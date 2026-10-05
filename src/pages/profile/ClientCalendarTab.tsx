@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
 import { useNavigate } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { BottomSheet } from "../../components/ui/BottomSheet";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
+import { YearScroll } from "../../components/calendar/YearScroll";
+import { EVENT_SWATCHES, eventColours } from "../../components/calendar/eventColour";
+import { linkLabel, minutesOf, normaliseLink, range12 } from "../../components/calendar/calendarTime";
+import { useIsDark } from "../../hooks/useIsDark";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
 import {
@@ -24,13 +28,12 @@ import {
   Plus,
   MapPin,
   FileText,
-  Trash2,
-  Repeat,
   Check,
   X,
   Dumbbell,
   Ticket,
   Paperclip,
+  Link as LinkIcon,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -41,15 +44,15 @@ async function openAttachment(path: string) {
 }
 
 type View = "year" | "month" | "week" | "day";
+const VIEWS: View[] = ["year", "month", "week", "day"];
 
-const repeatOptions: { value: CalendarEvent["repeat"]; label: string }[] = [
-  { value: "none", label: "Never" },
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-];
-
-const eventColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+/** The view pills' own light colours, kept on the segmented tabs (decision 15). */
+const TAB_LIGHT = {
+  activeFill: "rgb(var(--c-primary-fill))",
+  activeInk: "rgb(var(--c-on-primary-fill))",
+  idleFill: "rgb(var(--c-team-lavender) / 0.15)",
+  idleInk: "rgb(var(--c-primary-deep-text))",
+};
 
 const monthNames = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" })
@@ -67,13 +70,7 @@ const startOfWeekISO = (iso: string) => {
   d.setDate(d.getDate() - d.getDay());
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
-const minutesOf = (hhmm?: string) => {
-  if (!hhmm) return 0;
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-};
-
-const blankDraft = (date: string) => ({
+const blankDraft = (date: string): EventDraft => ({
   title: "",
   date,
   allDay: false,
@@ -82,7 +79,8 @@ const blankDraft = (date: string) => ({
   location: "",
   repeat: "none" as CalendarEvent["repeat"],
   notes: "",
-  color: eventColorOptions[0],
+  color: EVENT_SWATCHES[0],
+  url: "",
 });
 
 const HOUR_PX = 56;
@@ -130,6 +128,8 @@ export default function ClientCalendarTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState(blankDraft(selectedDate));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [linkError, setLinkError] = useState(false);
+  const dark = useIsDark();
 
   const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -318,6 +318,7 @@ export default function ClientCalendarTab() {
   };
 
   const openCompose = () => {
+    setLinkError(false);
     setEditingId(null);
     setDraft(blankDraft(selectedDate));
     setConfirmDelete(false);
@@ -329,6 +330,7 @@ export default function ClientCalendarTab() {
     setEditingId(e.id);
     setConfirmDelete(false);
     setSaveError(null);
+    setLinkError(false);
     setDraft({
       title: e.title,
       date: e.date,
@@ -338,13 +340,23 @@ export default function ClientCalendarTab() {
       location: e.location ?? "",
       repeat: e.repeat,
       notes: e.notes ?? "",
-      color: e.color ?? eventColorOptions[0],
+      color: e.color ?? EVENT_SWATCHES[0],
+      // Carried into the draft so saving an edit keeps the link; before the
+      // Link field existed, an edit sent no url and the server cleared it.
+      url: e.url ?? "",
     });
     setComposeOpen(true);
   };
 
   const saveEvent = async () => {
     if (!draft.title.trim() || !authUserId || saving) return;
+    // http(s) only (B38): a bare host gets https://, anything else is refused.
+    const url = normaliseLink(draft.url);
+    if (draft.url.trim() && !url) {
+      setLinkError(true);
+      return;
+    }
+    setLinkError(false);
     setSaving(true);
     setSaveError(null);
     const payload = {
@@ -357,6 +369,7 @@ export default function ClientCalendarTab() {
       repeat: draft.repeat,
       notes: draft.notes,
       color: draft.color,
+      url: url ?? undefined,
     };
     const result = editingId
       ? await updateEvent(authUserId, editingId, payload)
@@ -426,7 +439,7 @@ export default function ClientCalendarTab() {
     const dayLabel = isToday
       ? "Today"
       : new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
-    const when = e.allDay ? "All day" : `${dayLabel} ${e.startTime} – ${e.endTime}`;
+    const when = e.allDay ? "All day" : `${dayLabel} ${range12(e.startTime, e.endTime)}`;
     let rel = "";
     if (isToday && !e.allDay) {
       const diffH = Math.max(0, Math.round(((minutesOf(e.startTime) - nowMinutes) / 60) * 10) / 10);
@@ -455,18 +468,42 @@ export default function ClientCalendarTab() {
     declined: "Declined",
   };
 
+  /** A tappable link on an event, in every view (MO1.6.4 note; B38). */
+  const eventLink = (e: ClientCalendarEvent, size = 11) => {
+    const href = normaliseLink(e.url);
+    if (!href) return null;
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(ev) => ev.stopPropagation()}
+        className="tap inline-flex items-center gap-1 max-w-full text-xs font-semibold text-primary-deep-text underline underline-offset-2 decoration-primary-deep-text/40"
+      >
+        <LinkIcon size={size} className="shrink-0" aria-hidden />
+        <span className="truncate">{linkLabel(href)}</span>
+      </a>
+    );
+  };
+
+  // MO1.6.2: the card tinted from the event's own colour, with its colour as
+  // the side bar. Everything the old full card carried stays: notes, the
+  // attachment, the invitation / Scheduled / Booked badge, the delisted note
+  // and Accept / Decline.
   const eventCard = (e: ClientCalendarEvent) => {
     const mine = isMine(e);
     const status = e.invite?.status;
     // Present only for an overlay row, and the one thing that distinguishes
     // it from a calendar_events row the client happens not to own.
     const booked = bookedById.get(e.id);
+    const { tint, bar } = eventColours(e.color, dark);
     return (
-      <Card
+      <div
         key={e.id}
-        className="space-y-2"
+        className="rounded-[20px] px-4 py-3.5 space-y-2"
         style={{
-          borderLeft: `4px solid ${e.color ?? "#7D6BB5"}`,
+          background: tint,
+          borderLeft: `3px solid ${bar}`,
           // A declined event stays on the calendar, and looking different is
           // how it says so at a glance rather than only in its badge.
           opacity: status === "declined" ? 0.6 : undefined,
@@ -476,7 +513,7 @@ export default function ClientCalendarTab() {
           <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
             <p className="text-sm font-semibold text-charcoal">{e.title}</p>
             <p className="text-xs text-charcoal-faint">
-              {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+              {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
               {e.repeat !== "none" && ` · repeats ${e.repeat}`}
             </p>
             {e.location && (
@@ -493,18 +530,6 @@ export default function ClientCalendarTab() {
               </p>
             )}
           </button>
-          {/* AN INVITEE MAY OPEN THE ATTACHMENT, which the bucket's select
-              policy allows and which nothing on this screen offered until
-              Phase 2 put files on events at all. Signed at the click, never
-              held: the TTL is minutes. */}
-          {e.attachmentPath && (
-            <button
-              onClick={() => void openAttachment(e.attachmentPath!)}
-              className="tap flex items-center gap-1 text-xs font-semibold text-primary mt-1"
-            >
-              <Paperclip size={11} /> Open attachment
-            </button>
-          )}
           {status ? (
             <span
               className={clsx(
@@ -534,6 +559,21 @@ export default function ClientCalendarTab() {
             </span>
           ) : null}
         </div>
+
+        {eventLink(e)}
+
+        {/* AN INVITEE MAY OPEN THE ATTACHMENT, which the bucket's select
+            policy allows and which nothing on this screen offered until
+            Phase 2 put files on events at all. Signed at the click, never
+            held: the TTL is minutes. */}
+        {e.attachmentPath && (
+          <button
+            onClick={() => void openAttachment(e.attachmentPath!)}
+            className="tap flex items-center gap-1 text-xs font-semibold text-primary-deep-text"
+          >
+            <Paperclip size={11} /> Open attachment
+          </button>
+        )}
 
         {/* WHY THEY CANNOT FIND THIS BUSINESS ANY MORE. A business turning its
             Explore listing off does not cancel bookings people already hold,
@@ -573,9 +613,28 @@ export default function ClientCalendarTab() {
             </Button>
           </div>
         )}
-      </Card>
+      </div>
     );
   };
+
+  const jump = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
+
+  /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30). */
+  const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
+    <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "#2B2C3A" : "#F6F4FE" }}>
+      <button onClick={onPrev} aria-label={prevLabel} className="tap w-7 h-7 -ml-1 flex items-center justify-center text-primary-deep-text shrink-0">
+        <ChevronLeft size={16} strokeWidth={2.2} />
+      </button>
+      <p className="flex-1 min-w-0 text-center text-[15px] font-semibold text-charcoal truncate">{label}</p>
+      {jump.show && <JumpToToday onClick={jump.jump} />}
+      <button onClick={onNext} aria-label={nextLabel} className="tap w-7 h-7 -mr-1 flex items-center justify-center text-primary-deep-text shrink-0">
+        <ChevronRight size={16} strokeWidth={2.2} />
+      </button>
+    </div>
+  );
+
+  const [yearJump, setYearJump] = useState(0);
+  const todayIso = toISO(today.getFullYear(), today.getMonth(), today.getDate());
 
   return (
     <div>
@@ -615,33 +674,33 @@ export default function ClientCalendarTab() {
         </p>
       )}
 
-      <div className="flex items-center gap-[6px] mb-[13px]">
-        {(["year", "month", "week", "day"] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={clsx(
-              "tap rounded-full px-[13px] py-[7px] text-[11px] capitalize whitespace-nowrap",
-              view === v ? "font-extrabold bg-primary-fill text-on-primary-fill" : "font-semibold bg-team-lavender/[0.15] text-primary-deep-text"
-            )}
-          >
-            {v}
-          </button>
-        ))}
-        {(() => {
-          const j = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
-          return j.show && <JumpToToday className="ml-auto" onClick={j.jump} />;
-        })()}
-      </div>
+      {/* MO1.6: the views as full-width segmented tabs (44 in a 56 track).
+          Light keeps the pills' colours (decision 15). A second tap on Year
+          while in Year scrolls back to today's year (MO1.6.1). */}
+      <SegmentedTabs
+        className="mb-[13px]"
+        items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
+        activeKey={view}
+        onChange={(k) => {
+          if (k === "year" && view === "year") {
+            setCursor((c) => ({ ...c, year: today.getFullYear() }));
+            setYearJump((n) => n + 1);
+            return;
+          }
+          setView(k as View);
+        }}
+        light={TAB_LIGHT}
+      />
 
       {/* "Next up": the real nearest event, not the mockup's fixed example
-          — hidden entirely when there is nothing upcoming to show. */}
+          — hidden entirely when there is nothing upcoming to show. Not drawn
+          on MO1.6, kept (B30). */}
       {view === "month" && nextUp && (
         <div
           className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
           style={{ background: "var(--gradient-board)" }}
         >
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">Next up</p>
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white/[0.8]">Next up</p>
           <div className="flex items-end justify-between gap-3 mt-[9px]">
             <div className="min-w-0">
               <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
@@ -657,21 +716,11 @@ export default function ClientCalendarTab() {
       {view === "month" && (
         <>
           <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
-            <div className="flex items-center justify-between mb-[11px]">
-              <button onClick={() => goMonth(-1)} className="tap w-[26px] h-[26px] rounded-full bg-team-lavender/[0.18] flex items-center justify-center text-primary-deep-text">
-                <ChevronLeft size={13} />
-              </button>
-              <p className="text-[13.5px] font-extrabold tracking-[-0.02em] text-charcoal">
-                {monthNames[cursor.month]} {cursor.year}
-              </p>
-              <button onClick={() => goMonth(1)} className="tap w-[26px] h-[26px] rounded-full bg-team-lavender/[0.18] flex items-center justify-center text-primary-deep-text">
-                <ChevronRight size={13} />
-              </button>
-            </div>
+            {headerCard(`${monthNames[cursor.month]} ${cursor.year}`, () => goMonth(-1), () => goMonth(1), "Previous month", "Next month")}
 
-            <div className="grid grid-cols-7 gap-[2px] mb-1">
+            <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-1">
               {"SMTWTFS".split("").map((d, i) => (
-                <div key={i} className="text-center text-[8.5px] font-bold tracking-[.1em] text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+                <div key={i} className="h-[31px] flex items-center justify-center text-[13px] font-semibold text-charcoal/[0.42] dark:text-charcoal/[0.55]">
                   {d}
                 </div>
               ))}
@@ -682,14 +731,16 @@ export default function ClientCalendarTab() {
                 const iso = toISO(cursor.year, cursor.month, day);
                 const hasEvents = !!eventsByDate[iso]?.length;
                 const isSelected = iso === selectedDate;
-                const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
+                const isToday = iso === todayIso;
                 return (
                   <button data-today={isToday || undefined}
                     key={i}
                     onClick={() => setSelectedDate(iso)}
+                    aria-label={new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                    aria-pressed={isSelected}
                     className={clsx(
-                      "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[12.5px] font-semibold",
-                      isSelected ? "font-extrabold text-white" : isToday ? "bg-team-lavender/[0.16] text-primary-deep-text font-bold" : "text-charcoal"
+                      "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[15px]",
+                      isSelected ? "font-semibold text-white" : isToday ? "bg-team-lavender/[0.16] text-primary-deep-text font-semibold" : "font-medium text-charcoal"
                     )}
                     style={isSelected ? { background: "var(--gradient-lavender-accent)" } : undefined}
                   >
@@ -703,9 +754,8 @@ export default function ClientCalendarTab() {
 
           {/* Iteration 6 "Team": a day agenda beneath the grid — the
               selected day's real events, tinted rows keyed to each
-              event's own colour. Month view no longer jumps to Day on tap
-              (the view pills above still reach the full hour timeline);
-              selecting a date now just updates this list in place. */}
+              event's own colour. Selecting a date updates this list in
+              place; the view tabs reach the full hour timeline. */}
           <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{selectedDateLabel}</p>
           {selectedEvents.length === 0 ? (
             <p className="text-[11.5px] text-charcoal-faint">No events</p>
@@ -713,38 +763,42 @@ export default function ClientCalendarTab() {
             <div className="flex flex-col gap-[7px]">
               {selectedEvents.map((e) => {
                 const mine = isMine(e);
-                const color = e.color ?? "#7D6BB5";
+                const { tint, bar } = eventColours(e.color, dark);
+                const link = eventLink(e, 10);
                 return (
-                  <button
+                  <div
                     key={e.id}
-                    onClick={() => openEdit(e)}
-                    disabled={!mine}
-                    className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 text-left"
-                    style={{ background: `${color}29`, opacity: e.invite?.status === "declined" ? 0.6 : undefined }}
+                    className="flex items-start gap-[11px] rounded-[15px] px-3.5 py-3"
+                    style={{ background: tint, opacity: e.invite?.status === "declined" ? 0.6 : undefined }}
                   >
-                    <span className="w-[3px] h-8 rounded-full shrink-0" style={{ background: color }} />
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[12.5px] font-bold text-charcoal truncate">{e.title}</span>
-                      <span className="block text-[10px] text-charcoal-tertiary truncate">
-                        {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
-                        {e.repeat !== "none" && ` · repeats ${e.repeat}`}
-                        {e.location && ` · ${e.location}`}
-                        {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
-                            card is what Month renders — not eventCard — so the
-                            full card's "Booked" badge never reaches the screen
-                            most people land on. The subtitle already composes
-                            from several optional parts; the business is one
-                            more, and the delisted note rides with it because
-                            there is nowhere else on this card to put it. */}
-                        {bookedById.get(e.id) &&
-                          ` · ${bookedById.get(e.id)!.businessName}${
-                            bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
-                          }`}
-                      </span>
+                    <span className="w-[3px] self-stretch min-h-8 rounded-full shrink-0" style={{ background: bar }} />
+                    <span className="flex-1 min-w-0 flex flex-col gap-1">
+                      <button onClick={() => openEdit(e)} disabled={!mine} className="tap flex items-center gap-2 text-left min-w-0">
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[12.5px] font-bold text-charcoal truncate">{e.title}</span>
+                          <span className="block text-[10px] text-charcoal-tertiary truncate">
+                            {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
+                            {e.repeat !== "none" && ` · repeats ${e.repeat}`}
+                            {e.location && ` · ${e.location}`}
+                            {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
+                                card is what Month renders — not eventCard — so the
+                                full card's "Booked" badge never reaches the screen
+                                most people land on. The subtitle already composes
+                                from several optional parts; the business is one
+                                more, and the delisted note rides with it because
+                                there is nowhere else on this card to put it. */}
+                            {bookedById.get(e.id) &&
+                              ` · ${bookedById.get(e.id)!.businessName}${
+                                bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                              }`}
+                          </span>
+                        </span>
+                        {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
+                        {bookedById.has(e.id) && <Ticket size={12} className="text-gold shrink-0" />}
+                      </button>
+                      {link}
                     </span>
-                    {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
-                    {bookedById.has(e.id) && <Ticket size={12} className="text-gold shrink-0" />}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -752,9 +806,6 @@ export default function ClientCalendarTab() {
         </>
       )}
 
-      {/* Everything below (Week/Year/Day views, the compose sheet) is
-          reached only via the view pills above and is unchanged — the
-          manifest's screen-level pass here is scoped to the Month view. */}
       {view === "week" &&
         (() => {
           const weekStart = startOfWeekISO(selectedDate);
@@ -769,24 +820,18 @@ export default function ClientCalendarTab() {
           })}`;
           return (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronLeft size={16} />
-                </button>
-                <p className="font-display font-semibold text-charcoal">{rangeLabel}</p>
-                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronRight size={16} />
-                </button>
+              <div className="mb-4">
+                {headerCard(rangeLabel, () => setSelectedDate(addDaysISO(selectedDate, -7)), () => setSelectedDate(addDaysISO(selectedDate, 7)), "Previous week", "Next week")}
               </div>
               {/* V10 (QA 10.0): "have all the dates from sunday to saturday
                   be under each other in boxes with each[event list] to
                   their respective sides not under" — a day box column with
-                  that day's events beside it, instead of the label sitting
-                  above a full-width event stack. */}
+                  that day's events beside it. Tapping a day box still opens
+                  it in Day view (B32). */}
               <div className="space-y-2.5">
                 {weekDays.map((iso) => {
                   const dayEvents = eventsByDate[iso] ?? [];
-                  const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
+                  const isToday = iso === todayIso;
                   const d = new Date(`${iso}T00:00:00`);
                   return (
                     <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
@@ -795,6 +840,7 @@ export default function ClientCalendarTab() {
                           setSelectedDate(iso);
                           setView("day");
                         }}
+                        aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
                           isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
@@ -821,35 +867,22 @@ export default function ClientCalendarTab() {
         })()}
 
       {view === "year" && (
-        <div className="grid grid-cols-3 gap-3">
-          {monthNames.map((name, m) => (
-            <button
-              key={name}
-              onClick={() => {
-                setCursor({ year: cursor.year, month: m });
-                setView("month");
-              }}
-              className="tap rounded-2xl bg-cream-card border border-charcoal/[0.06] shadow-soft py-4 flex flex-col items-center gap-1"
-            >
-              <span className="text-sm font-semibold text-charcoal">{name.slice(0, 3)}</span>
-              <span className="text-[10px] text-charcoal-faint">
-                {Object.keys(eventsByDate).filter((d) => d.startsWith(`${cursor.year}-${pad(m + 1)}`)).length} events
-              </span>
-            </button>
-          ))}
-        </div>
+        <YearScroll
+          year={cursor.year}
+          todayIso={todayIso}
+          eventDays={Object.keys(eventsByDate)}
+          jumpSignal={yearJump}
+          onOpenMonth={(y, m) => {
+            setCursor({ year: y, month: m });
+            setView("month");
+          }}
+        />
       )}
 
       {view === "day" && (
         <>
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} />
-            </button>
-            <p className="font-display font-semibold text-charcoal">{selectedDateLabel}</p>
-            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} />
-            </button>
+          <div className="mb-4">
+            {headerCard(selectedDateLabel, () => setSelectedDate(addDaysISO(selectedDate, -1)), () => setSelectedDate(addDaysISO(selectedDate, 1)), "Previous day", "Next day")}
           </div>
 
           {/* INVITATIONS GET A LIST OF THEIR OWN IN DAY VIEW, above the
@@ -877,7 +910,7 @@ export default function ClientCalendarTab() {
 
           <div className="relative" style={{ height: HOUR_PX * 24 }}>
             {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
+              <div key={h} data-hour={h} className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
                 <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
                   {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
                 </span>
@@ -890,37 +923,54 @@ export default function ClientCalendarTab() {
                 const top = (start / 60) * HOUR_PX;
                 const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
                 const mine = isMine(e);
+                const { tint, bar } = eventColours(e.color, dark);
+                const href = normaliseLink(e.url);
                 return (
-                  <button
+                  <div
                     key={e.id}
-                    onClick={() => openEdit(e)}
-                    disabled={!mine}
-                    className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
+                    className="absolute left-0 right-1 rounded-xl overflow-hidden shadow-soft"
                     style={{
                       top,
                       height,
-                      background: `${e.color ?? "#7D6BB5"}22`,
-                      borderLeft: `3px solid ${e.color ?? "#7D6BB5"}`,
+                      background: tint,
+                      borderLeft: `3px solid ${bar}`,
                       opacity: e.invite?.status === "declined" ? 0.6 : undefined,
                     }}
                   >
-                    <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
-                      {e.title}
-                      {/* The timeline block is too small for the badge and the
-                          buttons; the day list above carries both. This says
-                          only that the event is an invitation, or a booking. */}
-                      {e.invite && <Check size={10} className="shrink-0" />}
-                      {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
-                    </p>
-                    <p className="text-[10px] text-charcoal-faint truncate">
-                      {e.startTime} – {e.endTime}
-                      {e.location ? ` · ${e.location}` : ""}
-                      {bookedById.get(e.id) &&
-                        ` · ${bookedById.get(e.id)!.businessName}${
-                          bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
-                        }`}
-                    </p>
-                  </button>
+                    <button
+                      onClick={() => openEdit(e)}
+                      disabled={!mine}
+                      className={clsx("tap w-full h-full px-2.5 py-1.5 text-left", href && "pr-9")}
+                    >
+                      <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
+                        {e.title}
+                        {/* The timeline block is too small for the badge and the
+                            buttons; the day list above carries both. This says
+                            only that the event is an invitation, or a booking. */}
+                        {e.invite && <Check size={10} className="shrink-0" />}
+                        {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
+                      </p>
+                      <p className="text-[10px] text-charcoal-faint truncate">
+                        {range12(e.startTime, e.endTime)}
+                        {e.location ? ` · ${e.location}` : ""}
+                        {bookedById.get(e.id) &&
+                          ` · ${bookedById.get(e.id)!.businessName}${
+                            bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                          }`}
+                      </p>
+                    </button>
+                    {href && (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open link, ${linkLabel(href)}`}
+                        className="tap absolute top-0.5 right-0.5 w-8 h-8 flex items-center justify-center text-primary-deep-text"
+                      >
+                        <LinkIcon size={13} />
+                      </a>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -928,150 +978,27 @@ export default function ClientCalendarTab() {
         </>
       )}
 
-      <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title={editingId ? "Edit Event" : "New Event"}>
-        <div className="space-y-4 animate-fade-slide-up">
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Title</span>
-            <input
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              placeholder="Doctor's appointment"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Date</span>
-            <input
-              type="date"
-              value={draft.date}
-              onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <div className="flex items-center justify-between bg-cream-soft rounded-xl px-3.5 py-3">
-            <span className="text-sm font-semibold text-charcoal">All day</span>
-            <button
-              onClick={() => setDraft((d) => ({ ...d, allDay: !d.allDay }))}
-              className={clsx("tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors", draft.allDay ? "bg-primary justify-end" : "bg-charcoal/10 justify-start")}
-            >
-              <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
-            </button>
-          </div>
-
-          {!draft.allDay && (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Starts</span>
-                <input
-                  type="time"
-                  value={draft.startTime}
-                  onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value }))}
-                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Ends</span>
-                <input
-                  type="time"
-                  value={draft.endTime}
-                  onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value }))}
-                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-            </div>
-          )}
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Location</span>
-            <input
-              value={draft.location}
-              onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
-              placeholder="Clinic, gym, video call…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
-            <div className="flex gap-2">
-              {eventColorOptions.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setDraft((d) => ({ ...d, color: c }))}
-                  aria-label={`Color ${c}`}
-                  className="tap w-7 h-7 rounded-full"
-                  style={{ background: c, boxShadow: draft.color === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 flex items-center gap-1.5">
-              <Repeat size={12} /> Repeat
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {repeatOptions.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
-                  className={clsx(
-                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                    draft.repeat === r.value ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>
-            <textarea
-              value={draft.notes}
-              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-              rows={3}
-              placeholder="Anything else to remember…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-            />
-          </label>
-
-          {saveError && (
-            <p className="text-xs font-semibold text-status-high text-center">{saveError}</p>
-          )}
-
-          <Button
-            fullWidth
-            size="lg"
-            onClick={() => void saveEvent()}
-            disabled={!draft.title.trim() || saving}
-          >
-            {saving ? "Saving…" : editingId ? "Save changes" : "Save event"}
-          </Button>
-
-          {editingId && (
-            <Button
-              fullWidth
-              variant="outline"
-              disabled={saving}
-              className="!border-teal/30 !text-teal-dark"
-              onClick={() => {
-                if (!confirmDelete) {
-                  setConfirmDelete(true);
-                  setTimeout(() => setConfirmDelete(false), 3000);
-                  return;
-                }
-                void removeEvent();
-              }}
-            >
-              <Trash2 size={15} /> {confirmDelete ? "Tap again to confirm" : "Delete event"}
-            </Button>
-          )}
-        </div>
-      </BottomSheet>
+      <EventComposeSheet
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        editing={!!editingId}
+        draft={draft}
+        setDraft={setDraft}
+        todayIso={todayIso}
+        saving={saving}
+        error={saveError}
+        linkError={linkError}
+        onSave={() => void saveEvent()}
+        onDelete={() => {
+          if (!confirmDelete) {
+            setConfirmDelete(true);
+            setTimeout(() => setConfirmDelete(false), 3000);
+            return;
+          }
+          void removeEvent();
+        }}
+        confirmDelete={confirmDelete}
+      />
     </div>
   );
 }
