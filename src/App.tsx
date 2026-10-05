@@ -58,6 +58,8 @@ import AccessibilityPage from "./pages/settings/AccessibilityPage";
 import PrivacyPage from "./pages/settings/PrivacyPage";
 import TermsPage from "./pages/settings/TermsPage";
 import LanguagePage from "./pages/settings/LanguagePage";
+import TwoFactorPage from "./pages/settings/TwoFactorPage";
+import TwoFactorSetupPage from "./pages/settings/TwoFactorSetupPage";
 import ResetPassword from "./pages/auth/ResetPassword";
 import PublicCertificate from "./pages/courses/PublicCertificate";
 
@@ -449,6 +451,8 @@ function AppRoutes() {
         <Route path="/app/settings/privacy" element={<PrivacyPage />} />
         <Route path="/app/settings/terms" element={<TermsPage />} />
         <Route path="/app/settings/language" element={<LanguagePage />} />
+        <Route path="/app/settings/two-factor" element={<TwoFactorPage />} />
+        <Route path="/app/settings/two-factor/setup" element={<TwoFactorSetupPage />} />
       </Route>
       {/* More specific than the marketing group's own path="*" (an extra
           static "app" segment outranks a bare splat), so this — not the

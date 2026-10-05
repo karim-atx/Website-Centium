@@ -154,7 +154,7 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader title="Notifications" showBack />
+      <PageHeader title="Notifications" showBack sub />
 
       {/* The lead card: primary-pale, as the app's other tinted cards. */}
       <div className="flex items-center gap-3.5 rounded-2xl bg-primary-pale px-4 py-3.5 mb-8">

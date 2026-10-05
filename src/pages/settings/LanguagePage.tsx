@@ -14,7 +14,7 @@ export default function LanguagePage() {
 
   return (
     <div>
-      <PageHeader title={t("Language")} showBack />
+      <PageHeader title={t("Language")} showBack sub />
       <SettingsSection label="App language">
         <div role="radiogroup" aria-label="App language">
           {APP_LANGUAGES.map((l) => {

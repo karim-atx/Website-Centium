@@ -5,7 +5,6 @@ import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
 import { ReportBugPopup } from "../../components/profile/ReportBugPopup";
 import { RateAppPopup } from "../../components/profile/RateAppPopup";
 import { StorageUsageRow } from "../../components/profile/StorageUsageRow";
-import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
@@ -13,7 +12,6 @@ import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { pushSupported } from "../../services/push";
-import { getMfaStatus } from "../../services/mfa";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
 import { APP_LANGUAGES } from "../../i18n/languages";
 import { pushUnavailableReason, watchPermission, type PermissionReading } from "./platform";
@@ -50,7 +48,7 @@ import {
 //
 // EVERY ROW THE BOARD DROPS IS KEPT (C13): Change password, Storage, Time
 // zone and Forum blocks live in a "Data & account" section above General; the
-// professionals' two-factor reminder moved to the two-factor page.
+// professionals' two-factor reminder moved to the two-factor page (R18).
 
 /** A permission's state, as the row says it. */
 function permissionLine(state: PermissionReading, purpose: string): string {
@@ -70,8 +68,6 @@ export default function Settings() {
     cycleSettingsLoaded,
     cycleOffered,
     setCycleTracking,
-    twoFactorNudgeDismissed,
-    setTwoFactorNudgeDismissed,
   } = useApp();
   const navigate = useNavigate();
 
@@ -167,24 +163,7 @@ export default function Settings() {
   const [reportBugOpen, setReportBugOpen] = useState(false);
   const [rateAppOpen, setRateAppOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  // Whether a factor is enrolled, for the professionals' reminder row. Re-read
-  // when the two-factor sheet closes, the only thing on this page that
-  // changes it. Null while unknown.
-  const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (twoFactorOpen) return;
-    let cancelled = false;
-    void getMfaStatus().then((result) => {
-      if (cancelled || !result.ok) return;
-      setMfaEnrolled(result.data.factors.length > 0);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [twoFactorOpen]);
 
   const isIos = detectPlatform() === "ios";
   const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
@@ -280,18 +259,8 @@ export default function Settings() {
         <SettingsRow
           icon={ShieldCheck}
           title="Two-factor authentication"
-          onClick={() => setTwoFactorOpen(true)}
+          onClick={() => navigate("/app/settings/two-factor")}
         />
-        {/* THE WAY BACK FROM A DISMISSAL: the professional dashboard's nudge
-            hides once dismissed, so turning it back on has to be findable.
-            Only for those who can see the nudge and turned it off. */}
-        {user.accountType === "professional" && twoFactorNudgeDismissed && mfaEnrolled === false && (
-          <SettingsRow
-            title="Remind me about two-factor"
-            subtitle="You dismissed the reminder on your dashboard."
-            toggle={{ checked: !twoFactorNudgeDismissed, onChange: () => setTwoFactorNudgeDismissed(false) }}
-          />
-        )}
       </SettingsSection>
 
       <SettingsSection label="Data & account">
@@ -341,7 +310,6 @@ export default function Settings() {
         open={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
       />
-      <TwoFactorSheet key={twoFactorOpen ? "2fa-open" : "2fa-closed"} open={twoFactorOpen} onClose={() => setTwoFactorOpen(false)} />
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </div>
   );

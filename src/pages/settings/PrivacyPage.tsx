@@ -65,7 +65,7 @@ export default function PrivacyPage() {
 
   return (
     <div>
-      <PageHeader title="Privacy" showBack />
+      <PageHeader title="Privacy" showBack sub />
 
       <SettingsSection label="Your controls">
         {/* Customer only: a professional has no professionals of their own to

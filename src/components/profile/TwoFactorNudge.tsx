@@ -23,11 +23,10 @@ import { ShieldCheck, X } from "lucide-react";
 // already enrolled — is untouched and lives in App.tsx's guards.
 //
 // THE SIGNAL IS THE ONE PHASE 1 ALREADY BUILT: getMfaStatus().factors, the
-// same call Settings makes to label its Security row. Note that `mfaPending`
+// same call the two-factor page makes to show its state. Note that `mfaPending`
 // from context is a DIFFERENT question — it means a challenge is outstanding,
 // which is false both for somebody who never enrolled and for somebody
 // already at aal2, so it cannot tell those two apart and is useless here.
-// Settings documents the same distinction for the same reason.
 
 export const TwoFactorNudge: React.FC = () => {
   const { user, authUserId, mfaReady, twoFactorNudgeDismissed, setTwoFactorNudgeDismissed } = useApp();
@@ -75,13 +74,14 @@ export const TwoFactorNudge: React.FC = () => {
           Turn on two-factor authentication so a password alone can't sign in to your account.
         </p>
         <button
-          onClick={() => navigate("/app/settings")}
+          onClick={() => navigate("/app/settings/two-factor")}
           className="tap mt-2 text-xs font-bold text-primary"
         >
           Set it up
         </button>
       </div>
-      {/* Dismissal is permanent on this device and reversible from Settings. */}
+      {/* Dismissal is permanent on this device and reversible from Settings ›
+          Two-factor authentication. */}
       <button
         onClick={() => setTwoFactorNudgeDismissed(true)}
         aria-label="Dismiss this reminder"

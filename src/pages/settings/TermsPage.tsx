@@ -53,7 +53,7 @@ const sections: { heading: string; body: string }[] = [
 export default function TermsPage() {
   return (
     <div>
-      <PageHeader title="Terms of Service" showBack />
+      <PageHeader title="Terms of Service" showBack sub />
 
       <p className="text-[12px] text-charcoal-faint">
         Prototype terms for demonstration purposes — not a legally binding document.

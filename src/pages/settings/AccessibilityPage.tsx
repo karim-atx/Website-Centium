@@ -11,7 +11,7 @@ export default function AccessibilityPage() {
 
   return (
     <div>
-      <PageHeader title="Accessibility" showBack />
+      <PageHeader title="Accessibility" showBack sub />
       <SettingsSection label="Display">
         <SettingsRow
           icon={ALargeSmall}
