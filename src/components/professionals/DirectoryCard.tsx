@@ -1,19 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { MapPin, UserCheck } from "lucide-react";
-import { Card } from "../ui/Card";
-import { Button } from "../ui/Button";
+import { ChevronRight, MapPin, Navigation, Wallet } from "lucide-react";
 import { VerifiedCheck } from "../cv/CvBadges";
 import type { DirectoryListing } from "../../services/directory";
-import type { ProfessionalType } from "../../types";
-import { professionalTypeIcon } from "../../utils/icons";
-
-import { SUBTYPE_LABELS } from "./subtypeLabels";
+import { useIsDark } from "../../hooks/useIsDark";
+import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import { RatingBadge } from "./RatingBadge";
+import { initials, typeColours } from "./typeColour";
 
-const subtypeLabel = (s: DirectoryListing["subtype"]): string => (s ? SUBTYPE_LABELS[s] : "Professional");
-
-const listingIcon = (s: DirectoryListing["subtype"]) =>
-  s && s in professionalTypeIcon ? professionalTypeIcon[s as ProfessionalType] : UserCheck;
+/** "Personal Trainer": the frame's type line, from the singular label. */
+const typeLabel = (s: DirectoryListing["subtype"]): string =>
+  s ? SUBTYPE_SINGULAR[s].replace(/\b\w/g, (c) => c.toUpperCase()) : "Professional";
 
 /**
  * A professional in the directory, shared by the list and the map so the two
@@ -21,53 +17,85 @@ const listingIcon = (s: DirectoryListing["subtype"]) =>
  * Hamra"), computed on the device; the list view passes nothing, and null
  * means not on the map near here (no area shared, or outside what was searched).
  *
+ * MO1.2: photo or initials in the type's pill colour; name, headline and type
+ * in the type colours; location and price as pills; the bio; a tinted
+ * full-width "View Profile". Kept though the frame doesn't draw them (B2):
+ * the Verified mark by the name and the rating ("New" under three reviews).
+ * No monthly rate, no price pill (B5).
+ *
  * The rating is professional_rating_summary's, through the directory view:
  * an average once three reviews count towards it, "New" before that.
  */
-export const DirectoryCard: React.FC<{ listing: DirectoryListing; distance?: string | null }> = ({ listing: p, distance }) => {
+export const DirectoryCard: React.FC<{
+  listing: DirectoryListing;
+  distance?: string | null;
+  className?: string;
+  /** MO1.2.2's floating map card leaves the bio out. */
+  hideBio?: boolean;
+}> = ({ listing: p, distance, className = "", hideBio }) => {
   const navigate = useNavigate();
+  const t = typeColours(p.subtype, useIsDark());
+  const pill = "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold max-w-full";
   return (
-    <Card className="animate-fade-slide-up">
-      <div className="flex items-start gap-3.5 mb-3">
-        <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-          {p.avatarUrl ? (
-            <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            (() => {
-              const Icon = listingIcon(p.subtype);
-              return <Icon size={19} className="text-primary-dark" />;
-            })()
-          )}
+    <div className={`rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4 animate-fade-slide-up ${className}`}>
+      <div className="flex items-start gap-3.5">
+        <span
+          className="w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[18px] font-bold"
+          style={{ background: t.pill, color: t.deep }}
+        >
+          {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
         </span>
         <div className="flex-1 min-w-0">
           <p className="flex items-center gap-[5px] min-w-0">
-            <span className="font-semibold text-charcoal text-sm truncate">{p.name}</span>
+            <span className="text-[15px] font-bold truncate" style={{ color: t.deep }}>
+              {p.name}
+            </span>
             {p.hasVerifiedLicence && <VerifiedCheck size={16} />}
           </p>
           {p.headline && (
-            <p className="text-[12.5px] font-semibold text-primary-deep-text line-clamp-2 break-words">{p.headline}</p>
-          )}
-          {(p.specialty || p.subtype) && (
-            <p className="text-xs text-primary-dark font-medium truncate">{p.specialty ?? subtypeLabel(p.subtype)}</p>
-          )}
-          <RatingBadge average={p.averageRating} count={p.reviewCount} className="mt-0.5 mb-0.5" />
-          {(p.location || p.monthlyRate != null) && (
-            <p className="text-xs text-charcoal-faint truncate">
-              {[p.location, p.monthlyRate != null ? `$${p.monthlyRate}/mo` : null].filter(Boolean).join(" · ")}
+            <p className="text-[12.5px] font-semibold line-clamp-2 break-words" style={{ color: t.main }}>
+              {p.headline}
             </p>
           )}
-          {distance !== undefined && (
-            <p className="flex items-center gap-1 text-xs font-semibold text-charcoal-soft mt-0.5">
-              <MapPin size={12} className="shrink-0" aria-hidden />
-              {distance ?? "Not on the map nearby"}
-            </p>
-          )}
+          <p className="text-[11.5px] font-medium truncate" style={{ color: t.main }}>
+            {p.specialty ?? typeLabel(p.subtype)}
+          </p>
+          <RatingBadge average={p.averageRating} count={p.reviewCount} className="mt-1" />
         </div>
       </div>
-      {p.bio && <p className="text-xs text-charcoal-soft mb-3.5 leading-relaxed">{p.bio}</p>}
-      <Button size="sm" fullWidth onClick={() => navigate(`/app/professionals/${p.profileId}`)}>
-        View Profile
-      </Button>
-    </Card>
+
+      {(p.location || p.monthlyRate != null || distance !== undefined) && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {p.location && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <MapPin size={12} strokeWidth={1.75} className="shrink-0" aria-hidden />
+              <span className="truncate">{p.location}</span>
+            </span>
+          )}
+          {p.monthlyRate != null && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <Wallet size={12} strokeWidth={1.75} className="shrink-0" aria-hidden />${p.monthlyRate}/mo
+            </span>
+          )}
+          {distance !== undefined && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <Navigation size={11} strokeWidth={1.75} className="shrink-0" aria-hidden />
+              <span className="truncate">{distance ?? "Not on the map nearby"}</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {p.bio && !hideBio && <p className="text-[13px] text-charcoal-soft leading-relaxed mt-3 break-words">{p.bio}</p>}
+
+      <button
+        type="button"
+        onClick={() => navigate(`/app/professionals/${p.profileId}`)}
+        className="tap mt-3.5 w-full h-11 rounded-xl flex items-center justify-center gap-1 text-[13.5px] font-bold"
+        style={{ background: t.pill, color: t.deep }}
+      >
+        View Profile <ChevronRight size={14} aria-hidden />
+      </button>
+    </div>
   );
 };

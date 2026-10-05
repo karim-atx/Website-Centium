@@ -8,6 +8,8 @@ export interface SegmentedTabItem {
    *  handoff's own literal weights (e.g. Food: 0.80 / 1.08 / 0.86). Defaults
    *  to 1 (equal share) when a specific weight isn't given in the handoff. */
   weight?: number;
+  /** An icon before the label (MO1.2's List / Map). */
+  icon?: React.ReactNode;
 }
 
 /** The mobile handoff's segmented tab bar (item 7), replacing every pill-tab
@@ -47,7 +49,11 @@ export const SegmentedTabs: React.FC<{
   trackStyle?: React.CSSProperties;
   /** Long labels wrap onto two centred lines (MO1.1.4's "Simple Deep Breathing"). */
   wrapLabels?: boolean;
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle, wrapLabels }) => {
+  /** Label size when a frame draws other than 12.5 (MO1.2: 15 on List / Map, 12 on the category rail). */
+  labelSize?: number;
+  /** Tab height when a frame draws other than 44 / 38 (MO1.2's category rail: 32 in a 40 track). */
+  tabHeight?: number;
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -82,7 +88,8 @@ export const SegmentedTabs: React.FC<{
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
               minWidth: scroll ? 86 : 0,
-              height: size === "compact" ? 38 : 44,
+              height: tabHeight ?? (size === "compact" ? 38 : 44),
+              gap: item.icon ? 6 : undefined,
               padding: scroll ? "0 16px" : "0 6px",
               borderRadius: 12,
               background: lit
@@ -91,10 +98,11 @@ export const SegmentedTabs: React.FC<{
               color: lit
                 ? active ? lit.activeInk : lit.idleInk
                 : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
-              fontSize: 12.5,
+              fontSize: labelSize,
               fontWeight: 700,
             }}
           >
+            {item.icon}
             {item.label}
           </button>
         );

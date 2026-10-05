@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
 import { Button } from "../ui/Button";
-import { startThread } from "../../services/messaging";
+import { useOpenThread } from "./useOpenThread";
 
 /**
  * Opens the real conversation with someone, creating it only if needed.
@@ -34,28 +32,7 @@ export const MessageProfessionalButton: React.FC<{
   variant?: "primary" | "outline";
   className?: string;
 }> = ({ professionalId, firstName, variant = "outline", className }) => {
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const open = async () => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    const result = await startThread(professionalId);
-    // Deliberately not clearing `busy` before navigating: on success this
-    // component unmounts, and re-enabling a button on the way out is a frame
-    // in which a second thread can be requested.
-    if (!result.ok) {
-      setBusy(false);
-      setError(result.message);
-      return;
-    }
-    // The thread id travels in navigation state rather than the URL. Messages
-    // opens it once and then forgets it, so backing out of the conversation
-    // lands on the list rather than bouncing straight back in.
-    navigate("/app/messages", { state: { threadId: result.threadId } });
-  };
+  const { open, busy, error } = useOpenThread(professionalId);
 
   return (
     <div className={className}>

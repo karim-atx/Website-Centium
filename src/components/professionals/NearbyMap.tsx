@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { LocateFixed } from "lucide-react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // The tile worker, bundled by Vite. MapLibre otherwise looks for it next to
@@ -23,6 +24,10 @@ import { distanceKm, type Coords } from "../../services/geo/distance";
  * named for a screen reader ("Sarah, personal trainer, about 3 km away"), and
  * activated with Enter or Space like any other button. A pin standing for
  * several people shows a count and expands on activation.
+ *
+ * MO1.2.2 (R12): one professional is an avatar pin (photo or initials) ringed
+ * in their type colour, with a small tail; the selected one is drawn larger.
+ * Several at one spot keep the count pin, ringed neutrally (B19).
  */
 
 const STYLE = {
@@ -36,6 +41,10 @@ export interface MapPin {
   lng: number;
   count: number;
   label: string;
+  /** A single professional's face: their photo, else initials, in their type colours. */
+  face?: { avatarUrl: string | null; initials: string; ring: string; fill: string; ink: string };
+  /** The pin of the card showing below the map. */
+  selected?: boolean;
 }
 
 export interface NearbyMapProps {
@@ -52,6 +61,8 @@ export interface NearbyMapProps {
   pick?: { value: Coords | null; onPick: (c: Coords) => void };
   className?: string;
   ariaLabel: string;
+  /** MO1.2.2's round recentre button (the repo's "Use my location"), top right. */
+  onRecentre?: () => void;
 }
 
 export default function NearbyMap({
@@ -65,7 +76,9 @@ export default function NearbyMap({
   pick,
   className,
   ariaLabel,
+  onRecentre,
 }: NearbyMapProps) {
+  const recentreSlot = !!onRecentre;
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -90,7 +103,7 @@ export default function NearbyMap({
       keyboard: true,
     });
     m.addControl(new maplibregl.AttributionControl({ compact: false }), "bottom-right");
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), recentreSlot ? "top-left" : "top-right");
     m.getCanvas().setAttribute("aria-label", ariaLabel);
     m.on("moveend", () => {
       const c = m.getCenter();
@@ -131,16 +144,49 @@ export default function NearbyMap({
       const el = document.createElement("button");
       el.type = "button";
       el.setAttribute("aria-label", p.label);
+      if (p.selected) el.setAttribute("aria-current", "true");
       el.title = p.label;
-      el.className =
-        "centium-map-pin flex items-center justify-center rounded-full border-2 border-white dark:border-[#0D0B1A] bg-primary-fill text-on-primary-fill font-extrabold shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40";
-      el.style.width = el.style.height = p.count > 1 ? "34px" : "26px";
-      el.style.fontSize = "13px";
-      el.textContent = p.count > 1 ? String(p.count) : "";
       el.addEventListener("click", (ev) => {
         ev.stopPropagation();
         latest.current.onSelectPin?.(p.key);
       });
+      if (p.face && p.count === 1) {
+        // An avatar in a ring of the type colour, over a small tail (38 x 45;
+        // 50 x 57 when selected).
+        const size = p.selected ? 50 : 38;
+        el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:ring-4 focus-visible:[&>span:first-child]:ring-primary/40";
+        el.style.zIndex = p.selected ? "2" : "1";
+        const disc = document.createElement("span");
+        disc.className = "flex items-center justify-center rounded-full overflow-hidden font-bold shadow-md";
+        disc.style.width = disc.style.height = `${size}px`;
+        disc.style.border = `${p.selected ? 3 : 2.5}px solid ${p.face.ring}`;
+        disc.style.background = p.face.fill;
+        disc.style.color = p.face.ink;
+        disc.style.fontSize = p.selected ? "15px" : "12px";
+        if (p.face.avatarUrl) {
+          const img = document.createElement("img");
+          img.src = p.face.avatarUrl;
+          img.alt = "";
+          img.className = "w-full h-full object-cover";
+          disc.appendChild(img);
+        } else {
+          disc.textContent = p.face.initials;
+        }
+        const tail = document.createElement("span");
+        tail.setAttribute("aria-hidden", "true");
+        tail.style.width = "0";
+        tail.style.height = "0";
+        tail.style.marginTop = "-1px";
+        tail.style.borderLeft = tail.style.borderRight = "6px solid transparent";
+        tail.style.borderTop = `7px solid ${p.face.ring}`;
+        el.append(disc, tail);
+        return new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(m);
+      }
+      el.className =
+        "centium-map-pin flex items-center justify-center rounded-full border-[2.5px] border-charcoal/25 bg-cream-card text-charcoal font-extrabold shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40";
+      el.style.width = el.style.height = p.count > 1 ? "38px" : "26px";
+      el.style.fontSize = "13px";
+      el.textContent = p.count > 1 ? String(p.count) : "";
       return new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(m);
     });
   }, [pins]);
@@ -172,10 +218,23 @@ export default function NearbyMap({
 
   // The credit line keeps its own readable colours in both themes, rather
   // than inheriting the app's text colour onto MapLibre's pale background.
+  // In dark the zoom buttons go dark too, so they are not a light patch.
   return (
+    <div className={`relative ${className ?? ""}`}>
+    {onRecentre && (
+      <button
+        type="button"
+        onClick={onRecentre}
+        aria-label="Use my location"
+        className="tap absolute top-3 right-3 z-[3] w-11 h-11 rounded-full bg-cream-card shadow-md flex items-center justify-center text-primary-deep-text"
+      >
+        <LocateFixed size={17} strokeWidth={1.75} />
+      </button>
+    )}
     <div
       ref={holder}
-      className={`${className ?? ""} [&_.maplibregl-ctrl-attrib]:!bg-white/85 [&_.maplibregl-ctrl-attrib]:!text-[#2B2B2B] [&_.maplibregl-ctrl-attrib_a]:!text-[#2B2B2B] dark:[&_.maplibregl-ctrl-attrib]:!bg-[#0D0B1A]/85 dark:[&_.maplibregl-ctrl-attrib]:!text-[#E8E6F0] dark:[&_.maplibregl-ctrl-attrib_a]:!text-[#E8E6F0]`}
+      className={`h-full w-full [&_.maplibregl-ctrl-attrib]:!bg-white/85 [&_.maplibregl-ctrl-attrib]:!text-[#2B2B2B] [&_.maplibregl-ctrl-attrib_a]:!text-[#2B2B2B] dark:[&_.maplibregl-ctrl-attrib]:!bg-[#0D0B1A]/85 dark:[&_.maplibregl-ctrl-attrib]:!text-[#E8E6F0] dark:[&_.maplibregl-ctrl-attrib_a]:!text-[#E8E6F0] dark:[&_.maplibregl-ctrl-group]:!bg-[#262932] dark:[&_.maplibregl-ctrl-group_button+button]:!border-t-white/10 dark:[&_.maplibregl-ctrl-icon]:invert`}
     />
+    </div>
   );
 }

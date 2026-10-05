@@ -29,6 +29,7 @@ import Contraception from "./pages/contraception/Contraception";
 import Mind from "./pages/mind/Mind";
 import Professionals from "./pages/professionals/Professionals";
 import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
+import ProfessionalReviews from "./pages/professionals/ProfessionalReviews";
 import CalendarTab from "./pages/professionals/CalendarTab";
 import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
 import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
@@ -405,6 +406,7 @@ function AppRoutes() {
         <Route path="/app/messages" element={<Messages />} />
         <Route path="/app/professionals/health-metrics" element={<HealthMetricsTab />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
+        <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics" element={<BusinessAnalyticsTab />} />

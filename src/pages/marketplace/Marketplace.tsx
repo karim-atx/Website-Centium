@@ -4,9 +4,11 @@ import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
 import { useEffect } from "react";
-import { Sparkles, Gem, Award, Medal, Trophy, Crown, ChevronLeft, Gift } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Gift } from "lucide-react";
 import { rewardForUser, type EarnedReward } from "../../services/rewards";
-import { tierProgress, tierReached } from "../../services/achievements";
+import { tierProgress } from "../../services/achievements";
+import { colourSet, tierHex } from "../../components/mind/achievementStyle";
+import { liftTo } from "../../data/folderColors";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -27,26 +29,10 @@ const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
   meal_prep: { icon: "#6F9993", bg: "rgba(162,200,194,.18)" },
 };
 
-// THE THRESHOLDS ARE THE DATABASE'S NOW. This list held its own ladder —
-// 0 / 5,000 / 10,000 / 15,000 / 20,000 — and point_tiers says 0 / 1,000 /
-// 3,000 / 7,500 / 15,000. Two copies of a ladder is two answers to "what tier
-// am I", and my_points_summary() resolves the tier server-side, so the client
-// copy had to go rather than be corrected. What is left here is the ICON per
-// tier, which is presentation and lives nowhere in the schema; a tier the
-// catalogue adds later falls back to the medal rather than disappearing.
-// V9 (QA 9.0): "Each tier should have a different minimalistic logo based
-// on their tier level."
-const TIER_ICON: Record<string, typeof Award> = {
-  Bronze: Award,
-  Silver: Medal,
-  Gold: Trophy,
-  Platinum: Crown,
-  Diamond: Gem,
-};
-
 export default function Marketplace() {
-  const { user, pointsSummary, pointTiers, noteFeatureMilestone } = useApp();
+  const { user, pointsSummary, noteFeatureMilestone } = useApp();
   const navigate = useNavigate();
+  const dark = useIsDark();
 
   // Explorer milestone: "Out and about". Recorded once per account for ever —
   // a repeat is a primary-key conflict the service treats as the success it
@@ -100,9 +86,11 @@ export default function Marketplace() {
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="mt-[5px]">
-          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Explore</p>
-          <p className="mt-[3px] text-[11px] text-charcoal-tertiary">The future Centium ecosystem</p>
+        {/* MO1.4: ONE header (Discover's second one is gone), 24/700 with its
+            13/400 subtitle. */}
+        <div className="mt-[3px]">
+          <h1 className="text-[24px] font-bold tracking-[-0.03em] text-charcoal leading-tight">Explore</h1>
+          <p className="mt-1 text-[13px] text-charcoal-tertiary">Classes and places near you</p>
         </div>
       </div>
 
@@ -115,85 +103,57 @@ export default function Marketplace() {
           INSERT grant and no INSERT policy for any client role, so there is no
           longer a way to write a point from this side even in principle — and
           nothing to fake, since achievements credit real ones. */}
-      {pointsSummary && (
-      <div
-        className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
-        // MO8.1: the tier card is all teal (#A2C8C2 → #4F7F78), the
-        // existing teal hero token, which carries its own dark-mode value.
-        style={{ background: "var(--gradient-teal-hero)" }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white">
-            {pointsSummary.tierName} tier
-          </p>
-          <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap">
-            {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
-              ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
-              : "Highest tier"}
-          </span>
-        </div>
-        <p className="mt-[10px] flex items-baseline gap-[5px]">
-          <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
-            {pointsSummary.balance.toLocaleString()}
-          </span>
-          <span className="text-[11px] font-semibold text-white/[0.74] dark:text-white">pts</span>
-        </p>
-        <div className="my-[11px]">
-          <div className="h-[5px] rounded-full bg-white/[0.26] overflow-hidden">
-            <div
-              className="h-full rounded-full bg-white"
-              style={{
-                width: `${tierProgress(pointsSummary) * 100}%`,
-                transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* WHERE THE BALANCE CAME FROM, which the old hero could not say
-            because it came from nowhere. Both halves are the ledger's own
-            sums by source; "other" only appears if a source outside these two
-            ever credits anything, so it is never a zero row nobody can
-            explain. */}
-        <div className="flex items-center gap-3 flex-wrap text-[9.5px] font-semibold text-white/[0.74] dark:text-white">
-          <span>{pointsSummary.achievementPoints.toLocaleString()} from achievements</span>
-          <span className="w-1 h-1 rounded-full bg-white/40" />
-          <span>{pointsSummary.referralPoints.toLocaleString()} from referrals</span>
-          {pointsSummary.otherPoints !== 0 && (
-            <>
-              <span className="w-1 h-1 rounded-full bg-white/40" />
-              <span>{pointsSummary.otherPoints.toLocaleString()} other</span>
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-1 mt-[11px] pt-[11px] border-t border-white/[0.24]">
-          {pointTiers.map((t) => {
-            const reached = tierReached(t, pointsSummary);
-            const Icon = TIER_ICON[t.name] ?? Medal;
-            return (
-              <div key={t.name} className="flex-1 flex flex-col items-center gap-1">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: reached ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.1)" }}>
-                  <Icon size={13} className="text-white" style={{ opacity: reached ? 1 : 0.5 }} />
-                </span>
-                <span className="text-[8px] font-extrabold text-white" style={{ opacity: reached ? 1 : 0.55 }}>
-                  {t.name}
+      {pointsSummary &&
+        (() => {
+          const tc = colourSet(tierHex(pointsSummary.tierName), dark);
+          return (
+            <button
+              type="button"
+              onClick={() => navigate("/app/mind/achievements")}
+              aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString()} points. Open Achievements`}
+              className="tap w-full text-left rounded-[20px] px-4 py-3.5 mb-3"
+              style={{ background: tc.fill, border: `1px solid ${tc.border}` }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: tc.ink }}>
+                    {pointsSummary.tierName}
+                  </span>
+                  <span className="text-[22px] font-extrabold leading-none text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
+                  <span className="text-[11px] font-semibold text-charcoal-faint">pts</span>
+                </p>
+                <span className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10.5px] font-bold rounded-full px-2.5 py-1 whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
+                    style={{ background: tc.track, color: dark ? liftTo(tierHex(pointsSummary.tierName), tc.track) : tc.ink }}>
+                    {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
+                      ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
+                      : "Highest tier"}
+                  </span>
+                  <ChevronRight size={15} className="text-charcoal-faint" aria-hidden />
                 </span>
               </div>
-            );
-          })}
-        </div>
-
-        {/* SAYING SO, RATHER THAN IMPLYING ONE. The row that used to sit under
-            this hero read "Your N-day streak unlocked a reward / 10% off your
-            next membership at partner gyms", and named a discount, a partner
-            and a transaction that did not exist. Points are real and a tier is
-            real; a reward to spend them on is not, yet. */}
-        <p className="mt-[11px] text-[10px] leading-[1.4] text-white/[0.66] dark:text-white">
-          Points count toward your tier. Rewards for your points are coming soon.
-        </p>
-      </div>
-      )}
+              <div className="h-[5px] rounded-full overflow-hidden mt-3" style={{ background: tc.track }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${tierProgress(pointsSummary) * 100}%`,
+                    background: tc.solid,
+                    transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)",
+                  }}
+                />
+              </div>
+              {/* WHERE THE BALANCE CAME FROM: the ledger's own sums by source;
+                  "other" only when a source outside these two credits anything. */}
+              <p className="mt-2.5 text-[11px] font-semibold text-charcoal-faint">
+                {pointsSummary.achievementPoints.toLocaleString()} from achievements · {pointsSummary.referralPoints.toLocaleString()} from referrals
+                {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString()} other` : ""}
+              </p>
+              {/* SAYING SO, RATHER THAN IMPLYING ONE: points and a tier are
+                  real; a reward to spend them on is not, yet. */}
+              <p className="mt-1.5 text-[11px] text-charcoal-faint">Rewards for your points are coming soon.</p>
+            </button>
+          );
+        })()}
 
       {/* MO8.1 reward row, in the handover's design, shown ONLY for a reward
           this user has really earned. There is no source yet (see
@@ -215,6 +175,7 @@ export default function Marketplace() {
           category each with their own selectable button" — every category
           is its own directly-tappable button again, no picker sheet
           in between. */}
+      {/* Kept below the tabs (B28): the only way into the category pages. */}
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">More categories</p>
       <div className="grid grid-cols-2 gap-[7px] mb-[13px]">
         {marketplaceCategories

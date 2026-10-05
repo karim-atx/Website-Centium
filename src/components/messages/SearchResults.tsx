@@ -21,8 +21,10 @@ export const SearchResults: React.FC<{
   hasMore: boolean;
   loadingMore: boolean;
   onMore: () => void;
-}> = ({ hits, query, titleFor, onOpen, hasMore, loadingMore, onMore }) => (
-  <div className="flex flex-col">
+  /** MO1.2.1.3.2 (search in one chat): the results in a card. */
+  card?: boolean;
+}> = ({ hits, query, titleFor, onOpen, hasMore, loadingMore, onMore, card }) => (
+  <div className={card ? "flex flex-col rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-3" : "flex flex-col"}>
     {hits.map((h) => {
       const s = snippetFor(h.matchedIn === "text" ? h.text ?? "" : h.attachmentName ?? "", query);
       return (
@@ -30,7 +32,7 @@ export const SearchResults: React.FC<{
           key={h.messageId}
           type="button"
           onClick={() => onOpen(h)}
-          className="tap w-full text-left min-h-[56px] py-2.5 px-1 border-b border-charcoal/[0.06] flex flex-col gap-0.5"
+          className={`tap w-full text-left min-h-[56px] py-2.5 px-1 border-b border-charcoal/[0.06] flex flex-col gap-0.5 ${card ? "last-of-type:border-b-0" : ""}`}
         >
           <span className="flex items-baseline justify-between gap-2">
             <span className="text-sm font-bold text-charcoal truncate">{titleFor(h)}</span>

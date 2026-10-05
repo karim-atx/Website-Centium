@@ -10,6 +10,7 @@ import { usePinRealtime } from "../../hooks/usePinRealtime";
 import { useThreadRealtime } from "../../hooks/useThreadRealtime";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
+import { PopupMenu } from "../ui/PopupMenu";
 import { FileViewerSheet } from "../health/FileViewerSheet";
 import { InlineImage } from "./InlineImage";
 import { BlockSheet, ReportSheet } from "./ConversationSafety";
@@ -152,6 +153,18 @@ const SAFETY_POLL_MS = 60000;
  * is the one place latency is felt; an inbox refreshing on its own is requests
  * spent on something nobody is reading.
  */
+/** "Today", "Yesterday", a weekday this week, else "Sep 28" (with the year if not this one). */
+function dayChip(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((start(now) - start(d)) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days > 1 && days < 7) return d.toLocaleDateString("en-US", { weekday: "long" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
+}
+
 export const ThreadView: React.FC<{
   thread: MessageThread;
   /** The reader's own mute/pin/archive for this chat; see Chat info. */
@@ -331,7 +344,8 @@ export const ThreadView: React.FC<{
   /** Message info (sent, delivered, read) for one of your own messages. */
   const [infoFor, setInfoFor] = useState<Message | null>(null);
   /** Photo or document, chosen from the paperclip. */
-  const [attachMenu, setAttachMenu] = useState(false);
+  // The paperclip, while the attach popup is open above it; null when closed.
+  const [attachAnchor, setAttachAnchor] = useState<HTMLElement | null>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   /**
    * Reactions on the loaded messages, keyed by message id. Re-read whenever the
@@ -1123,9 +1137,10 @@ export const ThreadView: React.FC<{
   })();
 
   return (
-    <div className="flex flex-col min-h-[60dvh]">
+    <div className="flex flex-col min-h-[calc(100dvh-136px)]">
       {infoOpen && authUserId ? (
         <ChatInfo
+          online={theyAreOnline}
           thread={thread}
           authUserId={authUserId}
           settings={settings}
@@ -1199,8 +1214,13 @@ export const ThreadView: React.FC<{
             <p className="text-sm text-charcoal-faint text-center py-8">No messages match "{searchTerm}".</p>
           )}
           {searchTerm && searchHits.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-3.5 flex flex-col gap-2">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary-dark px-1">
+                {searchHits.length}
+                {searchMore ? "+" : ""} {searchHits.length === 1 && !searchMore ? "message" : "messages"}
+              </p>
               <SearchResults
+                card
                 hits={searchHits}
                 query={searchTerm}
                 titleFor={(h) => (h.senderId === authUserId ? "You" : thread.participantName)}
@@ -1218,7 +1238,9 @@ export const ThreadView: React.FC<{
       )}
       {!(searchOpen && searchTerm) && (
       <>
-      <div className={`flex items-center gap-2.5 mb-4 ${searchOpen ? "hidden" : ""}`}>
+      <div
+        className={`sticky top-0 z-20 -mx-4 px-4 pt-[max(env(safe-area-inset-top),8px)] pb-3 mb-3 bg-cream border-b border-charcoal/[0.06] flex items-center gap-2.5 ${searchOpen ? "hidden" : ""}`}
+      >
         <button
           onClick={onBack}
           aria-label="Back to conversations"
@@ -1249,7 +1271,7 @@ export const ThreadView: React.FC<{
           </span>
           )}
           <span className="flex flex-col min-w-0">
-            <span className="text-[15px] font-bold text-charcoal truncate">{groupName}</span>
+            <span className="text-[14.5px] font-bold text-charcoal truncate">{groupName}</span>
             {isGroup ? (
               typingName ? (
                 <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
@@ -1265,7 +1287,7 @@ export const ThreadView: React.FC<{
               )
             ) : (
               (theyAreTyping || theyAreOnline) && (
-                <span className="text-xs font-semibold" style={{ color: "#2E7D57" }}>
+                <span className="text-[11.5px] font-semibold" style={{ color: "#2E7D57" }}>
                   {theyAreTyping ? "typing…" : "Online"}
                 </span>
               )
@@ -1296,6 +1318,14 @@ export const ThreadView: React.FC<{
             </button>
           </>
         )}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          aria-label="Search this chat"
+          className="tap w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
+        >
+          <Search size={17} strokeWidth={1.75} />
+        </button>
       </div>
 
       {/* WHO THIS IS, stated rather than implied by a name in the header.
@@ -1391,8 +1421,15 @@ export const ThreadView: React.FC<{
           );
           const myReaction = mineReactions.find((x) => x.userId === authUserId)?.emoji ?? null;
           const tick = m.readAt ? "read" : m.deliveredAt ? "delivered" : "sent";
+          const day = dayChip(m.createdAt);
+          const newDay = index === 0 || dayChip(messages[index - 1].createdAt) !== day;
           return (
             <div key={m.id} className="flex flex-col gap-1">
+              {newDay && (
+                <p className="self-center text-[10.5px] font-bold text-charcoal-faint bg-cream-soft rounded-full px-3 py-[5px] my-1.5">
+                  {day}
+                </p>
+              )}
               {joinEvents.at[m.id]?.map((label, i) => (
                 <p key={i} className="self-center text-xs text-charcoal-soft bg-cream-card rounded-full px-3 py-[5px] my-0.5">
                   {label}
@@ -1419,13 +1456,13 @@ export const ThreadView: React.FC<{
                   e.preventDefault();
                   setActionsFor(m);
                 }}
-                className={`max-w-[78%] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words select-none transition-shadow flex flex-col gap-1 ${
+                className={`max-w-[78%] px-3 py-[9px] text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words select-none transition-shadow flex flex-col gap-1 ${
                   mine
-                    ? "self-end rounded-[16px_16px_4px_16px] bg-bubble-sent text-white dark:text-[#0D0B1A]"
+                    ? "self-end rounded-[20px_20px_4px_20px] bg-bubble-sent text-white dark:text-[#0D0B1A]"
                     : // Support messages keep the teal the Admin console gives
                       // them. The light text colour is corrected to clear AA on
                       // teal-pale; the dark one already does.
-                      `self-start rounded-[16px_16px_16px_4px] ${
+                      `self-start rounded-[20px_20px_20px_4px] ${
                         fromSupport
                           ? "bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
                           : "bg-cream-soft text-charcoal"
@@ -1675,6 +1712,8 @@ export const ThreadView: React.FC<{
           </div>
         </div>
       ) : (
+      <>
+      <div className="flex-1" aria-hidden />
       <div className={`sticky ${footerBottom} bg-cream pt-2`}>
       {editing && (
         <div className="flex items-center gap-2 rounded-[10px] bg-cream-soft px-2.5 py-1.5 mb-2">
@@ -1734,23 +1773,25 @@ export const ThreadView: React.FC<{
               }}
             />
             <button
-              onClick={() => setAttachMenu(true)}
+              onClick={(e) => setAttachAnchor(e.currentTarget)}
               disabled={sending}
               aria-label="Attach a photo or document"
-              className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 hover:bg-cream-soft disabled:opacity-40"
+              aria-haspopup="menu"
+              aria-expanded={!!attachAnchor}
+              className="tap w-11 h-11 rounded-full border border-charcoal/10 bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-40"
             >
-              <Paperclip size={16} />
+              <Paperclip size={17} strokeWidth={1.75} />
             </button>
           </>
         )}
         {recorder.recording ? (
           <div
-            className={`flex-1 flex items-center gap-2 rounded-full px-4 py-2.5 ${
+            className={`flex-1 h-12 flex items-center gap-2 rounded-full px-4 ${
               willCancel ? "bg-status-high-bg" : "bg-cream-soft"
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-status-high animate-pulse shrink-0" />
-            <span className="text-sm font-semibold tabular-nums text-charcoal">
+            <span className="text-[13px] font-bold tabular-nums text-status-high">
               {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, "0")}
             </span>
             <span className="text-[11px] text-charcoal-faint truncate">
@@ -1769,7 +1810,7 @@ export const ThreadView: React.FC<{
               if (e.key === "Enter") void send();
             }}
             placeholder={isGroup ? "Message the group" : "Message…"}
-            className="flex-1 rounded-full bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="flex-1 min-w-0 h-11 rounded-full bg-cream-soft border border-charcoal/10 px-4 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         )}
 
@@ -1796,12 +1837,13 @@ export const ThreadView: React.FC<{
           onClick={() => void send()}
           disabled={sending || !draft.trim()}
           aria-label="Send message"
-          className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
+          className="tap w-11 h-11 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
         >
           <Send size={16} />
         </button>
       </div>
       </div>
+      </>
       )}
       </>
       )}
@@ -1851,35 +1893,26 @@ export const ThreadView: React.FC<{
         />
       )}
 
-      <BottomSheet open={attachMenu} onClose={() => setAttachMenu(false)} title="Send">
-        <div className="flex flex-col animate-fade-slide-up">
-          <button
-            type="button"
-            onClick={() => {
-              setAttachMenu(false);
-              fileInputRef.current?.click();
-            }}
-            className="tap w-full flex items-center gap-3 px-1 min-h-[52px] text-left"
-          >
-            <ImageIcon size={18} className="text-charcoal-soft shrink-0" />
-            <span className="text-sm font-semibold text-charcoal">Photo</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAttachMenu(false);
-              docInputRef.current?.click();
-            }}
-            className="tap w-full flex items-start gap-3 px-1 py-3 min-h-[52px] text-left"
-          >
-            <FileText size={18} className="text-charcoal-soft shrink-0 mt-0.5" />
-            <span>
-              <span className="block text-sm font-semibold text-charcoal">Document</span>
-              <span className="block text-xs text-charcoal-soft">PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB</span>
-            </span>
-          </button>
-        </div>
-      </BottomSheet>
+      <PopupMenu
+        open={!!attachAnchor}
+        onClose={() => setAttachAnchor(null)}
+        anchor={attachAnchor}
+        width={260}
+        align="left"
+        options={[
+          { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },
+          {
+            value: "document",
+            label: "Document",
+            icon: <FileText size={15} strokeWidth={1.75} />,
+            note: "PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB",
+          },
+        ]}
+        onSelect={(v) => {
+          setAttachAnchor(null);
+          (v === "photo" ? fileInputRef : docInputRef).current?.click();
+        }}
+      />
 
       {/* MESSAGE INFO, for your own messages. Delivered and read are stored
           only where both people allow read receipts, so a dash can mean

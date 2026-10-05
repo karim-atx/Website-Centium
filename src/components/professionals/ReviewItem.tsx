@@ -1,5 +1,5 @@
 import React from "react";
-import { Star } from "lucide-react";
+import { Star, User } from "lucide-react";
 import type { ReviewRow } from "../../services/professional-reviews";
 
 // One review, rendered the same way everywhere it appears: the listing's
@@ -19,6 +19,44 @@ const stars = (rating: number, size: number) =>
     <Star key={i} size={size} aria-hidden className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
   ));
 
+/** The words, any moderator note, the professional's reply and the actions: shared by both layouts. */
+const Body: React.FC<{
+  review: ReviewRow;
+  redacted: boolean;
+  replyLabel: string;
+  actions?: React.ReactNode;
+  size: string;
+}> = ({ review, redacted, replyLabel, actions, size }) => {
+  const reply = review.reply;
+  return (
+    <>
+        {redacted ? (
+          // Not counted anywhere: professional_rating_summary leaves redacted
+          // reviews out of the average and the count.
+          <p className="text-charcoal-faint italic" style={{ fontSize: size }}>A moderator removed this review. It no longer counts toward the rating.</p>
+        ) : (
+          review.body && <p className="text-charcoal-soft leading-relaxed whitespace-pre-line break-words" style={{ fontSize: size }}>{review.body}</p>
+        )}
+        {reply && (
+          <div className="mt-2.5 ml-1 pl-3 border-l-2 border-primary/30">
+            <p className="flex items-center gap-2 text-[11px] font-bold text-charcoal-soft">
+              {replyLabel}
+              {reply.editedAt && !reply.redactedAt && (
+                <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
+              )}
+            </p>
+            {reply.redactedAt ? (
+              <p className="text-[13px] text-charcoal-faint italic">A moderator removed this reply. Only you can see that it was here.</p>
+            ) : (
+              <p className="text-[13px] text-charcoal-soft leading-relaxed whitespace-pre-line break-words">{reply.body}</p>
+            )}
+          </div>
+        )}
+        {actions && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">{actions}</div>}
+    </>
+  );
+};
+
 export const ReviewItem: React.FC<{
   review: ReviewRow;
   /** Shown above the stars. Falls back to "A client" — see services/professional-reviews. */
@@ -28,9 +66,44 @@ export const ReviewItem: React.FC<{
   replyLabel?: string;
   /** Report, reply and the like, under the review. */
   actions?: React.ReactNode;
-}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions }) => {
+  /**
+   * "row" (MO1.2.1.1, the reviews page): an avatar, the name, then stars and
+   * the date on one line. The name stays the shipped rule (B10): a first name
+   * only when the reviewer opted in, else "A client" with a plain person icon.
+   */
+  layout?: "default" | "row";
+}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default" }) => {
   const redacted = !!review.redactedAt;
-  const reply = review.reply;
+  if (layout === "row") {
+    const named = !!review.reviewerName;
+    return (
+      <div className="flex gap-3">
+        <span
+          className="w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center shrink-0 text-[12px] font-bold text-charcoal-soft"
+          aria-hidden
+        >
+          {named ? review.reviewerName!.trim().charAt(0).toUpperCase() : <User size={15} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[13px] font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
+            {review.editedAt && !redacted && (
+              <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide shrink-0">Edited</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 mb-1.5">
+            <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
+              {stars(review.rating, 11)}
+            </span>
+            <span className="text-[11px] text-charcoal-faint">
+              {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </span>
+          </div>
+          <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size="13px" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
@@ -44,29 +117,7 @@ export const ReviewItem: React.FC<{
         )}
       </div>
       {showName && <p className="text-xs font-semibold text-charcoal-soft mb-0.5">{review.reviewerName ?? "A client"}</p>}
-      {redacted ? (
-        // Not counted anywhere: professional_rating_summary leaves redacted
-        // reviews out of the average and the count.
-        <p className="text-sm text-charcoal-faint italic">A moderator removed this review. It no longer counts toward the rating.</p>
-      ) : (
-        review.body && <p className="text-sm text-charcoal-soft leading-relaxed whitespace-pre-line break-words">{review.body}</p>
-      )}
-      {reply && (
-        <div className="mt-2.5 ml-1 pl-3 border-l-2 border-primary/30">
-          <p className="flex items-center gap-2 text-[11px] font-bold text-charcoal-soft">
-            {replyLabel}
-            {reply.editedAt && !reply.redactedAt && (
-              <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
-            )}
-          </p>
-          {reply.redactedAt ? (
-            <p className="text-[13px] text-charcoal-faint italic">A moderator removed this reply. Only you can see that it was here.</p>
-          ) : (
-            <p className="text-[13px] text-charcoal-soft leading-relaxed whitespace-pre-line break-words">{reply.body}</p>
-          )}
-        </div>
-      )}
-      {actions && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">{actions}</div>}
+      <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size="14px" />
     </div>
   );
 };

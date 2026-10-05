@@ -6,6 +6,8 @@ import { useApp } from "../../context/AppContext";
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  /** A subtitle colour other than the faint grey (MO1.2.1.1: the professional's type colour). */
+  subtitleColor?: string;
   right?: React.ReactNode;
   // V4: pages reached from More (Mind/Professionals/Explore) have no other
   // way back except the bottom nav — show an explicit back chevron instead.
@@ -20,7 +22,7 @@ interface PageHeaderProps {
   eyebrow?: string;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, right, showBack, onBack, eyebrow }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow }) => {
   const navigate = useNavigate();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
@@ -46,7 +48,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, right, 
             </p>
           )}
           <h1 className="font-display text-[27px] font-bold tracking-[-0.022em] text-charcoal">{title}</h1>
-          {subtitle && <p className="text-[13px] font-medium text-charcoal-faint mt-1.5">{subtitle}</p>}
+          {subtitle && (
+            <p className={`text-[13px] font-medium mt-1.5 ${subtitleColor ? "" : "text-charcoal-faint"}`} style={subtitleColor ? { color: subtitleColor } : undefined}>
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
       {right}
