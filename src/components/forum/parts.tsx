@@ -136,22 +136,27 @@ export function HeldNote() {
   );
 }
 
-/** A filter or category chip (design screens 1 and 3). */
+/**
+ * A filter or category chip (design screens 1 and 3). `inStrip` is mobile
+ * v5.1 MO1.3's filter strip: 32 pt, radius 12, 12 pt text, same colours.
+ */
 export function ForumChip({
   active,
   onClick,
   children,
+  inStrip,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  inStrip?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="tap h-[34px] rounded-full px-[14px] text-[13px] shrink-0"
+      className={clsx("tap shrink-0", inStrip ? "h-8 rounded-xl px-3 text-[12px]" : "h-[34px] rounded-full px-[14px] text-[13px]")}
       style={
         active
           ? { background: fv("accent"), color: fv("on-accent"), fontWeight: 700, border: "none" }

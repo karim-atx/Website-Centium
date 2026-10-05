@@ -3,7 +3,9 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import {
   fetchAuthors,
+  fetchMyLikes,
   fetchThreads,
+  likeThread,
   signPhotos,
   THREAD_PAGE,
   UNKNOWN_AUTHOR,
@@ -12,6 +14,8 @@ import {
 } from "../../services/forum";
 import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
+import { useIsDark } from "../../hooks/useIsDark";
+import { categoryColours, orderCategories, type CategoryColours } from "./categoryColour";
 import { WarningNotice } from "./WarningNotice";
 import {
   AuthorInitial,
@@ -24,7 +28,13 @@ import {
   ReplyIcon,
 } from "./parts";
 
-// Design screen 1: the forum list.
+// Design screen 1: the forum list, restyled to mobile v5.1 MO1.3.
+//
+// LIGHT MODE KEEPS THE FORUM'S OWN COLOURS (the --forum-* palette); the new
+// parts are the category colours (the card's edge and its pill, A20), the
+// round New post button and tappable likes (A21). Everything the design does
+// not draw is kept: the moderator warning, the held section, "Show older
+// posts", photos, recovery-mode hiding and the empty state (A25).
 //
 // RECOVERY-SENSITIVE MODE IS APPLIED HERE, ON THE DEVICE. The fetch below is
 // the same whether the mode is on or off (every category, the same columns,
@@ -34,12 +44,14 @@ import {
 // would hide is never shown for a moment first.
 
 export function ForumHome({
+  userId,
   categories,
   nickname,
   isProfessional,
   recoveryOn,
   recoveryPending,
 }: {
+  userId: string;
   categories: ForumCategory[];
   nickname: string | null;
   isProfessional: boolean;
@@ -55,10 +67,13 @@ export function ForumHome({
   const [photos, setPhotos] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<{ key: string | null; message: string } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [likes, setLikes] = useState<Set<string>>(new Set());
   const seq = useRef(0);
+  const dark = useIsDark();
 
   const byKey = useMemo(() => new Map(categories.map((c) => [c.key, c])), [categories]);
-  const chips = filterChips(categories, recoveryOn);
+  // The design's order (A20): All · Nutrition · Workouts · Progress · Motivation.
+  const chips = orderCategories(filterChips(categories, recoveryOn));
   // A chip recovery mode hides can't stay selected once the mode comes on:
   // the list falls back to All.
   const activeFilter = filter && recoveryOn && hiddenInRecovery(byKey.get(filter)) ? null : filter;
@@ -67,12 +82,14 @@ export function ForumHome({
   const shownError = error && error.key === activeFilter ? error.message : null;
 
   const decorate = useCallback(async (list: ForumThread[]) => {
-    const [a, p] = await Promise.all([
+    const [a, p, l] = await Promise.all([
       fetchAuthors(list.map((t) => t.id), []),
       signPhotos(list.map((t) => t.photoPath).filter((x): x is string => !!x)),
+      fetchMyLikes(list.map((t) => t.id)),
     ]);
     setAuthors((prev) => new Map([...prev, ...a]));
     setPhotos((prev) => new Map([...prev, ...p]));
+    setLikes((prev) => new Set([...prev, ...l]));
   }, []);
 
   useEffect(() => {
@@ -109,20 +126,45 @@ export function ForumHome({
     setLoadingMore(false);
   };
 
+  // A like on the list (A21), optimistic: the count and the heart change at
+  // once and go back if the write fails.
+  const toggleLike = async (t: ForumThread) => {
+    const next = !likes.has(t.id);
+    const bump = (d: number) =>
+      setPage((pg) => pg && { ...pg, threads: pg.threads.map((x) => (x.id === t.id ? { ...x, reactionCount: Math.max(0, x.reactionCount + d) } : x)) });
+    const mark = (on: boolean) =>
+      setLikes((prev) => {
+        const s = new Set(prev);
+        if (on) s.add(t.id);
+        else s.delete(t.id);
+        return s;
+      });
+    mark(next);
+    bump(next ? 1 : -1);
+    const r = await likeThread(t.id, userId, next);
+    if (!r.ok) {
+      mark(!next);
+      bump(next ? -1 : 1);
+      setError({ key: activeFilter, message: r.message });
+    }
+  };
+
   const shown = (threads ?? []).filter((t) => !(recoveryOn && hiddenInRecovery(byKey.get(t.categoryKey))));
   const held = shown.filter((t) => t.status === "held");
   const feed = shown.filter((t) => t.status !== "held");
 
+  // MO1.3 #11: a round 56 pt button with a Plus (was an extended "New post"
+  // pill); the label moves to aria-label.
   const fab = (
     <Link
       to="/app/forum/new"
-      className="tap fixed z-30 h-14 rounded-[18px] flex items-center gap-2 px-5 text-[15px] font-extrabold no-underline shadow-fab bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:right-8"
+      aria-label="New post"
+      className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline shadow-fab bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:right-8"
       style={{ background: fv("accent"), color: fv("on-accent") }}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
         <path d="M12 5v14M5 12h14" />
       </svg>
-      New post
     </Link>
   );
 
@@ -136,12 +178,18 @@ export function ForumHome({
           ))}
         </div>
       ) : (
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="group" aria-label="Categories">
-          <ForumChip active={activeFilter === null} onClick={() => setFilter(null)}>
+        // MO1.3 #3: the strip runs off the right edge (radius 16 0 0 16).
+        <div
+          className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
+          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
+          role="group"
+          aria-label="Categories"
+        >
+          <ForumChip inStrip active={activeFilter === null} onClick={() => setFilter(null)}>
             All
           </ForumChip>
           {chips.map((c) => (
-            <ForumChip key={c.key} active={activeFilter === c.key} onClick={() => setFilter(c.key)}>
+            <ForumChip inStrip key={c.key} active={activeFilter === c.key} onClick={() => setFilter(c.key)}>
               {c.name}
             </ForumChip>
           ))}
@@ -160,9 +208,16 @@ export function ForumHome({
         </div>
       )}
 
-      <div className="text-xs leading-[1.5] rounded-2xl px-[14px] py-3" style={{ background: fv("rules-bg"), color: fv("rules-ink") }}>
-        Be kind, share experience rather than medical advice, and report anything that worries you. Posts here aren't a
-        substitute for a doctor.
+      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. */}
+      <div
+        className="flex gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
+        style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgba(174,161,220,0.35)" }}
+      >
+        <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
+        <span>
+          <strong className="font-extrabold">Community rules:</strong> Be kind, share experience rather than medical
+          advice, and report anything that worries you. Posts here aren't a substitute for a doctor.
+        </span>
       </div>
 
       {shownError && (
@@ -210,6 +265,9 @@ export function ForumHome({
                   author={authors.get(t.id) ?? UNKNOWN_AUTHOR}
                   categoryName={byKey.get(t.categoryKey)?.name ?? ""}
                   photoUrl={t.photoPath ? photos.get(t.photoPath) ?? null : null}
+                  colours={categoryColours(t.categoryKey, dark)}
+                  liked={likes.has(t.id)}
+                  onLike={() => void toggleLike(t)}
                   onOpen={() => navigate(`/app/forum/post/${t.id}`)}
                 />
               )
@@ -239,20 +297,33 @@ export function ForumHome({
   );
 }
 
+/** "Pinned · 40d" or "38d ago" (MO1.3); other ages ("Yesterday", a date) as they are. */
+function metaLine(thread: ForumThread): string {
+  const age = forumAge(thread.createdAt);
+  if (thread.pinned) return `Pinned · ${age}`;
+  return /^d+[mhd]$/.test(age) ? `${age} ago` : age;
+}
+
 function ThreadCard({
   thread,
   author,
   categoryName,
   photoUrl,
+  colours,
+  liked,
+  onLike,
   onOpen,
 }: {
   thread: ForumThread;
   author: Author;
   categoryName: string;
   photoUrl: string | null;
+  colours: CategoryColours;
+  liked: boolean;
+  onLike: () => void;
   onOpen: () => void;
 }) {
-  const meta = [categoryName, forumAge(thread.createdAt), thread.pinned ? "pinned" : null].filter(Boolean).join(" · ");
+  const replies = `${thread.replyCount} ${thread.replyCount === 1 ? "reply" : "replies"}`;
   return (
     <div
       role="link"
@@ -261,19 +332,31 @@ function ThreadCard({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen();
       }}
-      className="tap cursor-pointer rounded-[18px] p-[14px] flex flex-col gap-2"
-      style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}
+      className="tap cursor-pointer rounded-[20px] p-4 flex flex-col gap-2.5"
+      // MO1.3 #6–10: the card's left edge in the category's colour (A20).
+      style={{ background: fv("card"), border: `1px solid ${fv("border")}`, borderLeft: `3px solid ${colours.strong}` }}
     >
       <div className="flex items-center gap-2.5">
         <AuthorInitial author={author} identity={thread.identity} size={36} />
-        <div className="grow min-w-0 flex flex-col gap-0.5">
+        <div className="grow min-w-0 flex flex-col gap-1">
           <AuthorName author={author} size={14} />
-          <span className="text-xs" style={{ color: fv("muted") }}>
-            {meta}
+          <span className="flex items-center gap-1.5 flex-wrap">
+            {categoryName && (
+              <span
+                className="inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10.5px] font-bold"
+                style={{ background: colours.pill, color: colours.ink }}
+              >
+                <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: colours.ink }} />
+                {categoryName}
+              </span>
+            )}
+            <span className="inline-flex items-center h-5 px-2 rounded-full text-[10.5px] font-semibold" style={{ background: fv("track"), color: fv("muted") }}>
+              {metaLine(thread)}
+            </span>
           </span>
         </div>
       </div>
-      <div className="text-base font-extrabold [overflow-wrap:anywhere]">{thread.title}</div>
+      <div className="text-[14.5px] font-bold leading-snug [overflow-wrap:anywhere]">{thread.title}</div>
       {thread.body && (
         <div className="text-[13px] leading-[1.5] line-clamp-2 [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
           {thread.body}
@@ -285,11 +368,21 @@ function ThreadCard({
         </div>
       )}
       <div className="flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
-        <span className="flex gap-[5px] items-center" aria-label={`${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}>
-          <HeartIcon color={fv("muted")} /> {thread.reactionCount}
-        </span>
-        <span className="flex gap-[5px] items-center">
-          <ReplyIcon color={fv("muted")} /> {thread.replyCount} {thread.replyCount === 1 ? "reply" : "replies"}
+        {/* Likes are tappable here now (A21), as on the post. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onLike();
+          }}
+          aria-pressed={liked}
+          aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
+          className="tap flex gap-[5px] items-center -my-2 py-2 pr-1 font-semibold"
+        >
+          <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} /> {thread.reactionCount}
+        </button>
+        <span className="flex gap-[5px] items-center font-semibold">
+          <ReplyIcon color={fv("muted")} /> {replies}
         </span>
       </div>
     </div>
