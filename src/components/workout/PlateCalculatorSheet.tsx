@@ -12,7 +12,7 @@ const PLATE: Record<number, { fill: string; text: string; h: number; w: number }
   25: { fill: "#C8403A", text: "#FFFFFF", h: 82, w: 13 },
   20: { fill: "#2E5F8A", text: "#FFFFFF", h: 82, w: 11 },
   15: { fill: "#D9A441", text: "#3F2A08", h: 73, w: 10 },
-  10: { fill: "#39845C", text: "#FFFFFF", h: 59, w: 9 }, // v5.1 R3: #3F9165 carried the white label at 3.85:1
+  10: { fill: "#3F9165", text: "#FFFFFF", h: 59, w: 9 },
   5: { fill: "#F4F4F2", text: "#4A443A", h: 42, w: 7 },
   2.5: { fill: "#2B2735", text: "#FFFFFF", h: 35, w: 6 },
   1.25: { fill: "#C9CCD2", text: "#4A443A", h: 29, w: 5 },
@@ -22,6 +22,9 @@ const SLEEVE = "#D6D3DB";
 const SHOULDER = "#9A96A3";
 const GRIP = "#B9B6C0";
 const KNURL = "#A7A3AF";
+// Dark mode's 10 kg plate: #3F9165 carries the white label at 3.85:1, so dark
+// mode uses #39845C (4.5:1). Light mode keeps the board's #3F9165.
+const plateFor = (kg: number, dark: boolean) => (dark && kg === 10 ? { ...PLATE[10], fill: "#39845C" } : PLATE[kg]);
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands): the sheet follows the v5.1
@@ -35,13 +38,13 @@ const PLATE_COLORS = {
   plateEdge: ["rgba(36,31,27,0.18)", "#808288"],
   swatchEdge: ["rgba(36,31,27,0.25)", "#808288"],
   unitTrack: ["#F0EDF9", "#303141"], // primary.tint
-  unitIdle: ["#7362A7", "#B7ABDE"], // primary.deep dark, 6.03:1 on the tint
+  unitIdle: ["#7D6BB5", "#B7ABDE"], // primary.deep dark, 6.03:1 on the tint
   otherBorder: ["#AEA1DC", "#9A8CD6"], // primary dark
-  pct: ["#7B65D5", "#B7ABDE"],
+  pct: ["#7D67D9", "#B7ABDE"],
   sliderFill: ["#AEA1DC", "#9A8CD6"],
   sliderTrack: ["#EDEDEF", "#3E4048"], // rgba(238,239,242,0.16) on the card, as the toggle's off track
   resultBox: ["#F3F1FC", "#303141"], // primary.tint
-  resultLabel: ["#725EC7", "#B7ABDE"],
+  resultLabel: ["#7D67D9", "#B7ABDE"],
   resultValue: ["#4A3AA0", "#C8BFE9"], // primary.deeper dark, 7.36:1
   resultSub: ["#5F5093", "#C8BFE9"],
   panelBorder: ["#EDEDEE", "rgba(238,239,242,0.08)"],
@@ -85,7 +88,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
     const out: React.ReactNode[] = [];
     let x = inner;
     stack.forEach((p, i) => {
-      const s = PLATE[p.look];
+      const s = plateFor(p.look, dark);
       const px = dir === 1 ? x - s.w : x;
       out.push(
         <g key={`p${dir}${i}`}>
@@ -349,7 +352,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
           {load && !barOnly ? (
             <div className="flex flex-wrap" style={{ gap: 8, marginTop: 10 }}>
               {load.plates.map((p) => {
-                const s = PLATE[unit === "kg" ? p.kg : nearestKgPlate(p.kg)];
+                const s = plateFor(unit === "kg" ? p.kg : nearestKgPlate(p.kg), dark);
                 return (
                   <span key={p.kg} className="flex items-center" style={{ gap: 6, background: "rgb(var(--c-cream-soft))", borderRadius: 8, padding: "6px 10px" }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: s.fill, border: `1px solid ${pc("swatchEdge", dark)}` }} />

@@ -61,11 +61,11 @@ const SS_BRACKET = "#DB885D";
  */
 const SESSION_COLORS = {
   danger: ["#B4372C", "#FF6B5E"],
-  addSet: ["#7D6BB5", "#B7ABDE"],
+  addSet: ["#AEA1DC", "#B7ABDE"],
   ssBadgeBg: ["#FBE7DC", "#4A3A37"],
   ssBadgeInk: ["#B4602F", "#E6A27F"],
   divider: ["#E0DFDF", "rgba(238,239,242,0.12)"],
-  uncheck: ["#8F8981", "#8A8698"],
+  uncheck: ["#C9C2B8", "#8A8698"],
   strike: ["#8A8887", "#8A8698"],
   fieldBorder: ["#E7E7EC", "rgba(238,239,242,0.10)"],
 } as const;
@@ -589,7 +589,7 @@ export const WorkoutSessionSheet: React.FC<{
           >
             <EllipsisVertical size={16} />
           </button>
-          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
+          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>
             {exIdx + 1} of {logged.length}
           </span>
         </div>
@@ -616,7 +616,7 @@ export const WorkoutSessionSheet: React.FC<{
           <>
             <div
               className="flex items-center uppercase"
-              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: "rgb(var(--c-charcoal-faint))" }}
+              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
             >
               <span style={{ width: 58 }}>Set</span>
               <span className="flex-1">Weight (kg)</span>
@@ -665,7 +665,7 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-faint))" }}>{asked} asked for · the rest are yours if you want them.</p>
+              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{asked} asked for · the rest are yours if you want them.</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
@@ -764,7 +764,7 @@ export const WorkoutSessionSheet: React.FC<{
             <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))", lineHeight: "19px" }}>
               {routineName}
             </p>
-            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))", lineHeight: "14px" }}>
+            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: "14px" }}>
               {started
                 ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
                 : elapsed > 0
@@ -923,7 +923,7 @@ export const WorkoutSessionSheet: React.FC<{
             onClick={() => void finishWorkout()}
             disabled={finished || saving}
             className="tap w-full flex items-center justify-center disabled:opacity-70"
-            style={{ gap: 8, height: 52, borderRadius: 14, background: playText(family), color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+            style={{ gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
           >
             {finished ? (
               "Workout Saved ✓"
@@ -1133,17 +1133,11 @@ export const WorkoutSessionSheet: React.FC<{
 };
 
 /** WO8: the plate calculator icon is a weight plate (assets/icons/plate-calculator.svg). */
-// WO1.2 handover note: "a gym plate with a bold rim, a thin inner ring, a
-// centre hole and two curved grip slots (no lines through the centre)". The
-// slots sit between rim and ring, above and below the hole, each an arc of
-// the plate drawn with round ends. No asset was supplied; drawn to the note.
 const PlateIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden>
-    <circle cx="12" cy="12" r="9.6" strokeWidth={2.2} />
-    <circle cx="12" cy="12" r="4.4" strokeWidth={1.2} />
-    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    <path d="M8.6 5.6 A7 7 0 0 1 15.4 5.6" strokeWidth={1.9} />
-    <path d="M8.6 18.4 A7 7 0 0 0 15.4 18.4" strokeWidth={1.9} />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5.2" style={{ strokeWidth: 1.4, opacity: 0.55 }} />
+    <circle cx="12" cy="12" r="1.8" />
   </svg>
 );
 
@@ -1192,7 +1186,8 @@ const SetRow: React.FC<{
     fontSize: 14,
     fontWeight: 600,
     ["--ph" as string]: ink,
-    ["--ph-opacity" as string]: placeholderOpacity(ink, field),
+    // The board's 46% in light mode (the CSS default); dark mode clears 4.5:1.
+    ...(dark ? { ["--ph-opacity" as string]: placeholderOpacity(ink, field) } : {}),
   };
   const label = s.setNumber;
 
@@ -1229,7 +1224,7 @@ const SetRow: React.FC<{
           ) : (
             <span style={{ fontSize: 10.5, fontWeight: 600, color: t?.label }}>{t?.short}</span>
           )}
-          <ChevronDown size={10} style={{ color: t?.label ?? "rgb(var(--c-charcoal-faint))" }} />
+          <ChevronDown size={10} style={{ color: t?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
         </span>
         <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
       </button>

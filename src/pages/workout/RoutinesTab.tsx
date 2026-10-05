@@ -28,7 +28,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 const ROUTINE_COLORS = {
   newFolder: ["#6B41EF", "#9A8CD6"],
   ongoing: ["#E9736A", "#EE8A82"],
-  meta: ["#726A61", "#B8B3C7"],
+  meta: ["#8C8378", "#B8B3C7"],
   checked: ["#AEA1DC", "#9A8CD6"],
   tick: ["#FFFFFF", "#121317"],
   off: ["#D6D2CB", "#4A4D57"],
@@ -455,8 +455,8 @@ export default function RoutinesTab() {
           global scope. */}
       <CyclePhaseStrip />
 
-      <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
-        <p className="section-label !border-b-0 !pb-0">Folders</p>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
         <button
           // Tapping it again closes the new-folder form, discarding the draft.
           onClick={() => {
@@ -530,7 +530,7 @@ export default function RoutinesTab() {
             can be dropped out of every folder. */}
         {(unfiled.length > 0 || draggingRoutine) && (
           <div data-flip="unfiled">
-            <p className="section-label mb-[9px]">Unfiled</p>
+            <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
             <div
               data-dnd-group=""
               className="flex flex-col gap-1.5"
@@ -576,12 +576,24 @@ export default function RoutinesTab() {
       <PinnedCta
         above={{
           label: "Browse starter programs",
-          icon: <Library size={17} className="text-charcoal-soft" />,
+          // Light mode keeps the colours of the Browse button this pinned one
+          // replaced (decision 15): the outline one when there are routines,
+          // and the empty card's filled primary one when there are none.
+          // Dark mode is the outline in both cases.
+          icon: <Library size={17} className={routines.length === 0 ? "text-white dark:text-charcoal-soft" : "text-charcoal-soft"} />,
+          className:
+            routines.length === 0
+              ? "!bg-primary !text-white !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-[rgba(143,104,246,0.28)]"
+              : undefined,
           onClick: () => setBrowseOpen(true),
         }}
         primary={{
           label: "Create routine",
           icon: <Plus size={15} />,
+          // Light mode keeps the colours of the Create routine button this
+          // pinned one replaced (#EFEEFD with #6B41EF ink, decision 15); dark
+          // mode is the filled primary.
+          className: "!bg-[#EFEEFD] !text-[#6B41EF] dark:!bg-primary-fill dark:!text-on-primary-fill",
           onClick: () => {
             setCreateFolder(null);
             setCreateOpen(true);
@@ -1226,7 +1238,7 @@ const RoutineRow: React.FC<{
           )}
           <button
             onClick={() => setAddExerciseOpen(true)}
-            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary-dark bg-cream-card hover:bg-primary-pale/40"
+            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary dark:text-primary-dark bg-cream-card hover:bg-primary-pale/40"
           >
             <Plus size={13} /> Add exercise
           </button>

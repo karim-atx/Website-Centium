@@ -404,7 +404,7 @@ export default function ExerciseDatabaseTab() {
           <div className="space-y-5">
             {groups.map((g, i) => (
               <div key={g.label ?? i}>
-                {g.label && <p className="section-label mb-2">{g.label}</p>}
+                {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
                 <div
                   className="overflow-hidden bg-cream-card divide-y divide-charcoal/[0.07]"
                   style={{ border: "1px solid rgb(var(--c-charcoal) / 0.11)", borderRadius: 18 }}
@@ -564,8 +564,8 @@ export default function ExerciseDatabaseTab() {
                     fontSize: 13,
                     whiteSpace: "nowrap",
                     ...(selected
-                      ? // Decision 7: primary-fill and its ink (#A092E0 carried white at 2.73:1).
-                        { background: "rgb(var(--c-primary-fill))", border: "1px solid rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700 }
+                      ? // The board's #A092E0 in light, primary-fill in dark.
+                        { background: "rgb(var(--c-fill-chip))", border: "1px solid rgb(var(--c-fill-chip))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700 }
                       : { background: "rgb(var(--c-surface-raised))", border: "1px solid rgb(var(--c-border-option))", color: "rgb(var(--c-charcoal))", fontWeight: 500 }),
                   }}
                 >

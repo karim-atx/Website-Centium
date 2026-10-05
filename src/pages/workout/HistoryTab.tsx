@@ -124,8 +124,8 @@ export default function HistoryTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      <div className="flex items-center justify-between pb-[7.5px] border-b-[1.5px] border-primary" style={{ marginBottom: 14 }}>
-        <p className="section-label !border-b-0 !pb-0">Summary</p>
+      <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Summary</p>
         <button
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           className="tap flex items-center bg-cream-card"
@@ -191,7 +191,7 @@ export default function HistoryTab() {
 
       {error && <p className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 10 }}>{error}</p>}
 
-      <p className="section-label" style={{ margin: "20px 0 10px" }}>
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide" style={{ margin: "20px 0 10px" }}>
         Logged sessions
       </p>
 
