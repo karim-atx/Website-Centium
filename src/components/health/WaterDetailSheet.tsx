@@ -75,7 +75,7 @@ export const WaterDetailSheet: React.FC<{ open: boolean; onClose: () => void }> 
 
         {exceeded && (
           <p className="flex items-center gap-1.5 text-xs font-semibold text-gold bg-gold-pale rounded-full px-3 py-1.5 w-fit mb-5 animate-fade-slide-up">
-            🎉 Goal exceeded — great hydration today!
+            🎉 Goal exceeded. Great hydration today!
           </p>
         )}
 

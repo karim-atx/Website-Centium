@@ -80,7 +80,7 @@ export const NewGroup: React.FC<{
         <button
           type="button"
           onClick={() => onCreated(createdId)}
-          className="tap h-[52px] rounded-2xl bg-primary text-white dark:text-[#0D0B1A] text-[15px] font-bold"
+          className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold"
         >
           Open the group
         </button>
@@ -120,7 +120,7 @@ export const NewGroup: React.FC<{
         type="button"
         onClick={() => void create()}
         disabled={!trimmed || busy}
-        className="tap h-[52px] rounded-2xl bg-primary text-white dark:text-[#0D0B1A] text-[15px] font-bold disabled:opacity-40 sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] lg:bottom-4"
+        className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold disabled:opacity-40 sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] lg:bottom-4"
       >
         {busy
           ? "Creating…"

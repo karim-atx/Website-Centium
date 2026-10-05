@@ -43,7 +43,7 @@ function describe(error: PostgrestError): string {
   // length. The UI refuses an unrated review and an over-long one before this
   // point, so reaching it means the client and the column drifted apart.
   if (code === "23514") {
-    return "That review couldn't be sent — check the rating and length, then try again.";
+    return "That review couldn't be sent. Check the rating and length, then try again.";
   }
   return "That review couldn't be sent. Check your connection and try again.";
 }
@@ -75,7 +75,7 @@ export async function submitReview(params: {
 
   const text = params.reviewText.trim();
   if (text.length > MAX_REVIEW_TEXT) {
-    return { ok: false, message: "That review is too long — please shorten it." };
+    return { ok: false, message: "That review is too long. Please shorten it." };
   }
 
   const { error } = await supabase.from("app_reviews").insert({

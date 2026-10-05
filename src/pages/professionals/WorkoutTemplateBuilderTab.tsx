@@ -268,14 +268,14 @@ export default function WorkoutTemplateBuilderTab() {
                         return (
                           <p key={a.id} className="text-xs text-charcoal-faint">
                             {who?.name ?? "A client"}
-                            {a.assignedDay ? ` — ${a.assignedDay}` : " — no day set"}
+                            {a.assignedDay ? ` · ${a.assignedDay}` : " · no day set"}
                           </p>
                         );
                       })}
                     </div>
                   )}
                   <div>
-                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
+                    <p className="section-label mb-1.5">
                       Exercises
                     </p>
                     {/* V10 (QA 10.0): "It should show the full details, not
@@ -314,7 +314,7 @@ export default function WorkoutTemplateBuilderTab() {
                     <p className="text-xs text-charcoal-faint">Not assigned to anyone yet.</p>
                   ) : (
                     <div>
-                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
+                      <p className="section-label mb-1.5">
                         Client activity
                       </p>
                       {/* WHAT THEY ACTUALLY LOGGED, or an honest silence.
@@ -537,7 +537,7 @@ export default function WorkoutTemplateBuilderTab() {
                   />
                   <button
                     onClick={() => addSubfolder(folder.id)}
-                    className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+                    className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
                   >
                     Add
                   </button>
@@ -582,7 +582,7 @@ export default function WorkoutTemplateBuilderTab() {
             </button>
             <button
               onClick={() => openCreateIn(null)}
-              className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
+              className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft"
               aria-label="New template"
             >
               <Plus size={18} />
@@ -599,7 +599,7 @@ export default function WorkoutTemplateBuilderTab() {
       )}
       {templatesError && !actionError && (
         <p className="text-[11.5px] font-semibold text-status-high mb-3">
-          Couldn't refresh your templates — showing what was saved on this device.
+          Couldn't refresh your templates. Showing what was saved on this device.
         </p>
       )}
 
@@ -612,7 +612,7 @@ export default function WorkoutTemplateBuilderTab() {
         {unfiledTemplates.map(templateCard)}
         {workoutTemplates.length === 0 && workoutTemplateFolders.length === 0 && (
           <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">No templates yet — build your first one.</p>
+            <p className="text-sm text-charcoal-faint">No templates yet. Build your first one.</p>
           </Card>
         )}
       </div>

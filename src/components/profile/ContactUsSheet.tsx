@@ -27,7 +27,7 @@ export const ContactUsSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           </button>
         ))}
         <p className="text-[11px] text-charcoal-faint text-center pt-2">
-          Prototype only — these don't connect to a real support channel yet.
+          Prototype only. These don't connect to a real support channel yet.
         </p>
       </div>
     </BottomSheet>

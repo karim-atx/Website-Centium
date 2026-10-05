@@ -208,7 +208,7 @@ export const ChatInfo: React.FC<{
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-xl font-extrabold text-charcoal">Chat info</h1>
+        <h1 className="text-[22px] leading-tight font-extrabold text-charcoal">Chat info</h1>
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
@@ -267,7 +267,7 @@ export const ChatInfo: React.FC<{
               }}
               className={`tap h-[34px] rounded-full px-3 text-[13px] ${
                 tab === t.value
-                  ? "bg-primary text-white dark:text-[#0D0B1A] font-bold"
+                  ? "bg-primary-fill text-on-primary-fill font-bold"
                   : "border border-charcoal/10 bg-cream-card text-charcoal font-semibold"
               }`}
             >

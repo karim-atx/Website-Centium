@@ -87,7 +87,7 @@ export const BP_HOW_TO_MEASURE_TITLE = "How to measure";
 export const BP_HOW_TO_MEASURE_STEPS: readonly string[] = [
   "Don't smoke, drink caffeine or exercise for 30 minutes beforehand.",
   "Empty your bladder and sit quietly for 5 minutes before you start.",
-  "Sit with your back supported and both feet flat on the floor — don't cross your legs.",
+  "Sit with your back supported and both feet flat on the floor. Don't cross your legs.",
   "Rest your arm on a flat surface with the cuff at heart height.",
   "Put the cuff on bare skin, not over clothing.",
   "Don't talk during the measurement.",

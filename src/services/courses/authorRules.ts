@@ -171,7 +171,7 @@ export function submitWarnings(course: { subtitle: string | null; learnPoints: s
   const empty = tree.modules.filter((m) => !tree.lessons.some((l) => l.moduleId === m.id));
   if (empty.length === 1) out.push(`“${empty[0].title}” has no lessons yet.`);
   else if (empty.length > 1) out.push(`${empty.length} weeks have no lessons yet.`);
-  if (!course.subtitle) out.push("There's no subtitle — it's the line under the title in the catalogue.");
+  if (!course.subtitle) out.push("There's no subtitle. It's the line under the title in the catalogue.");
   if (course.learnPoints.length === 0) out.push("“What you'll learn” is empty.");
   return out;
 }
@@ -195,7 +195,7 @@ export const RENAME_RESETS_PROGRESS =
 export const REVISION_EXPLAINER =
   "Your course stays live and unchanged while you edit this copy. Learners see the changes only once we've approved them.";
 
-export const WITHDRAW_EXPLAINER = "Your published course isn't affected — only these draft changes are lost.";
+export const WITHDRAW_EXPLAINER = "Your published course isn't affected. Only these draft changes are lost.";
 
 /** Words for a database refusal. Always returns something. */
 export function describeAuthorError(error: { code?: string; message?: string }, action: AuthorAction): string {
@@ -203,7 +203,7 @@ export function describeAuthorError(error: { code?: string; message?: string }, 
     case "ATX66":
       return "Only professionals with a verified licence can publish courses. Check your licence in Profile.";
     case "ATX70":
-      return "That isn't a link to a single YouTube video. Paste a youtube.com/watch, youtu.be or /embed link — not a playlist.";
+      return "That isn't a link to a single YouTube video. Paste a youtube.com/watch, youtu.be or /embed link, not a playlist.";
     case "ATX64":
       return "That file wasn't uploaded by you. Try choosing it again.";
     case "ATX67":
@@ -227,7 +227,7 @@ export function describeAuthorError(error: { code?: string; message?: string }, 
         ? "Add at least one lesson before submitting."
         : "That isn't a value this field accepts.";
     case "23514":
-      return "That doesn't fit — check the lengths and numbers, and try again.";
+      return "That doesn't fit. Check the lengths and numbers, and try again.";
     default:
       return "Something went wrong. Try again.";
   }

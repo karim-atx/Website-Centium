@@ -491,7 +491,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         setNotice({
           tone: "info",
           text: outcome.transcript
-            ? `Heard "${outcome.transcript}" — but no food in it. Try again, or add it manually.`
+            ? `Heard "${outcome.transcript}", but no food in it. Try again, or add it manually.`
             : "No food in that one. Try again, or add it manually.",
         });
         break;
@@ -754,7 +754,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       // Shown beside the serving label only when the spoken word was dropped.
       unitNote:
         item.spokenUnit && !item.unit
-          ? `Logged as ${item.quantity} serving${plural} — “${item.spokenUnit}” is not a unit this can convert`
+          ? `Logged as ${item.quantity} serving${plural}. “${item.spokenUnit}” is not a unit this can convert`
           : null,
       quantityLabel: item.unit && item.unit !== "serving" ? item.unit : `serving${plural}`,
     };
@@ -819,7 +819,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             </button>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">What did you eat?</p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Tap the mic and describe your meal naturally — Centium will find the foods for you to
+              Tap the mic and describe your meal naturally. Centium will find the foods for you to
               confirm.
             </p>
           </>
@@ -939,8 +939,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              We found — select what to add
+            <p className="section-label mb-2">
+              We found: select what to add
             </p>
             <div className="space-y-2 mb-4">
               {items.map((item, i) => {
@@ -1133,7 +1133,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                               />
                             ) : (
                               <p className="text-[11px] text-charcoal-faint">
-                                No per-nutrient data for this food yet — the calories and macros
+                                No per-nutrient data for this food yet. The calories and macros
                                 above are all there is.
                               </p>
                             )}
@@ -1174,7 +1174,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">
-              AI-identified from your description — review before adding. Estimates, not
+              AI-identified from your description. Review before adding. Estimates, not
               medical-grade data.
             </p>
           </div>

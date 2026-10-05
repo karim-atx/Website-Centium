@@ -237,8 +237,8 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   height: 29,
                   gap: 5,
                   borderRadius: 8,
-                  background: on ? "#AEA1DC" : "#F5F5F6",
-                  color: on ? "#FFFFFF" : "#5B5349",
+                  background: on ? "rgb(var(--c-primary-fill))" : "#F5F5F6",
+                  color: on ? "rgb(var(--c-on-primary-fill))" : "#5B5349",
                   fontSize: 12,
                   fontWeight: 600,
                   whiteSpace: "nowrap",
@@ -311,7 +311,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
         {locked && (
           <p className="text-[10.5px] text-charcoal-faint mt-2">
-            Locked — only your dietitian can edit this plan.
+            Locked: only your dietitian can edit this plan.
           </p>
         )}
       </section>
@@ -341,7 +341,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
               <>
                 <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
+                  Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.
                 </p>
               </>
             ) : (
@@ -408,7 +408,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
               <>
                 <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
+                  Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.
                 </p>
               </>
             ) : (
@@ -495,7 +495,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             }}
             disabled={locked}
             className="tap inline-flex items-center justify-center flex-none disabled:opacity-40 disabled:pointer-events-none"
-            style={{ ...ACTION, gap: 5, background: "#AEA1DC", color: "#FFFFFF" }}
+            style={{ ...ACTION, gap: 5, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))" }}
           >
             <Check size={13} /> Use custom
           </button>
@@ -511,7 +511,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             in the app. */}
         {(nutritionGoal.pregnancyKcal ?? 0) > 0 && (
           <p className="mt-2 text-[10.5px] leading-[1.4] text-charcoal-faint">
-            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy — {targets.calories} kcal in total. The
+            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy, {targets.calories} kcal in total. The
             pregnancy card at the top of this tab takes it off again.
           </p>
         )}
@@ -574,8 +574,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         {planError && <p className="text-[10.5px] font-semibold text-[#C0392B] mt-1.5">{planError}</p>}
         {!planError && nutritionGoal.planType === "existing" && (
           <p className="text-[10.5px] text-charcoal-faint mt-1.5">
-            {user.linkedProfessionalName} is responsible for your goals and macros while this plan is
-            active — weight goal, calorie target and macro distribution can only be changed by them.
+            {user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
         <PopupMenu
@@ -598,7 +597,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint mt-2"
           >
             <X size={12} />
-            {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active — incompatible Diary
+            {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active. Incompatible Diary
             items are highlighted. Tap to clear.
           </button>
         )}

@@ -92,7 +92,7 @@ export const AchievementUnlockSheet: React.FC = () => {
 
           <button
             onClick={dismissUnlock}
-            className="tap mt-5 w-full rounded-full bg-primary py-3 text-[13px] font-bold text-white"
+            className="tap mt-5 w-full rounded-full bg-primary-fill py-3 text-[13px] font-bold text-on-primary-fill"
           >
             {unlockQueue.length > 1 ? `Next (${unlockQueue.length - 1} more)` : "Nice"}
           </button>

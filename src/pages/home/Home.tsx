@@ -98,8 +98,7 @@ export default function Home() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-primary-deep-text mb-0.5">You're in a recovery-sensitive experience</p>
             <p className="text-xs text-charcoal-soft leading-relaxed">
-              Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile
-              — nothing you've logged is ever lost.
+              Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile. Nothing you've logged is ever lost.
             </p>
           </div>
           <button

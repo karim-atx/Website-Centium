@@ -395,7 +395,7 @@ async function capExceededMessage(): Promise<string> {
   if (!usage.ok) {
     return "You're out of storage space. Remove a file you no longer need, then try again.";
   }
-  return `You're out of storage space — ${humanSize(usage.usage.usedBytes)} of ${humanSize(
+  return `You're out of storage space: ${humanSize(usage.usage.usedBytes)} of ${humanSize(
     usage.usage.capBytes
   )} used. Remove a file you no longer need, then try again.`;
 }

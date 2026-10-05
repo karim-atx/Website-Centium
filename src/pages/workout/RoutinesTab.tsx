@@ -399,7 +399,7 @@ export default function RoutinesTab() {
                       if (subfolderName.trim()) run(addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor));
                       setAddingSubfolderTo(null);
                     }}
-                    className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+                    className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
                   >
                     Add
                   </button>
@@ -464,7 +464,7 @@ export default function RoutinesTab() {
         )}
         {routinesError && !actionError && (
           <p className="text-[11.5px] font-semibold text-status-high mb-3">
-            Couldn't refresh your routines — showing what was saved on this device.
+            Couldn't refresh your routines. Showing what was saved on this device.
           </p>
         )}
       </div>
@@ -492,7 +492,7 @@ export default function RoutinesTab() {
                 setNewFolderName("");
                 setNewFolderOpen(false);
               }}
-              className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+              className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
             >
               Add
             </button>
@@ -691,8 +691,7 @@ export default function RoutinesTab() {
             <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
               <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
               <p className="text-sm text-charcoal-soft mb-5">
-                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely — its
-                progress won't be saved.
+                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely. Its progress won't be saved.
               </p>
               <div className="flex gap-2.5">
                 <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
@@ -1149,7 +1148,7 @@ const RoutineRow: React.FC<{
                           <button
                             onClick={() => setReplaceTarget(ex.id)}
                             aria-label={`Replace ${ex.name}`}
-                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary text-white text-[10px] font-semibold"
+                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary-fill text-on-primary-fill text-[10px] font-semibold"
                           >
                             <Repeat size={14} />
                             Replace

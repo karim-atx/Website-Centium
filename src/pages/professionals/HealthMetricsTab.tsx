@@ -83,7 +83,7 @@ export default function HealthMetricsTab() {
                       readings shows a dash, never a zero. */}
                   {c.access.healthMetrics || c.access.weight || c.access.bodyMeasurements ? (
                     <div>
-                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                      <p className="section-label mb-2">
                         Logged
                       </p>
                       <div className="grid grid-cols-4 gap-2 text-center">
@@ -91,7 +91,7 @@ export default function HealthMetricsTab() {
                           <div className="bg-cream-soft rounded-xl py-2.5">
                             <Scale size={13} className="mx-auto mb-1 text-charcoal-soft" />
                             <p className="text-sm font-bold text-charcoal">
-                              {c.lastWeightKg != null ? `${c.lastWeightKg}kg` : "—"}
+                              {c.lastWeightKg != null ? `${c.lastWeightKg}kg` : "–"}
                             </p>
                           </div>
                         )}
@@ -101,7 +101,7 @@ export default function HealthMetricsTab() {
                             <p className="text-sm font-bold text-charcoal">
                               {c.measurements?.body_fat_pct
                                 ? `${c.measurements.body_fat_pct.value}%`
-                                : "—"}
+                                : "–"}
                             </p>
                           </div>
                         )}
@@ -110,7 +110,7 @@ export default function HealthMetricsTab() {
                             <div className="bg-cream-soft rounded-xl py-2.5">
                               <Moon size={13} className="mx-auto mb-1 text-charcoal-soft" />
                               <p className="text-sm font-bold text-charcoal">
-                                {c.vitals?.sleepHours != null ? `${c.vitals.sleepHours}h` : "—"}
+                                {c.vitals?.sleepHours != null ? `${c.vitals.sleepHours}h` : "–"}
                               </p>
                             </div>
                             <div className="bg-cream-soft rounded-xl py-2.5">
@@ -118,7 +118,7 @@ export default function HealthMetricsTab() {
                               <p className="text-sm font-bold text-charcoal">
                                 {c.vitals?.stepsAvg != null
                                   ? `${Math.round(c.vitals.stepsAvg / 1000)}k`
-                                  : "—"}
+                                  : "–"}
                               </p>
                             </div>
                           </>
@@ -139,7 +139,7 @@ export default function HealthMetricsTab() {
                   <ClientClinicalRecords client={c} onOpenFile={setViewing} />
 
                   <div>
-                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                    <p className="section-label mb-2">
                       Clinical notes
                     </p>
                     <div className="space-y-3">

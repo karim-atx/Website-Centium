@@ -703,7 +703,7 @@ export const HomeWidget: React.FC<{
                   </span>
                 ) : (
                   <span className="text-[10px] font-semibold text-center leading-snug text-team-teal-ink/[0.72] px-1">
-                    No workout planned — pick a routine
+                    No workout planned. Pick a routine
                   </span>
                 )}
               </div>
@@ -741,7 +741,7 @@ export const HomeWidget: React.FC<{
                     </>
                   ) : (
                     <p className="text-[13px] font-bold leading-snug text-charcoal">
-                      No workout planned — pick a routine
+                      No workout planned. Pick a routine
                     </p>
                   )}
                 </div>
@@ -792,7 +792,7 @@ export const HomeWidget: React.FC<{
                 </p>
                 {isLarge && (
                   <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">
-                    Meals, notes, and how you're feeling — no calorie counting required.
+                    Meals, notes, and how you're feeling, no calorie counting required.
                   </p>
                 )}
               </div>

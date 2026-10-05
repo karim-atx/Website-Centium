@@ -315,7 +315,7 @@ export const MethodSetupSheet: React.FC<{
         {/* Methods with no schedule say so, rather than showing an empty form. */}
         {!SCHEDULED_METHODS.includes(draft.method) && (
           <p className="mt-3 text-[11.5px] leading-relaxed text-charcoal-soft">
-            There's no schedule to keep for this one — it's recorded so the rest of the app knows
+            There's no schedule to keep for this one. It's recorded so the rest of the app knows
             what you use.
           </p>
         )}

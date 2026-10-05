@@ -123,7 +123,7 @@ export const AssignTemplateSheet: React.FC<{
               isPublic={template.isPublic}
             />
             <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-              This is a starter program from Centium. It can't be assigned or edited — duplicate it
+              This is a starter program from Centium. It can't be assigned or edited. Duplicate it
               into a template of your own first.
             </p>
           </>

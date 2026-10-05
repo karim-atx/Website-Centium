@@ -145,7 +145,7 @@ export const BarcodeScanner: React.FC<{
             onClick={submitTyped}
             disabled={!typed.trim()}
             className="tap flex-none disabled:opacity-50"
-            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
           >
             Use
           </button>

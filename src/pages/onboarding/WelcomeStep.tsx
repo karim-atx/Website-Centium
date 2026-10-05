@@ -72,16 +72,16 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
             All in one place.
           </h1>
           <p className="text-charcoal-soft text-[14.5px] leading-[1.6] font-medium max-w-[280px] mx-auto mb-[46px] text-pretty">
-            Food, fitness, health metrics and everything in between — built around you.
+            Food, fitness, health metrics and everything in between, built around you.
           </p>
           {launching ? (
-            <div className="w-full h-14 rounded-2xl bg-primary text-white dark:text-[#0D0B1A] flex items-center justify-center font-bold text-[15.5px] tracking-[-0.01em]">
+            <div className="w-full h-14 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center font-bold text-[15.5px] tracking-[-0.01em]">
               Get Started
             </div>
           ) : (
             <button
               onClick={handleGetStarted}
-              className="tap w-full h-14 rounded-2xl bg-primary text-white dark:text-[#0D0B1A] font-bold text-[15.5px] tracking-[-0.01em] shadow-[0_2px_10px_rgba(125,107,181,0.26)] dark:shadow-none"
+              className="tap w-full h-14 rounded-2xl bg-primary-fill text-on-primary-fill font-bold text-[15.5px] tracking-[-0.01em] shadow-[0_2px_10px_rgba(125,107,181,0.26)] dark:shadow-none"
             >
               Get Started
             </button>

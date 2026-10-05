@@ -84,7 +84,7 @@ const UpgradeFooter: React.FC<{ show?: boolean }> = ({ show = true }) => (
     {show && (
       <a
         href={upgradeMailto()}
-        className="tap w-full flex items-center justify-center rounded-2xl bg-primary text-white text-base font-semibold h-14"
+        className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-base font-semibold h-14"
       >
         {UPGRADE_ACTION_LABEL}
       </a>
@@ -346,7 +346,7 @@ function BusinessSubscription() {
           <p className="text-xs text-charcoal-soft leading-relaxed">
             {formatPrice(base.monthlyPrice)}/mo covers the business account. Each seat block is{" "}
             {formatPrice(seat.monthlyPrice)}/mo and seats {perBlock} professional
-            {perBlock === 1 ? "" : "s"} — buy as many blocks as you need. Every seated professional
+            {perBlock === 1 ? "" : "s"}. Buy as many blocks as you need. Every seated professional
             gets the {seatPlan?.name ?? "seat"} plan for as long as they're on your team.
           </p>
         </div>

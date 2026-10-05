@@ -373,7 +373,7 @@ export default function Messages() {
   const chip = (on: boolean) =>
     `tap h-[34px] rounded-full px-3.5 text-[13px] ${
       on
-        ? "bg-primary text-white dark:text-[#0D0B1A] font-bold"
+        ? "bg-primary-fill text-on-primary-fill font-bold"
         : "bg-cream-card border border-charcoal/10 text-charcoal font-semibold"
     }`;
 
@@ -448,7 +448,7 @@ export default function Messages() {
       )}
 
       {searchingMessages && items.length > 0 && (
-        <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1 mb-1">Chats</h2>
+        <h2 className="section-label mt-1 mb-1">Chats</h2>
       )}
 
       {!loading && (threads.length > 0 || invitations.length > 0 || lists.length > 0) && items.length === 0 && !searchingMessages && (
@@ -489,7 +489,7 @@ export default function Messages() {
 
       {searchingMessages && (
         <section className="mt-3" aria-label="Messages">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mb-1">Messages</h2>
+          <h2 className="section-label mb-1">Messages</h2>
           {searchError && <p className="text-xs text-status-high py-2">{searchError}</p>}
           {!searching && !searchError && hits.length === 0 && (
             <p className="text-sm text-charcoal-faint text-center py-6">No messages match "{term}".</p>
@@ -527,7 +527,7 @@ export default function Messages() {
           type="button"
           onClick={() => setNewOpen(true)}
           aria-label="New chat, group or broadcast"
-          className="tap fixed z-30 right-4 lg:right-8 bottom-[calc(env(safe-area-inset-bottom)+80px)] lg:bottom-8 w-14 h-14 rounded-[18px] bg-primary text-white dark:text-[#0D0B1A] flex items-center justify-center shadow-lg"
+          className="tap fixed z-30 right-4 lg:right-8 bottom-[calc(env(safe-area-inset-bottom)+80px)] lg:bottom-8 w-14 h-14 rounded-[18px] bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-lg"
         >
           <Plus size={24} strokeWidth={2.4} />
         </button>

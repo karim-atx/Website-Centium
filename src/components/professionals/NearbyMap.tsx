@@ -133,7 +133,7 @@ export default function NearbyMap({
       el.setAttribute("aria-label", p.label);
       el.title = p.label;
       el.className =
-        "centium-map-pin flex items-center justify-center rounded-full border-2 border-white dark:border-[#0D0B1A] bg-primary text-white dark:text-[#0D0B1A] font-extrabold shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40";
+        "centium-map-pin flex items-center justify-center rounded-full border-2 border-white dark:border-[#0D0B1A] bg-primary-fill text-on-primary-fill font-extrabold shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40";
       el.style.width = el.style.height = p.count > 1 ? "34px" : "26px";
       el.style.fontSize = "13px";
       el.textContent = p.count > 1 ? String(p.count) : "";

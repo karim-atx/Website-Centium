@@ -125,7 +125,7 @@ export const MapAreaSection: React.FC<{
                 aria-pressed={mode === o.v}
                 onClick={() => setMode(o.v)}
                 className={`tap h-9 rounded-full text-[13px] font-bold ${
-                  mode === o.v ? "bg-primary text-white dark:text-[#0D0B1A]" : "bg-cream-card border border-charcoal/10 text-charcoal"
+                  mode === o.v ? "bg-primary-fill text-on-primary-fill" : "bg-cream-card border border-charcoal/10 text-charcoal"
                 }`}
               >
                 {o.label}

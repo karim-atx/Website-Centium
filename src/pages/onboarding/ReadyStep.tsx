@@ -29,9 +29,9 @@ export const ReadyStep: React.FC<{
   const isCustomer = !isProfessional && !isBusiness;
 
   const headline = isProfessional
-    ? "Your professional dashboard is ready — start by adding your first client."
+    ? "Your professional dashboard is ready. Start by adding your first client."
     : isBusiness
-    ? "Your business listing is ready — clients can find you on Centium Explore."
+    ? "Your business listing is ready. Clients can find you on Centium Explore."
     : "We've built your personalized dashboard around your goals. Let's take a look.";
 
   return (
@@ -46,7 +46,7 @@ export const ReadyStep: React.FC<{
 
       {isCustomer && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+          <p className="section-label mb-3">
             Your starting point
           </p>
           <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export const ReadyStep: React.FC<{
 
       {isProfessional && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+          <p className="section-label mb-3">
             Your profile
           </p>
           <div className="flex flex-wrap gap-2">
@@ -82,7 +82,7 @@ export const ReadyStep: React.FC<{
 
       {isBusiness && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+          <p className="section-label mb-3">
             Your business
           </p>
           <div className="flex flex-wrap gap-2">

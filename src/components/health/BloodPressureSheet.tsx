@@ -201,7 +201,7 @@ export const BloodPressureSheet: React.FC<{
               value={sys}
               onChange={(e) => setSys(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Systolic, in mmHg"
               className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
             />
@@ -213,7 +213,7 @@ export const BloodPressureSheet: React.FC<{
               value={dia}
               onChange={(e) => setDia(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Diastolic, in mmHg"
               className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
             />
@@ -226,7 +226,7 @@ export const BloodPressureSheet: React.FC<{
               value={pulse}
               onChange={(e) => setPulse(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Pulse, in beats per minute"
               className={`${fieldStyle} text-center text-base font-bold tabular-nums`}
             />

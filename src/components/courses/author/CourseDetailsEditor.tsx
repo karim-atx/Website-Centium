@@ -257,7 +257,7 @@ export function CourseDetailsEditor({
       )}
 
       {/* FREE IS A DECISION, NOT AN ABSENCE, so it is worth a line. */}
-      {free && <Hint>Anyone over 18 can take it. Videos and readings are free in every course either way — a price adds quizzes, downloadable plans, questions to you, and a certificate.</Hint>}
+      {free && <Hint>Anyone over 18 can take it. Videos and readings are free in every course either way. A price adds quizzes, downloadable plans, questions to you, and a certificate.</Hint>}
 
       {/* What it HAS earned, net of the rate that applied to each sale rather
           than today's rate applied backwards. */}
@@ -296,7 +296,7 @@ export function CourseDetailsEditor({
           not in. */}
       {!editable && (
         <QuietButton disabled>
-          {lockedReason === "review" ? "Locked while it's with a reviewer" : "Published — open a revision above to edit it"}
+          {lockedReason === "review" ? "Locked while it's with a reviewer" : "Published. Open a revision above to edit it"}
         </QuietButton>
       )}
     </AuthorCard>

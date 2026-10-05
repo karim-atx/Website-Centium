@@ -183,7 +183,7 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
       return;
     }
     if (result.status === "no_profile") {
-      setError("Save your details first — there's nothing to list yet.");
+      setError("Save your details first. There's nothing to list yet.");
       return;
     }
     if (result.status === "needs_dob") {
@@ -277,7 +277,7 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
                     ? listed
                       ? "Clients browsing Explore can find you."
                       : "You're not listed. Only clients with your code can connect."
-                    : "Save your details first — there's nothing to list yet."}
+                    : "Save your details first. There's nothing to list yet."}
                 </p>
               </div>
               <Toggle

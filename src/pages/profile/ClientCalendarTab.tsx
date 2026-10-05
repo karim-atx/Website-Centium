@@ -271,7 +271,7 @@ export default function ClientCalendarTab() {
         // Same note shape as the professional's overlay — who it is with,
         // then whatever the class itself said — with the wording corrected for
         // direction: the client booked this, nobody scheduled it for them.
-        notes: `Booked with ${c.businessName}${c.notes ? ` — ${c.notes}` : ""}`,
+        notes: `Booked with ${c.businessName}${c.notes ? `: ${c.notes}` : ""}`,
         // The same gold the professional's tab gives business classes, so one
         // entity reads the same on both calendars.
         color: "#D9A441",
@@ -622,7 +622,7 @@ export default function ClientCalendarTab() {
             onClick={() => setView(v)}
             className={clsx(
               "tap rounded-full px-[13px] py-[7px] text-[11px] capitalize whitespace-nowrap",
-              view === v ? "font-extrabold bg-team-lavender text-white" : "font-semibold bg-team-lavender/[0.15] text-primary-deep-text"
+              view === v ? "font-extrabold bg-primary-fill text-on-primary-fill" : "font-semibold bg-team-lavender/[0.15] text-primary-deep-text"
             )}
           >
             {v}
@@ -797,7 +797,7 @@ export default function ClientCalendarTab() {
                         }}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
@@ -1019,7 +1019,7 @@ export default function ClientCalendarTab() {
                   onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
                   className={clsx(
                     "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                    draft.repeat === r.value ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                    draft.repeat === r.value ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
                   {r.label}

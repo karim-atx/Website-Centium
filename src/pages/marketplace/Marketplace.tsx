@@ -239,7 +239,7 @@ export default function Marketplace() {
         <Sparkles size={22} className="text-berry mx-auto mb-3" />
         <p className="font-display font-semibold text-charcoal mb-1.5">More coming to Centium</p>
         <p className="text-xs text-charcoal-soft max-w-xs mx-auto leading-relaxed">
-          Stores, classes, equipment, supplements and wellness services — a full health marketplace,
+          Stores, classes, equipment, supplements and wellness services: a full health marketplace,
           built around your streaks and progress.
         </p>
       </Card>

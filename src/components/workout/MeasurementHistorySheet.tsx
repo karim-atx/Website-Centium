@@ -241,7 +241,7 @@ export const MeasurementHistorySheet: React.FC<{
         <button
           onClick={onClose}
           className="tap w-full flex items-center justify-center"
-          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
         >
           Done
         </button>

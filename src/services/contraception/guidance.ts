@@ -57,7 +57,7 @@ export const SETUP_BODY =
 /** Said under the method picker, once. */
 export const NOT_A_PRESCRIBER =
   "This is a record of what you already use. It doesn't recommend a method, and it " +
-  "doesn't judge one — that conversation belongs with your doctor or pharmacist.";
+  "doesn't judge one. That conversation belongs with your doctor or pharmacist.";
 
 export const PACK_TITLE = "This pack";
 export const PACK_ACTIVE = "Active";
@@ -104,7 +104,7 @@ export const NEXT_KIND_LABEL: Record<string, string> = {
 
 export const NEXT_TODAY = "Today";
 export const NEXT_OVERDUE = (days: number) =>
-  `${days} day${days === 1 ? "" : "s"} ago — overdue`;
+  `${days} day${days === 1 ? "" : "s"} ago (overdue)`;
 export const NEXT_IN = (days: number) => `In ${days} day${days === 1 ? "" : "s"}`;
 
 /** Shown beside a device's replace-by date, which is often years out. */
@@ -159,7 +159,7 @@ export const DETAIL_LABEL: Record<"neutral" | "detailed", string> = {
 };
 
 export const DETAIL_HELP: Record<"neutral" | "detailed", string> = {
-  neutral: "Hides the reason on your lock screen — it just says you have a reminder.",
+  neutral: "Hides the reason on your lock screen. It just says you have a reminder.",
   detailed: "Says what the reminder is for, so it's readable to anyone who sees your screen.",
 };
 

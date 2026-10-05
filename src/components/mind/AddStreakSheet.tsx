@@ -46,7 +46,7 @@ export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-            Link to a habit — its streak carries over automatically
+            Link to a habit: its streak carries over automatically
           </span>
           {availableHabits.length > 0 ? (
             <div className="space-y-1.5">

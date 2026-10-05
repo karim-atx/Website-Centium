@@ -172,8 +172,8 @@ export const CalendarPickerSheet: React.FC<{
                       borderRadius: 12,
                       fontSize: 15,
                       fontWeight: isSelected ? 600 : 500,
-                      background: isSelected ? "#AB9ED7" : "transparent",
-                      color: isSelected ? "#FFFFFF" : isFuture ? "#CFCBD6" : "#000000",
+                      background: isSelected ? "rgb(var(--c-primary-fill))" : "transparent",
+                      color: isSelected ? "rgb(var(--c-on-primary-fill))" : isFuture ? "#CFCBD6" : "#000000",
                     }}
                   >
                     {d.getDate()}
@@ -196,7 +196,7 @@ export const CalendarPickerSheet: React.FC<{
                   onClose();
                 }}
                 className="tap w-full flex items-center justify-center"
-                style={{ marginTop: 14, height: 44, borderRadius: 14, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+                style={{ marginTop: 14, height: 44, borderRadius: 14, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
               >
                 {confirmLabel}
               </button>

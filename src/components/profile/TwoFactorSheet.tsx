@@ -176,8 +176,7 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle size={15} className="shrink-0 mt-0.5 text-status-caution" />
                   <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-                    Turning this off means your password alone gets into your account — including
-                    your health data. You can turn it back on at any time.
+                    Turning this off means your password alone gets into your account, including your health data. You can turn it back on at any time.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -215,7 +214,7 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               account.
             </p>
             <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-              You'll need an authenticator app — Google Authenticator, 1Password, Authy or any
+              You'll need an authenticator app: Google Authenticator, 1Password, Authy or any
               other. Setting this up takes about a minute.
             </p>
             {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
@@ -335,8 +334,7 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               </div>
               <p className="text-[12px] text-charcoal-soft leading-relaxed">
                 Centium doesn't issue backup codes. If you lose access to your authenticator app,
-                contact support and we'll remove two-factor from your account once we've confirmed
-                who you are — resetting your password on its own won't get you back in.
+                contact support and we'll remove two-factor from your account once we've confirmed who you are. Resetting your password on its own won't get you back in.
               </p>
               <p className="text-[12px] text-charcoal-soft leading-relaxed">
                 If your authenticator app can back itself up to your own cloud account, turning

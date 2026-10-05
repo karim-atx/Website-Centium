@@ -40,7 +40,7 @@ const SectionLabel: React.FC<{ icon: typeof FileText; children: React.ReactNode 
   icon: Icon,
   children,
 }) => (
-  <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+  <p className="section-label mb-2 flex items-center gap-1.5">
     <Icon size={13} /> {children}
   </p>
 );

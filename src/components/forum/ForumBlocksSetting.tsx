@@ -50,7 +50,7 @@ export function ForumBlocksSetting() {
 
   return (
     <>
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Community</p>
+      <p className="section-label mb-2.5">Community</p>
       <Card padded={false} className="mb-6">
         <button
           type="button"

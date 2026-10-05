@@ -35,7 +35,7 @@ export const IntegrationsCard: React.FC = () => {
 
   return (
     <Card>
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+      <p className="section-label mb-1">
         Integration
       </p>
       <div className="flex items-center justify-between gap-3 py-3">

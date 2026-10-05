@@ -185,7 +185,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
       ? isRatioRow
         ? `${amount.toFixed(1)} : 1`
         : `${formatAmount(amount)}${unitSuffix}`
-      : "—";
+      : "–";
 
   let targetText: string;
   if (row.kind === "ref") targetText = `Ref ${row.refText ?? ""} · ${row.source}`;
@@ -572,7 +572,7 @@ function NutrientDetailSection({
                       color: percent === null ? "transparent" : overLimit ? "#B4491F" : "#5F5093",
                     }}
                   >
-                    {percent === null ? "—" : `${percent}%`}
+                    {percent === null ? "–" : `${percent}%`}
                   </span>
                 </div>
                 {partial && (

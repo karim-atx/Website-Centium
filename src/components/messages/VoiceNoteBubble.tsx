@@ -151,7 +151,7 @@ export const VoiceNoteBubble: React.FC<{
             playing ? "Pause voice note" : seconds ? `Play voice note, ${formatDuration(seconds)}` : "Play voice note"
           }
           className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-            mine ? "bg-white/25 text-white dark:bg-black/15 dark:text-[#0D0B1A]" : "bg-primary text-white dark:text-[#0D0B1A]"
+            mine ? "bg-white/25 text-white dark:bg-black/15 dark:text-[#0D0B1A]" : "bg-primary-fill text-on-primary-fill"
           }`}
         >
           {loading ? (

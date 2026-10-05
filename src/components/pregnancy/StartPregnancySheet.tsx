@@ -84,7 +84,7 @@ export const StartPregnancySheet: React.FC<{
                 setValue("");
               }}
               className={`tap flex-1 rounded-xl px-3 py-2.5 text-[11.5px] font-semibold leading-snug ${
-                basis === key ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                basis === key ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
               }`}
             >
               {label}

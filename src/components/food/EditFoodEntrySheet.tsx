@@ -316,7 +316,7 @@ export const EditFoodEntrySheet: React.FC<{
               onClick={handleSave}
               disabled={busy}
               className="tap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
             >
               {busy && !deleting ? "Saving…" : "Save changes"}
             </button>

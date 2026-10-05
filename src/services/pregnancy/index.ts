@@ -50,7 +50,7 @@ function describe(error: PostgrestError): string {
     return "Your session expired. Sign in again to save this.";
   }
   if (code === "23505") return "There's already a pregnancy being tracked.";
-  if (code === "23514") return "Those dates don't work together — check them and try again.";
+  if (code === "23514") return "Those dates don't work together. Check them and try again.";
   if (code === "42501") {
     return "You don't have permission to save this. Sign in again and try once more.";
   }

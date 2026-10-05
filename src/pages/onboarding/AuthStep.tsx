@@ -249,7 +249,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const handleSignUp = async () => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
     if (isBurner) return;
-    if (!meetsRule) return setError("Choose a stronger password — see the checklist below.");
+    if (!meetsRule) return setError("Choose a stronger password. See the checklist below.");
     if (password !== confirmPassword) return setError("Passwords don't match.");
     setError(null);
     setBusy(true);
@@ -378,8 +378,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           <div className="rounded-2xl bg-primary-pale px-4 py-3.5 text-sm text-primary-dark flex items-start gap-2.5">
             <MailCheck size={16} className="mt-0.5 shrink-0" />
             <span>
-              An account isn't active until that link is clicked. You can leave this page open —
-              onboarding picks up where you left off when you return.
+              An account isn't active until that link is clicked. You can leave this page open. Onboarding picks up where you left off when you return.
             </span>
           </div>
           <p className="text-[11px] text-charcoal-faint mt-3">

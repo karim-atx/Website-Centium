@@ -305,7 +305,7 @@ export const DataSharingSection: React.FC<{
       {/* The sheet that renders the single-professional variant carries its
           own title, so the section heading would just repeat it. */}
       {!professionalId && (
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <p className="section-label mb-2 flex items-center gap-1.5">
           <ShieldCheck size={13} /> Data sharing
         </p>
       )}
@@ -370,7 +370,7 @@ export const DataSharingSection: React.FC<{
               <p className="text-[11px] text-charcoal-soft leading-relaxed">
                 When you agreed to share health metrics with {pro.name}, that one switch also
                 covered your lab results and your medical history. That was too much to bundle
-                into a single question. We've split it out below — your activity and vitals are
+                into a single question. We've split it out below. Your activity and vitals are
                 still shared exactly as before, and{" "}
                 {unanswered[pro.professionalId]!.length > 1 ? (
                   <>

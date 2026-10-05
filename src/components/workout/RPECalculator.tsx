@@ -83,8 +83,8 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
                     height: 34,
                     borderRadius: 8,
                     border: `1px solid ${on ? "#AEA1DC" : "#E7E6E6"}`,
-                    background: on ? "#AEA1DC" : "#FFFFFF",
-                    color: on ? "#FFFFFF" : "#5B5349",
+                    background: on ? "rgb(var(--c-primary-fill))" : "#FFFFFF",
+                    color: on ? "rgb(var(--c-on-primary-fill))" : "#5B5349",
                     fontSize: 12,
                     fontWeight: on ? 700 : 500,
                   }}
@@ -106,7 +106,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
             </p>
             <p className="tabular-nums" style={{ margin: 0, lineHeight: "34px" }}>
               <span style={{ fontSize: 30, fontWeight: 800, color: "#4A3AA0", letterSpacing: "-0.02em" }}>
-                {suggested ?? "—"}
+                {suggested ?? "–"}
               </span>
               {suggested != null && <span style={{ fontSize: 13, fontWeight: 600, color: "#7D67D9", marginLeft: 4 }}>kg</span>}
             </p>

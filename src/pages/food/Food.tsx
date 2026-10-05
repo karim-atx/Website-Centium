@@ -39,11 +39,14 @@ const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 // Master handover, CentiumTabFrame `food.diary` with quick-add "timeOfDay":
 // the quick-add tiles, like the meal cards, read "Snacks" (approved
 // decision 7). Each tile carries its own sampled fill and time-of-day glyph.
+// Mobile v5.1 R2: white 10 px labels sit on these, and the board's fills
+// (#BEB4E6 #B1A5DF #B1A5E0 #9284C4) carry it at 1.9 to 3.3:1. Each is its
+// own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0, 5.0, 5.6:1.
 const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeof Sunrise }> = {
-  breakfast: { label: "Breakfast", fill: "#BEB4E6", Icon: Sunrise },
-  snack: { label: "Snacks", fill: "#B1A5DF", Icon: Clock },
-  lunch: { label: "Lunch", fill: "#B1A5E0", Icon: Sun },
-  dinner: { label: "Dinner", fill: "#9284C4", Icon: Sunset },
+  breakfast: { label: "Breakfast", fill: "#797292", Icon: Sunrise },
+  snack: { label: "Snacks", fill: "#726A90", Icon: Clock },
+  lunch: { label: "Lunch", fill: "#726A90", Icon: Sun },
+  dinner: { label: "Dinner", fill: "#6B6190", Icon: Sunset },
 };
 
 const SWIPE_THRESHOLD = 60;
@@ -333,7 +336,7 @@ export default function Food() {
                 {todaysEntries.length === 0 ? "Nothing logged yet today" : `${todaysEntries.length} item${todaysEntries.length === 1 ? "" : "s"} logged today`}
               </p>
               <p className="text-xs text-charcoal-faint">
-                Meals, notes, and how you're feeling — no calorie counting required.
+                Meals, notes, and how you're feeling, no calorie counting required.
               </p>
             </Card>
           ) : (
@@ -421,7 +424,7 @@ export default function Food() {
               says the list may be stale rather than implying it is empty. */}
           {diaryError && !deleteError && (
             <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
-              Couldn't refresh your diary — showing what was saved on this device.
+              Couldn't refresh your diary. Showing what was saved on this device.
             </p>
           )}
 
@@ -574,9 +577,9 @@ export default function Food() {
                                       width: 20,
                                       height: 20,
                                       borderRadius: 10,
-                                      background: checked ? "#AEA1DC" : "#FFFFFF",
+                                      background: checked ? "rgb(var(--c-primary-fill))" : "#FFFFFF",
                                       border: checked ? "none" : "1.5px solid #D1CAEB",
-                                      color: "#FFFFFF",
+                                      color: checked ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF",
                                     }}
                                   >
                                     {checked && <Check size={12} strokeWidth={3} />}
@@ -671,7 +674,7 @@ export default function Food() {
                             }}
                             disabled={activeSelection.ids.size === 0}
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
-                            style={{ height: 36, gap: 6, borderRadius: 10, background: "#AEA1DC", color: "#FFFFFF", fontSize: 12.5, fontWeight: 700 }}
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12.5, fontWeight: 700 }}
                           >
                             <Copy size={13} /> Copy ({activeSelection.ids.size})
                           </button>
@@ -718,7 +721,7 @@ export default function Food() {
           aria-label="Add Food"
           // 104px over the nav plus the home-indicator inset, and 20px in from
           // the right edge of the centred 430px app column (01 GLOBAL).
-          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary text-white shadow-fab flex items-center justify-center"
+          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab flex items-center justify-center"
         >
           <Plus size={22} />
         </button>

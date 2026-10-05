@@ -161,8 +161,8 @@ export default function BusinessAnalyticsTab() {
 
       {section === "insights" && (
         <>
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="section-label text-charcoal-faint">Business performance</p>
+          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
+            <p className="section-label !border-b-0 !pb-0">Business performance</p>
             <button
               onClick={() =>
                 downloadCsv(
@@ -193,7 +193,7 @@ export default function BusinessAnalyticsTab() {
 
           {/* QA 13.0: "Each card should be clickable and open a filtered
               list with recommended actions." */}
-          <p className="section-label text-charcoal-faint mb-2.5">Needs attention</p>
+          <p className="section-label mb-2.5">Needs attention</p>
           <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04]">
             {insightActions.map((i) => (
               <button
@@ -207,7 +207,7 @@ export default function BusinessAnalyticsTab() {
             ))}
           </Card>
 
-          <p className="section-label text-charcoal-faint mb-2.5">Marketplace listing performance</p>
+          <p className="section-label mb-2.5">Marketplace listing performance</p>
           <div className="grid grid-cols-2 gap-2.5 mb-4">
             {[
               { icon: Eye, label: "Listing views (30d)", value: (businessListing.membersReached * 6 + 128).toLocaleString() },
@@ -249,7 +249,7 @@ export default function BusinessAnalyticsTab() {
           {/* QA 13.0: "Averages can mislead... include a distribution
               chart that immediately identifies how many people may need
               extra support." */}
-          <p className="section-label text-charcoal-faint mb-2.5">Adherence distribution</p>
+          <p className="section-label mb-2.5">Adherence distribution</p>
           <Card className="mb-6">
             <div className="space-y-2.5">
               {adherenceBuckets.map((b) => (
@@ -266,7 +266,7 @@ export default function BusinessAnalyticsTab() {
               ))}
             </div>
             <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
-              An average adherence rate can hide who actually needs support — {adherenceBuckets[0].count + adherenceBuckets[1].count} of{" "}
+              An average adherence rate can hide who actually needs support: {adherenceBuckets[0].count + adherenceBuckets[1].count} of{" "}
               {adherenceTotal} clients are below 50%.
             </p>
           </Card>
@@ -284,7 +284,7 @@ export default function BusinessAnalyticsTab() {
               </span>
               <span className="text-left">
                 <span className="text-sm font-bold text-charcoal block">Clients needing review</span>
-                <span className="text-xs text-charcoal-faint block">{atRiskCount} flagged — tap to see why</span>
+                <span className="text-xs text-charcoal-faint block">{atRiskCount} flagged. Tap to see why</span>
               </span>
             </span>
             <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
@@ -293,7 +293,7 @@ export default function BusinessAnalyticsTab() {
       )}
 
       <p className="text-[11px] text-charcoal-faint text-center mt-2">
-        Prototype metrics — production Centium will report real revenue, booking and adherence data.
+        Prototype metrics. Production Centium will report real revenue, booking and adherence data.
       </p>
 
       <BottomSheet open={!!openInsight} onClose={() => setOpenInsight(null)} title={openInsight?.label}>
@@ -318,7 +318,7 @@ export default function BusinessAnalyticsTab() {
             </Card>
           ))}
           <p className="text-[11px] text-charcoal-faint leading-relaxed pt-1">
-            Flags are based on visible signals (attendance, bookings, payments) — not a diagnosis or a
+            Flags are based on visible signals (attendance, bookings, payments), not a diagnosis or a
             black-box score.
           </p>
         </div>

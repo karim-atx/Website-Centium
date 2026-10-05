@@ -3,6 +3,7 @@ import { useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
+import { Toggle } from "../../components/ui/Toggle";
 import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -579,21 +580,12 @@ export default function Cycle() {
                 {settings.trackerEnabled ? G.TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
               </p>
             </div>
-            <button
-              role="switch"
-              aria-checked={settings.trackerEnabled}
-              aria-label="Cycle tracking"
+            <Toggle
+              checked={settings.trackerEnabled}
+              onChange={(on) => void setTracking(on)}
+              label="Cycle tracking"
               disabled={busy}
-              onClick={() => void setTracking(!settings.trackerEnabled)}
-              className={`tap shrink-0 w-11 h-6 rounded-full transition-colors ${
-                settings.trackerEnabled ? "bg-primary" : "bg-charcoal/20"
-              }`}
-            >
-              <span
-                className="block w-5 h-5 rounded-full bg-white shadow transition-transform"
-                style={{ transform: settings.trackerEnabled ? "translateX(22px)" : "translateX(2px)" }}
-              />
-            </button>
+            />
           </Card>
 
           <Card className="mb-3">
@@ -867,7 +859,7 @@ function Stat({ label, value, unit }: { label: string; value: number | null; uni
   return (
     <div className="text-center bg-cream-soft rounded-xl py-2.5">
       {/* A NULL IS A DASH, never a zero: a zero-day cycle is not a cycle. */}
-      <p className="text-[15px] font-bold text-charcoal tabular-nums">{value ?? "—"}</p>
+      <p className="text-[15px] font-bold text-charcoal tabular-nums">{value ?? "–"}</p>
       <p className="text-[9.5px] text-charcoal-faint">
         {label}
         {value !== null && ` · ${unit}`}

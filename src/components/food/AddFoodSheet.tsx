@@ -709,7 +709,7 @@ export const AddFoodSheet: React.FC<{
                 type="button"
                 onClick={confirmAdjust}
                 className="tap w-full inline-flex items-center justify-center gap-2"
-                style={{ height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+                style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
               >
                 <Check size={16} /> Confirm
               </button>
@@ -720,7 +720,7 @@ export const AddFoodSheet: React.FC<{
                 onClick={handleAdd}
                 disabled={justAdded || saving}
                 className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
               >
                 {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
               </button>
@@ -948,7 +948,7 @@ export const AddFoodSheet: React.FC<{
           className="tap flex items-center justify-center shrink-0"
           style={
             multi
-              ? { width: 34, height: 34, borderRadius: 17, background: on ? "#AEA1DC" : "#FFFFFF", border: on ? "none" : "1.5px solid #D1CAEB", color: "#FFFFFF" }
+              ? { width: 34, height: 34, borderRadius: 17, background: on ? "rgb(var(--c-primary-fill))" : "#FFFFFF", border: on ? "none" : "1.5px solid #D1CAEB", color: on ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF" }
               : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }
           }
         >
@@ -995,7 +995,7 @@ export const AddFoodSheet: React.FC<{
                   onClick={(e) => (suggestMeal ? void logPicked(meal) : setMealAnchor(e.currentTarget))}
                   disabled={multiSaving}
                   className="tap flex-1 inline-flex items-center justify-center disabled:opacity-60"
-                  style={{ height: 50, gap: 8, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+                  style={{ height: 50, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
                 >
                   <Plus size={16} /> {multiSaving ? "Adding…" : `Add food (${picked.size})`}
                 </button>
@@ -1091,7 +1091,7 @@ export const AddFoodSheet: React.FC<{
 
           {matchingMeals.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+              <p className="section-label mb-2">
                 Custom meals
               </p>
               <div className="space-y-1.5">
@@ -1156,7 +1156,7 @@ export const AddFoodSheet: React.FC<{
                 <p className="text-center text-sm text-charcoal-faint py-8">Start typing to search foods</p>
               ) : (
                 <>
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+                  <p className="section-label flex items-center gap-1.5">
                     <Clock size={12} />
                     {suggestMeal ? `Frequent at ${detailMealLabels[suggestMeal]}` : "Frequent & recent"}
                   </p>
@@ -1190,7 +1190,7 @@ export const AddFoodSheet: React.FC<{
             )}
             {query.trim() !== "" && !loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
-                Not in our catalog yet — try Custom or Barcode to add it.
+                Not in our catalog yet. Try Custom or Barcode to add it.
               </p>
             )}
           </div>

@@ -120,7 +120,7 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   // footer
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = "500 15px Manrope, sans-serif";
-  ctx.fillText("Prototype health tracking — not a diagnosis.", 48, CARD_H - 48);
+  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, CARD_H - 48);
 }
 
 // V7 (QA 7.0): "the ability to share a summary of the entire biomarkers
@@ -196,7 +196,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = "500 15px Manrope, sans-serif";
-  ctx.fillText("Prototype health tracking — not a diagnosis.", 48, canvas.height - 24);
+  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, canvas.height - 24);
 }
 
 export const ShareBiomarkerSheet: React.FC<{
@@ -230,7 +230,7 @@ export const ShareBiomarkerSheet: React.FC<{
   // system share sheet), so they never name the marker. The card itself is
   // what the person chose to share.
   const fileBase = marker ? "lab-result" : "lab-results";
-  const shareTitle = marker ? "Lab result — Centium" : "Lab results — Centium";
+  const shareTitle = marker ? "Lab result · Centium" : "Lab results · Centium";
 
   const download = () => {
     if (!canvasRef.current || !ready) return;

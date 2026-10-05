@@ -218,14 +218,14 @@ export const BroadcastEditor: React.FC<{
         type="button"
         onClick={() => void send()}
         disabled={!trimmedName || !body || count === 0 || busy}
-        className="tap h-[52px] rounded-2xl bg-primary text-white dark:text-[#0D0B1A] text-[15px] font-bold disabled:opacity-40"
+        className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold disabled:opacity-40"
       >
         {busy ? "Sending…" : `Send to ${count} ${count === 1 ? "client" : "clients"}`}
       </button>
 
       {history.length > 0 && (
         <section className="flex flex-col gap-1 mt-2" aria-label="Sent before">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft">Sent before</h2>
+          <h2 className="section-label">Sent before</h2>
           {history.map((b) => (
             <div key={b.id} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] text-sm">
               <span className="text-charcoal">
@@ -255,7 +255,7 @@ export const BroadcastEditor: React.FC<{
           <button
             type="button"
             onClick={() => setPicking(false)}
-            className="tap w-full mt-3 h-12 rounded-xl bg-primary text-white dark:text-[#0D0B1A] text-sm font-semibold"
+            className="tap w-full mt-3 h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
           >
             Done · {count} {count === 1 ? "client" : "clients"}
           </button>

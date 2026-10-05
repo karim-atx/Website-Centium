@@ -181,7 +181,7 @@ export default function JournalTab() {
               setNewFolderName("");
               setNewFolderOpen(false);
             }}
-            className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+            className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
           >
             Add
           </button>
@@ -234,7 +234,7 @@ export default function JournalTab() {
                   <button
                     onClick={() => startEdit(e)}
                     aria-label="Edit entry"
-                    className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center"
+                    className="tap w-9 h-9 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
                   >
                     <Pencil size={14} />
                   </button>
@@ -244,7 +244,7 @@ export default function JournalTab() {
                       setRevealedId(null);
                     }}
                     aria-label="Delete entry"
-                    className="tap w-9 h-9 rounded-full bg-teal text-white flex items-center justify-center"
+                    className="tap w-9 h-9 rounded-full bg-teal-fill text-on-primary-fill flex items-center justify-center"
                   >
                     <Trash2 size={14} />
                   </button>

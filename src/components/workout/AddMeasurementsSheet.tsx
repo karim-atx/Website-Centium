@@ -166,7 +166,7 @@ export const AddMeasurementsSheet: React.FC<{
                     <input
                       value={raw[site.type] ?? ""}
                       onChange={(e) => setRaw((r) => ({ ...r, [site.type]: e.target.value }))}
-                      placeholder="—"
+                      placeholder="–"
                       inputMode="decimal"
                       aria-label={site.label}
                       className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -206,7 +206,7 @@ export const AddMeasurementsSheet: React.FC<{
           onClick={() => void save()}
           disabled={saving || filled === 0}
           className="tap w-full flex items-center justify-center disabled:opacity-60"
-          style={{ marginTop: 18, height: 48, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+          style={{ marginTop: 18, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
         >
           {saving
             ? "Saving…"

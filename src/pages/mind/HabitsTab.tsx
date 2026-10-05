@@ -211,7 +211,7 @@ export default function HabitsTab() {
               placeholder="New habit…"
               className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <button onClick={create} className="tap w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+            <button onClick={create} className="tap w-9 h-9 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0">
               <Check size={15} />
             </button>
             <button onClick={() => setAdding(false)} className="tap w-9 h-9 rounded-xl bg-cream-soft text-charcoal-faint flex items-center justify-center shrink-0">

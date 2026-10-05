@@ -39,7 +39,7 @@ export const PROVIDER_FIRST = "General guidance · your provider's advice comes 
 
 export const PROVIDER_FIRST_LONG =
   "These are general figures for an uncomplicated single pregnancy. Your midwife, " +
-  "obstetrician or doctor knows your history — where their advice differs from this, " +
+  "obstetrician or doctor knows your history. Where their advice differs from this, " +
   "follow theirs.";
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ export const NUTRIENTS: readonly Nutrient[] = [
 
 /** Things to limit or avoid. Each is a fact, not an instruction to worry. */
 export const NUTRITION_LIMITS: readonly string[] = [
-  "Caffeine: under 200 mg a day — about one 350 ml cup of coffee.",
+  "Caffeine: under 200 mg a day, about one 350 ml cup of coffee.",
   "Alcohol: none. No amount is known to be safe in pregnancy.",
   "Seafood: about 225–340 g a week, from low-mercury choices.",
   "Avoid unpasteurised dairy.",
@@ -294,13 +294,13 @@ export const KICKS_EXPLAINER =
   "matters most is a change from their normal pattern.";
 /** The one thing this screen must say, and it is not a threshold. */
 export const KICKS_CHANGE_NOTE =
-  "If your baby's movements slow down or stop, contact your provider straight away — " +
-  "don't wait for a count to finish.";
+  "If your baby's movements slow down or stop, contact your provider straight away. " +
+  "Don't wait for a count to finish.";
 
 export const CONTRACTIONS_TITLE = "Contractions";
 export const CONTRACTIONS_EXPLAINER =
   "Time from the start of one contraction to the start of the next. Bring these " +
-  "numbers to your provider — when to go in depends on your pregnancy.";
+  "numbers to your provider. When to go in depends on your pregnancy.";
 /** DELIBERATELY NOT "5-1-1". That rule is a provider's to give, not an app's. */
 export const CONTRACTIONS_NO_RULE =
   "This app doesn't tell you when to travel. Your provider will have given you a rule " +
@@ -317,7 +317,7 @@ export const START_BODY =
 export const START_FROM_LMP = "Work it out from my last period";
 export const START_FROM_DUE = "I know my due date";
 export const DUE_DATE_HELP =
-  "If a scan has changed your due date, enter the date from the scan — it's more " +
+  "If a scan has changed your due date, enter the date from the scan. It's more " +
   "accurate than counting from a period.";
 
 export const END_TITLE = "End pregnancy tracking";
@@ -358,7 +358,7 @@ export const POSTPARTUM_WEEKS = 12;
 
 export const POSTPARTUM_TITLE = "After birth";
 export const POSTPARTUM_BODY =
-  "Periods can take a while to come back, and they're often irregular at first — " +
+  "Periods can take a while to come back, and they're often irregular at first, " +
   "especially while you're breastfeeding. Estimates will be rough until a few cycles " +
   "have been logged.";
 
@@ -372,7 +372,7 @@ export const POSTPARTUM_BODY =
  */
 export const LOSS_TITLE = "We're here when you're ready";
 export const LOSS_BODY =
-  "Cycle predictions are paused. Turn them back on whenever you want to — there's no " +
+  "Cycle predictions are paused. Turn them back on whenever you want to. There's no " +
   "rush, and nothing you've logged has been deleted.";
 export const LOSS_SUPPORT =
   "Your provider can talk you through what happens next, physically and otherwise. " +

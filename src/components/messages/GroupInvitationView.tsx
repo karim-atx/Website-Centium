@@ -78,7 +78,7 @@ export const GroupInvitationView: React.FC<{
             type="button"
             onClick={() => void answer(true)}
             disabled={!!busy}
-            className="tap h-[46px] rounded-[14px] bg-primary text-white dark:text-[#0D0B1A] text-sm font-bold disabled:opacity-50"
+            className="tap h-[46px] rounded-[14px] bg-primary-fill text-on-primary-fill text-sm font-bold disabled:opacity-50"
           >
             {busy === "join" ? "Joining…" : "Join group"}
           </button>

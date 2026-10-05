@@ -87,7 +87,7 @@ export const FileViewerSheet: React.FC<{
             <FileWarning size={22} className="text-status-high" />
             <p className="text-sm font-semibold text-charcoal">{error}</p>
             <p className="text-[11px] text-charcoal-faint max-w-[16rem]">
-              The record is still here — only the attached file couldn't be loaded.
+              The record is still here. Only the attached file couldn't be loaded.
             </p>
           </div>
         )}

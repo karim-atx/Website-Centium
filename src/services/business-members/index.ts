@@ -211,7 +211,7 @@ const rpc = (): Rpc => supabase as unknown as Rpc;
 function describe(error: { message?: string; code?: string }, fallback: string): string {
   switch (error.code ?? "") {
     case "ATX02":
-      return "You've done that a few times just now — wait a minute and try again.";
+      return "You've done that a few times just now. Wait a minute and try again.";
     case "ATX08":
       return "That membership no longer exists.";
     case "ATX09":

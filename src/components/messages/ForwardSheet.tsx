@@ -171,7 +171,7 @@ export const ForwardSheet: React.FC<{
               <span
                 aria-hidden
                 className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
-                  chosen.has(t.id) ? "bg-primary text-white dark:text-[#0D0B1A]" : "border-2 border-charcoal/20"
+                  chosen.has(t.id) ? "bg-primary-fill text-on-primary-fill" : "border-2 border-charcoal/20"
                 }`}
               >
                 {chosen.has(t.id) && <Check size={13} strokeWidth={3} />}
@@ -184,7 +184,7 @@ export const ForwardSheet: React.FC<{
               type="button"
               onClick={() => void send()}
               disabled={busy || chosen.size === 0}
-              className="tap w-full mt-3 rounded-xl bg-primary text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-40"
+              className="tap w-full mt-3 rounded-xl bg-primary-fill text-on-primary-fill font-semibold text-sm py-3 disabled:opacity-40"
             >
               {busy ? "Sending…" : chosen.size > 1 ? `Send to ${chosen.size} chats` : "Send"}
             </button>

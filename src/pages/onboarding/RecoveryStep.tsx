@@ -24,7 +24,7 @@ export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
   return (
     <OnboardingShell
       title="One more thing, privately"
-      subtitle="This is just between you and the app — it only changes what we show you."
+      subtitle="This is just between you and the app. It only changes what we show you."
       onBack={onBack}
       footer={
         <Button fullWidth size="lg" onClick={onNext}>
@@ -34,8 +34,7 @@ export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
     >
       <div className="space-y-4">
         <p className="text-sm text-charcoal-soft leading-relaxed">
-          Some people find calorie counts, weight numbers, or streaks unhelpful — or genuinely hard — for
-          their relationship with food. If that's true for you right now, we can leave those out.
+          Some people find calorie counts, weight numbers, or streaks unhelpful, or genuinely hard, for their relationship with food. If that's true for you right now, we can leave those out.
         </p>
 
         {/* QA 13.0: "have the button a bit away from the text as it appears
@@ -52,7 +51,7 @@ export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           <span
             className={clsx(
               "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
-              draft.recoverySensitive ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
+              draft.recoverySensitive ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-faint"
             )}
           >
             <HeartHandshake size={17} />
@@ -62,14 +61,13 @@ export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
               Start with a gentler, recovery-sensitive experience
             </span>
             <span className="text-xs text-charcoal-faint leading-relaxed block">
-              Hides calorie totals, weight, and streaks to start. You control this anytime in Settings —
-              nothing you've logged is ever lost.
+              Hides calorie totals, weight, and streaks to start. You control this anytime in Settings. Nothing you've logged is ever lost.
             </span>
           </span>
         </button>
 
         <p className="text-[11px] text-charcoal-tertiary text-center">
-          Entirely optional — leave this off if it doesn't apply to you.
+          Entirely optional. Leave this off if it doesn't apply to you.
         </p>
       </div>
     </OnboardingShell>

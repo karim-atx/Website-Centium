@@ -97,7 +97,7 @@ export const EnduranceRunner: React.FC<{
                 onStarted();
               }}
               aria-label={isRunning(watch) ? "Pause the stopwatch" : "Start the stopwatch"}
-              className="tap w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center"
+              className="tap w-7 h-7 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
             >
               {isRunning(watch) ? <Pause size={12} fill="white" /> : <Play size={12} fill="white" />}
             </button>

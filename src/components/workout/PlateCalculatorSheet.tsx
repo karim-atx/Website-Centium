@@ -148,8 +148,8 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
     minWidth: 0,
     height: 38,
     borderRadius: 10,
-    background: on ? "#AEA1DC" : "#F5F5F6",
-    color: on ? "#FFFFFF" : "#5B5349",
+    background: on ? "rgb(var(--c-primary-fill))" : "#F5F5F6",
+    color: on ? "rgb(var(--c-on-primary-fill))" : "#5B5349",
     fontSize: 12.5,
     fontWeight: on ? 700 : 600,
   });
@@ -284,7 +284,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 Working
               </p>
               <p className="tabular-nums" style={{ margin: 0, lineHeight: "36px" }}>
-                <span style={{ fontSize: 30, fontWeight: 800, color: "#4A3AA0", letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "—"}</span>
+                <span style={{ fontSize: 30, fontWeight: 800, color: "#4A3AA0", letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
                 {load && <span style={{ fontSize: 13, fontWeight: 600, color: "#7D67D9", marginLeft: 4 }}>{u}</span>}
               </p>
             </div>
@@ -293,7 +293,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 Per side
               </p>
               <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 800, color: "#4A3AA0" }}>
-                {!load ? "—" : barOnly ? "Bar only" : `${fmt(load.perSide)} ${u}`}
+                {!load ? "–" : barOnly ? "Bar only" : `${fmt(load.perSide)} ${u}`}
               </p>
               {load && (
                 <p style={{ margin: "2px 0 0", fontSize: 10.5, color: "#5F5093" }}>

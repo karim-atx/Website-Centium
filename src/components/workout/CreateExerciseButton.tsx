@@ -13,7 +13,7 @@ export const CreateExerciseButton: React.FC<{ onClick: () => void }> = ({ onClic
     type="button"
     onClick={onClick}
     className="tap flex items-center shrink-0"
-    style={{ height: 34, borderRadius: 12, padding: "0 16px", gap: 8, background: "#AEA1DC", color: "#FFFFFF", fontSize: 12.5, fontWeight: 700 }}
+    style={{ height: 34, borderRadius: 12, padding: "0 16px", gap: 8, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12.5, fontWeight: 700 }}
   >
     <Plus size={13} strokeWidth={2.4} /> Create exercise
   </button>

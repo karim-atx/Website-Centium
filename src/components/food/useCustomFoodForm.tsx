@@ -283,8 +283,8 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             minWidth: 0,
             height: 52,
             borderRadius: 16,
-            background: "#AEA1DC",
-            color: "#FFFFFF",
+            background: "rgb(var(--c-primary-fill))",
+            color: "rgb(var(--c-on-primary-fill))",
             fontWeight: 700,
             fontSize: 14,
             border: "none",
@@ -355,7 +355,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         onClick={() => void saveEdit()}
         disabled={!canSave}
         className="tap flex-1 min-w-0"
-        style={{ height: 52, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontWeight: 700, fontSize: 15, opacity: canSave ? 1 : 0.4 }}
+        style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700, fontSize: 15, opacity: canSave ? 1 : 0.4 }}
       >
         {saving ? "Saving…" : "Save changes"}
       </button>

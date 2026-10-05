@@ -259,7 +259,7 @@ export default function ProfessionalDashboard() {
             </button>
             <button
               onClick={() => setAddOpen(true)}
-              className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center"
+              className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
             >
               <Plus size={18} />
             </button>
@@ -312,7 +312,7 @@ export default function ProfessionalDashboard() {
             // Says plainly why the denominator is smaller than the roster,
             // instead of leaving a professional to wonder who is missing.
             <p className="text-[11px] text-white/60 -mt-2.5 mb-3">
-              {noData} not shown — not sharing workouts
+              {noData} not shown (not sharing workouts)
             </p>
           )}
           <div className="flex h-1.5 rounded-full overflow-hidden mb-3">
@@ -419,7 +419,7 @@ export default function ProfessionalDashboard() {
                 ? "No clients match your search."
                 : plan && !plan.mayConnectClients
                   ? "No clients yet."
-                  : "No clients yet — add your first one."}
+                  : "No clients yet. Add your first one."}
             </p>
           </Card>
         )}
@@ -488,7 +488,7 @@ export default function ProfessionalDashboard() {
                   onClick={() => void answer(req.id, "accept")}
                   disabled={!!answering}
                   aria-label={`Accept ${req.name}`}
-                  className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-40"
+                  className="tap w-9 h-9 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center disabled:opacity-40"
                 >
                   <Check size={15} />
                 </button>

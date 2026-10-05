@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Card } from "../ui/Card";
+import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contraception";
 import type { NotificationDetail } from "../../services/cycle/types";
@@ -161,7 +162,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
               disabled={busy}
               onClick={() => void save({ notificationDetail: d })}
               className={`tap flex-1 rounded-xl px-3 py-2 text-[12px] font-semibold disabled:opacity-50 ${
-                on ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                on ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
               }`}
             >
               {G.DETAIL_LABEL[d]}
@@ -198,20 +199,6 @@ const Row: React.FC<{
       <p className="text-[12.5px] text-charcoal">{label}</p>
       <p className="text-[10.5px] text-charcoal-faint leading-snug">{help}</p>
     </div>
-    <button
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onToggle}
-      className={`tap shrink-0 w-11 h-6 rounded-full transition-colors disabled:cursor-not-allowed ${
-        on ? "bg-primary" : "bg-charcoal/20"
-      }`}
-    >
-      <span
-        className="block w-5 h-5 rounded-full bg-white shadow transition-transform"
-        style={{ transform: on ? "translateX(22px)" : "translateX(2px)" }}
-      />
-    </button>
+    <Toggle checked={on} onChange={() => onToggle()} label={label} disabled={disabled} />
   </div>
 );

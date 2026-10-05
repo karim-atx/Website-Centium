@@ -168,7 +168,7 @@ export default function CalendarTab() {
         startTime: c.startTime,
         endTime: c.endTime,
         repeat: "none" as const,
-        notes: `Scheduled by ${c.businessName}${c.notes ? ` — ${c.notes}` : ""}`,
+        notes: `Scheduled by ${c.businessName}${c.notes ? `: ${c.notes}` : ""}`,
         color: "#D9A441",
       })),
     [assignedClasses]
@@ -403,7 +403,7 @@ export default function CalendarTab() {
         right={
           <button
             onClick={openCompose}
-            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
+            className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft"
             aria-label="New event"
           >
             <Plus size={18} />
@@ -419,7 +419,7 @@ export default function CalendarTab() {
             onClick={() => setView(v)}
             className={clsx(
               "tap px-4 py-1.5 rounded-full text-xs font-bold capitalize",
-              view === v ? "bg-primary text-white" : "text-charcoal-faint"
+              view === v ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-faint"
             )}
           >
             {v}
@@ -470,7 +470,7 @@ export default function CalendarTab() {
                   className={clsx(
                     "tap aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm",
                     isSelected
-                      ? "bg-primary text-white font-bold"
+                      ? "bg-primary-fill text-on-primary-fill font-bold"
                       : isToday
                       ? "bg-primary-pale text-primary-dark font-semibold"
                       : "text-charcoal hover:bg-cream-soft"
@@ -539,7 +539,7 @@ export default function CalendarTab() {
                         }}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
@@ -752,7 +752,7 @@ export default function CalendarTab() {
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       draft.repeat === r.value
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >

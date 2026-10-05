@@ -177,7 +177,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                   className={clsx(
                     "tap rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
                     isPrimary
-                      ? "bg-primary text-white border-primary"
+                      ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                       : isSecondary
                       ? "bg-primary-pale text-primary-dark border-primary/40"
                       : "bg-cream-card border-charcoal/10 text-charcoal-soft"
@@ -250,7 +250,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             onClick={save}
             disabled={!name.trim()}
             className="tap flex-1 flex items-center justify-center disabled:opacity-60"
-            style={{ height: 52, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
           >
             Save exercise
           </button>
@@ -303,7 +303,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                     <li>No routine or template uses it.</li>
                   )}
                   {impact?.hasPersonalRecord && <li>Its personal record is deleted with it.</li>}
-                  <li>Past workouts keep it — logged sets are not touched.</li>
+                  <li>Past workouts keep it. Logged sets are not touched.</li>
                 </ul>
                 <div className="flex" style={{ gap: 8, marginTop: 10 }}>
                   <Button variant="outline" fullWidth onClick={() => setConfirmDelete(false)}>

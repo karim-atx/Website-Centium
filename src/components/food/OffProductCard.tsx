@@ -13,7 +13,7 @@ export const OffProductCard: React.FC<{
   onConfirm: () => void;
   onManual: () => void;
 }> = ({ product, onConfirm, onManual }) => {
-  const macro = (v: number | null) => (v === null ? "—" : `${v}g`);
+  const macro = (v: number | null) => (v === null ? "–" : `${v}g`);
   return (
     <div>
       <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
@@ -59,7 +59,7 @@ export const OffProductCard: React.FC<{
         <button
           onClick={onConfirm}
           className="tap flex-1"
-          style={{ height: 48, borderRadius: 14, background: "#A198DF", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+          style={{ height: 48, borderRadius: 14, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
         >
           Use this product
         </button>

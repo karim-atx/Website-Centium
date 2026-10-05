@@ -81,7 +81,7 @@ export const ClientPicker: React.FC<{
             <span
               aria-hidden
               className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
-                on ? "bg-primary text-white dark:text-[#0D0B1A]" : "border-2 border-charcoal/20"
+                on ? "bg-primary-fill text-on-primary-fill" : "border-2 border-charcoal/20"
               }`}
             >
               {on && <Check size={13} strokeWidth={3} />}

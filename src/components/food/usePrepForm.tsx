@@ -344,7 +344,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
             <div className="flex flex-col gap-2" style={containerStyle}>
               {clientId && (
                 <p className="text-[11px] text-charcoal-faint">
-                  Saved only to this client's own food database — not your personal foods.
+                  Saved only to this client's own food database, not your personal foods.
                 </p>
               )}
               <input

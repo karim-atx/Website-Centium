@@ -444,7 +444,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: "#6F9993", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
+              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: "rgb(var(--c-teal-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
             >
               <Plus size={12} /> Add
             </button>
@@ -629,7 +629,7 @@ function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; un
   return (
     <div className="min-w-0">
       <p style={{ color: ink, fontSize: 17, fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
-        {value ?? "—"}
+        {value ?? "–"}
         {value != null && unit && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
       </p>
       <p style={{ color: accent ? "#5B3FE4" : "#463A80", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>

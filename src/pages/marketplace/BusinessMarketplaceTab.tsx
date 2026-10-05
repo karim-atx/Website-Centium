@@ -75,7 +75,7 @@ export default function BusinessMarketplaceTab() {
                 key={c.id}
                 onClick={() => setCategory(c.id)}
                 className={`tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
-                  category === c.id ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  category === c.id ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                 }`}
               >
                 {c.label}
@@ -121,13 +121,13 @@ export default function BusinessMarketplaceTab() {
           // so there is nothing to attach a listing to until the owner has
           // saved their profile once.
           <p className="mt-2 text-xs text-charcoal-faint">
-            Save your business profile first — listings are published under it.
+            Save your business profile first. Listings are published under it.
           </p>
         )}
       </Card>
 
       {/* V10 (QA 10.0): "The ability to add/remove discounts in the market place." */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Discounts</p>
+      <p className="section-label mb-2.5">Discounts</p>
       <Card className="mb-6">
         <div className="flex items-center gap-2 mb-3">
           <input
@@ -144,7 +144,7 @@ export default function BusinessMarketplaceTab() {
         {discounts.discounts.length === 0 ? (
           <p className="text-sm text-charcoal-faint">
             {discounts.businessId || discounts.loading
-              ? "No discounts yet — add one to feature it on Explore."
+              ? "No discounts yet. Add one to feature it on Explore."
               : "Save your business profile first to start adding discounts."}
           </p>
         ) : (
@@ -165,7 +165,7 @@ export default function BusinessMarketplaceTab() {
         )}
       </Card>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Your listings</p>
+      <p className="section-label mb-2.5">Your listings</p>
       <div className="space-y-2.5">
         {offerings.offerings.map((o) => {
           const Icon = marketplaceCategoryIcon[o.category];
@@ -191,7 +191,7 @@ export default function BusinessMarketplaceTab() {
         })}
         {offerings.offerings.length === 0 && !offerings.loading && (
           <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">No listings yet — publish your first one above.</p>
+            <p className="text-sm text-charcoal-faint">No listings yet. Publish your first one above.</p>
           </Card>
         )}
       </div>

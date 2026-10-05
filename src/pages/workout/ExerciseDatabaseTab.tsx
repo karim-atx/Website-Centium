@@ -107,8 +107,8 @@ const controlStyle = (on: boolean): React.CSSProperties => ({
   fontWeight: 600,
   whiteSpace: "nowrap",
   border: `1px solid ${on ? "#AEA1DC" : "rgba(36,31,27,0.11)"}`,
-  background: on ? "#AEA1DC" : "#FFFFFF",
-  color: on ? "#FFFFFF" : "#5B5349",
+  background: on ? "rgb(var(--c-primary-fill))" : "#FFFFFF",
+  color: on ? "rgb(var(--c-on-primary-fill))" : "#5B5349",
 });
 
 export default function ExerciseDatabaseTab() {
@@ -319,8 +319,8 @@ export default function ExerciseDatabaseTab() {
                   gap: 6,
                   fontSize: 12,
                   fontWeight: 700,
-                  background: on ? "#AEA1DC" : "transparent",
-                  color: on ? "#FFFFFF" : "#8C8378",
+                  background: on ? "rgb(var(--c-primary-fill))" : "transparent",
+                  color: on ? "rgb(var(--c-on-primary-fill))" : "#8C8378",
                 }}
               >
                 {v === "list" ? <List size={13} /> : <User size={13} />}
@@ -389,7 +389,7 @@ export default function ExerciseDatabaseTab() {
           <div className="space-y-5">
             {groups.map((g, i) => (
               <div key={g.label ?? i}>
-                {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
+                {g.label && <p className="section-label mb-2">{g.label}</p>}
                 <div
                   className="overflow-hidden bg-white divide-y divide-[rgba(36,31,27,0.07)]"
                   style={{ border: "1px solid rgba(36,31,27,0.11)", borderRadius: 18 }}

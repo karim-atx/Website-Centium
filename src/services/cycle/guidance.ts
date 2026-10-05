@@ -204,7 +204,7 @@ export const FLAGS_HEADING = "Worth a conversation";
 
 export const SETUP_TITLE = "When did your last period start?";
 export const SETUP_BODY =
-  "That's all it takes to start. Everything else — cycle length, phases, estimates — " +
+  "That's all it takes to start. Everything else (cycle length, phases, estimates) " +
   "is worked out from the days you log.";
 export const SETUP_CTA = "Log my last period";
 
@@ -301,7 +301,7 @@ export const ENERGY_LABEL: Record<number, string> = {
 };
 
 export const BBT_HELP =
-  "Basal body temperature — taken at the same time each morning, before getting up.";
+  "Basal body temperature: taken at the same time each morning, before getting up.";
 
 /**
  * Shown when a positive pregnancy test is logged.
@@ -313,7 +313,7 @@ export const BBT_HELP =
  * after one tap has made a decision that was not its to make.
  */
 export const POSITIVE_TEST_PROMPT =
-  "You've logged a positive test. Nothing changes automatically — you can switch " +
+  "You've logged a positive test. Nothing changes automatically. You can switch " +
   "pregnancy tracking on whenever you're ready.";
 export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
 
@@ -341,8 +341,8 @@ export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
  */
 export const TRACKER_OFF_TITLE = "Cycle tracking is off";
 export const TRACKER_OFF_BODY =
-  "It's off by default for this profile. Switch it on if you want to track a cycle — " +
-  "everything stays private to you unless you share it.";
+  "It's off by default for this profile. Switch it on if you want to track a cycle. " +
+  "Everything stays private to you unless you share it.";
 export const TRACKER_OFF_CTA = "Turn on cycle tracking";
 
 export const TIMEZONE_TITLE = "Time zone";
@@ -369,8 +369,8 @@ export const DELETE_ALL_CONFIRM = "Delete everything";
 
 /** Shown when the tracker is switched off, rather than deleting anything. */
 export const TRACKER_OFF_KEEPS_DATA =
-  "Switching the tracker off hides it and stops sharing your phase. Your logs are kept " +
-  "— use Delete all cycle data if you want them gone.";
+  "Switching the tracker off hides it and stops sharing your phase. Your logs are kept. " +
+  "Use Delete all cycle data if you want them gone.";
 
 // ---------------------------------------------------------------------------
 // Sharing

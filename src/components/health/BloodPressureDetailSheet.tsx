@@ -156,7 +156,7 @@ export const BloodPressureDetailSheet: React.FC<{
               key={p.value}
               onClick={() => setPeriod(p.value)}
               className={`tap px-3 h-7 text-[11px] font-bold rounded-full leading-none ${
-                period === p.value ? "bg-primary text-white" : "text-charcoal-faint"
+                period === p.value ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-faint"
               }`}
             >
               {p.label}
@@ -226,19 +226,19 @@ export const BloodPressureDetailSheet: React.FC<{
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="text-center bg-cream-soft rounded-xl py-2.5">
                 <p className="text-sm font-bold text-charcoal tabular-nums">
-                  {average ? `${average.systolic}/${average.diastolic}` : "—"}
+                  {average ? `${average.systolic}/${average.diastolic}` : "–"}
                 </p>
                 <p className="text-[10px] text-charcoal-faint">Average</p>
               </div>
               <div className="text-center bg-cream-soft rounded-xl py-2.5">
                 <p className="text-sm font-bold text-charcoal tabular-nums">
-                  {morningAvg ? `${morningAvg.systolic}/${morningAvg.diastolic}` : "—"}
+                  {morningAvg ? `${morningAvg.systolic}/${morningAvg.diastolic}` : "–"}
                 </p>
                 <p className="text-[10px] text-charcoal-faint">Morning</p>
               </div>
               <div className="text-center bg-cream-soft rounded-xl py-2.5">
                 <p className="text-sm font-bold text-charcoal tabular-nums">
-                  {eveningAvg ? `${eveningAvg.systolic}/${eveningAvg.diastolic}` : "—"}
+                  {eveningAvg ? `${eveningAvg.systolic}/${eveningAvg.diastolic}` : "–"}
                 </p>
                 <p className="text-[10px] text-charcoal-faint">Evening</p>
               </div>
@@ -251,7 +251,7 @@ export const BloodPressureDetailSheet: React.FC<{
             {/* --- how many in each category ------------------------------ */}
             {!inPregnancy && (
             <>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            <p className="section-label mb-2">
               Readings by category
             </p>
             <div className="space-y-1.5 mb-5">
@@ -280,7 +280,7 @@ export const BloodPressureDetailSheet: React.FC<{
             )}
 
             {/* --- the readings themselves -------------------------------- */}
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            <p className="section-label mb-2">
               All readings
             </p>
             <div className="space-y-1.5 mb-4">

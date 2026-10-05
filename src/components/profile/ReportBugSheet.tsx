@@ -71,7 +71,7 @@ export const ReportBugSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           </div>
           <p className="text-sm font-semibold text-charcoal">Report sent</p>
           <p className="text-xs text-charcoal-faint mt-1 max-w-xs">
-            Thank you — the team reads these when reviewing reports. You won&rsquo;t get a
+            Thank you. The team reads these when reviewing reports. You won&rsquo;t get a
             reply here.
           </p>
         </div>

@@ -195,7 +195,7 @@ export default function BusinessCalendarTab() {
         title="Calendar"
         showBack
         right={
-          <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft disabled:opacity-40" aria-label="New event">
+          <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40" aria-label="New event">
             <Plus size={18} />
           </button>
         }
@@ -208,7 +208,7 @@ export default function BusinessCalendarTab() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={clsx("tap px-4 py-1.5 rounded-full text-xs font-bold capitalize", view === v ? "bg-primary text-white" : "text-charcoal-faint")}
+            className={clsx("tap px-4 py-1.5 rounded-full text-xs font-bold capitalize", view === v ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-faint")}
           >
             {v}
           </button>
@@ -256,7 +256,7 @@ export default function BusinessCalendarTab() {
                   }}
                   className={clsx(
                     "tap aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm",
-                    isSelected ? "bg-primary text-white font-bold" : isToday ? "bg-primary-pale text-primary-dark font-semibold" : "text-charcoal hover:bg-cream-soft"
+                    isSelected ? "bg-primary-fill text-on-primary-fill font-bold" : isToday ? "bg-primary-pale text-primary-dark font-semibold" : "text-charcoal hover:bg-cream-soft"
                   )}
                 >
                   {day}
@@ -302,7 +302,7 @@ export default function BusinessCalendarTab() {
                         onClick={() => { setSelectedDate(iso); setView("day"); }}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
@@ -500,7 +500,7 @@ export default function BusinessCalendarTab() {
                     onClick={() => setDraft((d) => ({ ...d, professionalId: d.professionalId === e.professionalId ? "" : e.professionalId }))}
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                      draft.professionalId === e.professionalId ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                      draft.professionalId === e.professionalId ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >
                     {e.name}

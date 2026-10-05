@@ -138,7 +138,7 @@ export const MfaChallenge: React.FC = () => {
             "lost your device?" button that dead-ends. */}
         <p className="text-[11px] text-charcoal-faint leading-relaxed">
           Lost access to your authenticator? Contact Centium support to have two-factor
-          authentication removed from your account — we'll need to confirm who you are first.
+          authentication removed from your account. We'll need to confirm who you are first.
         </p>
 
         <button

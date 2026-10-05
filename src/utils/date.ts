@@ -15,11 +15,11 @@
  * a missing timestamp reads as absent instead of broken.
  */
 export function formatDisplayDate(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "–";
   // A bare "2026-06-02" is already parsed as UTC midnight by JS, so both
   // shapes land on the same footing.
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return "–";
   return parsed.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -92,7 +92,7 @@ export function validateDateOfBirth(dob: string): string | null {
   if (age === undefined) return "Enter a valid date of birth.";
   if (new Date(dob) > new Date()) return "Date of birth must be in the past.";
   if (age < MIN_AGE) return `You need to be at least ${MIN_AGE} to use Centium.`;
-  if (age > MAX_AGE) return "Check the date of birth — that doesn't look right.";
+  if (age > MAX_AGE) return "Check the date of birth. That doesn't look right.";
   return null;
 }
 

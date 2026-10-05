@@ -111,8 +111,8 @@ export default function HistoryTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Summary</p>
+      <div className="flex items-center justify-between pb-[7.5px] border-b-[1.5px] border-primary" style={{ marginBottom: 14 }}>
+        <p className="section-label !border-b-0 !pb-0">Summary</p>
         <button
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           className="tap flex items-center bg-white"
@@ -178,12 +178,12 @@ export default function HistoryTab() {
 
       {error && <p className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 10 }}>{error}</p>}
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide" style={{ margin: "20px 0 10px" }}>
+      <p className="section-label" style={{ margin: "20px 0 10px" }}>
         Logged sessions
       </p>
 
       {listed.length === 0 ? (
-        <p className="text-center text-sm text-charcoal-faint py-8">No logged workouts yet — finish a routine to see it here.</p>
+        <p className="text-center text-sm text-charcoal-faint py-8">No logged workouts yet. Finish a routine to see it here.</p>
       ) : (
         <div className="flex flex-col" style={{ gap: 8 }}>
           {listed.map((s) => (

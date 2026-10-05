@@ -436,7 +436,7 @@ function describeInviteError(error: { code?: string; message?: string } | null):
   if (code === "ATX12") {
     // The picker only offers people from an active relationship, so reaching
     // this means the relationship ended between opening the sheet and saving.
-    return "You can only invite people you currently work with. That connection may have ended — reopen this event and try again.";
+    return "You can only invite people you currently work with. That connection may have ended. Reopen this event and try again.";
   }
   if (code === "ATX10") {
     // assign_template_to_client's own events. Not offered for editing at all,

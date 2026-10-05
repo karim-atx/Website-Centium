@@ -26,7 +26,7 @@ type SubTab = "meals" | "recipes" | "foods";
 const SUB: Record<SubTab, { label: string; color: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
   meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
   recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
-  foods: { label: "Custom Foods", color: "#7D67D9", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
+  foods: { label: "Custom Foods", color: "rgb(var(--c-primary-fill))", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
 };
 const SUB_ORDER: SubTab[] = ["meals", "recipes", "foods"];
 

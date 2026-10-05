@@ -31,6 +31,6 @@ import React from "react";
  */
 export const BusinessPrototypeNotice: React.FC = () => (
   <p className="text-[11px] text-charcoal-faint text-center mb-4">
-    Prototype business tools — changes are saved on this device only.
+    Prototype business tools: changes are saved on this device only.
   </p>
 );

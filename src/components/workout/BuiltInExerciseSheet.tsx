@@ -64,7 +64,7 @@ export const BuiltInExerciseSheet: React.FC<{
                   className="rounded-xl px-3 py-2 text-xs font-semibold border"
                   style={
                     primary
-                      ? { background: "#AEA1DC", borderColor: "#AEA1DC", color: "#FFFFFF" }
+                      ? { background: "rgb(var(--c-primary-fill))", borderColor: "#AEA1DC", color: "rgb(var(--c-on-primary-fill))" }
                       : secondary
                         ? { background: "#EEEBF8", borderColor: "#D4CDED", color: "#5F5093" }
                         : { background: "#FFFFFF", borderColor: "rgba(36,31,27,0.07)", color: "#A5A09B" }
@@ -97,7 +97,7 @@ export const BuiltInExerciseSheet: React.FC<{
           onClick={onHistory}
           disabled={!onHistory}
           className="tap w-full flex items-center justify-center disabled:opacity-60"
-          style={{ height: 52, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", gap: 8, fontSize: 14, fontWeight: 700 }}
+          style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", gap: 8, fontSize: 14, fontWeight: 700 }}
         >
           <BookOpen size={18} /> History
         </button>

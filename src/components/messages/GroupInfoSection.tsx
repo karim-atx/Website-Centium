@@ -182,7 +182,7 @@ export const GroupInfoSection: React.FC<{
             type="button"
             onClick={() => void invite()}
             disabled={busy || picked.size === 0}
-            className="tap w-full mt-3 h-12 rounded-xl bg-primary text-white dark:text-[#0D0B1A] text-sm font-semibold disabled:opacity-40"
+            className="tap w-full mt-3 h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold disabled:opacity-40"
           >
             {busy ? "Inviting…" : `Invite ${picked.size} ${picked.size === 1 ? "client" : "clients"}`}
           </button>
@@ -202,7 +202,7 @@ export const GroupInfoSection: React.FC<{
             type="button"
             disabled={busy || !newName.trim() || newName.trim() === name}
             onClick={() => void run(() => renameGroup(threadId, newName.trim()), () => setRenaming(false))}
-            className="tap h-12 rounded-xl bg-primary text-white dark:text-[#0D0B1A] text-sm font-semibold disabled:opacity-40"
+            className="tap h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold disabled:opacity-40"
           >
             Save
           </button>

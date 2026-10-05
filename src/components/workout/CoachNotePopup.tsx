@@ -107,7 +107,7 @@ export const CoachNotePopup: React.FC<{
         <button
           onClick={onClose}
           className="tap w-full flex-none"
-          style={{ marginTop: 16, height: 44, borderRadius: 12, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+          style={{ marginTop: 16, height: 44, borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
         >
           Close
         </button>

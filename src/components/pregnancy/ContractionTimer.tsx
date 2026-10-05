@@ -156,10 +156,10 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
                   })}
                 </span>
                 <span className="w-[74px] text-right text-charcoal font-semibold tabular-nums">
-                  {lasted !== null ? formatDuration(lasted) : "—"}
+                  {lasted !== null ? formatDuration(lasted) : "–"}
                 </span>
                 <span className="w-[86px] text-right text-charcoal font-semibold tabular-nums">
-                  {spacing !== null ? formatDuration(spacing) : "—"}
+                  {spacing !== null ? formatDuration(spacing) : "–"}
                 </span>
               </div>
             );

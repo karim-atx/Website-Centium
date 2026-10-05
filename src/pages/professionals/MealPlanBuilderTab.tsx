@@ -166,14 +166,14 @@ export default function MealPlanBuilderTab() {
                 <Lock size={15} className="shrink-0" /> {client?.name} hasn't selected "Existing plan"
               </p>
               <p className="text-xs text-charcoal-soft mt-1.5">
-                Ask them to switch to it on their Food &gt; Goals &amp; Macros tab — until then, their weight
+                Ask them to switch to it on their Food &gt; Goals &amp; Macros tab. Until then, their weight
                 goal, calorie target and macro distribution stay theirs to edit, not yours.
               </p>
             </Card>
           )}
 
           <Card className="mb-5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+            <p className="section-label mb-3">
               {client?.name}'s weight goal
             </p>
             <div className="grid grid-cols-3 gap-2 mb-4">
@@ -184,7 +184,7 @@ export default function MealPlanBuilderTab() {
                   disabled={!isExistingPlan}
                   className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
                     nutritionGoal.weightGoal === g.value
-                      ? "bg-primary text-white border-primary"
+                      ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
                   }`}
                 >
@@ -213,7 +213,7 @@ export default function MealPlanBuilderTab() {
                       className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
                         nutritionGoal.desiredWeightConfirmed
                           ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                          : "bg-primary border-primary text-white"
+                          : "bg-primary-fill border-primary-fill text-on-primary-fill"
                       }`}
                     >
                       <Check size={16} strokeWidth={3} />
@@ -257,8 +257,8 @@ export default function MealPlanBuilderTab() {
 
           {client && client.lastWeightKg !== undefined && (
             <Card className="mb-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+              <div className="flex items-center justify-between mb-2 pb-[7.5px] border-b-[1.5px] border-primary">
+                <p className="section-label !border-b-0 !pb-0">
                   {client.name}'s weight trend
                 </p>
               </div>
@@ -280,8 +280,8 @@ export default function MealPlanBuilderTab() {
               UI" — same shared nutritionGoal the client's own Goals & Macros
               tab reads from. */}
           <Card className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">TDEE estimate</p>
+            <div className="flex items-center justify-between mb-3 pb-[7.5px] border-b-[1.5px] border-primary">
+              <p className="section-label !border-b-0 !pb-0">TDEE estimate</p>
               <Sparkles size={14} className="text-primary" />
             </div>
             {clientTdee !== null ? (
@@ -300,7 +300,7 @@ export default function MealPlanBuilderTab() {
           </Card>
 
           <Card className="mb-5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+            <p className="section-label mb-3">
               Daily calorie target
             </p>
             <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export default function MealPlanBuilderTab() {
                 disabled={!isExistingPlan}
                 aria-label={editingCalorie ? "Confirm calorie target" : "Edit calorie target"}
                 className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 ${
-                  editingCalorie ? "bg-primary border-2 border-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                  editingCalorie ? "bg-primary-fill border-2 border-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                 }`}
               >
                 {editingCalorie ? <Check size={16} strokeWidth={3} /> : <Pencil size={13} />}
@@ -338,7 +338,7 @@ export default function MealPlanBuilderTab() {
           </Card>
 
           <Card className="mb-6">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+            <p className="section-label mb-3">
               Macro distribution
             </p>
             <MacroSplitEditor
@@ -354,8 +354,8 @@ export default function MealPlanBuilderTab() {
               now lives in `clientCustomMeals[clientId]`, so switching the
               client chip above shows a different list, and creating one
               here only ever reaches this one client. */}
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
+            <p className="section-label !border-b-0 !pb-0">
               {client?.name}'s custom meal plans
             </p>
             <button

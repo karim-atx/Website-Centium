@@ -125,7 +125,7 @@ export const Metronome: React.FC = () => {
         onClick={() => setOpen((v) => !v)}
         className={clsx(
           "tap w-[34px] h-[34px] rounded-full flex items-center justify-center shadow-soft",
-          running ? "bg-teal text-white" : "bg-white text-charcoal-soft"
+          running ? "bg-teal-fill text-on-primary-fill" : "bg-white text-charcoal-soft"
         )}
         aria-label="Metronome"
         aria-expanded={open}
@@ -173,8 +173,10 @@ export const Metronome: React.FC = () => {
             style={{
               height: 44,
               borderRadius: 12,
-              background: running ? "#7D67D9" : "#AEA1DC",
-              color: "#FFFFFF",
+              // White ink needs 4.5:1: idle is primary-fill, and running is
+              // the deeper brand shade so the two states stay distinct.
+              background: running ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--c-primary-fill))",
+              color: "rgb(var(--c-on-primary-fill))",
               fontSize: 14,
               fontWeight: 700,
             }}

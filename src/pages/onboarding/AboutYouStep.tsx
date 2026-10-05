@@ -139,7 +139,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
       title="About you"
       subtitle={
         isProfessional
-          ? "Sets up your own Centium profile — you'll add clients next."
+          ? "Sets up your own Centium profile. You'll add clients next."
           : "This helps us personalize your targets."
       }
       onBack={onBack}
@@ -230,7 +230,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                     className={clsx(
                       "tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 border transition-colors",
                       draft.sex === opt.value
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                         : "bg-cream-card text-charcoal-soft border-charcoal/10"
                     )}
                   >

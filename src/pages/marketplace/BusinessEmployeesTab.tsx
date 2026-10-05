@@ -92,16 +92,16 @@ export default function BusinessEmployeesTab() {
       )}
 
       <Card className="mb-6">
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+        <p className="section-label mb-2">
           Your business ID
         </p>
         <p className="text-[11px] text-charcoal-faint mb-3">
-          A reference for your own records — share it when a professional asks which business you
+          A reference for your own records. Share it when a professional asks which business you
           are. Adding someone to the team is done from your account, not theirs.
         </p>
         <div className="flex items-center gap-2">
           <div className="flex-1 bg-primary-pale rounded-2xl py-3 text-center">
-            <p className="text-lg font-bold tracking-widest text-primary-dark">{user.businessId ?? "—"}</p>
+            <p className="text-lg font-bold tracking-widest text-primary-dark">{user.businessId ?? "–"}</p>
           </div>
           <button
             onClick={copyId}
@@ -141,7 +141,7 @@ export default function BusinessEmployeesTab() {
         </div>
       )}
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         Affiliated professionals
       </p>
       <div className="space-y-2.5">

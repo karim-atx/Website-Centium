@@ -369,7 +369,7 @@ const Transport: React.FC<{ running: boolean; onToggle: () => void; onReset: () 
     <button
       onClick={onToggle}
       aria-label={running ? "Pause the block timer" : "Start the block timer"}
-      className="tap w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center"
+      className="tap w-8 h-8 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
     >
       {running ? <Pause size={13} fill="white" /> : <Play size={13} fill="white" />}
     </button>
