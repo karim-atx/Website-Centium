@@ -53,7 +53,9 @@ function Figure({ pose, size, animate }: { pose: Pose; size: number; animate: bo
         alt=""
         width={size}
         height={size}
-        className="object-contain"
+        // The GIFs are drawn on white. In dark, invert them (hue kept) and
+        // screen-blend so the white becomes the card behind, not a light square.
+        className="object-contain dark:invert dark:hue-rotate-180 dark:mix-blend-screen"
         style={{ width: size, height: size }}
       />
     );
@@ -130,8 +132,9 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
               />
             </svg>
             <span className="relative w-[96px] h-[96px] rounded-full bg-cream-card flex flex-col items-center justify-center overflow-hidden">
-              <Figure pose={pose} size={72} animate={!reduced} />
-              <span className="absolute bottom-2 text-[12px] font-bold text-primary-dark tabular-nums">
+              {/* The count sits under the figure so a pose GIF never runs into it. */}
+              <Figure pose={pose} size={pose.image ? 60 : 72} animate={!reduced} />
+              <span className={clsx("text-[12px] font-bold leading-none text-primary-dark tabular-nums", pose.image ? "-mt-1" : "absolute bottom-2")}>
                 {finished ? "Done" : `${secondsLeft}s`}
               </span>
             </span>
