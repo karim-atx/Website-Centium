@@ -381,7 +381,7 @@ export default function Mind() {
                         setEditingStreak(s);
                       }}
                       aria-label="Edit streak"
-                      className="tap w-6 h-6 rounded-full bg-cream-card/70 flex items-center justify-center text-primary-deep-text shrink-0"
+                      className="tap w-6 h-6 rounded-full bg-white/60 dark:bg-cream-card/70 flex items-center justify-center text-primary-deep-text shrink-0"
                     >
                       <Pencil size={11} />
                     </button>
