@@ -38,6 +38,8 @@ import {
 import { ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CheckIcon, CoverPill, Instructor, StarIcon } from "./courseParts";
+import { coverBackground, onCover } from "./courseCover";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -104,6 +106,7 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
 
 export function CourseDetailView({ courseId, userId }: { courseId: string; userId: string }) {
   const navigate = useNavigate();
+  const dark = useIsDark();
   const [state, setState] = useState<Loaded | null | { error: string } | undefined>(undefined);
   const [busy, setBusy] = useState<"free" | "paid" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -125,9 +128,9 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       onClick={() => navigate("/app/forum?tab=courses")}
       aria-label="Back"
       className="tap w-11 h-11 rounded-full flex items-center justify-center"
-      style={{ background: "#FFFFFF" }}
+      style={{ background: onCover(dark).bg }}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#241F1B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={onCover(dark).ink} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
       </svg>
     </button>
@@ -194,7 +197,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
   return (
     <div className="flex flex-col -mx-4" style={{ color: fv("text") }}>
-      <div className="h-[180px] flex flex-col justify-between p-3" style={{ background: course.coverColour }}>
+      <div className="h-[180px] flex flex-col justify-between p-3" style={{ background: coverBackground(course.coverColour, dark) }}>
         {back}
         <span className="self-start">
           <CoverPill>{coursePill(course.level, modules.length, course.weeklyHours)}</CoverPill>

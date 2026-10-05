@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
 import { fv } from "../forum/forumColor";
 import { ProfessionalBadge } from "../forum/parts";
-
-// Pieces shared by the course screens (design screens 6-8). Sizes and
-// colours are the design's, through the --forum-* variables so dark mode has
-// its own values.
+import { useIsDark } from "../../hooks/useIsDark";
+import { onCover } from "./courseCover";
 
 export function StarIcon({ size = 13 }: { size?: number }) {
   return (
@@ -33,10 +31,11 @@ export function LockIcon() {
 
 /** The white pill on a course's cover: "Beginner · 6 weeks". */
 export function CoverPill({ children }: { children: React.ReactNode }) {
+  const { bg, ink } = onCover(useIsDark());
   return (
     <span
       className="text-[11px] font-extrabold rounded-full px-[9px] py-1"
-      style={{ background: "#FFFFFF", color: "#241F1B" }}
+      style={{ background: bg, color: ink }}
     >
       {children}
     </span>

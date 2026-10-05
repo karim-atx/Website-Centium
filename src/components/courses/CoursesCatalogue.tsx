@@ -20,6 +20,8 @@ import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } f
 import { ForumChip, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
+import { coverBackground } from "./courseCover";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 6: the Courses tab. Search, category chips, "Continue
 // learning" with progress, then the course cards.
@@ -64,6 +66,7 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
 const COURSE_ORDER = ["workouts", "nutrition", "progress", "motivation", "general"];
 
 export function CoursesCatalogue({ userId }: { userId: string }) {
+  const dark = useIsDark();
   const [result, setResult] = useState<{ data: Data } | { error: string } | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
@@ -229,7 +232,7 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                   className="rounded-[20px] overflow-hidden flex flex-col no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
-                  <div className="h-[104px] flex items-end p-2.5" style={{ background: c.coverColour }}>
+                  <div className="h-[104px] flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
                     <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
                   </div>
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">
