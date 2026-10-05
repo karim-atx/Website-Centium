@@ -373,3 +373,32 @@ export async function unsubscribeFromPush(): Promise<UnsubscribeResult> {
     };
   }
 }
+
+/**
+ * Whether this browser is registered to receive this account's pushes: it has
+ * a push subscription AND the account owns a push_subscriptions row for that
+ * endpoint. Null when it cannot be told (no support, or the read failed).
+ *
+ * THE ROW, NOT THE BROWSER SUBSCRIPTION, decides it. unsubscribeFromPush()
+ * deliberately leaves the browser's subscription alive and only deletes the
+ * row, so a live browser subscription alone does not mean anything arrives.
+ * Never subscribes to find out: getSubscription() only reads.
+ */
+export async function isThisDeviceRegistered(): Promise<boolean | null> {
+  if (!pushSupported()) return null;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) return false;
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) return false;
+    const { data, error } = await supabase
+      .from("push_subscriptions")
+      .select("endpoint")
+      .eq("endpoint", subscription.endpoint)
+      .limit(1);
+    if (error) return null;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return null;
+  }
+}

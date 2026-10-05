@@ -19,7 +19,7 @@ interface Props {
 // clinical yes/no — matches the later "Avoid calling it an 'ED toggle'...
 // Do not make the user explain why they selected it" guidance from the same
 // cycle, which applies just as much here at first ask as it does in
-// Settings later.
+// Profile later.
 export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   return (
     <OnboardingShell
@@ -61,7 +61,7 @@ export const RecoveryStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
               Start with a gentler, recovery-sensitive experience
             </span>
             <span className="text-xs text-charcoal-faint leading-relaxed block">
-              Hides calorie totals, weight, and streaks to start. You control this anytime in Settings. Nothing you've logged is ever lost.
+              Hides calorie totals, weight, and streaks to start. You control this anytime in Profile. Nothing you've logged is ever lost.
             </span>
           </span>
         </button>

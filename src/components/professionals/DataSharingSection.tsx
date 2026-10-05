@@ -2,8 +2,25 @@ import React, { useEffect, useRef, useState } from "react";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
-import { ShieldCheck, Info, Check } from "lucide-react";
+import {
+  Activity,
+  Baby,
+  Check,
+  ClipboardList,
+  Droplet,
+  Dumbbell,
+  FlaskConical,
+  HeartPulse,
+  Info,
+  Ruler,
+  Scale,
+  ShieldCheck,
+  TrendingUp,
+  UtensilsCrossed,
+  type LucideIcon,
+} from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { initials } from "./typeColour";
 import { formatDisplayDate } from "../../utils/date";
 import {
   beginToggleAttempt,
@@ -27,6 +44,42 @@ import {
   reconcilePendingGrants,
   type PendingGrantChange,
 } from "../../services/consent/pending";
+
+/** MO1.5.1.1: the board's three groups. */
+const GROUPS: { label: string; categories: AccessCategory[] }[] = [
+  { label: "Everyday tracking", categories: ["food_diary", "workout_activity", "weight", "progress", "health_metrics"] },
+  { label: "Health records", categories: ["lab_results", "medical_history", "body_measurements", "blood_pressure"] },
+  { label: "Personal", categories: ["cycle_phase", "pregnancy"] },
+];
+
+/**
+ * The groups with their categories, in ACCESS_CATEGORIES order. A category
+ * added later and not yet placed in a group goes in the last one, so a new
+ * switch can never silently go missing from this screen.
+ */
+const groupsOf = () => {
+  const placed = new Set(GROUPS.flatMap((g) => g.categories));
+  return GROUPS.map((g, i) => ({
+    label: g.label,
+    items: ACCESS_CATEGORIES.filter(
+      (c) => g.categories.includes(c.category) || (i === GROUPS.length - 1 && !placed.has(c.category))
+    ),
+  }));
+};
+
+const CATEGORY_ICON: Partial<Record<AccessCategory, LucideIcon>> = {
+  food_diary: UtensilsCrossed,
+  workout_activity: Dumbbell,
+  weight: Scale,
+  progress: TrendingUp,
+  health_metrics: Activity,
+  lab_results: FlaskConical,
+  medical_history: ClipboardList,
+  body_measurements: Ruler,
+  blood_pressure: HeartPulse,
+  cycle_phase: Droplet,
+  pregnancy: Baby,
+};
 
 /** The display label for a category, for use inside prose. */
 const labelFor = (category: AccessCategory): string =>
@@ -300,116 +353,99 @@ export const DataSharingSection: React.FC<{
   if (!authUserId || loading) return null;
   if (visible.length === 0) return null;
 
-  return (
-    <div className={professionalId ? undefined : "mb-6"}>
-      {/* The sheet that renders the single-professional variant carries its
-          own title, so the section heading would just repeat it. */}
-      {!professionalId && (
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
-          <ShieldCheck size={13} /> Data sharing
+  // MO1.5.1.1 (R15, batch C): the switches in three quiet groups, each row
+  // with an icon tile, and they/them copy after the header (BR-15). In the
+  // Profile sheet (one professional) the header is centred: avatar, name,
+  // "Connected since". Every notice below is kept although the board does not
+  // draw it: the unanswered-categories question with its decline, the Saved
+  // ticks, and the changes that did not save.
+  const header = (pro: LinkedProfessional) =>
+    professionalId ? (
+      <div className="flex flex-col items-center text-center mb-4">
+        <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
+          {pro.avatarUrl ? <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(pro.name)}
+        </span>
+        <p className="mt-2.5 text-[17px] font-bold text-charcoal">{pro.name}</p>
+        <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
+        <p className="mt-2.5 text-[12.5px] text-charcoal-soft max-w-[300px]">
+          Choose what they can see. Nothing is shared unless you turn it on.
         </p>
-      )}
+      </div>
+    ) : (
+      <>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
+            {pro.avatarUrl ? (
+              <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <PERSON_ICON size={17} className="text-primary-dark" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-charcoal truncate">{pro.name}</p>
+            <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-charcoal-soft mb-3">Choose what they can see. Nothing is shared unless you turn it on.</p>
+      </>
+    );
 
-      {error && <p className="text-xs font-semibold text-status-high mb-2">{error}</p>}
+  const body = (pro: LinkedProfessional) => (
+    <>
+      {header(pro)}
 
-      {/* SAID IN WORDS, not left as a switch that quietly sprang back. The
-          client asked for something, this device recorded the request before
-          sending it, and the database came back disagreeing — so the change is
-          not in effect and they are the only person who can put that right.
-          Rendering the true value alone would be the silent failure all over
-          again, one screen further on.
-
-          Named per professional even inside the single-professional sheet: a
-          change that did not take effect for someone else is still a category
-          being shared against the client's wishes, and the sheet's title is
-          not a reason to withhold that. */}
-      {unsaved.length > 0 && (
-        <div className="rounded-2xl bg-status-high-bg border border-status-high/30 px-3.5 py-3 mb-2.5">
-          <p className="text-[11.5px] font-semibold text-status-high mb-1">
-            {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
+      {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
+        <div className="rounded-xl bg-primary-pale border border-primary/[0.16] px-3 py-2.5 mb-3">
+          <p className="text-[11.5px] font-semibold text-charcoal mb-1">Two things we should have asked separately</p>
+          <p className="text-[11px] text-charcoal-soft leading-relaxed">
+            When you agreed to share health metrics with {pro.name}, that one switch also covered your lab results and
+            your medical history. That was too much to bundle into a single question. We've split it out below. Your
+            activity and vitals are still shared exactly as before, and{" "}
+            {unanswered[pro.professionalId]!.length > 1 ? (
+              <>these two are waiting on your answer. Until you answer, they can't see either one.</>
+            ) : (
+              <>
+                {labelFor(unanswered[pro.professionalId]![0])} is waiting on your answer. Until you answer, they can't
+                see it.
+              </>
+            )}{" "}
+            Either answer is fine.
           </p>
-          {unsaved.map((u) => (
-            <p
-              key={`${u.professionalId}:${u.category}`}
-              className="text-[11px] text-charcoal-soft leading-relaxed"
-            >
-              {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with{" "}
-              {nameFor(u.professionalId)}. Set it again to retry.
-            </p>
-          ))}
+          {/* The switches below are the "yes". This is the "no": without it the
+              only way to decline would be to grant access and take it straight
+              back, which on medications and imaging means a real disclosure in
+              order to refuse one. */}
+          <button
+            onClick={() => void declineAll(pro.professionalId)}
+            disabled={saving === pro.professionalId}
+            className="tap mt-2.5 rounded-xl bg-cream-card text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
+          >
+            {saving === pro.professionalId
+              ? "Saving…"
+              : unanswered[pro.professionalId]!.length > 1
+              ? "Don't share these"
+              : "Don't share this"}
+          </button>
         </div>
       )}
 
-      {visible.map((pro) => (
-        <Card key={pro.professionalId} className="mb-2.5 animate-fade-slide-up">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-              {pro.avatarUrl ? (
-                <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <PERSON_ICON size={17} className="text-primary-dark" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-charcoal truncate">{pro.name}</p>
-              <p className="text-xs text-charcoal-faint">
-                Connected since {formatDisplayDate(pro.joinedAt)}
-              </p>
-            </div>
-          </div>
-
-          <p className="text-[11px] text-charcoal-soft mb-3">
-            Choose what {pro.name} can see. Nothing is shared unless you turn it on.
-          </p>
-
-          {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
-            <div className="rounded-xl bg-primary-pale border border-primary/[0.16] px-3 py-2.5 mb-3">
-              <p className="text-[11.5px] font-semibold text-charcoal mb-1">
-                Two things we should have asked separately
-              </p>
-              <p className="text-[11px] text-charcoal-soft leading-relaxed">
-                When you agreed to share health metrics with {pro.name}, that one switch also
-                covered your lab results and your medical history. That was too much to bundle
-                into a single question. We've split it out below. Your activity and vitals are
-                still shared exactly as before, and{" "}
-                {unanswered[pro.professionalId]!.length > 1 ? (
-                  <>
-                    these two are waiting on your answer. Until you answer, {pro.name} can't see
-                    either one.
-                  </>
-                ) : (
-                  <>
-                    {labelFor(unanswered[pro.professionalId]![0])} is waiting on your answer.
-                    Until you answer, {pro.name} can't see it.
-                  </>
-                )}{" "}
-                Either answer is fine.
-              </p>
-              {/* The switches below are the "yes". This is the "no" — without
-                  it the only way to decline would be to grant access and take
-                  it straight back, which on medications and imaging means a
-                  real disclosure in order to refuse one. */}
-              <button
-                onClick={() => void declineAll(pro.professionalId)}
-                disabled={saving === pro.professionalId}
-                className="tap mt-2.5 rounded-xl bg-cream-card text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
-              >
-                {saving === pro.professionalId
-                  ? "Saving…"
-                  : unanswered[pro.professionalId]!.length > 1
-                  ? "Don't share these"
-                  : "Don't share this"}
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-2.5">
-            {ACCESS_CATEGORIES.map(({ category, label, description }) => {
-              // Absent means denied — no default-on.
+      {groupsOf().map((g) => (
+        <div key={g.label} className="mt-4 first:mt-0">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">{g.label}</p>
+          <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
+            {g.items.map(({ category, label, description }) => {
+              // Absent means denied: no default-on.
               const granted = grants[pro.professionalId]?.[category] === true;
+              const Icon = CATEGORY_ICON[category] ?? ShieldCheck;
               return (
-                <div key={category} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                <div
+                  key={category}
+                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[48px] before:end-0 before:h-px before:bg-charcoal/[0.06] last:before:hidden"
+                >
+                  <span className="w-9 h-9 rounded-2xl bg-cream-soft text-charcoal-soft flex items-center justify-center shrink-0" aria-hidden>
+                    <Icon size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm text-charcoal flex items-center gap-1.5">
                       {label}
                       {savedKey === `${pro.professionalId}:${category}` && (
@@ -429,27 +465,65 @@ export const DataSharingSection: React.FC<{
               );
             })}
           </div>
-
-          {/* THIS USED TO SAY THE OPPOSITE, and it was wrong in the most
-              dangerous direction a sentence on this screen can be wrong:
-              "the data itself isn't connected yet, so turning something on
-              doesn't reveal anything to them today". Eighteen RLS policies and
-              two Storage policies gate professional access on these switches —
-              food diary, workouts, weight, vitals, blood panels and markers,
-              medications, surgeries, comorbidities, imaging, and the lab-report
-              and medical-imaging buckets. Turning one on discloses real
-              clinical data to a real person, immediately. Telling a client
-              otherwise on the screen where they decide is not a stale comment;
-              it is misinformed consent. */}
-          <p className="flex items-start gap-1.5 text-[11px] text-charcoal-faint mt-3.5 pt-3 border-t border-charcoal/[0.06]">
-            <Info size={12} className="mt-0.5 shrink-0" />
-            <span>
-              These take effect straight away. Turning one on lets {pro.name} see that data from
-              that moment; turning it off stops them just as quickly.
-            </span>
-          </p>
-        </Card>
+        </div>
       ))}
+
+      {/* THIS USED TO SAY THE OPPOSITE ("turning something on doesn't reveal
+          anything to them today"), which was wrong in the most dangerous
+          direction: eighteen RLS policies and two Storage policies gate
+          professional access on these switches. Turning one on discloses real
+          clinical data to a real person, immediately. */}
+      <p className="flex items-start gap-1.5 text-[11px] text-charcoal-faint mt-3.5 pt-3 border-t border-charcoal/[0.06]">
+        <Info size={12} className="mt-0.5 shrink-0" />
+        <span>
+          These take effect straight away. Turning one on lets them see that data from that moment; turning it off
+          stops them just as quickly.
+        </span>
+      </p>
+    </>
+  );
+
+  return (
+    <div className={professionalId ? undefined : "mb-6"}>
+      {/* The sheet that renders the single-professional variant carries its
+          own title, so the section heading would just repeat it. */}
+      {!professionalId && (
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <ShieldCheck size={13} /> Data sharing
+        </p>
+      )}
+
+      {error && <p className="text-xs font-semibold text-status-high mb-2">{error}</p>}
+
+      {/* SAID IN WORDS, not left as a switch that quietly sprang back: the
+          database came back disagreeing with what this device asked for, so
+          the change is not in effect. Named per professional even inside the
+          single-professional sheet. */}
+      {unsaved.length > 0 && (
+        <div className="rounded-2xl bg-status-high-bg border border-status-high/30 px-3.5 py-3 mb-2.5">
+          <p className="text-[11.5px] font-semibold text-status-high mb-1">
+            {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
+          </p>
+          {unsaved.map((u) => (
+            <p key={`${u.professionalId}:${u.category}`} className="text-[11px] text-charcoal-soft leading-relaxed">
+              {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with {nameFor(u.professionalId)}. Set it
+              again to retry.
+            </p>
+          ))}
+        </div>
+      )}
+
+      {visible.map((pro) =>
+        professionalId ? (
+          <div key={pro.professionalId} className="animate-fade-slide-up">
+            {body(pro)}
+          </div>
+        ) : (
+          <Card key={pro.professionalId} className="mb-2.5 animate-fade-slide-up">
+            {body(pro)}
+          </Card>
+        )
+      )}
     </div>
   );
 };

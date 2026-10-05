@@ -622,6 +622,56 @@ body {
   transform: scale(1.15);
 }
 
+/* R19 (batch C, C26): Settings > Accessibility > High contrast. Every text
+   token takes the strongest ink and every hairline goes to 30% of it
+   (MO1.8.6.1), in every colour theme. Light: #111111. Dark: the dark
+   text.primary #F5F3FA, the same rule mirrored. The board gives a darkened
+   primary for Centium light only (#5B48B8, text #4B3BA0); the other themes
+   and dark keep their primary until R20 (batch D). */
+html.high-contrast {
+  --c-charcoal: 17 17 17;
+  --c-charcoal-soft: 17 17 17;
+  --c-charcoal-faint: 17 17 17;
+  --c-charcoal-tertiary: 17 17 17;
+  --c-charcoal-muted: 17 17 17;
+  --border-row: rgb(17 17 17 / 0.3);
+}
+html.high-contrast.dark {
+  --c-charcoal: 245 243 250;
+  --c-charcoal-soft: 245 243 250;
+  --c-charcoal-faint: 245 243 250;
+  --c-charcoal-tertiary: 245 243 250;
+  --c-charcoal-muted: 245 243 250;
+  --border-row: rgb(245 243 250 / 0.3);
+}
+html.high-contrast[data-accent="centium"]:not(.dark) {
+  --c-primary: 91 72 184;
+  --c-primary-fill: 91 72 184;
+  --c-on-primary-fill: 255 255 255;
+  --c-primary-accent: 75 59 160;
+  --c-primary-dark: 75 59 160;
+  --c-primary-deep-text: 75 59 160;
+}
+/* The hairlines are literal `border-charcoal/[0.06]`-style classes whose
+   alpha no token reaches, so they are matched by class here, with focus
+   borders left alone. */
+html.high-contrast [class*="border-charcoal/"]:not(:focus) {
+  border-color: rgb(var(--c-charcoal) / 0.3);
+}
+html.high-contrast [class*="divide-charcoal/"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--c-charcoal) / 0.3);
+}
+html.high-contrast [class*="before:bg-charcoal/"]::before {
+  background-color: rgb(var(--c-charcoal) / 0.3);
+}
+
+/* R19 (batch C, C25): Settings > Accessibility > Bigger tap targets. Every
+   tappable gets a 48 x 48 hit area (the global rule below gives 44) and rows
+   grow by 8 (--row-extra, read by the Settings rows). Off, nothing changes. */
+html.big-targets {
+  --row-extra: 8px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -692,6 +742,10 @@ body {
   width: max(100%, 44px);
   height: max(100%, 44px);
   transform: translate(-50%, -50%);
+}
+html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, select, textarea, [role="button"])))::after {
+  width: max(100%, 48px);
+  height: max(100%, 48px);
 }
 
 /* Hero handoff (design_handoff_hero/source/hero.css + README §2/§3 row 10):

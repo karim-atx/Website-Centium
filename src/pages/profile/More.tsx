@@ -1,7 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
-import { ReferralSheet } from "../../components/profile/ReferralSheet";
+import { ReferralPopup } from "../../components/profile/ReferralPopup";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
 import { useUnread } from "../../context/UnreadContext";
@@ -235,7 +235,7 @@ export default function More() {
         <ChevronRight size={14} style={{ color: "#C8BFE9" }} className="shrink-0" />
       </button>
 
-      <ReferralSheet open={referralOpen} onClose={() => setReferralOpen(false)} />
+      <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
       {isProfessional && <PaymentsSheet open={paymentsOpen} onClose={() => setPaymentsOpen(false)} />}
       {isProfessional && <PublicListingSheet open={listingOpen} onClose={() => setListingOpen(false)} />}
     </div>

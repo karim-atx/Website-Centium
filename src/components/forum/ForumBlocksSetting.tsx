@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { ChevronRight, UserX } from "lucide-react";
-import { Card } from "../ui/Card";
+import { UserX } from "lucide-react";
+import { SettingsRow } from "../ui/SettingsRows";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { fetchMyForumBlocks, unblockForumBlock, type ForumBlock } from "../../services/forum";
 import { forumAccess } from "../../services/forum/rules";
 
-// Settings > "Blocked in the forum": the people blocked from a forum post,
+// Settings > Data & account > "Blocked in the forum" (a row since batch C;
+// it used to be a card under its own "Community" label): the people blocked from a forum post,
 // each shown by the label that was on the post when they were blocked (a
 // nickname or a first name) and nothing else, with Unblock. The app never
 // holds who is behind a label; my_forum_blocks returns a reference and the
@@ -50,20 +51,7 @@ export function ForumBlocksSetting() {
 
   return (
     <>
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Community</p>
-      <Card padded={false} className="mb-6">
-        <button
-          type="button"
-          onClick={openList}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <UserX size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Blocked in the forum</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
-        </button>
-      </Card>
+      <SettingsRow icon={UserX} title="Blocked in the forum" onClick={openList} />
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Blocked in the forum">
         <div className="flex flex-col gap-3 pb-4">

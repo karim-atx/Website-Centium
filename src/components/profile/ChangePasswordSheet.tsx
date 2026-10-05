@@ -17,6 +17,7 @@ import {
   verifyCurrentPassword,
 } from "../../services/auth/passwordChange";
 import { hasEmailPassword } from "../../services/auth/passwordChangeLogic";
+import { CodeBoxes } from "../ui/CodeBoxes";
 import {
   meetsPasswordRule,
   passwordChecks,
@@ -332,15 +333,17 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                 For your security, we emailed a 6-digit code to {email}. Enter it to finish changing your password.
               </p>
             </div>
-            <input
+            {/* Six boxes (Foundations 2.5), as on every code screen. */}
+            <CodeBoxes
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-              inputMode="numeric"
-              autoComplete="one-time-code"
+              onChange={(v) => {
+                setCode(v);
+                setError(null);
+              }}
+              error={!!error}
+              disabled={busy}
               autoFocus
-              placeholder="000000"
-              aria-label="Six-digit code from your email"
-              className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-center text-xl font-semibold tracking-[0.4em] text-charcoal placeholder:text-charcoal-faint placeholder:tracking-[0.4em] focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              label="Six-digit code from your email"
             />
             {notice && <p className="text-xs text-charcoal-soft text-center">{notice}</p>}
             {error && (

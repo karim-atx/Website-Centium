@@ -904,7 +904,7 @@ than deleted stays world-readable indefinitely.
 
 **Report a bug writes to `bug_reports` and works.** Directly above it in the
 same card, **Contact us does nothing at all** — `ContactUsSheet` is three
-buttons with no handlers (Live Chat, Call us, Email at `support@centium.app`)
+buttons with no handlers (Live Chat, Call us, Email at `support@atraxia.org`)
 and a footer reading *"Prototype only — these don't connect to a real support
 channel yet."*
 
@@ -916,12 +916,12 @@ have opened it.
 
 This was left alone deliberately rather than overlooked. Fixing it means
 answering product questions that belong to whoever runs support — is there a
-phone line, is there a chat provider, does `support@centium.app` receive mail
+phone line, is there a chat provider, does `support@atraxia.org` receive mail
 — and deleting the rows would discard intent someone may still act on. The
 options are roughly: make the channels real, remove the ones that are not, or
 fold support into the bug report, and each is a different product decision.
 
-**Two things to know before deciding.** `support@centium.app` has never been
+**Two things to know before deciding.** `support@atraxia.org` has never been
 verified to exist; it appears only in mock content, so anything built on it
 (a `mailto:` in particular) could route real reports into nothing, which is
 worse than an obviously dead button. And **a filed bug report notifies nobody**

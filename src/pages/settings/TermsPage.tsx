@@ -1,12 +1,15 @@
+import { ChevronRight, ExternalLink } from "lucide-react";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
-import React from "react";
-import { BottomSheet } from "../ui/BottomSheet";
 
-// V9 (QA 9.0): "In the general tabs I would like a button for terms and
-// services... Should be applicable in the other professional and business
-// UI as well" — one shared sheet, reused by Settings.tsx for every account
-// type, covering the concepts specific to each (client tracking, professional
-// services/certification, business listings/marketplace) in one document.
+// MO1.8.8 Terms of Service, as a page (was a sheet), LAYOUT ONLY (C35): the
+// board's shape (intro, the medical-disclaimer callout card, headed
+// sections, the full-terms link) with today's words until the final copy
+// arrives (D28). The "Prototype" line stays until then, as the intro.
+//
+// THE DISCLAIMER HAS ONE SOURCE: the callout reads HEALTH_DISCLAIMER, which
+// section 2 also opens with, and links to the website's Health & Medical
+// Disclaimer. Every account type reaches this page from Settings.
 const sections: { heading: string; body: string }[] = [
   {
     heading: "1. Acceptance of terms",
@@ -15,11 +18,7 @@ const sections: { heading: string; body: string }[] = [
   },
   {
     heading: "2. Not medical advice",
-    // QA 11.0: "please mention that Centium does not diagnose prognose and
-    // does not act like a replacement for a doctor rather just provides
-    // advice" + "Another legal line should state that Centium does not
-    // condone the use or purchase of steroids/drugs."
-    // Task Y2: the app-wide disclaimer opens this section.
+    // QA 11.0 and Task Y2: the app-wide disclaimer opens this section.
     body:
       `${HEALTH_DISCLAIMER} ` +
       "Centium provides health, fitness and nutrition tracking tools for informational purposes only. Centium does not diagnose, prognose, or treat any condition, and is not a replacement for a doctor — the app and any professional advice given through it are guidance only. Always consult a qualified healthcare professional before making changes to your diet, exercise or medication routine. Centium does not condone, endorse, or facilitate the use or purchase of steroids or other unregulated drugs, and no such content or listing is permitted on the platform.",
@@ -51,18 +50,48 @@ const sections: { heading: string; body: string }[] = [
   },
 ];
 
-export const TermsOfServiceSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  <BottomSheet open={open} onClose={onClose} title="Terms of Service">
-    <div className="space-y-4 animate-fade-slide-up">
-      <p className="text-[11px] text-charcoal-faint">
+export default function TermsPage() {
+  return (
+    <div>
+      <PageHeader title="Terms of Service" showBack sub />
+
+      <p className="text-[12px] text-charcoal-faint">
         Prototype terms for demonstration purposes — not a legally binding document.
       </p>
-      {sections.map((s) => (
-        <div key={s.heading}>
-          <p className="text-sm font-semibold text-charcoal mb-1">{s.heading}</p>
-          <p className="text-xs text-charcoal-soft leading-relaxed">{s.body}</p>
-        </div>
-      ))}
+
+      {/* The board's medical-disclaimer callout: primary-pale, as the app's
+          other tinted notes. */}
+      <a
+        href="/legal#health"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tap mt-4 block rounded-2xl bg-primary-pale px-4 py-3.5"
+      >
+        <span className="block text-[13px] font-semibold leading-snug text-charcoal">{HEALTH_DISCLAIMER}</span>
+        <span className="mt-2 flex items-center justify-between gap-2 text-[12.5px] font-semibold text-primary-deep-text">
+          Health and Medical Disclaimer
+          <ChevronRight size={15} aria-hidden className="shrink-0 rtl:-scale-x-100" />
+        </span>
+      </a>
+
+      <div className="mt-6 space-y-5">
+        {sections.map((s) => (
+          <section key={s.heading}>
+            <h2 className="text-[14px] font-bold text-charcoal mb-1">{s.heading}</h2>
+            <p className="text-[14px] leading-[1.6] text-charcoal-soft">{s.body}</p>
+          </section>
+        ))}
+      </div>
+
+      <a
+        href="/legal#terms"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-semibold text-primary-deep-text"
+      >
+        Read the full Terms of Service
+        <ExternalLink size={16} aria-hidden className="shrink-0" />
+      </a>
     </div>
-  </BottomSheet>
-);
+  );
+}

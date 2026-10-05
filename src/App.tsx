@@ -53,6 +53,13 @@ import More from "./pages/profile/More";
 import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
 import Community, { CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 import Settings from "./pages/settings/Settings";
+import NotificationsPage from "./pages/settings/NotificationsPage";
+import AccessibilityPage from "./pages/settings/AccessibilityPage";
+import PrivacyPage from "./pages/settings/PrivacyPage";
+import TermsPage from "./pages/settings/TermsPage";
+import LanguagePage from "./pages/settings/LanguagePage";
+import TwoFactorPage from "./pages/settings/TwoFactorPage";
+import TwoFactorSetupPage from "./pages/settings/TwoFactorSetupPage";
 import ResetPassword from "./pages/auth/ResetPassword";
 import PublicCertificate from "./pages/courses/PublicCertificate";
 
@@ -438,6 +445,14 @@ function AppRoutes() {
         <Route path="/app/forum/courses/:courseId" element={<CoursePage />} />
         <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/app/settings" element={<Settings />} />
+        {/* MO1.8 sub-screens, pages since batch C (they were sheets). */}
+        <Route path="/app/settings/notifications" element={<NotificationsPage />} />
+        <Route path="/app/settings/accessibility" element={<AccessibilityPage />} />
+        <Route path="/app/settings/privacy" element={<PrivacyPage />} />
+        <Route path="/app/settings/terms" element={<TermsPage />} />
+        <Route path="/app/settings/language" element={<LanguagePage />} />
+        <Route path="/app/settings/two-factor" element={<TwoFactorPage />} />
+        <Route path="/app/settings/two-factor/setup" element={<TwoFactorSetupPage />} />
       </Route>
       {/* More specific than the marketing group's own path="*" (an extra
           static "app" segment outranks a bare splat), so this — not the

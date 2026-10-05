@@ -20,9 +20,12 @@ interface PageHeaderProps {
   // Design refinement §5.4: a 10.5px/600 uppercase line above the title
   // (Home's date, a professional's name) — optional, screen-specific.
   eyebrow?: string;
+  // Mobile v5.1 C-02: a Settings sub-page title is 24/700 (MO1.8.3 – MO1.8.8),
+  // one step under the 27/700 of a top-level page.
+  sub?: boolean;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub }) => {
   const navigate = useNavigate();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
@@ -47,7 +50,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitl
               {eyebrow}
             </p>
           )}
-          <h1 className="font-display text-[27px] font-bold tracking-[-0.022em] text-charcoal">{title}</h1>
+          <h1 className={`font-display ${sub ? "text-[24px] leading-[1.25]" : "text-[27px]"} font-bold tracking-[-0.022em] text-charcoal`}>{title}</h1>
           {subtitle && (
             <p className={`text-[13px] font-medium mt-1.5 ${subtitleColor ? "" : "text-charcoal-faint"}`} style={subtitleColor ? { color: subtitleColor } : undefined}>
               {subtitle}

@@ -205,6 +205,8 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
           .cent-water-drift, .cent-water-swell { animation-duration: 40s !important; }
           .cent-water-slosh, .cent-water-sparkle { animation: none !important; }
         }
+        .reduce-motion .cent-water-drift, .reduce-motion .cent-water-swell { animation: none !important; }
+        .reduce-motion .cent-water-slosh, .reduce-motion .cent-water-sparkle { animation: none !important; }
       `}</style>
 
       {/* Fill container: 126px at the goal, never higher. */}

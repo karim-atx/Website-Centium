@@ -7,6 +7,7 @@ import { updatePassword } from "../../services/auth";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
+import { CodeBoxes } from "../../components/ui/CodeBoxes";
 import {
   passwordChecks,
   meetsPasswordRule,
@@ -206,15 +207,17 @@ export default function ResetPassword() {
               </span>
             </div>
 
-            <input
+            {/* Six boxes (Foundations 2.5), as on every two-factor screen. */}
+            <CodeBoxes
               value={mfaCode}
-              onChange={(e) => setMfaCode(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-              inputMode="numeric"
-              autoComplete="one-time-code"
+              onChange={(v) => {
+                setMfaCode(v);
+                setError(null);
+              }}
+              error={!!error}
+              disabled={busy}
               autoFocus
-              placeholder="000000"
-              aria-label="Six-digit authentication code"
-              className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-center text-xl font-semibold tracking-[0.4em] text-charcoal placeholder:text-charcoal-faint placeholder:tracking-[0.4em] focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              label="Six-digit authentication code"
             />
 
             {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}

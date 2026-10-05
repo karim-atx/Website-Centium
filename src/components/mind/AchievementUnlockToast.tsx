@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { LEVEL_LABEL } from "../../services/achievements";
 import { colourSet, levelHex } from "./achievementStyle";
 
@@ -49,22 +50,6 @@ const SCHEDULE: [number, Phase][] = [
 ];
 const ORDER: Phase[] = ["dot", "circle", "logo", "flip", "wide", "details", "sheen", "outDetails", "outWide", "outCircle", "gone"];
 const at = (p: Phase, q: Phase) => ORDER.indexOf(p) >= ORDER.indexOf(q);
-
-function useReducedMotion(): boolean {
-  // Initialised from the query rather than set in an effect, so the first paint
-  // is already correct; the listener follows a mid-session change.
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
-  );
-  useEffect(() => {
-    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!query) return;
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
 
 export const AchievementUnlockToast: React.FC = () => {
   const { unlockQueue, dismissUnlock } = useApp();

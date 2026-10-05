@@ -45,7 +45,7 @@ import {
  * THE CURRENT THREAD IS EXCLUDED. Forwarding into the conversation you are
  * reading looks like a duplicate rather than an action; copy exists for that.
  *
- * CONFIRMS IN PLACE, matching ReportBugSheet and RateAppSheet. This app has no
+ * CONFIRMS IN PLACE, matching ReportBugPopup and RateAppPopup. This app has no
  * toast, and the alternative -- closing silently -- leaves someone unsure
  * whether a message went to the right person, which is the one thing worth
  * being certain about when the destination was chosen a second ago.

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Card } from "../ui/Card";
+import { Clock } from "lucide-react";
+import { SettingsRow } from "../ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { browserTimezone, knownTimezones } from "../../services/timezone";
 import { zoneLabel } from "../../services/timezone/logic";
@@ -11,7 +12,8 @@ import { zoneLabel } from "../../services/timezone/logic";
  * Picking a zone records it as the user's choice (timezone_chosen_at), so a
  * phone in another zone no longer changes it. "Use this device's time zone"
  * goes back to following the device. Moved here from the cycle tracker's own
- * Settings tab, which now links to it.
+ * Settings tab, which now links to it (#timezone). A row in Settings' "Data &
+ * account" section since batch C; it used to be a card of its own.
  *
  * A <select> OF THE ENGINE'S OWN LIST, because the server validates names
  * (ATX50) and a hand-kept list would go stale; where the engine cannot list
@@ -37,13 +39,17 @@ export const TimezoneSetting: React.FC = () => {
   };
 
   return (
-    <Card className="mb-6" id="timezone">
-      <p className="text-sm font-medium text-charcoal">Time zone</p>
-      <p className="mt-0.5 text-[11px] leading-relaxed text-charcoal-faint">
+    <SettingsRow
+      id="timezone"
+      icon={Clock}
+      title="Time zone"
+      subtitle={
+    <>
+      <span className="block leading-relaxed">
         Sets what counts as "today" for your streaks, meditation and cycle days, and when reminders are sent.
-      </p>
+      </span>
       {myTimezone === null ? (
-        <p className="mt-2.5 text-xs text-charcoal-faint">Loading…</p>
+        <span className="block mt-2.5 text-xs text-charcoal-faint">Loading…</span>
       ) : (
         <>
           <select
@@ -66,26 +72,28 @@ export const TimezoneSetting: React.FC = () => {
               </option>
             ))}
           </select>
-          <p className="mt-1.5 text-[11px] text-charcoal-soft" role="status">
+          <span className="block mt-1.5 text-[11px] text-charcoal-soft" role="status">
             {chosen ? "Set by you. This device won't change it." : "Follows this device."}
-          </p>
+          </span>
           {(chosen || (device && device !== stored)) && (
             <button
               type="button"
               onClick={() => void run(followDeviceZone)}
               disabled={busy}
-              className="tap mt-1 text-[11.5px] font-semibold text-primary-dark disabled:opacity-40"
+              className="tap mt-1 block text-[11.5px] font-semibold text-primary-dark disabled:opacity-40"
             >
               Use this device's time zone{device ? ` (${zoneLabel(device)})` : ""}
             </button>
           )}
           {error && (
-            <p className="mt-2 text-xs font-semibold text-status-high" role="alert">
+            <span className="block mt-2 text-xs font-semibold text-status-high" role="alert">
               {error}
-            </p>
+            </span>
           )}
         </>
       )}
-    </Card>
+    </>
+      }
+    />
   );
 };

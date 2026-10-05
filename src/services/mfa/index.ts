@@ -180,3 +180,17 @@ export async function unenrollFactor(factorId: string): Promise<MfaResult<null>>
   if (error) return fail(error);
   return { ok: true, data: null };
 }
+
+/**
+ * Removes unverified TOTP factors left by abandoned enrolments. They protect
+ * nothing (GoTrue lets an aal1 session remove them for that reason), and a
+ * leftover one would collide with a new enrolment's friendly name or count
+ * toward the ten-factor ceiling. Verified factors are never touched.
+ */
+export async function removeAbandonedFactors(): Promise<void> {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  if (error) return;
+  for (const factor of data.all) {
+    if (factor.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: factor.id });
+  }
+}

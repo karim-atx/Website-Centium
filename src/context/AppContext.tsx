@@ -470,7 +470,9 @@ interface AppState {
   // Future Supabase migration: device_presentation_settings (per-platform,
   // stays local, never synced) — larger text / reduce motion are
   // presentation, not synced app preferences.
-  accessibility: { largerText: boolean; reduceMotion: boolean };
+  // R19 (batch C) adds High contrast and Bigger tap targets, also device-local;
+  // optional so a value saved before them reads as off.
+  accessibility: { largerText: boolean; reduceMotion: boolean; highContrast?: boolean; biggerTargets?: boolean };
   updateAccessibility: (patch: Partial<AppState["accessibility"]>) => void;
 
   foodLog: FoodLogEntry[];
@@ -2074,6 +2076,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.style.fontSize = accessibility.largerText ? "112.5%" : "";
     document.documentElement.classList.toggle("larger-icons", accessibility.largerText);
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
+    document.documentElement.classList.toggle("high-contrast", !!accessibility.highContrast);
+    document.documentElement.classList.toggle("big-targets", !!accessibility.biggerTargets);
   }, [accessibility]);
 
   // Starts empty. The seeded demo meals are gone — see services/food, which
@@ -5253,8 +5257,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // this branch is never reached by one.
   //
   // A male profile gets no row created for it, and can still switch the
-  // tracker on from Settings — sex decides the DEFAULT, never the
-  // availability.
+  // tracker on from the profile (Cycle tracking moved there from Settings in
+  // batch C) — sex decides the DEFAULT, never the availability.
   //
   // NO ZONE IS WRITTEN HERE ANY MORE (task T): the profile holds it, below.
   const seededCycleFor = useRef<string | null>(null);
