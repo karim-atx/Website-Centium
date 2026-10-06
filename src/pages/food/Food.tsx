@@ -63,7 +63,7 @@ const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 // each is its own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0,
 // 5.0, 5.6:1.
 const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: string; Icon: typeof Sunrise }> = {
-  breakfast: { label: "Breakfast", fill: "rgb(var(--th-beb4e6))", fillDark: "#797292", Icon: Sunrise },
+  breakfast: { label: "Breakfast", fill: "rgb(var(--th-beb4e6))", fillDark: "rgb(var(--th-797292))", Icon: Sunrise },
   snack: { label: "Snacks", fill: "rgb(var(--th-b1a5df))", fillDark: "rgb(var(--th-726a90))", Icon: Clock },
   lunch: { label: "Lunch", fill: "rgb(var(--th-b1a5e0))", fillDark: "rgb(var(--th-726a90))", Icon: Sun },
   dinner: { label: "Dinner", fill: "rgb(var(--th-9284c4))", fillDark: "rgb(var(--th-6b6190))", Icon: Sunset },

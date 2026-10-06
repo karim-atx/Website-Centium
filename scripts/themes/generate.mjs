@@ -49,8 +49,13 @@ const CARD = { light: "#ffffff", dark: "#1c1f28" };
 const TINT_ALPHA = { light: 0.65, dark: 0.25 };
 
 // ---- families ---------------------------------------------------------------
+// Solid lavender fills whose chroma falls inside the text-grey band below: the
+// Food quick-add Breakfast tile's dark fill sits beside its #726A90 / #6B6190
+// siblings, so it follows the theme with them.
+const LAV_FILLS = new Set(["#797292"]);
 /** "lav", "teal" or null (fixed: greys, near-whites, ink, every other hue). */
 export function family(hex) {
+  if (LAV_FILLS.has(hex.toLowerCase())) return "lav";
   const [L, C, H] = toOklch(hex);
   if (H >= 270 && H <= 310 && C >= 0.008) {
     if (C < 0.006) return null;
