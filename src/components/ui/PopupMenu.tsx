@@ -57,6 +57,12 @@ interface PopupMenuProps<V extends string> {
    * 11/400 on a 15 line). Unset leaves every other menu as it is.
    */
   noteType?: { size: number; weight: number; lineHeight?: number };
+  /**
+   * The space between the trigger and the card when a frame draws other than
+   * 6 (MO1.2.1.3.4's attach popup: 8.5, measured). Unset leaves every other
+   * menu as it is.
+   */
+  gap?: number;
 }
 
 /**
@@ -103,6 +109,7 @@ export function PopupMenu<V extends string>({
   variant = "tint",
   backdrop = true,
   noteType,
+  gap = GAP,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
@@ -119,15 +126,15 @@ export function PopupMenu<V extends string>({
       const cardW = width + 2 * pad + 2; // content + padding + border
       let left = align === "right" ? r.right - cardW : r.left;
       left = Math.min(Math.max(EDGE, left), vw - cardW - EDGE);
-      const below = vh - r.bottom - GAP - EDGE;
-      const above = r.top - GAP - EDGE;
+      const below = vh - r.bottom - gap - EDGE;
+      const above = r.top - gap - EDGE;
       // Opens downward unless the space below is short and there is more
       // above (FO6 opens upward from the Plan card near the bottom).
       const up = below < 220 && above > below;
       setPos(
         up
-          ? { bottom: vh - r.top + GAP, left, maxHeight: above, up }
-          : { top: r.bottom + GAP, left, maxHeight: below, up }
+          ? { bottom: vh - r.top + gap, left, maxHeight: above, up }
+          : { top: r.bottom + gap, left, maxHeight: below, up }
       );
     };
     place();
@@ -137,7 +144,7 @@ export function PopupMenu<V extends string>({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, anchor, width, align, pad]);
+  }, [open, anchor, width, align, pad, gap]);
 
   if (!open || !pos) return null;
 

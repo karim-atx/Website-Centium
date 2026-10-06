@@ -27,7 +27,7 @@ import {
   type GroupReader,
   type GroupState,
 } from "../../services/messaging/groups";
-import { clockTime } from "./chatTime";
+import { clockOptions, clockTime } from "./chatTime";
 import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
 import { useThreadLive } from "../../context/threadLive";
 import { computeWaveform } from "../../services/messaging/waveformDecode";
@@ -1943,6 +1943,8 @@ export const ThreadView: React.FC<{
         align="left"
         // The note is 11/400 #8C8378 (table), its lines 15 apart (measured).
         noteType={{ size: 11, weight: 400, lineHeight: 15 / 11 }}
+        // 8.5 above the composer (measured on MO1.2.1.3.4 at 2x; decision 23).
+        gap={8.5}
         options={[
           { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },
           {
@@ -1982,7 +1984,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm font-semibold text-charcoal">{label}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
-                    ? new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                    ? new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", ...clockOptions() })
                     : "–"}
                 </span>
               </div>
@@ -2128,7 +2130,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     };
   }, [messageId]);
   const when = (at: string) =>
-    new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", ...clockOptions() });
   const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
   return (
     <>

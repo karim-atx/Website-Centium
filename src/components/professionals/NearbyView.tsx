@@ -285,14 +285,23 @@ export const NearbyView: React.FC<{
       )}
 
       {phase === "ask" && (
-        <Card className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-charcoal">See professionals near you</p>
-          <p className="text-xs text-charcoal-soft leading-relaxed">
+        // Decision 23 (kept-list 240): Foundations › Empty state (56
+        // primary.tint tile with LocateFixed 26 thin-stroke in primary.accent,
+        // title 15/700, line 12.5/500 muted, max 260); the two actions and the
+        // location note are kept under it.
+        <div className="flex flex-col items-center text-center py-8">
+          <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+            <LocateFixed size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">See professionals near you</p>
+          <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
             Use your location, or choose an area. Your location stays on this device: Centium only uses a
             rough area (about 10 km) to find who's nearby, and never saves it.
           </p>
-          {locError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{locError}</p>}
-          <div className="grid grid-cols-2 gap-2">
+          {locError && (
+            <p className="mt-3 w-full text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{locError}</p>
+          )}
+          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
             <Button size="sm" onClick={() => void locateMe()}>
               <LocateFixed size={15} /> Use my location
             </Button>
@@ -300,7 +309,7 @@ export const NearbyView: React.FC<{
               <MapPin size={15} /> Choose an area
             </Button>
           </div>
-        </Card>
+        </div>
       )}
 
       {phase === "ready" && origin && (

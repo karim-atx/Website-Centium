@@ -27,14 +27,23 @@ interface PageHeaderProps {
   // MO1.8 family: the back chevron's 36 pt button sits 6 from the title
   // (header "gap 6px"; the title box measures x 58), not 10. Off by default.
   tightBack?: boolean;
+  /**
+   * The space under the header in px when a frame draws other than the
+   * default 20 (mb-5). MO1.2 / MO1.2.1.1: 16 to the first element (decision
+   * 23 flag). Unset leaves every other screen as it is.
+   */
+  bottomGap?: number;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub, tightBack }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub, tightBack, bottomGap }) => {
   const back = useBack();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
   return (
-    <div className="flex items-start justify-between mb-5 animate-fade-slide-up">
+    <div
+      className="flex items-start justify-between mb-5 animate-fade-slide-up"
+      style={bottomGap !== undefined ? { marginBottom: bottomGap } : undefined}
+    >
       <div className={`flex items-start ${tightBack ? "gap-1.5" : "gap-2.5"}`}>
         {showBack && (
           // V5 (QA 5.0): plain arrow by default, circular outline only on

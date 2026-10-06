@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, MapPin, Navigation, Wallet } from "lucide-react";
+import { ChevronRight, MapPin, Navigation, Star, Wallet } from "lucide-react";
 import { VerifiedCheck } from "../cv/CvBadges";
 import type { DirectoryListing } from "../../services/directory";
 import { useIsDark } from "../../hooks/useIsDark";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
-import { RatingBadge } from "./RatingBadge";
-import { initials, typeColours } from "./typeColour";
+import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
+import { goldPill, initials, typeColours } from "./typeColour";
 
 /** "Personal Trainer": the frame's type line, from the singular label. */
 const typeLabel = (s: DirectoryListing["subtype"]): string =>
@@ -19,8 +19,10 @@ const typeLabel = (s: DirectoryListing["subtype"]): string =>
  *
  * MO1.2: photo or initials in the type's pill colour; name, headline and type
  * in the type colours; location and price as pills; the bio; a tinted
- * full-width "View Profile". Kept though the frame doesn't draw them (B2):
- * the Verified mark by the name and the rating ("New" under three reviews).
+ * full-width "View Profile". Kept though the frame doesn't draw it (B2):
+ * the Verified mark by the name. The rating is the gold reviews pill beside
+ * the area pill, as Foundations' professional card lists it (decision 23,
+ * kept-list 64; "New" under three reviews).
  * No monthly rate, no price pill (B5).
  *
  * The rating is professional_rating_summary's, through the directory view:
@@ -34,7 +36,10 @@ export const DirectoryCard: React.FC<{
   hideBio?: boolean;
 }> = ({ listing: p, distance, className = "", hideBio }) => {
   const navigate = useNavigate();
-  const t = typeColours(p.subtype, useIsDark());
+  const dark = useIsDark();
+  const t = typeColours(p.subtype, dark);
+  const gold = goldPill(dark);
+  const rating = ratingLabel(p.averageRating, p.reviewCount);
   const pill = "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold max-w-full";
   const open = () => navigate(`/app/professionals/${p.profileId}`);
   // MO1.2 interactions #11–14: a tap anywhere on the card opens the profile.
@@ -67,12 +72,11 @@ export const DirectoryCard: React.FC<{
           <p className="text-[11.5px] font-medium truncate" style={{ color: t.main }}>
             {p.specialty ?? typeLabel(p.subtype)}
           </p>
-          <RatingBadge average={p.averageRating} count={p.reviewCount} className="mt-1" />
         </div>
       </div>
 
-      {(p.location || p.monthlyRate != null || distance !== undefined) && (
-        <div className="flex flex-wrap gap-1.5 mt-3">
+      {/* Always shown now: the gold reviews pill is on every card. */}
+      <div className="flex flex-wrap gap-1.5 mt-3">
           {p.location && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
               {/* Pill icons in the type's main colour, the text in its deep (sampled on MO1.2). */}
@@ -80,6 +84,24 @@ export const DirectoryCard: React.FC<{
               <span className="truncate">{p.location}</span>
             </span>
           )}
+          {/* Foundations › gold reviews pill (#FBF3E2 / 1 px #D9A441 / #9A7424,
+              Star in #D9A441), beside the area pill. Its size on the card is
+              not given: the card pills' 24 tall / 11 type with Star 12, at
+              the profile gold pill's 700 weight. */}
+          <span
+            className={`${pill} !font-bold`}
+            style={{ background: gold.bg, border: `1px solid ${gold.border}`, color: gold.ink }}
+            aria-label={
+              rating.kind === "average"
+                ? `Rated ${rating.value}, ${reviewCountLabel(rating.count)}`
+                : p.reviewCount > 0
+                  ? `New, ${reviewCountLabel(p.reviewCount)}`
+                  : "New, no rating yet"
+            }
+          >
+            <Star size={12} className="shrink-0" aria-hidden style={{ fill: gold.star, color: gold.star }} />
+            {rating.kind === "average" ? `${rating.value} · ${reviewCountLabel(rating.count)}` : "New"}
+          </span>
           {p.monthlyRate != null && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
               <Wallet size={12} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />${p.monthlyRate}/mo
@@ -91,8 +113,7 @@ export const DirectoryCard: React.FC<{
               <span className="truncate">{distance ?? "Not on the map nearby"}</span>
             </span>
           )}
-        </div>
-      )}
+      </div>
 
       {p.bio && !hideBio && <p className="text-[13px] text-charcoal-soft leading-relaxed mt-3 break-words">{p.bio}</p>}
 

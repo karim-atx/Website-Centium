@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
@@ -454,11 +453,13 @@ export default function ProfessionalDetail() {
           Shown only once the gate has actually answered — `canReview` is null
           while the check is in flight, and telling somebody they can't review
           before asking would be a guess. */}
+      {/* Decision 23 (kept-list 61–62): the lock-line pattern (#8: 11.5/400
+          muted, Lock 12/1.75, gap 6) instead of a card. */}
       {isReal && !signedOut && canReview === false && !myReview && (
-        <Card className="mb-5 animate-fade-slide-up">
-          <p className="section-label text-charcoal-faint mb-1.5">Reviews</p>
-          <p className="text-sm text-charcoal-faint">You can only review a professional you've worked with.</p>
-        </Card>
+        <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5 animate-fade-slide-up">
+          <Lock size={12} strokeWidth={1.75} className="shrink-0" aria-hidden /> You can only review a professional you've
+          worked with.
+        </p>
       )}
 
       {reviewError && (

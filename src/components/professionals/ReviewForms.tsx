@@ -3,6 +3,7 @@ import { Pencil, Star } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { Toggle } from "../ui/Toggle";
 import { ReviewItem } from "./ReviewItem";
 import { textPx } from "../../theme/textSize";
 import type { ReviewRow } from "../../services/professional-reviews";
@@ -26,9 +27,15 @@ import {
 const fieldClass =
   "w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none";
 
-/** A textarea's character count, red once over the limit. */
-const Counter: React.FC<{ text: string; max: number; id: string }> = ({ text, max, id }) => {
-  const over = bodyLength(text) > max;
+/**
+ * A textarea's character count, red once over the limit. `nearLimitOnly`
+ * (MO1.2.1.2, decision 23 kept-list 196): shown only in the last 10% of the
+ * limit or over it.
+ */
+const Counter: React.FC<{ text: string; max: number; id: string; nearLimitOnly?: boolean }> = ({ text, max, id, nearLimitOnly }) => {
+  const len = bodyLength(text);
+  const over = len > max;
+  if (nearLimitOnly && len < max * 0.9) return null;
   return (
     <p id={id} aria-live="polite" className={`text-[11px] font-semibold text-right mt-1 tabular-nums ${over ? "text-status-high" : "text-charcoal-faint"}`}>
       {counterLabel(text, max)}
@@ -229,22 +236,19 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           aria-invalid={over || undefined}
           className={`${fieldClass} h-[209px]`}
         />
-        <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" />
+        <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" nearLimitOnly />
       </label>
       {/* NOT "post anonymously": the professional can resolve an active
-          client's name from the relationship whatever this says. */}
-      <label className="flex items-start gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={showName}
-          onChange={(e) => setShowName(e.target.checked)}
-          className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
-        />
-        <span className="text-xs text-charcoal-soft leading-relaxed">
+          client's name from the relationship whatever this says.
+          Decision 23 (kept-list 197): a Toggle row (Foundations Toggle 44×26)
+          in place of the checkbox; the words are unchanged. */}
+      <div className="flex items-center gap-3">
+        <p className="flex-1 min-w-0 text-xs text-charcoal-soft leading-relaxed">
           Show my first name on this review.{" "}
           <span className="text-charcoal-faint">Your professional can see who left it either way.</span>
-        </span>
-      </label>
+        </p>
+        <Toggle checked={showName} onChange={setShowName} label="Show my first name on this review" />
+      </div>
       {over && (
         <p className="text-xs font-semibold text-status-high">
           A review can be up to {REVIEW_BODY_MAX.toLocaleString("en")} characters.

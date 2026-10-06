@@ -73,7 +73,13 @@ export const ReviewItem: React.FC<{
    * only when the reviewer opted in, else "A client" with a plain person icon.
    */
   layout?: "default" | "row";
-}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default" }) => {
+  /**
+   * "row" only: a trailing control on the name line, e.g. MO1.2.1.1's ⋮ menu
+   * holding Report (decision 23, kept-list 190), which clears the row under
+   * the review.
+   */
+  menu?: React.ReactNode;
+}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default", menu }) => {
   const redacted = !!review.redactedAt;
   if (layout === "row") {
     const named = !!review.reviewerName;
@@ -93,9 +99,14 @@ export const ReviewItem: React.FC<{
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[13px] leading-4 font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
-              {review.editedAt && !redacted && (
-                <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide shrink-0">Edited</span>
-              )}
+              {(review.editedAt && !redacted) || menu ? (
+                <span className="flex items-center gap-1 shrink-0">
+                  {review.editedAt && !redacted && (
+                    <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
+                  )}
+                  {menu}
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>

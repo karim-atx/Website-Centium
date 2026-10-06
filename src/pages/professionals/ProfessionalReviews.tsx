@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Pencil, Star } from "lucide-react";
+import { EllipsisVertical, Flag, LogIn, Pencil, Star } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { Card } from "../../components/ui/Card";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { PinnedCta } from "../../components/ui/PinnedCta";
@@ -36,6 +36,8 @@ export default function ProfessionalReviews() {
   const [listing, setListing] = useState<DirectoryListing | null | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  /** The open ⋮ menu: which review, and the button it anchors to. */
+  const [menuFor, setMenuFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -55,7 +57,7 @@ export default function ProfessionalReviews() {
   if (listing === undefined)
     return (
       <div aria-busy="true">
-        <PageHeader title="Reviews" showBack />
+        <PageHeader title="Reviews" showBack bottomGap={16} />
         <span className="sr-only">Loading…</span>
         <div aria-hidden className="h-[140px] rounded-[18px] bg-cream-soft mb-5" />
         <div aria-hidden className="h-[14px] w-24 rounded bg-cream-soft mb-2 ml-1" />
@@ -91,7 +93,7 @@ export default function ProfessionalReviews() {
 
   return (
     <div className={canWrite || canEdit ? "pb-[172px]" : ""}>
-      <PageHeader title="Reviews" subtitle={`${listing.name} · ${typeName(listing.subtype)}`} subtitleColor={t.main} showBack />
+      <PageHeader title="Reviews" subtitle={`${listing.name} · ${typeName(listing.subtype)}`} subtitleColor={t.main} showBack bottomGap={16} />
 
       {/* The summary: the average (or "New" under three reviews, B7), the
           count, and the five bars. */}
@@ -134,15 +136,21 @@ export default function ProfessionalReviews() {
 
       {signedOut ? (
         // The count is public; the words are for members.
-        <Card className="text-center py-8">
-          <p className="text-sm font-semibold text-charcoal">Sign in to read reviews</p>
-          <p className="text-xs text-charcoal-faint mt-1 leading-relaxed">
+        // Decision 23 (kept-list 60): Foundations › Empty state (56 primary.tint
+        // tile, 26 thin-stroke icon in primary.accent, title 15/700, one line
+        // 12.5/500 muted, max 260), keeping the Sign in button under it.
+        <div className="flex flex-col items-center text-center py-8">
+          <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+            <LogIn size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">Sign in to read reviews</p>
+          <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
             Reviews are from {firstName}'s clients, and members can read them.
           </p>
           <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
             Sign in
           </Button>
-        </Card>
+        </div>
       ) : (
         <div className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4">
           {mine && myStatus !== "withdrawn" && (
@@ -152,17 +160,23 @@ export default function ProfessionalReviews() {
           )}
           {others.map((r) => (
             <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
+              {/* Decision 23 (kept-list 190): Report moves into a ⋮ menu
+                  (Foundations Dropdown menu) on the name line; the button
+                  keeps a 44 tap target (negative margins hold the row). */}
               <ReviewItem
                 review={r}
                 layout="row"
                 replyLabel={`Reply from ${firstName}`}
-                actions={
+                menu={
                   <button
                     type="button"
-                    onClick={() => setReportingId(r.id)}
-                    className="tap min-h-[44px] text-xs font-semibold text-charcoal-faint"
+                    aria-label="Review options"
+                    aria-haspopup="menu"
+                    aria-expanded={menuFor?.id === r.id}
+                    onClick={(e) => setMenuFor({ id: r.id, anchor: e.currentTarget })}
+                    className="tap w-11 h-11 -my-3.5 -mr-3 rounded-full flex items-center justify-center text-charcoal-faint"
                   >
-                    Report
+                    <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />
                   </button>
                 }
               />
@@ -170,7 +184,15 @@ export default function ProfessionalReviews() {
           ))}
           {error && <p className="py-4 text-xs font-semibold text-status-high text-center">{error}</p>}
           {!error && others.length === 0 && !(mine && myStatus !== "withdrawn") && (
-            <p className="py-8 text-sm text-charcoal-faint text-center">No reviews yet.</p>
+            // Decision 23 (kept-list 59): Foundations › Empty state with the
+            // existing words as its title. The handover gives no copy for the
+            // one line under it, so there is none (unspecified).
+            <div className="flex flex-col items-center text-center py-8">
+              <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+                <Star size={26} strokeWidth={1.5} aria-hidden />
+              </span>
+              <p className="text-[15px] font-bold text-charcoal mt-3">No reviews yet</p>
+            </div>
           )}
         </div>
       )}
@@ -201,6 +223,16 @@ export default function ProfessionalReviews() {
           const message = await withdraw();
           if (!message) await refresh();
           return message;
+        }}
+      />
+
+      <PopupMenu
+        open={!!menuFor}
+        anchor={menuFor?.anchor ?? null}
+        onClose={() => setMenuFor(null)}
+        options={[{ value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> }]}
+        onSelect={() => {
+          if (menuFor) setReportingId(menuFor.id);
         }}
       />
 
