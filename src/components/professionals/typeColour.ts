@@ -22,9 +22,9 @@ export interface TypeColours {
 }
 
 const FAMILIES = {
-  purple: { main: "#7D6BB5", deep: "#5F5093", pill: "#F0EDF9" },
-  teal: { main: "#4F7F78", deep: "#3C6B65", pill: "#E7F2F0" },
-  other: { main: "#5B4A9E", deep: "#463A80", pill: "#E9E5F6" },
+  purple: { main: "rgb(var(--th-7d6bb5))", deep: "rgb(var(--th-5f5093))", pill: "rgb(var(--th-f0edf9))" },
+  teal: { main: "rgb(var(--th-4f7f78))", deep: "rgb(var(--th-3c6b65))", pill: "#E7F2F0" },
+  other: { main: "rgb(var(--th-5b4a9e))", deep: "rgb(var(--th-463a80))", pill: "rgb(var(--th-e9e5f6))" },
 } as const;
 
 const DARK_CARD = "#1C1F28";

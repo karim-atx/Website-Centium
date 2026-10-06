@@ -84,7 +84,7 @@ export const ConsentReviewBanner: React.FC = () => {
           <button
             onClick={() => navigate(SHARING_ROUTE)}
             className="tap mt-[11px] rounded-full bg-white text-[11px] font-extrabold px-[15px] py-2"
-            style={{ color: "#5F5093" }}
+            style={{ color: "rgb(var(--thi-5f5093))" }}
           >
             Review sharing
           </button>

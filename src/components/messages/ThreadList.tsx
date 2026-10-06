@@ -221,7 +221,7 @@ export const ThreadList: React.FC<{
 
 /** The group avatar from the design: a two-person mark on teal. */
 const GroupAvatar: React.FC = () => (
-  <span className="w-12 h-12 rounded-full bg-[#E4F0EE] dark:bg-teal-pale flex items-center justify-center shrink-0">
-    <Users size={22} className="text-[#2F5F58] dark:text-teal-deep-text" aria-hidden />
+  <span className="w-12 h-12 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center shrink-0">
+    <Users size={22} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
   </span>
 );

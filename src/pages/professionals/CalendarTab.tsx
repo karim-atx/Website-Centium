@@ -49,7 +49,7 @@ const repeatOptions: { value: CalendarEvent["repeat"]; label: string }[] = [
   { value: "monthly", label: "Monthly" },
 ];
 
-const eventColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+const eventColorOptions = ["rgb(var(--th-7d6bb5))", "rgb(var(--th-6f9993))", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 const monthNames = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" })

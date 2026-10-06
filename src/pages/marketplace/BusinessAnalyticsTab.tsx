@@ -63,7 +63,7 @@ const insightActions: { label: string; action: string }[] = [
 const adherenceBuckets = [
   { range: "0–24%", count: 6, color: "#C0392B" },
   { range: "25–49%", count: 14, color: "#D9A441" },
-  { range: "50–74%", count: 31, color: "#6F9993" },
+  { range: "50–74%", count: 31, color: "rgb(var(--thi-6f9993))" },
   { range: "75–100%", count: 79, color: "#3F9165" },
 ];
 
