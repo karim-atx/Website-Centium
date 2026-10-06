@@ -111,6 +111,18 @@ export function makeMapper(fromAnchor, toAnchor) {
       best = cand;
       if (luminance(cand) < target) lo = mid; else hi = mid;
     }
-    return best;
+    // 8-bit rounding can move luminance by a percent or so, enough to tip a
+    // 4.5:1 pairing under; take the neighbouring value whose luminance is
+    // nearest the target.
+    const [r0, g0, b0] = hexToRgb(best);
+    let pick = best, err = Math.abs(luminance(best) - target);
+    for (const dr of [-1, 0, 1]) for (const dg of [-1, 0, 1]) for (const db of [-1, 0, 1]) {
+      const c = [r0 + dr, g0 + dg, b0 + db];
+      if (c.some((v) => v < 0 || v > 255)) continue;
+      const hx = rgbToHex(c);
+      const e = Math.abs(luminance(hx) - target);
+      if (e < err) { err = e; pick = hx; }
+    }
+    return pick;
   };
 }

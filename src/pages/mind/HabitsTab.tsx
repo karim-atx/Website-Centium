@@ -170,10 +170,10 @@ export default function HabitsTab() {
                       aria-pressed={ticked}
                       className={clsx(
                         "tap w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary border-primary" : "border-charcoal/15 dark:border-[#807C93]"
+                        ticked ? "bg-primary-fill border-primary-fill" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
                     >
-                      {ticked && <Check size={13} className="text-white dark:text-on-primary-fill" strokeWidth={3} />}
+                      {ticked && <Check size={13} className="text-on-primary-fill" strokeWidth={3} />}
                     </button>
                   ) : (
                     <span
@@ -181,10 +181,10 @@ export default function HabitsTab() {
                       role="img"
                       className={clsx(
                         "w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary border-primary" : future ? "border-charcoal/[0.08]" : "border-charcoal/15 dark:border-[#807C93]"
+                        ticked ? "bg-primary-fill border-primary-fill" : future ? "border-charcoal/[0.08]" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
                     >
-                      {ticked && <Check size={13} className="text-white dark:text-on-primary-fill" strokeWidth={3} />}
+                      {ticked && <Check size={13} className="text-on-primary-fill" strokeWidth={3} />}
                     </span>
                   )}
                 </span>
@@ -238,7 +238,7 @@ export default function HabitsTab() {
                     <span
                       className={clsx(
                         "mt-[3px] h-6 min-w-[26px] rounded-lg flex items-center justify-center text-[13px] tabular-nums",
-                        isToday ? "bg-primary text-white dark:bg-primary-fill dark:text-on-primary-fill font-semibold" : "font-bold text-charcoal"
+                        isToday ? "bg-primary-fill text-on-primary-fill font-semibold" : "font-bold text-charcoal"
                       )}
                     >
                       {Number(day.slice(8))}

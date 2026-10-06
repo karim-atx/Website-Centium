@@ -32,7 +32,12 @@ export const ColorThemePicker: React.FC = () => {
               )}
               style={{ background: `linear-gradient(90deg, ${t.primary} 50%, ${t.secondary} 50%)` }}
             >
-              {selected && <Check size={15} className="text-white" strokeWidth={3} aria-hidden />}
+              {/* White on Centium's swatch, as drawn; the other swatches' light
+                  halves (Sky's slate, Rose's blush, Gold) cannot carry white at
+                  3:1, so their check is the app's near-black ink. */}
+              {selected && (
+                <Check size={15} className={t.value === "centium" ? "text-white" : "text-[#0D0B1A]"} strokeWidth={3} aria-hidden />
+              )}
             </span>
             <span
               className={clsx("text-[11px] leading-none", selected ? "font-bold text-primary-accent" : "font-medium text-charcoal-soft")}

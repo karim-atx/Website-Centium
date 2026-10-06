@@ -583,7 +583,7 @@ export default function RoutinesTab() {
           icon: <Library size={17} className={routines.length === 0 ? "text-white dark:text-charcoal-soft" : "text-charcoal-soft"} />,
           className:
             routines.length === 0
-              ? "!bg-primary !text-white !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
+              ? "!bg-primary-fill !text-on-primary-fill !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
               : undefined,
           onClick: () => setBrowseOpen(true),
         }}

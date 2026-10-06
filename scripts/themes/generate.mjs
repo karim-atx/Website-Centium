@@ -154,7 +154,10 @@ function mapHex(hex, theme, mode, fam = family(hex)) {
  *  sits on a filled hero keeps its shade). */
 function inkOf(centHex, base, mode, pale) {
   const card = CARD[mode];
-  if (contrast(centHex, card) < 1.6) return base;
+  // Under 2.5:1 on the page in Centium, a text colour is drawn on something
+  // else (pale lavender on a dark toast or button, white-ish on a hero), so it
+  // keeps its matched shade, which holds Centium's contrast on that ground.
+  if (contrast(centHex, card) < 2.5) return base;
   return ensureContrast(base, [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
 }
 function mapString(str, theme, mode) {
