@@ -1121,7 +1121,8 @@ const RoutineRow: React.FC<{
               editor on tap, so a permanent checkbox column would give every
               row two meanings; and nobody groups a superset by accident. */}
           <div
-            className="flex items-center justify-between bg-cream-card px-4 py-2"
+            // WO1.1 measures this strip 32 tall over its hairline: 8 + a 16 line + 8.
+            className="flex items-center justify-between bg-cream-card px-4 py-2 leading-4"
             style={{ borderBottom: "1px solid rgb(var(--c-charcoal) / 0.05)" }}
           >
             {selecting ? (
@@ -1249,7 +1250,8 @@ const RoutineRow: React.FC<{
           )}
           <button
             onClick={() => setAddExerciseOpen(true)}
-            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary dark:text-primary-dark bg-cream-card hover:bg-primary-pale/40"
+            // WO1.1 measures this row 38 tall (11 + a 16 line + 11).
+            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-[11px] text-xs font-semibold text-primary dark:text-primary-dark bg-cream-card hover:bg-primary-pale/40"
           >
             <Plus size={13} /> Add exercise
           </button>
