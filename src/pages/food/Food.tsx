@@ -403,19 +403,17 @@ export default function Food() {
                   {macroRow("Fat", totals.fat, targets.fat)}
                 </div>
               </div>
-              <span
-                className="absolute flex items-center justify-center rounded-full"
-                style={{
-                  width: 22,
-                  height: 22,
-                  right: 13,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "rgba(255,255,255,0.18)",
-                }}
-              >
-                <ChevronRight size={13} strokeWidth={2.4} className="text-white" />
-              </span>
+              {/* FO1: a bare ChevronRight 13/2.4, vertically centred, its
+                  glyph ending 18 from the card's edge (the 13 box ends 4.2
+                  past the drawn stroke, so the box sits 13.8 in). The card
+                  still opens Nutrient Summary. */}
+              <ChevronRight
+                size={13}
+                strokeWidth={2.4}
+                aria-hidden
+                className="absolute text-white"
+                style={{ right: 13.8, top: "50%", transform: "translateY(-50%)" }}
+              />
             </button>
           )}
 

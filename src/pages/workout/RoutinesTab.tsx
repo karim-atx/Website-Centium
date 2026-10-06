@@ -15,7 +15,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
-import { folderFamily, routineFamily, themedFamily, type FolderFamily } from "../../data/folderColors";
+import { folderFamily, mixHex, routineFamily, themedFamily, tintOn, type FolderFamily } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 
 /**
@@ -581,10 +581,12 @@ export default function RoutinesTab() {
           // and the empty card's filled primary one when there are none.
           // Dark mode is the outline in both cases.
           icon: <Library size={17} className={routines.length === 0 ? "text-white dark:text-charcoal-soft" : "text-charcoal-soft"} />,
-          className:
-            routines.length === 0
-              ? "!bg-primary-fill !text-on-primary-fill !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
-              : undefined,
+          // WO1 / WO1.1 measure a 9 pt icon gap here (the CTA default is 7).
+          className: clsx(
+            "!gap-[9px]",
+            routines.length === 0 &&
+              "!bg-primary-fill !text-on-primary-fill !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
+          ),
           onClick: () => setBrowseOpen(true),
         }}
         primary={{
@@ -1185,7 +1187,15 @@ const RoutineRow: React.FC<{
                 }
               />
             ) : (
-              <div key={`solo-${runIdx}`} className="divide-y divide-charcoal/[0.04]">
+              <div
+                /* WO1.1: the hairlines between exercise rows are the folder
+                   colour as a light tint (#E8E6F5 on the lavender frame, its
+                   play shade at about 18% on white); dark mode the same shade
+                   as a tint on the card. */
+                key={`solo-${runIdx}`}
+                className="divide-y divide-[color:var(--ex-divider)]"
+                style={{ "--ex-divider": dark ? tintOn(family.play, 0.2) : mixHex("#FFFFFF", family.play, 0.18) } as React.CSSProperties}
+              >
                 {run.members.map((ex) => {
                   const revealed = revealedId === ex.id;
                   const line = prescriptionLine(ex);
