@@ -149,16 +149,17 @@ function mapHex(hex, theme, mode, fam = family(hex)) {
   if (!fam) return hex;
   return held(hex, mappers(theme, mode)[fam](hex), mode);
 }
-/** Text twin: 4.5:1 on the page, the soft surface and the pale tint, when the
- *  Centium colour is meant for a page-coloured ground at all (pale text that
- *  sits on a filled hero keeps its shade). */
-function inkOf(centHex, base, mode, pale) {
+/** Text twin: 4.5:1 on the page, the soft surface and its family's tints (the
+ *  pale shade, and the base colour at 50% on the page, which covers stacked
+ *  washes such as a 42% badge on a 16% tile), when the Centium colour is meant
+ *  for a page-coloured ground at all. */
+function inkOf(centHex, base, mode, tints) {
   const card = CARD[mode];
   // Under 2.5:1 on the page in Centium, a text colour is drawn on something
   // else (pale lavender on a dark toast or button, white-ish on a hero), so it
   // keeps its matched shade, which holds Centium's contrast on that ground.
   if (contrast(centHex, card) < 2.5) return base;
-  return ensureContrast(base, [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
+  return ensureContrast(base, [...GROUND[mode], ...tints], 4.5, mode === "light" ? -1 : 1);
 }
 function mapString(str, theme, mode) {
   return str
@@ -227,7 +228,11 @@ function themeBlock(theme, mode, literals) {
 
   // Ink twins.
   const ink2 = {};
-  for (const n of INK_TOKENS) ink2[n + "-ink"] = inkOf(centium(n), v[n], mode, pale);
+  const tints = {
+    lav: [pale, over(v["--c-primary"], 0.5, CARD[mode])],
+    teal: [v["--c-teal-pale"], over(v["--c-teal"], 0.5, CARD[mode])],
+  };
+  for (const n of INK_TOKENS) ink2[n + "-ink"] = inkOf(centium(n), v[n], mode, tints[LAV.includes(n) ? "lav" : "teal"]);
   ink2["--c-primary-ink"] = ensureContrast(p, [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
 
   const lines = [];
@@ -242,7 +247,7 @@ function themeBlock(theme, mode, literals) {
     const base = mapHex(hex, theme, mode);
     if (WHITE_FILLS.has(h)) lines.push(`  --thw-${h}: ${cssTriplet(family(hex) ? ensureContrast(base, [WHITE], 4.5, -1) : base)};`);
     lines.push(`  --th-${h}: ${cssTriplet(base)};`);
-    lines.push(`  --thi-${h}: ${cssTriplet(inkOf(hex, base, mode, pale))};`);
+    lines.push(`  --thi-${h}: ${cssTriplet(family(hex) ? inkOf(hex, base, mode, tints[family(hex)]) : base)};`);
   }
   const sel = mode === "light" ? `[data-accent="${theme}"]` : `.dark[data-accent="${theme}"]`;
   return `${sel} {\n${lines.join("\n")}\n}\n`;
