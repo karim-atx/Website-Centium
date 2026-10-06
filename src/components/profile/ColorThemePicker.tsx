@@ -13,7 +13,9 @@ export const ColorThemePicker: React.FC = () => {
   const { colorTheme, setColorTheme } = useApp();
 
   return (
-    <div role="radiogroup" aria-label="Color theme" className="flex gap-[23px]">
+    // The frame's 23px gap wherever the row has room (390 and up: identical);
+    // it narrows below that so all five swatches fit at 320 (revision round).
+    <div role="radiogroup" aria-label="Color theme" className="flex" style={{ columnGap: "clamp(4px, calc((100% - 200px) / 4), 23px)" }}>
       {COLOR_THEMES.map((t) => {
         const selected = colorTheme === t.value;
         return (

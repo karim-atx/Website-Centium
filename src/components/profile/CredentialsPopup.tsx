@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
-import { AtSign, KeyRound, Mail, Phone, XIcon } from "lucide-react";
+import { KeyRound, Mail, Phone } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { updatePhone } from "../../services/profile";
@@ -25,6 +25,34 @@ import { forumAccess, NICKNAME_PROBLEM_TEXT, nicknameProblem } from "../../servi
 const INSTAGRAM = /^[A-Za-z0-9._]{1,30}$/;
 const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
 const bare = (handle: string) => handle.trim().replace(/^@+/, "");
+
+// MO1.5.4: Instagram and X with their brand marks (Foundations 2.4 "Brand
+// icons", fixed in every theme), copied from the handover's
+// assets/icons/custom/MO1-5-4_03 and _04, 26 pt. The neutral glyphs that
+// stood in for them doubled the "@" prefix (revision round, item 9). X's mark
+// is drawn in the ink colour so it stays visible on the dark field.
+const InstagramMark: React.FC = () => (
+  <svg width={26} height={26} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <defs>
+      <radialGradient id="cred-ig" cx="0.3" cy="1.07" r="1.3">
+        <stop offset="0" stopColor="#FFDD55" />
+        <stop offset="0.12" stopColor="#FFDD55" />
+        <stop offset="0.45" stopColor="#FF543E" />
+        <stop offset="0.75" stopColor="#C837AB" />
+        <stop offset="1" stopColor="#6A35D9" />
+      </radialGradient>
+    </defs>
+    <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#cred-ig)" />
+    <rect x="5.6" y="5.6" width="12.8" height="12.8" rx="4" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
+    <circle cx="12" cy="12" r="3.1" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
+    <circle cx="16.3" cy="7.7" r="1" fill="#FFFFFF" />
+  </svg>
+);
+const XMark: React.FC = () => (
+  <svg width={26} height={26} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", color: "rgb(var(--c-charcoal))" }} fill="currentColor">
+    <path d="M17.75 2.5h3.07l-6.71 7.67L22 21.5h-6.18l-4.84-6.33-5.54 6.33H2.37l7.18-8.2L2 2.5h6.34l4.38 5.79zm-1.08 17.18h1.7L7.4 4.23H5.58z" />
+  </svg>
+);
 
 export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { user, authUserId, updateProfile } = useApp();
@@ -178,12 +206,12 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       <p className="mt-4 mb-2 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Social</p>
       <div className="grid grid-cols-2 gap-2.5">
         {/* MO1.5.4: a fixed "@" prefix and lowercase placeholders. */}
-        {field("instagram", <AtSign size={16} />, instagram, setInstagram, {
+        {field("instagram", <InstagramMark />, instagram, setInstagram, {
           placeholder: "instagram",
           label: "Instagram handle",
           prefix: true,
         })}
-        {field("x", <XIcon size={16} />, x, setX, { placeholder: "x", label: "X handle", prefix: true })}
+        {field("x", <XMark />, x, setX, { placeholder: "x", label: "X handle", prefix: true })}
       </div>
       <p className="mt-2 text-[11px] text-charcoal-faint">
         Your phone number is saved to your account. Instagram and X stay on this device for now.

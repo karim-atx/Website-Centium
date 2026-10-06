@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { CentredPopup } from "../../components/ui/CentredPopup";
 import { useIsDark } from "../../hooks/useIsDark";
 import { initials } from "../../components/professionals/typeColour";
 import { fmt12 } from "../../components/calendar/calendarTime";
@@ -81,13 +82,6 @@ const farOff = (iso: string) => {
   return new Date(`${iso}T00:00:00`).getTime() - today.getTime() >= 7 * 86_400_000;
 };
 
-const toggled = (set: Set<string>, id: string) => {
-  const next = new Set(set);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  return next;
-};
-
 export default function Discover() {
   const { authUserId, profileReady } = useApp();
 
@@ -103,7 +97,7 @@ export default function Discover() {
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("classes");
   const [businessType, setBusinessType] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState<Set<string>>(new Set());
+  const [infoFor, setInfoFor] = useState<MarketplaceClass | null>(null);
   const dark = useIsDark();
 
   // One loader for all three reads, so a refresh after a booking cannot leave
@@ -311,14 +305,15 @@ export default function Discover() {
                         <span className={`text-[11.5px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
                           {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
                         </span>
-                        {/* The class's notes aren't drawn (MO1.4); they stay
-                            one tap away behind Info (decision 1). */}
-                        {c.notes && (
+                        {/* What the card no longer draws (MO1.4): the end time, the
+                            class type and the notes stay one tap away in the
+                            Info popup (decision 1; revision round, item 8). */}
+                        {(c.notes || c.classType || c.endTime) && (
                           <button
                             type="button"
-                            onClick={() => setNotesOpen((s) => toggled(s, c.classId))}
-                            aria-expanded={notesOpen.has(c.classId)}
-                            aria-label="Class notes"
+                            onClick={() => setInfoFor(c)}
+                            aria-haspopup="dialog"
+                            aria-label="Class details"
                             className="tap w-8 h-8 -my-1 flex items-center justify-center text-charcoal-faint"
                           >
                             <Info size={15} strokeWidth={1.75} aria-hidden />
@@ -339,9 +334,6 @@ export default function Discover() {
                       </div>
                     </div>
                   </div>
-                  {c.notes && notesOpen.has(c.classId) && (
-                    <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">{c.notes}</p>
-                  )}
                   {/* Booked: cancelling stays on the card (B24). Full is not a
                       reason to disable a booking somebody already holds. */}
                   {mine && (
@@ -475,6 +467,34 @@ export default function Discover() {
           ))}
         </div>
       )}
+
+      {/* Class details (revision round, item 8): what the MO1.4 card leaves
+          out, in the shared centred popup. */}
+      <CentredPopup
+        open={!!infoFor}
+        onClose={() => setInfoFor(null)}
+        title={infoFor?.title ?? ""}
+        icon={<Info size={22} strokeWidth={1.75} />}
+        body={infoFor?.businessName}
+      >
+        {infoFor && (
+          <dl className="mt-3 space-y-2 text-[13px]">
+            <div className="flex justify-between gap-3">
+              <dt className="text-charcoal-faint">Time</dt>
+              <dd className="font-semibold text-charcoal text-end tabular-nums">
+                {dateLabel(infoFor.date)} · {fmt12(infoFor.startTime)}–{fmt12(infoFor.endTime)}
+              </dd>
+            </div>
+            {infoFor.classType && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-charcoal-faint">Type</dt>
+                <dd className="font-semibold text-charcoal text-end">{infoFor.classType}</dd>
+              </div>
+            )}
+            {infoFor.notes && <dd className="text-charcoal-soft leading-relaxed pt-1">{infoFor.notes}</dd>}
+          </dl>
+        )}
+      </CentredPopup>
     </div>
   );
 }
