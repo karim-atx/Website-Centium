@@ -29,21 +29,26 @@ import { linePx, textPx } from "../../theme/textSize";
 //                  an 18px chevron 14px after it; subtitle 17px #869595 on a
 //                  22px line, wrapping after "Habits, journal &"; the supplied
 //                  brain illustration at 0.61 scale (214 x 169) flush top-right
-//   tile row       three tiles, gap 9, height 120, radius 14, #EBF5F2; a 30px
-//                  #4F8F8A icon well 18px from the top; 12.5px bold title with
-//                  a chevron, 10px #8A9796 subtitle on a 14px line, centred
+//   tile row       three tiles, gap 9, height 131, radius 14, #EBF5F2; a 48px
+//                  r12 #4F8F8A icon tile 18px from the top with a 30px glyph
+//                  at 1.25 stroke (MO1 icon set, decision 18); 12.5px bold
+//                  title 10px below it with a chevron, 10px #8A9796 subtitle
+//                  on a 14px line, centred
 //   grouped list   radius 18, #F7F7FC, 4px padding; rows 56.6 high, 30px
-//                  #8E7FD0 wells 14px in, 11px to the text; 12px bold title,
+//                  #8E7FD0 wells 14px in with a 22px glyph at 1.25 stroke,
+//                  11px to the text; 12px bold title,
 //                  10px #9A94B3 subtitle and chevron; 1px #EBEAF6 dividers from
 //                  the text to 15px short of the edge
 //   spacing        7 between hero, tiles and list; 13 before Premium
-//   Premium        unchanged (60 high, as the frame measures)
+//   Premium        60 high, as the frame measures; a 22px leaf crown
+// Every lavender and teal here follows the colour theme (th-* colours), the
+// mint hero and tiles and the #9A94B3 greys included (MO1 §9 "Swaps to theme").
 // The frame is a client account's page. The frame has no dark mode, so dark
 // mode takes the app's tint families (teal .12, lavender .10) at the same
 // geometry. Font sizes and weights are fitted to the frame's text widths.
 
 type Entry = {
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number; className?: string; strokeWidth?: number; absoluteStrokeWidth?: boolean }>;
   label: string;
   desc: string;
   to?: string;
@@ -126,7 +131,7 @@ export default function More() {
           {/* Mind: the hero. Habits, Journal and Meditation are all inside it. */}
           <button
             onClick={() => navigate("/app/mind")}
-            className="tap relative w-full overflow-hidden text-left block bg-[#ECF5F3] dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
+            className="tap relative w-full overflow-hidden text-left block bg-th-ecf5f3 dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
             style={{ minHeight: 169, borderRadius: 18, marginBottom: 7 }}
           >
             <img
@@ -155,13 +160,13 @@ export default function More() {
               <button
                 key={t.label}
                 onClick={() => go(t)}
-                className="tap flex flex-col items-center text-center bg-[#EBF5F2] dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
-                style={{ minHeight: 120, borderRadius: 14, padding: "18px 6px 12px" }}
+                className="tap flex flex-col items-center text-center bg-th-ebf5f2 dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
+                style={{ minHeight: 131, borderRadius: 14, padding: "18px 6px 9px" }}
               >
-                <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-4f8f8a))" }}>
-                  <t.icon size={14} className="text-white" />
+                <span className="flex items-center justify-center shrink-0" style={{ width: 48, height: 48, borderRadius: 12, background: "rgb(var(--th-4f8f8a))" }}>
+                  <t.icon size={30} strokeWidth={1.25} absoluteStrokeWidth className="text-white" />
                 </span>
-                <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 8, gap: 2, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16) }}>
+                <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 10, gap: 2, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16) }}>
                   {t.label}
                   <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
                 </span>
@@ -193,19 +198,19 @@ export default function More() {
               />
             )}
             <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-8e7fd0))" }}>
-              <r.icon size={14} className="text-white" />
+              <r.icon size={22} strokeWidth={1.25} absoluteStrokeWidth className="text-white" />
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-charcoal" style={{ fontSize: textPx(12), fontWeight: 700, lineHeight: linePx(16) }}>
                 {r.label}
               </span>
-              <span className="block truncate" style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), color: "#9A94B3" }}>
+              <span className="block truncate text-th-9a94b3" style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13) }}>
                 {r.desc}
               </span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
               {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
-              <ChevronRight size={14} style={{ color: "#9A94B3" }} />
+              <ChevronRight size={14} className="text-th-9a94b3" />
             </span>
           </button>
         ))}
@@ -221,7 +226,7 @@ export default function More() {
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgb(var(--th-aea1dc) / .26)" }}>
-            <PremiumLeafIcon size={15} style={{ color: "rgb(var(--thi-c8bfe9))" }} />
+            <PremiumLeafIcon size={22} style={{ color: "rgb(var(--thi-c8bfe9))" }} />
           </div>
           <div>
             <p className="text-[12.5px] font-extrabold text-white">Centium Premium</p>

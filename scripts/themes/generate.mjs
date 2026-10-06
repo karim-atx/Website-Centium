@@ -52,10 +52,17 @@ const TINT_ALPHA = { light: 0.65, dark: 0.25 };
 // Solid lavender fills whose chroma falls inside the text-grey band below: the
 // Food quick-add Breakfast tile's dark fill sits beside its #726A90 / #6B6190
 // siblings, so it follows the theme with them.
-const LAV_FILLS = new Set(["#797292"]);
+// Batch E (E11, decided 6 October): colours the classifier below would keep
+// fixed that the user chose to follow the theme: the More hub and navbar grey
+// #9A94B3 and its dark twin #8A8698 (MO1 §9 lists #9A94B3 under "swaps to
+// theme primary"), the Workout Metrics empty bars #53506C, and the More hub's
+// mint hero and tiles #ECF5F3 / #EBF5F2 (near-white, so below the teal band).
+const LAV_FILLS = new Set(["#797292", "#9a94b3", "#8a8698", "#53506c"]);
+const TEAL_FILLS = new Set(["#ecf5f3", "#ebf5f2"]);
 /** "lav", "teal" or null (fixed: greys, near-whites, ink, every other hue). */
 export function family(hex) {
   if (LAV_FILLS.has(hex.toLowerCase())) return "lav";
+  if (TEAL_FILLS.has(hex.toLowerCase())) return "teal";
   const [L, C, H] = toOklch(hex);
   if (H >= 270 && H <= 310 && C >= 0.008) {
     if (C < 0.006) return null;

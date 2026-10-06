@@ -106,7 +106,8 @@
   --c-team-nav-accent: 143 104 246;
   /* The board's nav.idle #9A94B3, and nav.accent #8F68F6 for the active
      label (decision 14). Dark mode has its own values below. */
-  --c-team-nav-idle: 154 148 179;
+  /* Batch E (E11): follows the colour theme; Centium value unchanged. */
+  --c-team-nav-idle: var(--th-9a94b3);
   --c-team-nav-accent-text: 143 104 246;
 
   /* Iteration 6.2 canonical widget library — same reasoning as the nav
@@ -375,7 +376,7 @@
      the ones dark text would vanish at — actually change. */
   /* nav.idle dark, the board's #8A8698: 4.66:1 on the dark.navbar surface
      rgba(28,31,40,0.94). */
-  --c-team-nav-idle: 138 134 152;
+  --c-team-nav-idle: var(--th-8a8698);
   /* #8F68F6 is under 4.5:1 on the dark bar; 9% toward white clears it for
      the active label: #9976F7, 4.93:1 on #1C1F28. */
   --c-team-nav-accent-text: 153 118 247;
