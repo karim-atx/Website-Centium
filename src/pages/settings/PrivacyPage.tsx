@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCheck, ChevronRight, Trash2, Users } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
@@ -65,7 +65,10 @@ export default function PrivacyPage() {
 
   return (
     <div>
-      <PageHeader title="Privacy" showBack sub />
+      <PageHeader title="Privacy" showBack sub tightBack />
+
+      {/* MO1.8.7: 24 pt side insets; 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
 
       <SettingsSection label="Your controls">
         {/* Customer only: a professional has no professionals of their own to
@@ -103,20 +106,24 @@ export default function PrivacyPage() {
         <p>
           Your health data is stored securely on Centium's servers, and connecting with a professional
           doesn't give them access to it. You choose what each one can see, category by category, and
-          can change or withdraw it any time — in Profile or the Professionals tab.
+          can change or withdraw it any time, in Profile or the Professionals tab.
         </p>
       </div>
 
+      {/* New since the redesign, so the handover's own colours (decision 22):
+          text and chevron #7D67D9, the rule above it rgba(174,161,220,0.30)
+          (measured #E7E3F4 in MO1.8.8, the same link). */}
       <a
         href="/legal#privacy"
         target="_blank"
         rel="noopener noreferrer"
-        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-deep-text"
+        className="tap mt-6 flex items-center justify-between gap-3 border-t border-th-aea1dc/30 dark:border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-accent"
       >
         Read the full Privacy Policy
         {/* MO1.8.7: 14 / 700 with ChevronRight 16 / 2. */}
         <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
       </a>
+      </SettingsBody>
 
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </div>

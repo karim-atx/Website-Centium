@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, CalendarCheck, Dumbbell, MessagesSquare, Trophy, UtensilsCrossed } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Toggle } from "../../components/ui/Toggle";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { fetchMessageNotifications, setMessageNotifications } from "../../services/preferences";
 import {
@@ -168,18 +168,25 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader title="Notifications" showBack sub />
+      {/* MO1.8.3 is the one Settings sub-page whose title is 27 / 700 on a
+          40 pt line (header 350 × 40; the "N" measures 19 pt tall), not the
+          24 of the others. */}
+      <PageHeader title="Notifications" showBack tightBack />
 
-      {/* The lead card: primary-pale, as the app's other tinted cards. MO1.8.3:
-          radius 20, padding 20, gap 14, a 48 pt tile with Bell 22 / 1.75, the
-          title 17 / 600 and the status 13 / 700. */}
-      <div className="flex items-center gap-3.5 rounded-[20px] bg-primary-pale p-5 mb-8">
-        <span className="w-12 h-12 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
+      {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title. */}
+      <SettingsBody className="-mt-1.5">
+      {/* The lead card, new since the redesign, so the handover's own light
+          colours (decision 22): rgba(154,140,214,0.12) (measured #F3F1FA), a
+          #9A8CD6 tile and the status in #7D67D9. MO1.8.3: radius 20, padding
+          20, gap 14, a 48 pt tile with Bell 22 / 1.75, the title 17 / 600 and
+          the status 13 / 700. */}
+      <div className="flex items-center gap-3.5 rounded-[20px] bg-th-9a8cd6/[0.12] dark:bg-primary-pale p-5 mb-8">
+        <span className="w-12 h-12 rounded-2xl bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
           <Bell size={22} strokeWidth={1.75} />
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[17px] font-semibold text-charcoal">Allow notifications</p>
-          <p className="text-[13px] font-bold text-primary-deep-text mt-px" role="status">
+          <p className="text-[13px] font-bold text-primary-accent mt-px" role="status">
             {deviceLine}
           </p>
         </div>
@@ -226,6 +233,7 @@ export default function NotificationsPage() {
       ))}
 
       {note && <p className="mt-4 text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2">{note}</p>}
+      </SettingsBody>
     </div>
   );
 }

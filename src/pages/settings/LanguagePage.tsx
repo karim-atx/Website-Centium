@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { APP_LANGUAGES } from "../../i18n/languages";
 
@@ -14,7 +14,9 @@ export default function LanguagePage() {
 
   return (
     <div>
-      <PageHeader title={t("Language")} showBack sub />
+      <PageHeader title={t("Language")} showBack sub tightBack />
+      {/* MO1.8.5: 24 pt side insets; the label 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
       <SettingsSection label="App language">
         <div role="radiogroup" aria-label="App language">
           {APP_LANGUAGES.map((l) => {
@@ -37,6 +39,7 @@ export default function LanguagePage() {
           })}
         </div>
       </SettingsSection>
+      </SettingsBody>
     </div>
   );
 }

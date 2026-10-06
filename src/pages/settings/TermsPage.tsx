@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { SettingsBody } from "../../components/ui/SettingsRows";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
 
 // MO1.8.8 Terms of Service, as a page (was a sheet), LAYOUT ONLY (C35): the
@@ -53,25 +54,30 @@ const sections: { heading: string; body: string }[] = [
 export default function TermsPage() {
   return (
     <div>
-      <PageHeader title="Terms of Service" showBack sub />
+      <PageHeader title="Terms of Service" showBack sub tightBack />
 
+      {/* MO1.8.8: 24 pt side insets; the first line 12 under the 36 pt title. */}
+      <SettingsBody className="-mt-2">
       <p className="text-[12px] text-charcoal-faint">
-        Prototype terms for demonstration purposes — not a legally binding document.
+        Prototype terms for demonstration purposes, not a legally binding document.
       </p>
 
-      {/* The board's medical-disclaimer callout: primary-pale, as the app's
-          other tinted notes. */}
+      {/* The board's medical-disclaimer callout, new since the redesign, so
+          the handover's own colours (decision 22): rgba(154,140,214,0.12)
+          (measured #F3F1FA), the link and chevron #7D67D9. */}
       <a
         href="/legal#health"
         target="_blank"
         rel="noopener noreferrer"
-        className="tap mt-4 block rounded-2xl bg-primary-pale px-4 py-3.5"
+        className="tap mt-4 block rounded-2xl bg-th-9a8cd6/[0.12] dark:bg-primary-pale px-4 py-3.5"
       >
-        {/* MO1.8.8: the statement 14 / 600, the link 13.5 / 700. */}
-        <span className="block text-[14px] font-semibold leading-snug text-charcoal">{HEALTH_DISCLAIMER}</span>
-        <span className="mt-2 flex items-center justify-between gap-2 text-[13.5px] font-bold text-primary-deep-text">
+        {/* MO1.8.8: the statement 14 / 600 on a 22 pt line (measured), the
+            link 13.5 / 700. */}
+        <span className="block text-[14px] font-semibold leading-[22px] text-charcoal">{HEALTH_DISCLAIMER}</span>
+        <span className="mt-2 flex items-center justify-between gap-2 text-[13.5px] font-bold text-primary-accent">
           Health and Medical Disclaimer
-          <ChevronRight size={15} aria-hidden className="shrink-0 rtl:-scale-x-100" />
+          {/* MO1.8.8 icon list: ChevronRight 16 / 2 is the page's only chevron. */}
+          <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
         </span>
       </a>
 
@@ -90,12 +96,15 @@ export default function TermsPage() {
         href="/legal#terms"
         target="_blank"
         rel="noopener noreferrer"
-        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-deep-text"
+        // New since the redesign (decision 22): #7D67D9, the rule above it
+        // rgba(174,161,220,0.30) (measured #E7E3F4).
+        className="tap mt-6 flex items-center justify-between gap-3 border-t border-th-aea1dc/30 dark:border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-accent"
       >
         Read the full Terms of Service
         {/* MO1.8.8: 14 / 700 with ChevronRight 16 / 2. */}
         <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
       </a>
+      </SettingsBody>
     </div>
   );
 }

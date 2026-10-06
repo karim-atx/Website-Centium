@@ -1,6 +1,6 @@
 import { ALargeSmall, Contrast, Pointer, Wind } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 
 // MO1.8.6 Accessibility, as a page (was a sheet), with the board's four
@@ -15,7 +15,9 @@ export default function AccessibilityPage() {
 
   return (
     <div>
-      <PageHeader title="Accessibility" showBack sub />
+      <PageHeader title="Accessibility" showBack sub tightBack />
+      {/* MO1.8.6: 24 pt side insets; the label 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
       <SettingsSection label="Display">
         <SettingsRow
           icon={ALargeSmall}
@@ -42,6 +44,7 @@ export default function AccessibilityPage() {
           toggle={{ checked: !!accessibility.biggerTargets, onChange: (v) => updateAccessibility({ biggerTargets: v }) }}
         />
       </SettingsSection>
+      </SettingsBody>
     </div>
   );
 }

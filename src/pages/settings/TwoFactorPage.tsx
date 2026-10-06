@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { BellRing, CircleCheck, ShieldCheck, Smartphone } from "lucide-react";
 import type { Factor } from "@supabase/supabase-js";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { CodeBoxes, CODE_LENGTH } from "../../components/ui/CodeBoxes";
@@ -109,8 +109,10 @@ export default function TwoFactorPage() {
 
   return (
     <div>
-      <PageHeader title="Two-factor authentication" showBack sub />
+      <PageHeader title="Two-factor authentication" showBack sub tightBack />
 
+      {/* MO1.8.4: 24 pt side insets; the label 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
       <SettingsSection label="Protection">
         <SettingsRow
           icon={ShieldCheck}
@@ -158,13 +160,17 @@ export default function TwoFactorPage() {
         aria-label="Authenticator app"
         className={clsx(
           "mt-6 rounded-[20px] px-4 py-4 transition-colors duration-300 motion-reduce:transition-none",
-          enabled ? "bg-primary-pale" : "bg-cream-soft"
+          // New since the redesign, so the handover's own light colours
+          // (decision 22): on rgba(154,140,214,0.12), measured #F3F1FA.
+          enabled ? "bg-th-9a8cd6/[0.12] dark:bg-primary-pale" : "bg-cream-soft"
         )}
       >
+        {/* The header dims with the rest of the off card (measured #CBC7C4,
+            the muted grey at 40%); on, it is primary.accent #7D67D9. */}
         <p
           className={clsx(
-            "text-[10.5px] font-bold uppercase tracking-wide transition-colors duration-300 motion-reduce:transition-none",
-            enabled ? "text-primary-deep-text" : "text-charcoal-faint"
+            "text-[10.5px] font-bold uppercase tracking-wide transition duration-300 motion-reduce:transition-none",
+            enabled ? "text-primary-accent" : "text-charcoal-faint opacity-40"
           )}
         >
           Authenticator app
@@ -178,11 +184,12 @@ export default function TwoFactorPage() {
           <span
             className={clsx(
               "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 motion-reduce:transition-none",
-              enabled ? "bg-primary/5" : "bg-charcoal/5"
+              // On: primary.tint #F0EDF9 with a #7D67D9 glyph (MO1.8.4.3, measured).
+              enabled ? "bg-th-f0edf9 dark:bg-primary/5" : "bg-charcoal/5"
             )}
             aria-hidden
           >
-            <Smartphone size={19} strokeWidth={1.75} className={enabled ? "text-primary-dark" : "text-charcoal-faint"} />
+            <Smartphone size={19} strokeWidth={1.75} className={enabled ? "text-primary-accent" : "text-charcoal-faint"} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-extrabold text-charcoal">Authenticator app</p>
@@ -197,24 +204,29 @@ export default function TwoFactorPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/app/settings/two-factor/setup?change=1")}
-                  className="tap mt-3 h-9 px-4 rounded-xl border border-primary/40 bg-cream-card text-[13px] font-semibold text-primary-deep-text"
+                  // MO1.8.4.3 measured: white, 1 px #AEA1DC, #7D67D9 text.
+                  className="tap mt-3 h-9 px-4 rounded-xl border border-th-aea1dc dark:border-primary/40 bg-cream-card text-[13px] font-semibold text-primary-accent"
                 >
                   Change app
                 </button>
               </>
             ) : (
               <>
-                <p className="mt-1 text-[13.5px] font-bold text-charcoal-faint">Status: ––</p>
+                {/* MO1.8.4: status 13.5 / 700 in the main ink (at the card's
+                    40%), the button white like the on state. */}
+                <p className="mt-1 text-[13.5px] font-bold text-charcoal">Status: ––</p>
                 <p className="mt-0.5 text-[12px] text-charcoal-faint">Added ––</p>
-                <span className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 text-[13px] font-semibold text-charcoal-faint">
+                <span className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 bg-cream-card text-[13px] font-semibold text-charcoal-faint">
                   Change app
                 </span>
               </>
             )}
           </div>
         </div>
-        {!enabled && <p className="mt-3 text-[12px] text-charcoal-soft">Turn on two-factor to use this.</p>}
+        {/* Measured full-strength #8C8378 on the off card (MO1.8.4). */}
+        {!enabled && <p className="mt-3 text-[12px] text-charcoal-faint">Turn on two-factor to use this.</p>}
       </section>
+      </SettingsBody>
 
       <CentredPopup
         open={offOpen}

@@ -74,7 +74,9 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
       open={open}
       onClose={onClose}
       title="Rate this app"
-      icon={<Star size={22} />}
+      // MO1.8.11: Star 22 / 1.75; the card 346 wide (overlay padded 0 22).
+      icon={<Star size={22} strokeWidth={1.75} />}
+      maxWidth={346}
       cta={{
         label: busy ? "Sending…" : "Send",
         disabled: busy || rating < 1 || tooLong,
@@ -92,7 +94,8 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         rows={3}
         aria-label="Your review (optional)"
         placeholder="What works well, and what doesn't? (optional)"
-        className="mt-2 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+        // 96 tall on the board (186 to 281.5 on the 2x crop).
+        className="mt-2 h-24 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
       />
 
       {reviewText.length > MAX_REVIEW_TEXT * 0.75 && (
