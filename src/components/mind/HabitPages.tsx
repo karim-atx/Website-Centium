@@ -42,7 +42,7 @@ export const HabitPages: React.FC<{ habits: HabitItem[] }> = ({ habits }) => {
               <div
                 key={h.id}
                 className="flex items-center justify-between gap-2 rounded-lg px-2 py-[5px]"
-                style={{ background: h.done ? "rgba(125,107,181,.14)" : "rgba(255,255,255,.45)" }}
+                style={{ background: h.done ? "rgb(var(--th-7d6bb5) / .14)" : "rgba(255,255,255,.45)" }}
               >
                 <span className={clsx("flex-1 min-w-0 text-[9.5px] truncate", h.done ? "font-bold text-charcoal" : "font-medium text-charcoal-faint")}>
                   {h.label}
@@ -52,7 +52,7 @@ export const HabitPages: React.FC<{ habits: HabitItem[] }> = ({ habits }) => {
                   style={
                     h.done
                       ? { background: "rgb(var(--c-team-lavender-deep))", border: "1.5px solid rgb(var(--c-team-lavender-deep))" }
-                      : { background: "transparent", border: "1.5px solid rgba(125,107,181,.3)" }
+                      : { background: "transparent", border: "1.5px solid rgb(var(--th-7d6bb5) / .3)" }
                   }
                 >
                   {h.done && <Check size={9} className="text-white" strokeWidth={3} />}

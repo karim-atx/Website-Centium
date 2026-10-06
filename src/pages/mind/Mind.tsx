@@ -231,8 +231,8 @@ export default function Mind() {
           />
           <Tile
             onClick={() => navigate("/app/mind/meditation")}
-            fill="rgba(162,200,194,.18)"
-            well="rgba(162,200,194,.3)"
+            fill="rgb(var(--th-a2c8c2) / .18)"
+            well="rgb(var(--th-a2c8c2) / .3)"
             icon={<LotusGlyph size={30} stroke="rgb(var(--c-teal-dark))" />}
             title="Meditation"
             line={meditationLine}
@@ -287,7 +287,7 @@ export default function Mind() {
                 onClick={() => setAutoOpen((v) => !v)}
                 aria-expanded={autoOpen}
                 className="tap w-full flex items-center gap-2 px-3.5 py-3 text-left"
-                style={{ background: "rgba(174,161,220,0.08)" }}
+                style={{ background: "rgb(var(--th-aea1dc) / 0.08)" }}
               >
                 <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint">Auto-tracked</span>
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary-pale text-[10px] font-bold text-primary-dark flex items-center justify-center tabular-nums">

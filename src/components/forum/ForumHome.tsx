@@ -214,7 +214,7 @@ export function ForumHome({
       {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. */}
       <div
         className="flex gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
-        style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgba(174,161,220,0.35)" }}
+        style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgb(var(--th-aea1dc) / 0.35)" }}
       >
         {colorTheme === "centium" ? (
           <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
