@@ -28,6 +28,7 @@ import {
 import { foodCategoryIcon } from "../../utils/icons";
 import type { MealType } from "../../types";
 import { resolveCssColor } from "../../theme/cssColor";
+import { textPx } from "../../theme/textSize";
 
 // Voice logging, end to end: record, transcribe, parse, confirm, log.
 //
@@ -1034,10 +1035,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                               className="text-center"
                               style={ci > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                             >
-                              <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cell.color }}>
+                              <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 800, color: cell.color }}>
                                 {cell.value}
                               </p>
-                              <p style={{ margin: "1px 0 0", fontSize: 10, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
+                              <p style={{ margin: "1px 0 0", fontSize: textPx(10), color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
                             </div>
                           ))}
                         </div>
@@ -1060,7 +1061,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             onClick={() => chooseAlternative(i, alt)}
                             aria-label={`Use ${alt.name} instead`}
                             className="tap transition-colors"
-                            style={{ ...sheetChipStyle(false), padding: "5px 10px", fontSize: 11.5 }}
+                            style={{ ...sheetChipStyle(false), padding: "5px 10px", fontSize: textPx(11.5) }}
                           >
                             {alt.name}
                           </button>
@@ -1088,7 +1089,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           inputMode="decimal"
                           aria-label={`${item.food?.name ?? item.spokenName} quantity`}
                           className="w-14 text-center tabular-nums focus:outline-none"
-                          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
+                          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
                         />
                       </div>
                     </div>

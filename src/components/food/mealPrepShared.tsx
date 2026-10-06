@@ -3,6 +3,7 @@ import type { Food, MealType, ServingUnit } from "../../types";
 import { servingMultiplier, mealLabels } from "../../services/nutrition";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
+import { textPx } from "../../theme/textSize";
 
 // Shared building blocks for mobile handoff item 10 (Food > Meal Prep
 // redesign): the Custom Meals + Recipes widget cards on MealPrepPanel, and
@@ -80,12 +81,12 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
       <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
         {rows.map((r, k) => (
           <div key={k} style={{ textAlign: "center", borderLeft: k === 0 ? "none" : `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` }}>
-            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: r[2] }}>{r[0]}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 11, color: PREP_FAINT }}>{r[1]}</p>
+            <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: r[2] }}>{r[0]}</p>
+            <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: PREP_FAINT }}>{r[1]}</p>
           </div>
         ))}
       </div>
-      {note && <p style={{ margin: "7px 2px 0", fontSize: 10.5, color: PREP_FAINT }}>{note}</p>}
+      {note && <p style={{ margin: "7px 2px 0", fontSize: textPx(10.5), color: PREP_FAINT }}>{note}</p>}
     </div>
   );
 };
@@ -105,5 +106,5 @@ export const prepMealLabel = (m: MealType) => mealLabels[m];
 export const PREP_PRIMARY = { meals: "rgb(var(--c-fill-prep))", recipes: "rgb(var(--c-fill-cta))" } as const;
 
 export function capsLabelStyle(color: string): React.CSSProperties {
-  return { margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color };
+  return { margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color };
 }

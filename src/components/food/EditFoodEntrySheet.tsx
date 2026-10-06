@@ -11,6 +11,7 @@ import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { NutrientDetailSections } from "./NutrientSections";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
+import { textPx } from "../../theme/textSize";
 
 const servingUnitOptions: { value: ServingUnit; label: string }[] = [
   { value: "serving", label: "serving" },
@@ -24,7 +25,7 @@ const servingUnitOptions: { value: ServingUnit; label: string }[] = [
 // Caps label at the top of a grey sheet container (00-FOUNDATIONS §0.3).
 const sheetCapsLabelStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 11,
+  fontSize: textPx(11),
   fontWeight: 700,
   letterSpacing: "0.12em",
   textTransform: "uppercase",
@@ -194,7 +195,7 @@ export const EditFoodEntrySheet: React.FC<{
     >
       {advancedOpen ? (
         <div className="animate-fade-slide-up flex flex-col gap-2.5">
-          <p style={{ fontSize: 13, color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
+          <p style={{ fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
             {entry.name} ·{" "}
             {editMultiplierDisplay === 1 ? entry.display.serving : `${editMultiplierDisplay} × ${entry.display.serving}`}
           </p>
@@ -211,7 +212,7 @@ export const EditFoodEntrySheet: React.FC<{
             />
           )}
 
-          <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
+          <p style={{ fontSize: textPx(10.5), lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
             % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
             Goals.
           </p>
@@ -229,10 +230,10 @@ export const EditFoodEntrySheet: React.FC<{
               <Icon size={20} />
             </span>
             <div className="min-w-0">
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
+              <p style={{ margin: 0, fontSize: textPx(18), fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
                 {entry.name}
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>{entry.display.serving}</p>
+              <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{entry.display.serving}</p>
             </div>
           </div>
 
@@ -240,7 +241,7 @@ export const EditFoodEntrySheet: React.FC<{
             className="flex items-center"
             style={{ gap: 12, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
           >
-            <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
+            <span style={{ flex: "none", fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
             <input
               value={quantityDraft}
               onChange={(e) => {
@@ -252,7 +253,7 @@ export const EditFoodEntrySheet: React.FC<{
               onBlur={() => setQuantityDraft(String(quantity))}
               inputMode="decimal"
               className="min-w-0 text-center focus:outline-none"
-              style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
+              style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
             />
           </div>
 
@@ -289,8 +290,8 @@ export const EditFoodEntrySheet: React.FC<{
                 className="text-center"
                 style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
               >
-                <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
+                <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: cell.color }}>{cell.value}</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
               </div>
             ))}
           </div>
@@ -318,7 +319,7 @@ export const EditFoodEntrySheet: React.FC<{
               onClick={handleSave}
               disabled={busy}
               className="tap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
+              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
             >
               {busy && !deleting ? "Saving…" : "Save changes"}
             </button>

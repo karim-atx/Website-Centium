@@ -19,6 +19,7 @@ import { normalizeGtin } from "../../utils/gtin";
 import { supabase } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import type { Food } from "../../types";
+import { textPx } from "../../theme/textSize";
 
 // Create Custom Food — master handover, CentiumFrame "Create Custom Food"
 // (lavender sheet): grey field containers, a scrolling logo row whose
@@ -291,7 +292,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             background: "rgb(var(--c-primary-fill))",
             color: "rgb(var(--c-on-primary-fill))",
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: textPx(14),
             border: "none",
             opacity: canSave ? 1 : 0.4,
           }}
@@ -318,7 +319,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
           <SlidersHorizontal size={20} strokeWidth={1.9} />
         </button>
       </div>
-      <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))", textAlign: "center" }}>
+      <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", textAlign: "center" }}>
         Saved foods, scanned barcodes and logged items all go to your Food Library, and show up in search
         alongside the database.
       </p>
@@ -360,7 +361,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         onClick={() => void saveEdit()}
         disabled={!canSave}
         className="tap flex-1 min-w-0"
-        style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700, fontSize: 15, opacity: canSave ? 1 : 0.4 }}
+        style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700, fontSize: textPx(15), opacity: canSave ? 1 : 0.4 }}
       >
         {saving ? "Saving…" : "Save changes"}
       </button>
@@ -374,7 +375,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         {field("Serving size", "serving", "1 piece")}
 
         <div>
-          <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
+          <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
             Logo
           </span>
           <div className="flex no-scrollbar scroll-row" style={{ flexWrap: "nowrap", gap: 8, margin: "0 -20px", padding: "0 20px" }}>
@@ -410,7 +411,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
               );
             })}
           </div>
-          <p style={{ margin: "7px 2px 0", fontSize: 10, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: "7px 2px 0", fontSize: textPx(10), color: "rgb(var(--c-charcoal-muted))" }}>
             Tap the selected icon again to change its colour.
           </p>
         </div>
@@ -427,7 +428,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
           <p
             style={{
               margin: "0 0 8px",
-              fontSize: 11,
+              fontSize: textPx(11),
               fontWeight: 700,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
@@ -451,7 +452,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                 background: "rgb(var(--c-cream-card))",
                 border: "1px solid rgb(var(--c-charcoal) / 0.1)",
                 padding: "10px 12px",
-                fontSize: 13,
+                fontSize: textPx(13),
                 color: "rgb(var(--c-charcoal))",
               }}
             />
@@ -468,7 +469,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
               </button>
             )}
           </div>
-          <p style={{ margin: "7px 2px 0", fontSize: 10, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: "7px 2px 0", fontSize: textPx(10), color: "rgb(var(--c-charcoal-muted))" }}>
             Optional. Adding it lets anyone scanning this pack find your food.
           </p>
         </div>
@@ -476,11 +477,11 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         {/* Decision 6 (FO3.2 frame c): in edit mode the per-serving note shows
             under the barcode block; with More nutrients open it heads that list. */}
         {editing && !advOpen && (
-          <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>Per serving. Leave anything you do not have blank.</p>
+          <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Per serving. Leave anything you do not have blank.</p>
         )}
         {advOpen && (
           <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
-            <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
+            <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
               Per serving. Leave anything you do not have blank.
             </p>
             {advGroups.map((sec) => {
@@ -501,11 +502,11 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                       border: "none",
                     }}
                   >
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{sec.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{sec.name}</span>
                     {filled > 0 && (
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: textPx(10),
                           fontWeight: 700,
                           color: dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))",
                           background: "rgb(var(--th-aea1dc) / 0.22)",
@@ -535,7 +536,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                           className="flex items-center"
                           style={{ gap: 8, padding: "5px 0", borderTop: i === 0 ? "0" : "1px solid rgb(var(--c-charcoal) / 0.05)" }}
                         >
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "rgb(var(--c-charcoal))" }}>{r.name}</span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), color: "rgb(var(--c-charcoal))" }}>{r.name}</span>
                           <input
                             value={nutrients[r.key] ?? ""}
                             onChange={(e) =>
@@ -552,12 +553,12 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                               background: "rgb(var(--c-cream-soft))",
                               border: "1px solid rgb(var(--c-charcoal) / 0.07)",
                               padding: "5px 8px",
-                              fontSize: 12,
+                              fontSize: textPx(12),
                               color: "rgb(var(--c-charcoal))",
                               textAlign: "right",
                             }}
                           />
-                          <span style={{ width: 34, flex: "none", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>{r.unit || ""}</span>
+                          <span style={{ width: 34, flex: "none", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>{r.unit || ""}</span>
                         </div>
                       ))}
                     </div>

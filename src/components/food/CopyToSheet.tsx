@@ -5,6 +5,7 @@ import { WheelPicker } from "../ui/WheelPicker";
 import { shiftDate } from "../../utils/date";
 import { COPY_MEALS, COPY_MEAL_LABEL, copyDayLabel } from "../../utils/copyTo";
 import type { MealType } from "../../types";
+import { textPx } from "../../theme/textSize";
 
 // Handover 2026-09-29 FO1.1 "Copy to…": where copied diary entries go. An
 // iOS-style wheel in two columns, Day and Meal, defaulting to Tomorrow and
@@ -36,7 +37,7 @@ export const CopyToSheet: React.FC<{
           onClick={() => onConfirm(day, toMeal)}
           disabled={busy}
           className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
-          style={{ height: 52, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
+          style={{ height: 52, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
           <Copy size={16} /> {busy ? "Copying…" : `Copy ${count} item${count === 1 ? "" : "s"}`}
         </button>
@@ -59,7 +60,7 @@ export const CopyToSheet: React.FC<{
           },
         ]}
       />
-      <div className="flex" style={{ marginTop: 8, color: "#9A94B3", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em" }}>
+      <div className="flex" style={{ marginTop: 8, color: "#9A94B3", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
         <span className="text-center" style={{ flex: 1.2 }}>
           DAY
         </span>

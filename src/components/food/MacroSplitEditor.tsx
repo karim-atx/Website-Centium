@@ -1,6 +1,7 @@
 import React from "react";
 import type { MacroSplit } from "../../types";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // QA 13.0: "adjusting the macro rebalancing should always adopt a scientific
 // based approach and not just blindly rebalance to 100%." min/max per macro
@@ -85,7 +86,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
           return (
             <div key={m.key} className="flex items-center" style={{ gap: 13 }}>
               <div className="flex-1 min-w-0">
-                <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{m.label}</p>
+                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{m.label}</p>
                 <input
                   type="range"
                   min={m.min}
@@ -105,8 +106,8 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
                 className="flex flex-col items-center justify-center flex-none"
                 style={{ width: 50, height: 36, borderRadius: 9, background: dark ? SQUARE_DARK[m.key].tint : m.tint }}
               >
-                <span style={{ fontSize: 12.5, fontWeight: 800, color: ink, lineHeight: 1.15 }}>{grams}g</span>
-                <span style={{ fontSize: 9.5, color: ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
+                <span style={{ fontSize: textPx(12.5), fontWeight: 800, color: ink, lineHeight: 1.15 }}>{grams}g</span>
+                <span style={{ fontSize: textPx(9.5), color: ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
               </div>
             </div>
           );

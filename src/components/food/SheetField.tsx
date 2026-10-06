@@ -1,6 +1,7 @@
 import React from "react";
 import { sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 /**
  * CentiumFrame `field()`: a grey labelled container with a white borderless
@@ -30,7 +31,7 @@ export const SheetField: React.FC<{
         placeholder={placeholder}
         inputMode={numeric ? "decimal" : "text"}
         className="w-full placeholder:text-charcoal-faint focus:outline-none"
-        style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "11px 13px", fontSize: 14, color: "rgb(var(--c-charcoal))", boxSizing: "border-box" }}
+        style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "11px 13px", fontSize: textPx(14), color: "rgb(var(--c-charcoal))", boxSizing: "border-box" }}
       />
     </label>
   );

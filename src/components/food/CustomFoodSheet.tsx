@@ -9,6 +9,7 @@ import { deleteCustomFood, type FoodSearchResult } from "../../services/food";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
+import { textPx } from "../../theme/textSize";
 
 /** FO3.2: Custom Foods is Dark Lavender. */
 const CUSTOM_FOOD_ACCENT = "rgb(var(--th-7d67d9))";
@@ -100,7 +101,7 @@ export const CustomFoodSheet: React.FC<{
                 setEditing(true);
               }}
               className="tap w-full inline-flex items-center justify-center"
-              style={{ height: 52, gap: 8, borderRadius: 16, background: CUSTOM_FOOD_ACCENT, color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              style={{ height: 52, gap: 8, borderRadius: 16, background: CUSTOM_FOOD_ACCENT, color: "#FFFFFF", fontSize: textPx(15.5), fontWeight: 700 }}
             >
               <Pencil size={16} /> Edit
             </button>
@@ -119,10 +120,10 @@ export const CustomFoodSheet: React.FC<{
                 <Icon size={20} />
               </span>
               <div className="min-w-0">
-                <p className="truncate" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
+                <p className="truncate" style={{ margin: 0, fontSize: textPx(17), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                   {shown.name}
                 </p>
-                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>{shown.servingLabel}</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{shown.servingLabel}</p>
               </div>
             </div>
             <div className="grid grid-cols-4" style={{ gap: 7, marginTop: 16 }}>
@@ -133,15 +134,15 @@ export const CustomFoodSheet: React.FC<{
                 [`${Math.round(shown.fat)}g`, "Fat"],
               ].map(([v, l]) => (
                 <div key={l} className="text-center" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "10px 4px" }}>
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>{v}</p>
-                  <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>{l}</p>
+                  <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>{v}</p>
+                  <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>{l}</p>
                 </div>
               ))}
             </div>
             {shown.barcode && (
               <div
                 className="flex items-center justify-between"
-                style={{ marginTop: 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: 13.5 }}
+                style={{ marginTop: 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
               >
                 <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
                 <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>
