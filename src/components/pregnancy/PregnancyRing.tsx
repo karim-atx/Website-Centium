@@ -1,5 +1,6 @@
 import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // The progress ring, in weeks.
 //
@@ -77,7 +78,7 @@ export const PregnancyRing: React.FC<{
         x={SIZE / 2}
         y={SIZE / 2 - (subline || footline ? 8 : 0)}
         textAnchor="middle"
-        style={{ fontSize: 21, fontWeight: 800, fill: "rgb(var(--c-charcoal))", letterSpacing: "-0.02em" }}
+        style={{ fontSize: textPx(21), fontWeight: 800, fill: "rgb(var(--c-charcoal))", letterSpacing: "-0.02em" }}
       >
         {headline}
       </text>
@@ -86,7 +87,7 @@ export const PregnancyRing: React.FC<{
           x={SIZE / 2}
           y={SIZE / 2 + 14}
           textAnchor="middle"
-          style={{ fontSize: 11.5, fill: "rgb(var(--c-charcoal-faint))" }}
+          style={{ fontSize: textPx(11.5), fill: "rgb(var(--c-charcoal-faint))" }}
         >
           {subline}
         </text>
@@ -96,7 +97,7 @@ export const PregnancyRing: React.FC<{
           x={SIZE / 2}
           y={SIZE / 2 + 31}
           textAnchor="middle"
-          style={{ fontSize: 11, fontWeight: 700, fill: RING_COLOR }}
+          style={{ fontSize: textPx(11), fontWeight: 700, fill: RING_COLOR }}
         >
           {footline}
         </text>

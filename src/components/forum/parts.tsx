@@ -3,6 +3,7 @@ import clsx from "clsx";
 import type { Author, Identity } from "../../services/forum";
 import { initialOf } from "../../services/forum/rules";
 import { fv } from "./forumColor";
+import { textPx } from "../../theme/textSize";
 
 // Small pieces shared by the forum screens (design PgYuBboDr8DEL2bk7EJKtU).
 // Sizes, weights and colours are the design's; colours go through the
@@ -67,7 +68,7 @@ export function ProfessionalBadge() {
  */
 export function AuthorName({ author, size }: { author: Author; size: 13 | 14 | 15 }) {
   const cls = "font-bold min-w-0 [overflow-wrap:anywhere]";
-  const style = { fontSize: size, color: fv("text") };
+  const style = { fontSize: textPx(size), color: fv("text") };
   if (author.professionalId) {
     return (
       <span className="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -115,7 +116,7 @@ export function RemovedNote({ kind, radius = 16 }: { kind: "post" | "reply"; rad
         borderRadius: radius,
         background: fv("removed-bg"),
         padding: kind === "post" ? "12px 14px" : "10px 12px",
-        fontSize: 13,
+        fontSize: textPx(13),
         color: fv("muted"),
       }}
     >
