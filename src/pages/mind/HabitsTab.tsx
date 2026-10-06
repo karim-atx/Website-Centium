@@ -422,11 +422,9 @@ export default function HabitsTab() {
           primary={{
             label: "Add habit",
             icon: <Plus size={15} />,
-            // MO1.1.1 #3: 13.5/700, 48/r14 per C-01. Add habit existed before
-            // the redesign, so light mode keeps the outline button (decision
-            // 22; the frame draws #A198DF filled); dark mode is the filled primary.
-            className:
-              "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
+            // MO1.1.1 #3: filled #A198DF (--c-fill-cta, primary.cta.alt),
+            // 13.5/700 white (decision 23); 48/r14 per C-01.
+            className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
             onClick: () => setAdding(true),
           }}
         />

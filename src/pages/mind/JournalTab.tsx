@@ -35,10 +35,9 @@ const dateLabel = (iso: string) => {
 // MO1.1.2.3 (new entry). MO1.1.2.2, the Face ID locked folder, is native-only
 // and not built; so the folder menu has no Lock.
 //
-// LIGHT MODE (decision 22): the parts new since the redesign — the swipe
-// tiles and the pinned CTA row — take the handover's own colours; the folder
-// tabs (the old folder chips), the FolderPlus toggle and the entry cards
-// existed before and keep theirs (decision 15). Delete is the shared destructive red in both
+// LIGHT MODE (decisions 22, 23): the swipe tiles, the folder tabs and the
+// pinned CTA row take the handover's own colours; the FolderPlus toggle and
+// the entry cards existed before and keep theirs (decision 15). Delete is the shared destructive red in both
 // modes. Dark mode is the v5.1 dark set throughout.
 //
 // FOLDERS AND ENTRIES ARE SERVER ROWS NOW (journal_folders +
@@ -176,11 +175,18 @@ export default function JournalTab() {
       {/* NO FOLDERS IS A REAL STARTING STATE NOW. Four were seeded into every
           account before — Personal, Training, Nutrition, General — as though
           somebody had made them. An entry needs a folder to live in, so this
-          asks for the first one rather than inventing it. */}
+          asks for the first one rather than inventing it. Decision 23 (kept
+          list 52): styled as Foundations › Empty state — a 56 primary.tint
+          tile with a 26 thin-stroke icon in primary.accent, title 15/700, one
+          line 12.5/500 muted, max width 260 — with the quick folder chips
+          kept under it. */}
       {journalFolders.length === 0 && !journalError && (
-        <Card className="text-center py-7 mb-4">
-          <p className="text-sm font-semibold text-charcoal mb-1">No folders yet</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4 mb-4">
+        <div className="flex flex-col items-center text-center py-8 mb-4">
+          <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
+            <Folder size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">No folders yet</p>
+          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 mb-4 leading-relaxed max-w-[260px]">
             Entries live in folders. Make the first one to start writing.
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
@@ -195,14 +201,14 @@ export default function JournalTab() {
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* MO1.1.2 #2: the folders as a segmented card (358 × 56), scrolling
-          sideways once they outgrow it. The folder chips existed before the
-          redesign, so light keeps their colours (decision 22; the frame draws
-          active #A79AD5 / white, idle #F5F4FE / #5B5349). Tabs keep their
-          natural width, 16 each side (2x frame: Personal 84, Training 80). */}
+          sideways once they outgrow it. Decision 23: the handover's colours,
+          active #A79AD5 / white, idle #F5F4FE / #5B5349 (SegmentedTabs'
+          defaults plus the #5B5349 idle ink). Tabs keep their natural width,
+          16 each side (2x frame: Personal 84, Training 80). */}
       {journalFolders.length > 0 && (
         <SegmentedTabs
           scroll
@@ -210,12 +216,7 @@ export default function JournalTab() {
           items={journalFolders.map((f) => ({ key: f.id, label: f.name }))}
           activeKey={selected}
           onChange={setActiveFolder}
-          light={{
-            activeFill: "rgb(var(--c-primary-fill))",
-            activeInk: "rgb(var(--c-on-primary-fill))",
-            idleFill: "rgb(var(--c-cream-card))",
-            idleInk: "rgb(var(--c-charcoal-soft))",
-          }}
+          idleInk="rgb(var(--c-charcoal-soft))"
         />
       )}
 
@@ -327,16 +328,15 @@ export default function JournalTab() {
             primary={{
               label: "New entry",
               icon: <Plus size={15} />,
-              // MO1.1.2 #10: 13.5/700, 48/r14 per C-01. New entry and Folder
-              // options existed before the redesign, so light mode keeps the
-              // outline button and the default tile (decision 22; the frame
-              // draws #A198DF filled and #EFEEFD / #7D67D9); dark is the filled primary.
-              className:
-                "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
+              // MO1.1.2 #10 (decision 23): New entry filled #A198DF
+              // (--c-fill-cta), 13.5/700 white; FolderCog on #EFEEFD with a
+              // #7D67D9 icon. 48/r14 per C-01.
+              className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
               onClick: startNew,
             }}
             trailing={{
               icon: <FolderCog size={18} strokeWidth={1.75} />,
+              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
               label: "Folder options",
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,

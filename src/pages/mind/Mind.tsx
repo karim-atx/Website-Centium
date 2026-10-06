@@ -59,10 +59,9 @@ const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
 
 const sectionLabel = "text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
 // MO1.1 #4 "Today": 10.5/700 #8C8378; tracking measured on the 2x frame
-// ("TODAY" 39 pt wide, cap 8) at about 0.1em. The label heads the list the
-// pre-R1 "Streaks" label headed, so light keeps that label's charcoal 42%
-// (decision 22; the frame draws #8C8378); dark is unchanged.
-const todayLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal/[0.42] dark:text-charcoal-faint";
+// ("TODAY" 39 pt wide, cap 8) at about 0.1em. Decision 23: the label takes
+// the frame's #8C8378 (text.muted); dark is unchanged.
+const todayLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal-muted dark:text-charcoal-faint";
 
 /** MO1.1 hero ring: done-today out of all habits. Measured on the 2x frame:
  *  48 across the outside, a 5 pt stroke, the count 13/800. */

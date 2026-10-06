@@ -326,18 +326,17 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
           label: running ? "Stop" : "Start",
           icon: running ? <Square size={14} /> : <Play size={14} />,
           onClick: toggle,
-          // MO1.1.4 #8: 13.5/700, 48/r14 per C-01. Start existed before the
-          // redesign, so it keeps the primary fill (decision 22).
-          className: "!text-[13.5px]",
+          // MO1.1.4 #8 (decision 23): filled #A198DF (--c-fill-cta),
+          // 13.5/700 white; 48/r14 per C-01.
+          className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
         }}
         trailing={{
           icon: <RotateCcw size={15} />,
           label: "Reset",
           onClick: reset,
           width: 44,
-          // The Reset button existed before the redesign: it keeps cream-soft
-          // with soft ink (decision 22; the frame draws #F0EEF9 / #7D67D9).
-          className: "!bg-cream-soft !text-charcoal-soft",
+          // 2x frame: #F0EEF9 (#AEA1DC at 18%) with a #7D67D9 icon (decision 23).
+          className: "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
         }}
       />
     </div>
