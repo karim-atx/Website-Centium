@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ImagePlus } from "lucide-react";
+import { DangerLine } from "./parts";
 import { useNavigate } from "react-router-dom";
 import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
 import { FORUM_PHOTO_ACCEPT, FORUM_PHOTOS_ENABLED, prepareForumPhoto } from "../../services/forum/photo";
@@ -63,7 +64,9 @@ export function ForumCompose({
   const [preparing, setPreparing] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Decision 23 (item 69): each error sits under the field it is about; a
+  // refusal from the server (or the upload) under the Post field.
+  const [error, setError] = useState<{ field: "title" | "body"; message: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Opens on General (the first); a choice recovery mode hides falls back to it too.
@@ -99,8 +102,8 @@ export function ForumCompose({
 
   const post = async () => {
     if (!ready || !chosen) {
-      if (t.length < 3) setError("Give your post a title of at least 3 characters.");
-      else if (!b) setError("Write something in your post.");
+      if (t.length < 3) setError({ field: "title", message: "Give your post a title of at least 3 characters." });
+      else if (!b) setError({ field: "body", message: "Write something in your post." });
       return;
     }
     setBusy(true);
@@ -110,7 +113,7 @@ export function ForumCompose({
       const up = await uploadForumPhoto(photo);
       if (!up.ok) {
         setBusy(false);
-        setError(up.message);
+        setError({ field: "body", message: up.message });
         return;
       }
       photoPath = up.value;
@@ -125,7 +128,7 @@ export function ForumCompose({
     });
     setBusy(false);
     if (!r.ok) {
-      setError(r.message);
+      setError({ field: "body", message: r.message });
       return;
     }
     navigate(r.value.held ? "/app/forum" : `/app/forum/post/${r.value.id}`, { replace: true });
@@ -177,12 +180,6 @@ export function ForumCompose({
     >
       {/* Frame check: 14 between the sections (measured), not 16. */}
       <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
-        {error && (
-          <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-            {error}
-          </p>
-        )}
-
         {!isProfessional && nickname && (
           <fieldset className="border-none m-0 p-0 flex flex-col gap-1.5">
             <legend className="text-[12px] font-semibold p-0 mb-1.5" style={{ color: fv("muted") }}>
@@ -242,65 +239,70 @@ export function ForumCompose({
             />
           </label>
         </div>
-        <label className="flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
-          Post
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            maxLength={8000}
-            placeholder="Share a win, ask a question, or pass on a tip…"
-            className="h-[198px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
-            style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
-          />
-        </label>
-
-        {FORUM_PHOTOS_ENABLED && (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept={FORUM_PHOTO_ACCEPT}
-              className="hidden"
-              onChange={(e) => void pick(e.target.files?.[0])}
+        {error?.field === "title" && <DangerLine className="-mt-2">{error.message}</DangerLine>}
+        {/* Decision 23 (item 68): the photo control is a 44 pt icon row in the
+            Post field's footer, so the field keeps the drawn 198 and the sheet
+            its height. The textarea takes what the footer leaves. */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="forum-compose-body" className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
+            Post
+          </label>
+          <div
+            className="h-[198px] rounded-xl flex flex-col overflow-hidden"
+            style={{ border: `1px solid ${fv("border")}`, background: fv("card") }}
+          >
+            <textarea
+              id="forum-compose-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              maxLength={8000}
+              placeholder="Share a win, ask a question, or pass on a tip…"
+              className="flex-1 min-h-0 px-3 py-2.5 text-sm font-normal resize-none outline-none bg-transparent"
+              style={{ color: fv("text") }}
             />
-            {preview ? (
-              <div className="flex flex-col gap-2">
-                <img src={preview} alt="The photo you're adding" className="w-full max-h-[240px] object-cover rounded-[14px]" />
-                <button
-                  type="button"
-                  onClick={removePhoto}
-                  className="tap self-start text-[13px] font-bold py-2"
-                  style={{ color: fv("link") }}
-                >
-                  Remove photo
-                </button>
+            {FORUM_PHOTOS_ENABLED && (
+              <div className="h-11 shrink-0 flex items-center gap-2 pr-2" style={{ borderTop: `1px solid ${fv("rule")}` }}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept={FORUM_PHOTO_ACCEPT}
+                  className="hidden"
+                  onChange={(e) => void pick(e.target.files?.[0])}
+                />
+                {preview ? (
+                  <>
+                    <img src={preview} alt="The photo you're adding" className="ml-1.5 w-8 h-8 rounded-lg object-cover shrink-0" />
+                    <button type="button" onClick={removePhoto} className="tap h-11 text-[13px] font-bold" style={{ color: fv("link") }}>
+                      Remove photo
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={preparing}
+                      aria-label={preparing ? "Preparing photo…" : "Add a photo (optional)"}
+                      className="tap w-11 h-11 flex items-center justify-center shrink-0 disabled:opacity-60"
+                      style={{ color: fv("link") }}
+                    >
+                      <ImagePlus size={18} strokeWidth={1.75} aria-hidden />
+                    </button>
+                    <span className="text-[12px] font-medium" style={{ color: fv("muted") }} aria-hidden>
+                      {preparing ? "Preparing photo…" : "Add a photo (optional)"}
+                    </span>
+                  </>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={preparing}
-                className="tap h-[52px] rounded-[14px] text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
-                style={{ border: `1px dashed ${fv("dashed")}`, background: fv("dashed-bg"), color: fv("rules-ink") }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="9" cy="11" r="2" />
-                  <path d="M21 17l-5-5-8 7" />
-                </svg>
-                {preparing ? "Preparing photo…" : "Add a photo (optional)"}
-              </button>
             )}
-            {photoError && (
-              <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-                {photoError}
-              </p>
-            )}
-          </>
-        )}
+          </div>
+          {photoError && <DangerLine>{photoError}</DangerLine>}
+          {error?.field === "body" && <DangerLine>{error.message}</DangerLine>}
+        </div>
 
         <div className="flex flex-col gap-1.5 text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-          {FORUM_PHOTOS_ENABLED && <span>Location and camera details are removed from photos before they're shared.</span>}
+          {/* A22 privacy line, kept but only while a photo is attached (decision 23, item 253). */}
+          {FORUM_PHOTOS_ENABLED && photo && <span>Location and camera details are removed from photos before they're shared.</span>}
           <span>Posts with links are checked by a moderator before they appear.</span>
         </div>
       </div>

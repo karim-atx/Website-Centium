@@ -17,8 +17,8 @@ import {
   type Lesson,
 } from "../../services/courses";
 import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } from "../../services/courses/rules";
-import { Search } from "lucide-react";
-import { ForumPlaceholder } from "../forum/parts";
+import { GraduationCap, Search } from "lucide-react";
+import { DangerLine, EmptyBlock, ForumPlaceholder } from "../forum/parts";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
@@ -71,7 +71,7 @@ const order = (key: string) => {
   return i < 0 ? COURSE_ORDER.length : i;
 };
 
-export function CoursesCatalogue({ userId }: { userId: string }) {
+export function CoursesCatalogue({ userId, isProfessional = false }: { userId: string; isProfessional?: boolean }) {
   const dark = useIsDark();
   const [result, setResult] = useState<{ data: Data } | { error: string } | null>(null);
   const [query, setQuery] = useState("");
@@ -111,13 +111,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
       });
   }, [data, query, filter]);
 
-  if (result && "error" in result) {
-    return (
-      <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-        {result.error}
-      </p>
-    );
-  }
+  // Decision 23 (item 67): a plain danger line, no box.
+  if (result && "error" in result) return <DangerLine>{result.error}</DangerLine>;
 
   const continuing = data
     ? data.enrolments
@@ -230,9 +225,24 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
             </div>
           )}
 
-          {/* Same label style; 12 under the Continue card, 8 above the first card (frame check). */}
-          <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
-            {query || filter ? "Results" : "Popular"}
+          {/* Same label style; 12 under the Continue card, 8 above the first
+              card (frame check). Decision 23 (item 65): a professional's way
+              into the builder is a trailing text action on this row (was a
+              44 pt tinted row above the search), so the drawn layout is the
+              same for everyone; 44 to the finger, 14 in the layout. */}
+          <span className="flex items-center justify-between gap-3 h-[14px]">
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+              {query || filter ? "Results" : "Popular"}
+            </span>
+            {isProfessional && (
+              <Link
+                to="/app/forum/courses/mine"
+                className="tap h-11 flex items-center text-[12px] font-bold no-underline"
+                style={{ color: fv("link") }}
+              >
+                Write a course
+              </Link>
+            )}
           </span>
           <div className="flex flex-col gap-2.5 -mt-1">
             {shown.map((c) => {
@@ -277,11 +287,13 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                 </Link>
               );
             })}
-            {shown.length === 0 && (
-              <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-                {query || filter ? "No courses match that." : "No courses yet. Check back soon."}
-              </p>
-            )}
+            {/* Decision 23 (item 66): Foundations › Empty state. */}
+            {shown.length === 0 &&
+              (query || filter ? (
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses match" line="Try another category or search." />
+              ) : (
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses yet" line="Check back soon." />
+              ))}
           </div>
         </>
       )}

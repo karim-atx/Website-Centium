@@ -35,9 +35,11 @@ import {
   weekContents,
   type AccessLevel,
 } from "../../services/courses/rules";
-import { ForumPlaceholder } from "../forum/parts";
+import { DangerLine, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
-import { Check } from "lucide-react";
+import { Check, ChevronRight, Star } from "lucide-react";
+import { CentredPopup } from "../ui/CentredPopup";
+import { StarRating } from "../ui/StarRating";
 import { CoverPill, Instructor, StarIcon } from "./courseParts";
 import { coverBackground, onCover } from "./courseCover";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -270,10 +272,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             all" the last row. */}
         {modules.length > 0 && (
           <div className="flex flex-col gap-2">
-            {/* Foundations `label.section` (decision 20), 4 in. The heading
-                existed before the redesign, so light keeps its text colour
-                (decision 22; the frame draws the muted grey); dark is muted. */}
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : fv("text") }}>
+            {/* Foundations `label.section` (decision 20), 4 in. Decision 23
+                (item 13): the frame's muted grey rgb(140,131,120) in light;
+                dark keeps the forum's muted. */}
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
               Syllabus
             </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
@@ -315,7 +317,8 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
         {paidCourse && !hasPaid && (
           <div className="flex flex-col gap-2">
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : fv("text") }}>
+            {/* Decision 23 (item 14): the same label in the frame's muted grey. */}
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
               Choose how to take it
             </span>
             <div className="flex gap-2">
@@ -450,7 +453,9 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
   };
 
   return (
-    <div className="rounded-2xl p-[14px] flex flex-col gap-2" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+    // Decision 23 (item 261): the learn card's shape (MO1.3.5 #5: radius 18,
+    // padding 14, gap 10, title 14/800).
+    <div className="rounded-[18px] p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
       <span className="text-sm font-extrabold">Certificate of completion</span>
       {certificate ? (
         <>
@@ -552,7 +557,9 @@ function QuestionsSection({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    // Decision 23 (item 261): one learn card (radius 18, padding 14, gap 10),
+    // the questions inside it as hairline-divided rows like the syllabus's.
+    <div className="rounded-[18px] p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
       <span className="text-sm font-extrabold">Questions to {authorName}</span>
       {canAsk && (
         <>
@@ -568,7 +575,7 @@ function QuestionsSection({
           <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
             Questions and answers are shared with everyone taking the full course. Your name isn't shown.
           </span>
-          {error && <p role="alert" className="m-0 text-xs font-semibold text-status-high">{error}</p>}
+          {error && <DangerLine>{error}</DangerLine>}
           <button
             type="button"
             onClick={() => void ask()}
@@ -581,7 +588,7 @@ function QuestionsSection({
         </>
       )}
       {questions.map((q) => (
-        <div key={q.id} className="rounded-[14px] px-[14px] py-3 flex flex-col gap-1.5 text-[13px]" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+        <div key={q.id} className="pt-2.5 flex flex-col gap-1.5 text-[13px]" style={{ borderTop: `1px solid ${fv("rule")}` }}>
           <span className="font-bold [overflow-wrap:anywhere] whitespace-pre-wrap">{q.body}</span>
           <span className="leading-[1.5] [overflow-wrap:anywhere] whitespace-pre-wrap" style={{ color: q.answer ? fv("body") : fv("muted") }}>
             {q.answer ?? "Waiting for an answer"}
@@ -597,6 +604,13 @@ function QuestionsSection({
   );
 }
 
+/**
+ * Decision 23 (kept-list item 41): the course rating sits behind one row that
+ * opens the shared review popup (the centred popup Rate this app uses: Star
+ * tile, StarRating, an optional text box, one full-width button), so the page
+ * keeps the drawn layout. The row is the learn card's shape (radius 18,
+ * padding 14) and says the saved rating once there is one.
+ */
 function RateSection({
   courseId,
   initial,
@@ -606,64 +620,99 @@ function RateSection({
   initial: { stars: number; body: string | null } | null;
   onSaved: () => Promise<unknown>;
 }) {
+  const [open, setOpen] = useState(false);
+  // The popup is keyed on each opening, so it always starts from what is saved.
+  const [opening, setOpening] = useState(0);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpening((n) => n + 1);
+          setOpen(true);
+        }}
+        aria-haspopup="dialog"
+        className="tap w-full min-h-11 rounded-[18px] p-[14px] flex items-center gap-2.5 text-left"
+        style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
+      >
+        <span className="text-sm font-extrabold grow">{initial ? "Your rating" : "Rate this course"}</span>
+        {initial && (
+          <span className="flex items-center gap-1 text-[13px]" style={{ color: fv("muted") }}>
+            <StarIcon size={12} /> {initial.stars}
+          </span>
+        )}
+        <ChevronRight size={16} strokeWidth={1.75} style={{ color: fv("muted") }} aria-hidden />
+      </button>
+      <RatePopup key={opening} open={open} onClose={() => setOpen(false)} courseId={courseId} initial={initial} onSaved={onSaved} />
+    </>
+  );
+}
+
+function RatePopup({
+  open,
+  onClose,
+  courseId,
+  initial,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  courseId: string;
+  initial: { stars: number; body: string | null } | null;
+  onSaved: () => Promise<unknown>;
+}) {
   const [stars, setStars] = useState(initial?.stars ?? 0);
   const [body, setBody] = useState(initial?.body ?? "");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const save = async () => {
     if (!stars || busy) return;
     setBusy(true);
-    setMessage(null);
+    setError(null);
     const r = await rateCourse(courseId, stars, body);
     setBusy(false);
-    setMessage(r.ok ? "Thanks, your rating is saved." : r.message);
-    if (r.ok) await onSaved();
+    if (!r.ok) {
+      setError(r.message);
+      return;
+    }
+    setSaved(true);
+    await onSaved();
   };
 
+  if (saved) {
+    return (
+      <CentredPopup
+        open={open}
+        onClose={onClose}
+        title="Rating saved"
+        icon={<Check size={22} />}
+        body="Thanks, your rating is saved."
+        cta={{ label: "Done", onClick: onClose }}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-extrabold">{initial ? "Your rating" : "Rate this course"}</span>
-      <div className="flex gap-1" role="radiogroup" aria-label="Stars">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            role="radio"
-            aria-checked={stars === n}
-            aria-label={`${n} ${n === 1 ? "star" : "stars"}`}
-            onClick={() => setStars(n)}
-            className="tap w-11 h-11 flex items-center justify-center"
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill={n <= stars ? fv("star") : "none"} stroke={fv("star")} strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z" />
-            </svg>
-          </button>
-        ))}
-      </div>
+    <CentredPopup
+      open={open}
+      onClose={onClose}
+      title={initial ? "Your rating" : "Rate this course"}
+      icon={<Star size={22} strokeWidth={1.75} />}
+      cta={{ label: busy ? "Saving…" : "Save rating", disabled: !stars || busy, loading: busy, onClick: () => void save() }}
+    >
+      <StarRating value={stars} onChange={setStars} disabled={busy} />
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={2000}
+        rows={3}
         placeholder="Add a few words (optional)"
         aria-label="Your review (optional)"
-        className="h-[72px] rounded-xl px-3 py-2.5 text-sm resize-none outline-none"
-        style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
+        className="mt-3 h-24 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
       />
-      {message && (
-        <p role="status" className="m-0 text-xs font-semibold" style={{ color: fv("muted") }}>
-          {message}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={() => void save()}
-        disabled={!stars || busy}
-        className="tap self-start h-10 rounded-full px-4 text-[13px] font-extrabold disabled:opacity-50"
-        style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
-      >
-        {busy ? "Saving…" : "Save rating"}
-      </button>
-    </div>
+      {error && <DangerLine className="mt-2">{error}</DangerLine>}
+    </CentredPopup>
   );
 }

@@ -117,8 +117,8 @@ export const INK_TOKENS = [...LAV, ...TEAL];
 const STRING_TOKENS = ["--border-row", "--shadow-fab", "--gradient-board", "--gradient-teal-hero", "--gradient-food-hero",
   "--gradient-lavender-accent", "--gradient-quick-action", "--sheet-band", "--sheet-border", "--sheet-title", "--sheet-handle",
   "--wheel-band", "--forum-accent", "--forum-track", "--forum-track-active", "--forum-border", "--forum-rules-bg", "--forum-rules-ink",
-  "--forum-link", "--forum-teal-bg", "--forum-teal-ink", "--forum-removed-bg", "--forum-photo-bg", "--forum-rule", "--forum-dashed",
-  "--forum-dashed-bg", "--forum-handle", "--forum-done-ink", "--forum-muted"];
+  "--forum-link", "--forum-teal-bg", "--forum-teal-ink", "--forum-removed-bg", "--forum-photo-bg", "--forum-rule",
+  "--forum-handle", "--forum-done-ink", "--forum-muted"];
 
 // ---- the literal colours used in src as th-<hex> ----------------------------
 function scanLiterals() {

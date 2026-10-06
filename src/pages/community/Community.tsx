@@ -1,4 +1,4 @@
-import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { forumAccess, ADULTS_ONLY_TEXT, NEEDS_DOB_TEXT, type ForumCategory } from "../../services/forum/rules";
 import { useForumMe } from "../../components/forum/useForumMe";
@@ -197,23 +197,11 @@ export default function Community({ compose = false }: { compose?: boolean }) {
               ))}
             </div>
             {tab === "courses" ? (
-              <>
-                {/* THE WAY INTO THE BUILDER, for the people who can use it.
-                    Only a professional sees it, because create_course refuses
-                    everybody else and a link to a screen that would only
-                    explain why is not worth a learner reading past. */}
-                {ctx.isProfessional && (
-                  <Link
-                    to="/app/forum/courses/mine"
-                    className="rounded-[14px] h-11 px-3.5 flex items-center justify-between gap-2 no-underline"
-                    style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
-                  >
-                    <span className="text-[13px] font-extrabold">My courses</span>
-                    <span className="text-[13px] font-bold">Write a course →</span>
-                  </Link>
-                )}
-                <CoursesCatalogue userId={ctx.userId} />
-              </>
+              // THE WAY INTO THE BUILDER, for the people who can use it: only
+              // a professional sees it, because create_course refuses everybody
+              // else. Since decision 23 (item 65) it is a "Write a course" text
+              // action on the catalogue's Popular row, not a row of its own.
+              <CoursesCatalogue userId={ctx.userId} isProfessional={ctx.isProfessional} />
             ) : (
               <>
               {compose && (

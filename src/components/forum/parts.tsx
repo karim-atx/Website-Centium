@@ -212,3 +212,35 @@ export function ForumPlaceholder({ height }: { height: number }) {
     />
   );
 }
+
+/**
+ * Foundations › Empty state, for the forum and the course catalogue
+ * (decision 23, kept-list items 66 and 72): a 56 pt primary.tint tile with a
+ * 26 pt thin-stroke icon in primary.accent, a 15/700 title and one 12.5/500
+ * text.muted line, at most 260 wide, centred. The gaps and the block's
+ * padding are not given in Foundations: 10 between the parts (MO1.4.3's
+ * block) and 32 above and below (unspecified).
+ */
+export function EmptyBlock({ icon, title, line }: { icon: React.ReactNode; title: string; line: string }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-2.5 py-8 mx-auto max-w-[260px]">
+      <span className="w-14 h-14 rounded-[18px] bg-primary-pale text-primary-accent flex items-center justify-center" aria-hidden="true">
+        {icon}
+      </span>
+      <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>
+      <p className="m-0 text-[12.5px] font-medium text-charcoal-faint leading-[1.55]">{line}</p>
+    </div>
+  );
+}
+
+/**
+ * A plain inline error in danger, no box (decision 23, items 67, 69, 70, 73;
+ * Foundations' "inline error line in danger under the affected element").
+ */
+export function DangerLine({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p role="alert" className={clsx("m-0 text-[12px] font-semibold text-status-high", className)}>
+      {children}
+    </p>
+  );
+}

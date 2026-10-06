@@ -23,7 +23,7 @@ import {
 import { forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { ForumSafetySheet } from "./ForumSafetySheet";
 import { OwnPostSheet } from "./OwnPostSheet";
-import { AuthorInitial, AuthorName, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
+import { AuthorInitial, AuthorName, DangerLine, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
 import { fv } from "./forumColor";
 import { PopupMenu } from "../ui/PopupMenu";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -220,11 +220,7 @@ export function ForumPostView({
           className={`${kind === "post" ? "h-[140px]" : "h-[90px]"} rounded-xl px-3 py-2.5 text-sm resize-none outline-none`}
           style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
         />
-        {editError && (
-          <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3 py-2">
-            {editError}
-          </p>
-        )}
+        {editError && <DangerLine>{editError}</DangerLine>}
         <div className="flex gap-2 justify-end">
           <button
             type="button"
@@ -427,11 +423,9 @@ export function ForumPostView({
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {error}
-        </p>
-      )}
+      {/* Decision 23 (item 70): plain danger lines, no box (here, in the
+          edit fields and over the reply bar). */}
+      {error && <DangerLine className="mt-3">{error}</DangerLine>}
 
       {/* First reply's avatar 12 under the action row (frame check; was 16). */}
       <div className="pt-3 flex flex-col gap-[18px] grow">
@@ -485,11 +479,7 @@ export function ForumPostView({
               </button>
             </span>
           )}
-          {replyError && (
-            <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3 py-2">
-              {replyError}
-            </p>
-          )}
+          {replyError && <DangerLine className="pl-1.5">{replyError}</DangerLine>}
           <div className="flex gap-2 items-center">
             {/* MO1.3.3 #10: 49 tall, padding 5 5 5 6, gap 8; the letter 13/700, Send 15. */}
             <label
@@ -641,8 +631,62 @@ function ReplyRow({
   onLike: () => void;
   onReply?: () => void;
 }) {
+  const hasMenu = author.isMine ? reply.status !== "removed" : reply.status === "published";
+  const openMenu = () => (author.isMine ? onOwn() : onSafety(author.label));
+
+  // Decision 23 (kept-list item 40): a long press on the reply opens the same
+  // menu the ⋮ does (edit / withdraw your own, report / block someone else's),
+  // as Messages' bubbles do: 500 ms held, cancelled by 10 px of movement so a
+  // scroll never fires it, and a right-click as the mouse's long press. The ⋮
+  // stays as the keyboard and screen-reader path to the same menu.
+  const pressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+  const fired = useRef(false);
+  const clearPress = () => {
+    if (pressTimer.current !== null) window.clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+  useEffect(() => clearPress, []);
+  // Not while the reply is being edited: a held finger there is selecting text.
+  const press = hasMenu && !editor
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          fired.current = false;
+          pressOrigin.current = { x: e.clientX, y: e.clientY };
+          clearPress();
+          pressTimer.current = window.setTimeout(() => {
+            fired.current = true;
+            openMenu();
+          }, 500);
+        },
+        onPointerMove: (e: React.PointerEvent) => {
+          const o = pressOrigin.current;
+          if (o && Math.hypot(e.clientX - o.x, e.clientY - o.y) > 10) clearPress();
+        },
+        onPointerUp: clearPress,
+        onPointerCancel: clearPress,
+        onPointerLeave: clearPress,
+        onContextMenu: (e: React.MouseEvent) => {
+          e.preventDefault();
+          clearPress();
+          if (!fired.current) openMenu();
+          fired.current = false;
+        },
+        // A press that opened the menu must not also tap the like or reply
+        // button it started on.
+        onClickCapture: (e: React.MouseEvent) => {
+          if (fired.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            fired.current = false;
+          }
+        },
+      }
+    : {};
+
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 [-webkit-touch-callout:none]" {...press}>
       <AuthorInitial author={author} identity={reply.identity} size={40} />
       <div className="flex flex-col gap-1 min-w-0 grow">
         <span className="flex gap-1.5 items-center flex-wrap">
@@ -652,11 +696,11 @@ function ReplyRow({
             · {forumAge(reply.createdAt)}
             {reply.editedAt ? " · edited" : ""}
           </span>
-          {(author.isMine ? reply.status !== "removed" : reply.status === "published") && (
+          {hasMenu && (
             <button
               type="button"
               aria-label={author.isMine ? "Edit or withdraw" : "Report or block"}
-              onClick={() => (author.isMine ? onOwn() : onSafety(author.label))}
+              onClick={openMenu}
               className="tap ml-auto w-8 h-8 -my-1.5 flex items-center justify-center shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">

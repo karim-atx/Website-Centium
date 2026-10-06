@@ -81,9 +81,7 @@ export function NicknameScreen({
       <div className="flex flex-col gap-4 pb-6">
         {/* Frame check (MO1.3.4): the back button at the content edge
             (chevron centre x 34), #5B5349 (new since R1); the AtSign tile 20
-            under it. The tile existed before the redesign, so it keeps the
-            forum tints in both modes (decision 22; the frame draws #F0EDF9 /
-            #7D6BB5); the title on a 30 pt line. */}
+            under it; the title on a 30 pt line. */}
         <button
           type="button"
           onClick={back}
@@ -92,8 +90,11 @@ export function NicknameScreen({
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="mt-1 w-14 h-14 rounded-[18px] flex items-center justify-center" style={{ background: fv("rules-bg") }}>
-          <AtSign size={26} strokeWidth={1.75} style={{ color: fv("rules-ink") }} />
+        {/* Decision 23 (item 12): the frame's #F0EDF9 / #7D6BB5 (primary.tint
+            / primary.deep, which follow the theme); dark takes the same
+            tokens' dark values. */}
+        <div className="mt-1 w-14 h-14 rounded-[18px] flex items-center justify-center bg-primary-pale">
+          <AtSign size={26} strokeWidth={1.75} className="text-primary-dark" />
         </div>
         <h1 className="m-0 text-[24px] font-extrabold leading-[1.25] [text-wrap:balance]">Choose a forum nickname</h1>
         <p className="m-0 text-[14px] leading-[1.6]" style={{ color: fv("body") }}>

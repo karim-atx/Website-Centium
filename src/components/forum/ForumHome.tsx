@@ -20,6 +20,8 @@ import { WarningNotice } from "./WarningNotice";
 import {
   AuthorInitial,
   AuthorName,
+  DangerLine,
+  EmptyBlock,
   ForumChip,
   ForumPlaceholder,
   HeartIcon,
@@ -27,6 +29,7 @@ import {
   RemovedNote,
   ReplyIcon,
 } from "./parts";
+import { MessagesSquare } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { ThemedMark } from "../ui/ThemedMark";
 
@@ -35,8 +38,9 @@ import { ThemedMark } from "../ui/ThemedMark";
 // LIGHT MODE KEEPS THE FORUM'S OWN COLOURS (the --forum-* palette); the new
 // parts are the category colours (the card's edge and its pill, A20), the
 // round New post button and tappable likes (A21). Everything the design does
-// not draw is kept: the moderator warning, the held section, "Show older
-// posts", photos, recovery-mode hiding and the empty state (A25).
+// not draw is kept: the moderator warning, the held section, older posts
+// (loaded on scroll since decision 23), photos, recovery-mode hiding and the
+// empty state (A25).
 //
 // RECOVERY-SENSITIVE MODE IS APPLIED HERE, ON THE DEVICE. The fetch below is
 // the same whether the mode is on or off (every category, the same columns,
@@ -120,7 +124,11 @@ export function ForumHome({
     const mine = seq.current;
     const key = activeFilter;
     const r = await fetchThreads({ categoryKey: key, before: oldest.createdAt });
-    if (mine !== seq.current) return;
+    // A filter change meanwhile: drop the page, but free the loader for the new list.
+    if (mine !== seq.current) {
+      setLoadingMore(false);
+      return;
+    }
     if (r.ok) {
       await decorate(r.value);
       const seen = new Set(threads.map((t) => t.id));
@@ -128,6 +136,27 @@ export function ForumHome({
     } else setError({ key, message: r.message });
     setLoadingMore(false);
   };
+
+  // Load-on-scroll (decision 23, item 42): when the sentinel under the last
+  // post comes within 400 px of the viewport, the next page loads. The ref
+  // keeps the observer on the latest loadMore without re-creating it.
+  const sentinel = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef(loadMore);
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+  });
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!more || !el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMoreRef.current();
+      },
+      { rootMargin: "0px 0px 400px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [more, threads]);
 
   // A like on the list (A21), optimistic: the count and the heart change at
   // once and go back if the write fails.
@@ -233,11 +262,8 @@ export function ForumHome({
         </span>
       </div>
 
-      {shownError && (
-        <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {shownError}
-        </p>
-      )}
+      {/* Decision 23 (item 73): a plain danger line, no box. */}
+      {shownError && <DangerLine>{shownError}</DangerLine>}
 
       {recoveryPending || threads === null ? (
         <div className="flex flex-col gap-2.5" aria-busy="true">
@@ -250,8 +276,11 @@ export function ForumHome({
         <>
           {held.length > 0 && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-xs font-extrabold tracking-[0.04em]" style={{ color: fv("muted") }}>
-                YOUR POST, WAITING FOR REVIEW
+              {/* Decision 23 (item 71): the handover's section label,
+                  10.5/700 uppercase at 0.12em on a 14 line (label.section),
+                  with the 1.5 pt primary line under it (C-05). */}
+              <span className="text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em] text-primary-dark pb-[7.5px] border-b-[1.5px] border-primary">
+                Your post, waiting for review
               </span>
               {held.map((t) => (
                 <button
@@ -286,21 +315,32 @@ export function ForumHome({
                 />
               )
             )}
+            {/* Decision 23 (item 72): Foundations › Empty state. */}
             {feed.length === 0 && held.length === 0 && !shownError && (
-              <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-                No posts here yet. Start the conversation.
-              </p>
+              <EmptyBlock icon={<MessagesSquare size={26} strokeWidth={1.75} />} title="No posts here yet" line="Start the conversation." />
             )}
+            {/* Decision 23 (item 42): older posts load as the end of the list
+                scrolls into view, with no visible control. The sentinel is
+                also a button that only shows while focused, so a keyboard
+                (or anyone without a scroll wheel) can still ask for them. */}
             {more && (
-              <button
-                type="button"
-                onClick={() => void loadMore()}
-                disabled={loadingMore}
-                className="tap h-11 rounded-full text-[13px] font-bold disabled:opacity-60"
-                style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
-              >
-                {loadingMore ? "Loading…" : "Show older posts"}
-              </button>
+              <>
+                <div ref={sentinel} aria-hidden="true" className="h-px -mt-2.5" />
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="sr-only focus:not-sr-only focus:self-center focus:h-11 focus:px-4 focus:rounded-full text-[13px] font-bold"
+                  style={{ color: fv("link") }}
+                >
+                  Load older posts
+                </button>
+              </>
+            )}
+            {loadingMore && (
+              <p role="status" className="m-0 text-center text-[12px]" style={{ color: fv("muted") }}>
+                Loading older posts…
+              </p>
             )}
           </div>
         </>
