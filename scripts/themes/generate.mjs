@@ -289,7 +289,10 @@ function hcBlock(theme, mode, literals, data) {
     lines.push(`  --c-primary: ${cssTriplet(prim)};`);
     lines.push(`  --c-primary-ink: ${cssTriplet(ensureContrast(prim, grounds("lav"), 4.5, dir))};`);
     for (const n of ["--c-primary-accent", "--c-primary-dark", "--c-primary-deep-text"]) {
-      lines.push(`  ${n}: ${cssTriplet(ensureContrast(text ?? data.v[n], grounds("lav"), 4.5, dir))};`);
+      const hcText = ensureContrast(text ?? data.v[n], grounds("lav"), 4.5, dir);
+      lines.push(`  ${n}: ${cssTriplet(hcText)};`);
+      // Their text twins too (Tailwind's text-primary-dark reads the -ink).
+      if (text) lines.push(`  ${n}-ink: ${cssTriplet(hcText)};`);
     }
     const fillBase = mode === "light" && theme !== "centium" && data.fillInk === WHITE ? prim : data.v["--c-primary-fill"];
     const fill = ensureContrast(fillBase, [data.fillInk], 4.5, data.fillInk === WHITE ? -1 : 1);
