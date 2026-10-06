@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
+import { textPx } from "../../theme/textSize";
 
 interface BottomSheetProps {
   open: boolean;
@@ -163,7 +164,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             {title && (
               <h2
                 className="flex-1 min-w-0 flex items-center justify-center"
-                style={{ color: titleColor, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", gap: 9 }}
+                style={{ color: titleColor, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", gap: 9 }}
               >
                 {titleIcon && <span className="flex shrink-0">{titleIcon}</span>}
                 <span className="min-w-0 truncate">{title}</span>

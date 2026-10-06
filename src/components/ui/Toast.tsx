@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
+import { textPx } from "../../theme/textSize";
 
 /** How long a toast stays up. The handover gives no duration. */
 export const TOAST_MS = 5000;
@@ -47,7 +48,7 @@ export const Toast: React.FC<{
         borderRadius: 12,
         padding: "11px 14px",
         color: "#FFFFFF",
-        fontSize: 12.5,
+        fontSize: textPx(12.5),
         fontWeight: 600,
       }}
     >

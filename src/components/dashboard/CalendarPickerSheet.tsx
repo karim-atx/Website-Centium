@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { JumpToToday } from "../ui/JumpToToday";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -124,7 +125,7 @@ export const CalendarPickerSheet: React.FC<{
           style={{ background: cal("shell"), borderRadius: 28, border: `1px solid ${cal("hairline")}` }}
         >
           <div className="flex items-center justify-center" style={{ height: 37 }}>
-            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: cal("title") }}>
+            <p style={{ margin: 0, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", color: cal("title") }}>
               {title}
             </p>
           </div>
@@ -143,7 +144,7 @@ export const CalendarPickerSheet: React.FC<{
                 <ChevronLeft size={16} strokeWidth={2.2} />
               </button>
               <span className="flex items-center" style={{ gap: 8 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
+                <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
                 {showJump && <JumpToToday onClick={jumpToToday} />}
               </span>
               <button
@@ -162,7 +163,7 @@ export const CalendarPickerSheet: React.FC<{
                 <div
                   key={i}
                   className="text-center"
-                  style={{ fontSize: 13, fontWeight: 600, color: cal("accent"), padding: "6px 0" }}
+                  style={{ fontSize: textPx(13), fontWeight: 600, color: cal("accent"), padding: "6px 0" }}
                 >
                   {w}
                 </div>
@@ -191,7 +192,7 @@ export const CalendarPickerSheet: React.FC<{
                     className="tap relative aspect-square flex items-center justify-center"
                     style={{
                       borderRadius: 12,
-                      fontSize: 15,
+                      fontSize: textPx(15),
                       fontWeight: isSelected ? 600 : 500,
                       background: isSelected ? "rgb(var(--c-fill-day))" : "transparent",
                       color: isSelected ? "rgb(var(--c-on-primary-fill))" : isFuture ? cal("future") : cal("day"),
@@ -217,7 +218,7 @@ export const CalendarPickerSheet: React.FC<{
                   onClose();
                 }}
                 className="tap w-full flex items-center justify-center"
-                style={{ marginTop: 14, height: 44, borderRadius: 14, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
+                style={{ marginTop: 14, height: 44, borderRadius: 14, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
               >
                 {confirmLabel}
               </button>

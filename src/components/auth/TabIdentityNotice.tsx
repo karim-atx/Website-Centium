@@ -4,6 +4,7 @@ import { Users } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useIsDark } from "../../hooks/useIsDark";
 import { currentTabLock, onTabLock, type TabLock } from "../../../lib/supabase/tabIdentity";
+import { textPx } from "../../theme/textSize";
 
 /**
  * The blocking notice for a tab whose account was changed from another tab
@@ -46,9 +47,9 @@ export const TabIdentityNotice: React.FC = () => {
           >
             <Users size={18} />
           </span>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
+          <p style={{ margin: 0, fontSize: textPx(16), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
         </div>
-        <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>
+        <p style={{ margin: "10px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
           Nothing more is saved from this tab until it reloads.
         </p>
         <Button className="w-full" style={{ marginTop: 18 }} onClick={() => window.location.reload()} autoFocus>

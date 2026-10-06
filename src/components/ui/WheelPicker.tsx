@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { textPx } from "../../theme/textSize";
 
 export interface WheelOption<V extends string | number = string> {
   value: V;
@@ -117,7 +118,7 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
             style={{
               height: ROW,
               scrollSnapAlign: "center",
-              fontSize: on ? 17 : 15,
+              fontSize: textPx(on ? 17 : 15),
               fontWeight: on ? 700 : 500,
               color: opt.disabled ? "var(--wheel-disabled)" : "var(--wheel-text)",
               opacity: opt.disabled ? 1 : on ? 1 : d < 1.5 ? 0.55 : 0.25,

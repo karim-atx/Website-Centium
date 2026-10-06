@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 export interface PopupMenuOption<V extends string = string> {
   value: V;
@@ -151,7 +152,7 @@ export function PopupMenu<V extends string>({
         }
       >
         {heading && (
-          <p style={{ margin: "2px 4px 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--c-charcoal-muted))" }}>
             {heading}
           </p>
         )}
@@ -178,7 +179,7 @@ export function PopupMenu<V extends string>({
                 border: `1px solid ${filled ? "rgb(var(--c-fill-chip))" : on ? c("onBorder") : "rgb(var(--c-border-option))"}`,
                 background: filled ? "rgb(var(--c-fill-chip))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
                 color: filled ? "rgb(var(--c-on-primary-fill))" : opt.destructive ? c("destructive") : "rgb(var(--c-charcoal))",
-                fontSize: 12.5,
+                fontSize: textPx(12.5),
                 fontWeight: on ? 700 : 500,
               }}
             >
@@ -186,7 +187,7 @@ export function PopupMenu<V extends string>({
               <span className="flex-1 min-w-0">
                 {opt.label}
                 {opt.note && (
-                  <span className="block" style={{ fontSize: 10.5, fontWeight: 500, marginTop: 1, color: "rgb(var(--c-charcoal-muted))" }}>
+                  <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: "rgb(var(--c-charcoal-muted))" }}>
                     {opt.note}
                   </span>
                 )}
