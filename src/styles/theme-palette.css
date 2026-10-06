@@ -262,7 +262,7 @@
   --thi-f6f4fe: var(--th-f6f4fe);
 }
 [data-accent="sky"] {
-  --c-primary: 79 125 255;
+  --c-primary: 132 168 252;
   --c-primary-light: 173 197 252;
   --c-primary-pale: 232 238 255;
   --c-primary-dark: 47 94 242;
@@ -582,7 +582,7 @@
   --thi-f6f4fe: 241 245 255;
 }
 .dark[data-accent="sky"] {
-  --c-primary: 46 91 255;
+  --c-primary: 122 160 250;
   --c-primary-light: 163 188 253;
   --c-primary-pale: 31 39 70;
   --c-primary-dark: 163 188 253;
@@ -902,7 +902,7 @@
   --thi-f6f4fe: 242 245 255;
 }
 [data-accent="rose"] {
-  --c-primary: 226 77 127;
+  --c-primary: 253 131 165;
   --c-primary-light: 255 174 193;
   --c-primary-pale: 255 234 237;
   --c-primary-dark: 207 23 103;
@@ -1222,7 +1222,7 @@
   --thi-f6f4fe: 255 242 245;
 }
 .dark[data-accent="rose"] {
-  --c-primary: 200 30 93;
+  --c-primary: 251 119 151;
   --c-primary-light: 253 164 180;
   --c-primary-pale: 52 31 47;
   --c-primary-dark: 253 164 180;
@@ -1542,7 +1542,7 @@
   --thi-f6f4fe: 255 243 244;
 }
 [data-accent="gold"] {
-  --c-primary: 246 196 69;
+  --c-primary: 210 162 8;
   --c-primary-light: 225 193 115;
   --c-primary-pale: 246 239 218;
   --c-primary-dark: 135 105 19;
@@ -1862,7 +1862,7 @@
   --thi-f6f4fe: 252 244 228;
 }
 .dark[data-accent="gold"] {
-  --c-primary: 217 151 6;
+  --c-primary: 212 150 36;
   --c-primary-light: 224 183 115;
   --c-primary-pale: 54 48 35;
   --c-primary-dark: 224 183 115;
@@ -2182,7 +2182,7 @@
   --thi-f6f4fe: 250 245 236;
 }
 [data-accent="coral"] {
-  --c-primary: 255 122 69;
+  --c-primary: 253 138 93;
   --c-primary-light: 255 178 149;
   --c-primary-pale: 255 234 226;
   --c-primary-dark: 187 71 18;
@@ -2502,7 +2502,7 @@
   --thi-f6f4fe: 255 242 238;
 }
 .dark[data-accent="coral"] {
-  --c-primary: 232 93 46;
+  --c-primary: 254 123 82;
   --c-primary-light: 254 167 137;
   --c-primary-pale: 57 40 41;
   --c-primary-dark: 254 167 137;

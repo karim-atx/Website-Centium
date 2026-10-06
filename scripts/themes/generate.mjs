@@ -182,7 +182,10 @@ function themeBlock(theme, mode, literals) {
   const centium = (name) => tripletToHex(mode === "light" ? lightOf(name) : darkOf(name));
   for (const n of LAV) v[n] = mapHex(centium(n), theme, mode, "lav");
   for (const n of TEAL) v[n] = mapHex(centium(n), theme, mode, "teal");
-  v["--c-primary"] = p.toLowerCase();
+  // --c-primary is matched like every other shade (it is also a translucent
+  // ground behind grey text, bg-primary/50, where the pair's own colour would
+  // drop the contrast Centium has). The pair's own colour is shown exactly in
+  // the C mark, the picker swatch and the filled controls below (D7).
   // The in-app C mark (theme rule 4): C in the primary, leaf in the secondary.
   v["--c-brand-c"] = p.toLowerCase();
   v["--c-brand-leaf"] = s.toLowerCase();
