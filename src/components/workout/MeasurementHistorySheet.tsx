@@ -224,7 +224,7 @@ export const MeasurementHistorySheet: React.FC<{
                         textAlign: "right",
                         borderRadius: 8,
                         background: "rgb(var(--c-cream-card))",
-                        border: "2px solid #AEA1DC",
+                        border: "2px solid rgb(var(--th-aea1dc))",
                         color: "rgb(var(--c-charcoal))",
                         fontSize: 14,
                       }}

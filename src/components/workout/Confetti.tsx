@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
-const COLORS = ["#AEA1DC", "#A2C8C2", "#D9A441", "#C0392B", "#4C8FD1", "#7D6BB5"];
+const COLORS = ["rgb(var(--th-aea1dc))", "rgb(var(--th-a2c8c2))", "#D9A441", "#C0392B", "#4C8FD1", "rgb(var(--th-7d6bb5))"];
 
 // QA 11.0: "If a set was selected as a PR and the checkmark was selected
 // confetti flies through the page as a celebration." A lightweight
@@ -71,7 +71,7 @@ export const Confetti: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 // from that row — gold, lavender and teal pieces in mixed shapes and sizes,
 // falling gently and fading out in about 1.2 s. Never blocks taps
 // (pointer-events none), and skipped entirely under reduced motion.
-const BURST_COLORS = ["#C8912B", "#D9A441", "#AEA1DC", "#C3B3FB", "#A2C8C2", "#63968B"];
+const BURST_COLORS = ["#C8912B", "#D9A441", "rgb(var(--th-aea1dc))", "rgb(var(--th-c3b3fb))", "rgb(var(--th-a2c8c2))", "rgb(var(--th-63968b))"];
 const BURST_SHAPES = ["rect", "circle", "triangle", "streamer"] as const;
 
 export const PrBurst: React.FC<{ rect: { left: number; top: number; width: number; height: number }; onDone: () => void }> = ({

@@ -27,8 +27,8 @@ export type { RenderRun } from "../../services/workout/blocks";
  */
 type BlockRail = { rail: string; tint: string; ink: string };
 const RAIL: Record<BlockKind, BlockRail> = {
-  superset: { rail: "#7D6BB5", tint: "rgba(125,107,181,0.08)", ink: "#5F5093" },
-  amrap: { rail: "#4F8F8A", tint: "rgba(79,143,138,0.09)", ink: "#3C6B65" },
+  superset: { rail: "rgb(var(--th-7d6bb5))", tint: "rgb(var(--th-7d6bb5) / 0.08)", ink: "rgb(var(--th-5f5093))" },
+  amrap: { rail: "rgb(var(--th-4f8f8a))", tint: "rgb(var(--th-4f8f8a) / 0.09)", ink: "rgb(var(--th-3c6b65))" },
   emom: { rail: "#3F6E93", tint: "rgba(63,110,147,0.08)", ink: "#3F6E93" },
   for_time: { rail: "#8A5878", tint: "rgba(138,88,120,0.08)", ink: "#8A5878" },
 };

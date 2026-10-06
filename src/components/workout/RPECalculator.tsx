@@ -29,10 +29,10 @@ const fieldInput: React.CSSProperties = {
  */
 const RPE_COLORS = {
   chipBorder: ["#E7E6E6", "rgba(238,239,242,0.10)"],
-  box: ["#F3F1FC", "#303141"],
-  label: ["#7D67D9", "#B7ABDE"],
-  hero: ["#4A3AA0", "#C8BFE9"],
-  support: ["#5F5093", "#C8BFE9"],
+  box: ["rgb(var(--th-f3f1fc))", "rgb(var(--th-303141))"],
+  label: ["rgb(var(--th-7d67d9))", "rgb(var(--th-b7abde))"],
+  hero: ["rgb(var(--th-4a3aa0))", "rgb(var(--th-c8bfe9))"],
+  support: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
 } as const;
 const rpeColor = (key: keyof typeof RPE_COLORS, dark: boolean): string => RPE_COLORS[key][dark ? 1 : 0];
 
@@ -100,7 +100,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
                   style={{
                     height: 34,
                     borderRadius: 8,
-                    border: `1px solid ${on ? "#AEA1DC" : rpeColor("chipBorder", dark)}`,
+                    border: `1px solid ${on ? "rgb(var(--th-aea1dc))" : rpeColor("chipBorder", dark)}`,
                     background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
                     color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
                     fontSize: 12,

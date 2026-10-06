@@ -40,8 +40,8 @@ type ToastState = { message: string; undo?: () => void; icon?: React.ReactNode; 
 // chip's lavender border takes #AEA1DC at 30% on the dark card (derived), its
 // calendar icon primary.deep dark and its chevron text.tertiary dark.
 const CHIP = {
-  border: ["#E0D5FC", "#48465E"],
-  icon: ["#8F68F6", "#B7ABDE"],
+  border: ["rgb(var(--th-e0d5fc))", "#48465E"],
+  icon: ["rgb(var(--th-8f68f6))", "rgb(var(--th-b7abde))"],
   chevron: ["#A9A29A", "#918DA0"],
 } as const;
 
@@ -116,7 +116,7 @@ export default function HistoryTab() {
     if (expandedId === s.id) setExpandedId(null);
     showToast({
       message: "Workout deleted.",
-      icon: <Trash2 size={14} className="flex-none" style={{ color: "#A2C8C2" }} />,
+      icon: <Trash2 size={14} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />,
       undo: handle.undo,
       commit: handle.commit,
     });

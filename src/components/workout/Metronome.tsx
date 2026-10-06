@@ -30,8 +30,8 @@ const Pendulum: React.FC<{ angle: number; swingSeconds: number; beat: number; sh
   soft,
 }) => (
   <svg width={120} height={112} viewBox="0 0 120 112" aria-hidden style={{ display: "block", margin: "0 auto" }}>
-    <path d="M44 10 H76 L98 104 H22 Z" fill="#C3B3FB" />
-    <path d="M49 18 H71 L88 96 H32 Z" fill="#E4DDFD" />
+    <path d="M44 10 H76 L98 104 H22 Z" fill="rgb(var(--th-c3b3fb))" />
+    <path d="M49 18 H71 L88 96 H32 Z" fill="rgb(var(--th-e4ddfd))" />
     <g
       style={{
         transform: `rotate(${angle}deg)`,
@@ -39,11 +39,11 @@ const Pendulum: React.FC<{ angle: number; swingSeconds: number; beat: number; sh
         transition: `transform ${swingSeconds}s ease-in-out`,
       }}
     >
-      <line x1="60" y1="92" x2="60" y2="22" stroke="#7D67D9" strokeWidth={3.5} strokeLinecap="round" />
-      <rect x="52" y="40" width="16" height="11" rx="3.5" fill="#4F8F8A" />
+      <line x1="60" y1="92" x2="60" y2="22" stroke="rgb(var(--th-7d67d9))" strokeWidth={3.5} strokeLinecap="round" />
+      <rect x="52" y="40" width="16" height="11" rx="3.5" fill="rgb(var(--th-4f8f8a))" />
     </g>
-    <circle cx="60" cy="92" r="5" fill="#7D67D9" />
-    <rect x="18" y="102" width="84" height="6" rx="3" fill="#AEA1DC" />
+    <circle cx="60" cy="92" r="5" fill="rgb(var(--th-7d67d9))" />
+    <rect x="18" y="102" width="84" height="6" rx="3" fill="rgb(var(--th-aea1dc))" />
     {showDot && (
       // Re-keyed on every beat so the pulse replays in time with the click.
       <circle
@@ -51,7 +51,7 @@ const Pendulum: React.FC<{ angle: number; swingSeconds: number; beat: number; sh
         cx="60"
         cy="6"
         r="3.5"
-        fill="#8F68F6"
+        fill="rgb(var(--th-8f68f6))"
         style={pulse ? { transformOrigin: "60px 6px", animation: soft ? "metro-beat-soft 0.45s ease-out" : "metro-beat 0.35s ease-out" } : undefined}
       />
     )}
@@ -181,7 +181,7 @@ export const Metronome: React.FC = () => {
               borderRadius: 12,
               // Idle is primary-fill. Running is the board's #7D67D9 in light
               // mode; dark mode uses the deeper brand shade.
-              background: running ? (dark ? "rgb(var(--c-primary-deep-text))" : "#7D67D9") : "rgb(var(--c-primary-fill))",
+              background: running ? (dark ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--th-7d67d9))") : "rgb(var(--c-primary-fill))",
               color: "rgb(var(--c-on-primary-fill))",
               fontSize: 14,
               fontWeight: 700,

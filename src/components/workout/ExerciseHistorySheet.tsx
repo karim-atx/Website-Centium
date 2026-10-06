@@ -9,7 +9,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 // tint (#2B2C3A dark) the stat label takes text.secondary dark (tertiary
 // #918DA0 measures 4.28:1 there) and the value primary.deeper dark.
 const label = (dark: boolean): React.CSSProperties => ({ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: dark ? "#B8B3C7" : "#9A94B3" });
-const value = (dark: boolean): React.CSSProperties => ({ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: dark ? "#C8BFE9" : "#5F5093", whiteSpace: "nowrap" });
+const value = (dark: boolean): React.CSSProperties => ({ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: dark ? "rgb(var(--thi-c8bfe9))" : "rgb(var(--thi-5f5093))", whiteSpace: "nowrap" });
 
 /**
  * WO14 · Exercise history, over the exercise popup: "[name] history", the
@@ -34,7 +34,7 @@ export const ExerciseHistorySheet: React.FC<{
     <BottomSheet open={open} onClose={onClose} title={`${name} history`}>
       {entries.length === 0 ? (
         <div className="flex flex-col items-center text-center animate-fade-slide-up" style={{ padding: "26px 12px 10px", gap: 10 }}>
-          <BookOpen size={20} style={{ color: "#AEA1DC" }} />
+          <BookOpen size={20} style={{ color: "rgb(var(--thi-aea1dc))" }} />
           <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "rgb(var(--c-charcoal-muted))" }}>
             No history yet. Log this exercise in a routine to see it here.
           </p>
@@ -42,7 +42,7 @@ export const ExerciseHistorySheet: React.FC<{
       ) : (
         <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
           {entries.map((e) => (
-            <div key={e.sessionId} style={{ background: "rgba(174,161,220,0.10)", borderRadius: 14, padding: "12px 14px 13px" }}>
+            <div key={e.sessionId} style={{ background: "rgb(var(--th-aea1dc) / 0.10)", borderRadius: 14, padding: "12px 14px 13px" }}>
               <div className="flex items-start justify-between" style={{ gap: 10 }}>
                 <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                   {new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}

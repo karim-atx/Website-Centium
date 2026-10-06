@@ -48,8 +48,8 @@ const MERIDIEMS: Meridiem[] = ["AM", "PM"];
  * borders option-border dark and the TIME label text.tertiary dark.
  */
 const COLORS = {
-  purple: ["#8F68F6", "#B7ABDE"],
-  groupTint: ["#E4DDFD", "#303141"],
+  purple: ["rgb(var(--th-8f68f6))", "rgb(var(--th-b7abde))"],
+  groupTint: ["rgb(var(--th-e4ddfd))", "rgb(var(--th-303141))"],
   whenBorder: ["#E0DFE0", "rgba(238,239,242,0.10)"],
   fieldBorder: ["#E6E6E7", "rgba(238,239,242,0.10)"],
   timeLabel: ["#9A94B3", "#918DA0"],

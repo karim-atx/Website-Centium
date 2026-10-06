@@ -43,13 +43,13 @@ import { MeasurementHistorySheet } from "../../components/workout/MeasurementHis
 // data is deleted by removing them.
 
 const balanceColors: Record<string, string> = {
-  back: "#7D6BB5",
+  back: "rgb(var(--th-7d6bb5))",
   chest: "#D9A441",
-  shoulders: "#6F9993",
+  shoulders: "rgb(var(--th-6f9993))",
   quads: "#4C8FD1",
   hamstrings: "#9C4F7C",
   glutes: "#C97B84",
-  bicep: "#8C7CC4",
+  bicep: "rgb(var(--th-8c7cc4))",
   tricep: "#B58F5A",
   core: "#5FA88F",
   cardio: "#E08E6D",
@@ -67,18 +67,18 @@ const balanceColors: Record<string, string> = {
  * dark hero band (derived with liftTo).
  */
 const COLORS = {
-  teal: ["#3B7570", "#A3C7C0"],
+  teal: ["rgb(var(--th-3b7570))", "rgb(var(--th-a3c7c0))"],
   tealTile: ["#F2F7F6", "#293339"],
-  tealUnit: ["#86B3AD", "#7FB3A9"],
-  spark: ["#6F9993", "#7FB3A9"],
-  purple: ["#8F68F6", "#B7ABDE"],
-  barNow: ["#8F68F6", "#9A8CD6"],
-  bar: ["#E6DEFD", tintOn("#AEA1DC", 0.38)],
+  tealUnit: ["rgb(var(--th-86b3ad))", "rgb(var(--th-7fb3a9))"],
+  spark: ["rgb(var(--th-6f9993))", "rgb(var(--th-7fb3a9))"],
+  purple: ["rgb(var(--th-8f68f6))", "rgb(var(--th-b7abde))"],
+  barNow: ["rgb(var(--th-8f68f6))", "rgb(var(--th-9a8cd6))"],
+  bar: ["rgb(var(--th-e6defd))", tintOn("rgb(var(--th-aea1dc))", 0.38)],
   emptyTrack: ["#F2F2F2", "#262932"],
   cardBorder: ["#EEEDED", "rgba(238,239,242,0.08)"],
   up: ["#8A5878", liftTo("#8A5878", "#293339")],
-  down: ["#3C6B65", liftTo("#3C6B65", "#293339")],
-  heroAccent: ["#5B3FE4", liftTo("#5B3FE4", "#303141")],
+  down: ["rgb(var(--th-3c6b65))", liftTo("rgb(var(--th-3c6b65))", "#293339")],
+  heroAccent: ["rgb(var(--th-5b3fe4))", liftTo("rgb(var(--th-5b3fe4))", "rgb(var(--th-303141))")],
 } as const;
 const metricColor = (key: keyof typeof COLORS, dark: boolean): string => COLORS[key][dark ? 1 : 0];
 
@@ -308,7 +308,7 @@ export default function MetricsTab() {
                       fontWeight: 700,
                       // Dark: the selected segment is the dark card, not a white pill.
                       background: volumeMode === m ? (dark ? "rgb(var(--c-cream-card))" : "#FFFFFF") : "transparent",
-                      color: volumeMode === m ? (dark ? "rgb(var(--c-charcoal))" : "#463A80") : "#FFFFFF",
+                      color: volumeMode === m ? (dark ? "rgb(var(--c-charcoal))" : "rgb(var(--thi-463a80))") : "#FFFFFF",
                     }}
                   >
                     {m === "workout" ? "By workout" : "By week"}
@@ -482,7 +482,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "#6F9993", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
+              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "rgb(var(--th-6f9993))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
             >
               <Plus size={12} /> Add
             </button>

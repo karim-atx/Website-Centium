@@ -14,16 +14,16 @@ const body: React.CSSProperties = { fontSize: 13, lineHeight: "19px", color: "rg
 // ink takes primary.deeper dark, the step badge primary.tint dark and the
 // image backdrop primary.tint.2 dark.
 const COLORS = {
-  ink: ["#5F5093", "#C8BFE9"],
-  badge: ["#F0EDF9", "#303141"],
-  imageBg: ["#F4F2FA", "#2B2C3A"],
+  ink: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  badge: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"],
+  imageBg: ["#F4F2FA", "rgb(var(--th-2b2c3a))"],
 } as const;
 
 const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
   <ul style={{ margin: 0, padding: 0, listStyle: "none" }} className="flex flex-col" >
     {items.map((t, i) => (
       <li key={i} className="flex items-start" style={{ gap: 11, marginTop: i ? 6 : 0, ...body, fontSize: 12.5 }}>
-        <span aria-hidden className="flex-none rounded-full" style={{ width: 4, height: 4, marginTop: 8, background: "#AEA1DC" }} />
+        <span aria-hidden className="flex-none rounded-full" style={{ width: 4, height: 4, marginTop: 8, background: "rgb(var(--th-aea1dc))" }} />
         <span className="min-w-0">{t}</span>
       </li>
     ))}

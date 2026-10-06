@@ -26,10 +26,10 @@ import { useIsDark } from "../../hooks/useIsDark";
  * dark primary with a near-black tick, as dark filled controls are.
  */
 const ROUTINE_COLORS = {
-  newFolder: ["#6B41EF", "#9A8CD6"],
+  newFolder: ["rgb(var(--th-6b41ef))", "rgb(var(--th-9a8cd6))"],
   ongoing: ["#E9736A", "#EE8A82"],
   meta: ["#8C8378", "#B8B3C7"],
-  checked: ["#AEA1DC", "#9A8CD6"],
+  checked: ["rgb(var(--th-aea1dc))", "rgb(var(--th-9a8cd6))"],
   tick: ["#FFFFFF", "#121317"],
   off: ["#D6D2CB", "#4A4D57"],
 } as const;
@@ -567,7 +567,7 @@ export default function RoutinesTab() {
       {/* Mobile v5.1 WO1 / WO1.1: "Browse starter programs" first, then a
           filled "Create routine" pinned above the navbar, both overlaying the
           list. Page CTAs are 48 / r14 (decision C-01); the fill is
-          primary-fill, not the board's #A198DF (2.60:1 with white). Browse is
+          primary-fill, not the board's rgb(var(--th-a198df)) (2.60:1 with white). Browse is
           now always shown, so the empty-state card no longer has its own
           (decision D9). The spacer lets the last
           routine scroll clear of both buttons: 172 for one CTA + 56 for the
@@ -583,7 +583,7 @@ export default function RoutinesTab() {
           icon: <Library size={17} className={routines.length === 0 ? "text-white dark:text-charcoal-soft" : "text-charcoal-soft"} />,
           className:
             routines.length === 0
-              ? "!bg-primary !text-white !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-[rgba(143,104,246,0.28)]"
+              ? "!bg-primary !text-white !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
               : undefined,
           onClick: () => setBrowseOpen(true),
         }}
@@ -593,7 +593,7 @@ export default function RoutinesTab() {
           // Light mode keeps the colours of the Create routine button this
           // pinned one replaced (#EFEEFD with #6B41EF ink, decision 15); dark
           // mode is the filled primary.
-          className: "!bg-[#EFEEFD] !text-[#6B41EF] dark:!bg-primary-fill dark:!text-on-primary-fill",
+          className: "!bg-th-efeefd !text-th-6b41ef dark:!bg-primary-fill dark:!text-on-primary-fill",
           onClick: () => {
             setCreateFolder(null);
             setCreateOpen(true);

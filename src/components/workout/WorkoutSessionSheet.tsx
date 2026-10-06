@@ -61,7 +61,7 @@ const SS_BRACKET = "#DB885D";
  */
 const SESSION_COLORS = {
   danger: ["#B4372C", "#FF6B5E"],
-  addSet: ["#AEA1DC", "#B7ABDE"],
+  addSet: ["rgb(var(--th-aea1dc))", "rgb(var(--th-b7abde))"],
   ssBadgeBg: ["#FBE7DC", "#4A3A37"],
   ssBadgeInk: ["#B4602F", "#E6A27F"],
   divider: ["#E0DFDF", "rgba(238,239,242,0.12)"],
@@ -802,7 +802,7 @@ export const WorkoutSessionSheet: React.FC<{
                 <span
                   aria-hidden
                   className="absolute rounded-full"
-                  style={{ top: 3, right: 3, width: 8, height: 8, background: "#8F68F6", boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))" }}
+                  style={{ top: 3, right: 3, width: 8, height: 8, background: "rgb(var(--th-8f68f6))", boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))" }}
                 />
               )}
             </button>
