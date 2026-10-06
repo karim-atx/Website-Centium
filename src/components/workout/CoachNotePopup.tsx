@@ -92,7 +92,7 @@ export const CoachNotePopup: React.FC<{
               <span
                 aria-hidden
                 className="flex-none flex items-center justify-center rounded-full"
-                style={{ width: 36, height: 36, background: "rgb(var(--th-a2c8c2))", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
+                style={{ width: 36, height: 36, background: "rgb(var(--thw-a2c8c2))", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
               >
                 {initials || <MessageSquareText size={15} />}
               </span>
