@@ -6,7 +6,13 @@ import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { YearScroll } from "../../components/calendar/YearScroll";
-import { EVENT_SWATCHES, eventColours } from "../../components/calendar/eventColour";
+import {
+  DEFAULT_EVENT_COLOUR,
+  EVENT_SWATCHES,
+  eventColours,
+  nearestEventSwatch,
+} from "../../components/calendar/eventColour";
+import { COLOR_THEMES } from "../../theme/colorThemes";
 import { linkLabel, minutesOf, normaliseLink, range12 } from "../../components/calendar/calendarTime";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useApp } from "../../context/AppContext";
@@ -70,7 +76,9 @@ const startOfWeekISO = (iso: string) => {
   d.setDate(d.getDate() - d.getDay());
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
-const blankDraft = (date: string): EventDraft => ({
+// `color` is the swatch nearest the active theme's primary (E11; see
+// nearestEventSwatch).
+const blankDraft = (date: string, color: string): EventDraft => ({
   title: "",
   date,
   allDay: false,
@@ -79,7 +87,7 @@ const blankDraft = (date: string): EventDraft => ({
   location: "",
   repeat: "none" as CalendarEvent["repeat"],
   notes: "",
-  color: EVENT_SWATCHES[0],
+  color,
   url: "",
 });
 
@@ -112,8 +120,11 @@ const HOUR_PX = 56;
 // only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
   const navigate = useNavigate();
-  const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone } =
+  const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone, colorTheme } =
     useApp();
+  const newEventColour = nearestEventSwatch(
+    COLOR_THEMES.find((t) => t.value === colorTheme)?.primary ?? DEFAULT_EVENT_COLOUR
+  );
 
   // Explorer milestone: "Looking ahead". One row per account for ever — the repeat is
   // a primary-key conflict the service treats as the success it is. 
@@ -126,7 +137,7 @@ export default function ClientCalendarTab() {
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState(blankDraft(selectedDate));
+  const [draft, setDraft] = useState(() => blankDraft(selectedDate, newEventColour));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [linkError, setLinkError] = useState(false);
   const dark = useIsDark();
@@ -320,7 +331,7 @@ export default function ClientCalendarTab() {
   const openCompose = () => {
     setLinkError(false);
     setEditingId(null);
-    setDraft(blankDraft(selectedDate));
+    setDraft(blankDraft(selectedDate, newEventColour));
     setConfirmDelete(false);
     setComposeOpen(true);
   };

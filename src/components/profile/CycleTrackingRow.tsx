@@ -37,7 +37,8 @@ export const CycleTrackingRow: React.FC = () => {
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-charcoal">Cycle tracking</span>
-            <span className="block text-[11px] text-charcoal-faint leading-snug">
+            {/* MO1.5 anatomy row 8: subtitle 12/400. */}
+            <span className="block text-xs text-charcoal-faint leading-snug">
               {cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
             </span>
           </span>

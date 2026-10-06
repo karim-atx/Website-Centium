@@ -227,8 +227,11 @@ export const EventComposeSheet: React.FC<{
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
-          {/* Two rows, five and four, as MO1.6.4 draws them. */}
-          <div className="grid grid-cols-5 w-fit gap-2">
+          {/* E8: all nine in one row, 32 circles (MO1.6.4, measured 32 on
+              the 2x frame) each in a 36 tap box, spread across the row; no
+              scrolling, no wrapping. Below 375 the boxes (and, under 32,
+              the circles) shrink so the row still fits. */}
+          <div className="flex justify-between">
             {EVENT_SWATCHES.map((c) => (
               <button
                 key={c}
@@ -236,10 +239,21 @@ export const EventComposeSheet: React.FC<{
                 onClick={() => setDraft((d) => ({ ...d, color: c }))}
                 aria-label={`Color ${c}`}
                 aria-pressed={draft.color === c}
-                // The faint ring in dark keeps the near-black swatch visible on the sheet.
-                className="tap w-8 h-8 rounded-full dark:ring-1 dark:ring-white/20"
-                style={{ background: c, boxShadow: draft.color === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined }}
-              />
+                className="tap flex-[0_1_36px] min-w-0 h-9 flex items-center justify-center"
+              >
+                <span
+                  aria-hidden
+                  // The faint ring in dark keeps the near-black swatch visible on the sheet.
+                  className="block w-8 max-w-full aspect-square rounded-full dark:ring-1 dark:ring-white/20"
+                  // Selected: MO1.6.4 draws a 1 px gap and a 1 px #241F1B ring
+                  // (measured on the 2x frame); the ring is the charcoal ink.
+                  style={{
+                    background: c,
+                    boxShadow:
+                      draft.color === c ? "0 0 0 1px rgb(var(--c-cream)), 0 0 0 2px rgb(var(--c-charcoal))" : undefined,
+                  }}
+                />
+              </button>
             ))}
           </div>
         </div>

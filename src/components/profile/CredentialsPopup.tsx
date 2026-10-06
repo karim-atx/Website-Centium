@@ -98,19 +98,32 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
     icon: React.ReactNode,
     value: string,
     onChange: (v: string) => void,
-    opts: { placeholder: string; label: string; prefix?: boolean; readOnly?: boolean; inputMode?: "tel" | "text" | "email" }
+    opts: {
+      placeholder: string;
+      label: string;
+      prefix?: boolean;
+      readOnly?: boolean;
+      inputMode?: "tel" | "text" | "email";
+      // MO1.5.4 draws "Email", "Phone" and "Forum nickname" as visible
+      // 12/600 labels above their fields; the social pair has none.
+      visibleLabel?: boolean;
+    }
   ) => (
     <label className="block">
-      <span className="sr-only">{opts.label}</span>
+      <span className={opts.visibleLabel ? "block mb-2 text-xs font-semibold text-charcoal-faint" : "sr-only"}>
+        {opts.label}
+      </span>
       <span
         className={clsx(
           "flex items-center gap-2.5 h-14 rounded-2xl bg-cream-soft border px-3.5",
           errors[key] ? "border-status-high" : "border-charcoal/10"
         )}
       >
-        <span className="shrink-0 text-charcoal-faint" aria-hidden>
-          {icon}
-        </span>
+        {icon && (
+          <span className="shrink-0 text-charcoal-faint" aria-hidden>
+            {icon}
+          </span>
+        )}
         {opts.prefix && <span className="text-sm text-charcoal-faint -me-1.5" aria-hidden>@</span>}
         <input
           value={value}
@@ -145,19 +158,32 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       icon={<KeyRound size={22} />}
       cta={{ label: done ? "Saved" : busy ? "Saving…" : "Save", disabled: busy || done, onClick: () => void save() }}
     >
-      <div className="space-y-2.5">
-        {field("email", <Mail size={16} />, user.email, () => {}, { placeholder: "Email", label: "Email", readOnly: true })}
-        {field("phone", <Phone size={16} />, phone, setPhone, { placeholder: "Phone number", label: "Phone number", inputMode: "tel" })}
+      {/* Visible labels (MO1.5.4.email / .phone); about 16 between the
+          email field and the Phone label, measured on the 2x frame. */}
+      <div className="space-y-4">
+        {field("email", <Mail size={16} />, user.email, () => {}, {
+          placeholder: "Email",
+          label: "Email",
+          readOnly: true,
+          visibleLabel: true,
+        })}
+        {field("phone", <Phone size={16} />, phone, setPhone, {
+          placeholder: "Phone number",
+          label: "Phone",
+          inputMode: "tel",
+          visibleLabel: true,
+        })}
       </div>
 
       <p className="mt-4 mb-2 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Social</p>
       <div className="grid grid-cols-2 gap-2.5">
+        {/* MO1.5.4: a fixed "@" prefix and lowercase placeholders. */}
         {field("instagram", <AtSign size={16} />, instagram, setInstagram, {
-          placeholder: "Instagram",
+          placeholder: "instagram",
           label: "Instagram handle",
-          prefix: false,
+          prefix: true,
         })}
-        {field("x", <XIcon size={16} />, x, setX, { placeholder: "X", label: "X handle", prefix: false })}
+        {field("x", <XIcon size={16} />, x, setX, { placeholder: "x", label: "X handle", prefix: true })}
       </div>
       <p className="mt-2 text-[11px] text-charcoal-faint">
         Your phone number is saved to your account. Instagram and X stay on this device for now.
@@ -165,9 +191,12 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
 
       {showNickname && (
         <div className="mt-4 pt-4 border-t border-charcoal/[0.06]">
-          {field("nickname", <AtSign size={16} />, nickname, setNicknameDraft, {
-            placeholder: "Forum nickname",
+          {/* MO1.5.4: no icon, a fixed "@" prefix, placeholder "nickname". */}
+          {field("nickname", null, nickname, setNicknameDraft, {
+            placeholder: "nickname",
             label: "Forum nickname",
+            prefix: true,
+            visibleLabel: true,
           })}
           <p className="mt-1.5 text-[11px] text-charcoal-faint">Shown on your Community posts and replies.</p>
         </div>

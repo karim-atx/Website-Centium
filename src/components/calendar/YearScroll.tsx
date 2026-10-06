@@ -35,7 +35,9 @@ function MiniMonth({
       aria-label={`${new Date(year, month, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}${count ? `, ${count} ${count === 1 ? "day" : "days"} with events` : ""}`}
       className="tap self-start flex flex-col items-stretch text-left min-w-0"
     >
-      <span className={`block text-[15px] font-semibold leading-tight ${isCurrent ? "text-primary-deep-text" : "text-charcoal"}`}>
+      {/* MO1.6.1 anatomy row 7: the current month in the primary accent
+          (#7D67D9); primary-dark is the closest existing light colour. */}
+      <span className={`block text-[15px] font-semibold leading-tight ${isCurrent ? "text-primary-dark" : "text-charcoal"}`}>
         {MONTHS[month]}
       </span>
       {count > 0 && (

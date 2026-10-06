@@ -115,7 +115,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
   );
 
   return (
-    <CentredPopup open={open} onClose={onClose} title="Invite friends" icon={<Gift size={22} />}>
+    // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75.
+    <CentredPopup
+      open={open}
+      onClose={onClose}
+      title="Invite friends"
+      titleSize={19}
+      icon={<Gift size={23} strokeWidth={1.75} />}
+    >
       <div className="text-start">
         {label("Rewards")}
         <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
@@ -125,11 +132,12 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           ].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
               <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                <row.icon size={16} className="text-primary-dark" />
+                {/* MO1.10: UserPlus / Sparkles 15/1.75; reward line 13.5/700. */}
+                <row.icon size={15} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="min-w-0">
                 <span className="block text-[12px] text-charcoal-faint">{row.who}</span>
-                <span className="block text-[14px] font-bold text-charcoal">{row.what}</span>
+                <span className="block text-[13.5px] font-bold text-charcoal">{row.what}</span>
               </span>
             </div>
           ))}
@@ -157,7 +165,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             aria-label="Copy referral code"
             className="tap w-12 h-12 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
           >
-            {copied ? <Check size={18} /> : <Copy size={18} />}
+            {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
           </button>
         </div>
         {codeError && <p className="text-[11px] text-status-high mt-2">{codeError}</p>}
@@ -167,7 +175,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           disabled={!myCode}
           className="tap mt-2.5 w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
         >
-          <Share size={16} aria-hidden />
+          <Share size={16} strokeWidth={1.75} aria-hidden />
           {copied ? "Code copied" : "Share code"}
         </button>
 
@@ -176,7 +184,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           {result?.success ? (
             // MO1.10.1: the success row replaces the code box.
             <p role="status" className="flex items-center gap-2 rounded-2xl bg-teal-pale px-3.5 py-3 text-[13px] font-semibold text-teal-dark dark:text-teal-deep-text">
-              <CircleCheck size={16} className="shrink-0" aria-hidden />
+              {/* MO1.10.1: CircleCheck 18/2. */}
+              <CircleCheck size={18} strokeWidth={2} className="shrink-0" aria-hidden />
               {result.message}
             </p>
           ) : referralRedeemed ? (
@@ -214,17 +223,31 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                 onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && void lookUp()}
                 placeholder="Enter a code"
                 aria-label="A friend's referral code"
-                className="flex-1 min-w-0 h-12 rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                aria-invalid={(result && !result.success) || undefined}
+                className={`flex-1 min-w-0 h-12 rounded-2xl bg-cream-soft border px-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                  // MO1.10.2: the border turns danger on a refusal.
+                  result && !result.success ? "border-status-high" : "border-charcoal/10"
+                }`}
               />
-              <Button size="md" onClick={lookUp} disabled={!codeDraft.trim() || busy}>
+              {/* MO1.10 / MO1.10.2: a tinted Apply (primary tint fill, deep
+                  primary text), drawn the same with or without a code typed;
+                  48 tall, about 73 wide, radius 14 (measured on the 2x frame:
+                  x 562–708, y 1340–1436). */}
+              <button
+                type="button"
+                onClick={() => void lookUp()}
+                disabled={!codeDraft.trim() || busy}
+                className="tap h-12 px-5 rounded-[14px] bg-primary-pale text-primary-deep-text text-[13px] font-bold shrink-0 disabled:pointer-events-none"
+              >
                 {busy ? "…" : "Apply"}
-              </Button>
+              </button>
             </div>
           )}
           {/* MO1.10.2: a refusal, in the RPC's own words for now. */}
           {result && !result.success && (
             <p role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-status-high">
-              <CircleAlert size={14} className="shrink-0 mt-px" aria-hidden />
+              {/* MO1.10.2: CircleAlert 13/2. */}
+              <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
               {result.message}
             </p>
           )}

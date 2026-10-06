@@ -14,7 +14,7 @@ import {
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
-import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, X } from "lucide-react";
+import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -151,7 +151,8 @@ export const MembershipsCard: React.FC = () => {
         <Store size={18} className="text-primary-dark" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-charcoal truncate">{m.businessName ?? "A business"}</p>
+        {/* MO1.5.1 anatomy row 3: title 15/700. */}
+        <p className="text-[15px] font-bold text-charcoal truncate">{m.businessName ?? "A business"}</p>
         <p className="text-xs text-charcoal-faint truncate">
           {m.planName ? `${m.planName} · ` : ""}
           {m.status === "ended" && m.endedAt
@@ -206,7 +207,8 @@ export const MembershipsCard: React.FC = () => {
                     {
                       key: "end",
                       label: "End membership",
-                      icon: <LogOut size={16} />,
+                      // Foundations swipe-row (Membership card): a Trash2 16 tile.
+                      icon: <Trash2 size={16} />,
                       onClick: () => setEnding(m),
                       destructive: true,
                     },
@@ -239,13 +241,15 @@ export const MembershipsCard: React.FC = () => {
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
-              className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+              className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-[11px] text-start"
             >
-              <span className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                <Plus size={18} className="text-primary-dark" />
+              {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row about 56
+                  (measured on the 2x frame: tile 62–125, row 803–913). */}
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Join another gym or studio</span>
-              <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
             </button>
           )}
         </div>

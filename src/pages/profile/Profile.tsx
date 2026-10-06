@@ -40,7 +40,7 @@ import {
   Award,
   Flag,
   Gauge,
-  HeartHandshake,
+  HandHeart,
   KeyRound,
   Plus,
 } from "lucide-react";
@@ -288,7 +288,9 @@ export default function Profile() {
     top: { value: React.ReactNode; unit: string; onClick: () => void; label: string },
     bottom: { value: React.ReactNode; unit: string; onClick: () => void; label: string }
   ) => (
-    <div className="rounded-2xl bg-cream-card border border-charcoal/[0.08] flex flex-col overflow-hidden min-w-0">
+    // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
+    // 2x frame: border x 32–211, y 216–501), divider inset 22 (x 78–163).
+    <div className="h-[143px] rounded-2xl bg-cream-card border border-charcoal/[0.08] flex flex-col overflow-hidden min-w-0">
       {[top, bottom].map((part, i) => (
         <button
           key={part.unit}
@@ -297,10 +299,11 @@ export default function Profile() {
           aria-label={part.label}
           className={clsx(
             "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
-            i === 1 && "border-t border-charcoal/[0.08] mx-3"
+            i === 1 && "border-t border-charcoal/[0.08] mx-[22px]"
           )}
         >
-          <span className="text-[20px] font-bold leading-tight text-charcoal tabular-nums capitalize">{part.value}</span>
+          {/* MO1.5 anatomy row 2: values 17px/700. */}
+          <span className="text-[17px] font-bold leading-tight text-charcoal tabular-nums capitalize">{part.value}</span>
           <span className="text-[11px] text-charcoal-faint">{part.unit}</span>
         </button>
       ))}
@@ -322,7 +325,7 @@ export default function Profile() {
           "mb-6 animate-fade-slide-up",
           hidesClientFields
             ? "flex flex-col items-center"
-            : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)_minmax(0,1fr)] gap-2.5 items-stretch"
+            : "grid grid-cols-[minmax(0,90px)_minmax(0,1fr)_minmax(0,90px)] gap-3 items-center"
         )}
       >
         {!hidesClientFields &&
@@ -460,14 +463,17 @@ export default function Profile() {
                   onClick={() => setSharingFor(p)}
                   className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
                 >
-                  <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[14px] font-bold text-primary-dark">
+                  {/* MO1.5.1 anatomy row 4: initials 12/700, name 14/600,
+                      "Manage data sharing" 11.5/400, ChevronRight 15; avatar
+                      32 measured on the 2x frame (x 62–125). */}
+                  <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[12px] font-bold text-primary-dark">
                     {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[15px] font-semibold text-charcoal truncate">{p.name}</span>
-                    <span className="block text-xs text-charcoal-faint">Manage data sharing</span>
+                    <span className="block text-[14px] font-semibold text-charcoal truncate">{p.name}</span>
+                    <span className="block text-[11.5px] text-charcoal-faint">Manage data sharing</span>
                   </span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
               {connectOpen ? (
@@ -478,13 +484,15 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={() => setConnectOpen(true)}
-                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-[11px] text-start"
                 >
-                  <span className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                    <Plus size={18} className="text-primary-dark" />
+                  {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row about 56
+                      (measured on the 2x frame: tile 62–125, row 1148–1258). */}
+                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                    <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
                   <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               )}
             </div>
@@ -506,13 +514,16 @@ export default function Profile() {
                 key={s.label}
                 type="button"
                 onClick={s.onClick}
-                className="tap flex items-center gap-2 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3 py-3.5 text-start min-w-0"
+                // MO1.5: label 13/600, Flag / Gauge 14/1.75, ChevronRight 14;
+                // tile 56 tall with a 28 r8 icon tile (measured on the 2x
+                // MO1.5.1 frame: tile y 1352–1463, icon tile 58–113).
+                className="tap flex items-center gap-2 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3 py-[13px] text-start min-w-0"
               >
-                <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                  <s.icon size={16} className="text-charcoal-soft" />
+                <span className="w-7 h-7 rounded-lg bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
+                  <s.icon size={14} strokeWidth={1.75} className="text-charcoal-soft" />
                 </span>
-                <span className="flex-1 min-w-0 text-sm font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
+                <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
               </button>
             ))}
           </div>
@@ -533,21 +544,26 @@ export default function Profile() {
             className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start pb-[7.5px] border-b-[1.5px] border-primary"
           >
             <span className="section-label text-charcoal-faint !border-b-0 !pb-0">Safety & content</span>
-            <ChevronDown
-              size={16}
-              aria-hidden
-              className={clsx("text-charcoal-faint transition-transform", safetyOpen && "rotate-180")}
-            />
+            {/* MO1.5.1 draws ChevronRight 14 while collapsed, MO1.5
+                ChevronDown 14 while open. */}
+            {safetyOpen ? (
+              <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0" />
+            ) : (
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+            )}
           </button>
           {safetyOpen && (
             <div id="safety-content" className="animate-fade-slide-up">
-              <Card className="mb-3">
+              {/* MO1.5 anatomy row 7: radius 18, padding 16 16 18 (its own
+                  values here; the shared Card stays as it is elsewhere). */}
+              <Card padded={false} className="mb-3 !rounded-[18px] pt-4 px-4 pb-[18px]">
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <span className="flex items-center gap-3 min-w-0">
                     <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                      <HeartHandshake size={16} className="text-primary-dark" />
+                      {/* MO1.5: HandHeart 17/1.5, title 14/600. */}
+                      <HandHeart size={17} strokeWidth={1.5} className="text-primary-dark" />
                     </span>
-                    <span className="text-sm font-bold text-charcoal">Recovery-sensitive experience</span>
+                    <span className="text-sm font-semibold text-charcoal">Recovery-sensitive experience</span>
                   </span>
                   <Toggle
                     checked={recoverySensitive}
@@ -577,11 +593,12 @@ export default function Profile() {
                 )}
                 {/* Task X: what is true, said instead of a pause that paused
                     nothing: where the setting lives, and who sees it. */}
-                <p className="text-[11px] text-charcoal-faint mt-2 leading-relaxed">
+                {/* MO1.5: body 12/400. */}
+                <p className="text-xs text-charcoal-faint mt-2 leading-relaxed">
                   Saved to your account, so it's the same on every device you sign in on. Professionals you work with are
                   never told whether it's on.
                 </p>
-                <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
+                <p className="text-xs text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
                   This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
                   <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
                     professional
@@ -612,9 +629,10 @@ export default function Profile() {
       {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. */}
       <button
         onClick={handleSignOut}
-        className="tap mx-auto mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold text-teal-dark"
+        className="tap mx-auto mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-teal-dark"
       >
-        <LogOut size={16} aria-hidden />
+        {/* MO1.5: 14/600 with LogOut 15/1.75. */}
+        <LogOut size={15} strokeWidth={1.75} aria-hidden />
         {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
       </button>
 

@@ -16,7 +16,7 @@ import {
   Scale,
   ShieldCheck,
   TrendingUp,
-  UtensilsCrossed,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
@@ -68,7 +68,8 @@ const groupsOf = () => {
 };
 
 const CATEGORY_ICON: Partial<Record<AccessCategory, LucideIcon>> = {
-  food_diary: UtensilsCrossed,
+  // MO1.5.1.1 icon list: Utensils 16/1.75.
+  food_diary: Utensils,
   workout_activity: Dumbbell,
   weight: Scale,
   progress: TrendingUp,
@@ -365,7 +366,8 @@ export const DataSharingSection: React.FC<{
         <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
           {pro.avatarUrl ? <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(pro.name)}
         </span>
-        <p className="mt-2.5 text-[17px] font-bold text-charcoal">{pro.name}</p>
+        {/* MO1.5.1.1 anatomy row 11: name 18/700. */}
+        <p className="mt-2.5 text-[18px] font-bold text-charcoal">{pro.name}</p>
         <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
         <p className="mt-2.5 text-[12.5px] text-charcoal-soft max-w-[300px]">
           Choose what they can see. Nothing is shared unless you turn it on.
@@ -443,7 +445,8 @@ export const DataSharingSection: React.FC<{
                   className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[48px] before:end-0 before:h-px before:bg-charcoal/[0.06] last:before:hidden"
                 >
                   <span className="w-9 h-9 rounded-2xl bg-cream-soft text-charcoal-soft flex items-center justify-center shrink-0" aria-hidden>
-                    <Icon size={16} />
+                    {/* MO1.5.1.1: category icons 16/1.75. */}
+                    <Icon size={16} strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-charcoal flex items-center gap-1.5">
