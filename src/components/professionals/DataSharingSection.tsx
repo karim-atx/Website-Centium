@@ -399,21 +399,16 @@ export const DataSharingSection: React.FC<{
     <>
       {header(pro)}
 
-      {/* Decision 23 (item 80), in the Profile sheet only: an r16 #F0EDF9
-          notice with a 12.5/400 body and a Foundations text action (13/700
-          primary.accent). The Professionals tab keeps its notice. */}
+      {/* Decision 23 (item 80): an r16 #F0EDF9 notice with a 12.5/400 body
+          and a Foundations text action (13/700 primary.accent). */}
       {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
         <div
-          className={
-            professionalId
-              ? "rounded-2xl bg-primary-pale px-3.5 pt-3 pb-1 mb-3"
-              : "rounded-xl bg-primary-pale border border-primary/[0.16] px-3 py-2.5 mb-3"
-          }
+          className="rounded-2xl bg-primary-pale px-3.5 pt-3 pb-1 mb-3"
         >
-          <p className={professionalId ? "text-[12.5px] font-semibold text-charcoal mb-1" : "text-[11.5px] font-semibold text-charcoal mb-1"}>
+          <p className="text-[12.5px] font-semibold text-charcoal mb-1">
             Two things we should have asked separately
           </p>
-          <p className={professionalId ? "text-[12.5px] text-charcoal-soft leading-normal" : "text-[11px] text-charcoal-soft leading-relaxed"}>
+          <p className="text-[12.5px] text-charcoal-soft leading-normal">
             When you agreed to share health metrics with {pro.name}, that one switch also covered your lab results and
             your medical history. That was too much to bundle into a single question. We've split it out below. Your
             activity and vitals are still shared exactly as before, and{" "}
@@ -434,11 +429,7 @@ export const DataSharingSection: React.FC<{
           <button
             onClick={() => void declineAll(pro.professionalId)}
             disabled={saving === pro.professionalId}
-            className={
-              professionalId
-                ? "tap min-h-11 inline-flex items-center text-[13px] font-bold text-primary-accent disabled:opacity-50"
-                : "tap mt-2.5 rounded-xl bg-cream-card text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
-            }
+            className="tap min-h-11 inline-flex items-center text-[13px] font-bold text-primary-accent disabled:opacity-50"
           >
             {saving === pro.professionalId
               ? "Saving…"
@@ -525,10 +516,10 @@ export const DataSharingSection: React.FC<{
           database came back disagreeing with what this device asked for, so
           the change is not in effect. Named per professional even inside the
           single-professional sheet. */}
-      {/* Decision 23 (item 81), in the Profile sheet only: the Foundations
+      {/* Decision 23 (item 81): the Foundations
           inline danger line (CircleAlert 13 + 12/600 danger), with which
           switch it was under it at the text's x. */}
-      {unsaved.length > 0 && professionalId && (
+      {unsaved.length > 0 && (
         <div role="alert" className="mb-3">
           <p className="flex items-start gap-2 text-xs font-semibold text-status-high">
             <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
@@ -536,19 +527,6 @@ export const DataSharingSection: React.FC<{
           </p>
           {unsaved.map((u) => (
             <p key={`${u.professionalId}:${u.category}`} className="ps-[21px] mt-0.5 text-xs text-charcoal-soft leading-normal">
-              {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with {nameFor(u.professionalId)}. Set it
-              again to retry.
-            </p>
-          ))}
-        </div>
-      )}
-      {unsaved.length > 0 && !professionalId && (
-        <div className="rounded-2xl bg-status-high-bg border border-status-high/30 px-3.5 py-3 mb-2.5">
-          <p className="text-[11.5px] font-semibold text-status-high mb-1">
-            {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
-          </p>
-          {unsaved.map((u) => (
-            <p key={`${u.professionalId}:${u.category}`} className="text-[11px] text-charcoal-soft leading-relaxed">
               {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with {nameFor(u.professionalId)}. Set it
               again to retry.
             </p>
