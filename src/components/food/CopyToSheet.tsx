@@ -60,7 +60,7 @@ export const CopyToSheet: React.FC<{
           },
         ]}
       />
-      <div className="flex" style={{ marginTop: 8, color: "#9A94B3", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
+      <div className="flex" style={{ marginTop: 8, color: "rgb(var(--thi-9a94b3))", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
         <span className="text-center" style={{ flex: 1.2 }}>
           DAY
         </span>

@@ -456,7 +456,7 @@ export default function RoutinesTab() {
       <CyclePhaseStrip />
 
       <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
+        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "rgb(var(--thi-9a94b3))" }}>Folders</p>
         <button
           // Tapping it again closes the new-folder form, discarding the draft.
           onClick={() => {

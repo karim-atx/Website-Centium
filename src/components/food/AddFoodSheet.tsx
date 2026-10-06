@@ -1077,7 +1077,7 @@ export const AddFoodSheet: React.FC<{
                 bg: dark ? "linear-gradient(150deg,rgb(var(--th-617b77)),rgb(var(--th-365652)))" : "linear-gradient(150deg,rgb(var(--th-8fb5af)),rgb(var(--th-4f7f78)))",
                 onClick: () => setScanNotice(true),
               },
-              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,#7A7293,rgb(var(--th-5b5180)))" : "linear-gradient(150deg,rgb(var(--th-c0b4e8)),rgb(var(--th-8f7fc9)))", onClick: openBarcode },
+              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-7a7293)),rgb(var(--th-5b5180)))" : "linear-gradient(150deg,rgb(var(--th-c0b4e8)),rgb(var(--th-8f7fc9)))", onClick: openBarcode },
               {
                 label: "Custom",
                 icon: (

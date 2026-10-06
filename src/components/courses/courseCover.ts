@@ -1,10 +1,17 @@
+import { themeHex } from "../../data/folderColors";
+
 /**
  * A course cover's colour. Light: the author's pastel as chosen. Dark: a
  * deeper shade of the same hue (no bright patch on a dark page); the
  * saturation is kept between 22% and 40% so a near-grey pastel still reads as
  * its colour rather than as grey.
  */
-export function coverBackground(hex: string, dark: boolean): string {
+export function coverBackground(chosen: string, dark: boolean): string {
+  // Batch E (E11): the two Centium pastels among the cover colours (teal
+  // #E4F0EE, lavender #ECE9F4) follow the colour theme; the generator maps
+  // them because they are named here: th-e4f0ee th-ece9f4. The other
+  // pastels stay as the author chose them.
+  const hex = /^#(e4f0ee|ece9f4)$/i.test(chosen) ? themeHex(chosen) : chosen;
   if (!dark || !/^#[0-9a-f]{6}$/i.test(hex)) return hex;
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   const max = Math.max(r, g, b);

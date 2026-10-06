@@ -53,7 +53,7 @@ const COLORS = {
   groupTint: ["rgb(var(--th-e4ddfd))", "rgb(var(--th-303141))"],
   whenBorder: ["#E0DFE0", "rgba(238,239,242,0.10)"],
   fieldBorder: ["#E6E6E7", "rgba(238,239,242,0.10)"],
-  timeLabel: ["#9A94B3", "#918DA0"],
+  timeLabel: ["rgb(var(--thi-9a94b3))", "rgb(var(--thi-918da0))"],
 } as const;
 
 export const AddMeasurementsSheet: React.FC<{

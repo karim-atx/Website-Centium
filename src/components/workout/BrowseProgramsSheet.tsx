@@ -8,7 +8,7 @@ import { BlockCard } from "./BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { formatCompactDuration } from "../../services/workout";
 import { programRow } from "../../services/workout/programRow";
-import { LEVEL_ORDER, levelColors, levelColorsMap, levelName } from "../../data/levelColors";
+import { LEVEL_ORDER, levelColors, levelColorsMap, levelName, programSheetColors } from "../../data/levelColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 
@@ -100,7 +100,10 @@ export const BrowseProgramsSheet: React.FC<{
     setSelected(null);
   };
 
-  const tone = selected ? levelColors(selected.level, dark) : null;
+  // Batch E (E11): the sheet chrome follows the colour theme; only the level
+  // chip keeps the level colour (levelTone).
+  const tone = selected ? programSheetColors(dark) : null;
+  const levelTone = selected?.level ? levelColors(selected.level, dark) : null;
 
   return (
     <BottomSheet
@@ -145,7 +148,16 @@ export const BrowseProgramsSheet: React.FC<{
               <p style={{ margin: 0, fontSize: textPx(12.5), lineHeight: linePx(20), color: "rgb(var(--c-charcoal-soft))" }}>{selected.description}</p>
             )}
             <p style={{ margin: selected.description ? "8px 0 0" : 0, fontSize: textPx(11), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
-              {[selected.level ? levelName(selected.level) : null, aboutDuration(selected), exerciseCount(selected)]
+              {selected.level && levelTone && (
+                <span
+                  className="inline-flex items-center align-middle rounded-full"
+                  style={{ gap: 5, padding: "2px 8px", marginInlineEnd: 6, background: levelTone.tile, color: levelTone.label, fontWeight: 700 }}
+                >
+                  <span aria-hidden className="rounded-full flex-none" style={{ width: 6, height: 6, background: levelTone.dot }} />
+                  {levelName(selected.level)}
+                </span>
+              )}
+              {[aboutDuration(selected), exerciseCount(selected)]
                 .filter(Boolean)
                 .join(" · ")}
             </p>

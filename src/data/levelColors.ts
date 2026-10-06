@@ -1,5 +1,5 @@
 import type { TemplateLevel } from "../types";
-import { liftTo, tintOn } from "./folderColors";
+import { liftTo, themeHex, tintOn } from "./folderColors";
 
 /**
  * Level colour map (handover 2026-09-29, 02 "Level colour map"), shared by the
@@ -117,6 +117,23 @@ export const levelColorsMap = (dark: boolean): Record<TemplateLevel, LevelColors
 export const levelColors = (level: TemplateLevel | null | undefined, dark = false): LevelColors => {
   const map = levelColorsMap(dark);
   return (level && map[level]) || map.intermediate;
+};
+
+// BATCH E (E11, 6 October): THE PROGRAM DETAIL SHEET'S CHROME FOLLOWS THE
+// COLOUR THEME, whatever the program's level: header band, title, close ring,
+// back link, section label, exercise rows, value blocks and the Add button take
+// Intermediate's lavender family (the primary's) as the active theme maps it.
+// Only the level chip keeps the level's own colour. The generator maps these
+// shades because they are named here:
+// th-5f5093 th-aea1dc th-7d67d9 th-ddd6f3 th-f1eefa th-e4def5 th-d3caef th-7d6bb5
+const themedIntermediate = (): LevelColors => {
+  const m = (hex: string) => themeHex(hex);
+  return { ...INTERMEDIATE, label: m(INTERMEDIATE.label), dot: m(INTERMEDIATE.dot), deep: m(INTERMEDIATE.deep), band: m(INTERMEDIATE.band), body: m(INTERMEDIATE.body), row: m(INTERMEDIATE.row), value: m(INTERMEDIATE.value), fill: m(INTERMEDIATE.fill) };
+};
+/** The detail sheet's colours for the current mode and colour theme (see above). */
+export const programSheetColors = (dark: boolean): LevelColors => {
+  const t = themedIntermediate();
+  return dark ? { ...darkLevel(t, t.dot), fill: themeHex("#7D6BB5", "dark") } : t;
 };
 
 export const levelName = (level: TemplateLevel): string => level[0].toUpperCase() + level.slice(1);

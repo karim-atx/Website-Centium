@@ -7,7 +7,7 @@ import { PopupMenu } from "../../components/ui/PopupMenu";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { Toast } from "../../components/ui/Toast";
-import { headInk, headInkSoft, liftTo, routineFamily, themedFamily, PURPLE, type FolderFamily } from "../../data/folderColors";
+import { headInk, headInkSoft, liftTo, routineFamily, themedFamily, unfiledFamily, type FolderFamily } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import {
   byNewest,
@@ -89,7 +89,7 @@ export default function HistoryTab() {
 
   const familyOf = (s: WorkoutSession): FolderFamily => {
     const routine = s.routineId ? routines.find((r) => r.id === s.routineId) : undefined;
-    return routine ? routineFamily(routine, routineFolders) : PURPLE;
+    return routine ? routineFamily(routine, routineFolders) : unfiledFamily();
   };
 
   const moveTo = async (s: WorkoutSession, date: string) => {
