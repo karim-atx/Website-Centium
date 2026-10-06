@@ -150,7 +150,7 @@ function mapHex(hex, theme, mode, fam = family(hex)) {
   return held(hex, mappers(theme, mode)[fam](hex), mode);
 }
 /** Text twin: 4.5:1 on the page, the soft surface and its family's tints (the
- *  pale shade, and the base colour at 50% on the page, which covers stacked
+ *  pale shade, and the base colour at 65% on the page, which covers stacked
  *  washes such as a 42% badge on a 16% tile), when the Centium colour is meant
  *  for a page-coloured ground at all. */
 function inkOf(centHex, base, mode, tints) {
@@ -229,8 +229,8 @@ function themeBlock(theme, mode, literals) {
   // Ink twins.
   const ink2 = {};
   const tints = {
-    lav: [pale, over(v["--c-primary"], 0.5, CARD[mode])],
-    teal: [v["--c-teal-pale"], over(v["--c-teal"], 0.5, CARD[mode])],
+    lav: [pale, over(v["--c-primary"], 0.65, CARD[mode])],
+    teal: [v["--c-teal-pale"], over(v["--c-teal"], 0.65, CARD[mode])],
   };
   for (const n of INK_TOKENS) ink2[n + "-ink"] = inkOf(centium(n), v[n], mode, tints[LAV.includes(n) ? "lav" : "teal"]);
   ink2["--c-primary-ink"] = ensureContrast(p, [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
