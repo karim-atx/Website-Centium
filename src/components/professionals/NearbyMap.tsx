@@ -48,10 +48,11 @@ const STYLE = {
  */
 const MAP_TINTS = {
   light: {
-    land: "rgb(var(--th-f3f3fd))",
-    area: "rgb(var(--th-eeebf8))",
+    // Revision round (decision 22, new element): the sampled values exactly.
+    land: "rgb(var(--th-f3f2f7))",
+    area: "rgb(var(--th-e4e0f4))",
     water: "rgb(var(--th-e9e5f6))",
-    park: "rgb(var(--th-e4f0ee))",
+    park: "rgb(var(--th-e1eeeb))",
     road: "rgb(var(--c-cream-card))",
     casing: "rgb(var(--th-ebeaf6))",
   },
@@ -229,12 +230,16 @@ export default function NearbyMap({
         // An avatar in a ring of the type colour, over a small tail (38 x 45;
         // 50 x 57 when selected).
         const size = p.selected ? 50 : 38;
-        el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:ring-4 focus-visible:[&>span:first-child]:ring-primary/40";
+        // The focus mark is an outline: the disc's box-shadow carries the type ring.
+        el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:outline focus-visible:[&>span:first-child]:outline-4 focus-visible:[&>span:first-child]:outline-offset-2 focus-visible:[&>span:first-child]:outline-primary/40";
         el.style.zIndex = p.selected ? "2" : "1";
         const disc = document.createElement("span");
-        disc.className = "flex items-center justify-center rounded-full overflow-hidden font-bold shadow-md";
+        disc.className = "flex items-center justify-center rounded-full overflow-hidden font-bold";
         disc.style.width = disc.style.height = `${size}px`;
-        disc.style.border = `${p.selected ? 3 : 2.5}px solid ${p.face.ring}`;
+        // Measured on MO1.2.2: a 2 px white (card) ring inside the disc's
+        // size, then the type colour outside it, 1.5 (3 when selected).
+        disc.style.border = "2px solid rgb(var(--c-cream-card))";
+        disc.style.boxShadow = `0 0 0 ${p.selected ? 3 : 1.5}px ${p.face.ring}, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`;
         disc.style.background = p.face.fill;
         disc.style.color = p.face.ink;
         disc.style.fontSize = p.selected ? "15px" : "12px";
@@ -301,8 +306,9 @@ export default function NearbyMap({
         type="button"
         onClick={onRecentre}
         aria-label="Use my location"
-        // MO1.2.2 #9: 40 x 40, white, round.
-        className="tap absolute top-3 right-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-primary-deep-text"
+        // MO1.2.2 #9: 40 x 40, white, round; the glyph #7D6BB5 (sampled; new
+        // in the redesign, so the handover's colour, decision 22).
+        className="tap absolute top-3 right-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-th-7d6bb5 dark:text-primary-deep-text"
       >
         <LocateFixed size={17} strokeWidth={1.75} />
       </button>

@@ -153,7 +153,8 @@ export const MessageActions: React.FC<{
 
         <div
           onClick={(e) => e.stopPropagation()}
-          className="w-[212px] bg-cream-card rounded-[14px] p-2 flex flex-col gap-1.5 animate-fade-slide-up"
+          // 199 wide (measured: 8 + 182 rows + 8 + border).
+          className="w-[199px] bg-cream-card rounded-[14px] p-2 flex flex-col gap-1.5 animate-fade-slide-up"
           style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.5)", boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)" }}
         >
           {safe.map((a) => (

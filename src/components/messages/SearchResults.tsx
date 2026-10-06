@@ -29,7 +29,10 @@ export const SearchResults: React.FC<{
   card?: boolean;
   isOther?: (hit: SearchHit) => boolean;
 }> = ({ hits, query, titleFor, onOpen, hasMore, loadingMore, onMore, card, isOther }) => (
-  <div className={card ? "flex flex-col rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-3" : "flex flex-col"}>
+  // Card mode (measured on MO1.2.1.3.2): rows 14 in from the card's edges,
+  // dividers running the card's full width, 10 above the title, 4 between the
+  // title and the words, 12 under them.
+  <div className={card ? "flex flex-col rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden" : "flex flex-col"}>
     {hits.map((h) => {
       const s = snippetFor(h.matchedIn === "text" ? h.text ?? "" : h.attachmentName ?? "", query);
       return (
@@ -37,7 +40,9 @@ export const SearchResults: React.FC<{
           key={h.messageId}
           type="button"
           onClick={() => onOpen(h)}
-          className={`tap w-full text-left min-h-[56px] py-2.5 px-1 border-b border-charcoal/[0.06] flex flex-col gap-0.5 ${card ? "last-of-type:border-b-0" : ""}`}
+          className={`tap w-full text-left min-h-[56px] border-b border-charcoal/[0.06] flex flex-col ${
+            card ? "pt-2.5 pb-3 px-3.5 gap-1 last-of-type:border-b-0" : "py-2.5 px-1 gap-0.5"
+          }`}
         >
           <span className="flex items-baseline justify-between gap-2">
             {card ? (

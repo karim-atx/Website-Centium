@@ -56,9 +56,11 @@ const Label: React.FC<{ accent?: CvAccent; children: React.ReactNode }> = ({ acc
 /** One timeline row: a dot in the accent, a rule down to the next. */
 const Dot: React.FC<{ accent?: CvAccent; last: boolean; children: React.ReactNode }> = ({ accent, last, children }) => (
   <li className="flex gap-3">
-    <div className="w-2.5 flex flex-col items-center pt-[5px] shrink-0" aria-hidden>
-      <span className={clsx("w-2.5 h-2.5 rounded-full shrink-0", !accent && "bg-primary")} style={accent ? { background: accent.label } : undefined} />
-      {!last && <span className="w-px flex-1 bg-charcoal/10 mt-1" />}
+    {/* MO1.2.1 (measured): an 8 dot centred on the title's first line, a
+        1 px rule from 3 under it; the text 12 to the right of the dot. */}
+    <div className="w-2 flex flex-col items-center pt-[7px] shrink-0" aria-hidden>
+      <span className={clsx("w-2 h-2 rounded-full shrink-0", !accent && "bg-primary")} style={accent ? { background: accent.label } : undefined} />
+      {!last && <span className="w-px flex-1 bg-charcoal/10 mt-[3px]" />}
     </div>
     <div className={clsx("min-w-0 flex-1 flex flex-col gap-[3px]", !last && "pb-3.5")}>{children}</div>
   </li>
@@ -134,7 +136,8 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
             {skills.map((s) => (
               <li
                 key={s}
-                className={clsx("text-[12px] font-semibold rounded-full px-3 py-1.5 max-w-full break-words", !accent && "bg-primary-pale text-primary-deep-text")}
+                // MO1.2.1: 28 tall (measured), 12 either side.
+                className={clsx("text-[12px] font-semibold rounded-full px-3 py-[5px] max-w-full break-words", !accent && "bg-primary-pale text-primary-deep-text")}
                 style={accent ? { background: accent.pillBg, color: accent.pillInk } : undefined}
               >
                 {s}

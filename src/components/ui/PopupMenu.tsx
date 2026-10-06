@@ -52,6 +52,11 @@ interface PopupMenuProps<V extends string> {
    * already-dimmed sheet and leaves it undimmed; tap outside still closes.
    */
   backdrop?: boolean;
+  /**
+   * The option notes' type when a frame draws other than 10.5/500 (MO1.2.1.3.4:
+   * 11/400 on a 15 line). Unset leaves every other menu as it is.
+   */
+  noteType?: { size: number; weight: number; lineHeight?: number };
 }
 
 /**
@@ -97,6 +102,7 @@ export function PopupMenu<V extends string>({
   heading,
   variant = "tint",
   backdrop = true,
+  noteType,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
@@ -217,7 +223,16 @@ export function PopupMenu<V extends string>({
               <span className="flex-1 min-w-0">
                 {opt.label}
                 {opt.note && (
-                  <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: "rgb(var(--c-charcoal-muted))" }}>
+                  <span
+                    className="block"
+                    style={{
+                      fontSize: textPx(noteType?.size ?? 10.5),
+                      fontWeight: noteType?.weight ?? 500,
+                      ...(noteType?.lineHeight ? { lineHeight: noteType.lineHeight } : {}),
+                      marginTop: 1,
+                      color: "rgb(var(--c-charcoal-muted))",
+                    }}
+                  >
                     {opt.note}
                   </span>
                 )}

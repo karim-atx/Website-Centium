@@ -28,6 +28,7 @@ import { fetchSharesPresence, setSharesPresence } from "../../services/messaging
 import { useThreadLive } from "../../context/threadLive";
 import { useApp } from "../../context/AppContext";
 import { GroupInfoSection } from "./GroupInfoSection";
+import { useIsDark } from "../../hooks/useIsDark";
 import type { GroupMember } from "../../services/messaging/groups";
 
 type Tab = GalleryKind | "starred";
@@ -83,6 +84,7 @@ export const ChatInfo: React.FC<{
 }> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group }) => {
   const s = settings ?? NO_SETTINGS;
   const { professionalClients } = useApp();
+  const dark = useIsDark();
   const displayName = group ? group.name : thread.participantName;
   const nameFor = (senderId: string | null) =>
     senderId === authUserId
@@ -214,20 +216,23 @@ export const ChatInfo: React.FC<{
     // MO1.2.1.3.1's rhythm (from the table's y values): header to hero 18,
     // hero to tiles 17, then 22 between the tiles, each label and card, and Block.
     <div className="flex flex-col gap-[22px] pb-6">
-      <div className="flex items-center gap-2">
+      {/* MO1.2.1.3.1 #1 (measured): the chevron's vertex at x 31.5 and centre
+          y 44, as on PageHeader (a 36 button, 2 down); the title at x 62. */}
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="tap w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-charcoal"
+          className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal"
         >
           <ChevronLeft size={18} />
         </button>
         <h1 className="text-[22px] font-extrabold text-charcoal">Chat info</h1>
       </div>
 
-      {/* Avatar 80 (measured on the frame at 2x). */}
-      <div className="flex flex-col items-center gap-1.5 -mt-1">
+      {/* Avatar 80 at y 80, the name's cap 8 under it, "Online" right under
+          the name (all measured on the frame at 2x). */}
+      <div className="flex flex-col items-center gap-2 -mt-1">
         {group ? (
           <span className="w-20 h-20 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center">
             <Users size={30} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
@@ -245,13 +250,14 @@ export const ChatInfo: React.FC<{
         )}
         <p className="text-lg font-bold text-charcoal text-center">{displayName}</p>
         {online && !group && (
-          <p className="-mt-1 text-[12.5px] font-semibold" style={{ color: "#2E7D57" }}>
+          <p className="-mt-[9px] text-[12.5px] font-semibold" style={{ color: "#2E7D57" }}>
             Online
           </p>
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 -mt-[5px]">
+      {/* Tiles at y 234: 20 under the hero. */}
+      <div className="grid grid-cols-4 gap-2 -mt-0.5">
         <button type="button" onClick={onSearch} className={tile}>
           <Search {...tileIcon} />
           Search chat
@@ -285,7 +291,9 @@ export const ChatInfo: React.FC<{
             active and 600 idle. */}
         <SegmentedTabs
           tabHeight={30}
-          trackStyle={{ padding: 4 }}
+          // The track is new in the redesign: the frame's #F4F3F9 (sampled) in
+          // light (decision 22); dark keeps SegmentedTabs' own.
+          trackStyle={{ padding: 4, ...(dark ? {} : { background: "rgb(var(--th-f4f3f9))" }) }}
           labelSize={12}
           idleWeight={600}
           items={TABS.map((t) => ({ key: t.value, label: t.label }))}
@@ -305,7 +313,8 @@ export const ChatInfo: React.FC<{
         />
 
         {tab === "media" && items && items.length > 0 && (
-          <div className="grid grid-cols-3 gap-1">
+          // 107 squares, 6 apart, 10 under the tabs (measured).
+          <div className="grid grid-cols-3 gap-1.5 -mt-0.5">
             {items.map((it) => (
               <GalleryPhoto key={it.id} item={it} onOpen={(url) => onOpenPhoto(it.path, url)} />
             ))}
@@ -410,9 +419,10 @@ export const ChatInfo: React.FC<{
         // MO1.2.1.3.1 #7: titles 13.5/600, subtitles 11.5/400 faint, rows
         // about 79 tall (measured on the frame at 2x: 12 above and below).
         <div className="flex items-center justify-between gap-3 min-h-[56px] py-3 border-b border-charcoal/[0.06]">
-          <div className="flex flex-col gap-0.5">
+          {/* Subtitle lines 16 apart, 3 under the title (measured): rows 79. */}
+          <div className="flex flex-col gap-[3px]">
             <span className="text-[13.5px] font-semibold text-charcoal">Show when I'm online</span>
-            <span className="text-[11.5px] font-normal text-charcoal-faint">
+            <span className="text-[11.5px] leading-4 font-normal text-charcoal-faint">
               Off by default. If off, you won't see theirs either. Applies to all your chats.
             </span>
             {presenceError && <span className="text-[11.5px] text-status-high">{presenceError}</span>}
@@ -426,9 +436,9 @@ export const ChatInfo: React.FC<{
         </div>
         )}
         <div className="flex items-center justify-between gap-3 min-h-[56px] py-3">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-[3px]">
             <span className="text-[13.5px] font-semibold text-charcoal">Read receipts</span>
-            <span className="text-[11.5px] font-normal text-charcoal-faint">If off, you won't see theirs either. Applies to all your chats.</span>
+            <span className="text-[11.5px] leading-4 font-normal text-charcoal-faint">If off, you won't see theirs either. Applies to all your chats.</span>
             {receiptsError && <span className="text-[11.5px] text-status-high">{receiptsError}</span>}
           </div>
           <Toggle

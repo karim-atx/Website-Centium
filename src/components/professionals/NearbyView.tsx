@@ -6,7 +6,7 @@ import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { AreaPicker } from "./AreaPicker";
 import { DirectoryCard } from "./DirectoryCard";
-import { initials, typeColours } from "./typeColour";
+import { initials, pinGround, typeColours } from "./typeColour";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import type { MapPin as Pin } from "./NearbyMap";
 import type { DirectoryListing } from "../../services/directory";
@@ -236,7 +236,7 @@ export const NearbyView: React.FC<{
       lng: g.lng,
       count: g.items.length,
       label,
-      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: t.pill, ink: t.deep },
+      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: pinGround(first.subtype, dark), ink: t.deep },
       selected: currentKey === g,
     };
   });

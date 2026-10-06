@@ -50,7 +50,18 @@ export default function ProfessionalReviews() {
 
   const { mine, myStatus, others, error, canReview, signedOut, save, withdraw } = useProfessionalReviews(listing?.profileId ?? null);
 
-  if (listing === undefined) return <p className="text-center py-20 text-charcoal-soft">Loading…</p>;
+  // MO1.2.1.1 States, Loading: skeleton blocks at the anatomy positions
+  // (surface.soft): the 140 summary card and the reviews card, radius 18.
+  if (listing === undefined)
+    return (
+      <div aria-busy="true">
+        <PageHeader title="Reviews" showBack />
+        <span className="sr-only">Loading…</span>
+        <div aria-hidden className="h-[140px] rounded-[18px] bg-cream-soft mb-5" />
+        <div aria-hidden className="h-[14px] w-24 rounded bg-cream-soft mb-2 ml-1" />
+        <div aria-hidden className="h-[336px] rounded-[18px] bg-cream-soft" />
+      </div>
+    );
   if (listing === null)
     return (
       <div className="text-center py-20 text-charcoal-soft">
@@ -86,9 +97,11 @@ export default function ProfessionalReviews() {
           count, and the five bars. */}
       <section
         aria-label="Rating summary"
-        className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-4 mb-5 flex items-center gap-5"
+        // 18 to the "All reviews" label (card foot 247, label cap 269 on the frame).
+        className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-4 mb-[18px] flex items-center gap-5"
       >
-        <div className="flex flex-col items-center gap-1 w-[104px] shrink-0">
+        {/* 98 wide (measured: stars centred at x 81–82, the bars' digits at x 151). */}
+        <div className="flex flex-col items-center gap-1 w-[98px] shrink-0">
           <p className="text-[40px] font-extrabold leading-none" style={{ color: t.deep }}>
             {label.kind === "average" ? label.value : "New"}
           </p>

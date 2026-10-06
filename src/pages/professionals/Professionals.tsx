@@ -18,7 +18,8 @@ import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
 import { YourReviewsSection } from "../../components/professionals/YourReviewsSection";
 import { sortByRating } from "../../services/professional-reviews/rules";
-import { List, Map as MapIcon } from "lucide-react";
+import { List, Map as MapIcon, Users } from "lucide-react";
+import { useIsDark } from "../../hooks/useIsDark";
 import { CvView } from "../../components/cv/CvView";
 import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import {
@@ -58,6 +59,7 @@ const CONTROL_LIGHT = {
 
 export default function Professionals() {
   const { user, authUserId, theme } = useApp();
+  const dark = useIsDark();
   /**
    * LIST OR MAP. The list is the directory, unchanged and open to everyone;
    * the map needs an account (the database's search is signed-in only) and
@@ -250,7 +252,15 @@ export default function Professionals() {
         idleWeight={600}
         scrollTabPadding="0 14px"
         scrollMinWidth={0}
-        trackStyle={{ padding: 4, borderRadius: "16px 0 0 16px", paddingRight: 16 }}
+        // The rail's track is the FO3 sub-tab container (#F4F3F9, measured on
+        // the frame), new in the redesign so it takes the handover's colour
+        // (decision 22); dark keeps SegmentedTabs' own track.
+        trackStyle={{
+          padding: 4,
+          borderRadius: "16px 0 0 16px",
+          paddingRight: 16,
+          ...(dark ? {} : { background: "rgb(var(--th-f4f3f9))" }),
+        }}
         light={CONTROL_LIGHT}
       />
 
@@ -282,27 +292,39 @@ export default function Professionals() {
             expected steady state until professionals opt in, and saying so
             plainly beats a blank screen; a failed request is not the same
             thing and must not borrow that wording. */}
+        {/* MO1.2 States, Loading: skeleton blocks at the cards' positions
+            (surface.soft, the card's radius 20, 224 tall as drawn). */}
         {listings === null && !directoryError && (
-          <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">Loading professionals…</p>
-          </Card>
+          <>
+            {[0, 1, 2].map((i) => (
+              <div key={i} aria-hidden className="h-[224px] rounded-[20px] bg-cream-soft" />
+            ))}
+            <span className="sr-only">Loading professionals…</span>
+          </>
         )}
+        {/* States, Error: an inline line in danger. */}
         {directoryError && (
-          <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">{directoryError}</p>
-          </Card>
+          <p role="alert" className="text-[12.5px] font-medium text-status-high text-center py-2">
+            {directoryError}
+          </p>
         )}
+        {/* States, Empty: Foundations › Empty state (56 primary.tint tile with
+            a 26 thin-stroke icon in primary.accent, title 15/700, one line
+            12.5/500 muted, max width 260). */}
         {listings !== null && !directoryError && filtered.length === 0 && (
-          <Card className="text-center py-8">
-            <p className="text-sm font-semibold text-charcoal">
+          <div className="flex flex-col items-center text-center py-8">
+            <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+              <Users size={26} strokeWidth={1.5} aria-hidden />
+            </span>
+            <p className="text-[15px] font-bold text-charcoal mt-3">
               {listings.length === 0 ? "No professionals listed yet" : "None in this category"}
             </p>
-            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed">
+            <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
               {listings.length === 0
                 ? "Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect."
                 : "Try a different category."}
             </p>
-          </Card>
+          </div>
         )}
       </div>
 

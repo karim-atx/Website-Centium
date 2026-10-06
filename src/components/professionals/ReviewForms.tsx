@@ -104,7 +104,8 @@ export const MyReviewCard: React.FC<{
               size="sm"
               variant="outline"
               onClick={onOpen}
-              className="shrink-0"
+              // 32 tall, radius 10 (measured on the frame; Foundations outline 32–40 / 10–12).
+              className="shrink-0 !h-8 !rounded-[10px]"
               style={{ fontSize: textPx(12), color: "rgb(var(--c-primary-deep-text))", borderColor: "rgb(var(--c-primary-dark))" }}
             >
               <Pencil size={13} /> Rate &amp; Review
@@ -198,7 +199,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
 
   return (
     <div className="space-y-5 animate-fade-slide-up">
-      {/* MO1.2.1.2: stars on a 44 pitch (34 + gap 10), the textarea 212 tall
+      {/* MO1.2.1.2: stars on a 44 pitch (34 + gap 10), the textarea 209 tall
           and "Your review" 12/600 in the faint grey (all measured on the frame
           at 2x, the label colour from the table). */}
       <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
@@ -217,7 +218,8 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
         ))}
       </div>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-faint mb-1.5 block">Your review</span>
+        {/* Re-measured (revision round): label box ends 10 above the field; the field is 209 outside. */}
+        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">Your review</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -225,7 +227,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           rows={5}
           aria-describedby="review-count"
           aria-invalid={over || undefined}
-          className={`${fieldClass} h-[212px]`}
+          className={`${fieldClass} h-[209px]`}
         />
         <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" />
       </label>

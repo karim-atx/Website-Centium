@@ -75,18 +75,19 @@ export const DirectoryCard: React.FC<{
         <div className="flex flex-wrap gap-1.5 mt-3">
           {p.location && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <MapPin size={12} strokeWidth={1.75} className="shrink-0" aria-hidden />
+              {/* Pill icons in the type's main colour, the text in its deep (sampled on MO1.2). */}
+              <MapPin size={12} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />
               <span className="truncate">{p.location}</span>
             </span>
           )}
           {p.monthlyRate != null && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Wallet size={12} strokeWidth={1.75} className="shrink-0" aria-hidden />${p.monthlyRate}/mo
+              <Wallet size={12} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />${p.monthlyRate}/mo
             </span>
           )}
           {distance !== undefined && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Navigation size={11} strokeWidth={1.75} className="shrink-0" aria-hidden />
+              <Navigation size={11} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />
               <span className="truncate">{distance ?? "Not on the map nearby"}</span>
             </span>
           )}
