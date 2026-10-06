@@ -407,13 +407,9 @@ export default function Food() {
                   glyph ending 18 from the card's edge (the 13 box ends 4.2
                   past the drawn stroke, so the box sits 13.8 in). The card
                   still opens Nutrient Summary. */}
-              <ChevronRight
-                size={13}
-                strokeWidth={2.4}
-                aria-hidden
-                className="absolute text-white"
-                style={{ right: 13.8, top: "50%", transform: "translateY(-50%)" }}
-              />
+              <span aria-hidden className="absolute flex" style={{ right: 13.8, top: "50%", transform: "translateY(-50%)" }}>
+                <ChevronRight size={13} strokeWidth={2.4} className="text-white" />
+              </span>
             </button>
           )}
 

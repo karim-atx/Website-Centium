@@ -571,8 +571,9 @@ html.larger-text {
    icons are lucide-react SVGs sized in raw px, which the text boost doesn't
    reach, so scale them visually in step (D17 keeps this). transform leaves
    layout boxes untouched, which is an acceptable trade-off for this
-   accessibility toggle. */
-.larger-icons svg {
+   accessibility toggle. Batch E (E7): not the Home Quick actions shape, which
+   is a fixed drawing its buttons and glyphs are laid over (.qa-shape). */
+.larger-icons svg:not(.qa-shape) {
   transform: scale(1.15);
 }
 
