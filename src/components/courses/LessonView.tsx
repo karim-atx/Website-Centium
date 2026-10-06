@@ -24,6 +24,7 @@ import { formatPrice, lessonOpenTo, minutesLabel, youtubeEmbedUrl, type AccessLe
 import { ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CheckIcon, LockIcon } from "./courseParts";
+import { useBack } from "../../hooks/useBack";
 
 // Design screen 8: a lesson. The video is YouTube's official embedded player
 // on the privacy-enhanced domain (youtube-nocookie.com), with no autoplay and
@@ -84,12 +85,15 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
   }, [courseId, userId]);
 
   const toCourse = `/app/forum/courses/${courseId}`;
+  // Batch E (E5): pops back to the course (no loop through a pushed copy of
+  // it); opened directly, replaces with the course.
+  const goBack = useBack(toCourse);
   const backButton = (
-    <Link to={toCourse} aria-label="Back to course" className="tap w-11 h-11 flex items-center justify-center shrink-0">
+    <button type="button" onClick={goBack} aria-label="Back to course" className="tap w-11 h-11 flex items-center justify-center shrink-0">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fv("text")} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
       </svg>
-    </Link>
+    </button>
   );
 
   if (state === undefined) {

@@ -30,6 +30,7 @@ import { StartPregnancySheet } from "../../components/pregnancy/StartPregnancySh
 import { EndPregnancySheet } from "../../components/pregnancy/EndPregnancySheet";
 import { gestationOn } from "../../services/pregnancy";
 import { ChevronLeft, ChevronRight, Info, Plus, Trash2 } from "lucide-react";
+import { useBack } from "../../hooks/useBack";
 
 // The cycle tracker.
 //
@@ -57,6 +58,7 @@ const todayISO = () => {
 
 export default function Cycle() {
   const navigate = useNavigate();
+  const back = useBack();
   const {
     cycleSettings,
     cycleSettingsLoaded,
@@ -134,7 +136,7 @@ export default function Cycle() {
   if (cycleSettingsLoaded && !settings && !pregnancy) {
     return (
       <div className="animate-fade-slide-up">
-        <BackRow onBack={() => navigate(-1)} />
+        <BackRow onBack={back} />
         <Card className="text-center py-8">
           <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.TRACKER_OFF_TITLE}</p>
           <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
@@ -183,7 +185,7 @@ export default function Cycle() {
   if (!settings) {
     return (
       <div className="animate-fade-slide-up">
-        <BackRow onBack={() => navigate(-1)} />
+        <BackRow onBack={back} />
         <Card className="text-center py-8">
           <p className="text-sm text-charcoal-faint">Loading…</p>
         </Card>
@@ -254,7 +256,7 @@ export default function Cycle() {
 
   return (
     <div className="animate-fade-slide-up">
-      <BackRow onBack={() => navigate(-1)} />
+      <BackRow onBack={back} />
       <SegmentedTabs
         items={tabsFor(pregnancy !== null)}
         activeKey={tab}

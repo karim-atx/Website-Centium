@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -17,6 +17,7 @@ import {
 } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { ChevronLeft, Info, Plus } from "lucide-react";
+import { useBack } from "../../hooks/useBack";
 
 // The contraception tracker.
 //
@@ -52,7 +53,7 @@ const todayISO = () => {
 const PILL_CHOICES: readonly EventKind[] = ["pill_taken", "pill_late", "pill_missed"];
 
 export default function Contraception() {
-  const navigate = useNavigate();
+  const back = useBack();
   const {
     authUserId,
     contraceptionPlan,
@@ -103,7 +104,7 @@ export default function Contraception() {
   if (contraceptionPlanLoaded && !plan) {
     return (
       <div className="animate-fade-slide-up">
-        <BackRow onBack={() => navigate(-1)} />
+        <BackRow onBack={back} />
         <Card className="text-center py-8">
           <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.SETUP_TITLE}</p>
           <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
@@ -129,7 +130,7 @@ export default function Contraception() {
   if (!plan) {
     return (
       <div className="animate-fade-slide-up">
-        <BackRow onBack={() => navigate(-1)} />
+        <BackRow onBack={back} />
         <Card className="text-center py-8">
           <p className="text-sm text-charcoal-faint">Loading…</p>
         </Card>
@@ -160,7 +161,7 @@ export default function Contraception() {
 
   return (
     <div className="animate-fade-slide-up">
-      <BackRow onBack={() => navigate(-1)} />
+      <BackRow onBack={back} />
 
       {error && (
         <p className="mb-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">

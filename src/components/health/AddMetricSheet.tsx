@@ -9,6 +9,7 @@ import { BloodPressureSheet } from "./BloodPressureSheet";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
 // frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
@@ -181,6 +182,8 @@ const CheckCircleGlyph: React.FC = () => (
 // V10 (QA 10.0): both water and weight now log against whichever day is
 // selected on Home, not always literal "today".
 export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const {
     water,
     waterGoalMl,

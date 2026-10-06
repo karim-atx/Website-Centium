@@ -23,6 +23,7 @@ import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/Re
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucide-react";
 import { textPx } from "../../theme/textSize";
+import { useBack } from "../../hooks/useBack";
 
 // MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
 // colours, the price and client-since pills, the gold reviews pill (which
@@ -43,6 +44,7 @@ import { textPx } from "../../theme/textSize";
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const back = useBack();
   const { authUserId } = useApp();
 
   // ONE SOURCE NOW: public_professional_directory, keyed by account uuid.
@@ -320,7 +322,7 @@ export default function ProfessionalDetail() {
   return (
     <div className={showPinned ? "pb-[172px]" : ""}>
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         aria-label="Back"
         className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-1"
       >

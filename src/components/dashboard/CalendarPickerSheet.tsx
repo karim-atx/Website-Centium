@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { JumpToToday } from "../ui/JumpToToday";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -71,6 +72,8 @@ export const CalendarPickerSheet: React.FC<{
   /** Rendered above Done; a function receives the day currently picked (WO4.1's time wheel greys later times on today). */
   children?: React.ReactNode | ((pendingDate: string) => React.ReactNode);
 }> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const dark = useIsDark();
   const cal = (key: keyof typeof CAL_COLORS) => CAL_COLORS[key][dark ? 1 : 0];
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));

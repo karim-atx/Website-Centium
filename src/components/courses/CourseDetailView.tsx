@@ -42,6 +42,7 @@ import { CoverPill, Instructor, StarIcon } from "./courseParts";
 import { coverBackground, onCover } from "./courseCover";
 import { useIsDark } from "../../hooks/useIsDark";
 import { PinnedCta } from "../ui/PinnedCta";
+import { useBack } from "../../hooks/useBack";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -124,10 +125,12 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
     };
   }, [courseId, userId]);
 
+  // Batch E (E5): pops back to the Courses tab; opened directly, replaces with it.
+  const goBack = useBack("/app/forum?tab=courses");
   const back = (
     <button
       type="button"
-      onClick={() => navigate("/app/forum?tab=courses")}
+      onClick={goBack}
       aria-label="Back"
       className="tap w-11 h-11 rounded-full flex items-center justify-center"
       style={{ background: onCover(dark).bg }}

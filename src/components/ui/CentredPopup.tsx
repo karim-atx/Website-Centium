@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { CtaButton, type CtaButtonProps } from "./PinnedCta";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // Mobile v5.1 handover, Foundations 2.5 "Centred popup": a white card, radius
 // 20, shadow.sheet, padding 24 x 20, at most 342 wide with 16 pt side margins,
@@ -55,6 +56,8 @@ export const CentredPopup: React.FC<{
   bodyWeight = 500,
   iconWell,
 }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);

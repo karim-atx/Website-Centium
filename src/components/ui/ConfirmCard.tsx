@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 /**
  * The shared compact confirmation, handover 2026-09-29 02 "Compact
@@ -26,6 +27,8 @@ export const ConfirmCard: React.FC<{
   onCancel: () => void;
   onConfirm: () => void;
 }> = ({ open, title, subtitle, confirmLabel = "Delete", busy, onCancel, onConfirm }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onCancel);
   const dark = useIsDark();
   if (!open) return null;
   return createPortal(

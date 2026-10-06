@@ -9,6 +9,7 @@ import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import type { CalendarEvent } from "../../types";
 import { EVENT_SWATCHES } from "./eventColour";
 import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "./calendarTime";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
@@ -135,6 +136,8 @@ export const EventComposeSheet: React.FC<{
   onDelete: () => void;
   confirmDelete: boolean;
 }> = ({ open, onClose, editing, draft, setDraft, todayIso, saving, error, linkError, onSave, onDelete, confirmDelete }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const [dateOpen, setDateOpen] = useState(false);
   const [wheel, setWheel] = useState<"start" | "end" | null>(null);
   // The open menu's anchor; null when closed.

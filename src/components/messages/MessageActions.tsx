@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, CheckCheck, Copy, Flag, Forward, Info, Pencil, Pin, PinOff, Plus, Reply, Star, StarOff, Trash2, type LucideIcon } from "lucide-react";
 import { MORE_REACTIONS, QUICK_REACTIONS } from "../../services/messaging/chatFeatures";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 export interface MessageAction {
   label: string;
@@ -50,6 +51,8 @@ export const MessageActions: React.FC<{
   onReact: ((emoji: string | null) => void) | null;
   actions: MessageAction[];
 }> = ({ open, onClose, mine, preview, time, tick, myReaction, onReact, actions }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const [more, setMore] = useState(false);
 
   useEffect(() => {

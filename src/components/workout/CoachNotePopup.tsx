@@ -3,6 +3,7 @@ import { MessageSquareText } from "lucide-react";
 import { fetchConnectedProfessional, professionalRole } from "../../services/connected-professional";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 /** "Updated 2d ago" (WO25). Beyond a week, the date. */
 function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
@@ -46,6 +47,8 @@ export const CoachNotePopup: React.FC<{
   professionalId: string | undefined;
   onClose: () => void;
 }> = ({ note, updatedAt, professionalId, onClose }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(true, onClose);
   const [coach, setCoach] = useState<{ name: string; role: string | null } | null>(null);
   const dark = useIsDark();
   const c = (key: keyof typeof COACH_COLORS) => COACH_COLORS[key][dark ? 1 : 0];

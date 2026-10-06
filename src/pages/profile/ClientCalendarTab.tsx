@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
-import { useNavigate } from "react-router-dom";
+
 import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
@@ -42,6 +42,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import clsx from "clsx";
+import { useBack } from "../../hooks/useBack";
 
 /** Opens an attachment in a new tab. Signed at the click — the TTL is minutes. */
 async function openAttachment(path: string) {
@@ -119,7 +120,7 @@ const HOUR_PX = 56;
 // would put two sources behind one screen; it is used below for one thing
 // only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
-  const navigate = useNavigate();
+  const back = useBack();
   const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone, colorTheme } =
     useApp();
   const newEventColour = nearestEventSwatch(
@@ -658,7 +659,7 @@ export default function ClientCalendarTab() {
       <div className="flex items-start justify-between gap-3 mb-[13px]">
         <div className="flex items-start gap-2.5">
           <button
-            onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate("/app/more"))}
+            onClick={back}
             aria-label="Back"
             className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
           >

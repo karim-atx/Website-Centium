@@ -14,6 +14,7 @@ import { LessonView } from "../../components/courses/LessonView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
 import { ForumPlaceholder } from "../../components/forum/parts";
 import { fv } from "../../components/forum/forumColor";
+import { useBack } from "../../hooks/useBack";
 
 // The Community page: Forum and Courses (design PgYuBboDr8DEL2bk7EJKtU,
 // screen 1), and the forum's own screens behind it.
@@ -82,12 +83,12 @@ function useForumGate(section: Section):
 
 // MO1.3 #1: a back chevron and the subtitle; the title keeps its 26/800 (A17).
 function Heading() {
-  const navigate = useNavigate();
+  const back = useBack();
   return (
     <div className="flex items-start gap-2.5">
       <button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={back}
         aria-label="Back"
         className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 -ml-1.5 mt-0.5"
         style={{ color: fv("muted") }}

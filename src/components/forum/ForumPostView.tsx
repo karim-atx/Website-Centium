@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useBack } from "../../hooks/useBack";
 import { ArrowLeft, ChevronDown, EllipsisVertical, MessageCircle, Send } from "lucide-react";
 import {
   createReply,
@@ -60,7 +61,6 @@ export function ForumPostView({
   recoveryOn: boolean;
   recoveryPending: boolean;
 }) {
-  const navigate = useNavigate();
   const [thread, setThread] = useState<ForumThread | null | undefined>(undefined);
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
@@ -160,7 +160,8 @@ export function ForumPostView({
     if (r.value.status === "published") setThread((t) => (t ? { ...t, replyCount: t.replyCount + 1 } : t));
   };
 
-  const back = () => navigate("/app/forum");
+  // Batch E (E5): pops back to the forum; opened directly, replaces with it.
+  const back = useBack("/app/forum");
 
   const startEdit = () => {
     if (!own || !thread) return;

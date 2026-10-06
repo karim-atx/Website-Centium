@@ -1,7 +1,7 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useBack } from "../../hooks/useBack";
 
 interface PageHeaderProps {
   title: string;
@@ -26,7 +26,7 @@ interface PageHeaderProps {
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub }) => {
-  const navigate = useNavigate();
+  const back = useBack();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
   return (
@@ -37,7 +37,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitl
           // hover — was always-visible before, inconsistent with the
           // hover-only back buttons already used on Settings/Subscription.
           <button
-            onClick={onBack ?? (() => navigate(-1))}
+            onClick={onBack ?? back}
             aria-label={t("Back")}
             className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 mt-0.5 transition-colors"
           >

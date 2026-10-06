@@ -3,9 +3,10 @@ import { fetchReservedNicknames, setNickname } from "../../services/forum";
 import { nicknameProblem, NICKNAME_PROBLEM_TEXT } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { rememberNickname } from "./useForumMe";
-import { useNavigate } from "react-router-dom";
+
 import { AtSign, ChevronLeft } from "lucide-react";
 import { PinnedCta } from "../ui/PinnedCta";
+import { useBack } from "../../hooks/useBack";
 
 // Design screen 4: "Choose a forum nickname". Shown on a member's first visit
 // to the forum, and again from Profile or the forum's Edit link to change it.
@@ -28,7 +29,7 @@ export function NicknameScreen({
   editing: boolean;
   onDone: (nickname: string) => void;
 }) {
-  const navigate = useNavigate();
+  const back = useBack();
   const [value, setValue] = useState(initial ?? "");
   const [reserved, setReserved] = useState<Set<string>>(new Set());
   const [touched, setTouched] = useState(false);
@@ -80,7 +81,7 @@ export function NicknameScreen({
       <div className="flex flex-col gap-4 pb-6">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={back}
           aria-label="Back"
           className="tap w-9 h-9 -ml-1.5 rounded-full flex items-center justify-center"
           style={{ color: fv("muted") }}

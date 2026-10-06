@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { NutrientSections, type NutrientFilter } from "../../components/food/NutrientSections";
@@ -7,6 +7,7 @@ import { useApp } from "../../context/AppContext";
 import { sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useBack } from "../../hooks/useBack";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Inks and surfaces with an
@@ -42,7 +43,7 @@ const formatDiaryDate = (iso: string) => {
 // CentiumNutrientSummary.dc.html).
 export default function NutrientSummaryPage() {
   const { foodLog, selectedDate, nutritionGoal, metricValues, language, t } = useApp();
-  const navigate = useNavigate();
+  const back = useBack();
   const dark = useIsDark();
   const [filter, setFilter] = useState<NutrientFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function NutrientSummaryPage() {
       >
         <div className="flex items-start min-w-0" style={{ gap: 6 }}>
           <button
-            onClick={() => navigate(-1)}
+            onClick={back}
             aria-label={t("Back")}
             className="tap flex-none flex items-center justify-center rounded-full"
             style={{ width: 32, height: 32, marginLeft: -6, color: "rgb(var(--c-charcoal-soft))", background: "none", padding: 0 }}

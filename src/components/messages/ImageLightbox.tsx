@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, X } from "lucide-react";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // A photo from a conversation, full screen: pinch or wheel to zoom, drag to
 // pan while zoomed, double-tap to zoom in or out, and close with the button,
@@ -19,6 +20,8 @@ export const ImageLightbox: React.FC<{
   onClose: () => void;
   refresh: () => Promise<string | null>;
 }> = ({ url, path, onClose, refresh }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(true, onClose);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [downloading, setDownloading] = useState(false);
   const [note, setNote] = useState<string | null>(null);

@@ -14,6 +14,7 @@ import BusinessDashboard from "./BusinessDashboard";
 import { useIsDark } from "../../hooks/useIsDark";
 import ProfessionalExplore from "./ProfessionalExplore";
 import { textPx } from "../../theme/textSize";
+import { useBack } from "../../hooks/useBack";
 
 // Iteration 6 "Team" §5 Explore: each "More categories" tile gets its own
 // icon colour and light row tint — extending the same colour family used
@@ -33,6 +34,7 @@ const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
 export default function Marketplace() {
   const { user, pointsSummary, noteFeatureMilestone } = useApp();
   const navigate = useNavigate();
+  const back = useBack();
   const dark = useIsDark();
 
   // Explorer milestone: "Out and about". Recorded once per account for ever —
@@ -81,7 +83,7 @@ export default function Marketplace() {
           same button Mind's header uses (Explore opens from More and Home). */}
       <div className="flex items-start gap-2.5 mb-[13px]">
         <button
-          onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate("/app/more"))}
+          onClick={back}
           aria-label="Back"
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
         >

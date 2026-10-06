@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
@@ -16,6 +15,7 @@ import {
 } from "../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { BillingToggle, PlanRow, PlanSkeleton } from "./PlanRows";
+import { useBack } from "../../hooks/useBack";
 import {
   ChevronLeft,
   Mic,
@@ -104,7 +104,7 @@ function bestSavingAmong(tiers: { monthlyPrice: number; yearlyPrice: number | nu
 // ---------------------------------------------------------------------------
 
 function ClientSubscription() {
-  const navigate = useNavigate();
+  const back = useBack();
   const { tiers, loading, error } = useSubscriptionTiers("client");
   const { resolved, loading: planLoading, error: planError } = useMySubscriptionTier("client");
   const [period, setPeriod] = useState<BillingPeriod>("yearly");
@@ -114,7 +114,7 @@ function ClientSubscription() {
 
   return (
     <div>
-      <BackButton onClick={() => navigate(-1)} />
+      <BackButton onClick={back} />
       <Masthead
         title="Your health, without the limits."
         blurb="Unlock the full Centium experience with AI-powered logging and deeper insights."
@@ -177,7 +177,7 @@ function ClientSubscription() {
 // ---------------------------------------------------------------------------
 
 function ProfessionalSubscription() {
-  const navigate = useNavigate();
+  const back = useBack();
   const { professionalClients } = useApp();
   const { tiers, loading, error } = useSubscriptionTiers("professional");
   const { effective, loading: planLoading, error: planError } = useEffectiveProfessionalTier();
@@ -190,7 +190,7 @@ function ProfessionalSubscription() {
 
   return (
     <div>
-      <BackButton onClick={() => navigate(-1)} />
+      <BackButton onClick={back} />
       <Masthead
         title="Grow your client roster."
         blurb="Centium for professionals scales with how many clients you manage."
@@ -242,7 +242,7 @@ function ProfessionalSubscription() {
 // ---------------------------------------------------------------------------
 
 function BusinessSubscription() {
-  const navigate = useNavigate();
+  const back = useBack();
   const { team: businessEmployees } = useBusinessTeam();
   const { tiers, loading, error } = useSubscriptionTiers("business");
   const { plan, loading: planLoading, error: planError } = useBusinessPlan();
@@ -262,7 +262,7 @@ function BusinessSubscription() {
 
   return (
     <div>
-      <BackButton onClick={() => navigate(-1)} />
+      <BackButton onClick={back} />
       <Masthead
         title="Grow your team."
         blurb="A base plan, plus seats for the professionals who work with you."

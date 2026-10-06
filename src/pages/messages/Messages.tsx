@@ -10,6 +10,7 @@ import { NewGroup } from "../../components/messages/NewGroup";
 import { BroadcastEditor } from "../../components/messages/BroadcastEditor";
 import { GroupInvitationView } from "../../components/messages/GroupInvitationView";
 import { ThreadView } from "../../components/messages/ThreadView";
+import { useBackCloses } from "../../hooks/useBackCloses";
 import { StarredMessages } from "../../components/messages/StarredMessages";
 import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
@@ -94,6 +95,16 @@ export default function Messages() {
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Batch E (E5): an open thread is in-page state, so the phone's back returns
+  // to the conversation list instead of leaving Messages.
+  const closeThread = () => {
+    setOpen(null);
+    setFocusId(null);
+    // Re-read on the way back, so a thread just replied to moves up with its
+    // new preview.
+    void load();
+  };
+  useBackCloses(!!open, closeThread);
 
   // Set by MessageProfessionalButton: the thread id travels in navigation state
   // and is resolved once the threads arrive. Consumed exactly once, so coming
@@ -296,13 +307,7 @@ export default function Messages() {
           focusMessageId={focusId}
           settings={settings[open.id]}
           onSettingsChanged={async () => setSettings(await fetchThreadSettings())}
-          onBack={() => {
-            setOpen(null);
-            setFocusId(null);
-            // Re-read on the way back, so a thread just replied to moves up with
-            // its new preview.
-            void load();
-          }}
+          onBack={closeThread}
         />
       </div>
     );

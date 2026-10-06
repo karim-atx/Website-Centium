@@ -30,6 +30,7 @@ import {
 import type { HabitItem, Streak } from "../../types";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
+import { useBack } from "../../hooks/useBack";
 
 type Section = "habits" | "journal" | "achievements" | "meditation";
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
@@ -114,6 +115,7 @@ export default function Mind() {
     journalLoading,
   } = useApp();
   const navigate = useNavigate();
+  const back = useBack();
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
@@ -187,7 +189,7 @@ export default function Mind() {
           title={SECTION_TITLE[section]}
           subtitle={SECTION_SUBTITLE[section]}
           showBack
-          onBack={() => navigate("/app/mind")}
+          onBack={back}
         />
         {section === "habits" && <HabitsTab />}
         {section === "journal" && <JournalTab />}
@@ -203,7 +205,7 @@ export default function Mind() {
           27px default — see the identical note in Food.tsx. MO1.1 #1. */}
       <div className="flex items-start gap-2.5 mb-[13px]">
         <button
-          onClick={() => navigate(-1)}
+          onClick={back}
           aria-label="Back"
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
         >
