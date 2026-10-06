@@ -289,7 +289,10 @@ function hcBlock(theme, mode, literals, data) {
     lines.push(`  --c-primary: ${cssTriplet(prim)};`);
     lines.push(`  --c-primary-ink: ${cssTriplet(ensureContrast(prim, grounds("lav"), 4.5, dir))};`);
     for (const n of ["--c-primary-accent", "--c-primary-dark", "--c-primary-deep-text"]) {
-      const hcText = ensureContrast(text ?? data.v[n], grounds("lav"), 4.5, dir);
+      // ... and on the primary itself at 50% (a translucent primary row such
+      // as habits' day header, where a saturated theme primary mixes darker).
+      const hcGrounds = text ? [...grounds("lav"), over(prim, 0.5, WHITE)] : grounds("lav");
+      const hcText = ensureContrast(text ?? data.v[n], hcGrounds, 4.5, dir);
       lines.push(`  ${n}: ${cssTriplet(hcText)};`);
       // Their text twins too (Tailwind's text-primary-dark reads the -ink).
       if (text) lines.push(`  ${n}-ink: ${cssTriplet(hcText)};`);
