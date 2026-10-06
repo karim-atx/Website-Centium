@@ -91,13 +91,26 @@ export function ensureContrast(hex, grounds, ratio, dir) {
  * exactly; every other shade keeps its place relative to it.
  */
 export function makeMapper(fromAnchor, toAnchor) {
-  const [Lc, Cc, hc] = toOklch(fromAnchor);
-  const [Lt, Ct, ht] = toOklch(toAnchor);
+  const [, Cc, hc] = toOklch(fromAnchor);
+  const [, Ct, ht] = toOklch(toAnchor);
   const ratio = Cc > 0.005 ? Ct / Cc : 1;
+  // Same relative lightness, read as the same LUMINANCE as the Centium shade:
+  // contrast depends on luminance alone, so every pairing of a mapped shade
+  // with a fixed colour (greys, white, the dark surfaces) or with another
+  // mapped shade keeps exactly the ratio it has in Centium. The theme's hue
+  // and chroma come from its pair; lightness is solved for.
   return (hex) => {
-    if (hex.toLowerCase() === fromAnchor.toLowerCase()) return toAnchor.toLowerCase();
     const [L, C, h] = toOklch(hex);
-    const nl = L <= Lc ? (L * Lt) / Lc : Lt + ((L - Lc) * (1 - Lt)) / (1 - Lc);
-    return fromOklch([nl, C * ratio, (h + ht - hc + 360) % 360]);
+    const target = luminance(hex);
+    const hue = (h + ht - hc + 360) % 360;
+    const chroma = C * ratio;
+    let lo = 0, hi = 1, best = fromOklch([L, chroma, hue]);
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      const cand = fromOklch([mid, chroma, hue]);
+      best = cand;
+      if (luminance(cand) < target) lo = mid; else hi = mid;
+    }
+    return best;
   };
 }

@@ -10,7 +10,10 @@
 // THE OTHER FOUR come from Foundations 2.1: each lavender shade maps to the
 // theme primary and each teal shade to the theme secondary "at the same
 // relative lightness" (makeMapper), using the light pair in light mode and the
-// dark pair in dark mode. Then contrast is held:
+// dark pair in dark mode. Lightness is matched as luminance, so every contrast
+// ratio a shade has in Centium carries over to the theme; the pair's own
+// colours are kept exactly where they are shown as themselves (--c-primary,
+// the C mark, the picker swatches). On top of that:
 //  - a shade that reached 4.5:1 (or 3:1) on white in Centium keeps reaching it
 //    (on the dark card in dark mode), so text and icons never get weaker;
 //  - every colour also has an ink variant (`--thi-*`, `--c-*-ink`), which
