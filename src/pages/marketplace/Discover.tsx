@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useIsDark } from "../../hooks/useIsDark";
 import { initials } from "../../components/professionals/typeColour";
-import { fmt12, range12 } from "../../components/calendar/calendarTime";
+import { fmt12 } from "../../components/calendar/calendarTime";
 import { useApp } from "../../context/AppContext";
 import {
   bookClass,
@@ -15,7 +15,7 @@ import {
   type MarketplaceClass,
   type MarketplaceVenue,
 } from "../../services/marketplace";
-import { CalendarDays, Search, Store, Dumbbell, Check } from "lucide-react";
+import { CalendarDays, Search, Store, Dumbbell, Check, Info } from "lucide-react";
 
 // Marketplace discovery: real classes, real venues, real bookings.
 //
@@ -74,6 +74,20 @@ const dateLabel = (iso: string) =>
     day: "numeric",
   });
 
+/** A class 7 or more days out, whose weekday alone would not say which week. */
+const farOff = (iso: string) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(`${iso}T00:00:00`).getTime() - today.getTime() >= 7 * 86_400_000;
+};
+
+const toggled = (set: Set<string>, id: string) => {
+  const next = new Set(set);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+};
+
 export default function Discover() {
   const { authUserId, profileReady } = useApp();
 
@@ -89,6 +103,7 @@ export default function Discover() {
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("classes");
   const [businessType, setBusinessType] = useState<string | null>(null);
+  const [notesOpen, setNotesOpen] = useState<Set<string>>(new Set());
   const dark = useIsDark();
 
   // One loader for all three reads, so a refresh after a booking cannot leave
@@ -266,8 +281,9 @@ export default function Discover() {
               return (
                 <div key={c.classId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 animate-fade-slide-up">
                   <div className="flex gap-3">
-                    {/* MO1.4's date block: weekday and start time. */}
-                    <span className="w-[52px] shrink-0 self-start rounded-[14px] bg-primary-pale flex flex-col items-center justify-center py-2.5">
+                    {/* MO1.4's date block: weekday and start time, 56 wide
+                        (measured from the frame, 2x: 112 px). */}
+                    <span className="w-14 shrink-0 self-start rounded-[14px] bg-primary-pale flex flex-col items-center justify-center py-2.5">
                       <span className="text-[10.5px] font-extrabold uppercase text-primary-dark">
                         {new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
                       </span>
@@ -276,14 +292,16 @@ export default function Discover() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[14px] font-bold text-charcoal truncate">{c.title}</p>
-                      <p className="text-[12px] font-semibold text-primary-dark truncate">
-                        {c.businessName}
-                        {c.classType ? ` · ${c.classType}` : ""}
-                      </p>
-                      <p className="text-[11.5px] text-charcoal-faint truncate">
-                        {dateLabel(c.date)} · {range12(c.startTime, c.endTime)}
-                        {c.location ? ` · ${c.location}` : ""}
-                      </p>
+                      {/* MO1.4 #6: the venue alone, then the place; the date
+                          block carries the day and time. A class a week or
+                          more away keeps its date on the place line, since
+                          the weekday alone would not say which week. */}
+                      <p className="text-[12px] font-semibold text-primary-dark truncate">{c.businessName}</p>
+                      {(c.location || farOff(c.date)) && (
+                        <p className="text-[11.5px] text-charcoal-faint truncate">
+                          {[farOff(c.date) ? dateLabel(c.date) : null, c.location].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-[12px] font-bold rounded-full px-2.5 py-0.5 bg-teal-pale text-teal-dark dark:text-teal-deep-text">
                           {free ? "Free" : c.price}
@@ -293,12 +311,27 @@ export default function Discover() {
                         <span className={`text-[11.5px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
                           {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
                         </span>
+                        {/* The class's notes aren't drawn (MO1.4); they stay
+                            one tap away behind Info (decision 1). */}
+                        {c.notes && (
+                          <button
+                            type="button"
+                            onClick={() => setNotesOpen((s) => toggled(s, c.classId))}
+                            aria-expanded={notesOpen.has(c.classId)}
+                            aria-label="Class notes"
+                            className="tap w-8 h-8 -my-1 flex items-center justify-center text-charcoal-faint"
+                          >
+                            <Info size={15} strokeWidth={1.75} aria-hidden />
+                          </button>
+                        )}
                         {!mine && (
+                          // MO1.4: Book is a rounded rectangle, radius 10
+                          // (measured from the frame, 2x), 32 tall.
                           <button
                             type="button"
                             onClick={() => void book(c)}
                             disabled={busyId === c.classId || c.isFull || !authUserId}
-                            className="tap ml-auto h-8 px-4 rounded-full border border-primary-dark/50 text-[12.5px] font-bold text-primary-dark disabled:opacity-50"
+                            className="tap ml-auto h-8 px-4 rounded-[10px] border border-primary-dark/50 text-[12.5px] font-bold text-primary-dark disabled:opacity-50"
                           >
                             {busyId === c.classId ? "…" : c.isFull ? "Full" : "Book"}
                           </button>
@@ -306,7 +339,9 @@ export default function Discover() {
                       </div>
                     </div>
                   </div>
-                  {c.notes && <p className="text-xs text-charcoal-faint mt-2 italic">{c.notes}</p>}
+                  {c.notes && notesOpen.has(c.classId) && (
+                    <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">{c.notes}</p>
+                  )}
                   {/* Booked: cancelling stays on the card (B24). Full is not a
                       reason to disable a booking somebody already holds. */}
                   {mine && (
@@ -331,13 +366,17 @@ export default function Discover() {
               );
             })}
 
+            {/* MO1.4.3: no classes, or none matching the filters, in the
+                same empty-state block (own copy). */}
             {filtered.length === 0 && !loading && (
               classes.length === 0 ? (
                 <EmptyState icon={<CalendarDays size={24} strokeWidth={1.75} />} title="No classes yet" body="Classes from gyms and studios near you will show here." />
               ) : (
-                <Card className="text-center py-8">
-                  <p className="text-sm text-charcoal-faint">No classes match those filters.</p>
-                </Card>
+                <EmptyState
+                  icon={<CalendarDays size={24} strokeWidth={1.75} />}
+                  title="No classes match"
+                  body="No classes match those filters. Try another price, type or search."
+                />
               )
             )}
           </div>
@@ -398,8 +437,9 @@ export default function Discover() {
           {gyms.map((v) => (
             <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up">
               {/* No cover photos yet: the primary tint with the gym's initials,
-                  as MO1.4.2 draws a gym without one. */}
-              <div className="h-[100px] bg-primary-pale flex items-center justify-center">
+                  as MO1.4.2 draws a gym without one. 84 tall of the 172 card
+                  (measured from the frame, unverified). */}
+              <div className="h-[84px] bg-primary-pale flex items-center justify-center">
                 <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-primary-dark">
                   {initials(v.name)}
                 </span>
@@ -420,20 +460,33 @@ export default function Discover() {
         </div>
       )}
 
+      {/* MO1.4 §4 Loading: skeleton blocks where the cards will be, in
+          surface.soft at each card's radius (class card 117, gym card 172;
+          a business row is its 48 tile plus padding). */}
       {loading && (
-        <Card className="text-center py-8 mt-2.5">
-          <p className="text-sm text-charcoal-faint">Loading…</p>
-        </Card>
+        <div className="space-y-2.5 mt-1" aria-busy="true" aria-label="Loading">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              aria-hidden="true"
+              className="animate-pulse rounded-[18px] bg-cream-soft"
+              style={{ height: tab === "gyms" ? 172 : tab === "businesses" ? 72 : 117 }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-/** Foundations' empty-state block (MO1.4.3): an icon tile, a title and a line. */
+/**
+ * Foundations' empty-state block (MO1.4.3): padding 56 24 0, gap 10; a 56 pt
+ * primary-tint tile (Foundations › Empty state), a title and a line.
+ */
 function EmptyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
-    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-10 pb-6">
-      <span className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark">{icon}</span>
+    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-14 pb-0">
+      <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark">{icon}</span>
       <p className="text-[16px] font-extrabold text-charcoal">{title}</p>
       <p className="text-[13px] text-charcoal-faint max-w-[260px] leading-relaxed">{body}</p>
     </div>

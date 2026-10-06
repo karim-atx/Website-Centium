@@ -247,13 +247,18 @@ export function ForumPostView({
       </div>
     );
 
+  // MO1.3.3 #1: a 56 pt bar over the content, full width, padding 12 12 0,
+  // gap 10, 94% card fill and a hairline under it; title 17/800, ArrowLeft 19/2.
   const topBar = (
-    <div className="flex items-center justify-between -mx-1 pb-2">
-      <span className="flex items-center gap-1.5">
+    <div
+      className="sticky top-0 z-20 -mx-4 mb-3.5 px-3 pt-[max(env(safe-area-inset-top),12px)] flex items-center justify-between"
+      style={{ background: `color-mix(in srgb, ${fv("card")} 94%, transparent)`, borderBottom: `1px solid ${fv("rule")}` }}
+    >
+      <span className="flex items-center gap-2.5">
         <button type="button" onClick={back} aria-label="Back" className="tap w-11 h-11 flex items-center justify-center">
-          <ArrowLeft size={22} strokeWidth={2} style={{ color: fv("text") }} />
+          <ArrowLeft size={19} strokeWidth={2} style={{ color: fv("text") }} />
         </button>
-        <span className="text-[18px] font-extrabold">Post</span>
+        <span className="text-[17px] font-extrabold">Post</span>
       </span>
       {thread && !hiddenByMode && !recoveryPending && thread.status !== "removed" && (authors.get(thread.id)?.isMine ?? false) ? (
         <button
@@ -317,31 +322,35 @@ export function ForumPostView({
         <RemovedNote kind="post" />
       ) : (
         <div className="flex flex-col gap-3">
-          {/* MO1.3.3: the header card in the category's colour. */}
+          {/* MO1.3.3 #2: the header card in the category's colour, radius 20,
+              padding 16 16 18. */}
           <div
-            className="relative overflow-hidden rounded-[22px] px-4 py-4 flex flex-col gap-3"
+            className="relative overflow-hidden rounded-[20px] px-4 pt-4 pb-[18px] flex flex-col gap-3"
             style={{ background: postColours.strong, color: postColours.onStrong }}
           >
             <span aria-hidden className="absolute -right-10 -top-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
             <div className="relative flex items-center gap-3">
+              {/* MO1.3.3: a 52 pt avatar, measured from the frame (2x, 106 px
+                  across), as a 3 pt white ring round 46. */}
               <span className="rounded-full p-[3px] shrink-0" style={{ background: "#FFFFFF" }}>
-                <AuthorInitial author={author} identity={thread.identity} size={40} />
+                <AuthorInitial author={author} identity={thread.identity} size={46} />
               </span>
               <div className="min-w-0 flex flex-col gap-1">
                 <span className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {author.professionalId ? (
-                    <Link to={`/app/professionals/${author.professionalId}`} className="text-[16px] font-bold no-underline [overflow-wrap:anywhere]" style={{ color: postColours.onStrong }}>
+                    <Link to={`/app/professionals/${author.professionalId}`} className="text-[15.5px] font-extrabold no-underline [overflow-wrap:anywhere]" style={{ color: postColours.onStrong }}>
                       {author.label}
                     </Link>
                   ) : (
-                    <span className="text-[16px] font-bold [overflow-wrap:anywhere]">{author.label}</span>
+                    <span className="text-[15.5px] font-extrabold [overflow-wrap:anywhere]">{author.label}</span>
                   )}
                   {author.professionalId && <ProfessionalBadge />}
                 </span>
                 <span className="flex items-center gap-2 flex-wrap">
+                  {/* MO1.3.3 #2: the tag 10.5/800 in the category colour on white. */}
                   {category && (
                     <span
-                      className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-bold"
+                      className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full text-[10.5px] font-extrabold"
                       style={{ background: "#FFFFFF", color: categoryColours(thread.categoryKey, false).strong }}
                     >
                       <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: categoryColours(thread.categoryKey, false).strong }} />
@@ -373,12 +382,12 @@ export function ForumPostView({
               {photoUrl && <img src={photoUrl} alt="Photo attached to the post" className="w-full max-h-[420px] object-cover" />}
             </div>
           )}
-          <p className="m-0 text-[12px]" style={{ color: fv("muted") }}>
+          <p className="m-0 text-[13px]" style={{ color: fv("muted") }}>
             {postTime(thread.createdAt)}
           </p>
           {thread.status === "published" && (
             <>
-              <div className="flex gap-5 py-3 text-[14px]" style={{ borderTop: `1px solid ${fv("rule")}`, borderBottom: `1px solid ${fv("rule")}`, color: fv("muted") }}>
+              <div className="flex gap-[18px] py-3 text-[14px]" style={{ borderTop: `1px solid ${fv("rule")}`, borderBottom: `1px solid ${fv("rule")}`, color: fv("muted") }}>
                 <span>
                   <strong className="font-extrabold" style={{ color: fv("text") }}>{thread.reactionCount}</strong>{" "}
                   {thread.reactionCount === 1 ? "Like" : "Likes"}
@@ -406,7 +415,7 @@ export function ForumPostView({
                   aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
                   className="tap flex-1 h-11 flex items-center justify-center"
                 >
-                  <HeartIcon filled={liked} color={fv("accent")} />
+                  <HeartIcon filled={liked} color={fv("accent")} size={20} />
                 </button>
               </div>
             </>
@@ -450,7 +459,9 @@ export function ForumPostView({
           style={{ borderTop: `1px solid ${fv("rule")}`, background: fv("card") }}
         >
           {!isProfessional && nickname && (
-            <span className="flex items-center gap-2 text-xs" style={{ color: fv("muted") }}>
+            // MO1.3.3 #9: "Reply as" 11.5/400, gap 6, and a 26 pt chip at 12/700
+            // (12 measured from the frame).
+            <span className="flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
               Reply as
               {/* MO1.3.3: a chip that opens the choice (was a native select). */}
               <button
@@ -459,11 +470,11 @@ export function ForumPostView({
                 onClick={() => setReplyMenu(true)}
                 aria-haspopup="menu"
                 aria-label={`Reply as ${replyAs === "nickname" ? nickname : firstName}`}
-                className="tap h-8 rounded-full px-3 flex items-center gap-1 text-[13px] font-bold"
+                className="tap h-[26px] rounded-full px-3 flex items-center gap-1 text-[12px] font-bold"
                 style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
               >
                 {replyAs === "nickname" ? nickname : firstName}
-                <ChevronDown size={14} />
+                <ChevronDown size={12} />
               </button>
             </span>
           )}
@@ -473,13 +484,14 @@ export function ForumPostView({
             </p>
           )}
           <div className="flex gap-2 items-center">
+            {/* MO1.3.3 #10: 49 tall, padding 5 5 5 6, gap 8; the letter 13/700, Send 15. */}
             <label
-              className="grow min-w-0 h-12 rounded-full flex items-center gap-2.5 pl-1.5 pr-1.5"
+              className="grow min-w-0 h-[49px] rounded-full flex items-center gap-2 py-[5px] pl-1.5 pr-[5px]"
               style={{ border: `1px solid ${fv("border")}` }}
             >
               <span
                 aria-hidden
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
                 style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
               >
                 {((replyAs === "nickname" && nickname ? nickname : firstName) || "?").charAt(0).toUpperCase()}
@@ -501,7 +513,7 @@ export function ForumPostView({
                 className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50"
                 style={{ background: fv("accent"), color: fv("on-accent") }}
               >
-                <Send size={16} />
+                <Send size={15} />
               </button>
             </label>
           </div>
@@ -628,7 +640,8 @@ function ReplyRow({
       <div className="flex flex-col gap-1 min-w-0 grow">
         <span className="flex gap-1.5 items-center flex-wrap">
           <AuthorName author={author} size={15} />
-          <span className="text-xs" style={{ color: fv("muted") }}>
+          {/* MO1.3.3 #7: age 12.5/400. */}
+          <span className="text-[12.5px]" style={{ color: fv("muted") }}>
             · {forumAge(reply.createdAt)}
             {reply.editedAt ? " · edited" : ""}
           </span>
@@ -649,7 +662,7 @@ function ReplyRow({
         </span>
         {reply.status === "held" && <HeldNote />}
         {editor ?? (
-          <span className="text-[15px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+          <span className="text-[14px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
             {reply.body}
           </span>
         )}
@@ -657,7 +670,7 @@ function ReplyRow({
           <span className="flex items-center gap-5 mt-1 text-[13px]" style={{ color: fv("muted") }}>
             {onReply && (
               <button type="button" onClick={onReply} aria-label="Reply" className="tap -my-2 py-2">
-                <MessageCircle size={16} strokeWidth={1.75} />
+                <MessageCircle size={15} strokeWidth={1.75} />
               </button>
             )}
             <button
@@ -667,7 +680,7 @@ function ReplyRow({
               aria-label={`${liked ? "Unlike" : "Like"} reply, ${reply.reactionCount} ${reply.reactionCount === 1 ? "like" : "likes"}`}
               className="tap flex items-center gap-1.5 -my-2 py-2"
             >
-              <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} />
+              <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} size={15} />
               {reply.reactionCount > 0 && <span className="tabular-nums">{reply.reactionCount}</span>}
             </button>
           </span>

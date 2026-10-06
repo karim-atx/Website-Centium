@@ -1,4 +1,5 @@
 import { liftTo, tintOn } from "../../data/folderColors";
+import { fv } from "./forumColor";
 
 // Mobile v5.1 MO1.3 / MO1.3.3: each forum category has a colour (A20). Light
 // mode uses the handover's values as drawn: `label` is the category pill's
@@ -16,6 +17,21 @@ const CATEGORY: Record<string, { label: string; strong: string }> = {
   motivation: { label: "#7A3A60", strong: "#8E4670" },
   general: { label: "#2E5E8E", strong: "#3C78B5" },
 };
+
+/**
+ * The category dot in the New post dropdown (MO1.3.2 / MO1.3.2.1 §9): fixed
+ * hexes in every theme and mode (D9), except Workouts, drawn #7D6BB5, which
+ * swaps to the theme primary (the forum accent).
+ */
+const DOT: Record<string, string> = {
+  general: "#4C8FD1",
+  nutrition: "#D9A441",
+  workouts: fv("accent"),
+  progress: "#3F9165",
+  motivation: "#9C4F7C",
+};
+
+export const categoryDot = (key: string): string => DOT[key] ?? DOT.general;
 
 /** The design's chip order: All · Nutrition · Workouts · Progress · Motivation. */
 export const CATEGORY_ORDER = ["nutrition", "workouts", "progress", "motivation", "general"];

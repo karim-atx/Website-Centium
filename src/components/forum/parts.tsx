@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import clsx from "clsx";
+import { Heart, MessageCircle } from "lucide-react";
 import type { Author, Identity } from "../../services/forum";
-import { initialOf } from "../../services/forum/rules";
+import { initialOf, initialsOf } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { textPx } from "../../theme/textSize";
 
@@ -23,27 +24,63 @@ export function AuthorInitial({
 }: {
   author: Author;
   identity: Identity;
-  size: 32 | 36 | 40;
+  size: 32 | 36 | 40 | 46;
 }) {
   const tone = author.professionalId
     ? { bg: fv("teal-bg"), ink: fv("teal-ink") }
     : identity === "nickname"
     ? { bg: fv("amber-bg"), ink: fv("amber-ink") }
     : { bg: fv("rules-bg"), ink: fv("rules-ink") };
+  // MO1.3: a nickname is one letter at 14/800 ("P"); a name is two letters at
+  // 14/700 ("ES" for Elie S.).
+  const nick = identity === "nickname";
   return (
     <div
       aria-hidden="true"
-      className="flex items-center justify-center shrink-0 font-extrabold"
-      style={{ width: size, height: size, borderRadius: size / 2, background: tone.bg, color: tone.ink }}
+      className="flex items-center justify-center shrink-0"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        background: tone.bg,
+        color: tone.ink,
+        fontSize: textPx(14),
+        fontWeight: nick ? 800 : 700,
+      }}
     >
-      {initialOf(author.label)}
+      {nick ? initialOf(author.label) : initialsOf(author.label)}
     </div>
+  );
+}
+
+const WHITE_MARK_LAYER: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background: "#FFFFFF",
+  maskSize: "100% 100%",
+  WebkitMaskSize: "100% 100%",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+};
+
+/**
+ * The Centium C and leaf in white, in every theme (MO1.3 rules card). Drawn
+ * the way ThemedMark draws its tinted mark: the brand's own C and leaf masks
+ * (public/centium-logo-c.png and -leaf.png, one 648 x 701 canvas) filled
+ * with a solid colour, at the canvas's own 648:701 proportions.
+ */
+export function WhiteMark({ width }: { width: number }) {
+  return (
+    <span aria-hidden="true" className="relative inline-block shrink-0" style={{ width, height: (width * 701) / 648 }}>
+      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-c.png)", WebkitMaskImage: "url(/centium-logo-c.png)" }} />
+      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-leaf.png)", WebkitMaskImage: "url(/centium-logo-leaf.png)" }} />
+    </span>
   );
 }
 
 export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
       <path d="M9 12l2 2 4-4" />
     </svg>
@@ -53,7 +90,7 @@ export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: st
 export function ProfessionalBadge() {
   return (
     <span
-      className="inline-flex items-center gap-[3px] h-5 px-[7px] rounded-full text-[11px] font-extrabold shrink-0"
+      className="inline-flex items-center gap-[3px] h-5 px-[7px] rounded-full text-[10.5px] font-extrabold shrink-0"
       style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
     >
       <ShieldCheckIcon color={fv("teal-ink")} />
@@ -91,20 +128,14 @@ export function AuthorName({ author, size }: { author: Author; size: 13 | 14 | 1
   );
 }
 
-export function HeartIcon({ filled, color }: { filled?: boolean; color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-    </svg>
-  );
+/** Lucide Heart, filled when liked. MO1.3 cards draw it 14/1.75, MO1.3.3's action row 20/1.75 and replies 15/1.75. */
+export function HeartIcon({ filled, color, size }: { filled?: boolean; color: string; size: 14 | 15 | 20 }) {
+  return <Heart size={size} strokeWidth={1.75} color={color} fill={filled ? color : "none"} aria-hidden="true" />;
 }
 
-export function ReplyIcon({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 5h16v11H9l-5 4z" />
-    </svg>
-  );
+/** Lucide MessageCircle beside a reply count (MO1.3 cards: 14/1.75). */
+export function ReplyIcon({ color, size }: { color: string; size: 14 | 15 }) {
+  return <MessageCircle size={size} strokeWidth={1.75} color={color} aria-hidden="true" />;
 }
 
 /** "Post removed by a moderator" / "Reply removed by a moderator" (design screens 2 and 5). */

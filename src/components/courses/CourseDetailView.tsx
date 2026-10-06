@@ -37,9 +37,11 @@ import {
 } from "../../services/courses/rules";
 import { ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
-import { CheckIcon, CoverPill, Instructor, StarIcon } from "./courseParts";
+import { Check } from "lucide-react";
+import { CoverPill, Instructor, StarIcon } from "./courseParts";
 import { coverBackground, onCover } from "./courseCover";
 import { useIsDark } from "../../hooks/useIsDark";
+import { PinnedCta } from "../ui/PinnedCta";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -197,7 +199,8 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
   return (
     <div className="flex flex-col -mx-4" style={{ color: fv("text") }}>
-      <div className="h-[180px] flex flex-col justify-between p-3" style={{ background: coverBackground(course.coverColour, dark) }}>
+      {/* MO1.3.5 #1: the hero, 390 × 176. */}
+      <div className="h-[176px] flex flex-col justify-between p-3" style={{ background: coverBackground(course.coverColour, dark) }}>
         {back}
         <span className="self-start">
           <CoverPill>{coursePill(course.level, modules.length, course.weeklyHours)}</CoverPill>
@@ -206,14 +209,8 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
       <div className="p-4 flex flex-col gap-3">
         <h1 className="m-0 text-[22px] font-extrabold leading-[1.25] [overflow-wrap:anywhere] [text-wrap:balance]">{course.title}</h1>
-        <span className="flex gap-1.5 items-center text-[13px]">
-          <span
-            className="w-7 h-7 rounded-full inline-flex items-center justify-center font-extrabold shrink-0"
-            style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
-            aria-hidden="true"
-          >
-            {authorName.charAt(0).toUpperCase()}
-          </span>
+        {/* MO1.3.5 #3: "By Rami" 13/400 muted and the badge, gap 6, no avatar. */}
+        <span className="flex items-center text-[13px] font-normal" style={{ color: fv("muted") }}>
           <Instructor authorId={course.authorId} name={authorName} link />
         </span>
         <span className="flex gap-1.5 items-center flex-wrap text-[13px]" style={{ color: fv("muted") }}>
@@ -221,7 +218,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             "No ratings yet"
           ) : (
             <>
-              <StarIcon /> {stats.averageRating.toFixed(1)} · {stats.ratings} {stats.ratings === 1 ? "rating" : "ratings"}
+              <StarIcon size={12} /> {stats.averageRating.toFixed(1)} · {stats.ratings} {stats.ratings === 1 ? "rating" : "ratings"}
             </>
           )}
           {/* Hidden below three, like the card's: "1 learner" tells that one
@@ -234,13 +231,20 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           )}
         </span>
 
+        {/* MO1.3.5 #5: radius 18, padding 14, gap 10; each point's Check
+            12/2.4 sits in a 20 pt tile in the primary tint (measured from the
+            frame, 2x: 40 px), 10 from the text. */}
         {course.learnPoints.length > 0 && (
-          <div className="rounded-2xl p-[14px] flex flex-col gap-2" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+          <div className="rounded-[18px] p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
             <span className="text-sm font-extrabold">What you'll learn</span>
             {course.learnPoints.map((p) => (
-              <span key={p} className="flex gap-2 text-[13px] leading-[1.5] [overflow-wrap:anywhere]">
-                <span className="pt-[3px]">
-                  <CheckIcon />
+              <span key={p} className="flex gap-2.5 text-[13px] leading-[1.5] [overflow-wrap:anywhere]">
+                <span
+                  aria-hidden="true"
+                  className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                  style={{ background: fv("rules-bg"), color: fv("accent") }}
+                >
+                  <Check size={12} strokeWidth={2.4} />
                 </span>
                 {p}
               </span>
@@ -248,41 +252,46 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           </div>
         )}
 
+        {/* MO1.3.5 #6: the syllabus as one card (radius 18, as the learn
+            card, measured) with hairline-divided rows, "N more weeks / See
+            all" the last row. */}
         {modules.length > 0 && (
           <div className="flex flex-col gap-2">
             <span className="text-sm font-extrabold">Syllabus</span>
-            {weeksShown.map((m, i) => {
-              const contents = weekContents(lessons.filter((l) => l.moduleId === m.id).map((l) => l.kind));
-              const mins = minutesByWeek(m.id);
-              return (
-                <div
-                  key={m.id}
-                  className="rounded-[14px] px-[14px] py-3 flex justify-between gap-3 text-[13px]"
-                  style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}
-                >
-                  <span className="min-w-0 [overflow-wrap:anywhere]">
-                    <strong>Week {i + 1}</strong> · {m.title}
-                    {contents ? `: ${contents}` : ""}
-                  </span>
-                  {mins && (
-                    <span className="shrink-0" style={{ color: fv("muted") }}>
-                      {mins}
+            <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+              {weeksShown.map((m, i) => {
+                const contents = weekContents(lessons.filter((l) => l.moduleId === m.id).map((l) => l.kind));
+                const mins = minutesByWeek(m.id);
+                return (
+                  <div
+                    key={m.id}
+                    className="px-[14px] py-3 flex justify-between gap-3 text-[13px]"
+                    style={i > 0 ? { borderTop: `1px solid ${fv("rule")}` } : undefined}
+                  >
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      <strong>Week {i + 1}</strong> · {m.title}
+                      {contents ? `: ${contents}` : ""}
                     </span>
-                  )}
+                    {mins && (
+                      <span className="shrink-0" style={{ color: fv("muted") }}>
+                        {mins}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {modules.length > 2 && (
+                <div
+                  className="px-[14px] py-1.5 flex justify-between items-center text-[13px]"
+                  style={{ borderTop: `1px solid ${fv("rule")}`, color: fv("muted") }}
+                >
+                  <span>{allWeeks ? `All ${modules.length} weeks` : `${modules.length - 2} more ${modules.length - 2 === 1 ? "week" : "weeks"}`}</span>
+                  <button type="button" onClick={() => setAllWeeks(!allWeeks)} className="tap font-bold py-2" style={{ color: fv("link") }}>
+                    {allWeeks ? "Show fewer" : "See all"}
+                  </button>
                 </div>
-              );
-            })}
-            {modules.length > 2 && (
-              <div
-                className="rounded-[14px] px-[14px] py-1.5 flex justify-between items-center text-[13px]"
-                style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("muted") }}
-              >
-                <span>{allWeeks ? `All ${modules.length} weeks` : `${modules.length - 2} more ${modules.length - 2 === 1 ? "week" : "weeks"}`}</span>
-                <button type="button" onClick={() => setAllWeeks(!allWeeks)} className="tap font-bold py-2" style={{ color: fv("link") }}>
-                  {allWeeks ? "Show fewer" : "See all"}
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
@@ -312,28 +321,18 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           </p>
         )}
 
-        {isAuthor ? (
-          <PrimaryButton onClick={goNext}>Open your course</PrimaryButton>
-        ) : !paidCourse || hasPaid ? (
-          <PrimaryButton onClick={() => void start("free")} busy={busy === "free"}>
-            {enrolment ? "Continue the course" : "Start the course"}
-          </PrimaryButton>
-        ) : (
-          <>
-            <PrimaryButton onClick={() => void start("paid")} busy={busy === "paid"}>
-              Get the full course
-            </PrimaryButton>
-            {/* MO1.3.5: a centred text link, no longer an outlined button. */}
-            <button
-              type="button"
-              onClick={() => void start("free")}
-              disabled={!!busy}
-              className="tap self-center h-11 px-3 text-[13px] font-bold disabled:opacity-60"
-              style={{ color: fv("link") }}
-            >
-              {busy === "free" ? "Starting…" : enrolment ? "Continue watching free" : "Start watching free"}
-            </button>
-          </>
+        {!isAuthor && paidCourse && !hasPaid && (
+          // MO1.3.5 #8: a centred text link under the choice; the main CTA is
+          // pinned (below).
+          <button
+            type="button"
+            onClick={() => void start("free")}
+            disabled={!!busy}
+            className="tap self-center h-11 px-3 text-[13px] font-bold disabled:opacity-60"
+            style={{ color: fv("link") }}
+          >
+            {busy === "free" ? "Starting…" : enrolment ? "Continue watching free" : "Start watching free"}
+          </button>
         )}
 
         {hasPaid && !isAuthor && enrolment && (
@@ -356,24 +355,32 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           Reviewed by Centium before publishing. Courses share general guidance, not personal medical advice. A certificate of
           completion is not a professional qualification.
         </span>
+        {/* The page's own padding covers 112 of the 172 a pinned CTA needs. */}
+        <div aria-hidden style={{ height: 60 }} />
       </div>
+
+      {/* MO1.3.5 #10: the main CTA pinned above the navbar after the
+          disclaimer, at the page size (48 / r14, C-01). It keeps the forum's
+          accent, the colour of the inline button it replaces. */}
+      <PinnedCta
+        primary={
+          isAuthor
+            ? { label: "Open your course", onClick: goNext, className: CTA_COLOURS }
+            : !paidCourse || hasPaid
+            ? {
+                label: enrolment ? "Continue the course" : "Start the course",
+                loading: busy === "free",
+                onClick: () => void start("free"),
+                className: CTA_COLOURS,
+              }
+            : { label: "Get the full course", loading: busy === "paid", onClick: () => void start("paid"), className: CTA_COLOURS }
+        }
+      />
     </div>
   );
 }
 
-function PrimaryButton({ onClick, busy, children }: { onClick: () => void; busy?: boolean; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={busy}
-      className="tap h-[54px] rounded-2xl text-base font-extrabold disabled:opacity-60 px-3"
-      style={{ background: fv("accent"), color: fv("on-accent") }}
-    >
-      {busy ? "Starting…" : children}
-    </button>
-  );
-}
+const CTA_COLOURS = "!bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]";
 
 /**
  * The certificate, and the switch that makes it public.

@@ -172,7 +172,7 @@ export default function Community({ compose = false }: { compose?: boolean }) {
           <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
             <Heading />
             {/* MO1.3 #2: a 56 pt segmented control (44 pt tabs), in the
-                forum's own colours. */}
+                forum's own colours; labels 15/700 in both states. */}
             <div className="flex gap-[5px] rounded-2xl p-1.5" style={{ background: fv("track") }} role="tablist" aria-label="Community">
               {(["forum", "courses"] as const).map((t) => (
                 <button
@@ -184,8 +184,8 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                   className="tap grow basis-0 h-11 rounded-xl text-[15px]"
                   style={
                     tab === t
-                      ? { background: fv("track-active"), color: fv("text"), fontWeight: 800 }
-                      : { background: "transparent", color: fv("muted"), fontWeight: 600 }
+                      ? { background: fv("track-active"), color: fv("text"), fontWeight: 700 }
+                      : { background: "transparent", color: fv("muted"), fontWeight: 700 }
                   }
                 >
                   {t === "forum" ? "Forum" : "Courses"}

@@ -17,7 +17,9 @@ import {
   type Lesson,
 } from "../../services/courses";
 import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } from "../../services/courses/rules";
-import { ForumChip, ForumPlaceholder } from "../forum/parts";
+import { Search } from "lucide-react";
+import { ForumPlaceholder } from "../forum/parts";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
 import { coverBackground } from "./courseCover";
@@ -64,6 +66,10 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
 
 /** MO1.3.1's filter order; anything else sorts last. */
 const COURSE_ORDER = ["workouts", "nutrition", "progress", "motivation", "general"];
+const order = (key: string) => {
+  const i = COURSE_ORDER.indexOf(key);
+  return i < 0 ? COURSE_ORDER.length : i;
+};
 
 export function CoursesCatalogue({ userId }: { userId: string }) {
   const dark = useIsDark();
@@ -137,14 +143,12 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-col gap-3 pb-6" style={{ color: fv("text") }}>
+      {/* MO1.3.1 #3: 44 tall, padding 0 14, gap 8, Search 16/1.75. */}
       <label
-        className="flex items-center gap-2 h-11 rounded-[14px] px-3"
+        className="flex items-center gap-2 h-11 rounded-[14px] px-[14px]"
         style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={fv("muted")} strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
+        <Search size={16} strokeWidth={1.75} color={fv("muted")} aria-hidden="true" className="shrink-0" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -156,31 +160,32 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
       </label>
 
       {data ? (
-        // MO1.3.1: the filters as one strip running off the right edge, in
-        // the frame's order (All · Workouts · Nutrition · Progress · Motivation).
-        <div
-          className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
-          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
-          role="group"
-          aria-label="Course categories"
-        >
-          <ForumChip inStrip active={filter === null} onClick={() => setFilter(null)}>
-            All
-          </ForumChip>
-          {[...data.categories]
-            .sort((a, b) => COURSE_ORDER.indexOf(a.key) - COURSE_ORDER.indexOf(b.key))
-            .map((c) => (
-              <ForumChip inStrip key={c.key} active={filter === c.key} onClick={() => setFilter(c.key)}>
-                {c.name}
-              </ForumChip>
-            ))}
+        // MO1.3.1 #4: FO3 sub-tabs, a 40 pt track (radius 12, padding 4, gap 4)
+        // of 32 pt tabs at 12px, active 700 and idle 600, in the frame's order
+        // (All · Workouts · Nutrition · Progress · Motivation). Light mode keeps
+        // the forum's track and accent (decision 19).
+        <div role="group" aria-label="Course categories">
+          <SegmentedTabs
+            scroll
+            items={[
+              { key: "", label: "All" },
+              ...[...data.categories]
+                .sort((a, b) => order(a.key) - order(b.key))
+                .map((c) => ({ key: c.key, label: c.name })),
+            ]}
+            activeKey={filter ?? ""}
+            onChange={(k) => setFilter(k || null)}
+            labelSize={12}
+            tabHeight={32}
+            idleWeight={600}
+            scrollTabPadding="0 14px"
+            scrollMinWidth={0}
+            trackStyle={{ padding: 4, gap: 4, borderRadius: 12, background: fv("track") }}
+            light={{ activeFill: fv("accent"), activeInk: fv("on-accent"), idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" }}
+          />
         </div>
       ) : (
-        <div className="flex gap-1.5" aria-hidden="true">
-          {[44, 86, 92, 84].map((w, i) => (
-            <div key={i} className="h-[34px] rounded-full animate-pulse shrink-0" style={{ width: w, background: fv("track") }} />
-          ))}
-        </div>
+        <div className="h-10 rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
       )}
 
       {!data ? (
@@ -210,7 +215,7 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                   <div className="h-1.5 rounded-[3px]" style={{ background: fv("track") }} aria-hidden="true">
                     <div className="h-1.5 rounded-[3px]" style={{ width: `${percent}%`, background: fv("accent") }} />
                   </div>
-                  <span className="text-xs" style={{ color: fv("muted") }}>
+                  <span className="text-xs font-bold" style={{ color: fv("muted") }}>
                     {percent}% complete
                   </span>
                 </Link>
@@ -232,7 +237,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                   className="rounded-[20px] overflow-hidden flex flex-col no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
-                  <div className="h-[104px] flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
+                  {/* MO1.3.1 #7: a 96 pt cover (measured from the frame, 2x: 191 px of the 188 pt card). */}
+                  <div className="h-24 flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
                     <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
                   </div>
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">

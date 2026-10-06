@@ -97,9 +97,11 @@ export function NicknameScreen({
         </p>
         <label className="flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
           Nickname
+          {/* MO1.3.4 #5: 50 tall with a 1.5 pt accent border (measured from
+              the frame, 2x: 100 px with a 3 px border). */}
           <span
             className="h-[50px] rounded-[14px] px-[14px] flex items-center gap-1"
-            style={{ border: `2px solid ${fv("accent")}`, background: fv("card") }}
+            style={{ border: `1.5px solid ${fv("accent")}`, background: fv("card") }}
           >
             <span aria-hidden className="text-base font-bold" style={{ color: fv("muted") }}>@</span>
           <input

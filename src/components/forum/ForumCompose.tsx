@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
 import { FORUM_PHOTO_ACCEPT, FORUM_PHOTOS_ENABLED, prepareForumPhoto } from "../../services/forum/photo";
@@ -8,8 +8,7 @@ import { fv } from "./forumColor";
 import { BottomSheet } from "../ui/BottomSheet";
 import { CtaButton } from "../ui/PinnedCta";
 import { PopupMenu } from "../ui/PopupMenu";
-import { useIsDark } from "../../hooks/useIsDark";
-import { categoryColours, orderCategories } from "./categoryColour";
+import { categoryDot, orderCategories } from "./categoryColour";
 
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
@@ -46,7 +45,6 @@ export function ForumCompose({
   recoveryPending: boolean;
 }) {
   const navigate = useNavigate();
-  const dark = useIsDark();
   // General first (the default), then the design's order (A20, A22).
   const chips = useMemo(() => {
     const all = orderCategories(composeChips(categories, recoveryOn));
@@ -146,11 +144,12 @@ export function ForumCompose({
           className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
           style={on ? { background: fv("accent"), color: fv("on-accent") } : { border: `1.5px solid ${fv("border")}`, background: fv("card") }}
         >
-          {on && <Check size={12} strokeWidth={3} />}
+          {on && <Check size={11} strokeWidth={3} />}
         </span>
+        {/* MO1.3.2 #12: name 13.5/700, hint 11/400, Check 11/3. */}
         <span className="min-w-0 flex flex-col gap-0.5">
-          <span className="text-sm font-extrabold truncate">{name}</span>
-          <span className="text-xs" style={{ color: fv("muted") }}>
+          <span className="text-[13.5px] font-bold truncate">{name}</span>
+          <span className="text-[11px] font-normal" style={{ color: fv("muted") }}>
             {hint}
           </span>
         </span>
@@ -182,7 +181,7 @@ export function ForumCompose({
               {choice("nickname", nickname, "Your nickname")}
               {choice("real_name", firstName, "Your first name")}
             </div>
-            <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
+            <span className="text-[11px] font-normal leading-[1.5]" style={{ color: fv("muted") }}>
               Nobody can see who is behind your nickname. You can't change this after posting.
             </span>
           </fieldset>
@@ -193,23 +192,29 @@ export function ForumCompose({
             <span className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
               Category
             </span>
+            {/* MO1.3.2: Category and Title 44 tall, Post 198 (measured from
+                the frame, 2x). */}
             {recoveryPending ? (
-              <div className="h-[46px] rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
+              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
             ) : (
               <button
                 ref={setAnchor}
                 type="button"
                 onClick={() => setMenuOpen(true)}
                 aria-haspopup="menu"
+                aria-expanded={menuOpen}
                 aria-label={`Category: ${chosenCat?.name ?? "none"}`}
-                className="tap h-[46px] rounded-xl px-3 flex items-center gap-2 text-sm font-semibold"
+                className="tap h-[44px] rounded-xl px-3 flex items-center gap-2 text-sm font-semibold"
                 style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
               >
-                {chosenCat && (
-                  <span aria-hidden className="w-2 h-2 rounded-full shrink-0" style={{ background: categoryColours(chosenCat.key, dark).ink }} />
-                )}
+                {chosenCat && <span aria-hidden className="w-2 h-2 rounded-full shrink-0" style={{ background: categoryDot(chosenCat.key) }} />}
                 <span className="flex-1 min-w-0 text-left truncate">{chosenCat?.name ?? ""}</span>
-                <ChevronDown size={15} className="shrink-0" style={{ color: fv("muted") }} />
+                {/* MO1.3.2.1: ChevronUp 15 while the menu is open. */}
+                {menuOpen ? (
+                  <ChevronUp size={15} className="shrink-0" style={{ color: fv("muted") }} />
+                ) : (
+                  <ChevronDown size={15} className="shrink-0" style={{ color: fv("muted") }} />
+                )}
               </button>
             )}
           </div>
@@ -220,7 +225,7 @@ export function ForumCompose({
               onChange={(e) => setTitle(e.target.value)}
               maxLength={140}
               placeholder="What's on your mind?"
-              className="h-[46px] rounded-xl px-3 text-sm font-semibold outline-none"
+              className="h-[44px] rounded-xl px-3 text-sm font-semibold outline-none"
               style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
             />
           </label>
@@ -232,7 +237,7 @@ export function ForumCompose({
             onChange={(e) => setBody(e.target.value)}
             maxLength={8000}
             placeholder="Share a win, ask a question, or pass on a tip…"
-            className="h-[160px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
+            className="h-[198px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
             style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
           />
         </label>
@@ -288,16 +293,20 @@ export function ForumCompose({
         </div>
       </div>
 
-      {/* MO1.3.2.1: the category dropdown. */}
+      {/* MO1.3.2.1: the category dropdown, plain rows on a 178 pt card, over
+          the sheet without a second dim. */}
       <PopupMenu<string>
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         anchor={anchor}
         align="left"
+        variant="plain"
+        backdrop={false}
+        width={164}
         options={chips.map((c) => ({
           value: c.key,
           label: c.name,
-          icon: <span className="block w-2 h-2 rounded-full" style={{ background: categoryColours(c.key, dark).ink }} />,
+          icon: <span className="block w-2 h-2 rounded-full" style={{ background: categoryDot(c.key) }} />,
         }))}
         selected={chosen}
         onSelect={(k) => setCategory(k)}

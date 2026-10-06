@@ -15,8 +15,6 @@ import {
 import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { useIsDark } from "../../hooks/useIsDark";
-import { useApp } from "../../context/AppContext";
-import { ThemedMark } from "../ui/ThemedMark";
 import { categoryColours, orderCategories, type CategoryColours } from "./categoryColour";
 import { WarningNotice } from "./WarningNotice";
 import {
@@ -28,6 +26,7 @@ import {
   HeldNote,
   RemovedNote,
   ReplyIcon,
+  WhiteMark,
 } from "./parts";
 
 // Design screen 1: the forum list, restyled to mobile v5.1 MO1.3.
@@ -72,7 +71,6 @@ export function ForumHome({
   const [likes, setLikes] = useState<Set<string>>(new Set());
   const seq = useRef(0);
   const dark = useIsDark();
-  const { colorTheme } = useApp();
 
   const byKey = useMemo(() => new Map(categories.map((c) => [c.key, c])), [categories]);
   // The design's order (A20): All · Nutrition · Workouts · Progress · Motivation.
@@ -157,11 +155,11 @@ export function ForumHome({
   const feed = shown.filter((t) => t.status !== "held");
 
   // MO1.3 #11: a round 56 pt button with a Plus (was an extended "New post"
-  // pill); the label moves to aria-label.
+  // pill); the accessible name is MO1.3 §10's Plus = "Add".
   const fab = (
     <Link
       to="/app/forum/new"
-      aria-label="New post"
+      aria-label="Add"
       className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline shadow-fab bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:right-8"
       style={{ background: fv("accent"), color: fv("on-accent") }}
     >
@@ -211,16 +209,20 @@ export function ForumHome({
         </div>
       )}
 
-      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. */}
+      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. The
+          mark is white in every theme, on a tile in the theme accent so it
+          reads on the light card as on the dark one. */}
       <div
-        className="flex gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
+        className="flex items-start gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
         style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgb(var(--th-aea1dc) / 0.35)" }}
       >
-        {colorTheme === "centium" ? (
-          <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
-        ) : (
-          <ThemedMark width={22} height={(22 * 713) / 687} className="shrink-0 mt-px" />
-        )}
+        <span
+          aria-hidden="true"
+          className="shrink-0 w-8 h-8 rounded-[10px] flex items-center justify-center"
+          style={{ background: fv("accent") }}
+        >
+          <WhiteMark width={18} />
+        </span>
         <span>
           <strong className="font-extrabold">Community rules:</strong> Be kind, share experience rather than medical
           advice, and report anything that worries you. Posts here aren't a substitute for a doctor.
@@ -304,11 +306,11 @@ export function ForumHome({
   );
 }
 
-/** "Pinned · 40d" or "38d ago" (MO1.3); other ages ("Yesterday", a date) as they are. */
+/** "Pinned · 40d" or "38d ago" (MO1.3); "Just now" and "Yesterday" as they are. */
 function metaLine(thread: ForumThread): string {
   const age = forumAge(thread.createdAt);
   if (thread.pinned) return `Pinned · ${age}`;
-  return /^d+[mhd]$/.test(age) ? `${age} ago` : age;
+  return /^\d+[mhd]$/.test(age) ? `${age} ago` : age;
 }
 
 function ThreadCard({
@@ -386,10 +388,10 @@ function ThreadCard({
           aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
           className="tap flex gap-[5px] items-center -my-2 py-2 pr-1 font-semibold"
         >
-          <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} /> {thread.reactionCount}
+          <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} size={14} /> {thread.reactionCount}
         </button>
         <span className="flex gap-[5px] items-center font-semibold">
-          <ReplyIcon color={fv("muted")} /> {replies}
+          <ReplyIcon color={fv("muted")} size={14} /> {replies}
         </span>
       </div>
     </div>

@@ -45,18 +45,20 @@ export function CoverPill({ children }: { children: React.ReactNode }) {
 /**
  * The instructor: first name and the Professional badge. Every published
  * course's author is a verified professional (checked again at publication),
- * so the badge always applies. On the course page the name links to their
- * directory page; on a card the whole card is the link, so it does not.
+ * so the badge always applies. On the course page ("By Rami") the name links
+ * to their directory page; on a card the whole card is the link, so it does not.
  */
 export function Instructor({ authorId, name, link }: { authorId: string | null; name: string; link: boolean }) {
   return (
     <span className="flex gap-1.5 items-center flex-wrap min-w-0">
       {link && authorId ? (
-        <Link to={`/app/professionals/${authorId}`} className="font-bold no-underline" style={{ color: fv("text") }}>
-          {name}
+        // MO1.3.5 #3: "By Rami" at 13/400 in the muted ink; the name still
+        // opens their directory page.
+        <Link to={`/app/professionals/${authorId}`} className="no-underline" style={{ color: "inherit" }}>
+          By {name}
         </Link>
       ) : (
-        <span>{name}</span>
+        <span>{link ? `By ${name}` : name}</span>
       )}
       <ProfessionalBadge />
     </span>
@@ -71,7 +73,7 @@ export function RatingShort({ average, count }: { average: number | null; count:
         "New"
       ) : (
         <>
-          <StarIcon /> {average.toFixed(1)} ({count})
+          <StarIcon size={12} /> {average.toFixed(1)} ({count})
         </>
       )}
     </span>

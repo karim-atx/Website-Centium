@@ -4,7 +4,7 @@ import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
 import { useEffect } from "react";
-import { Sparkles, ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { Sparkles, ChevronLeft, Gift } from "lucide-react";
 import { rewardForUser, type EarnedReward } from "../../services/rewards";
 import { tierProgress } from "../../services/achievements";
 import { colourSet, tierHex } from "../../components/mind/achievementStyle";
@@ -123,6 +123,7 @@ export default function Marketplace() {
                   <span className="text-[22px] font-extrabold leading-none text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
                   <span className="text-[11px] font-semibold text-charcoal-faint">pts</span>
                 </p>
+                {/* MO1.4 #2: the pill alone, no chevron (the card still opens Achievements). */}
                 <span className="flex items-center gap-1 shrink-0">
                   <span className="text-[10.5px] font-bold rounded-full px-2.5 py-1 whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
                     style={{ background: tc.track, color: dark ? liftTo(tierHex(pointsSummary.tierName), tc.track) : tc.ink }}>
@@ -130,7 +131,6 @@ export default function Marketplace() {
                       ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
                       : "Highest tier"}
                   </span>
-                  <ChevronRight size={15} className="text-charcoal-faint" aria-hidden />
                 </span>
               </div>
               <div className="h-[5px] rounded-full overflow-hidden mt-3" style={{ background: tc.track }}>
