@@ -15,8 +15,8 @@ import { useIsDark } from "../../hooks/useIsDark";
  * bar track and fills sit over either surface and stay as they are.
  */
 const NS_COLORS = {
-  lav: ["#5F5093", "#C8BFE9"],
-  groupLabel: ["rgba(95,80,147,0.7)", "rgba(200,191,233,0.7)"],
+  lav: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  groupLabel: ["rgb(var(--th-5f5093) / 0.7)", "rgb(var(--th-c8bfe9) / 0.7)"],
   noAmount: ["#B8B1A8", "#918DA0"],
   noValue: ["#B3ADA4", "#918DA0"],
   over: ["#B4761F", "#D9A441"],
@@ -285,7 +285,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
           </span>
         )}
         {row.kind === "calc" && (
-          <span className="flex-none" style={{ ...chipStyle, color: nsColor("lav", dark), background: "rgba(174,161,220,0.2)" }}>
+          <span className="flex-none" style={{ ...chipStyle, color: nsColor("lav", dark), background: "rgb(var(--th-aea1dc) / 0.2)" }}>
             calculated
           </span>
         )}
@@ -294,14 +294,14 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
       {showBar && (
         <span
           className="block overflow-hidden"
-          style={{ height: 4, borderRadius: 9999, background: "rgba(174,161,220,0.2)", marginTop: 6 }}
+          style={{ height: 4, borderRadius: 9999, background: "rgb(var(--th-aea1dc) / 0.2)", marginTop: 6 }}
         >
           <span
             className="block h-full"
             style={{
               borderRadius: 9999,
               width: `${barPct}%`,
-              background: isOver ? "#D9A441" : row.kind === "ref" ? "#C6BCE9" : "#AEA1DC",
+              background: isOver ? "#D9A441" : row.kind === "ref" ? "rgb(var(--th-c6bce9))" : "rgb(var(--th-aea1dc))",
             }}
           />
         </span>
@@ -373,7 +373,7 @@ function NutrientSectionBlock({
   return (
     <div
       className="rounded-[15px] bg-cream-card"
-      style={{ padding: "13px 14px", border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
+      style={{ padding: "13px 14px", border: "1px solid rgb(var(--th-aea1dc) / 0.34)", boxShadow: "0 4px 14px rgb(var(--th-5f5093) / 0.08)" }}
     >
       <button
         onClick={onToggle}
@@ -388,7 +388,7 @@ function NutrientSectionBlock({
             fontSize: 9.5,
             fontWeight: 700,
             color: nsColor("lav", dark),
-            background: "rgba(174,161,220,0.18)",
+            background: "rgb(var(--th-aea1dc) / 0.18)",
             borderRadius: 8,
             padding: "3px 8px",
           }}
@@ -505,11 +505,11 @@ function NutrientDetailSection({
   const visible = multi ? allRows : withAmounts;
 
   return (
-    <div style={{ background: "rgb(var(--c-cream-card))", border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: "rgb(var(--c-cream-card))", border: "1px solid rgb(var(--th-aea1dc) / 0.34)", borderRadius: 12, overflow: "hidden" }}>
       <button
         onClick={onToggle}
         className="tap w-full flex items-center text-left"
-        style={{ padding: "10px 12px", gap: 8, background: expanded ? "rgba(174,161,220,0.12)" : "rgb(var(--c-cream-card))" }}
+        style={{ padding: "10px 12px", gap: 8, background: expanded ? "rgb(var(--th-aea1dc) / 0.12)" : "rgb(var(--c-cream-card))" }}
         aria-expanded={expanded}
       >
         <span className="flex-1 min-w-0" style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>

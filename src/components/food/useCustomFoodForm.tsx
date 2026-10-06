@@ -309,9 +309,9 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             minWidth: 0,
             height: 52,
             borderRadius: 16,
-            border: `1px solid ${advOpen ? "#A092E0" : "rgb(var(--c-charcoal) / 0.11)"}`,
-            background: advOpen ? "rgba(174,161,220,0.18)" : "rgb(var(--c-cream-card))",
-            color: advOpen ? (dark ? FOOD_DARK.lavDeep : "#5F5093") : "rgb(var(--c-charcoal-soft))",
+            border: `1px solid ${advOpen ? "rgb(var(--th-a092e0))" : "rgb(var(--c-charcoal) / 0.11)"}`,
+            background: advOpen ? "rgb(var(--th-aea1dc) / 0.18)" : "rgb(var(--c-cream-card))",
+            color: advOpen ? (dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))") : "rgb(var(--c-charcoal-soft))",
             transition: "background-color .18s ease, border-color .18s ease",
           }}
         >
@@ -336,9 +336,9 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         width: 60,
         height: 52,
         borderRadius: 16,
-        border: `1px solid ${advOpen ? "#A092E0" : "rgb(var(--c-charcoal) / 0.11)"}`,
-        background: advOpen ? "rgba(174,161,220,0.18)" : "rgb(var(--c-cream-card))",
-        color: advOpen ? (dark ? FOOD_DARK.lavDeep : "#5F5093") : "rgb(var(--c-charcoal-soft))",
+        border: `1px solid ${advOpen ? "rgb(var(--th-a092e0))" : "rgb(var(--c-charcoal) / 0.11)"}`,
+        background: advOpen ? "rgb(var(--th-aea1dc) / 0.18)" : "rgb(var(--c-cream-card))",
+        color: advOpen ? (dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))") : "rgb(var(--c-charcoal-soft))",
       }}
     >
       <SlidersHorizontal size={20} strokeWidth={1.9} />
@@ -423,7 +423,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         </div>
 
         {/* Barcode sits after the macros, just before the save / advanced row. */}
-        <div style={{ border: "1px solid rgba(174,161,220,0.4)", borderRadius: 14, background: "rgba(174,161,220,0.07)", padding: 12 }}>
+        <div style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.4)", borderRadius: 14, background: "rgb(var(--th-aea1dc) / 0.07)", padding: 12 }}>
           <p
             style={{
               margin: "0 0 8px",
@@ -431,7 +431,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
               fontWeight: 700,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
-              color: dark ? FOOD_DARK.lavDeep : "#5F5093",
+              color: dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))",
             }}
           >
             Barcode
@@ -489,7 +489,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
               return (
                 <div
                   key={sec.id}
-                  style={{ border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden", background: "rgb(var(--c-cream-card))" }}
+                  style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.34)", borderRadius: 12, overflow: "hidden", background: "rgb(var(--c-cream-card))" }}
                 >
                   <button
                     onClick={() => setOpenGroups((g) => ({ ...g, [sec.id]: !g[sec.id] }))}
@@ -497,7 +497,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                     style={{
                       gap: 8,
                       padding: "10px 12px",
-                      background: groupOpen ? "rgba(174,161,220,0.12)" : "rgb(var(--c-cream-card))",
+                      background: groupOpen ? "rgb(var(--th-aea1dc) / 0.12)" : "rgb(var(--c-cream-card))",
                       border: "none",
                     }}
                   >
@@ -507,8 +507,8 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                         style={{
                           fontSize: 10,
                           fontWeight: 700,
-                          color: dark ? FOOD_DARK.lavDeep : "#5F5093",
-                          background: "rgba(174,161,220,0.22)",
+                          color: dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))",
+                          background: "rgb(var(--th-aea1dc) / 0.22)",
                           borderRadius: 6,
                           padding: "2px 6px",
                         }}

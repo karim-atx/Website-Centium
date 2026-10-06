@@ -13,9 +13,9 @@ import { useIsDark } from "../../hooks/useIsDark";
 // `ink` / `tint`: the value square at the end of each line on Goals & Macros
 // (FO2.2 / FO4.2 / FO5.2), measured from the frames.
 const macroMeta = [
-  { key: "proteinPct" as const, label: "Protein", color: "#7D6BB5", ink: "#7D6BB5", tint: "#F0EDF9", kcalPerG: 4, min: 10, max: 35 },
-  { key: "carbsPct" as const, label: "Carbs", color: "#AEA1DC", ink: "#8175C2", tint: "#F0EDF9", kcalPerG: 4, min: 30, max: 65 },
-  { key: "fatPct" as const, label: "Fat", color: "#A2C8C2", ink: "#6F9993", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
+  { key: "proteinPct" as const, label: "Protein", color: "rgb(var(--thi-7d6bb5))", ink: "rgb(var(--th-7d6bb5))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 10, max: 35 },
+  { key: "carbsPct" as const, label: "Carbs", color: "rgb(var(--thi-aea1dc))", ink: "rgb(var(--th-8175c2))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 30, max: 65 },
+  { key: "fatPct" as const, label: "Fat", color: "rgb(var(--thi-a2c8c2))", ink: "rgb(var(--th-6f9993))", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
 ];
 
 // Mobile v5.1 R3, dark mode (no light islands): the value squares' dark
@@ -25,9 +25,9 @@ const macroMeta = [
 // src/data/folderColors.ts). The bar colours sit on the empty track as fills
 // and stay as they are.
 const SQUARE_DARK: Record<MacroMeta["key"], { ink: string; tint: string }> = {
-  proteinPct: { ink: "#A093C9", tint: "#303141" },
-  carbsPct: { ink: "#9B92CF", tint: "#303141" },
-  fatPct: { ink: "#7BA19C", tint: "#293339" },
+  proteinPct: { ink: "rgb(var(--th-a093c9))", tint: "rgb(var(--th-303141))" },
+  carbsPct: { ink: "rgb(var(--th-9b92cf))", tint: "rgb(var(--th-303141))" },
+  fatPct: { ink: "rgb(var(--th-7ba19c))", tint: "#293339" },
 };
 
 type MacroMeta = (typeof macroMeta)[number];

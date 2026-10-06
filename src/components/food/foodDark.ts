@@ -20,16 +20,16 @@ export const FOOD_DARK = {
   rule: "rgba(238,239,242,0.10)",
   outline: "rgba(238,239,242,0.10)",
   label: "#B8B3C7",
-  protein: "#9486C2",
-  carbs: "#9086C9",
+  protein: "rgb(var(--th-9486c2))",
+  carbs: "rgb(var(--th-9086c9))",
   fat: "#648DDE",
   dangerBg: "#3C2A30",
   dangerBorder: "#723C3D",
   danger: "#FF6B5E",
-  iconTile: "#303141",
-  lavInk: "#B7ABDE",
-  lavDeep: "#C8BFE9",
-  tealInk: "#7FB3A9",
+  iconTile: "rgb(var(--th-303141))",
+  lavInk: "rgb(var(--th-b7abde))",
+  lavDeep: "rgb(var(--th-c8bfe9))",
+  tealInk: "rgb(var(--th-7fb3a9))",
 } as const;
 
 // The ink on those fills: white, except that dark mode's primary-fill is the

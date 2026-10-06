@@ -39,9 +39,9 @@ import { useIsDark } from "../../hooks/useIsDark";
  * (danger.tint and danger dark).
  */
 const DIARY_COLORS = {
-  protein: ["#7D6BB5", "#B7ABDE"],
-  carbs: ["#8C7CC4", "#AEA1DC"],
-  fat: ["#4F7F78", "#7FB3A9"],
+  protein: ["rgb(var(--th-7d6bb5))", "rgb(var(--th-b7abde))"],
+  carbs: ["rgb(var(--th-8c7cc4))", "rgb(var(--th-aea1dc))"],
+  fat: ["rgb(var(--th-4f7f78))", "rgb(var(--th-7fb3a9))"],
   selectRing: ["#D1CAEB", "#8A8698"],
   deleteBg: ["#FCEDEC", "#3C2A30"],
   deleteBorder: ["#F2CFCC", "rgba(255,107,94,0.3)"],
@@ -63,10 +63,10 @@ const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 // each is its own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0,
 // 5.0, 5.6:1.
 const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: string; Icon: typeof Sunrise }> = {
-  breakfast: { label: "Breakfast", fill: "#BEB4E6", fillDark: "#797292", Icon: Sunrise },
-  snack: { label: "Snacks", fill: "#B1A5DF", fillDark: "#726A90", Icon: Clock },
-  lunch: { label: "Lunch", fill: "#B1A5E0", fillDark: "#726A90", Icon: Sun },
-  dinner: { label: "Dinner", fill: "#9284C4", fillDark: "#6B6190", Icon: Sunset },
+  breakfast: { label: "Breakfast", fill: "rgb(var(--th-beb4e6))", fillDark: "#797292", Icon: Sunrise },
+  snack: { label: "Snacks", fill: "rgb(var(--th-b1a5df))", fillDark: "rgb(var(--th-726a90))", Icon: Clock },
+  lunch: { label: "Lunch", fill: "rgb(var(--th-b1a5e0))", fillDark: "rgb(var(--th-726a90))", Icon: Sun },
+  dinner: { label: "Dinner", fill: "rgb(var(--th-9284c4))", fillDark: "rgb(var(--th-6b6190))", Icon: Sunset },
 };
 
 const SWIPE_THRESHOLD = 60;
@@ -474,12 +474,12 @@ export default function Food() {
               // is white (the dark card in dark mode) with the lavender hairline
               // and shadow; only its header carries the lavender wash, and only
               // while open.
-              const headBg = collapsed ? "rgb(var(--c-cream-card))" : "rgba(174,161,220,0.12)";
+              const headBg = collapsed ? "rgb(var(--c-cream-card))" : "rgb(var(--th-aea1dc) / 0.12)";
               return (
                 <div
                   key={meal}
                   className="rounded-[15px] bg-cream-card overflow-hidden"
-                  style={{ border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
+                  style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.34)", boxShadow: "0 4px 14px rgb(var(--th-5f5093) / 0.08)" }}
                   onTouchStart={onMealTouchStart}
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
@@ -522,8 +522,8 @@ export default function Food() {
                           {mealCal > 0 && (
                             <>
                               <span style={{ width: `${(mealProtein / macroTotal) * 100}%`, background: dc("protein", dark) }} />
-                              <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: "#AEA1DC" }} />
-                              <span style={{ width: `${(mealFat / macroTotal) * 100}%`, background: "#A2C8C2" }} />
+                              <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: "rgb(var(--th-aea1dc))" }} />
+                              <span style={{ width: `${(mealFat / macroTotal) * 100}%`, background: "rgb(var(--th-a2c8c2))" }} />
                             </>
                           )}
                         </span>

@@ -71,8 +71,8 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
   const dark = useIsDark();
   const rows: [string, string, string][] = [
     [String(Math.round(t.kcal)), "kcal", PREP_CHARCOAL],
-    [`${Math.round(t.p * 10) / 10}g`, "protein", dark ? FOOD_DARK.protein : "#7D6BB5"],
-    [`${Math.round(t.c)}g`, "carbs", dark ? FOOD_DARK.carbs : "#8175C2"],
+    [`${Math.round(t.p * 10) / 10}g`, "protein", dark ? FOOD_DARK.protein : "rgb(var(--th-7d6bb5))"],
+    [`${Math.round(t.c)}g`, "carbs", dark ? FOOD_DARK.carbs : "rgb(var(--th-8175c2))"],
     [`${Math.round(t.f * 10) / 10}g`, "fat", dark ? FOOD_DARK.fat : "#4274D7"],
   ];
   return (

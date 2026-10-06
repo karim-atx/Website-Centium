@@ -11,7 +11,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
 
 /** FO3.2: Custom Foods is Dark Lavender. */
-const CUSTOM_FOOD_ACCENT = "#7D67D9";
+const CUSTOM_FOOD_ACCENT = "rgb(var(--th-7d67d9))";
 
 /**
  * Handover 2026-09-29 FO3.2: one custom food's popup. View mode shows it with
@@ -61,7 +61,7 @@ export const CustomFoodSheet: React.FC<{
   });
 
   if (!shown) return null;
-  const tone = logoTone(shown.logoTone, dark) ?? (dark ? { bg: FOOD_DARK.iconTile, fg: FOOD_DARK.lavInk } : { bg: "#EFECF9", fg: CUSTOM_FOOD_ACCENT });
+  const tone = logoTone(shown.logoTone, dark) ?? (dark ? { bg: FOOD_DARK.iconTile, fg: FOOD_DARK.lavInk } : { bg: "rgb(var(--th-efecf9))", fg: CUSTOM_FOOD_ACCENT });
   const Icon = foodCategoryIcon[shown.category] ?? UtensilsCrossed;
 
   const leaveEditing = () => (form.dirty ? setConfirm("discard-back") : setEditing(false));

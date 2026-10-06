@@ -33,7 +33,7 @@ const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[
 // frames: white cards with a 1px #E7E6E6 (rgba(36,31,27,0.11)) hairline,
 // radius 16, 14px sides, 10px apart; titles are bold purple caps with no icon.
 const CARD_LIGHT: React.CSSProperties = { background: "rgb(var(--c-cream-card))", border: "1px solid #E7E6E6", borderRadius: 16, padding: "11px 14px 12px" };
-const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" };
+const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--thi-6d50d3))" };
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Colours whose light value is
@@ -50,14 +50,14 @@ const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight
  */
 const GOALS_COLORS = {
   hairline: ["#E7E6E6", "rgba(238,239,242,0.08)"],
-  title: ["#6D50D3", "#B7ABDE"],
+  title: ["rgb(var(--th-6d50d3))", "rgb(var(--th-b7abde))"],
   gain: ["#3F9165", "#47956B"],
   lose: ["#C0392B", "#CF695E"],
   fieldBorder: ["#E0DFE0", "rgba(238,239,242,0.10)"],
-  stepperPill: ["#F5F4FE", "#2B2C3A"],
-  stepperField: ["#F2F2FE", "#303141"],
-  stepperRule: ["#EEECFE", "rgba(238,239,242,0.08)"],
-  stepperGlyph: ["#1D167D", "#C8BFE9"],
+  stepperPill: ["rgb(var(--th-f5f4fe))", "rgb(var(--th-2b2c3a))"],
+  stepperField: ["rgb(var(--th-f2f2fe))", "rgb(var(--th-303141))"],
+  stepperRule: ["rgb(var(--th-eeecfe))", "rgba(238,239,242,0.08)"],
+  stepperGlyph: ["rgb(var(--th-1d167d))", "rgb(var(--th-c8bfe9))"],
   stepperFigure: ["#01012A", "#F5F3FA"],
   stepperUnit: ["#8A8594", "#B8B3C7"],
 } as const;

@@ -103,7 +103,7 @@ export const BarcodeScanner: React.FC<{
     <BottomSheet open={open} onClose={onClose} title={title}>
       <div className="animate-fade-slide-up">
         {showCamera ? (
-          <div className="relative overflow-hidden" style={{ borderRadius: 18, background: "#1E1834", aspectRatio: "4 / 3" }}>
+          <div className="relative overflow-hidden" style={{ borderRadius: 18, background: "rgb(var(--th-1e1834))", aspectRatio: "4 / 3" }}>
             <video ref={video} playsInline muted className="absolute inset-0 w-full h-full" style={{ objectFit: "cover" }} />
             {/* The frame to aim with. */}
             <div
@@ -120,7 +120,7 @@ export const BarcodeScanner: React.FC<{
           </div>
         ) : (
           <div className="flex items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? FOOD_DARK.box : "#F4F4F6" }}>
-            <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "#7D67D9", marginTop: 1 }} />
+            <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", marginTop: 1 }} />
             <p style={{ margin: 0, fontSize: 12.5, color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
               {camera === "denied"
                 ? "Camera access is off for this site. Allow it in your browser settings, or type the number below."
