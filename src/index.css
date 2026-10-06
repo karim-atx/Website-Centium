@@ -502,72 +502,17 @@
   color-scheme: dark;
 }
 
-/* V3: accent color themes (Settings > Appearance). Each overrides only the
-   --c-primary* "primary" tokens used throughout for buttons/active states —
-   everything else in the palette stays put. */
-[data-accent="ocean"] {
-  --c-primary: 76 143 209;
-  --c-bubble-sent: 55 104 153;
-  --c-primary-fill: 76 143 209;
-  --c-primary-accent: 30 74 110;
-  --c-primary-light: 116 175 227;
-  --c-primary-pale: 220 234 248;
-  --c-primary-dark: 30 74 110;
-  --c-hero-from: 46 87 127;
-  --c-hero-to: 30 74 110;
-}
-/* Mobile v5.1 R3: each dark theme's primary-pale is primary.tint dark, the
-   theme's dark primary at 14% flattened onto the card #1C1F28. */
-.dark[data-accent="ocean"] {
-  --c-primary: 116 175 227;
-  --c-bubble-sent: var(--c-primary);
-  --c-primary-fill: var(--c-primary);
-  --c-primary-accent: var(--c-primary);
-  --c-primary-light: 150 197 237;
-  --c-primary-pale: 40 51 66;
-  --c-primary-dark: 209 230 247;
-}
+/* R20 (batch D): the colour themes. Centium is the values above; the other
+   four (Sky, Rose, Gold, Coral) are generated into styles/theme-palette.css
+   by scripts/themes/generate.mjs, which replaced the Ocean, Sunset and Berry
+   blocks that lived here. */
 
-[data-accent="sunset"] {
-  --c-primary: 233 116 82;
-  --c-bubble-sent: 158 79 56;
-  --c-primary-fill: 233 116 82;
-  --c-primary-accent: 165 66 36;
-  --c-primary-light: 242 164 136;
-  --c-primary-pale: 252 230 221;
-  --c-primary-dark: 165 66 36;
-  --c-hero-from: 130 65 46;
-  --c-hero-to: 118 47 26;
-}
-.dark[data-accent="sunset"] {
-  --c-primary: 240 140 108;
-  --c-bubble-sent: var(--c-primary);
-  --c-primary-fill: var(--c-primary);
-  --c-primary-accent: var(--c-primary);
-  --c-primary-light: 247 178 152;
-  --c-primary-pale: 58 46 50;
-  --c-primary-dark: 250 199 176;
-}
-
-[data-accent="berry"] {
-  --c-primary: 156 79 124;
-  --c-bubble-sent: 151 77 120;
-  --c-primary-fill: 156 79 124;
-  --c-primary-accent: 107 48 84;
-  --c-primary-light: 184 118 156;
-  --c-primary-pale: 241 224 235;
-  --c-primary-dark: 107 48 84;
-  --c-hero-from: 125 63 99;
-  --c-hero-to: 107 48 84;
-}
-.dark[data-accent="berry"] {
-  --c-primary: 200 128 172;
-  --c-bubble-sent: var(--c-primary);
-  --c-primary-fill: var(--c-primary);
-  --c-primary-accent: var(--c-primary);
-  --c-primary-light: 216 158 194;
-  --c-primary-pale: 52 45 58;
-  --c-primary-dark: 240 214 231;
+/* The theme swap fades over 300 ms (motion.fade). Set for 320 ms by
+   setColorTheme, never under Reduce motion. */
+html.theme-fade,
+html.theme-fade * {
+  transition: background-color 300ms ease-in-out, color 300ms ease-in-out, border-color 300ms ease-in-out,
+    fill 300ms ease-in-out, stroke 300ms ease-in-out !important;
 }
 
 * {
@@ -626,14 +571,17 @@ body {
    token takes the strongest ink and every hairline goes to 30% of it
    (MO1.8.6.1), in every colour theme. Light: #111111. Dark: the dark
    text.primary #F5F3FA, the same rule mirrored. The board gives a darkened
-   primary for Centium light only (#5B48B8, text #4B3BA0); the other themes
-   and dark keep their primary until R20 (batch D). */
+   primary for Centium light (#5B48B8, text #4B3BA0), set below; the theme
+   colours of every other theme and mode are darkened or lifted to 4.5:1 in
+   styles/theme-palette.css (R20/D19, generated). */
 html.high-contrast {
   --c-charcoal: 17 17 17;
   --c-charcoal-soft: 17 17 17;
   --c-charcoal-faint: 17 17 17;
   --c-charcoal-tertiary: 17 17 17;
   --c-charcoal-muted: 17 17 17;
+  /* nav.idle is a text grey too (inactive navbar labels and icons). */
+  --c-team-nav-idle: 17 17 17;
   --border-row: rgb(17 17 17 / 0.3);
 }
 html.high-contrast.dark {
@@ -642,6 +590,7 @@ html.high-contrast.dark {
   --c-charcoal-faint: 245 243 250;
   --c-charcoal-tertiary: 245 243 250;
   --c-charcoal-muted: 245 243 250;
+  --c-team-nav-idle: 245 243 250;
   --border-row: rgb(245 243 250 / 0.3);
 }
 html.high-contrast[data-accent="centium"]:not(.dark) {
@@ -752,15 +701,15 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
    real CSS hover/active states for the hero CTAs, replacing the "Request a
    Demo" button's previous JS onMouseEnter/onMouseLeave handlers. */
 .hero-cta-solid:hover {
-  background: #6a54c4;
+  background: rgb(var(--th-6a54c4));
 }
 .hero-cta-solid:active {
   transform: scale(0.96);
 }
 .hero-cta-ghost:hover {
-  background: rgba(94, 158, 149, 0.16);
-  border-color: #5e9e95;
-  color: #2f5f58;
+  background: rgb(var(--th-5e9e95) / 0.16);
+  border-color: rgb(var(--th-5e9e95));
+  color: rgb(var(--thi-2f5f58));
 }
 .hero-cta-ghost:active {
   transform: scale(0.96);
@@ -822,13 +771,13 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   cursor: pointer;
 }
 .set-slider:focus-visible {
-  box-shadow: 0 0 0 3px rgba(174, 161, 220, 0.45);
+  box-shadow: 0 0 0 3px rgb(var(--th-aea1dc) / 0.45);
 }
 
 /* WO24 Percentage slider: a white thumb ringed in #AEA1DC on the grey track. */
 .plate-slider::-webkit-slider-thumb {
-  border: 1.5px solid #aea1dc;
+  border: 1.5px solid rgb(var(--th-aea1dc));
 }
 .plate-slider::-moz-range-thumb {
-  border: 1.5px solid #aea1dc;
+  border: 1.5px solid rgb(var(--th-aea1dc));
 }

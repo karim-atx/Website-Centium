@@ -46,7 +46,7 @@ export const OffProductCard: React.FC<{
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center"
-          style={{ color: dark ? FOOD_DARK.lavInk : "#7D67D9", fontWeight: 600, gap: 3 }}
+          style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", fontWeight: 600, gap: 3 }}
         >
           View on Open Food Facts <ExternalLink size={11} />
         </a>

@@ -42,7 +42,7 @@ export const TabIdentityNotice: React.FC = () => {
         <div className="flex items-center" style={{ gap: 12 }}>
           <span
             className="flex-none flex items-center justify-center"
-            style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(162,200,194,.25)", color: dark ? "#7FB3A9" : "#4F7F78" }}
+            style={{ width: 40, height: 40, borderRadius: 12, background: "rgb(var(--th-a2c8c2) / .25)", color: dark ? "rgb(var(--thi-7fb3a9))" : "rgb(var(--thi-4f7f78))" }}
           >
             <Users size={18} />
           </span>

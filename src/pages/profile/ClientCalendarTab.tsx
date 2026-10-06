@@ -621,7 +621,7 @@ export default function ClientCalendarTab() {
 
   /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30). */
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
-    <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "#2B2C3A" : "#F6F4FE" }}>
+    <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f6f4fe))" }}>
       <button onClick={onPrev} aria-label={prevLabel} className="tap w-7 h-7 -ml-1 flex items-center justify-center text-primary-deep-text shrink-0">
         <ChevronLeft size={16} strokeWidth={2.2} />
       </button>
@@ -745,7 +745,7 @@ export default function ClientCalendarTab() {
                     style={isSelected ? { background: "var(--gradient-lavender-accent)" } : undefined}
                   >
                     {day}
-                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "#fff" : "#6F9993") : "transparent" }} />
+                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "#fff" : "rgb(var(--th-6f9993))") : "transparent" }} />
                   </button>
                 );
               })}

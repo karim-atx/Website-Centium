@@ -224,7 +224,7 @@ export const EditFoodEntrySheet: React.FC<{
           <div className="flex items-center" style={{ gap: 13, marginBottom: 14 }}>
             <span
               className="flex items-center justify-center shrink-0"
-              style={{ width: 48, height: 48, borderRadius: 15, background: dark ? FOOD_DARK.iconTile : "#EFECFB", color: dark ? FOOD_DARK.lavInk : "#6B4BE0" }}
+              style={{ width: 48, height: 48, borderRadius: 15, background: dark ? FOOD_DARK.iconTile : "rgb(var(--th-efecfb))", color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-6b4be0))" }}
             >
               <Icon size={20} />
             </span>
@@ -280,8 +280,8 @@ export const EditFoodEntrySheet: React.FC<{
           <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
             {[
               { value: `${Math.round(preview.calories)}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
-              { value: `${Math.round(preview.protein * 10) / 10}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
-              { value: `${Math.round(preview.carbs)}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+              { value: `${Math.round(preview.protein * 10) / 10}g`, color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: "protein" },
+              { value: `${Math.round(preview.carbs)}g`, color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: "carbs" },
               { value: `${Math.round(preview.fat * 10) / 10}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
             ].map((cell, i) => (
               <div

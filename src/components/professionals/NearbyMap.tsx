@@ -9,6 +9,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
 maplibregl.setWorkerUrl(workerUrl);
 import { distanceKm, type Coords } from "../../services/geo/distance";
+import { resolveCssColor } from "../../theme/cssColor";
 
 /**
  * The map behind Professionals → Map, and the small pin map in a
@@ -213,7 +214,7 @@ export default function NearbyMap({
     pickMarker.current = null;
     const v = pick?.value;
     if (!v) return;
-    pickMarker.current = new maplibregl.Marker({ color: "#7D6BB5" }).setLngLat([v.lng, v.lat]).addTo(m);
+    pickMarker.current = new maplibregl.Marker({ color: resolveCssColor("rgb(var(--thi-7d6bb5))") }).setLngLat([v.lng, v.lat]).addTo(m);
   }, [pick?.value]);
 
   // The credit line keeps its own readable colours in both themes, rather

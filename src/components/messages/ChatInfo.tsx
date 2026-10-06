@@ -222,8 +222,8 @@ export const ChatInfo: React.FC<{
 
       <div className="flex flex-col items-center gap-1.5">
         {group ? (
-          <span className="w-[72px] h-[72px] rounded-full bg-[#E4F0EE] dark:bg-teal-pale flex items-center justify-center">
-            <Users size={30} className="text-[#2F5F58] dark:text-teal-deep-text" aria-hidden />
+          <span className="w-[72px] h-[72px] rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center">
+            <Users size={30} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
           </span>
         ) : (
         <span className="w-[72px] h-[72px] rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[26px] font-extrabold text-primary-deep-text">

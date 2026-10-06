@@ -21,12 +21,12 @@ import ProfessionalExplore from "./ProfessionalExplore";
 // marketplaceCategories) get a neutral tile in the same spirit as
 // Explore/Referral/Settings on the More screen.
 const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
-  stores: { icon: "#7D6BB5", bg: "rgba(174,161,220,.16)" },
-  supplements: { icon: "#4F7F78", bg: "rgba(162,200,194,.18)" },
+  stores: { icon: "rgb(var(--th-7d6bb5))", bg: "rgb(var(--th-aea1dc) / .16)" },
+  supplements: { icon: "rgb(var(--th-4f7f78))", bg: "rgb(var(--th-a2c8c2) / .18)" },
   equipment: { icon: "#C29A3D", bg: "rgba(36,31,27,.05)" },
   wellness: { icon: "#9C4F7C", bg: "rgba(36,31,27,.05)" },
-  clothing: { icon: "#9B8AD0", bg: "rgba(174,161,220,.16)" },
-  meal_prep: { icon: "#6F9993", bg: "rgba(162,200,194,.18)" },
+  clothing: { icon: "rgb(var(--th-9b8ad0))", bg: "rgb(var(--th-aea1dc) / .16)" },
+  meal_prep: { icon: "rgb(var(--th-6f9993))", bg: "rgb(var(--th-a2c8c2) / .18)" },
 };
 
 export default function Marketplace() {
@@ -221,7 +221,7 @@ function RewardRow({ reward }: { reward: EarnedReward }) {
   return (
     <div
       className="flex items-center mb-[13px]"
-      style={{ gap: 11, padding: "12px 14px", borderRadius: 15, background: "rgba(162,200,194,.18)" }}
+      style={{ gap: 11, padding: "12px 14px", borderRadius: 15, background: "rgb(var(--th-a2c8c2) / .18)" }}
     >
       <span
         className="flex-none flex items-center justify-center"
@@ -233,7 +233,7 @@ function RewardRow({ reward }: { reward: EarnedReward }) {
         <span className="block" style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
           {reward.title}
         </span>
-        <span className="block" style={{ fontSize: 10.5, color: dark ? "#A3C7C0" : "#4F7F78", marginTop: 1 }}>
+        <span className="block" style={{ fontSize: 10.5, color: dark ? "rgb(var(--thi-a3c7c0))" : "rgb(var(--thi-4f7f78))", marginTop: 1 }}>
           {reward.detail}
         </span>
       </span>

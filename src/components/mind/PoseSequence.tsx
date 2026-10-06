@@ -178,7 +178,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
               <span
                 className={clsx(
                   "absolute left-2 top-2 z-10 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center",
-                  current ? "bg-primary text-white dark:bg-primary-fill dark:text-on-primary-fill" : "bg-cream-card text-primary-dark border border-charcoal/[0.1]"
+                  current ? "bg-primary-fill text-on-primary-fill" : "bg-cream-card text-primary-dark border border-charcoal/[0.1]"
                 )}
               >
                 {i + 1}

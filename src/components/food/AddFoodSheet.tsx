@@ -35,8 +35,8 @@ import { FOOD_DARK } from "./foodDark";
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
 // primary.accent dark (5.56:1 on the card; a shape needs 3:1).
-const PICKED_ROW_DARK = "#2B2C3A";
-const PICK_RING_DARK = "#9A8CD6";
+const PICKED_ROW_DARK = "rgb(var(--th-2b2c3a))";
+const PICK_RING_DARK = "rgb(var(--th-9a8cd6))";
 
 // V4: preset serving units offered as tap targets — only the quantity number
 // is typed. The relevant subset differs a little by food category (a plate
@@ -614,7 +614,7 @@ export const AddFoodSheet: React.FC<{
             <div className="flex items-center" style={{ gap: 13, marginBottom: 16 }}>
               <span
                 className="flex items-center justify-center shrink-0"
-                style={{ width: 46, height: 46, borderRadius: 14, background: dark ? FOOD_DARK.iconTile : "#EEEBFB", color: dark ? FOOD_DARK.lavInk : "#6B4BE0" }}
+                style={{ width: 46, height: 46, borderRadius: 14, background: dark ? FOOD_DARK.iconTile : "rgb(var(--th-eeebfb))", color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-6b4be0))" }}
               >
                 <FoodIcon category={selectedFood.category} size={20} />
               </span>
@@ -693,8 +693,8 @@ export const AddFoodSheet: React.FC<{
             <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
                 { value: `${foodTotalCal}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
-                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
-                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: "protein" },
+                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: "carbs" },
                 { value: `${Math.round(selectedFood.fat * multiplier)}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
               ].map((cell, i) => (
                 <div
@@ -958,7 +958,7 @@ export const AddFoodSheet: React.FC<{
           style={
             multi
               ? { width: 34, height: 34, borderRadius: 17, background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))", border: on ? "none" : `1.5px solid ${dark ? PICK_RING_DARK : "#D1CAEB"}`, color: on ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF" }
-              : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : dark ? FOOD_DARK.iconTile : "#F0EDF9", color: tone ? tone.fg : dark ? FOOD_DARK.lavInk : "#7D6BB5" }
+              : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : dark ? FOOD_DARK.iconTile : "rgb(var(--th-f0edf9))", color: tone ? tone.fg : dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d6bb5))" }
           }
         >
           {multi ? on && <Check size={17} strokeWidth={2.6} /> : <FoodIcon category={r.food?.category ?? "homemade"} size={16} />}
@@ -1064,7 +1064,7 @@ export const AddFoodSheet: React.FC<{
               Barcode x0.635, Custom x0.835). */}
           <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: "AI Voice", icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,#647B77,#445E5A)" : "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
+              { label: "AI Voice", icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-647b77)),rgb(var(--th-445e5a)))" : "linear-gradient(150deg,rgb(var(--th-a2c8c2)),rgb(var(--th-6f9993)))", onClick: () => setVoiceOpen(true) },
               {
                 label: "AI Scan",
                 icon: (
@@ -1073,10 +1073,10 @@ export const AddFoodSheet: React.FC<{
                     <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, right: -6 }} />
                   </span>
                 ),
-                bg: dark ? "linear-gradient(150deg,#617B77,#365652)" : "linear-gradient(150deg,#8FB5AF,#4F7F78)",
+                bg: dark ? "linear-gradient(150deg,rgb(var(--th-617b77)),rgb(var(--th-365652)))" : "linear-gradient(150deg,rgb(var(--th-8fb5af)),rgb(var(--th-4f7f78)))",
                 onClick: () => setScanNotice(true),
               },
-              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,#7A7293,#5B5180)" : "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
+              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,#7A7293,rgb(var(--th-5b5180)))" : "linear-gradient(150deg,rgb(var(--th-c0b4e8)),rgb(var(--th-8f7fc9)))", onClick: openBarcode },
               {
                 label: "Custom",
                 icon: (
@@ -1085,7 +1085,7 @@ export const AddFoodSheet: React.FC<{
                     <Apple size={15} />
                   </span>
                 ),
-                bg: dark ? "linear-gradient(150deg,#796EAC,#4F437B)" : "linear-gradient(150deg,#9184CE,#5F5093)",
+                bg: dark ? "linear-gradient(150deg,rgb(var(--th-796eac)),rgb(var(--th-4f437b)))" : "linear-gradient(150deg,rgb(var(--th-9184ce)),rgb(var(--th-5f5093)))",
                 onClick: () => setCustomMode(true),
               },
             ].map(({ label, icon, bg, onClick }) => (
@@ -1212,7 +1212,7 @@ export const AddFoodSheet: React.FC<{
       <Toast
         open={scanNotice}
         message="AI Scan isn't available yet."
-        icon={<Camera size={15} className="flex-none" style={{ color: "#A2C8C2" }} />}
+        icon={<Camera size={15} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />}
         onExpire={() => setScanNotice(false)}
       />
       <Toast open={!!addedMessage} message={addedMessage ?? ""} onExpire={() => setAddedMessage(null)} />

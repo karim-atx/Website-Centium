@@ -97,7 +97,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   justifyContent: "center",
                   flex: "none",
                   background: dark ? "rgba(38,41,50,0.92)" : "rgba(255,255,255,0.92)",
-                  color: dark ? "#7FB3A9" : "#4F7F78",
+                  color: dark ? "rgb(var(--thi-7fb3a9))" : "rgb(var(--thi-4f7f78))",
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
                   touchAction: "manipulation",
                 }}

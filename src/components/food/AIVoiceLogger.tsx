@@ -27,6 +27,7 @@ import {
 } from "../../services/ai/voiceFood";
 import { foodCategoryIcon } from "../../utils/icons";
 import type { MealType } from "../../types";
+import { resolveCssColor } from "../../theme/cssColor";
 
 // Voice logging, end to end: record, transcribe, parse, confirm, log.
 //
@@ -94,7 +95,7 @@ const WAVE_MIN_PAINT_WIDTH = 140; // narrower than this: pause and release audio
 const WAVE_STOP_HOLD_MS = 450; // the last frame holds this long on stop
 const waveColor = (i: number, n: number) => {
   const recency = i / (n - 1); // 0 = oldest (leftmost), 1 = newest
-  return recency > 0.82 ? "#6F9993" : recency > 0.5 ? "#83AAA4" : "#A2C8C2";
+  return recency > 0.82 ? "rgb(var(--th-6f9993))" : recency > 0.5 ? "rgb(var(--th-83aaa4))" : "rgb(var(--th-a2c8c2))";
 };
 
 /** The frame's seed row, so the wave is never an empty box before levels arrive. */
@@ -139,7 +140,7 @@ function renderWave(canvas: HTMLCanvasElement, buffer: number[], dpr: number) {
   for (let i = 0; i < n; i++) {
     const h = Math.min(WAVE_HEIGHT, Math.max(WAVE_BAR_WIDTH, buffer[i] * WAVE_HEIGHT));
     const x = i * WAVE_BAR_PITCH;
-    ctx.fillStyle = waveColor(i, n);
+    ctx.fillStyle = resolveCssColor(waveColor(i, n));
     ctx.beginPath();
     if (typeof ctx.roundRect === "function") ctx.roundRect(x, midY - h / 2, WAVE_BAR_WIDTH, h, WAVE_BAR_WIDTH / 2);
     else ctx.rect(x, midY - h / 2, WAVE_BAR_WIDTH, h);
@@ -1024,8 +1025,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         >
                           {[
                             { value: `${preview.calories}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
-                            { value: `${preview.protein}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
-                            { value: `${preview.carbs}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+                            { value: `${preview.protein}g`, color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: "protein" },
+                            { value: `${preview.carbs}g`, color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: "carbs" },
                             { value: `${preview.fat}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
                           ].map((cell, ci) => (
                             <div

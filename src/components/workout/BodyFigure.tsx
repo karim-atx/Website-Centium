@@ -86,12 +86,12 @@ export const BodyFigure: React.FC<{
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
-          style={{ filter: "drop-shadow(0 0 4px rgba(143,104,246,0.6))" }}
+          style={{ filter: "drop-shadow(0 0 4px rgb(var(--th-8f68f6) / 0.6))" }}
         >
           <div
             className="body-zone-fill absolute inset-0"
             style={{
-              background: "rgba(143,104,246,0.6)",
+              background: "rgb(var(--th-8f68f6) / 0.6)",
               WebkitMaskImage: `url(${zoneMaskUrl(figure, selected)})`,
               maskImage: `url(${zoneMaskUrl(figure, selected)})`,
               WebkitMaskSize: "100% 100%",

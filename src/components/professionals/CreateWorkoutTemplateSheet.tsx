@@ -222,7 +222,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
                       }}
                       disabled={selected.length < 2}
                       className="tap text-[11.5px] font-semibold"
-                      style={{ color: selected.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                      style={{ color: selected.length < 2 ? "#C9C2B8" : "rgb(var(--thi-5f5093))" }}
                     >
                       Group as…
                     </button>
@@ -291,8 +291,8 @@ export const CreateWorkoutTemplateSheet: React.FC<{
                               width: 18,
                               height: 18,
                               borderRadius: 5,
-                              border: `2px solid ${selected.includes(ex.id) ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`,
-                              background: selected.includes(ex.id) ? "#AEA1DC" : "transparent",
+                              border: `2px solid ${selected.includes(ex.id) ? "rgb(var(--th-aea1dc))" : "rgba(36,31,27,0.2)"}`,
+                              background: selected.includes(ex.id) ? "rgb(var(--th-aea1dc))" : "transparent",
                             }}
                           />
                         ) : (

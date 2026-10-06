@@ -120,13 +120,13 @@ const WATER_DARK = {
  * (3.4:1), each lifted toward white until it reads. REM (berry) and Light
  * (sky) already pass and keep their token.
  */
-const SLEEP_STAGE_INK_DARK: Record<string, string> = { Awake: "#5A9691", Deep: "#9283C1" };
+const SLEEP_STAGE_INK_DARK: Record<string, string> = { Awake: "rgb(var(--th-5a9691))", Deep: "rgb(var(--th-9283c1))" };
 
 /**
  * Mobile v5.1 R3, dark mode: the small Weight tile's #7567B7 glyph and "kg"
  * (3.25:1 on the tile over the dark page), lifted to 4.5:1 for the text.
  */
-const WEIGHT_ACCENT_DARK = "#8E82C4";
+const WEIGHT_ACCENT_DARK = "rgb(var(--th-8e82c4))";
 
 // Seamless drift. A layer's loop only closes if its travel is a whole number
 // of its own wave periods (716 / crests). 358px is that for 2 and 4 crests;
@@ -490,7 +490,7 @@ export const HomeWidget: React.FC<{
     case "steps": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "steps" } });
       if (metricValues.steps === null) {
-        return wrap(onClick, emptyCard("rgba(162,200,194,.2)", "Steps", emptyHint("steps")));
+        return wrap(onClick, emptyCard("rgb(var(--th-a2c8c2) / .2)", "Steps", emptyHint("steps")));
       }
       const steps = metricValues.steps;
       const pct = Math.round((steps / stepsGoal) * 100);
@@ -498,7 +498,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(162,200,194,.2)",
+            "rgb(var(--th-a2c8c2) / .2)",
             <>
               <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
               <p className={`${numeralSmall} mt-[5px]`}>{metricValues.steps.toLocaleString()}</p>
@@ -511,7 +511,7 @@ export const HomeWidget: React.FC<{
                       className="flex-1 rounded-[1px]"
                       style={{
                         height: `${Math.max(8, (h.value / stepsMax) * 100)}%`,
-                        background: isToday ? "rgb(var(--c-team-teal-deep))" : "rgba(111,153,147,.34)",
+                        background: isToday ? "rgb(var(--c-team-teal-deep))" : "rgb(var(--th-6f9993) / .34)",
                       }}
                     />
                   );
@@ -537,7 +537,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(162,200,194,.2)",
+          "rgb(var(--th-a2c8c2) / .2)",
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
@@ -556,7 +556,7 @@ export const HomeWidget: React.FC<{
                 <div className="relative h-[9px] rounded-[5px] bg-teal-dark/20 overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 rounded-[5px]"
-                    style={{ width: `${Math.min(100, pct)}%`, background: "linear-gradient(90deg,#A9CFC9,#6F9993)" }}
+                    style={{ width: `${Math.min(100, pct)}%`, background: "linear-gradient(90deg,rgb(var(--th-a9cfc9)),rgb(var(--th-6f9993)))" }}
                   />
                 </div>
                 <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
@@ -634,7 +634,7 @@ export const HomeWidget: React.FC<{
       if (metricValues.sleepHours === null) {
         return wrap(
           () => navigate("/app/health", { state: { openMetric: "sleep" } }),
-          emptyCard("rgba(174,161,220,.13)", "Sleep", emptyHint("sleep"))
+          emptyCard("rgb(var(--th-aea1dc) / .13)", "Sleep", emptyHint("sleep"))
         );
       }
       const onClick = () => navigate("/app/health", { state: { openMetric: "sleep" } });
@@ -646,7 +646,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(174,161,220,.13)",
+            "rgb(var(--th-aea1dc) / .13)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.65] dark:text-primary-deep-text`}>Sleep</p>
               <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
@@ -666,7 +666,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(174,161,220,.16)",
+          "rgb(var(--th-aea1dc) / .16)",
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Sleep</p>
@@ -741,7 +741,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(162,200,194,.16)",
+            "rgb(var(--th-a2c8c2) / .16)",
             <>
               <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
@@ -770,7 +770,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(162,200,194,.16)",
+          "rgb(var(--th-a2c8c2) / .16)",
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
@@ -817,7 +817,7 @@ export const HomeWidget: React.FC<{
                     <span
                       key={d}
                       className="flex-1 h-1.5 rounded-[3px]"
-                      style={{ background: workoutDaysThisWeek.includes(d) ? "rgb(var(--c-teal-dark))" : "rgba(111,153,147,.24)" }}
+                      style={{ background: workoutDaysThisWeek.includes(d) ? "rgb(var(--c-teal-dark))" : "rgb(var(--th-6f9993) / .24)" }}
                     />
                   ))}
                 </span>
@@ -831,7 +831,7 @@ export const HomeWidget: React.FC<{
     // ----------------------------------------------------------- Nutrition
     case "nutrition": {
       const onClick = () => navigate("/app/food");
-      if (recoveryModePending) return pendingCard("rgba(174,161,220,.16)", "Food");
+      if (recoveryModePending) return pendingCard("rgb(var(--th-aea1dc) / .16)", "Food");
       if (recoverySensitive) {
         // Recovery-sensitive mode: the same neutral summary the Food tab
         // shows — what was logged, never calories or macros.
@@ -839,7 +839,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(174,161,220,.16)",
+            "rgb(var(--th-aea1dc) / .16)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
@@ -870,7 +870,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(174,161,220,.16)",
+            "rgb(var(--th-aea1dc) / .16)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
@@ -891,7 +891,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(174,161,220,.16)",
+          "rgb(var(--th-aea1dc) / .16)",
           <>
             <div className="flex items-center justify-between gap-2.5">
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
@@ -941,11 +941,11 @@ export const HomeWidget: React.FC<{
     case "weight": {
       // Task X follow-up: no weight until the account's recovery setting is
       // known on this browser; a neutral tile in its place, never the number.
-      if (recoveryModePending) return pendingCard("rgba(174,161,220,.11)", "Weight");
+      if (recoveryModePending) return pendingCard("rgb(var(--th-aea1dc) / .11)", "Weight");
       if (metricValues.weight === null) {
         return wrap(
           () => navigate("/app/health", { state: { openMetric: "weight" } }),
-          emptyCard("rgba(174,161,220,.11)", "Weight", emptyHint("weight"))
+          emptyCard("rgb(var(--th-aea1dc) / .11)", "Weight", emptyHint("weight"))
         );
       }
       const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
@@ -961,7 +961,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(174,161,220,.11)",
+            "rgb(var(--th-aea1dc) / .11)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
               <div className="flex-1 flex items-end justify-center min-h-0">
@@ -971,7 +971,7 @@ export const HomeWidget: React.FC<{
                     width={iconSize}
                     height={iconSize}
                     fill="none"
-                    stroke={dark ? WEIGHT_ACCENT_DARK : "#7567B7"}
+                    stroke={dark ? WEIGHT_ACCENT_DARK : "rgb(var(--th-7567b7))"}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     style={{ display: "block" }}
@@ -991,7 +991,7 @@ export const HomeWidget: React.FC<{
                   </svg>
                   {/* Item 4: the numeric value must be charcoal, not
                       accent-colored — the unit text and glyph/icon below
-                      keep the existing #7567B7 accent. The theme token, so
+                      keep the existing rgb(var(--th-7567b7)) accent. The theme token, so
                       it reads #241F1B in light and white in dark (HO1.1). */}
                   <span
                     style={{
@@ -1015,7 +1015,7 @@ export const HomeWidget: React.FC<{
                       right: 0,
                       top: "73%",
                       textAlign: "center",
-                      color: dark ? WEIGHT_ACCENT_DARK : "#7567B7",
+                      color: dark ? WEIGHT_ACCENT_DARK : "rgb(var(--thi-7567b7))",
                       fontWeight: 800,
                       lineHeight: 1,
                       fontSize: iconSize * 0.119,
@@ -1042,7 +1042,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(174,161,220,.11)",
+          "rgb(var(--th-aea1dc) / .11)",
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
@@ -1084,11 +1084,11 @@ export const HomeWidget: React.FC<{
                         fontFamily="Manrope"
                         fontSize={8}
                         fontWeight={700}
-                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgba(95,80,147,.6)"}
+                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .6)"}
                       >
                         {p.v.toFixed(1)}
                       </text>
-                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgba(95,80,147,.5)"}>
+                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .5)"}>
                         {dayLetter(p.date)}
                       </text>
                     </React.Fragment>
@@ -1109,7 +1109,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(174,161,220,.16)",
+            "rgb(var(--th-aea1dc) / .16)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
@@ -1118,7 +1118,7 @@ export const HomeWidget: React.FC<{
                     <defs>
                       <linearGradient id="team-habit-check" x1="0" y1="0" x2="1" y2="0">
                         <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgb(var(--c-team-lavender-deep))" />
-                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgba(125,107,181,.22)" />
+                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgb(var(--th-7d6bb5) / .22)" />
                       </linearGradient>
                     </defs>
                     <path d="M3.6 12.9 9.1 18.4 20.4 6.2" fill="none" stroke="url(#team-habit-check)" strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
@@ -1135,7 +1135,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(174,161,220,.16)",
+          "rgb(var(--th-aea1dc) / .16)",
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
@@ -1308,7 +1308,7 @@ export const HomeWidget: React.FC<{
         return wrap(
           onClick,
           shell(
-            "rgba(162,200,194,.18)",
+            "rgb(var(--th-a2c8c2) / .18)",
             <>
               <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
@@ -1321,7 +1321,7 @@ export const HomeWidget: React.FC<{
       return wrap(
         onClick,
         shell(
-          "rgba(162,200,194,.18)",
+          "rgb(var(--th-a2c8c2) / .18)",
           <>
             <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
             <MeditationLarge summary={meditationSummary} />

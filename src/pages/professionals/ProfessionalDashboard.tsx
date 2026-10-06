@@ -293,7 +293,7 @@ export default function ProfessionalDashboard() {
         // in dark mode holds a light "readable text on dark ground" value
         // rather than a fill colour) — a fixed hero accent, same approach
         // as StreaksBar's gradient.
-        <Card className="mb-6 !text-white animate-fade-slide-up" style={{ background: "#7D6BB5" }}>
+        <Card className="mb-6 !text-white animate-fade-slide-up" style={{ background: "rgb(var(--thw-7d6bb5))" }}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-white/70 mb-1.5">
             Today
           </p>

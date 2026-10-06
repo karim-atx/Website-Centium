@@ -28,9 +28,9 @@ type SubTab = "meals" | "recipes" | "foods";
 // `ink` is the text on `color`: white, or on-primary-fill (white in light
 // mode) on the primary fill, which dark mode makes the light lavender.
 const SUB: Record<SubTab, { label: string; color: string; ink: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
-  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
-  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
-  foods: { label: "Custom Foods", color: "rgb(var(--c-fill-foods))", ink: "rgb(var(--c-on-primary-fill))", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
+  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "rgb(var(--th-4f7f78))", create: "Create Meal", empty: "No meal prep yet", emptyText: "rgb(var(--th-5f8681))" },
+  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "rgb(var(--th-f0eef9))", icon: "rgb(var(--th-816fb7))", create: "Create Recipe", empty: "No recipes yet", emptyText: "rgb(var(--th-7a6db0))" },
+  foods: { label: "Custom Foods", color: "rgb(var(--c-fill-foods))", ink: "rgb(var(--c-on-primary-fill))", row: "rgb(var(--th-f1eefb))", icon: "rgb(var(--th-7d67d9))", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "rgb(var(--th-7d67d9))" },
 };
 // Mobile v5.1 R3, dark mode (no light islands): the rows' tints are
 // secondary.tint (meals) and primary.tint (recipes, foods) dark; the icons and
@@ -38,9 +38,9 @@ const SUB: Record<SubTab, { label: string; color: string; ink: string; row: stri
 // dark (6.99:1 on the card tile, 7.06:1 and 6.03:1 on the tints); the tab
 // container (#F4F3F9) is tabs.container dark.
 const SUB_DARK: Record<SubTab, { row: string; icon: string; emptyText: string }> = {
-  meals: { row: "#293339", icon: "#7FB3A9", emptyText: "#A3C7C0" },
-  recipes: { row: "#303141", icon: "#B7ABDE", emptyText: "#B7ABDE" },
-  foods: { row: "#303141", icon: "#B7ABDE", emptyText: "#B7ABDE" },
+  meals: { row: "#293339", icon: "rgb(var(--th-7fb3a9))", emptyText: "rgb(var(--th-a3c7c0))" },
+  recipes: { row: "rgb(var(--th-303141))", icon: "rgb(var(--th-b7abde))", emptyText: "rgb(var(--th-b7abde))" },
+  foods: { row: "rgb(var(--th-303141))", icon: "rgb(var(--th-b7abde))", emptyText: "rgb(var(--th-b7abde))" },
 };
 const TABS_CONTAINER: [string, string] = ["#F4F3F9", "#242730"];
 const SUB_ORDER: SubTab[] = ["meals", "recipes", "foods"];

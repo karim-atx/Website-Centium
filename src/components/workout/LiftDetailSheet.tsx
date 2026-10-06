@@ -69,7 +69,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
           style={{
             marginTop: 16,
             borderRadius: 20,
-            background: "linear-gradient(180deg, #A79AD5, #A194D1)",
+            background: "linear-gradient(180deg, rgb(var(--th-a79ad5)), rgb(var(--th-a194d1)))",
             paddingTop: 12,
           }}
         >
@@ -97,7 +97,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                     fontSize: 11,
                     fontWeight: 700,
                     background: range === r ? "#FFFFFF" : "transparent",
-                    color: range === r ? "#463A80" : "#FFFFFF",
+                    color: range === r ? "rgb(var(--thi-463a80))" : "#FFFFFF",
                   }}
                 >
                   {r}

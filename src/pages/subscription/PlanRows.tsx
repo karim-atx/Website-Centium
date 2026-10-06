@@ -54,7 +54,7 @@ export const BillingToggle: React.FC<{
               "text-[10px] font-bold rounded-full px-1.5 py-0.5",
               // On the selected pill: white/20 in light mode (the board's); dark
               // mode inverts (its ink on primary-fill read 3.15:1 through white/20).
-              period === "yearly" ? "bg-white/20 text-white dark:bg-on-primary-fill dark:text-primary-fill" : "bg-teal-fill text-on-primary-fill"
+              period === "yearly" ? "bg-on-primary-fill/20 text-on-primary-fill dark:bg-on-primary-fill dark:text-primary-fill" : "bg-teal-fill text-on-primary-fill"
             )}
           >
             −{bestSaving}%

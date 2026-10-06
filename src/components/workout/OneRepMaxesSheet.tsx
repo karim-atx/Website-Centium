@@ -25,8 +25,8 @@ import {
  */
 const ORM_COLORS = {
   sortBorder: ["#E5E4E5", "rgba(238,239,242,0.10)"],
-  teal: ["#3B7570", "#A3C7C0"],
-  tealUnit: ["#86B3AD", "#7FB3A9"],
+  teal: ["rgb(var(--th-3b7570))", "rgb(var(--th-a3c7c0))"],
+  tealUnit: ["rgb(var(--th-86b3ad))", "rgb(var(--th-7fb3a9))"],
   faint: ["#C9C2B8", "#918DA0"],
 } as const;
 const ormColor = (key: keyof typeof ORM_COLORS, dark: boolean): string => ORM_COLORS[key][dark ? 1 : 0];

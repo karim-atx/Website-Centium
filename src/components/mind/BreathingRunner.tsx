@@ -26,7 +26,7 @@ const holdTargetScale = (pattern: BreathingPattern, phaseIdx: number) => {
   return 1;
 };
 
-const PHASE_COLOUR = (label: string) => (label === "Breathe in" ? "#7D6BB5" : label === "Breathe out" ? "#A2C8C2" : "#C8BFE9");
+const PHASE_COLOUR = (label: string) => (label === "Breathe in" ? "rgb(var(--th-7d6bb5))" : label === "Breathe out" ? "rgb(var(--th-a2c8c2))" : "rgb(var(--th-c8bfe9))");
 const SIZE = 270;
 const ARC_R = 128;
 const ARC_C = 2 * Math.PI * ARC_R;
@@ -210,7 +210,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
                 ry={36}
                 transform={`rotate(${(360 / PETALS) * i} ${SIZE / 2} ${SIZE / 2})`}
                 style={{
-                  fill: teal ? "rgba(162,200,194,0.30)" : "rgba(174,161,220,0.24)",
+                  fill: teal ? "rgb(var(--th-a2c8c2) / 0.30)" : "rgb(var(--th-aea1dc) / 0.24)",
                   transition: `fill ${transition} ease`,
                 }}
               />

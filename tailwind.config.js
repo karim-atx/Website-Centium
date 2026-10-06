@@ -1,4 +1,17 @@
 import plugin from "tailwindcss/plugin";
+// Imported (not read with fs) so Tailwind reloads its config when the
+// generator rewrites the list.
+import THEME_COLORS from "./src/styles/theme-colors.json";
+
+// R20 (batch D): every lavender or teal colour the app used as a literal is a
+// `th-<hex>` colour now (bg-th-aea1dc, text-th-7d6bb5, ...), backed by
+// --th-<hex> in styles/theme-palette.css: the literal itself in Centium, the
+// mapped shade in the other themes. The list is written by the generator.
+const th = Object.fromEntries(THEME_COLORS.map((h) => [h, `rgb(var(--th-${h}) / <alpha-value>)`]));
+// Text takes each colour's ink twin: identical in Centium, and in the other
+// themes the shade that reaches 4.5:1 on the page (D6, D8).
+const thInk = Object.fromEntries(THEME_COLORS.map((h) => [h, `rgb(var(--thi-${h}) / <alpha-value>)`]));
+const ink = (name) => `rgb(var(--c-${name}-ink) / <alpha-value>)`;
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -18,6 +31,7 @@ export default {
           soft: "rgb(var(--c-cream-soft) / <alpha-value>)",
           card: "rgb(var(--c-cream-card) / <alpha-value>)",
         },
+        th,
         // Mobile v5.1 surface.raised: #FAFAFB, dark #262932. See index.css.
         surface: {
           raised: "rgb(var(--c-surface-raised) / <alpha-value>)",
@@ -167,6 +181,28 @@ export default {
           "dark-accent": "#A991FE",
           "dark-ink": "#F5F3FA",
           "dark-soft": "#B8B3C7",
+        },
+      },
+      // Text utilities read the ink twins (see above). Background, border,
+      // ring, fill and stroke keep the colour itself.
+      textColor: {
+        th: thInk,
+        primary: {
+          DEFAULT: ink("primary"),
+          light: ink("primary-light"),
+          dark: ink("primary-dark"),
+          "deep-text": ink("primary-deep-text"),
+          accent: ink("primary-accent"),
+        },
+        teal: { DEFAULT: ink("teal"), light: ink("teal-light"), dark: ink("teal-dark"), "deep-text": ink("teal-deep-text") },
+        trend: { "high-text": ink("trend-high-text") },
+        team: {
+          "nav-accent": ink("team-nav-accent"),
+          "nav-accent-text": ink("team-nav-accent-text"),
+          lavender: ink("team-lavender"),
+          "lavender-deep": ink("team-lavender-deep"),
+          "teal-ink": ink("team-teal-ink"),
+          "teal-deep": ink("team-teal-deep"),
         },
       },
       borderRadius: {

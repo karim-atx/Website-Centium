@@ -18,7 +18,7 @@ type SubTab = "breathing" | "stretching" | "yoga";
 // board value, so it is its green #3F9165 at 16% on the row with the text
 // lifted to 4.5:1 (#6BAA88).
 const difficultyColor: Record<string, string> = {
-  beginner: "text-[#3F9165] bg-[#E3F3E9] dark:text-[#6BAA88] dark:bg-[#283838]",
+  beginner: "text-[#3F9165] bg-[#E3F3E9] dark:text-[#6BAA88] dark:bg-th-283838",
   intermediate: "text-[#B08A2E] bg-[#FBF1DD] dark:text-[#CAB082] dark:bg-[#3A342C]",
   advanced: "text-[#C0392B] bg-[#FBE7E4] dark:text-[#FF6B5E] dark:bg-[#3C2A30]",
 };

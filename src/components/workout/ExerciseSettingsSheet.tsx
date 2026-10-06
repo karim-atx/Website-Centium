@@ -305,7 +305,7 @@ export const ExerciseSettingsSheet: React.FC<{
                     style={
                       draft.weightKg === 0
                         ? { background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))" }
-                        : { background: "rgba(174,161,220,0.14)", color: "#5F5093" }
+                        : { background: "rgb(var(--th-aea1dc) / 0.14)", color: "rgb(var(--thi-5f5093))" }
                     }
                   >
                     Bodyweight

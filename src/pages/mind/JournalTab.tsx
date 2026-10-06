@@ -280,7 +280,7 @@ export default function JournalTab() {
               <div
                 aria-hidden
                 className="mt-[9px] h-px"
-                style={{ background: dark ? "var(--border-row)" : "rgba(174,161,220,0.5)" }}
+                style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.5)" }}
               />
               <p className="mt-2 text-sm leading-5 font-semibold text-charcoal truncate">{e.title}</p>
             </Card>

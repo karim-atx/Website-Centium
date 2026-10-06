@@ -15,6 +15,8 @@ import {
 import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useApp } from "../../context/AppContext";
+import { ThemedMark } from "../ui/ThemedMark";
 import { categoryColours, orderCategories, type CategoryColours } from "./categoryColour";
 import { WarningNotice } from "./WarningNotice";
 import {
@@ -70,6 +72,7 @@ export function ForumHome({
   const [likes, setLikes] = useState<Set<string>>(new Set());
   const seq = useRef(0);
   const dark = useIsDark();
+  const { colorTheme } = useApp();
 
   const byKey = useMemo(() => new Map(categories.map((c) => [c.key, c])), [categories]);
   // The design's order (A20): All · Nutrition · Workouts · Progress · Motivation.
@@ -211,9 +214,13 @@ export function ForumHome({
       {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. */}
       <div
         className="flex gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
-        style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgba(174,161,220,0.35)" }}
+        style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgb(var(--th-aea1dc) / 0.35)" }}
       >
-        <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
+        {colorTheme === "centium" ? (
+          <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
+        ) : (
+          <ThemedMark width={22} height={(22 * 713) / 687} className="shrink-0 mt-px" />
+        )}
         <span>
           <strong className="font-extrabold">Community rules:</strong> Be kind, share experience rather than medical
           advice, and report anything that worries you. Posts here aren't a substitute for a doctor.

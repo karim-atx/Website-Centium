@@ -81,7 +81,7 @@ export const MessageActions: React.FC<{
       aria-label="Message actions"
       onClick={onClose}
       className="fixed inset-0 z-[70] overflow-y-auto"
-      style={{ background: "rgba(58, 53, 71, 0.92)" }}
+      style={{ background: "rgb(var(--th-3a3547) / 0.92)" }}
     >
       <div
         className={`min-h-full max-w-lg mx-auto px-4 py-10 flex flex-col justify-center gap-2.5 ${
@@ -133,7 +133,7 @@ export const MessageActions: React.FC<{
         <div
           onClick={(e) => e.stopPropagation()}
           className="w-[212px] bg-cream-card rounded-[14px] p-2 flex flex-col gap-1.5 animate-fade-slide-up"
-          style={{ border: "1px solid rgba(174,161,220,0.5)", boxShadow: "0 12px 32px rgba(95,80,147,0.18)" }}
+          style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.5)", boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)" }}
         >
           {safe.map((a) => (
             <button key={a.label} type="button" onClick={a.onSelect} className={`${row} text-charcoal`}>

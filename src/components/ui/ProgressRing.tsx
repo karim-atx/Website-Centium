@@ -14,7 +14,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   progress,
   size = 96,
   strokeWidth = 10,
-  color = "#7D6BB5",
+  color = "rgb(var(--th-7d6bb5))",
   // Mobile v5.1 R3, dark mode: the default track is surface.raised #262932.
   trackColor,
   children,

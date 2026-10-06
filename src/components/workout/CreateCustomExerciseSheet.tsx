@@ -50,9 +50,9 @@ const dropdownStyle: React.CSSProperties = {
  */
 const COLORS = {
   tintedBorder: ["#D6CFED", "#48465E"],
-  tintedBg: ["#F0EDF9", "#303141"],
+  tintedBg: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"],
   plainBorder: ["#E4E4E9", "rgba(238,239,242,0.10)"],
-  ink: ["#5F5093", "#C8BFE9"],
+  ink: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
   chevron: ["#A9A29A", "#918DA0"],
   dangerBorder: ["rgba(176,64,47,0.28)", "rgba(255,107,94,0.28)"],
   dangerBg: ["#FBEDEB", "#3C2A30"],

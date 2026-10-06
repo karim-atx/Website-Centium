@@ -56,12 +56,12 @@ export const InsertionLine: React.FC<{ listRef: React.RefObject<HTMLDivElement |
       ref={ref}
       aria-hidden
       className="fixed pointer-events-none"
-      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "#7D6BB5", boxShadow: "0 0 0 1.5px rgb(var(--c-cream))" }}
+      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "rgb(var(--th-7d6bb5))", boxShadow: "0 0 0 1.5px rgb(var(--c-cream))" }}
     >
       {/* The ring and the dot's centre are the page behind the list (white in light, the dark page in dark). */}
       <span
         className="absolute rounded-full"
-        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid #7D6BB5", background: "rgb(var(--c-cream))" }}
+        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid rgb(var(--th-7d6bb5))", background: "rgb(var(--c-cream))" }}
       />
     </div>,
     document.body

@@ -51,10 +51,10 @@ export const Toast: React.FC<{
         fontWeight: 600,
       }}
     >
-      {icon ?? <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "#A2C8C2" }} />}
+      {icon ?? <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />}
       <span className="flex-1 min-w-0 truncate">{message}</span>
       {onUndo && (
-        <button onClick={onUndo} className="tap flex-none" style={{ color: "#C3B3FB", fontWeight: 700, minHeight: 32 }}>
+        <button onClick={onUndo} className="tap flex-none" style={{ color: "rgb(var(--thi-c3b3fb))", fontWeight: 700, minHeight: 32 }}>
           Undo
         </button>
       )}

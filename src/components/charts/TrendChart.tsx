@@ -246,7 +246,7 @@ export const TrendChart: React.FC<{
               return i === sel ? (
                 <g key={i}>
                   <circle cx={cx} cy={cy} r={9} fill="#FFFFFF" fillOpacity={0.3} />
-                  <circle cx={cx} cy={cy} r={5} fill="#FFFFFF" stroke="#7D67D9" strokeWidth={2} />
+                  <circle cx={cx} cy={cy} r={5} fill="#FFFFFF" stroke="rgb(var(--th-7d67d9))" strokeWidth={2} />
                 </g>
               ) : (
                 <circle key={i} cx={cx} cy={cy} r={3} fill="#FFFFFF" />

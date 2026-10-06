@@ -16,10 +16,10 @@ import { useIsDark } from "../../hooks/useIsDark";
  * dots primary.accent dark.
  */
 const SUMMARY_COLORS = {
-  lavInk: ["#5F5093", "#C8BFE9"],
-  banner: ["#F3F3FD", "#2B2C3A"],
-  link: ["#6D50D3", "#B7ABDE"],
-  dot: ["#6D50D3", "#9A8CD6"],
+  lavInk: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  banner: ["rgb(var(--th-f3f3fd))", "rgb(var(--th-2b2c3a))"],
+  link: ["rgb(var(--th-6d50d3))", "rgb(var(--th-b7abde))"],
+  dot: ["rgb(var(--th-6d50d3))", "rgb(var(--th-9a8cd6))"],
 } as const;
 const summaryColor = (key: keyof typeof SUMMARY_COLORS, dark: boolean): string => SUMMARY_COLORS[key][dark ? 1 : 0];
 
@@ -117,8 +117,8 @@ export default function NutrientSummaryPage() {
             height: 36,
             borderRadius: 11,
             padding: 0,
-            background: loggedOnly ? "rgba(174,161,220,0.22)" : "rgb(var(--c-cream-card))",
-            border: `1px solid ${loggedOnly ? "#A092E0" : "rgba(174,161,220,0.34)"}`,
+            background: loggedOnly ? "rgb(var(--th-aea1dc) / 0.22)" : "rgb(var(--c-cream-card))",
+            border: `1px solid ${loggedOnly ? "rgb(var(--th-a092e0))" : "rgb(var(--th-aea1dc) / 0.34)"}`,
             color: loggedOnly ? summaryColor("lavInk", dark) : "rgb(var(--c-charcoal-soft))",
           }}
         >

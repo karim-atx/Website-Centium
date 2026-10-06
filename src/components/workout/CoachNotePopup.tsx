@@ -24,9 +24,9 @@ function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
  * text (text.primary, 12.5:1 on that box).
  */
 const COACH_COLORS = {
-  icon: ["#7D6BB5", "#9A8CD6"],
-  noteBox: ["#F6F5FB", "#2B2C3A"],
-  noteText: ["#3A3446", "#F5F3FA"],
+  icon: ["rgb(var(--th-7d6bb5))", "rgb(var(--th-9a8cd6))"],
+  noteBox: ["#F6F5FB", "rgb(var(--th-2b2c3a))"],
+  noteText: ["rgb(var(--th-3a3446))", "#F5F3FA"],
 } as const;
 
 /**
@@ -92,7 +92,7 @@ export const CoachNotePopup: React.FC<{
               <span
                 aria-hidden
                 className="flex-none flex items-center justify-center rounded-full"
-                style={{ width: 36, height: 36, background: "#A2C8C2", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
+                style={{ width: 36, height: 36, background: "rgb(var(--thw-a2c8c2))", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
               >
                 {initials || <MessageSquareText size={15} />}
               </span>

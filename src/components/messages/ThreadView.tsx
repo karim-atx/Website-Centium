@@ -1258,8 +1258,8 @@ export const ThreadView: React.FC<{
           className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left"
         >
           {isGroup ? (
-            <span className="w-10 h-10 rounded-full bg-[#E4F0EE] dark:bg-teal-pale flex items-center justify-center shrink-0">
-              <Users size={19} className="text-[#2F5F58] dark:text-teal-deep-text" aria-hidden />
+            <span className="w-10 h-10 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center shrink-0">
+              <Users size={19} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
             </span>
           ) : (
           <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold text-primary-deep-text">
@@ -2050,7 +2050,7 @@ export const ThreadView: React.FC<{
  * always differ and each person keeps their colour as others join.
  */
 const SENDER_TONES = [
-  "text-[#2F5F58] dark:text-teal-deep-text",
+  "text-th-2f5f58 dark:text-teal-deep-text",
   "text-[#9B2C22] dark:text-[#F0A39A]",
   "text-[#7A5212] dark:text-gold",
   "text-[#2B5C8A] dark:text-[#8FB8E8]",

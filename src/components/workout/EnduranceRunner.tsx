@@ -19,7 +19,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 // Mobile v5.1 R3 (no light islands): the plan box's pale lavender has no
 // token of the same light value; dark is primary.tint.2 on the card
 // (#2B2C3A). Everything else here is written as the tokens.
-const PLAN_BOX = ["#F6F4FB", "#2B2C3A"] as const;
+const PLAN_BOX = ["#F6F4FB", "rgb(var(--th-2b2c3a))"] as const;
 
 // Running an endurance effort, and recording what it produced.
 //
@@ -135,7 +135,7 @@ export const EnduranceRunner: React.FC<{
                   // The current step is named as well as highlighted, so the
                   // position survives greyscale and a screen reader — which
                   // reads aria-current and never the background.
-                  boxShadow: i === current ? "inset 2px 0 0 #7D6BB5" : "none",
+                  boxShadow: i === current ? "inset 2px 0 0 rgb(var(--th-7d6bb5))" : "none",
                   opacity: i < current ? 0.5 : 1,
                 }}
               >

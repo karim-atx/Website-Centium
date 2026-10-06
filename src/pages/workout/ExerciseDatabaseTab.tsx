@@ -107,7 +107,7 @@ const BACK_ZONE_KEYS: ZoneKey[] = ["shoulders", "back", "triceps", "forearms", "
 const COLORS = {
   yoursInk: ["#8A6318", "#CAB082"],
   yoursBg: ["rgba(200,145,43,0.16)", "#3A342C"],
-  flipInk: ["#5F5093", "#C8BFE9"],
+  flipInk: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
   chevron: ["#ADA9A4", "#918DA0"],
 } as const;
 
@@ -119,7 +119,7 @@ const controlStyle = (on: boolean): React.CSSProperties => ({
   fontSize: 11.5,
   fontWeight: 600,
   whiteSpace: "nowrap",
-  border: `1px solid ${on ? "#AEA1DC" : "rgb(var(--c-charcoal) / 0.11)"}`,
+  border: `1px solid ${on ? "rgb(var(--th-aea1dc))" : "rgb(var(--c-charcoal) / 0.11)"}`,
   background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
   color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
 });
@@ -518,7 +518,7 @@ export default function ExerciseDatabaseTab() {
             style={{
               height: 404,
               background: "#FBFBFD",
-              border: "1px solid rgba(174,161,220,0.3)",
+              border: "1px solid rgb(var(--th-aea1dc) / 0.3)",
               borderRadius: 18,
               animation: "cb-fade .3s ease both",
             }}

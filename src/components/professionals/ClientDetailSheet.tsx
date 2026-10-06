@@ -516,7 +516,7 @@ export const ClientDetailSheet: React.FC<{
                         {reading.change != null && reading.change !== 0 && (
                           <p
                             className="text-[10px] font-semibold"
-                            style={{ color: reading.change > 0 ? "#8A5878" : "#3C6B65" }}
+                            style={{ color: reading.change > 0 ? "#8A5878" : "rgb(var(--thi-3c6b65))" }}
                           >
                             {reading.change > 0 ? "+" : ""}
                             {reading.change}

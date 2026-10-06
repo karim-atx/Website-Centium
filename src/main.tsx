@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
+import './styles/theme-palette.css'
 import App from './App.tsx'
 
 // Registers the service worker that receives push notifications (src/sw.ts).

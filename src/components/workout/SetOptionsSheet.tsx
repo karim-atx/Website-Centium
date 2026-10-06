@@ -48,7 +48,7 @@ const SET_OPTIONS_COLORS = {
   notesBox: ["#F2F3F5", "#242730"],
   notesLabel: ["#575863", "#B8B3C7"],
   pinIdle: ["#A39D95", "#918DA0"],
-  pinned: ["#5F5093", "#C8BFE9"],
+  pinned: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
 } as const;
 const optionsColor = (key: keyof typeof SET_OPTIONS_COLORS, dark: boolean): string => SET_OPTIONS_COLORS[key][dark ? 1 : 0];
 

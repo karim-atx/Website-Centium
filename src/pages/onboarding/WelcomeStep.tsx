@@ -81,7 +81,7 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
           ) : (
             <button
               onClick={handleGetStarted}
-              className="tap w-full h-14 rounded-2xl bg-primary-fill text-on-primary-fill font-bold text-[15.5px] tracking-[-0.01em] shadow-[0_2px_10px_rgba(125,107,181,0.26)] dark:shadow-none"
+              className="tap w-full h-14 rounded-2xl bg-primary-fill text-on-primary-fill font-bold text-[15.5px] tracking-[-0.01em] shadow-[0_2px_10px_rgb(var(--th-7d6bb5)/0.26)] dark:shadow-none"
             >
               Get Started
             </button>

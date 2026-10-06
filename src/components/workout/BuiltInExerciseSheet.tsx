@@ -25,10 +25,10 @@ export interface BuiltInExercise {
  */
 const COLORS = {
   field: ["#F7F7FA", "#242730"],
-  infoBg: ["#F0EDF9", "#303141"],
+  infoBg: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"],
   infoBorder: ["#D6CFED", "#48465E"],
-  ink: ["#5F5093", "#C8BFE9"],
-  secondaryBg: ["#EEEBF8", "#2B2C3A"],
+  ink: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  secondaryBg: ["rgb(var(--th-eeebf8))", "rgb(var(--th-2b2c3a))"],
   secondaryBorder: ["#D4CDED", "#48465E"],
   offInk: ["#A5A09B", "#918DA0"],
 } as const;
@@ -86,7 +86,7 @@ export const BuiltInExerciseSheet: React.FC<{
                     className="rounded-xl px-3 py-2 text-xs font-semibold border"
                     style={
                       primary
-                        ? { background: "rgb(var(--c-primary-fill))", borderColor: "#AEA1DC", color: "rgb(var(--c-on-primary-fill))" }
+                        ? { background: "rgb(var(--c-primary-fill))", borderColor: "rgb(var(--th-aea1dc))", color: "rgb(var(--c-on-primary-fill))" }
                         : secondary
                           ? { background: c("secondaryBg"), borderColor: c("secondaryBorder"), color: c("ink") }
                           : { background: "rgb(var(--c-cream-card))", borderColor: "rgb(var(--c-charcoal) / 0.07)", color: c("offInk") }
