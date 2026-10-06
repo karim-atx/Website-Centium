@@ -431,11 +431,12 @@ export default function Food() {
                   <button
                     key={meal}
                     onClick={() => openAdd(meal)}
-                    className="tap flex-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
+                    className="tap flex-1 min-w-0 px-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
                     style={{ background: dark ? fillDark : fill }}
                   >
                     <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                    {label}
+                    {/* Ends in "…" rather than running into the corner under Larger text (D18). */}
+                    <span className="min-w-0 truncate">{label}</span>
                   </button>
                 );
               })}
