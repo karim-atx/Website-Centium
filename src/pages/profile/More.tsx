@@ -20,6 +20,7 @@ import {
   Banknote,
   Globe2,
 } from "lucide-react";
+import { linePx, textPx } from "../../theme/textSize";
 
 // MO1.4 · More (handover 2026-09-30 More supplement, assets/MO1.4.png, built in
 // full on 2026-09-30). Every measurement below is taken from the frame, which
@@ -138,12 +139,12 @@ export default function More() {
             />
             <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
               <span className="flex items-center" style={{ gap: 14 }}>
-                <span className="text-th-32544d dark:text-th-d5eae5" style={{ fontSize: 38, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                <span className="text-th-32544d dark:text-th-d5eae5" style={{ fontSize: textPx(38), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   Mind
                 </span>
                 <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5" />
               </span>
-              <span className="block text-th-869595 dark:text-th-a5bdb9" style={{ marginTop: 12, maxWidth: 160, fontSize: 17, fontWeight: 500, lineHeight: "22px" }}>
+              <span className="block text-th-869595 dark:text-th-a5bdb9" style={{ marginTop: 12, maxWidth: 160, fontSize: textPx(17), fontWeight: 500, lineHeight: linePx(22) }}>
                 Habits, journal &amp; meditation
               </span>
             </span>
@@ -160,11 +161,11 @@ export default function More() {
                 <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-4f8f8a))" }}>
                   <t.icon size={14} className="text-white" />
                 </span>
-                <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 8, gap: 2, fontSize: 12.5, fontWeight: 700, lineHeight: "16px" }}>
+                <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 8, gap: 2, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16) }}>
                   {t.label}
                   <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
                 </span>
-                <span className="text-th-8a9796 dark:text-th-9cb0ad" style={{ marginTop: 2, fontSize: 10, lineHeight: "14px" }}>
+                <span className="text-th-8a9796 dark:text-th-9cb0ad" style={{ marginTop: 2, fontSize: textPx(10), lineHeight: linePx(14) }}>
                   {t.desc}
                 </span>
               </button>
@@ -195,10 +196,10 @@ export default function More() {
               <r.icon size={14} className="text-white" />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-charcoal" style={{ fontSize: 12, fontWeight: 700, lineHeight: "16px" }}>
+              <span className="block text-charcoal" style={{ fontSize: textPx(12), fontWeight: 700, lineHeight: linePx(16) }}>
                 {r.label}
               </span>
-              <span className="block truncate" style={{ marginTop: 5, fontSize: 10, lineHeight: "13px", color: "#9A94B3" }}>
+              <span className="block truncate" style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), color: "#9A94B3" }}>
                 {r.desc}
               </span>
             </span>
