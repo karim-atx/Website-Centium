@@ -53,9 +53,9 @@ interface PopupMenuProps<V extends string> {
  * surface-raised / border-option tokens, whose light values are the literals.
  */
 const MENU_COLORS = {
-  onFill: ["#F0EDF9", "#303141"],
-  onBorder: ["#AEA1DC", "#9A8CD6"],
-  check: ["#7D6BB5", "#B7ABDE"],
+  onFill: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"],
+  onBorder: ["rgb(var(--th-aea1dc))", "rgb(var(--th-9a8cd6))"],
+  check: ["rgb(var(--th-7d6bb5))", "rgb(var(--th-b7abde))"],
   destructive: ["rgb(192,57,43)", "#FF6B5E"],
 } as const;
 
@@ -140,9 +140,9 @@ export function PopupMenu<V extends string>({
             maxHeight: pos.maxHeight,
             boxSizing: "content-box",
             background: "rgb(var(--c-cream-card))",
-            border: "1px solid rgba(174,161,220,0.5)",
+            border: "1px solid rgb(var(--th-aea1dc) / 0.5)",
             borderRadius: 14,
-            boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
+            boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)",
             padding: 8,
             animation: "popup-menu-in .22s cubic-bezier(.22,1,.36,1) both",
             transformOrigin: `${pos.up ? "bottom" : "top"} ${align}`,

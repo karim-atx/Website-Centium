@@ -53,7 +53,7 @@ export const SegmentedTabs: React.FC<{
   labelSize?: number;
   /** Tab height when a frame draws other than 44 / 38 (MO1.2's category rail: 32 in a 40 track). */
   tabHeight?: number;
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight }) => {
+}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -73,7 +73,7 @@ export const SegmentedTabs: React.FC<{
     <div
       ref={trackRef}
       className={`flex items-center ${scroll ? "overflow-x-auto no-scrollbar" : ""} ${className ?? ""}`}
-      style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, ...trackStyle }}
+      style={{ background: dark ? "#242730" : "rgb(var(--th-f3f3fd))", borderRadius: 16, padding: 6, gap: 5, ...trackStyle }}
       role="tablist"
     >
       {items.map((item) => {
@@ -94,7 +94,7 @@ export const SegmentedTabs: React.FC<{
               borderRadius: 12,
               background: lit
                 ? active ? lit.activeFill : lit.idleFill
-                : active ? (dark ? "rgb(var(--c-primary-fill))" : "#A79AD5") : dark ? "#2B2C3A" : "#F5F4FE",
+                : active ? (dark ? "rgb(var(--c-primary-fill))" : "rgb(var(--th-a79ad5))") : dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f5f4fe))",
               color: lit
                 ? active ? lit.activeInk : lit.idleInk
                 : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,

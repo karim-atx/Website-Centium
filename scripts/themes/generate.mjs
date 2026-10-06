@@ -52,6 +52,9 @@ export function family(hex) {
     // are "text greys", fixed in every theme (rule 5).
     if (L > 0.35 && L < 0.9 && C < 0.051) return null;
     if (L < 0.2) return null; // the near-black ink #0D0B1A
+    // The dark surfaces #1C1F28, #262932, #242730 (chroma 0.018 or less) are
+    // page backgrounds, fixed; the lavender washes over them (#303141 ...) are not.
+    if (L < 0.35 && C < 0.02) return null;
     if (L > 0.96 && C < 0.012) return null; // #F5F3FA dark text, near-whites
     return "lav";
   }
@@ -108,6 +111,26 @@ function scanLiterals() {
     }
   })(SRC);
   return [...found].sort();
+}
+/** Literal fills drawn under white text on the same line (a white-ink className
+ *  or style beside a th background): in the other themes these keep white at
+ *  4.5:1, as filled controls do (D7). */
+function scanWhiteFills() {
+  const found = new Set();
+  const white = /\btext-white\b|\bcolor:\s*["'`](#fff\b|#ffffff\b|white\b)/i;
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(e.name)) {
+        for (const line of fs.readFileSync(p, "utf8").split("\n")) {
+          if (!white.test(line)) continue;
+          for (const m of line.matchAll(/(?:\bbg-th-|\bfrom-th-|\bto-th-|background[^,;]*?--th-)([0-9a-f]{6})/g)) found.add(m[1]);
+        }
+      }
+    }
+  })(SRC);
+  return found;
 }
 
 // ---- mapping ----------------------------------------------------------------
@@ -213,7 +236,8 @@ function themeBlock(theme, mode, literals) {
   }
   for (const h of literals) {
     const hex = "#" + h;
-    const base = mapHex(hex, theme, mode);
+    let base = mapHex(hex, theme, mode);
+    if (WHITE_FILLS.has(h) && family(hex)) base = ensureContrast(base, [WHITE], 4.5, -1);
     lines.push(`  --th-${h}: ${cssTriplet(base)};`);
     lines.push(`  --thi-${h}: ${cssTriplet(inkOf(hex, base, mode, pale))};`);
   }
@@ -221,8 +245,10 @@ function themeBlock(theme, mode, literals) {
   return `${sel} {\n${lines.join("\n")}\n}\n`;
 }
 
+let WHITE_FILLS = new Set();
 function generate() {
   const literals = scanLiterals();
+  WHITE_FILLS = scanWhiteFills();
   const unknown = literals.filter((h) => !family("#" + h));
   const centiumLines = [];
   for (const n of INK_TOKENS) centiumLines.push(`  ${n}-ink: var(${n});`);

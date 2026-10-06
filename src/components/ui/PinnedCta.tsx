@@ -27,7 +27,7 @@ const sizeClasses: Record<CtaSize, string> = {
 const variantClasses: Record<CtaVariant, string> = {
   primary: "bg-primary-fill text-on-primary-fill",
   secondary: "bg-primary-pale text-primary-deep-text",
-  outline: "bg-cream-card text-charcoal border border-[rgba(143,104,246,0.28)]",
+  outline: "bg-cream-card text-charcoal border border-th-8f68f6/[0.28]",
 };
 
 export interface CtaButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {

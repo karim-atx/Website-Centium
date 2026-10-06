@@ -156,8 +156,8 @@ export const SwipeActions: React.FC<{
               width: tile,
               height: tile,
               borderRadius: 14,
-              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
-              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
+              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgb(var(--th-aea1dc) / 0.18)",
+              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "rgb(var(--thi-b7abde))" : "rgb(var(--thi-7d67d9))",
             }}
           >
             {a.icon}

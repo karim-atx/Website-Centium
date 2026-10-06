@@ -11,9 +11,9 @@ import { useIsDark } from "../../hooks/useIsDark";
  * --hero-label, so band content drawn by the caller follows the mode too.
  */
 const BAND = {
-  bg: ["#E4DDFD", "#303141"],
-  value: ["#2E2560", "#F5F3FA"],
-  label: ["#463A80", "#C8BFE9"],
+  bg: ["rgb(var(--th-e4ddfd))", "rgb(var(--th-303141))"],
+  value: ["rgb(var(--th-2e2560))", "#F5F3FA"],
+  label: ["rgb(var(--th-463a80))", "rgb(var(--th-c8bfe9))"],
 } as const;
 
 
@@ -36,7 +36,7 @@ export const HeroCard: React.FC<{
   const dark = useIsDark();
   return (
     <div className={`overflow-hidden ${className ?? ""}`} style={{ borderRadius: 20 }}>
-      <div style={{ background: dark ? "var(--gradient-lavender-accent)" : "linear-gradient(180deg,#A79AD5,#A194D1)", color: "#FFFFFF", padding: topPadding }}>{top}</div>
+      <div style={{ background: dark ? "var(--gradient-lavender-accent)" : "linear-gradient(180deg,rgb(var(--th-a79ad5)),rgb(var(--th-a194d1)))", color: "#FFFFFF", padding: topPadding }}>{top}</div>
       {bottom && (
         <div
           style={{

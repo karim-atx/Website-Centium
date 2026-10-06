@@ -10,7 +10,7 @@ interface ProgressBarProps {
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
-  color = "#7D6BB5",
+  color = "rgb(var(--th-7d6bb5))",
   trackClassName,
   height = 8,
 }) => {
