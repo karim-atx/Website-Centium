@@ -56,14 +56,17 @@ const DARK_CARD = "#1C1F28";
 
 export function colourSet(hex: string, dark: boolean): ColourSet {
   if (!dark) {
-    // #FBF7F4 is Bronze at about 5% on white (the frame's fill).
+    // MO1.1.3 draws only Bronze: the fill #FBF7F4 (spec #2) and the bar's
+    // empty track #EEE3DC (2x frame: Bronze at 14% over that fill). The other
+    // tiers take the same mix: their fill about 5% on white (unspecified).
+    const fill = hex === TIER_HEX.Bronze ? "#FBF7F4" : tintOn(hex, 0.05, "#FFFFFF");
     return {
       ink: hex,
-      fill: tintOn(hex, 0.05, "#FFFFFF"),
+      fill,
       border: `${hex}3D`, // 24%
       solid: hex,
       onSolid: "#FFFFFF",
-      track: tintOn(hex, 0.16, "#FFFFFF"),
+      track: tintOn(hex, 0.14, fill),
     };
   }
   const fill = tintOn(hex, 0.14, DARK_CARD);

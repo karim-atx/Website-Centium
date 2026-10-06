@@ -35,11 +35,11 @@ const dateLabel = (iso: string) => {
 // MO1.1.2.3 (new entry). MO1.1.2.2, the Face ID locked folder, is native-only
 // and not built; so the folder menu has no Lock.
 //
-// LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
-// folder tabs take the old folder chips' colours, the Edit tile the old round
-// button's, and the pinned New entry the old outline button's. Delete is the
-// shared destructive red in both modes. Dark mode is the v5.1 dark set
-// throughout.
+// LIGHT MODE (decision 22): the parts new since the redesign — the segmented
+// folder card, the swipe tiles and the pinned CTA row — take the handover's
+// own colours; the FolderPlus toggle and the entry cards existed before and
+// keep theirs (decision 15). Delete is the shared destructive red in both
+// modes. Dark mode is the v5.1 dark set throughout.
 //
 // FOLDERS AND ENTRIES ARE SERVER ROWS NOW (journal_folders +
 // journal_entries), which changes two things on this screen. The folder list
@@ -199,19 +199,18 @@ export default function JournalTab() {
       )}
 
       {/* MO1.1.2 #2: the folders as a segmented card (358 × 56), scrolling
-          sideways once they outgrow it. Light colours are the old chips'. */}
+          sideways once they outgrow it. The segmented card is new since the
+          redesign, so it takes the handover's colours (decision 22): active
+          #A79AD5 / white, idle #F5F4FE / #5B5349. Tabs keep their natural
+          width, 16 each side (2x frame: Personal 84, Training 80). */}
       {journalFolders.length > 0 && (
         <SegmentedTabs
           scroll
+          scrollMinWidth={0}
           items={journalFolders.map((f) => ({ key: f.id, label: f.name }))}
           activeKey={selected}
           onChange={setActiveFolder}
-          light={{
-            activeFill: "rgb(var(--c-primary-fill))",
-            activeInk: "rgb(var(--c-on-primary-fill))",
-            idleFill: "rgb(var(--c-cream-card))",
-            idleInk: "rgb(var(--c-charcoal-soft))",
-          }}
+          idleInk="rgb(var(--c-charcoal-soft))"
         />
       )}
 
@@ -264,8 +263,9 @@ export default function JournalTab() {
                 key: "edit",
                 label: "Edit",
                 icon: <Pencil size={16} />,
+                // The swipe tile is new since the redesign: the frame's
+                // #F0EEF9 tile with a #7D67D9 pencil, SwipeActions' default.
                 onClick: () => startEdit(e),
-                light: { fill: "rgb(var(--c-primary-fill))", ink: "rgb(var(--c-on-primary-fill))" },
               },
               {
                 key: "delete",
@@ -299,7 +299,8 @@ export default function JournalTab() {
               <div
                 aria-hidden
                 className="mt-[9px] h-px"
-                style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.5)" }}
+                // #D3CBEC on the 2x frame: #AEA1DC at 55%.
+                style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.55)" }}
               />
               <p className="mt-2 text-sm leading-5 font-semibold text-charcoal truncate">{e.title}</p>
             </Card>
@@ -321,14 +322,15 @@ export default function JournalTab() {
             primary={{
               label: "New entry",
               icon: <Plus size={15} />,
-              // Light mode keeps the outline New entry button this replaced;
-              // dark mode is the filled primary.
-              className:
-                "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
+              // MO1.1.2 #10: the pinned CTA row is new since the redesign
+              // (decision 22): New entry filled #A198DF, FolderCog on #EFEEFD
+              // with a #7D67D9 icon. 48/r14 per C-01.
+              className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
               onClick: startNew,
             }}
             trailing={{
               icon: <FolderCog size={18} strokeWidth={1.75} />,
+              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
               label: "Folder options",
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,

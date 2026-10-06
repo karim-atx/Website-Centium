@@ -105,7 +105,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
     <div>
       {/* The hero: the current pose. */}
       {/* MO1.1.4.1 #3: padding 18 16 14, r22. */}
-      <div className="rounded-[22px] bg-primary-pale px-4 pt-[18px] pb-3.5 mb-6">
+      <div className="rounded-[22px] bg-primary-pale px-4 pt-[18px] pb-3.5 mb-[21px]">
         <div className="flex items-center gap-4">
           <span className="relative shrink-0 flex items-center justify-center" style={{ width: RING_BOX, height: RING_BOX }}>
             <svg viewBox={`0 0 ${RING_BOX} ${RING_BOX}`} className="absolute inset-0 -rotate-90" aria-hidden>
@@ -157,13 +157,15 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
           >
             <span className="text-[11px] font-bold tracking-[.14em] uppercase text-charcoal-muted">Next</span>
             <span className="flex-1 min-w-0 text-[13.5px] font-semibold text-charcoal truncate">{next.name}</span>
-            <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+            <ChevronRight size={14} className="text-charcoal-faint shrink-0" />
           </button>
         )}
       </div>
 
       {/* The sequence. */}
-      <p className="mb-2.5 px-1 text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+      {/* MO1.1.4.1 #4: x 21, y 426, 350 × 14, 10.5/700 #8C8378 (new since
+          the redesign, decision 22); 21 under the hero, 8 above the first card. */}
+      <p className="mb-2 px-1 text-[10.5px] leading-[14px] font-bold tracking-[.1em] uppercase text-charcoal-muted dark:text-charcoal-faint">
         Sequence
       </p>
       <div className="space-y-2">

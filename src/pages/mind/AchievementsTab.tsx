@@ -36,7 +36,10 @@ import {
 // until the medallion set exists (A11), inside a round medallion. The badge
 // cards and the recently-unlocked points keep their old light colours.
 
-const sectionLabel = "text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
+// MO1.1.3 #3 "Recently unlocked": the handover's 10.5/700 label (decision 20;
+// tracking measured on the 2x frame at about 0.1em). The label existed before
+// the redesign, so it keeps its light colour (decisions 20 and 22).
+const sectionLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
 
 /** A badge's emoji in a round medallion; greyed when locked. */
 function Medallion({ icon, earned, size }: { icon: string; earned: boolean; size: number }) {
@@ -139,15 +142,20 @@ export default function AchievementsTab() {
       {/* ---- MO1.1.3 #2: the tier card, in the current tier's colour ------- */}
       {pointsSummary && tier && (
         <div
-          className="rounded-[22px] px-[18px] pt-[18px] pb-4 mb-[22px] border"
+          // MO1.1.3 #2, 254 tall on the 2x frame. Measured there: the count
+          // 3 pt under the tier label; "13 of 59" / "earned" bottom-aligned
+          // with the balance (their baselines 18 apart); tier names 3 pt under
+          // the discs; the rule 12 under the floors; and 12 pt under the
+          // rewards line (the spec's 16 assumes a tighter line height).
+          className="rounded-[22px] px-[18px] pt-[18px] pb-3 mb-[22px] border"
           style={{ background: tier.fill, borderColor: tier.border }}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-extrabold tracking-[.16em] uppercase" style={{ color: tier.ink }}>
                 {pointsSummary.tierName} tier
               </p>
-              <p className="mt-1.5 flex items-baseline gap-1.5">
+              <p className="mt-[3px] flex items-baseline gap-1.5">
                 <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
                   {pointsSummary.balance.toLocaleString()}
                 </span>
@@ -155,7 +163,7 @@ export default function AchievementsTab() {
               </p>
             </div>
             <div className="text-right">
-              <p className="tabular-nums">
+              <p className="tabular-nums leading-[17px]">
                 <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
                 <span className="text-[12px] font-semibold text-charcoal-muted"> of {counts.total}</span>
               </p>
@@ -228,7 +236,7 @@ export default function AchievementsTab() {
                   </span>
                   <span
                     // Only the current tier's name is bold, in its colour (MO1.1.3).
-                    className={clsx("mt-1.5 text-[11px]", current ? "font-bold" : "font-normal")}
+                    className={clsx("mt-[3px] text-[11px]", current ? "font-bold" : "font-normal")}
                     style={{ color: current ? own.ink : "rgb(var(--c-charcoal-muted))" }}
                   >
                     {t.name}
@@ -242,7 +250,7 @@ export default function AchievementsTab() {
           {/* SAID PLAINLY, BECAUSE IT IS TRUE AND THE ALTERNATIVE IS TO IMPLY
               OTHERWISE. Points are earned and a tier is real; there is nothing
               yet to spend them on (A13). */}
-          <p className="mt-3.5 pt-3 border-t text-[12px] text-charcoal-muted" style={{ borderColor: tier.border }}>
+          <p className="mt-3 pt-3 border-t text-[12px] text-charcoal-muted" style={{ borderColor: tier.border }}>
             Rewards for your points are coming soon.
           </p>
         </div>
@@ -287,16 +295,18 @@ export default function AchievementsTab() {
         <SegmentedTabs
           scroll
           className="-mr-4 mb-3"
-          trackStyle={{ borderRadius: "16px 0 0 16px" }}
+          // MO1.1.3 #4 (2x frame): a 52 pt track, 40 pt tabs at their
+          // natural width (12 each side: "All" 40), 8 apart. The strip is new
+          // since the redesign, so it takes the handover's colours (decision
+          // 22): active #A79AD5 / white, idle #F5F4FE / #5B5349.
+          trackStyle={{ borderRadius: "16px 0 0 16px", gap: 8 }}
+          tabHeight={40}
+          scrollTabPadding="0 12px"
+          scrollMinWidth={0}
+          idleInk="rgb(var(--c-charcoal-soft))"
           items={[{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: CATEGORY_LABEL[c] }))]}
           activeKey={category}
           onChange={(k) => setCategory(k as AchievementCategory | "all")}
-          light={{
-            activeFill: "rgb(var(--c-primary-fill))",
-            activeInk: "rgb(var(--c-on-primary-fill))",
-            idleFill: "rgb(var(--c-cream-card))",
-            idleInk: "rgb(var(--c-charcoal-soft))",
-          }}
         />
       )}
 

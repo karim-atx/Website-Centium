@@ -7,6 +7,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { LEVEL_LABEL } from "../../services/achievements";
 import { colourSet, levelHex } from "./achievementStyle";
 import { ThemedC } from "../ui/ThemedMark";
+import { tintOn } from "../../data/folderColors";
 
 // The unlock moment, mobile v5.1 MO1.1.3.2: a pill at the top of whatever
 // page earned it. It replaces the bottom sheet with its confetti and "Nice".
@@ -93,6 +94,9 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   }, [reduced]);
 
   const set = colourSet(levelHex(achievement.level), dark);
+  // The chip and the coin's back face: #F3EDE9 on the 2x frame, the level's
+  // colour at 12% on the white pill (the hero's track is a deeper mix).
+  const tint = dark ? set.track : tintOn(levelHex(achievement.level), 0.12, "#FFFFFF");
   // A one-off has no level; MO1.1.3.2 still draws the chip, so it reads as
   // the first rung, Bronze (matching levelHex's fallback colour).
   const level = LEVEL_LABEL[achievement.level ?? "bronze"];
@@ -198,7 +202,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
             </span>
             <span
               className="absolute inset-0 rounded-full flex items-center justify-center text-[22px] leading-none"
-              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: set.track }}
+              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: tint }}
             >
               {achievement.icon}
             </span>
@@ -219,7 +223,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
               {level && (
                 <span
                   className="shrink-0 text-[10px] font-bold rounded-full px-1.5 py-[1px]"
-                  style={{ color: set.ink, background: set.track }}
+                  style={{ color: set.ink, background: tint }}
                 >
                   {level}
                 </span>
