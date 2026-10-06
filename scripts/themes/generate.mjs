@@ -279,16 +279,20 @@ function hcBlock(theme, mode, literals, data) {
     lines.push(`  ${n}-ink: ${cssTriplet(ensureContrast(data.ink2[n + "-ink"], grounds(fam), 4.5, dir))};`);
   }
   if (!centiumLight) {
-    const prim = data.v["--c-primary"];
-    const strong = mode === "light"
-      ? ensureContrast(prim, [WHITE, ...grounds("lav")], 4.5, -1)
-      : ensureContrast(prim, grounds("lav"), 4.5, 1);
-    lines.push(`  --c-primary: ${cssTriplet(strong)};`);
-    lines.push(`  --c-primary-ink: ${cssTriplet(strong)};`);
+    // Light: Centium's own High contrast values (#5B48B8 primary, #4B3BA0
+    // text, index.css) matched into the theme like every other shade, so the
+    // theme keeps Centium's ratios there too. Dark (no hand values): lifted.
+    const prim = mode === "light" && theme !== "centium"
+      ? mapHex("#5b48b8", theme, "light", "lav")
+      : ensureContrast(data.v["--c-primary"], grounds("lav"), 4.5, 1);
+    const text = mode === "light" && theme !== "centium" ? mapHex("#4b3ba0", theme, "light", "lav") : null;
+    lines.push(`  --c-primary: ${cssTriplet(prim)};`);
+    lines.push(`  --c-primary-ink: ${cssTriplet(ensureContrast(prim, grounds("lav"), 4.5, dir))};`);
     for (const n of ["--c-primary-accent", "--c-primary-dark", "--c-primary-deep-text"]) {
-      lines.push(`  ${n}: ${cssTriplet(ensureContrast(data.v[n], grounds("lav"), 4.5, dir))};`);
+      lines.push(`  ${n}: ${cssTriplet(ensureContrast(text ?? data.v[n], grounds("lav"), 4.5, dir))};`);
     }
-    const fill = ensureContrast(data.v["--c-primary-fill"], [data.fillInk], 4.5, data.fillInk === WHITE ? -1 : 1);
+    const fillBase = mode === "light" && theme !== "centium" && data.fillInk === WHITE ? prim : data.v["--c-primary-fill"];
+    const fill = ensureContrast(fillBase, [data.fillInk], 4.5, data.fillInk === WHITE ? -1 : 1);
     lines.push(`  --c-primary-fill: ${cssTriplet(fill)};`);
   }
   for (const h of literals) {
