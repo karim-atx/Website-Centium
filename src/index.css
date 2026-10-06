@@ -697,15 +697,15 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
    real CSS hover/active states for the hero CTAs, replacing the "Request a
    Demo" button's previous JS onMouseEnter/onMouseLeave handlers. */
 .hero-cta-solid:hover {
-  background: #6a54c4;
+  background: rgb(var(--th-6a54c4));
 }
 .hero-cta-solid:active {
   transform: scale(0.96);
 }
 .hero-cta-ghost:hover {
-  background: rgba(94, 158, 149, 0.16);
-  border-color: #5e9e95;
-  color: #2f5f58;
+  background: rgb(var(--th-5e9e95) / 0.16);
+  border-color: rgb(var(--th-5e9e95));
+  color: rgb(var(--thi-2f5f58));
 }
 .hero-cta-ghost:active {
   transform: scale(0.96);
@@ -767,13 +767,13 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   cursor: pointer;
 }
 .set-slider:focus-visible {
-  box-shadow: 0 0 0 3px rgba(174, 161, 220, 0.45);
+  box-shadow: 0 0 0 3px rgb(var(--th-aea1dc) / 0.45);
 }
 
 /* WO24 Percentage slider: a white thumb ringed in #AEA1DC on the grey track. */
 .plate-slider::-webkit-slider-thumb {
-  border: 1.5px solid #aea1dc;
+  border: 1.5px solid rgb(var(--th-aea1dc));
 }
 .plate-slider::-moz-range-thumb {
-  border: 1.5px solid #aea1dc;
+  border: 1.5px solid rgb(var(--th-aea1dc));
 }

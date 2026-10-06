@@ -125,7 +125,7 @@ export default function More() {
           {/* Mind: the hero. Habits, Journal and Meditation are all inside it. */}
           <button
             onClick={() => navigate("/app/mind")}
-            className="tap relative w-full overflow-hidden text-left block bg-[#ECF5F3] dark:bg-[rgba(162,200,194,0.12)] animate-fade-slide-up"
+            className="tap relative w-full overflow-hidden text-left block bg-[#ECF5F3] dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
             style={{ minHeight: 169, borderRadius: 18, marginBottom: 7 }}
           >
             <img
@@ -138,12 +138,12 @@ export default function More() {
             />
             <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
               <span className="flex items-center" style={{ gap: 14 }}>
-                <span className="text-[#32544D] dark:text-[#D5EAE5]" style={{ fontSize: 38, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                <span className="text-th-32544d dark:text-th-d5eae5" style={{ fontSize: 38, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   Mind
                 </span>
-                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-[#32544D] dark:text-[#D5EAE5]" />
+                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5" />
               </span>
-              <span className="block text-[#869595] dark:text-[#A5BDB9]" style={{ marginTop: 12, maxWidth: 160, fontSize: 17, fontWeight: 500, lineHeight: "22px" }}>
+              <span className="block text-th-869595 dark:text-th-a5bdb9" style={{ marginTop: 12, maxWidth: 160, fontSize: 17, fontWeight: 500, lineHeight: "22px" }}>
                 Habits, journal &amp; meditation
               </span>
             </span>
@@ -154,17 +154,17 @@ export default function More() {
               <button
                 key={t.label}
                 onClick={() => go(t)}
-                className="tap flex flex-col items-center text-center bg-[#EBF5F2] dark:bg-[rgba(162,200,194,0.12)] animate-fade-slide-up"
+                className="tap flex flex-col items-center text-center bg-[#EBF5F2] dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
                 style={{ minHeight: 120, borderRadius: 14, padding: "18px 6px 12px" }}
               >
-                <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "#4F8F8A" }}>
+                <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-4f8f8a))" }}>
                   <t.icon size={14} className="text-white" />
                 </span>
                 <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 8, gap: 2, fontSize: 12.5, fontWeight: 700, lineHeight: "16px" }}>
                   {t.label}
                   <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
                 </span>
-                <span className="text-[#8A9796] dark:text-[#9CB0AD]" style={{ marginTop: 2, fontSize: 10, lineHeight: "14px" }}>
+                <span className="text-th-8a9796 dark:text-th-9cb0ad" style={{ marginTop: 2, fontSize: 10, lineHeight: "14px" }}>
                   {t.desc}
                 </span>
               </button>
@@ -174,7 +174,7 @@ export default function More() {
       )}
 
       <div
-        className="bg-[#F7F7FC] dark:bg-[rgba(174,161,220,0.10)] animate-fade-slide-up"
+        className="bg-[#F7F7FC] dark:bg-th-aea1dc/[0.10] animate-fade-slide-up"
         style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}
       >
         {rows.map((r, i) => (
@@ -187,11 +187,11 @@ export default function More() {
             {i > 0 && (
               <span
                 aria-hidden
-                className="absolute top-0 bg-[#EBEAF6] dark:bg-[rgba(174,161,220,0.16)]"
+                className="absolute top-0 bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16]"
                 style={{ left: 55, right: 15, height: 1 }}
               />
             )}
-            <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "#8E7FD0" }}>
+            <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-8e7fd0))" }}>
               <r.icon size={14} className="text-white" />
             </span>
             <span className="flex-1 min-w-0">
@@ -219,8 +219,8 @@ export default function More() {
         style={{ background: "#241F1B" }}
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgba(174,161,220,.26)" }}>
-            <PremiumLeafIcon size={15} style={{ color: "#C8BFE9" }} />
+          <div className="w-8 h-8 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgb(var(--th-aea1dc) / .26)" }}>
+            <PremiumLeafIcon size={15} style={{ color: "rgb(var(--thi-c8bfe9))" }} />
           </div>
           <div>
             <p className="text-[12.5px] font-extrabold text-white">Centium Premium</p>
@@ -232,7 +232,7 @@ export default function More() {
             <p className="text-[10px] text-white/60">AI logging, deeper insights &amp; rewards</p>
           </div>
         </div>
-        <ChevronRight size={14} style={{ color: "#C8BFE9" }} className="shrink-0" />
+        <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0" />
       </button>
 
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
