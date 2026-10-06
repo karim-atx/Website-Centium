@@ -179,7 +179,7 @@ export const MembershipsCard: React.FC = () => {
 
   return (
     <section className="mb-6 animate-fade-slide-up" aria-labelledby="memberships-label">
-      <p id="memberships-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p id="memberships-label" className="section-label text-charcoal-faint mb-2.5">
         Memberships
       </p>
 

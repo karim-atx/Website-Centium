@@ -29,7 +29,7 @@ export const SettingsSection: React.FC<{
   const labelId = useId();
   return (
     <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
-      <h2 id={labelId} className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+      <h2 id={labelId} className="section-label text-charcoal-faint mb-1">
         {label}
       </h2>
       <div>{children}</div>

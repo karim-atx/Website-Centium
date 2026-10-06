@@ -33,7 +33,7 @@ export const YourReviewsSection: React.FC<{ authUserId: string | null }> = ({ au
 
   return (
     <section className="mb-6" aria-labelledby="your-reviews">
-      <h2 id="your-reviews" className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mb-2">
+      <h2 id="your-reviews" className="section-label text-charcoal-soft mb-2">
         Your reviews
       </h2>
       {error ? (

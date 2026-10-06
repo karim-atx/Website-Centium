@@ -680,11 +680,11 @@ export default function CalendarTab() {
             <button
               onClick={() => setDraft((d) => ({ ...d, allDay: !d.allDay }))}
               className={clsx(
-                "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
+                "tap w-11 h-[26px] rounded-full flex items-center px-[3px] transition-colors",
                 draft.allDay ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
               )}
             >
-              <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
+              <div className="w-5 h-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]" />
             </button>
           </div>
 

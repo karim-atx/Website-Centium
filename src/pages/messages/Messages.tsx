@@ -448,7 +448,7 @@ export default function Messages() {
       )}
 
       {searchingMessages && items.length > 0 && (
-        <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1 mb-1">Chats</h2>
+        <h2 className="section-label text-charcoal-soft mt-1 mb-1">Chats</h2>
       )}
 
       {!loading && (threads.length > 0 || invitations.length > 0 || lists.length > 0) && items.length === 0 && !searchingMessages && (
@@ -489,7 +489,7 @@ export default function Messages() {
 
       {searchingMessages && (
         <section className="mt-3" aria-label="Messages">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mb-1">Messages</h2>
+          <h2 className="section-label text-charcoal-soft mb-1">Messages</h2>
           {searchError && <p className="text-xs text-status-high py-2">{searchError}</p>}
           {!searching && !searchError && hits.length === 0 && (
             <p className="text-sm text-charcoal-faint text-center py-6">No messages match "{term}".</p>

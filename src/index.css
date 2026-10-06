@@ -621,6 +621,11 @@ html.high-contrast [class*="divide-charcoal/"] > :not([hidden]) ~ :not([hidden])
 html.high-contrast [class*="before:bg-charcoal/"]::before {
   background-color: rgb(var(--c-charcoal) / 0.3);
 }
+/* MO1.8.6.1: the toggle's off track is strengthened like the hairlines
+   (the frame measures about #B0B0B0, 30% ink). */
+html.high-contrast .toggle-off {
+  background-color: rgb(var(--c-charcoal) / 0.3);
+}
 
 /* R19 (batch C, C25): Settings > Accessibility > Bigger tap targets. Every
    tappable gets a 48 x 48 hit area (the global rule below gives 44) and rows
@@ -731,14 +736,19 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   }
 }
 
-/* Design refinement: the one text role repeated on nearly every screen —
-   section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
-   the old 12px/600/wide-tracking convention. */
+/* Mobile v5.1, decision 20 (supersedes 17): the one section-label style, "with
+   the line" (C-05). Foundations label.section.settings: 11 / 600 uppercase,
+   0.14em, a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is NOT set
+   here: each label keeps its current colour class (decision 19, light mode
+   stays pre-R1). The SectionLabel component renders this same geometry. */
 .section-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  padding-bottom: 7.5px;
+  border-bottom: 1.5px solid rgb(var(--c-primary));
 }
 
 /* WO8 logger fields: placeholders (last session's or the template's values)

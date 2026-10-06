@@ -92,7 +92,7 @@ export default function BusinessEmployeesTab() {
       )}
 
       <Card className="mb-6">
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+        <p className="section-label text-charcoal-faint mb-2">
           Your business ID
         </p>
         <p className="text-[11px] text-charcoal-faint mb-3">
@@ -141,7 +141,7 @@ export default function BusinessEmployeesTab() {
         </div>
       )}
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label text-charcoal-faint mb-2.5">
         Affiliated professionals
       </p>
       <div className="space-y-2.5">

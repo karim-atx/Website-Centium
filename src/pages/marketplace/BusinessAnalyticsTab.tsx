@@ -161,8 +161,8 @@ export default function BusinessAnalyticsTab() {
 
       {section === "insights" && (
         <>
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="section-label text-charcoal-faint">Business performance</p>
+          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
+            <p className="section-label text-charcoal-faint !border-b-0 !pb-0">Business performance</p>
             <button
               onClick={() =>
                 downloadCsv(

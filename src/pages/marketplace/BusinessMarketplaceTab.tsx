@@ -127,7 +127,7 @@ export default function BusinessMarketplaceTab() {
       </Card>
 
       {/* V10 (QA 10.0): "The ability to add/remove discounts in the market place." */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Discounts</p>
+      <p className="section-label text-charcoal-faint mb-2.5">Discounts</p>
       <Card className="mb-6">
         <div className="flex items-center gap-2 mb-3">
           <input
@@ -165,7 +165,7 @@ export default function BusinessMarketplaceTab() {
         )}
       </Card>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Your listings</p>
+      <p className="section-label text-charcoal-faint mb-2.5">Your listings</p>
       <div className="space-y-2.5">
         {offerings.offerings.map((o) => {
           const Icon = marketplaceCategoryIcon[o.category];

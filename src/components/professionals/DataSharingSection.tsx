@@ -488,7 +488,7 @@ export const DataSharingSection: React.FC<{
       {/* The sheet that renders the single-professional variant carries its
           own title, so the section heading would just repeat it. */}
       {!professionalId && (
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <p className="section-label text-charcoal-faint mb-2 flex items-center gap-1.5">
           <ShieldCheck size={13} /> Data sharing
         </p>
       )}

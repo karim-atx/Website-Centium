@@ -425,7 +425,7 @@ export default function ProfessionalDetail() {
           before asking would be a guess. */}
       {isReal && !signedOut && canReview === false && !myReview && (
         <Card className="mb-5 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
+          <p className="section-label text-charcoal-faint mb-1.5">Reviews</p>
           <p className="text-sm text-charcoal-faint">You can only review a professional you've worked with.</p>
         </Card>
       )}

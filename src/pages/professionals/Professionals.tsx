@@ -342,7 +342,7 @@ export default function Professionals() {
 
           {linkedDetail?.bio && (
             <div>
-              <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1.5">About</p>
+              <p className="section-label text-charcoal-soft mb-1.5">About</p>
               <p className="text-sm text-charcoal leading-relaxed whitespace-pre-line">{linkedDetail.bio}</p>
             </div>
           )}

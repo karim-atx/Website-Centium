@@ -177,7 +177,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
 
       {draft.accountType === "customer" && (
         <div className="animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          <p className="section-label text-charcoal-faint mb-2">
             I am a…
           </p>
           <div className="grid grid-cols-2 gap-2 mb-3">

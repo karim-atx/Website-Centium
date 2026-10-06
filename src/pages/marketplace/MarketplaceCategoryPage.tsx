@@ -130,7 +130,7 @@ export default function MarketplaceCategoryPage() {
 
         {id !== "gyms" && id !== "classes" && businessListingsForCategory.length > 0 && (
           <>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide pt-2">
+            <p className="section-label text-charcoal-faint pt-2">
               From Centium businesses
             </p>
             {businessListingsForCategory.map((o) => (

@@ -97,7 +97,7 @@ function Heading() {
         </svg>
       </button>
       <div className="min-w-0">
-        <h1 className="m-0 text-[26px] font-extrabold leading-tight" style={{ color: fv("text") }}>Community</h1>
+        <h1 className="m-0 text-[27px] font-bold leading-[1.5] tracking-[-0.022em]" style={{ color: fv("text") }}>Community</h1>
         <p className="mt-1 text-[13px] font-medium" style={{ color: fv("muted") }}>
           Discuss with other clients, or learn from a course
         </p>

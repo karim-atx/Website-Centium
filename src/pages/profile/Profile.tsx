@@ -308,7 +308,7 @@ export default function Profile() {
   );
 
   const sectionLabel = (text: string, id?: string) => (
-    <p id={id} className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+    <p id={id} className="section-label text-charcoal-faint mb-2.5">
       {text}
     </p>
   );
@@ -530,9 +530,9 @@ export default function Profile() {
             onClick={() => setSafetyOpen((o) => !o)}
             aria-expanded={safetyOpen}
             aria-controls="safety-content"
-            className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start"
+            className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start pb-[7.5px] border-b-[1.5px] border-primary"
           >
-            <span className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Safety & content</span>
+            <span className="section-label text-charcoal-faint !border-b-0 !pb-0">Safety & content</span>
             <ChevronDown
               size={16}
               aria-hidden
