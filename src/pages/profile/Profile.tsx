@@ -290,7 +290,10 @@ export default function Profile() {
   ) => (
     // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
     // 2x frame: border x 32–211, y 216–501), divider inset 22 (x 78–163).
-    <div className="h-[143px] rounded-2xl bg-cream-card border border-charcoal/[0.08] flex flex-col overflow-hidden min-w-0">
+    // Decision 22 (new tile, not in pre-R1): the handover's own colours, as
+    // theme tokens: 1px #6F9993 border and divider (teal-dark), values
+    // 17/700 #5F5093 (primary-deep-text), units 11/400 #AEA1DC (primary).
+    <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
       {[top, bottom].map((part, i) => (
         <button
           key={part.unit}
@@ -299,12 +302,12 @@ export default function Profile() {
           aria-label={part.label}
           className={clsx(
             "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
-            i === 1 && "border-t border-charcoal/[0.08] mx-[22px]"
+            i === 1 && "border-t border-teal-dark mx-[22px]"
           )}
         >
           {/* MO1.5 anatomy row 2: values 17px/700. */}
-          <span className="text-[17px] font-bold leading-tight text-charcoal tabular-nums capitalize">{part.value}</span>
-          <span className="text-[11px] text-charcoal-faint">{part.unit}</span>
+          <span className="text-[17px] font-bold leading-tight text-primary-deep-text tabular-nums capitalize">{part.value}</span>
+          <span className="text-[11px] text-primary">{part.unit}</span>
         </button>
       ))}
     </div>
@@ -351,7 +354,7 @@ export default function Profile() {
           <button
             onClick={() => setAvatarSheetOpen(true)}
             aria-label="Change profile picture"
-            className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[34px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
+            className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[30px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
           >
             {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
           </button>
@@ -375,9 +378,12 @@ export default function Profile() {
             <button
               type="button"
               onClick={() => setCredentialsOpen(true)}
-              className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-deep-text"
+              // MO1.5: a 118 × 32 pill, radius 12 (measured on the 2x frame:
+              // x 272–507, y 484–547), #F0EDF9 fill, #7D6BB5 key and label
+              // (new chip, decision 22), KeyRound 14/1.75.
+              className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-dark"
             >
-              <KeyRound size={14} aria-hidden />
+              <KeyRound size={14} strokeWidth={1.75} aria-hidden />
               Credentials
             </button>
           )}
@@ -451,43 +457,48 @@ export default function Profile() {
         <section className="mb-6 animate-fade-slide-up">
           {sectionLabel(connectedProfessionals.length > 0 ? "Connected professionals" : "Professionals")}
           {connectedProfessionals.length === 0 ? (
-            <Card>
+            // MO1.5 anatomy row 4: the code card is radius 18 with 14 padding
+            // (measured on the 2x frame, as the Memberships card).
+            <Card padded={false} className="!rounded-[18px] p-3.5">
               <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
             </Card>
           ) : (
-            <div className="space-y-2.5">
+            // MO1.5.1: 8 between the rows (2x frame: 1129 → 1146).
+            <div className="space-y-2">
               {connectedProfessionals.map((p) => (
                 <button
                   key={p.professionalId}
                   type="button"
                   onClick={() => setSharingFor(p)}
-                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                  className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3.5 text-start"
                 >
                   {/* MO1.5.1 anatomy row 4: initials 12/700, name 14/600,
                       "Manage data sharing" 11.5/400, ChevronRight 15; avatar
-                      32 measured on the 2x frame (x 62–125). */}
+                      32 measured on the 2x frame (x 62–125); row 61 tall,
+                      radius 18 (2x frame: y 1008–1129). */}
                   <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[12px] font-bold text-primary-dark">
                     {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[14px] font-semibold text-charcoal truncate">{p.name}</span>
-                    <span className="block text-[11.5px] text-charcoal-faint">Manage data sharing</span>
+                    <span className="block text-[14px] font-semibold leading-tight text-charcoal truncate">{p.name}</span>
+                    <span className="block text-[11.5px] leading-tight text-charcoal-faint">Manage data sharing</span>
                   </span>
                   <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
               {connectOpen ? (
-                <Card>
+                <Card padded={false} className="!rounded-[18px] p-3.5">
                   <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
                 </Card>
               ) : (
                 <button
                   type="button"
                   onClick={() => setConnectOpen(true)}
-                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-[11px] text-start"
+                  className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
                 >
-                  {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row about 56
-                      (measured on the 2x frame: tile 62–125, row 1148–1258). */}
+                  {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row 58 with
+                      12 padding (measured on the 2x frame: tile 1172–1235,
+                      row 1146–1259). */}
                   <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                     <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
@@ -515,12 +526,14 @@ export default function Profile() {
                 type="button"
                 onClick={s.onClick}
                 // MO1.5: label 13/600, Flag / Gauge 14/1.75, ChevronRight 14;
-                // tile 56 tall with a 28 r8 icon tile (measured on the 2x
-                // MO1.5.1 frame: tile y 1352–1463, icon tile 58–113).
-                className="tap flex items-center gap-2 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3 py-[13px] text-start min-w-0"
+                // tile 56 tall, radius 18, with a 28 r8 icon tile (measured on
+                // the 2x MO1.5.1 frame: tile y 1352–1463, icon tile 58–113).
+                // The icon tile is new (decision 22): #F0EDF9 with a #7D6BB5
+                // glyph, as drawn.
+                className="tap flex items-center gap-2 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3 py-[13px] text-start min-w-0"
               >
-                <span className="w-7 h-7 rounded-lg bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                  <s.icon size={14} strokeWidth={1.75} className="text-charcoal-soft" />
+                <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                  <s.icon size={14} strokeWidth={1.75} className="text-primary-dark" />
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
                 <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
@@ -541,7 +554,12 @@ export default function Profile() {
             onClick={() => setSafetyOpen((o) => !o)}
             aria-expanded={safetyOpen}
             aria-controls="safety-content"
-            className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start pb-[7.5px] border-b-[1.5px] border-primary"
+            // The label's own 10 below only when the card shows: collapsed
+            // (MO1.5.1), Sign Out sits the section's 24 under the label.
+            className={clsx(
+              "tap w-full flex items-center justify-between gap-3 text-start pb-[7.5px] border-b-[1.5px] border-primary",
+              safetyOpen && "mb-2.5"
+            )}
           >
             <span className="section-label text-charcoal-faint !border-b-0 !pb-0">Safety & content</span>
             {/* MO1.5.1 draws ChevronRight 14 while collapsed, MO1.5
@@ -557,10 +575,11 @@ export default function Profile() {
               {/* MO1.5 anatomy row 7: radius 18, padding 16 16 18 (its own
                   values here; the shared Card stays as it is elsewhere). */}
               <Card padded={false} className="mb-3 !rounded-[18px] pt-4 px-4 pb-[18px]">
-                <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-3 min-w-0">
-                    <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                      {/* MO1.5: HandHeart 17/1.5, title 14/600. */}
+                    {/* MO1.5: HandHeart 17/1.5, title 14/600; the 36 icon
+                        tile is #F0EDF9 (new, decision 22; 2x frame x 66–137). */}
+                    <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                       <HandHeart size={17} strokeWidth={1.5} className="text-primary-dark" />
                     </span>
                     <span className="text-sm font-semibold text-charcoal">Recovery-sensitive experience</span>
@@ -578,34 +597,40 @@ export default function Profile() {
                     label="Recovery-sensitive experience"
                   />
                 </div>
-                {/* QA 13.0: when the toggle is on it shows the text under. */}
-                {recoverySensitive && (
-                  <p className="text-xs text-charcoal-faint leading-relaxed">
-                    Personalize food tracking to reduce number-focused and potentially triggering content. You control
-                    what is shown, and you can change this at any time.
+                {/* MO1.5 anatomy rows 7–8 (measured on the 2x frame): the body
+                    sits under the title (x 162, past the 36 tile and its 12
+                    gap), 10 below the tile row, 12/400 on an 18 line, 8
+                    between paragraphs with no rule; one inset rule, 16 above
+                    and below, before Cycle tracking. */}
+                <div className="ps-12 mt-2.5 pb-4 border-b border-charcoal/[0.06] space-y-2">
+                  {/* QA 13.0: when the toggle is on it shows the text under. */}
+                  {recoverySensitive && (
+                    <p className="text-xs text-charcoal-faint leading-normal">
+                      Personalize food tracking to reduce number-focused and potentially triggering content. You control
+                      what is shown, and you can change this at any time.
+                    </p>
+                  )}
+                  {justToggledRecovery && (
+                    <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 leading-relaxed">
+                      Your experience has been updated: calorie totals, weight-related content, deficit language, and
+                      streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                    </p>
+                  )}
+                  {/* Task X: what is true, said instead of a pause that paused
+                      nothing: where the setting lives, and who sees it. */}
+                  <p className="text-xs text-charcoal-faint leading-normal">
+                    Saved to your account, so it's the same on every device you sign in on. Professionals you work with
+                    are never told whether it's on.
                   </p>
-                )}
-                {justToggledRecovery && (
-                  <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed">
-                    Your experience has been updated: calorie totals, weight-related content, deficit language, and streaks
-                    are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                  <p className="text-xs text-charcoal-faint leading-normal">
+                    This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
+                    <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
+                      professional
+                    </button>
+                    .
                   </p>
-                )}
-                {/* Task X: what is true, said instead of a pause that paused
-                    nothing: where the setting lives, and who sees it. */}
-                {/* MO1.5: body 12/400. */}
-                <p className="text-xs text-charcoal-faint mt-2 leading-relaxed">
-                  Saved to your account, so it's the same on every device you sign in on. Professionals you work with are
-                  never told whether it's on.
-                </p>
-                <p className="text-xs text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
-                  This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
-                  <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
-                    professional
-                  </button>
-                  .
-                </p>
-                <div className="mt-3.5 pt-3.5 border-t border-charcoal/[0.06]">
+                </div>
+                <div className="mt-4">
                   <CycleTrackingRow />
                 </div>
               </Card>
@@ -626,10 +651,11 @@ export default function Profile() {
         </section>
       )}
 
-      {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. */}
+      {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. A 48
+          block (MO1.5 row 10: 358 × 48), 24 under the section above. */}
       <button
         onClick={handleSignOut}
-        className="tap mx-auto mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-teal-dark"
+        className="tap mx-auto flex items-center justify-center gap-2 px-4 py-3.5 text-[14px] font-semibold text-teal-dark"
       >
         {/* MO1.5: 14/600 with LogOut 15/1.75. */}
         <LogOut size={15} strokeWidth={1.75} aria-hidden />

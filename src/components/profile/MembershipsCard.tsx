@@ -130,7 +130,9 @@ export const MembershipsCard: React.FC = () => {
           }}
           placeholder="Member code"
           aria-label="Member code"
-          className="flex-1 min-w-0 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          // Foundations Inputs (MO1.5 row 3, measured: 255 × 44, radius 12):
+          // height 44, radius 12, padding 0 14, value 14/600.
+          className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <Button onClick={() => void redeem()} disabled={!code.trim() || redeeming}>
           {redeeming ? "…" : "Join"}
@@ -143,11 +145,13 @@ export const MembershipsCard: React.FC = () => {
   const row = (m: Membership) => (
     <div
       className={clsx(
-        "flex items-center gap-3 rounded-2xl bg-cream-soft px-3.5 py-3",
+        // MO1.5.1 anatomy row 3 (2x frame): 72 tall, radius 18, padding 16,
+        // a 40 white tile radius 12 (x 64–143, y 672–751).
+        "flex items-center gap-3 rounded-[18px] bg-cream-soft p-4",
         m.status === "ended" && "opacity-60"
       )}
     >
-      <span className="w-11 h-11 rounded-2xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
+      <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
         <Store size={18} className="text-primary-dark" />
       </span>
       <div className="min-w-0 flex-1">
@@ -189,16 +193,19 @@ export const MembershipsCard: React.FC = () => {
       {memberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.
-        <Card>
+        // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
+        // under the field.
+        <Card padded={false} className="!rounded-[18px] p-3.5">
           {codeBox}
           {!redeemNote && loaded && (
-            <p className="mt-2 text-xs text-charcoal-faint">
+            <p className="mt-2.5 text-xs text-charcoal-faint">
               Got a code from a gym or studio? Enter it here to become a member.
             </p>
           )}
         </Card>
       ) : (
-        <div className="space-y-2.5">
+        // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
+        <div className="space-y-2">
           {memberships.map((m) => (
             <div key={m.id}>
               {m.status === "active" ? (
@@ -236,15 +243,15 @@ export const MembershipsCard: React.FC = () => {
           ))}
 
           {joinOpen ? (
-            <Card>{codeBox}</Card>
+            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox}</Card>
           ) : (
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
-              className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-[11px] text-start"
+              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
             >
-              {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row about 56
-                  (measured on the 2x frame: tile 62–125, row 803–913). */}
+              {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row 58 with 12
+                  padding, radius 18 (2x frame: tile 826–889, row 800–915). */}
               <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                 <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>

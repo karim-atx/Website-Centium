@@ -362,8 +362,10 @@ export const DataSharingSection: React.FC<{
   // ticks, and the changes that did not save.
   const header = (pro: LinkedProfessional) =>
     professionalId ? (
-      <div className="flex flex-col items-center text-center mb-4">
-        <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
+      // MO1.5.1.1 anatomy row 11: padding 4 8 2; the avatar is 60 (2x frame:
+      // y 1258–1377).
+      <div className="flex flex-col items-center text-center mb-4 pt-1 px-2 pb-0.5">
+        <span className="w-[60px] h-[60px] rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
           {pro.avatarUrl ? <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(pro.name)}
         </span>
         {/* MO1.5.1.1 anatomy row 11: name 18/700. */}
@@ -432,19 +434,24 @@ export const DataSharingSection: React.FC<{
       )}
 
       {groupsOf().map((g) => (
-        <div key={g.label} className="mt-4 first:mt-0">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">{g.label}</p>
-          <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
+        // MO1.5.1.1 rows 12–13 are section labels: the one section-label
+        // style (decision 20). Group cards radius 18 (2x frame).
+        <div key={g.label} className="mt-6 first:mt-0">
+          <p className="section-label text-charcoal-faint mb-2.5">{g.label}</p>
+          <div className="rounded-[18px] border border-charcoal/[0.08] px-3.5">
             {g.items.map(({ category, label, description }) => {
               // Absent means denied: no default-on.
               const granted = grants[pro.professionalId]?.[category] === true;
               const Icon = CATEGORY_ICON[category] ?? ShieldCheck;
               return (
+                // MO1.5.1.1 (2x frame): a 32 r10 #F0EDF9 tile with a #7D6BB5
+                // glyph (new tile, decision 22; x 72–135), and the rule from
+                // the label's x (160) at #F4F4F3 (5%).
                 <div
                   key={category}
-                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[48px] before:end-0 before:h-px before:bg-charcoal/[0.06] last:before:hidden"
+                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[44px] before:end-0 before:h-px before:bg-charcoal/[0.05] last:before:hidden"
                 >
-                  <span className="w-9 h-9 rounded-2xl bg-cream-soft text-charcoal-soft flex items-center justify-center shrink-0" aria-hidden>
+                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale text-primary-dark flex items-center justify-center shrink-0" aria-hidden>
                     {/* MO1.5.1.1: category icons 16/1.75. */}
                     <Icon size={16} strokeWidth={1.75} />
                   </span>

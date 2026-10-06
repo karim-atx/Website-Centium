@@ -141,10 +141,13 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       <span className={opts.visibleLabel ? "block mb-2 text-xs font-semibold text-charcoal-faint" : "sr-only"}>
         {opts.label}
       </span>
+      {/* MO1.5.4 (2x frame): 56 tall, radius 12, #F5F5F6 with no visible
+          border (the field meets the white card directly, x 76 / y 946);
+          the border shows only for an error (Foundations Inputs). */}
       <span
         className={clsx(
-          "flex items-center gap-2.5 h-14 rounded-2xl bg-cream-soft border px-3.5",
-          errors[key] ? "border-status-high" : "border-charcoal/10"
+          "flex items-center gap-2.5 h-14 rounded-xl bg-cream-soft border px-3.5",
+          errors[key] ? "border-status-high" : "border-transparent"
         )}
       >
         {icon && (
@@ -183,19 +186,27 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       open={open}
       onClose={onClose}
       title="Credentials"
-      icon={<KeyRound size={22} />}
+      // MO1.5.4 (2x frame): the card is 350 wide (20 from each edge of the
+      // 390 board, row 10 "padding 0 20px") with the fields 18 in (x 76–703),
+      // the icon tile 22 under the top (y 656 → 700) and Save 18 above the
+      // bottom (y 1893 → 1929); KeyRound 22/1.75 in #7D6BB5 on the #F0EDF9
+      // tile (new popup, decision 22).
+      maxWidth={350}
+      className="!px-[18px] !pt-[22px] !pb-[18px]"
+      icon={<KeyRound size={22} strokeWidth={1.75} className="text-primary-dark" />}
       cta={{ label: done ? "Saved" : busy ? "Saving…" : "Save", disabled: busy || done, onClick: () => void save() }}
     >
       {/* Visible labels (MO1.5.4.email / .phone); about 16 between the
           email field and the Phone label, measured on the 2x frame. */}
       <div className="space-y-4">
-        {field("email", <Mail size={16} />, user.email, () => {}, {
+        {/* MO1.5.4 icons: Mail 15/1.75, Phone 15/1.75. */}
+        {field("email", <Mail size={15} strokeWidth={1.75} />, user.email, () => {}, {
           placeholder: "Email",
           label: "Email",
           readOnly: true,
           visibleLabel: true,
         })}
-        {field("phone", <Phone size={16} />, phone, setPhone, {
+        {field("phone", <Phone size={15} strokeWidth={1.75} />, phone, setPhone, {
           placeholder: "Phone number",
           label: "Phone",
           inputMode: "tel",
@@ -203,7 +214,10 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
         })}
       </div>
 
-      <p className="mt-4 mb-2 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Social</p>
+      {/* MO1.5.4 row 10: "Social" 10.5/700 (cap height 7.5 on the 2x frame),
+          16 under the Phone field and 14 above the pair (y 1241 / 1280–1295 /
+          1330). */}
+      <p className="mt-4 mb-3.5 text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">Social</p>
       <div className="grid grid-cols-2 gap-2.5">
         {/* MO1.5.4: a fixed "@" prefix and lowercase placeholders. */}
         {field("instagram", <InstagramMark />, instagram, setInstagram, {

@@ -110,17 +110,24 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
     setResult({ success: false, message: outcome.message });
   };
 
+  // MO1.10 row 3: the popup's labels are 10.5/700 (cap 7.5 on the 2x frame),
+  // 10 above what they name (no rule under them in the popup).
   const label = (text: string) => (
-    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">{text}</p>
+    <p className="text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide mb-2.5">{text}</p>
   );
 
   return (
-    // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75.
+    // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75. Row 3 "padding 0
+    // 18px": the card is 354 wide at 390 (2x frame x 36–743), its content 18
+    // in (x 72), the Gift tile 22 under the top (y 148 → 192) and Apply 18
+    // above the bottom (y 1503 → 1539).
     <CentredPopup
       open={open}
       onClose={onClose}
       title="Invite friends"
       titleSize={19}
+      maxWidth={354}
+      className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<Gift size={23} strokeWidth={1.75} />}
     >
       <div className="text-start">
@@ -131,9 +138,11 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             { icon: Sparkles, who: "You", what: "1,500 points plus 15% off your next month" },
           ].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
-              <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+              {/* MO1.10 (2x frame): a 32 r10 #F0EDF9 tile (x 102–165) with
+                  the glyph in #7D67D9 (new popup, decision 22). */}
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                 {/* MO1.10: UserPlus / Sparkles 15/1.75; reward line 13.5/700. */}
-                <row.icon size={15} strokeWidth={1.75} className="text-primary-dark" />
+                <row.icon size={15} strokeWidth={1.75} className="text-primary-accent" />
               </span>
               <span className="min-w-0">
                 <span className="block text-[12px] text-charcoal-faint">{row.who}</span>
@@ -153,9 +162,12 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           </p>
         )}
 
-        <div className="mt-4">{label("Your code")}</div>
+        {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
+            box 48 tall, radius 12, a 12% hairline (#E4E4E3), the code 16/800
+            (cap 11.5) spaced 0.18em; the Copy button radius 12. */}
+        <div className="mt-3.5">{label("Your code")}</div>
         <div className="flex items-center gap-2">
-          <span className="flex-1 min-w-0 h-12 rounded-2xl bg-cream-card border border-charcoal/10 flex items-center justify-center text-[18px] font-extrabold tracking-[0.18em] text-charcoal truncate">
+          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
             {myCode ?? (codeError ? "Unavailable" : "…")}
           </span>
           <button
@@ -163,7 +175,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             onClick={() => void copyCode()}
             disabled={!myCode}
             aria-label="Copy referral code"
-            className="tap w-12 h-12 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
+            className="tap w-12 h-12 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
           >
             {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
           </button>
@@ -173,17 +185,23 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           type="button"
           onClick={() => void shareCode()}
           disabled={!myCode}
-          className="tap mt-2.5 w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+          // MO1.10: 8 under the code row (2x frame y 943 → 960), radius 14.
+          className="tap mt-2 w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <Share size={16} strokeWidth={1.75} aria-hidden />
           {copied ? "Code copied" : "Share code"}
         </button>
 
-        <div className="mt-5 pt-4 border-t border-charcoal/[0.06]">
+        {/* MO1.10 (2x frame): the rule 16 under the block above (y 1290 →
+            1330) and 14 above "Have a code?". */}
+        <div className="mt-4 pt-3.5 border-t border-charcoal/[0.06]">
           {label("Have a code?")}
           {result?.success ? (
             // MO1.10.1: the success row replaces the code box.
-            <p role="status" className="flex items-center gap-2 rounded-2xl bg-teal-pale px-3.5 py-3 text-[13px] font-semibold text-teal-dark dark:text-teal-deep-text">
+            // MO1.10.1 (2x frame): 48 tall (y 1408–1503), radius 12, #E4F0EE
+            // with #2F5F58 text and icon (new, decision 22; theme secondary),
+            // 10 between the 18 check and the text.
+            <p role="status" className="flex items-center gap-2.5 min-h-12 rounded-xl bg-th-e4f0ee dark:bg-teal-pale px-3.5 py-3 text-[13px] font-semibold text-th-2f5f58 dark:text-teal-deep-text">
               {/* MO1.10.1: CircleCheck 18/2. */}
               <CircleCheck size={18} strokeWidth={2} className="shrink-0" aria-hidden />
               {result.message}
@@ -224,20 +242,24 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                 placeholder="Enter a code"
                 aria-label="A friend's referral code"
                 aria-invalid={(result && !result.success) || undefined}
-                className={`flex-1 min-w-0 h-12 rounded-2xl bg-cream-soft border px-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  // MO1.10.2: the border turns danger on a refusal.
-                  result && !result.success ? "border-status-high" : "border-charcoal/10"
+                // MO1.10 (2x frame): 48 tall, radius 12, #F5F5F6 with no
+                // visible border (y 1408–1503); MO1.10.2: the border turns
+                // danger on a refusal.
+                // The typed code 14/600 (Foundations Inputs; MO1.10.2 cap
+                // 10 on the 2x frame); the danger border is 1.5 (y 1340–1342).
+                className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft border-[1.5px] px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                  result && !result.success ? "border-status-high" : "border-transparent"
                 }`}
               />
-              {/* MO1.10 / MO1.10.2: a tinted Apply (primary tint fill, deep
-                  primary text), drawn the same with or without a code typed;
-                  48 tall, about 73 wide, radius 14 (measured on the 2x frame:
-                  x 562–708, y 1340–1436). */}
+              {/* MO1.10 / MO1.10.2: a tinted Apply, #F0EDF9 with #7D67D9
+                  text (2x frame; new popup, decision 22), drawn the same with
+                  or without a code typed; 48 tall, about 73 wide, radius 12
+                  (x 562–707, y 1408–1503). */}
               <button
                 type="button"
                 onClick={() => void lookUp()}
                 disabled={!codeDraft.trim() || busy}
-                className="tap h-12 px-5 rounded-[14px] bg-primary-pale text-primary-deep-text text-[13px] font-bold shrink-0 disabled:pointer-events-none"
+                className="tap h-12 px-5 rounded-xl bg-primary-pale text-primary-accent text-[13px] font-bold shrink-0 disabled:pointer-events-none"
               >
                 {busy ? "…" : "Apply"}
               </button>
@@ -245,7 +267,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           )}
           {/* MO1.10.2: a refusal, in the RPC's own words for now. */}
           {result && !result.success && (
-            <p role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-status-high">
+            // MO1.10.2 (2x frame): 10 under the field, 8 between the 13 icon
+            // and the 12/600 line.
+            <p role="alert" className="mt-2.5 flex items-start gap-2 text-xs font-semibold text-status-high">
               {/* MO1.10.2: CircleAlert 13/2. */}
               <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
               {result.message}

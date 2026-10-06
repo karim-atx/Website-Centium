@@ -36,8 +36,9 @@ function MiniMonth({
       className="tap self-start flex flex-col items-stretch text-left min-w-0"
     >
       {/* MO1.6.1 anatomy row 7: the current month in the primary accent
-          (#7D67D9); primary-dark is the closest existing light colour. */}
-      <span className={`block text-[15px] font-semibold leading-tight ${isCurrent ? "text-primary-dark" : "text-charcoal"}`}>
+          #7D67D9 (new since pre-R1, whose year view had no current month:
+          decision 22, the handover's own colour). */}
+      <span className={`block text-[15px] font-semibold leading-tight ${isCurrent ? "text-primary-accent" : "text-charcoal"}`}>
         {MONTHS[month]}
       </span>
       {count > 0 && (
@@ -45,7 +46,9 @@ function MiniMonth({
           {count} {count === 1 ? "event" : "events"}
         </span>
       )}
-      <span className="grid grid-cols-7 gap-y-[3px] mt-1" aria-hidden>
+      {/* MO1.6.1 (2x frame): the first row's centre 24.5 under the name's,
+          rows 17 apart (y 535 → 569); today a 15 circle (x 158–187). */}
+      <span className="grid grid-cols-7 gap-y-[2px] mt-2" aria-hidden>
         {cells.map((d, i) => {
           const today = d > 0 && iso(year, month, d) === todayIso;
           return (
@@ -53,7 +56,7 @@ function MiniMonth({
               key={i}
               data-today={today || undefined}
               className={`h-[15px] flex items-center justify-center text-[9px] tabular-nums ${
-                today ? "font-bold rounded-full bg-primary-fill text-on-primary-fill" : "font-semibold text-charcoal"
+                today ? "w-[15px] justify-self-center font-bold rounded-full bg-primary-fill text-on-primary-fill" : "font-semibold text-charcoal"
               }`}
             >
               {d > 0 ? d : ""}
@@ -120,7 +123,9 @@ export const YearScroll: React.FC<{
   return (
     <div
       ref={box}
-      className="relative flex flex-col gap-6 overflow-y-auto no-scrollbar -mx-1 px-1 pb-6"
+      // MO1.6.1 (2x frame): 30 between a year's last row and the next
+      // heading (Dec's last row 1467 → "2027" 1578 centre to centre).
+      className="relative flex flex-col gap-[30px] overflow-y-auto no-scrollbar -mx-1 px-1 pb-6"
       style={{ height: height ?? undefined }}
     >
       {years.map((y) => (
@@ -134,7 +139,9 @@ export const YearScroll: React.FC<{
         >
           <h2 className="m-0 text-[30px] font-extrabold leading-[1.2] tracking-[-0.02em] text-charcoal tabular-nums">{y}</h2>
           <div className="h-px bg-charcoal/[0.08] mt-2 mb-4" />
-          <div className="grid grid-cols-3 gap-x-4 gap-y-5">
+          {/* Month rows 131.6 apart for five-week months (Jan → Apr, 2x
+              frame), so 22 between them. */}
+          <div className="grid grid-cols-3 gap-x-4 gap-y-[22px]">
             {Array.from({ length: 12 }, (_, m) => (
               <MiniMonth
                 key={m}

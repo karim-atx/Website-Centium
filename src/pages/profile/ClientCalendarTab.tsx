@@ -512,7 +512,9 @@ export default function ClientCalendarTab() {
     return (
       <div
         key={e.id}
-        className="rounded-[20px] px-4 py-3.5 space-y-2"
+        // MO1.6.2 (2x frame, Yoga class card y 652–843): radius 22, 20 of
+        // padding past the 3 bar on every side, so a three-line card is 96.
+        className="rounded-[22px] p-5 space-y-2"
         style={{
           background: tint,
           borderLeft: `3px solid ${bar}`,

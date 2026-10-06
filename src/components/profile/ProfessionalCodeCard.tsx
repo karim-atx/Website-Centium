@@ -91,7 +91,9 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
             onKeyDown={(e) => e.key === "Enter" && void check()}
             placeholder="Professional code"
             aria-label="Professional code"
-            className="flex-1 min-w-0 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+            // Foundations Inputs (MO1.5 row 4, as the member code field):
+            // height 44, radius 12, padding 0 14, value 14/600.
+            className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <Button onClick={() => void check()} disabled={!code.trim() || busy}>
             {busy ? "…" : "Connect"}
@@ -104,7 +106,7 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
         </p>
       ) : (
         !found && (
-          <p className="mt-2 text-xs text-charcoal-faint">
+          <p className="mt-2.5 text-xs text-charcoal-faint">
             Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.
           </p>
         )
