@@ -24,8 +24,8 @@ interface QuickActionsProps {
 // the artwork's rounded corners. The four white glyphs are cut from the same
 // artwork (public/quick-actions/*.png), so they are untouched too.
 const S = 358 / 1881;
-const PURPLE = "#9591DC";
-const TEAL = "#95C0BB";
+const PURPLE = "rgb(var(--th-9591dc))";
+const TEAL = "rgb(var(--th-95c0bb))";
 const TOP = 114; // mic top: the cluster's top edge
 const BOTTOM = 617; // bottom arc's lowest point
 const CX = 1081;

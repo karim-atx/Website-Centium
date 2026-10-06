@@ -15,11 +15,11 @@ const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
  * The panel, month label and day numbers take cream-card / charcoal.
  */
 const CAL_COLORS = {
-  shell: ["#EDEAFE", "#303141"],
-  hairline: ["#7155CA", "#9A8CD6"],
-  title: ["#7155CA", "#C8BFE9"],
-  bar: ["#F6F4FE", "#2B2C3A"],
-  accent: ["#5B3FE4", "#B7ABDE"],
+  shell: ["rgb(var(--th-edeafe))", "rgb(var(--th-303141))"],
+  hairline: ["rgb(var(--th-7155ca))", "rgb(var(--th-9a8cd6))"],
+  title: ["rgb(var(--th-7155ca))", "rgb(var(--th-c8bfe9))"],
+  bar: ["rgb(var(--th-f6f4fe))", "rgb(var(--th-2b2c3a))"],
+  accent: ["rgb(var(--th-5b3fe4))", "rgb(var(--th-b7abde))"],
   future: ["#CFCBD6", "#8A8698"],
   day: ["#000000", "rgb(var(--c-charcoal))"],
 } as const;
@@ -202,7 +202,7 @@ export const CalendarPickerSheet: React.FC<{
                       <span
                         aria-hidden
                         className="absolute left-1/2 -translate-x-1/2 rounded-full"
-                        style={{ bottom: 5, width: 4, height: 4, background: isSelected ? "rgb(var(--c-on-primary-fill))" : "#AB9ED7" }}
+                        style={{ bottom: 5, width: 4, height: 4, background: isSelected ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--th-ab9ed7))" }}
                       />
                     )}
                   </button>

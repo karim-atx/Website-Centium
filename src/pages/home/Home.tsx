@@ -81,7 +81,7 @@ export default function Home() {
           // Mobile v5.1 R3, dark mode: team-teal-ink turns light teal (#93C1B9), so
           // the avatar takes the teal #6F9993 as a 30% to 16% tint on the dark
           // surfaces (secondary.tint #293339), 5.9:1 to 6.5:1 under the initial.
-          style={{ background: dark ? "linear-gradient(150deg,#2E3B3C,#293339)" : "linear-gradient(150deg,#C8E0DC,#A2C8C2)" }}
+          style={{ background: dark ? "linear-gradient(150deg,rgb(var(--th-2e3b3c)),#293339)" : "linear-gradient(150deg,rgb(var(--th-c8e0dc)),rgb(var(--th-a2c8c2)))" }}
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />

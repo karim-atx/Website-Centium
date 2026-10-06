@@ -377,8 +377,8 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
                 gridColumn: `span ${spans[i]}`,
                 height: dragRender!.height,
                 borderRadius: 15,
-                border: "2px dashed rgba(143,104,246,0.45)",
-                background: "rgba(143,104,246,0.06)",
+                border: "2px dashed rgb(var(--th-8f68f6) / 0.45)",
+                background: "rgb(var(--th-8f68f6) / 0.06)",
                 boxSizing: "border-box",
               }}
             />
