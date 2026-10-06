@@ -1,5 +1,6 @@
 import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
 // as [light, dark], the dark values the v5.1 chart rules (grid
@@ -44,7 +45,7 @@ export const BiomarkerLineChart: React.FC<{
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
-          <text x={0} y={y(v) + 3} fontSize={9} fill={axis}>
+          <text x={0} y={y(v) + 3} style={{ fontSize: textPx(9) }} fill={axis}>
             {v.toFixed(1)}{unit}
           </text>
           <line x1={padding.left} x2={width - padding.right} y1={y(v)} y2={y(v)} stroke={grid} strokeWidth={1} />
@@ -63,10 +64,10 @@ export const BiomarkerLineChart: React.FC<{
         <circle key={i} cx={x(i)} cy={y(h.value)} r={2.5} fill={color} />
       ))}
 
-      <text x={x(0)} y={height - 4} fontSize={9} fill={axis} textAnchor="start">
+      <text x={x(0)} y={height - 4} style={{ fontSize: textPx(9) }} fill={axis} textAnchor="start">
         {shortDate(history[0].date)}
       </text>
-      <text x={x(history.length - 1)} y={height - 4} fontSize={9} fill={axis} textAnchor="end">
+      <text x={x(history.length - 1)} y={height - 4} style={{ fontSize: textPx(9) }} fill={axis} textAnchor="end">
         {shortDate(history[history.length - 1].date)}
       </text>
     </svg>
