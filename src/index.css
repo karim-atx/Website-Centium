@@ -571,8 +571,9 @@ body {
    token takes the strongest ink and every hairline goes to 30% of it
    (MO1.8.6.1), in every colour theme. Light: #111111. Dark: the dark
    text.primary #F5F3FA, the same rule mirrored. The board gives a darkened
-   primary for Centium light only (#5B48B8, text #4B3BA0); the other themes
-   and dark keep their primary until R20 (batch D). */
+   primary for Centium light (#5B48B8, text #4B3BA0), set below; the theme
+   colours of every other theme and mode are darkened or lifted to 4.5:1 in
+   styles/theme-palette.css (R20/D19, generated). */
 html.high-contrast {
   --c-charcoal: 17 17 17;
   --c-charcoal-soft: 17 17 17;

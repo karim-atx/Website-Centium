@@ -44,6 +44,9 @@ const CENTIUM = { light: ["#AEA1DC", "#6F9993"], dark: ["#A991FE", "#6F9993"] };
 const WHITE = "#ffffff", INK_DARK = "#0d0b1a";
 const GROUND = { light: ["#ffffff", "#f5f5f6"], dark: ["#1c1f28", "#262932"] };
 const CARD = { light: "#ffffff", dark: "#1c1f28" };
+// The strongest family wash text sits on: stacked badges reach about 60% in
+// light; dark washes stay near 14-25% on the card.
+const TINT_ALPHA = { light: 0.65, dark: 0.25 };
 
 // ---- families ---------------------------------------------------------------
 /** "lav", "teal" or null (fixed: greys, near-whites, ink, every other hue). */
@@ -229,8 +232,8 @@ function themeBlock(theme, mode, literals) {
   // Ink twins.
   const ink2 = {};
   const tints = {
-    lav: [pale, over(v["--c-primary"], 0.65, CARD[mode])],
-    teal: [v["--c-teal-pale"], over(v["--c-teal"], 0.65, CARD[mode])],
+    lav: [pale, over(v["--c-primary"], TINT_ALPHA[mode], CARD[mode])],
+    teal: [v["--c-teal-pale"], over(v["--c-teal"], TINT_ALPHA[mode], CARD[mode])],
   };
   for (const n of INK_TOKENS) ink2[n + "-ink"] = inkOf(centium(n), v[n], mode, tints[LAV.includes(n) ? "lav" : "teal"]);
   ink2["--c-primary-ink"] = ensureContrast(p, [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
@@ -242,15 +245,78 @@ function themeBlock(theme, mode, literals) {
     const src = mode === "light" ? rootVars[n] : (darkVars[n] ?? rootVars[n]);
     if (src) lines.push(`  ${n}: ${mapString(src, theme, mode)};`);
   }
+  const lits = {};
   for (const h of literals) {
     const hex = "#" + h;
     const base = mapHex(hex, theme, mode);
     if (WHITE_FILLS.has(h)) lines.push(`  --thw-${h}: ${cssTriplet(family(hex) ? ensureContrast(base, [WHITE], 4.5, -1) : base)};`);
+    const inkHex = family(hex) ? inkOf(hex, base, mode, tints[family(hex)]) : base;
+    lits[h] = inkHex;
     lines.push(`  --th-${h}: ${cssTriplet(base)};`);
-    lines.push(`  --thi-${h}: ${cssTriplet(family(hex) ? inkOf(hex, base, mode, tints[family(hex)]) : base)};`);
+    lines.push(`  --thi-${h}: ${cssTriplet(inkHex)};`);
   }
   const sel = mode === "light" ? `[data-accent="${theme}"]` : `.dark[data-accent="${theme}"]`;
+  return { css: `${sel} {\n${lines.join("\n")}\n}\n`, data: { v, ink2, lits, tints, fillInk: ink } };
+}
+
+// ---- high contrast (D19) ----------------------------------------------------
+// MO1.8.6.1 / Foundations 2.1: text greys go to #111111 (light) / #F5F3FA (dark)
+// and hairlines to 30% (index.css, every theme); here the theme colours are
+// darkened (light) or lifted (dark) until every text pairing reaches 4.5:1 -
+// on the page, the soft surface and the family's tints - and the primary
+// carries its ink at 4.5:1. Centium light keeps C26's hand values (#5B48B8 /
+// #4B3BA0, index.css) and only adds what they do not cover.
+function hcBlock(theme, mode, literals, data) {
+  const dir = mode === "light" ? -1 : 1;
+  const grounds = (fam) => [...GROUND[mode], ...data.tints[fam]];
+  const lines = [];
+  const centiumLight = theme === "centium" && mode === "light";
+  const centOf = (n) => tripletToHex(mode === "light" ? lightOf(n) : darkOf(n));
+  for (const n of INK_TOKENS) {
+    if (centiumLight && /--c-primary/.test(n)) continue;
+    if (contrast(centOf(n), CARD[mode]) < 2.5) continue;
+    const fam = LAV.includes(n) ? "lav" : "teal";
+    lines.push(`  ${n}-ink: ${cssTriplet(ensureContrast(data.ink2[n + "-ink"], grounds(fam), 4.5, dir))};`);
+  }
+  if (!centiumLight) {
+    const prim = data.v["--c-primary"];
+    const strong = mode === "light"
+      ? ensureContrast(prim, [WHITE, ...grounds("lav")], 4.5, -1)
+      : ensureContrast(prim, grounds("lav"), 4.5, 1);
+    lines.push(`  --c-primary: ${cssTriplet(strong)};`);
+    lines.push(`  --c-primary-ink: ${cssTriplet(strong)};`);
+    for (const n of ["--c-primary-accent", "--c-primary-dark", "--c-primary-deep-text"]) {
+      lines.push(`  ${n}: ${cssTriplet(ensureContrast(data.v[n], grounds("lav"), 4.5, dir))};`);
+    }
+    const fill = ensureContrast(data.v["--c-primary-fill"], [data.fillInk], 4.5, data.fillInk === WHITE ? -1 : 1);
+    lines.push(`  --c-primary-fill: ${cssTriplet(fill)};`);
+  }
+  for (const h of literals) {
+    const hex = "#" + h;
+    const fam = family(hex);
+    if (!fam || contrast(hex, CARD[mode]) < 2.5) continue;
+    lines.push(`  --thi-${h}: ${cssTriplet(ensureContrast(data.lits[h], grounds(fam), 4.5, dir))};`);
+  }
+  const sel = mode === "light"
+    ? `html.high-contrast[data-accent="${theme}"]:not(.dark)`
+    : `html.high-contrast.dark[data-accent="${theme}"]`;
   return `${sel} {\n${lines.join("\n")}\n}\n`;
+}
+
+/** Centium's own values, in the shape themeBlock returns, for its HC block. */
+function centiumData(mode, literals) {
+  const val = (n) => tripletToHex(mode === "light" ? lightOf(n) : darkOf(n));
+  const v = {};
+  for (const n of [...LAV, ...TEAL, "--c-primary-fill"]) v[n] = val(n);
+  const ink2 = {};
+  for (const n of INK_TOKENS) ink2[n + "-ink"] = v[n];
+  const lits = {};
+  for (const h of literals) lits[h] = "#" + h;
+  const tints = {
+    lav: [v["--c-primary-pale"], over(v["--c-primary"], TINT_ALPHA[mode], CARD[mode])],
+    teal: [v["--c-teal-pale"], over(v["--c-teal"], TINT_ALPHA[mode], CARD[mode])],
+  };
+  return { v, ink2, lits, tints, fillInk: mode === "light" ? WHITE : INK_DARK };
 }
 
 let WHITE_FILLS = new Set();
@@ -270,7 +336,14 @@ function generate() {
    R20 colour themes: Centium (default, values unchanged) and the four
    Foundations 2.1 theme pairs, light and dark. */
 :root {\n${[...new Set(centiumLines)].join("\n")}\n}\n`;
-  for (const theme of Object.keys(THEMES)) for (const mode of ["light", "dark"]) out += themeBlock(theme, mode, literals);
+  const hc = [];
+  for (const mode of ["light", "dark"]) hc.push(hcBlock("centium", mode, literals, centiumData(mode, literals)));
+  for (const theme of Object.keys(THEMES)) for (const mode of ["light", "dark"]) {
+    const b = themeBlock(theme, mode, literals);
+    out += b.css;
+    hc.push(hcBlock(theme, mode, literals, b.data));
+  }
+  out += "\n/* High contrast (D19): after the themes, so it wins where weights tie. */\n" + hc.join("");
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, out);
   fs.writeFileSync(LIST, JSON.stringify(literals) + "\n");
