@@ -73,12 +73,12 @@ const COLORS = {
   spark: ["rgb(var(--th-6f9993))", "rgb(var(--th-7fb3a9))"],
   purple: ["rgb(var(--th-8f68f6))", "rgb(var(--th-b7abde))"],
   barNow: ["rgb(var(--th-8f68f6))", "rgb(var(--th-9a8cd6))"],
-  bar: ["rgb(var(--th-e6defd))", tintOn("rgb(var(--th-aea1dc))", 0.38)],
+  bar: ["rgb(var(--th-e6defd))", "rgb(var(--th-53506c))" /* tintOn("#AEA1DC", 0.38) */],
   emptyTrack: ["#F2F2F2", "#262932"],
   cardBorder: ["#EEEDED", "rgba(238,239,242,0.08)"],
   up: ["#8A5878", liftTo("#8A5878", "#293339")],
-  down: ["rgb(var(--th-3c6b65))", liftTo("rgb(var(--th-3c6b65))", "#293339")],
-  heroAccent: ["rgb(var(--th-5b3fe4))", liftTo("rgb(var(--th-5b3fe4))", "rgb(var(--th-303141))")],
+  down: ["rgb(var(--th-3c6b65))", "rgb(var(--th-809f9b))" /* liftTo("#3C6B65", "#293339") */],
+  heroAccent: ["rgb(var(--th-5b3fe4))", "rgb(var(--th-9d8cef))" /* liftTo("#5B3FE4", "#303141") */],
 } as const;
 const metricColor = (key: keyof typeof COLORS, dark: boolean): string => COLORS[key][dark ? 1 : 0];
 
