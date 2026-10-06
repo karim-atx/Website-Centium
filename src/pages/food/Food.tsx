@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
-import { Card } from "../../components/ui/Card";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { mealForCurrentTime } from "../../utils/mealForTime";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
@@ -18,6 +17,7 @@ import {
 import { copyDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { SwipeActions } from "../../components/ui/SwipeActions";
 import { Toast } from "../../components/ui/Toast";
 import { CopyToSheet } from "../../components/food/CopyToSheet";
 import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
@@ -89,7 +89,6 @@ export default function Food() {
   // FO7: which meal the sheet suggests for; null from the floating +.
   const [addFor, setAddFor] = useState<MealType | null>(null);
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
-  const [revealedId, setRevealedId] = useState<string | null>(null);
   // QA 11.0: meal sections collapse like Routine folders on Workout >
   // Routines.
   const [collapsedMeals, setCollapsedMeals] = useState<Set<MealType>>(new Set());
@@ -100,7 +99,6 @@ export default function Food() {
   // Deleting now goes to the database first, so it can fail and has to say so.
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const undoTimerRef = useRef<number | null>(null);
-  const rowTouchStart = useRef<{ x: number; y: number } | null>(null);
   const mealTouchStart = useRef<{ x: number; y: number } | null>(null);
   const lastTapRef = useRef<{ meal: MealType; at: number } | null>(null);
   // FO1.1 selection: one meal of the day being viewed at a time, never kept
@@ -288,25 +286,6 @@ export default function Food() {
     }
   };
 
-  // Swipe-left on a logged food item reveals a Delete pill, Apple-UI style.
-  const onRowTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    rowTouchStart.current = { x: t.clientX, y: t.clientY };
-  };
-  const onRowTouchEnd = (e: React.TouchEvent, entryId: string) => {
-    if (!rowTouchStart.current) return;
-    e.stopPropagation();
-    const t = e.changedTouches[0];
-    const dx = t.clientX - rowTouchStart.current.x;
-    const dy = t.clientY - rowTouchStart.current.y;
-    rowTouchStart.current = null;
-    if (dx < -SWIPE_THRESHOLD && Math.abs(dy) < 40) {
-      setRevealedId(entryId);
-    } else if (dx > SWIPE_THRESHOLD) {
-      setRevealedId(null);
-    }
-  };
-
   // Iteration 6 "Team" §2.1: each macro's bar sits on the same row as its
   // label and gram readout now, instead of stacked beneath it.
   const macroRow = (label: string, value: number, target: number) => (
@@ -353,14 +332,20 @@ export default function Food() {
             // loading on this browser, so no totals yet, in either form.
             <NumberPlaceholder height={HERO_PLACEHOLDER_HEIGHT} label="Today" className="mb-[13px]" />
           ) : recoverySensitive ? (
-            <Card className="mb-6">
+            // Decision 23 (kept item 153): the hero's geometry (r20, 101 tall,
+            // pad 15×16, 13 below) in the neutral tint (surface.soft, the
+            // cream-soft token), so switching the setting does not move the page.
+            <div
+              className="rounded-[20px] px-4 py-[15px] mb-[13px] bg-cream-soft flex flex-col justify-center"
+              style={{ minHeight: 101 }}
+            >
               <p className="text-sm font-bold text-charcoal mb-1">
                 {todaysEntries.length === 0 ? "Nothing logged yet today" : `${todaysEntries.length} item${todaysEntries.length === 1 ? "" : "s"} logged today`}
               </p>
               <p className="text-xs text-charcoal-faint">
                 Meals, notes, and how you're feeling, no calorie counting required.
               </p>
-            </Card>
+            </div>
           ) : (
             // Iteration 6 "Team" §2.1: lavender-only hero (no halo), the
             // kcal figure + "of X kcal" + "left" chip stacked in a fixed-
@@ -574,7 +559,6 @@ export default function Food() {
                           {entries.map((e) => {
                             const inSelection = activeSelection?.meal === meal;
                             const checked = inSelection && activeSelection!.ids.has(e.id);
-                            const revealed = !inSelection && revealedId === e.id;
                             // QA 11.0: "Pressing a specific restriction will
                             // highlight specific food diary items that are not
                             // compatible with the restriction."
@@ -603,20 +587,30 @@ export default function Food() {
                                     {checked && <Check size={12} strokeWidth={3} />}
                                   </button>
                                 )}
-                              <div className="relative overflow-hidden rounded-[11px] flex-1 min-w-0">
-                                {revealed && (
-                                  <button
-                                    onClick={() => {
-                                      void handleDelete(e.id);
-                                      setRevealedId(null);
-                                    }}
-                                    aria-label={`Delete ${e.name}`}
-                                    className="tap absolute inset-y-0 right-0 w-20 flex flex-col items-center justify-center gap-0.5 rounded-r-[11px] bg-[#C0392B] text-white text-[10px] font-semibold z-0"
-                                  >
-                                    <Trash2 size={14} />
-                                    Delete
-                                  </button>
-                                )}
+                              <div
+                                className="flex-1 min-w-0"
+                                // A swipe on a row is the row's own: it must not
+                                // also reach the card's swipe-right copy-yesterday.
+                                onTouchStart={inSelection ? undefined : (ev) => ev.stopPropagation()}
+                                onTouchEnd={inSelection ? undefined : (ev) => ev.stopPropagation()}
+                              >
+                              {/* Decision 23 (kept item 50): Foundations "Swipe-row
+                                  actions", the shared SwipeActions — a Delete tile
+                                  (danger.tint, Trash2 16 danger.icon, r14) at the
+                                  row's height, the row sliding as one r11 unit. */}
+                              <SwipeActions
+                                radius={11}
+                                disabled={inSelection}
+                                actions={[
+                                  {
+                                    key: "delete",
+                                    label: `Delete ${e.name}`,
+                                    icon: <Trash2 size={16} />,
+                                    destructive: true,
+                                    onClick: () => void handleDelete(e.id),
+                                  },
+                                ]}
+                              >
                                 <button
                                   onClick={(ev) => {
                                     if (inSelection) {
@@ -624,16 +618,12 @@ export default function Food() {
                                       toggleSelected(e.id);
                                       return;
                                     }
-                                    if (revealed) setRevealedId(null);
-                                    else setEditingEntry(e);
+                                    setEditingEntry(e);
                                   }}
-                                  onTouchStart={inSelection ? undefined : onRowTouchStart}
-                                  onTouchEnd={inSelection ? undefined : (ev) => onRowTouchEnd(ev, e.id)}
                                   className={clsx(
-                                    "tap relative z-10 w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left transition-transform duration-200",
+                                    "tap relative w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left",
                                     restricted ? "bg-status-high-bg" : "bg-team-lavender/10"
                                   )}
-                                  style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
                                 >
                                   <span className="min-w-0">
                                     <span className="flex items-center gap-1.5 text-[12px] font-semibold text-charcoal">
@@ -656,6 +646,7 @@ export default function Food() {
                                     </span>
                                   )}
                                 </button>
+                              </SwipeActions>
                               </div>
                               </div>
                             );

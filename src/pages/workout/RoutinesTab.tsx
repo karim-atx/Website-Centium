@@ -7,6 +7,7 @@ import { Card } from "../../components/ui/Card";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { Button } from "../../components/ui/Button";
 import { PopupMenu } from "../../components/ui/PopupMenu";
+import { SwipeActions } from "../../components/ui/SwipeActions";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
 import { BlockCard } from "../../components/workout/BlockCard";
@@ -71,7 +72,6 @@ import {
   Group,
 } from "lucide-react";
 
-const SWIPE_THRESHOLD = 50;
 
 let addedExId = 0;
 const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
@@ -93,7 +93,7 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 
 
 // Folder colour families live in data/folderColors (handover 2026-09-29 02),
-// shared with the logger, History and the active-workout bar.
+// shared with the logger and History.
 
 // WO1.1 menus, on the shared popup (02 "Popup / dropdown": row/folder ⋮ menus).
 type FolderAction = "rename" | "color" | "duplicate" | "subfolder" | "routine" | "delete";
@@ -370,6 +370,8 @@ export default function RoutinesTab() {
         <FolderHeader
           folder={folder}
           family={family}
+          // WO1 #4b / WO1.1 #4 (decision 23): white ink as drawn.
+          drawnInk
           count={folderRoutines.length}
           collapsed={collapsed}
           highlighted={(drag?.target.kind === "header" || drag?.target.kind === "into") && drag.target.folderId === folder.id}
@@ -530,7 +532,8 @@ export default function RoutinesTab() {
             can be dropped out of every folder. */}
         {(unfiled.length > 0 || draggingRoutine) && (
           <div data-flip="unfiled">
-            <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
+            {/* Decision 23 (kept item 135): styled as the "Folders" label (9.5/700 #9A94B3 .2em). */}
+            <p className="mb-[9px] text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "rgb(var(--thi-9a94b3))" }}>Unfiled</p>
             <div
               data-dnd-group=""
               className="flex flex-col gap-1.5"
@@ -566,8 +569,7 @@ export default function RoutinesTab() {
 
       {/* Mobile v5.1 WO1 / WO1.1: "Browse starter programs" first, then a
           filled "Create routine" pinned above the navbar, both overlaying the
-          list. Page CTAs are 48 / r14 (decision C-01); the fill is
-          primary-fill, not the board's rgb(var(--th-a198df)) (2.60:1 with white). Browse is
+          list. Page CTAs are 48 / r14 (decision C-01). Browse is
           now always shown, so the empty-state card no longer has its own
           (decision D9). The spacer lets the last
           routine scroll clear of both buttons: 172 for one CTA + 56 for the
@@ -592,10 +594,10 @@ export default function RoutinesTab() {
         primary={{
           label: "Create routine",
           icon: <Plus size={15} />,
-          // Light mode keeps the colours of the Create routine button this
-          // pinned one replaced (#EFEEFD with #6B41EF ink, decision 15); dark
-          // mode is the filled primary.
-          className: "!bg-th-efeefd !text-th-6b41ef dark:!bg-primary-fill dark:!text-on-primary-fill",
+          // WO1 #8 / WO1.1 #9 (decision 23): filled #A198DF (--c-fill-cta,
+          // primary.cta.alt), 13.5/700 white, as drawn and as Add habit;
+          // 48/r14 per C-01. Dark: primary-fill with its near-black ink.
+          className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
           onClick: () => {
             setCreateFolder(null);
             setCreateOpen(true);
@@ -658,6 +660,7 @@ export default function RoutinesTab() {
               <FolderHeader
                 folder={dragFolder!}
                 family={themedFamily(folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!)), dark)}
+                drawnInk
                 count={routinesIn(routines, dragFolder!.id).length}
                 collapsed={collapsedFolders.has(dragFolder!.id)}
               />
@@ -939,10 +942,8 @@ const RoutineRow: React.FC<{
 }> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing, running, onPause }) => {
   const dark = useIsDark();
   const [expanded, setExpanded] = useState(false);
-  const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   // --- grouping -------------------------------------------------------------
   //
@@ -1008,26 +1009,6 @@ const RoutineRow: React.FC<{
 
   const canMove = (exerciseId: string, direction: "up" | "down") =>
     moveExercise(routine.exercises, exerciseId, direction) !== routine.exercises;
-
-  // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
-  // same pattern as the Food diary's swipe-to-delete.
-  const onRowTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
-  };
-  const onRowTouchEnd = (e: React.TouchEvent, exId: string) => {
-    if (!touchStart.current) return;
-    e.stopPropagation();
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.current.x;
-    const dy = t.clientY - touchStart.current.y;
-    touchStart.current = null;
-    if (dx < -SWIPE_THRESHOLD && Math.abs(dy) < 40) {
-      setRevealedId(exId);
-    } else if (dx > SWIPE_THRESHOLD) {
-      setRevealedId(null);
-    }
-  };
 
   /** The up/down pair, shown on every row so order is editable at all. */
   const MoveControls: React.FC<{ exerciseId: string }> = ({ exerciseId }) => (
@@ -1198,40 +1179,21 @@ const RoutineRow: React.FC<{
                 style={{ "--ex-divider": dark ? tintOn(family.play, 0.2) : mixHex("#FFFFFF", family.play, 0.18) } as React.CSSProperties}
               >
                 {run.members.map((ex) => {
-                  const revealed = revealedId === ex.id;
                   const line = prescriptionLine(ex);
                   return (
-                    <div key={ex.id} className="relative overflow-hidden">
-                      {revealed && (
-                        <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
-                          <button
-                            onClick={() => setReplaceTarget(ex.id)}
-                            aria-label={`Replace ${ex.name}`}
-                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary-fill text-on-primary-fill text-[10px] font-semibold"
-                          >
-                            <Repeat size={14} />
-                            Replace
-                          </button>
-                          <button
-                            onClick={() => {
-                              onDeleteExercise(ex.id);
-                              setRevealedId(null);
-                            }}
-                            aria-label={`Delete ${ex.name}`}
-                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold"
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                      <div
-                        onTouchStart={onRowTouchStart}
-                        onTouchEnd={(ev) => onRowTouchEnd(ev, ex.id)}
-                        onClick={() => revealed && setRevealedId(null)}
-                        className="relative z-10 flex items-center justify-between px-4 py-2.5 bg-cream-card transition-transform duration-200"
-                        style={{ transform: revealed ? "translateX(-128px)" : "translateX(0)" }}
-                      >
+                    // Decision 23 (kept item 133): Foundations "Swipe-row
+                    // actions", the shared SwipeActions — Replace (Repeat 16 on
+                    // rgba(174,161,220,.18)) and Delete (Trash2 16 on
+                    // danger.tint), 56 tiles r14 gap 8; the row slides 128.
+                    <div key={ex.id} className="bg-cream-card">
+                    <SwipeActions
+                      radius={0}
+                      actions={[
+                        { key: "replace", label: `Replace ${ex.name}`, icon: <Repeat size={16} />, onClick: () => setReplaceTarget(ex.id) },
+                        { key: "delete", label: `Delete ${ex.name}`, icon: <Trash2 size={16} />, destructive: true, onClick: () => onDeleteExercise(ex.id) },
+                      ]}
+                    >
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-cream-card">
                         <div className="min-w-0">
                           <p className="text-sm text-charcoal">{ex.name}</p>
                           {/* Was `{sets} × {reps} · {weightKg}kg`, which showed
@@ -1242,6 +1204,7 @@ const RoutineRow: React.FC<{
                         </div>
                         {memberAction(ex)}
                       </div>
+                    </SwipeActions>
                     </div>
                   );
                 })}
@@ -1278,7 +1241,6 @@ const RoutineRow: React.FC<{
         onPick={(pick) => {
           if (replaceTarget) onReplaceExercise(replaceTarget, pick);
           setReplaceTarget(null);
-          setRevealedId(null);
         }}
         alreadyAdded={[]}
       />

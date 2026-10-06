@@ -5,7 +5,8 @@ import { THEME_MAP } from "../styles/themeMap";
  * Folder colour families, handover 2026-09-29 02 "Folder colour tokens":
  * the five shades a folder's colour resolves to — header, tile (the dark
  * shade), row tint, bar and play. Shared by the Routines tab, the logger
- * (WO8), History (WO3.1) and the active-workout bar (WO17).
+ * (WO8) and History (WO3.1). (The active-workout bar is primary.fill since
+ * decision 23.)
  */
 export interface FolderFamily {
   head: string;
@@ -184,14 +185,6 @@ export function loggerShades(family: FolderFamily, dark = false): LoggerShades {
 }
 
 /**
- * The WO17 active-workout bar: the folder family's dark (tile) shade behind
- * white text, and a lighter tint for the progress line. Per 03 "WO17" a
- * routine with no folder falls back to #7D67D9. The lighter tints are
- * measured from the WO17 frame (teal #A2C8C2, lavender #C2B3FA); the frame
- * has none for the other folder colours or the no-folder fallback, so those
- * are DERIVED: the bar colour 55% of the way to white.
- */
-/**
  * The lowest opacity at which a logger field's placeholder (last session's or
  * the template's value, drawn in the field's ink) reads at 4.5:1 on the field.
  * 46% measures about 2:1. Used in dark mode only (light keeps 46%).
@@ -204,23 +197,6 @@ export function placeholderOpacity(ink: string, field: string): number {
     if (contrastRatio(mixed, field) >= 4.5) return Math.round(op * 100) / 100;
   }
   return 1;
-}
-
-export function activeBarShades(
-  routine: Pick<Routine, "folderId"> | null | undefined,
-  folders: RoutineFolder[],
-  dark = false
-): { bg: string; line: string } {
-  const folder = routine?.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
-  // No folder: the board's #7D67D9 in light mode (decision 14); dark mode
-  // keeps #7D6BB5 (primary.deep), which carries the white text at 4.5:1.
-  // Batch E: it follows the colour theme like the unfiled family.
-  const none = dark ? themeHex("#7D6BB5", "dark") : themeHex("#7D67D9");
-  if (!folder) return { bg: none, line: mixHex(none, "#FFFFFF", 0.55) };
-  const family = folderFamily(folder, folders.indexOf(folder));
-  if (family === TEAL) return { bg: TEAL.tile, line: "#A2C8C2" };
-  if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
-  return { bg: family.tile, line: mixHex(family.tile, "#FFFFFF", 0.55) };
 }
 
 /**

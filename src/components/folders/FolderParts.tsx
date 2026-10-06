@@ -173,6 +173,11 @@ export const FolderHeader: React.FC<{
   press?: PressProps;
   grip?: GripProps;
   colorEditor?: React.ReactNode;
+  /**
+   * White name, count and icons on every header, as WO1 / WO1.1 draw them
+   * (decision 23). Off by default: the ink is picked by contrast (headInk).
+   */
+  drawnInk?: boolean;
 }> = ({
   folder,
   family: baseFamily,
@@ -189,6 +194,7 @@ export const FolderHeader: React.FC<{
   press,
   grip,
   colorEditor,
+  drawnInk = false,
 }) => {
   const gripProps = grip;
   // Mobile v5.1 R3: the header shade for the current mode (dark: the hue at
@@ -197,9 +203,10 @@ export const FolderHeader: React.FC<{
   const dark = useIsDark();
   const family = themedFamily(baseFamily, dark);
   // Near-black on the light headers, white on the dark one (headInk), so
-  // the name, count, chevron, ⋮ and grip all reach 4.5:1 on every colour.
-  const ink = headInk(family);
-  const inkSoft = headInkSoft(family);
+  // the name, count, chevron, ⋮ and grip all reach 4.5:1 on every colour;
+  // or white throughout with `drawnInk` (the Routines tab).
+  const ink = drawnInk ? "#FFFFFF" : headInk(family);
+  const inkSoft = drawnInk ? "rgba(255,255,255,0.86)" : headInkSoft(family);
   return (
     <div
       data-drag-card
