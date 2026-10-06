@@ -2074,7 +2074,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateAccessibility: AppState["updateAccessibility"] = (patch) =>
     setAccessibility((prev) => ({ ...prev, ...patch }));
   useEffect(() => {
-    document.documentElement.style.fontSize = accessibility.largerText ? "112.5%" : "";
+    document.documentElement.classList.toggle("larger-text", accessibility.largerText);
     document.documentElement.classList.toggle("larger-icons", accessibility.largerText);
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
     document.documentElement.classList.toggle("high-contrast", !!accessibility.highContrast);
