@@ -236,7 +236,9 @@ export default function Professionals() {
           above — two cards that looked alike where one was true. The real one
           covers this case. */}
 
-      {/* MO1.2: the categories in a tinted rail that runs off the right edge. */}
+      {/* MO1.2: the categories in a tinted rail that runs off the right edge.
+          Idle labels 12/600; tabs at their natural width, 14 either side of
+          the label (measured on the frame: "All" is 43 wide). */}
       <SegmentedTabs
         className="mb-4 -mr-4"
         scroll
@@ -245,6 +247,9 @@ export default function Professionals() {
         onChange={(k) => setType(k === "all" ? null : (k as Subtype))}
         labelSize={12}
         tabHeight={32}
+        idleWeight={600}
+        scrollTabPadding="0 14px"
+        scrollMinWidth={0}
         trackStyle={{ padding: 4, borderRadius: "16px 0 0 16px", paddingRight: 16 }}
         light={CONTROL_LIGHT}
       />

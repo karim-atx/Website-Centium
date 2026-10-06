@@ -196,10 +196,14 @@ export const ChatInfo: React.FC<{
       ? `Muted until ${listTime(s.mutedUntil) === clockTime(s.mutedUntil) ? clockTime(s.mutedUntil) : `${listTime(s.mutedUntil)} ${clockTime(s.mutedUntil)}`}`
       : "Mute";
 
+  // MO1.2.1.3.1: tiles tinted primary-pale (#F0EDF9 sampled from the frame)
+  // with no border (a no-decision item: the handover's look, theme token).
   const tile =
-    "tap min-h-[64px] rounded-[14px] border border-charcoal/10 bg-cream-card text-[11.5px] font-bold text-primary-deep-text flex flex-col items-center justify-center gap-1 px-1.5 text-center disabled:opacity-50";
-  // MO1.2.1.3.1's section labels: 10.5/700 uppercase in the label purple.
-  const label = "text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary-dark px-1 -mb-1.5";
+    "tap min-h-[64px] rounded-[14px] bg-primary-pale text-[11.5px] font-bold text-primary-deep-text flex flex-col items-center justify-center gap-1 px-1.5 text-center disabled:opacity-50";
+  // MO1.2.1.3.1's section labels: 10.5/700 uppercase in the label purple,
+  // 8 above their card (the column's 22 gap less 14).
+  const label = "text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary-dark px-1 -mb-3.5";
+  const tileIcon = { size: 17, strokeWidth: 1.75, "aria-hidden": true } as const;
   // Block and Report as the frame's tinted danger card.
   const dangerCard =
     "tap w-full min-h-[46px] rounded-[14px] bg-status-high-bg text-status-high text-[13.5px] font-bold flex items-center justify-center gap-2 px-4";
@@ -207,7 +211,9 @@ export const ChatInfo: React.FC<{
     void save({ archived_at: s.archivedAt ? null : new Date().toISOString() }).then((ok) => ok && !s.archivedAt && onBack());
 
   return (
-    <div className="flex flex-col gap-3.5 pb-6">
+    // MO1.2.1.3.1's rhythm (from the table's y values): header to hero 18,
+    // hero to tiles 17, then 22 between the tiles, each label and card, and Block.
+    <div className="flex flex-col gap-[22px] pb-6">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -215,18 +221,19 @@ export const ChatInfo: React.FC<{
           aria-label="Back"
           className="tap w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-charcoal"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
         </button>
         <h1 className="text-[22px] font-extrabold text-charcoal">Chat info</h1>
       </div>
 
-      <div className="flex flex-col items-center gap-1.5">
+      {/* Avatar 80 (measured on the frame at 2x). */}
+      <div className="flex flex-col items-center gap-1.5 -mt-1">
         {group ? (
-          <span className="w-[72px] h-[72px] rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center">
+          <span className="w-20 h-20 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center">
             <Users size={30} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
           </span>
         ) : (
-        <span className="w-[72px] h-[72px] rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[26px] font-extrabold text-primary-deep-text">
+        <span className="w-20 h-20 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[26px] font-extrabold text-primary-deep-text">
           {thread.participantAvatarUrl ? (
             <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
           ) : thread.participantName ? (
@@ -244,13 +251,13 @@ export const ChatInfo: React.FC<{
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 -mt-[5px]">
         <button type="button" onClick={onSearch} className={tile}>
-          <Search size={16} aria-hidden />
+          <Search {...tileIcon} />
           Search chat
         </button>
         <button type="button" disabled={busy} onClick={() => setMuteOpen(true)} className={tile}>
-          <BellOff size={16} aria-hidden />
+          <BellOff {...tileIcon} />
           {muteLabel}
         </button>
         <button
@@ -259,11 +266,11 @@ export const ChatInfo: React.FC<{
           onClick={() => void save({ pinned_at: s.pinnedAt ? null : new Date().toISOString() })}
           className={tile}
         >
-          {s.pinnedAt ? <PinOff size={16} aria-hidden /> : <Pin size={16} aria-hidden />}
+          {s.pinnedAt ? <PinOff {...tileIcon} /> : <Pin {...tileIcon} />}
           {s.pinnedAt ? "Unpin" : "Pin"}
         </button>
         <button type="button" disabled={busy} onClick={archive} className={tile}>
-          {s.archivedAt ? <ArchiveRestore size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
+          {s.archivedAt ? <ArchiveRestore {...tileIcon} /> : <Archive {...tileIcon} />}
           {s.archivedAt ? "Unarchive" : "Archive"}
         </button>
       </div>
@@ -273,9 +280,14 @@ export const ChatInfo: React.FC<{
       <p className={label}>Shared in this chat</p>
       <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex flex-col gap-3" aria-label="Shared in this chat">
         {/* MO1.2.1.3.1: the four kinds as segmented tabs inside the card.
-            Light keeps the pills' colours (decision 15). */}
+            Light keeps the pills' colours (decision 15). 30 tabs in a 38
+            track (padding 4), measured on the frame at 2x; labels 12, 700
+            active and 600 idle. */}
         <SegmentedTabs
-          size="compact"
+          tabHeight={30}
+          trackStyle={{ padding: 4 }}
+          labelSize={12}
+          idleWeight={600}
           items={TABS.map((t) => ({ key: t.value, label: t.label }))}
           activeKey={tab}
           onChange={(k) => {
@@ -371,7 +383,7 @@ export const ChatInfo: React.FC<{
             {galleryBusy ? "Loading…" : "Show more"}
           </button>
         )}
-        <p className="text-xs text-charcoal-soft">
+        <p className="text-[11.5px] font-normal text-charcoal-faint">
           {tab === "media" ? "Photos are private to this chat." : tab === "starred" ? "Only you can see your stars." : "Files are private to this chat."}
         </p>
       </section>
@@ -395,10 +407,12 @@ export const ChatInfo: React.FC<{
       <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-1 flex flex-col" aria-label="Privacy">
         {/* Never in a group: the database does not share presence there. */}
         {!group && (
-        <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
+        // MO1.2.1.3.1 #7: titles 13.5/600, subtitles 11.5/400 faint, rows
+        // about 79 tall (measured on the frame at 2x: 12 above and below).
+        <div className="flex items-center justify-between gap-3 min-h-[56px] py-3 border-b border-charcoal/[0.06]">
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-charcoal">Show when I'm online</span>
-            <span className="text-xs text-charcoal-soft">
+            <span className="text-[13.5px] font-semibold text-charcoal">Show when I'm online</span>
+            <span className="text-[11.5px] font-normal text-charcoal-faint">
               Off by default. If off, you won't see theirs either. Applies to all your chats.
             </span>
             {presenceError && <span className="text-[11.5px] text-status-high">{presenceError}</span>}
@@ -411,10 +425,10 @@ export const ChatInfo: React.FC<{
           />
         </div>
         )}
-        <div className="flex items-center justify-between gap-3 min-h-[56px]">
+        <div className="flex items-center justify-between gap-3 min-h-[56px] py-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-charcoal">Read receipts</span>
-            <span className="text-xs text-charcoal-soft">If off, you won't see theirs either. Applies to all your chats.</span>
+            <span className="text-[13.5px] font-semibold text-charcoal">Read receipts</span>
+            <span className="text-[11.5px] font-normal text-charcoal-faint">If off, you won't see theirs either. Applies to all your chats.</span>
             {receiptsError && <span className="text-[11.5px] text-status-high">{receiptsError}</span>}
           </div>
           <Toggle

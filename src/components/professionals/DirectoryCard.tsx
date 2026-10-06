@@ -36,8 +36,15 @@ export const DirectoryCard: React.FC<{
   const navigate = useNavigate();
   const t = typeColours(p.subtype, useIsDark());
   const pill = "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold max-w-full";
+  const open = () => navigate(`/app/professionals/${p.profileId}`);
+  // MO1.2 interactions #11–14: a tap anywhere on the card opens the profile.
+  // The card itself is not a button (it holds one); View Profile stays the
+  // keyboard and screen-reader path to the same place.
   return (
-    <div className={`rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4 animate-fade-slide-up ${className}`}>
+    <div
+      onClick={open}
+      className={`cursor-pointer rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4 animate-fade-slide-up ${className}`}
+    >
       <div className="flex items-start gap-3.5">
         <span
           className="w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[18px] font-bold"
@@ -90,8 +97,12 @@ export const DirectoryCard: React.FC<{
 
       <button
         type="button"
-        onClick={() => navigate(`/app/professionals/${p.profileId}`)}
-        className="tap mt-3.5 w-full h-11 rounded-xl flex items-center justify-center gap-1 text-[13.5px] font-bold"
+        onClick={(e) => {
+          e.stopPropagation();
+          open();
+        }}
+        // MO1.2: 40 tall (measured on the frame; the 224 card fits it).
+        className="tap mt-3.5 w-full h-10 rounded-xl flex items-center justify-center gap-1 text-[13.5px] font-bold"
         style={{ background: t.pill, color: t.deep }}
       >
         View Profile <ChevronRight size={14} aria-hidden />

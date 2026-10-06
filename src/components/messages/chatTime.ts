@@ -15,6 +15,13 @@ export function listTime(iso: string, now = new Date()): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
+/** MO1.2.1.3.2's search result time: the day, then the clock ("Today · 08:14"). */
+export function dayAndTime(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  const day = sameDay(d, now) ? "Today" : listTime(iso, now);
+  return `${day} · ${clockTime(iso)}`;
+}
+
 export function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }

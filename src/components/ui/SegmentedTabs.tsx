@@ -54,7 +54,13 @@ export const SegmentedTabs: React.FC<{
   labelSize?: number;
   /** Tab height when a frame draws other than 44 / 38 (MO1.2's category rail: 32 in a 40 track). */
   tabHeight?: number;
-}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight }) => {
+  /** Idle label weight when a frame draws other than 700 (MO1.2's rail and MO1.2.1.3.1's shared tabs: 600). */
+  idleWeight?: number;
+  /** A scrolling track's tab padding and minimum width when a frame draws other than `0 16px` / 86
+   *  (MO1.2's rail: natural width, 14 each side, so "All" is 43). */
+  scrollTabPadding?: string;
+  scrollMinWidth?: number;
+}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight, idleWeight = 700, scrollTabPadding = "0 16px", scrollMinWidth = 86 }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -88,10 +94,10 @@ export const SegmentedTabs: React.FC<{
             className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : "whitespace-nowrap"}`}
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
-              minWidth: scroll ? 86 : 0,
+              minWidth: scroll ? scrollMinWidth : 0,
               height: tabHeight ?? (size === "compact" ? 38 : 44),
               gap: item.icon ? 6 : undefined,
-              padding: scroll ? "0 16px" : "0 6px",
+              padding: scroll ? scrollTabPadding : "0 6px",
               borderRadius: 12,
               background: lit
                 ? active ? lit.activeFill : lit.idleFill
@@ -100,7 +106,7 @@ export const SegmentedTabs: React.FC<{
                 ? active ? lit.activeInk : lit.idleInk
                 : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
               fontSize: textPx(labelSize),
-              fontWeight: 700,
+              fontWeight: active ? 700 : idleWeight,
             }}
           >
             {item.icon}

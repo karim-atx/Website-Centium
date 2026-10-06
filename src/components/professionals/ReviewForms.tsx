@@ -4,6 +4,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ReviewItem } from "./ReviewItem";
+import { textPx } from "../../theme/textSize";
 import type { ReviewRow } from "../../services/professional-reviews";
 import {
   EDIT_WINDOW_OVER,
@@ -97,7 +98,15 @@ export const MyReviewCard: React.FC<{
           // MO1.2.1: the prompt and the outline button on one row.
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>
-            <Button size="sm" variant="outline" onClick={onOpen} className="shrink-0">
+            {/* MO1.2.1 #7: 12/700 in the deep primary ink with a 1 px primary-dark
+                outline (#7D6BB5, sampled from the frame). */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpen}
+              className="shrink-0"
+              style={{ fontSize: textPx(12), color: "rgb(var(--c-primary-deep-text))", borderColor: "rgb(var(--c-primary-dark))" }}
+            >
               <Pencil size={13} /> Rate &amp; Review
             </Button>
           </div>
@@ -189,7 +198,10 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
 
   return (
     <div className="space-y-5 animate-fade-slide-up">
-      <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label="Rating">
+      {/* MO1.2.1.2: stars on a 44 pitch (34 + gap 10), the textarea 212 tall
+          and "Your review" 12/600 in the faint grey (all measured on the frame
+          at 2x, the label colour from the table). */}
+      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
         {Array.from({ length: 5 }, (_, i) => (
           <button
             key={i}
@@ -205,7 +217,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
         ))}
       </div>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your review</span>
+        <span className="text-xs font-semibold text-charcoal-faint mb-1.5 block">Your review</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -213,7 +225,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           rows={5}
           aria-describedby="review-count"
           aria-invalid={over || undefined}
-          className={fieldClass}
+          className={`${fieldClass} h-[212px]`}
         />
         <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" />
       </label>

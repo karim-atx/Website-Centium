@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -227,10 +227,16 @@ export const ThreadView: React.FC<{
    * client bar floats 18px up and is 58px tall; the professional and business
    * bar is flush and goes away at lg, where the sidebar takes over.
    */
-  const footerBottom =
-    user.accountType === "professional" || user.accountType === "business"
-      ? "bottom-[calc(env(safe-area-inset-bottom)+64px)] lg:bottom-0"
-      : "bottom-[calc(env(safe-area-inset-bottom)+84px)]";
+  //
+  // MO1.2.1.3: on the client bar the composer's foot is 20 above the navbar's
+  // top (composer y 704 + 44, navbar y 768), i.e. 96 above the screen's foot
+  // (navbar 18 up + 58 tall + 20). Stuck, that is the sticky offset; in flow
+  // (a short thread), the root pulls 16 into the page's 112 bottom padding to
+  // land on the same line.
+  const clientBar = !(user.accountType === "professional" || user.accountType === "business");
+  const footerBottom = clientBar
+    ? "bottom-[calc(env(safe-area-inset-bottom)+96px)]"
+    : "bottom-[calc(env(safe-area-inset-bottom)+64px)] lg:bottom-0";
   /**
    * The other participant has deleted their account.
    *
@@ -1137,7 +1143,7 @@ export const ThreadView: React.FC<{
   })();
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-136px)]">
+    <div className={`flex flex-col ${clientBar ? "min-h-[calc(100dvh-120px)] -mb-4" : "min-h-[calc(100dvh-136px)]"}`}>
       {infoOpen && authUserId ? (
         <ChatInfo
           online={theyAreOnline}
@@ -1190,8 +1196,11 @@ export const ThreadView: React.FC<{
       {searchOpen && (
         <div className="mb-4">
           <div className="flex items-center gap-2">
-            <label className="flex-1 flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3">
-              <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
+            {/* MO1.2.1.3.2: the focused field takes a 1 px primary-dark border
+                (#7D6BB5, sampled from the frame); Search 16/1.75; Cancel 13.5/700
+                in the deep primary ink. */}
+            <label className="flex-1 flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 focus-within:border-primary-dark px-3">
+              <Search size={16} strokeWidth={1.75} className="text-charcoal-soft shrink-0" aria-hidden />
               <span className="sr-only">Search in this chat</span>
               <input
                 autoFocus
@@ -1204,7 +1213,7 @@ export const ThreadView: React.FC<{
             <button
               type="button"
               onClick={closeSearch}
-              className="tap min-h-[44px] px-2 text-sm font-semibold text-primary-deep-text shrink-0"
+              className="tap min-h-[44px] px-2 text-[13.5px] font-bold text-primary-deep-text shrink-0"
             >
               Cancel
             </button>
@@ -1224,6 +1233,7 @@ export const ThreadView: React.FC<{
                 hits={searchHits}
                 query={searchTerm}
                 titleFor={(h) => (h.senderId === authUserId ? "You" : thread.participantName)}
+                isOther={(h) => h.senderId !== authUserId}
                 onOpen={(h) => {
                   closeSearch();
                   window.setTimeout(() => void focusMessage(h.messageId), 50);
@@ -1244,9 +1254,10 @@ export const ThreadView: React.FC<{
         <button
           onClick={onBack}
           aria-label="Back to conversations"
-          className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"
+          className="tap w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
         >
-          <ArrowLeft size={16} />
+          {/* MO1.2.1.3: a bare ChevronLeft 17, no disc. */}
+          <ChevronLeft size={17} />
         </button>
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
@@ -1271,7 +1282,8 @@ export const ThreadView: React.FC<{
           </span>
           )}
           <span className="flex flex-col min-w-0">
-            <span className="text-[14.5px] font-bold text-charcoal truncate">{groupName}</span>
+            {/* MO1.2.1.3 #9: 14.5/700 in the deep primary ink (a no-decision item: the handover's look, theme token). */}
+            <span className="text-[14.5px] font-bold text-primary-deep-text truncate">{groupName}</span>
             {isGroup ? (
               typingName ? (
                 <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
@@ -1549,9 +1561,11 @@ export const ThreadView: React.FC<{
                     tick-read-received). Shape carries the state anyway, so it
                     survives greyscale and colour blindness. The star is the
                     reader's own mark, so it sits here too. */}
+                {/* MO1.2.1.3: 10/600, the bubble's ink at 0.8 on your own
+                    (white 0.8 in light mode), the faint grey on theirs; ticks 14. */}
                 <span
-                  className={`self-end flex items-center gap-1 text-[11px] ${
-                    mine ? "opacity-90" : "text-charcoal-soft"
+                  className={`self-end flex items-center gap-1 text-[10px] font-semibold ${
+                    mine ? "opacity-80" : "text-charcoal-faint"
                   }`}
                 >
                   {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
@@ -1562,11 +1576,11 @@ export const ThreadView: React.FC<{
                   {isGroup && mine && !m.deletedAt && (readCounts[m.id] ?? 0) > 0 ? ` · read by ${readCounts[m.id]}` : ""}
                   {mine && !isGroup && !m.deletedAt &&
                     (tick === "read" ? (
-                      <CheckCheck size={15} aria-label="Read" className="text-tick-read-sent" />
+                      <CheckCheck size={14} aria-label="Read" className="text-tick-read-sent" />
                     ) : tick === "delivered" ? (
-                      <CheckCheck size={15} aria-label="Delivered" />
+                      <CheckCheck size={14} aria-label="Delivered" />
                     ) : (
-                      <Check size={15} aria-label="Sent" />
+                      <Check size={14} aria-label="Sent" />
                     ))}
                 </span>
               </div>
@@ -1596,6 +1610,8 @@ export const ThreadView: React.FC<{
                   onClose={() => setActionsFor(null)}
                   mine={mine}
                   preview={describeMessage(m)}
+                  time={clockTime(m.createdAt)}
+                  tick={mine && !isGroup && !m.deletedAt ? tick : null}
                   myReaction={myReaction}
                   onReact={block.blocked || departed || m.deletedAt ? null : (emoji) => void react(m, emoji)}
                   actions={actionsForMessage(m)}
@@ -1772,22 +1788,28 @@ export const ThreadView: React.FC<{
                 if (file) void attach(file);
               }}
             />
-            <button
-              onClick={(e) => setAttachAnchor(e.currentTarget)}
-              disabled={sending}
-              aria-label="Attach a photo or document"
-              aria-haspopup="menu"
-              aria-expanded={!!attachAnchor}
-              className="tap w-11 h-11 rounded-full border border-charcoal/10 bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-40"
-            >
-              <Paperclip size={17} strokeWidth={1.75} />
-            </button>
+            {/* MO1.2.1.3.6: while recording the row is the bar and the mic only. */}
+            {!recorder.recording && (
+              <button
+                onClick={(e) => setAttachAnchor(e.currentTarget)}
+                disabled={sending}
+                aria-label="Attach a photo or document"
+                aria-haspopup="menu"
+                aria-expanded={!!attachAnchor}
+                className="tap w-11 h-11 rounded-full border border-charcoal/10 bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-40"
+              >
+                <Paperclip size={17} strokeWidth={1.75} />
+              </button>
+            )}
           </>
         )}
         {recorder.recording ? (
+          // MO1.2.1.3.6: the bar is the pale danger tint throughout; past the
+          // cancel distance it deepens (a ring in the danger colour) so the
+          // slide-to-cancel feedback is kept.
           <div
-            className={`flex-1 h-12 flex items-center gap-2 rounded-full px-4 ${
-              willCancel ? "bg-status-high-bg" : "bg-cream-soft"
+            className={`flex-1 h-12 flex items-center gap-2 rounded-full px-4 bg-status-high-bg ${
+              willCancel ? "ring-2 ring-status-high/50" : ""
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-status-high animate-pulse shrink-0" />
@@ -1824,23 +1846,26 @@ export const ThreadView: React.FC<{
             onPointerCancel={() => void onRecordUp()}
             disabled={sending}
             aria-label="Hold to record a voice note"
-            className={`tap w-10 h-10 rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
+            // MO1.2.1.3.5: Mic 18/1.75 idle. MO1.2.1.3.6: a 48 red disc with Mic 19 while recording.
+            className={`tap rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
               recorder.recording
-                ? "bg-status-high text-white dark:text-[#0D0B1A] scale-110"
-                : "text-charcoal-soft hover:bg-cream-soft"
-            } transition-transform`}
+                ? "w-12 h-12 bg-status-high text-white dark:text-[#0D0B1A]"
+                : "w-10 h-10 text-charcoal-soft hover:bg-cream-soft"
+            }`}
           >
-            <Mic size={17} />
+            {recorder.recording ? <Mic size={19} /> : <Mic size={18} strokeWidth={1.75} />}
           </button>
         )}
-        <button
-          onClick={() => void send()}
-          disabled={sending || !draft.trim()}
-          aria-label="Send message"
-          className="tap w-11 h-11 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
-        >
-          <Send size={16} />
-        </button>
+        {!recorder.recording && (
+          <button
+            onClick={() => void send()}
+            disabled={sending || !draft.trim()}
+            aria-label="Send message"
+            className="tap w-11 h-11 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
+          >
+            <Send size={16} />
+          </button>
+        )}
       </div>
       </div>
       </>
@@ -1897,7 +1922,9 @@ export const ThreadView: React.FC<{
         open={!!attachAnchor}
         onClose={() => setAttachAnchor(null)}
         anchor={attachAnchor}
-        width={260}
+        // MO1.2.1.3.4: 260 overall; `width` is the content box, inside 8 + 8
+        // padding and a 1 + 1 border.
+        width={242}
         align="left"
         options={[
           { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },

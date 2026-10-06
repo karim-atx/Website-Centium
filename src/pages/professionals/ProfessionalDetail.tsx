@@ -22,6 +22,7 @@ import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/ReviewForms";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucide-react";
+import { textPx } from "../../theme/textSize";
 
 // MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
 // colours, the price and client-since pills, the gold reviews pill (which
@@ -323,13 +324,15 @@ export default function ProfessionalDetail() {
         aria-label="Back"
         className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-1"
       >
-        <ChevronLeft size={20} />
+        {/* MO1.2.1 / MO1.2.1.4: ChevronLeft 18. */}
+        <ChevronLeft size={18} />
       </button>
 
-      {/* MO1.2.1: the centred hero, in the professional's type colours (B3). */}
+      {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
+          Avatar 96 (measured on the frame). */}
       <div className="flex flex-col items-center text-center gap-1.5 mb-6 animate-fade-slide-up">
         <span
-          className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
+          className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
           style={{ background: t.pill, color: t.deep }}
         >
           {listing?.avatarUrl ? <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(professional.name)}
@@ -490,6 +493,8 @@ export default function ProfessionalDetail() {
           frame's own rule). Not connected: Message and "Request to hire" —
           the frame's Hire, which needs offers and payments (decision 4) — in
           its sent and cooldown states when there is one. */}
+      {/* Labels 13.5/700 (MO1.2.1 #9, MO1.2.1.4 #8). MO1.2.1.4's Message
+          carries a 1 px outline in the type's deep colour on the pill fill. */}
       {showPinned &&
         (isConnected ? (
           <PinnedCta
@@ -498,7 +503,7 @@ export default function ProfessionalDetail() {
               icon: <MessageCircle size={15} />,
               loading: threadBusy,
               onClick: () => void openThread(),
-              style: { background: t.main, color: t.onMain },
+              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
             }}
           />
         ) : (
@@ -508,7 +513,7 @@ export default function ProfessionalDetail() {
               icon: <MessageCircle size={15} />,
               loading: threadBusy,
               onClick: () => void openThread(),
-              style: { background: t.pill, color: t.deep },
+              style: { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
             }}
             primary={{
               label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Request to hire",
@@ -516,7 +521,7 @@ export default function ProfessionalDetail() {
               loading: sending,
               disabled: hireState !== "none" || !authUserId,
               onClick: () => void requestHire(),
-              style: { background: t.main, color: t.onMain },
+              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
             }}
           />
         ))}

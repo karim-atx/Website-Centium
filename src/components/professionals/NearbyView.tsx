@@ -338,7 +338,8 @@ export const NearbyView: React.FC<{
                 scroll-snap strip, so a keyboard or a mouse wheel moves it too. */}
             {cards.length > 0 && (
               // Sits above the tile credit line, which must stay visible.
-              <div className="absolute inset-x-2 bottom-[30px] z-[3]">
+              // MO1.2.2 #10: the card is 358 wide, flush with the map's edges.
+              <div className="absolute inset-x-0 bottom-[30px] z-[3]">
                 {cards.length > 1 && (
                   <p className="text-center text-[11px] font-semibold text-charcoal-soft mb-1" aria-live="polite">
                     <span className="inline-block rounded-full bg-cream-card/90 px-2 py-0.5 shadow-sm">
@@ -358,7 +359,7 @@ export const NearbyView: React.FC<{
                   aria-label="Professionals on the map, nearest first"
                 >
                   {cards.map(({ p }) => (
-                    <div key={p.profileId} className="w-full shrink-0 snap-center px-1">
+                    <div key={p.profileId} className="w-full shrink-0 snap-center">
                       <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
                     </div>
                   ))}

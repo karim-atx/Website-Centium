@@ -66,7 +66,9 @@ export default function ProfessionalReviews() {
   const label = ratingLabel(listing.averageRating, listing.reviewCount);
   const ownCounts = mine && myStatus !== "withdrawn";
   const dist = ratingDistribution([...others, ...(ownCounts ? [mine] : [])]);
-  const most = Math.max(1, ...dist);
+  // MO1.2.1.1: each bar is its share of all the reviews (15 of 18 is 83%), not
+  // of the largest count.
+  const total = Math.max(1, dist.reduce((a, b) => a + b, 0));
 
   const refresh = async () => {
     const found = await fetchListing(listing.profileId);
@@ -103,8 +105,9 @@ export default function ProfessionalReviews() {
           {[5, 4, 3, 2, 1].map((n) => (
             <div key={n} className="flex items-center gap-2 text-[11px]">
               <span className="w-2 font-bold text-charcoal-soft">{n}</span>
-              <span className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: t.pill }}>
-                <span className="block h-full rounded-full" style={{ width: `${(dist[n - 1] / most) * 100}%`, background: t.main }} />
+              {/* 5 thick (measured on the frame at 2x). */}
+              <span className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: t.pill }}>
+                <span className="block h-full rounded-full" style={{ width: `${(dist[n - 1] / total) * 100}%`, background: t.main }} />
               </span>
               <span className="w-4 text-right text-charcoal-faint tabular-nums">{dist[n - 1]}</span>
             </div>

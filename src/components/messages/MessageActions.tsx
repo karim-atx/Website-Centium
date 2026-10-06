@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Flag, Forward, Info, Pencil, Pin, PinOff, Plus, Reply, Star, StarOff, Trash2, type LucideIcon } from "lucide-react";
+import { Check, CheckCheck, Copy, Flag, Forward, Info, Pencil, Pin, PinOff, Plus, Reply, Star, StarOff, Trash2, type LucideIcon } from "lucide-react";
 import { MORE_REACTIONS, QUICK_REACTIONS } from "../../services/messaging/chatFeatures";
 
 export interface MessageAction {
@@ -42,11 +42,14 @@ export const MessageActions: React.FC<{
   onClose: () => void;
   mine: boolean;
   preview: string;
+  /** MO1.2.1.3.3: the lifted bubble keeps its time ("18:42") and, on your own, its tick. */
+  time?: string;
+  tick?: "sent" | "delivered" | "read" | null;
   myReaction: string | null;
   /** Null when this message cannot be reacted to (a blocked conversation). */
   onReact: ((emoji: string | null) => void) | null;
   actions: MessageAction[];
-}> = ({ open, onClose, mine, preview, myReaction, onReact, actions }) => {
+}> = ({ open, onClose, mine, preview, time, tick, myReaction, onReact, actions }) => {
   const [more, setMore] = useState(false);
 
   useEffect(() => {
@@ -100,7 +103,8 @@ export const MessageActions: React.FC<{
                 onClick={() => react(emoji)}
                 aria-label={`React ${emoji}`}
                 aria-pressed={emoji === myReaction}
-                className={`tap w-11 h-11 rounded-full text-[22px] leading-none flex items-center justify-center ${
+                // MO1.2.1.3.3: emoji 21.
+                className={`tap w-11 h-11 rounded-full text-[21px] leading-none flex items-center justify-center ${
                   emoji === myReaction ? "bg-primary-pale" : ""
                 }`}
               >
@@ -114,20 +118,34 @@ export const MessageActions: React.FC<{
                 aria-label="More reactions"
                 className="tap w-11 h-11 rounded-full bg-cream-soft flex items-center justify-center text-primary-deep-text"
               >
-                <Plus size={18} strokeWidth={2.2} />
+                <Plus size={17} />
               </button>
             )}
           </div>
         )}
 
+        {/* MO1.2.1.3.3: the lifted bubble at 13.5, with its time 10/600 and
+            ticks 14, as in the thread. */}
         <div
-          className={`max-w-[78%] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words line-clamp-6 ${
+          className={`max-w-[78%] px-3 py-[9px] flex flex-col gap-0.5 ${
             mine
               ? "bg-bubble-sent text-white dark:text-[#0D0B1A] rounded-[20px_20px_4px_20px]"
               : "bg-cream-card text-charcoal rounded-[20px_20px_20px_4px]"
           }`}
         >
-          {preview}
+          <span className="text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words line-clamp-6">{preview}</span>
+          {time && (
+            <span className={`self-end flex items-center gap-1 text-[10px] font-semibold ${mine ? "opacity-80" : "text-charcoal-faint"}`}>
+              {time}
+              {tick === "read" ? (
+                <CheckCheck size={14} aria-label="Read" className="text-tick-read-sent" />
+              ) : tick === "delivered" ? (
+                <CheckCheck size={14} aria-label="Delivered" />
+              ) : tick === "sent" ? (
+                <Check size={14} aria-label="Sent" />
+              ) : null}
+            </span>
+          )}
         </div>
 
         <div

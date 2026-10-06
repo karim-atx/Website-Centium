@@ -1,7 +1,6 @@
 import React from "react";
 import { ExternalLink } from "lucide-react";
 import clsx from "clsx";
-import { VerifiedPill } from "./CvBadges";
 import { proficiencyLabel, type PublicCv } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 
@@ -19,7 +18,8 @@ import { byRecency, formatMonth, formatRange } from "../../services/professional
 // Sections with nothing in them are left out rather than shown empty.
 
 const CARD = "rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4";
-const SUB = "text-[12.5px] text-charcoal-soft";
+// MO1.2.1 / MO1.2.1.4: meta lines 11.5/400 rgb(140,131,120), the existing faint grey.
+const SUB = "text-[11.5px] font-normal text-charcoal-faint";
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter((p) => p && p.trim()).join(" · ");
 
@@ -94,11 +94,11 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
           <ol className={CARD}>
             {cv.licences.map((l, i) => (
               <Dot key={l.id} accent={accent} last={i === cv.licences.length - 1}>
-                <div className="flex justify-between gap-2 items-start">
-                  <p className="text-[13.5px] font-semibold text-charcoal break-words">{l.name}</p>
-                  {l.verified && <VerifiedPill />}
-                </div>
-                {join(l.issuingBody, formatMonth(l.issued)) && <p className={SUB}>{join(l.issuingBody, formatMonth(l.issued))}</p>}
+                <p className="text-[13.5px] font-semibold text-charcoal break-words">{l.name}</p>
+                {/* MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill. */}
+                {join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null) && (
+                  <p className={SUB}>{join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null)}</p>
+                )}
                 {l.expired && l.expires && <p className={SUB}>Expired {formatMonth(l.expires)}</p>}
                 {l.credentialUrl && <CvAnchor href={l.credentialUrl}>View credential</CvAnchor>}
               </Dot>

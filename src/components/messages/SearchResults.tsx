@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 import type { SearchHit } from "../../services/messaging/chatFeatures";
 import { snippetFor } from "../../services/messaging/searchSnippet";
-import { listTime } from "./chatTime";
+import { dayAndTime, listTime } from "./chatTime";
 
 /**
  * Message search results (phase 2A). One row per matching message: who and
@@ -21,9 +21,14 @@ export const SearchResults: React.FC<{
   hasMore: boolean;
   loadingMore: boolean;
   onMore: () => void;
-  /** MO1.2.1.3.2 (search in one chat): the results in a card. */
+  /**
+   * MO1.2.1.3.2 (search in one chat): the results in a card. Each row's title
+   * is 12.5/700, in the deep primary ink for the other person (`isOther`);
+   * the time is 11/400 faint "Today · 08:14"; the words run to two lines.
+   */
   card?: boolean;
-}> = ({ hits, query, titleFor, onOpen, hasMore, loadingMore, onMore, card }) => (
+  isOther?: (hit: SearchHit) => boolean;
+}> = ({ hits, query, titleFor, onOpen, hasMore, loadingMore, onMore, card, isOther }) => (
   <div className={card ? "flex flex-col rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-3" : "flex flex-col"}>
     {hits.map((h) => {
       const s = snippetFor(h.matchedIn === "text" ? h.text ?? "" : h.attachmentName ?? "", query);
@@ -35,12 +40,21 @@ export const SearchResults: React.FC<{
           className={`tap w-full text-left min-h-[56px] py-2.5 px-1 border-b border-charcoal/[0.06] flex flex-col gap-0.5 ${card ? "last-of-type:border-b-0" : ""}`}
         >
           <span className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-bold text-charcoal truncate">{titleFor(h)}</span>
-            <span className="text-xs text-charcoal-soft shrink-0">{listTime(h.createdAt)}</span>
+            {card ? (
+              <>
+                <span className={`text-[12.5px] font-bold truncate ${isOther?.(h) ? "text-primary-deep-text" : "text-charcoal"}`}>{titleFor(h)}</span>
+                <span className="text-[11px] font-normal text-charcoal-faint shrink-0">{dayAndTime(h.createdAt)}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-bold text-charcoal truncate">{titleFor(h)}</span>
+                <span className="text-xs text-charcoal-soft shrink-0">{listTime(h.createdAt)}</span>
+              </>
+            )}
           </span>
-          <span className="text-[13px] text-charcoal-soft flex items-center gap-1.5 min-w-0">
-            {h.matchedIn === "attachment_name" && <FileText size={13} className="shrink-0" aria-label="In a file name" />}
-            <span className="truncate">
+          <span className={`text-[13px] text-charcoal-soft flex gap-1.5 min-w-0 ${card ? "items-start" : "items-center"}`}>
+            {h.matchedIn === "attachment_name" && <FileText size={13} className={`shrink-0 ${card ? "mt-[3px]" : ""}`} aria-label="In a file name" />}
+            <span className={card ? "line-clamp-2 break-words" : "truncate"}>
               {s.before}
               {s.match && (
                 <mark className="bg-primary-pale text-primary-deep-text font-bold rounded-[3px] px-px">{s.match}</mark>
