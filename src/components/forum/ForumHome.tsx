@@ -26,8 +26,9 @@ import {
   HeldNote,
   RemovedNote,
   ReplyIcon,
-  WhiteMark,
 } from "./parts";
+import { useApp } from "../../context/AppContext";
+import { ThemedMark } from "../ui/ThemedMark";
 
 // Design screen 1: the forum list, restyled to mobile v5.1 MO1.3.
 //
@@ -71,6 +72,7 @@ export function ForumHome({
   const [likes, setLikes] = useState<Set<string>>(new Set());
   const seq = useRef(0);
   const dark = useIsDark();
+  const { colorTheme } = useApp();
 
   const byKey = useMemo(() => new Map(categories.map((c) => [c.key, c])), [categories]);
   // The design's order (A20): All · Nutrition · Workouts · Progress · Motivation.
@@ -170,7 +172,8 @@ export function ForumHome({
   );
 
   return (
-    <div className="flex flex-col gap-3 pb-28" style={{ color: fv("text") }}>
+    // -mt-0.5: the strip sits 10 under the Forum / Courses tabs (frame check).
+    <div className="flex flex-col gap-3 pb-28 -mt-0.5" style={{ color: fv("text") }}>
       <WarningNotice />
       {recoveryPending ? (
         <div className="flex gap-1.5" aria-hidden="true">
@@ -179,10 +182,11 @@ export function ForumHome({
           ))}
         </div>
       ) : (
-        // MO1.3 #3: the strip runs off the right edge (radius 16 0 0 16).
+        // MO1.3 #3: the strip runs off the right edge. Frame check: radius
+        // 12 0 0 12 (measured) and, new since R1, the FO3 track #F4F3F9.
         <div
           className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
-          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
+          style={{ background: dark ? fv("track") : "rgb(var(--th-f4f3f9))", borderRadius: "12px 0 0 12px" }}
           role="group"
           aria-label="Categories"
         >
@@ -198,7 +202,8 @@ export function ForumHome({
       )}
 
       {!isProfessional && nickname && (
-        <div className="text-xs flex justify-between items-center gap-2" style={{ color: fv("muted") }}>
+        // Frame check: 16 under the strip, two 18 pt lines (36 tall).
+        <div className="mt-1 text-xs leading-[1.5] flex justify-between items-center gap-2" style={{ color: fv("muted") }}>
           <span className="min-w-0">
             Your nickname: <strong style={{ color: fv("text") }}>{nickname}</strong>. You choose nickname or name each
             time you post.
@@ -209,20 +214,19 @@ export function ForumHome({
         </div>
       )}
 
-      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. The
-          mark is white in every theme, on a tile in the theme accent so it
-          reads on the light card as on the dark one. */}
+      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. Frame
+          check: the mark is drawn bare in its own colours, 22 wide (measured),
+          no tile — the brand PNG in Centium, the themed C and leaf otherwise;
+          10 under the nickname line. */}
       <div
-        className="flex items-start gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
+        className={`flex items-start gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border ${!isProfessional && nickname ? "-mt-0.5" : ""}`}
         style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgb(var(--th-aea1dc) / 0.35)" }}
       >
-        <span
-          aria-hidden="true"
-          className="shrink-0 w-8 h-8 rounded-[10px] flex items-center justify-center"
-          style={{ background: fv("accent") }}
-        >
-          <WhiteMark width={18} />
-        </span>
+        {colorTheme === "centium" ? (
+          <img src="/centium-mark.png" alt="" aria-hidden="true" className="shrink-0 object-contain" style={{ width: (22 * 687) / 648, height: (22 * 713) / 648 }} />
+        ) : (
+          <ThemedMark width={(22 * 687) / 648} height={(22 * 713) / 648} className="shrink-0" />
+        )}
         <span>
           <strong className="font-extrabold">Community rules:</strong> Be kind, share experience rather than medical
           advice, and report anything that worries you. Posts here aren't a substitute for a doctor.
@@ -237,9 +241,10 @@ export function ForumHome({
 
       {recoveryPending || threads === null ? (
         <div className="flex flex-col gap-2.5" aria-busy="true">
-          <ForumPlaceholder height={150} />
-          <ForumPlaceholder height={120} />
-          <ForumPlaceholder height={150} />
+          {/* At the frame's card heights (MO1.3 #6–8: 202, 181, 181). */}
+          <ForumPlaceholder height={202} />
+          <ForumPlaceholder height={181} />
+          <ForumPlaceholder height={181} />
         </div>
       ) : (
         <>
@@ -347,27 +352,30 @@ function ThreadCard({
     >
       <div className="flex items-center gap-2.5">
         <AuthorInitial author={author} identity={thread.identity} size={36} />
-        <div className="grow min-w-0 flex flex-col gap-1">
+        {/* Frame check (measured): the name line 20 tall, the pills 18. */}
+        <div className="grow min-w-0 flex flex-col gap-1 leading-[20px]">
           <AuthorName author={author} size={14} />
           <span className="flex items-center gap-1.5 flex-wrap">
             {categoryName && (
               <span
-                className="inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10.5px] font-bold"
+                className="inline-flex items-center gap-1 h-[18px] px-2 rounded-full text-[10.5px] font-bold"
                 style={{ background: colours.pill, color: colours.ink }}
               >
                 <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: colours.ink }} />
                 {categoryName}
               </span>
             )}
-            <span className="inline-flex items-center h-5 px-2 rounded-full text-[10.5px] font-semibold" style={{ background: fv("track"), color: fv("muted") }}>
+            <span className="inline-flex items-center h-[18px] px-2 rounded-full text-[10.5px] font-semibold" style={{ background: fv("track"), color: fv("muted") }}>
               {metaLine(thread)}
             </span>
           </span>
         </div>
       </div>
-      <div className="text-[14.5px] font-bold leading-snug [overflow-wrap:anywhere]">{thread.title}</div>
+      {/* Frame check (measured on cards 1 and 2): title lines 21, the body
+          3 under the title in 20 pt lines, the counts 14 under the body. */}
+      <div className="text-[14.5px] font-bold leading-[21px] [overflow-wrap:anywhere]">{thread.title}</div>
       {thread.body && (
-        <div className="text-[13px] leading-[1.5] line-clamp-2 [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
+        <div className="-mt-[7px] text-[13px] leading-[20px] line-clamp-2 [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
           {thread.body}
         </div>
       )}
@@ -376,7 +384,7 @@ function ThreadCard({
           {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
         </div>
       )}
-      <div className="flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
+      <div className="mt-1 h-[17px] flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
         {/* Likes are tappable here now (A21), as on the post. */}
         <button
           type="button"

@@ -7,6 +7,7 @@ import { rememberNickname } from "./useForumMe";
 import { AtSign, ChevronLeft } from "lucide-react";
 import { PinnedCta } from "../ui/PinnedCta";
 import { useBack } from "../../hooks/useBack";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 4: "Choose a forum nickname". Shown on a member's first visit
 // to the forum, and again from Profile or the forum's Edit link to change it.
@@ -30,6 +31,7 @@ export function NicknameScreen({
   onDone: (nickname: string) => void;
 }) {
   const back = useBack();
+  const dark = useIsDark();
   const [value, setValue] = useState(initial ?? "");
   const [reserved, setReserved] = useState<Set<string>>(new Set());
   const [touched, setTouched] = useState(false);
@@ -79,19 +81,22 @@ export function NicknameScreen({
       style={{ color: fv("text") }}
     >
       <div className="flex flex-col gap-4 pb-6">
+        {/* Frame check (MO1.3.4): the back button at the content edge
+            (chevron centre x 34), #5B5349 (new since R1); the AtSign tile 20
+            under it in the frame's #F0EDF9 / #7D6BB5 (new since R1, light;
+            dark keeps the forum tints); the title on a 30 pt line. */}
         <button
           type="button"
           onClick={back}
           aria-label="Back"
-          className="tap w-9 h-9 -ml-1.5 rounded-full flex items-center justify-center"
-          style={{ color: fv("muted") }}
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft"
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="w-14 h-14 rounded-[18px] flex items-center justify-center" style={{ background: fv("rules-bg") }}>
-          <AtSign size={26} strokeWidth={1.75} style={{ color: fv("rules-ink") }} />
+        <div className="mt-1 w-14 h-14 rounded-[18px] flex items-center justify-center" style={{ background: dark ? fv("rules-bg") : "rgb(var(--th-f0edf9))" }}>
+          <AtSign size={26} strokeWidth={1.75} style={{ color: dark ? fv("rules-ink") : "rgb(var(--th-7d6bb5))" }} />
         </div>
-        <h1 className="m-0 text-[24px] font-extrabold leading-[1.2] [text-wrap:balance]">Choose a forum nickname</h1>
+        <h1 className="m-0 text-[24px] font-extrabold leading-[1.25] [text-wrap:balance]">Choose a forum nickname</h1>
         <p className="m-0 text-[14px] leading-[1.6]" style={{ color: fv("body") }}>
           Each time you post, you choose whether to use this nickname or your first name. Nobody in the community can
           see who is behind your nickname.
@@ -128,7 +133,8 @@ export function NicknameScreen({
             {shownError}
           </span>
         )}
-        <ul id="nickname-rules" className="m-0 pl-[18px] text-[12.5px] leading-[1.7] list-disc" style={{ color: fv("body") }}>
+        {/* Frame check: text at x 29 (13 in), 19 pt lines, 6 between rules. */}
+        <ul id="nickname-rules" className="m-0 pl-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
           <li>3 to 20 letters, numbers or underscores</li>
           <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
           <li>You can change it later in Profile</li>

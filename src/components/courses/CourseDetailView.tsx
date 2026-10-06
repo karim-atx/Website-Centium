@@ -132,10 +132,12 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       type="button"
       onClick={goBack}
       aria-label="Back"
-      className="tap w-11 h-11 rounded-full flex items-center justify-center"
+      // Frame check (MO1.3.5): a 36 pt disc (measured) with ChevronLeft 18
+      // (the table's icon list); the tap area stays 44 through the ::before.
+      className="tap relative w-9 h-9 rounded-full flex items-center justify-center before:content-[''] before:absolute before:-inset-1"
       style={{ background: onCover(dark).bg }}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={onCover(dark).ink} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={onCover(dark).ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
       </svg>
     </button>
@@ -201,16 +203,23 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
   const weeksShown = allWeeks ? modules : modules.slice(0, 2);
 
   return (
-    <div className="flex flex-col -mx-4" style={{ color: fv("text") }}>
-      {/* MO1.3.5 #1: the hero, 390 × 176. */}
-      <div className="h-[176px] flex flex-col justify-between p-3" style={{ background: coverBackground(course.coverColour, dark) }}>
+    // Frame check: the hero starts at the top edge (y 0), so the page's 24 pt
+    // top padding (and the safe area, re-added inside the hero) is cancelled.
+    <div className="flex flex-col -mx-4 -mt-[calc(env(safe-area-inset-top)+24px)]" style={{ color: fv("text") }}>
+      {/* MO1.3.5 #1: the hero, 390 × 176; padding 14 16 (measured: the
+          disc at 16,14, the pill 16 in and 14 off the bottom). */}
+      <div
+        className="h-[calc(env(safe-area-inset-top)+176px)] flex flex-col justify-between px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-3.5"
+        style={{ background: coverBackground(course.coverColour, dark) }}
+      >
         {back}
         <span className="self-start">
           <CoverPill>{coursePill(course.level, modules.length, course.weeklyHours)}</CoverPill>
         </span>
       </div>
 
-      <div className="p-4 flex flex-col gap-3">
+      {/* Frame check: title 15 under the hero, 14 between the blocks (measured). */}
+      <div className="px-4 pt-[15px] pb-4 flex flex-col gap-3.5">
         <h1 className="m-0 text-[22px] font-extrabold leading-[1.25] [overflow-wrap:anywhere] [text-wrap:balance]">{course.title}</h1>
         {/* MO1.3.5 #3: "By Rami" 13/400 muted and the badge, gap 6, no avatar. */}
         <span className="flex items-center text-[13px] font-normal" style={{ color: fv("muted") }}>
@@ -261,7 +270,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             all" the last row. */}
         {modules.length > 0 && (
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-extrabold">Syllabus</span>
+            {/* Foundations `label.section` (decision 20), 4 in; colour stays (decision 22). */}
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+              Syllabus
+            </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
               {weeksShown.map((m, i) => {
                 const contents = weekContents(lessons.filter((l) => l.moduleId === m.id).map((l) => l.kind));
@@ -301,7 +313,9 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
         {paidCourse && !hasPaid && (
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-extrabold">Choose how to take it</span>
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+              Choose how to take it
+            </span>
             <div className="flex gap-2">
               <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
                 <span className="text-sm font-extrabold">Watch free</span>
@@ -309,7 +323,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
                   All video lessons and readings
                 </span>
               </div>
-              <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("rules-bg"), border: `2px solid ${fv("accent")}` }}>
+              <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("rules-bg"), border: `1.5px solid ${fv("accent")}` }}>
                 <span className="text-sm font-extrabold">Full course · {price}</span>
                 <span className="text-xs leading-[1.5] [overflow-wrap:anywhere]" style={{ color: fv("rules-ink") }}>
                   Adds quizzes, PDFs and a certificate
@@ -332,7 +346,8 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             type="button"
             onClick={() => void start("free")}
             disabled={!!busy}
-            className="tap self-center h-11 px-3 text-[13px] font-bold disabled:opacity-60"
+            // 27 in the layout as drawn (padding 4 0), 44 to the finger.
+            className="tap self-center h-11 -my-[8.5px] px-0 text-[13px] font-bold disabled:opacity-60"
             style={{ color: fv("link") }}
           >
             {busy === "free" ? "Starting…" : enrolment ? "Continue watching free" : "Start watching free"}

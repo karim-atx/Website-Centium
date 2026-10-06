@@ -85,13 +85,15 @@ function useForumGate(section: Section):
 function Heading() {
   const back = useBack();
   return (
-    <div className="flex items-start gap-2.5">
+    // Frame check (MO1.3 #1): the header starts at the content edge (chevron
+    // centred at x 34, title at 62 after the 10 gap) and the tabs sit 16 under
+    // the subtitle (measured: the page's 12 gap + 6).
+    <div className="flex items-start gap-2.5 mb-1.5">
       <button
         type="button"
         onClick={back}
         aria-label="Back"
-        className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 -ml-1.5 mt-0.5"
-        style={{ color: fv("muted") }}
+        className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-charcoal-soft"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6" />
@@ -99,7 +101,8 @@ function Heading() {
       </button>
       <div className="min-w-0">
         <h1 className="m-0 text-[27px] font-bold leading-[1.5] tracking-[-0.022em]" style={{ color: fv("text") }}>Community</h1>
-        <p className="mt-1 text-[13px] font-medium" style={{ color: fv("muted") }}>
+        {/* New since R1, so the frame's text.muted rgb(140,131,120) (decision 22). */}
+        <p className="mt-1 text-[13px] font-medium text-charcoal-faint">
           Discuss with other clients, or learn from a course
         </p>
       </div>

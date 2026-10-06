@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { CentredPopup } from "../../components/ui/CentredPopup";
@@ -211,7 +210,13 @@ export default function Discover() {
         onChange={onChange}
         labelSize={12}
         tabHeight={32}
-        trackStyle={{ padding: 4, gap: 4, borderRadius: 12, ...(dark ? {} : { background: "#F4F3F9" }) }}
+        // Foundations › FO3 sub-tabs: natural width, 12 each side, radius 9,
+        // inactive 600 (frame check; were min 86, 16, 12 and 700).
+        idleWeight={600}
+        scrollTabPadding="0 12px"
+        scrollMinWidth={0}
+        tabRadius={9}
+        trackStyle={{ padding: 4, gap: 4, borderRadius: 12, ...(dark ? {} : { background: "rgb(var(--th-f4f3f9))" }) }}
         light={light}
       />
     </div>
@@ -234,7 +239,7 @@ export default function Discover() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search classes, places or a location"
-          className="w-full h-[46px] rounded-[14px] bg-cream-soft border border-charcoal/10 pl-10 pr-4 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full h-[46px] rounded-[14px] bg-cream-soft border border-charcoal/10 pl-[37px] pr-4 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
@@ -268,7 +273,9 @@ export default function Discover() {
               "Class type"
             )}
 
-          <div className="space-y-2.5 mt-1">
+          {/* 14 from the sub-tabs to the first card (frame check; the 12
+              margin above collapses into it). */}
+          <div className="space-y-2.5 mt-[14px]">
             {filtered.map((c) => {
               const mine = booked.has(c.classId);
               const free = !c.priceValue;
@@ -277,8 +284,10 @@ export default function Discover() {
                   <div className="flex gap-3">
                     {/* MO1.4's date block: weekday and start time, 56 wide
                         (measured from the frame, 2x: 112 px). */}
-                    <span className="w-14 shrink-0 self-start rounded-[14px] bg-primary-pale flex flex-col items-center justify-center py-2.5">
-                      <span className="text-[10.5px] font-extrabold uppercase text-primary-dark">
+                    <span className="w-14 shrink-0 self-center rounded-[14px] bg-primary-pale flex flex-col items-center justify-center py-2.5">
+                      {/* Frame check: the block is centred on the card, and
+                          its weekday (new since R1) is the frame's #7D67D9. */}
+                      <span className="text-[10.5px] font-extrabold uppercase text-th-7d67d9 dark:text-primary-dark">
                         {new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
                       </span>
                       <span className="text-[14px] font-extrabold text-charcoal tabular-nums leading-tight">{fmt12(c.startTime).split(" ")[0]}</span>
@@ -296,13 +305,16 @@ export default function Discover() {
                           {[farOff(c.date) ? dateLabel(c.date) : null, c.location].filter(Boolean).join(" · ")}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[12px] font-bold rounded-full px-2.5 py-0.5 bg-teal-pale text-teal-dark dark:text-teal-deep-text">
+                      {/* Frame check (measured, the table gives no values):
+                          row 6 under the place line; tag 20 tall, 8.5 each
+                          side, 10.5/700; spots 11; 6 between them. */}
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="h-5 inline-flex items-center text-[10.5px] font-bold rounded-full px-[8.5px] bg-teal-pale text-teal-dark dark:text-teal-deep-text">
                           {free ? "Free" : c.price}
                         </span>
                         {/* STRAIGHT FROM THE VIEW. spots_remaining is computed
                             over every booking server-side. */}
-                        <span className={`text-[11.5px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
+                        <span className={`text-[11px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
                           {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
                         </span>
                         {/* What the card no longer draws (MO1.4): the end time, the
@@ -320,13 +332,14 @@ export default function Discover() {
                           </button>
                         )}
                         {!mine && (
-                          // MO1.4: Book is a rounded rectangle, radius 10
-                          // (measured from the frame, 2x), 32 tall.
+                          // MO1.4: Book is a rounded rectangle, radius 10,
+                          // 58 × 30 (measured from the frame, 2x): a 1 px
+                          // #AEA1DC outline, 12/700 #7D67D9 label.
                           <button
                             type="button"
                             onClick={() => void book(c)}
                             disabled={busyId === c.classId || c.isFull || !authUserId}
-                            className="tap ml-auto h-8 px-4 rounded-[10px] border border-primary-dark/50 text-[12.5px] font-bold text-primary-dark disabled:opacity-50"
+                            className="tap ml-auto h-[30px] px-[14px] rounded-[10px] border border-primary dark:border-primary-dark/50 text-[12px] font-bold text-th-7d67d9 dark:text-primary-dark disabled:opacity-50"
                           >
                             {busyId === c.classId ? "…" : c.isFull ? "Full" : "Book"}
                           </button>
@@ -384,17 +397,19 @@ export default function Discover() {
             { activeFill: "rgb(var(--c-primary-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
             "Business type"
           )}
-          <div className="space-y-2.5 mt-1">
+          <div className="space-y-2.5 mt-[14px]">
             {shownBusinesses.map((v) => (
-              <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex gap-3 animate-fade-slide-up">
+              <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex items-center gap-3 animate-fade-slide-up">
                 {/* No logos yet (B26): initials in the primary tint, as the
-                    frame draws a store without one. */}
-                <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-primary-dark">
+                    frame draws a store without one. The tile and the type
+                    line are new since R1, so they take the frame's #7D67D9
+                    (frame check); the tile centres on the row as drawn. */}
+                <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
                   {initials(v.name)}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[14px] font-bold text-charcoal truncate">{v.name}</p>
-                  <p className="text-[12px] font-semibold text-primary-dark truncate">{typeLabel(v.venueType)}</p>
+                  <p className="text-[12px] font-semibold text-th-7d67d9 dark:text-primary-dark truncate">{typeLabel(v.venueType)}</p>
                   {v.location && <p className="text-[11.5px] text-charcoal-faint truncate">{v.location}</p>}
                   {/* Kept though not drawn (B26): bio, upcoming classes, perk. */}
                   {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed line-clamp-2">{v.bio}</p>}
@@ -415,9 +430,9 @@ export default function Discover() {
               businesses.length === 0 ? (
                 <EmptyState icon={<Store size={24} strokeWidth={1.75} />} title="No businesses yet" body="Shops and studios near you will show here." />
               ) : (
-                <Card className="text-center py-8">
-                  <p className="text-sm text-charcoal-faint">None of this kind yet.</p>
-                </Card>
+                // Frame check: the filtered-empty case in MO1.4.3's block
+                // (was a centred card from before the redesign).
+                <EmptyState icon={<Store size={24} strokeWidth={1.75} />} title="None of this kind yet" body="Try another type, or All." />
               )
             )}
           </div>
@@ -425,14 +440,14 @@ export default function Discover() {
       )}
 
       {tab === "gyms" && (
-        <div className="space-y-2.5 mt-1">
+        <div className="space-y-2.5 mt-[14px]">
           {gyms.map((v) => (
             <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up">
               {/* No cover photos yet: the primary tint with the gym's initials,
                   as MO1.4.2 draws a gym without one. 84 tall of the 172 card
                   (measured from the frame, unverified). */}
               <div className="h-[84px] bg-primary-pale flex items-center justify-center">
-                <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-primary-dark">
+                <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
                   {initials(v.name)}
                 </span>
               </div>
@@ -440,7 +455,8 @@ export default function Discover() {
                 <p className="text-[15px] font-bold text-charcoal truncate">{v.name}</p>
                 {v.location && <p className="text-[11.5px] text-charcoal-faint truncate">{v.location}</p>}
                 {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed line-clamp-2">{v.bio}</p>}
-                {v.perk && <p className="text-[12.5px] font-bold text-primary-dark mt-1">{v.perk}</p>}
+                {/* Directly under the place line, as the frame's price line (frame check). */}
+                {v.perk && <p className="text-[12.5px] font-bold text-primary-dark">{v.perk}</p>}
               </div>
             </div>
           ))}
@@ -456,13 +472,13 @@ export default function Discover() {
           surface.soft at each card's radius (class card 117, gym card 172;
           a business row is its 48 tile plus padding). */}
       {loading && (
-        <div className="space-y-2.5 mt-1" aria-busy="true" aria-label="Loading">
+        <div className="space-y-2.5 mt-[14px]" aria-busy="true" aria-label="Loading">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
               aria-hidden="true"
               className="animate-pulse rounded-[18px] bg-cream-soft"
-              style={{ height: tab === "gyms" ? 172 : tab === "businesses" ? 72 : 117 }}
+              style={{ height: tab === "gyms" ? 172 : tab === "businesses" ? 81 : 117 }}
             />
           ))}
         </div>
@@ -505,10 +521,11 @@ export default function Discover() {
  */
 function EmptyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
-    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-14 pb-0">
-      <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark">{icon}</span>
+    // 42 here plus the list's 14 = the block's 56 from the rail above (frame check).
+    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-[42px] pb-0">
+      <span className="w-14 h-14 rounded-[18px] bg-primary-pale flex items-center justify-center text-th-7d67d9 dark:text-primary-dark">{icon}</span>
       <p className="text-[16px] font-extrabold text-charcoal">{title}</p>
-      <p className="text-[13px] text-charcoal-faint max-w-[260px] leading-relaxed">{body}</p>
+      <p className="text-[13px] text-charcoal-faint leading-[1.55]">{body}</p>
     </div>
   );
 }

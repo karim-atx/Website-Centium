@@ -250,9 +250,11 @@ export function ForumPostView({
 
   // MO1.3.3 #1: a 56 pt bar over the content, full width, padding 12 12 0,
   // gap 10, 94% card fill and a hairline under it; title 17/800, ArrowLeft 19/2.
+  // Frame check: the bar sits at the very top (y 0), so it cancels the page's
+  // 24 pt top padding (and the safe area, which its own padding re-adds).
   const topBar = (
     <div
-      className="sticky top-0 z-20 -mx-4 mb-3.5 px-3 pt-[max(env(safe-area-inset-top),12px)] flex items-center justify-between"
+      className="sticky top-0 z-20 -mx-4 -mt-[calc(env(safe-area-inset-top)+24px)] mb-3.5 px-3 pt-[calc(env(safe-area-inset-top)+12px)] flex items-center justify-between"
       style={{ background: `color-mix(in srgb, ${fv("card")} 94%, transparent)`, borderBottom: `1px solid ${fv("rule")}` }}
     >
       <span className="flex items-center gap-2.5">
@@ -398,7 +400,8 @@ export function ForumPostView({
                   {thread.replyCount === 1 ? "Reply" : "Replies"}
                 </span>
               </div>
-              <div className="flex -mt-3 pb-1" style={{ borderBottom: `1px solid ${fv("rule")}` }}>
+              {/* 44 + the hairline = the frame's 46 row (was 4 more). */}
+              <div className="flex -mt-3" style={{ borderBottom: `1px solid ${fv("rule")}` }}>
                 <button
                   type="button"
                   onClick={() => replyInput.current?.focus()}
@@ -430,7 +433,8 @@ export function ForumPostView({
         </p>
       )}
 
-      <div className="pt-4 flex flex-col gap-[18px] grow">
+      {/* First reply's avatar 12 under the action row (frame check; was 16). */}
+      <div className="pt-3 flex flex-col gap-[18px] grow">
         {visibleReplies.map((r) =>
           r.status === "removed" ? (
             <RemovedNote key={r.id} kind="reply" radius={12} />
@@ -456,13 +460,15 @@ export function ForumPostView({
             e.preventDefault();
             void send();
           }}
-          className="sticky z-20 bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:bottom-4 mt-4 -mx-3 px-3 pt-2.5 pb-3 flex flex-col gap-2 rounded-2xl"
+          // Frame check: the pill ends 20 above the navbar (pb 8, was 12).
+          className="sticky z-20 bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:bottom-4 mt-4 -mx-3 px-3 pt-2.5 pb-2 flex flex-col gap-2 rounded-2xl"
           style={{ borderTop: `1px solid ${fv("rule")}`, background: fv("card") }}
         >
           {!isProfessional && nickname && (
             // MO1.3.3 #9: "Reply as" 11.5/400, gap 6, and a 26 pt chip at 12/700
             // (12 measured from the frame).
-            <span className="flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
+            // Inset 6 from the pill's edge, as drawn (x 23; frame check).
+            <span className="pl-1.5 flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
               Reply as
               {/* MO1.3.3: a chip that opens the choice (was a native select). */}
               <button

@@ -90,7 +90,8 @@ export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: st
 export function ProfessionalBadge() {
   return (
     <span
-      className="inline-flex items-center gap-[3px] h-5 px-[7px] rounded-full text-[10.5px] font-extrabold shrink-0"
+      // 18 tall, as MO1.3 and MO1.3.1 draw it (measured; was 20).
+      className="inline-flex items-center gap-[3px] h-[18px] px-[7px] rounded-full text-[10.5px] font-extrabold shrink-0"
       style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
     >
       <ShieldCheckIcon color={fv("teal-ink")} />
@@ -170,7 +171,8 @@ export function HeldNote() {
 
 /**
  * A filter or category chip (design screens 1 and 3). `inStrip` is mobile
- * v5.1 MO1.3's filter strip: 32 pt, radius 12, 12 pt text, same colours.
+ * v5.1 MO1.3's filter strip: 32 pt, radius 9 (Foundations › FO3 sub-tabs,
+ * measured on the frame; was 12), 12 pt text, same colours.
  */
 export function ForumChip({
   active,
@@ -188,7 +190,7 @@ export function ForumChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={clsx("tap shrink-0", inStrip ? "h-8 rounded-xl px-3 text-[12px]" : "h-[34px] rounded-full px-[14px] text-[13px]")}
+      className={clsx("tap shrink-0", inStrip ? "h-8 rounded-[9px] px-3 text-[12px]" : "h-[34px] rounded-full px-[14px] text-[13px]")}
       style={
         active
           ? { background: fv("accent"), color: fv("on-accent"), fontWeight: 700, border: "none" }

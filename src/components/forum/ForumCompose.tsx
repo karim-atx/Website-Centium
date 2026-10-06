@@ -9,6 +9,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { CtaButton } from "../ui/PinnedCta";
 import { PopupMenu } from "../ui/PopupMenu";
 import { categoryDot, orderCategories } from "./categoryColour";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
@@ -45,6 +46,7 @@ export function ForumCompose({
   recoveryPending: boolean;
 }) {
   const navigate = useNavigate();
+  const dark = useIsDark();
   // General first (the default), then the design's order (A20, A22).
   const chips = useMemo(() => {
     const all = orderCategories(composeChips(categories, recoveryOn));
@@ -134,20 +136,28 @@ export function ForumCompose({
   const choice = (value: Identity, name: string, hint: string) => {
     const on = identity === value;
     return (
+      // Frame check (measured): 56 tall (padding 8 10), a 1.5 outline when
+      // chosen; the card's pre-R1 colours stay (decision 22).
       <label
-        className="flex-1 min-w-0 rounded-[14px] px-3 py-2.5 flex gap-2.5 items-center cursor-pointer"
-        style={on ? { border: `2px solid ${fv("accent")}`, background: fv("rules-bg") } : { border: `1px solid ${fv("border")}`, margin: 1 }}
+        className="flex-1 min-w-0 rounded-[14px] px-2.5 py-2 flex gap-2.5 items-center cursor-pointer"
+        style={on ? { border: `1.5px solid ${fv("accent")}`, background: fv("rules-bg") } : { border: `1px solid ${fv("border")}`, margin: 0.5 }}
       >
         <input type="radio" name="forum-post-as" checked={on} onChange={() => setIdentity(value)} className="sr-only" />
+        {/* The check circle is new since R1: the frame's 18 pt circle,
+            #9A8CD6 when chosen, a 1.5 #CBCACA ring when not (light). */}
         <span
           aria-hidden
-          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-          style={on ? { background: fv("accent"), color: fv("on-accent") } : { border: `1.5px solid ${fv("border")}`, background: fv("card") }}
+          className="w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0"
+          style={
+            on
+              ? { background: dark ? fv("accent") : "rgb(var(--th-9a8cd6))", color: dark ? fv("on-accent") : "#FFFFFF" }
+              : { border: `1.5px solid ${dark ? fv("border") : "#CBCACA"}`, background: fv("card") }
+          }
         >
           {on && <Check size={11} strokeWidth={3} />}
         </span>
-        {/* MO1.3.2 #12: name 13.5/700, hint 11/400, Check 11/3. */}
-        <span className="min-w-0 flex flex-col gap-0.5">
+        {/* MO1.3.2 #12: name 13.5/700, hint 11/400, Check 11/3; no gap (measured). */}
+        <span className="min-w-0 flex flex-col">
           <span className="text-[13.5px] font-bold truncate">{name}</span>
           <span className="text-[11px] font-normal" style={{ color: fv("muted") }}>
             {hint}
@@ -165,7 +175,8 @@ export function ForumCompose({
       title="New Post"
       footer={<CtaButton label={busy ? "Posting…" : "Post to forum"} onClick={() => void post()} disabled={!ready} loading={busy} />}
     >
-      <div className="flex flex-col gap-4" style={{ color: fv("text") }}>
+      {/* Frame check: 14 between the sections (measured), not 16. */}
+      <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
         {error && (
           <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
             {error}
@@ -173,8 +184,8 @@ export function ForumCompose({
         )}
 
         {!isProfessional && nickname && (
-          <fieldset className="border-none m-0 p-0 flex flex-col gap-2">
-            <legend className="text-[12px] font-semibold p-0 mb-2" style={{ color: fv("muted") }}>
+          <fieldset className="border-none m-0 p-0 flex flex-col gap-1.5">
+            <legend className="text-[12px] font-semibold p-0 mb-1.5" style={{ color: fv("muted") }}>
               Post as
             </legend>
             <div className="flex gap-2">
@@ -188,7 +199,8 @@ export function ForumCompose({
         )}
 
         <div className="flex gap-2.5">
-          <div className="flex flex-col gap-1.5 w-[42%] shrink-0">
+          {/* 35% (122 of 349, measured), the title field the rest. */}
+          <div className="flex flex-col gap-1.5 w-[35%] shrink-0">
             <span className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
               Category
             </span>
@@ -207,7 +219,7 @@ export function ForumCompose({
                 className="tap h-[44px] rounded-xl px-3 flex items-center gap-2 text-sm font-semibold"
                 style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
               >
-                {chosenCat && <span aria-hidden className="w-2 h-2 rounded-full shrink-0" style={{ background: categoryDot(chosenCat.key) }} />}
+                {chosenCat && <span aria-hidden className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: categoryDot(chosenCat.key) }} />}
                 <span className="flex-1 min-w-0 text-left truncate">{chosenCat?.name ?? ""}</span>
                 {/* MO1.3.2.1: ChevronUp 15 while the menu is open. */}
                 {menuOpen ? (

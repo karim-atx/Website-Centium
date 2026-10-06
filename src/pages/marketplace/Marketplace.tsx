@@ -81,11 +81,13 @@ export default function Marketplace() {
           27px default — see the identical note in Food.tsx. */}
       {/* Handover 2026-09-29 MO8.1: a back arrow beside the title, the
           same button Mind's header uses (Explore opens from More and Home). */}
-      <div className="flex items-start gap-2.5 mb-[13px]">
+      {/* MO1.4 #1 (frame check): the header at x 9 with a 6 gap, so the
+          title starts at 51; the chevron centred at y 42; 16 to the card. */}
+      <div className="flex items-start gap-1.5 mb-4">
         <button
           onClick={back}
           aria-label="Back"
-          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-[7px] transition-colors"
         >
           <ChevronLeft size={18} />
         </button>
@@ -119,15 +121,19 @@ export default function Marketplace() {
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="flex items-baseline gap-2 min-w-0">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: tc.ink }}>
+                  {/* Frame check: letter-spacing measured from the frame
+                      (BRONZE 47 wide at 10/800: ~0.12em); the 22/800 figure
+                      keeps its normal line height, so the row is 33 tall and
+                      the pill centres on it as drawn. */}
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: tc.ink }}>
                     {pointsSummary.tierName}
                   </span>
-                  <span className="text-[22px] font-extrabold leading-none text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
+                  <span className="text-[22px] font-extrabold leading-[1.5] text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
                   <span className="text-[11px] font-semibold text-charcoal-faint">pts</span>
                 </p>
                 {/* MO1.4 #2: the pill alone, no chevron (the card still opens Achievements). */}
                 <span className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10.5px] font-bold rounded-full px-2.5 py-1 whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
+                  <span className="text-[10.5px] font-bold rounded-full px-[9px] py-[3px] whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
                     style={{ background: tc.track, color: dark ? liftTo(tierHex(pointsSummary.tierName), tc.track) : tc.ink }}>
                     {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
                       ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
@@ -135,7 +141,8 @@ export default function Marketplace() {
                   </span>
                 </span>
               </div>
-              <div className="h-[5px] rounded-full overflow-hidden mt-3" style={{ background: tc.track }}>
+              {/* Frame check: the bar is 4 tall, 11 under the top row. */}
+              <div className="h-1 rounded-full overflow-hidden mt-[11px]" style={{ background: tc.track }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -153,7 +160,7 @@ export default function Marketplace() {
               </p>
               {/* SAYING SO, RATHER THAN IMPLYING ONE: points and a tier are
                   real; a reward to spend them on is not, yet. */}
-              <p className="mt-1.5 text-[11px] text-charcoal-faint">Rewards for your points are coming soon.</p>
+              <p className="mt-[7px] text-[11px] text-charcoal-faint">Rewards for your points are coming soon.</p>
             </button>
           );
         })()}

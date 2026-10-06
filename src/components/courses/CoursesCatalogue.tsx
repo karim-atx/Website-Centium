@@ -142,7 +142,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
     : [];
 
   return (
-    <div className="flex flex-col gap-3 pb-6" style={{ color: fv("text") }}>
+    // -mt-0.5: the search sits 10 under the Forum / Courses tabs (frame check).
+    <div className="flex flex-col gap-3 pb-6 -mt-0.5" style={{ color: fv("text") }}>
       {/* MO1.3.1 #3: 44 tall, padding 0 14, gap 8, Search 16/1.75. */}
       <label
         className="flex items-center gap-2 h-11 rounded-[14px] px-[14px]"
@@ -180,7 +181,10 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
             idleWeight={600}
             scrollTabPadding="0 14px"
             scrollMinWidth={0}
-            trackStyle={{ padding: 4, gap: 4, borderRadius: 12, background: fv("track") }}
+            // Frame check: Foundations' FO3 tab radius 9; the track (new since
+            // R1) is the frame's #F4F3F9 in light.
+            tabRadius={9}
+            trackStyle={{ padding: 4, gap: 4, borderRadius: 12, background: dark ? fv("track") : "rgb(var(--th-f4f3f9))" }}
             light={{ activeFill: fv("accent"), activeInk: fv("on-accent"), idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" }}
           />
         </div>
@@ -198,14 +202,17 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
         <>
           {continuing.length > 0 && !query && !filter && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-[13px] font-extrabold tracking-[0.04em]" style={{ color: fv("muted") }}>
-                CONTINUE LEARNING
+              {/* Frame check: Foundations `label.section` (10.5/700 uppercase,
+                  14 line, 0.12em; decision 20), 4 in from the content edge;
+                  the label's pre-R1 colour stays (decision 22). */}
+              <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+                Continue learning
               </span>
               {continuing.map(({ course, next, week, n, percent }) => (
                 <Link
                   key={course.id}
                   to={`/app/forum/courses/${course.id}/lessons/${next.id}`}
-                  className="rounded-[20px] px-4 py-3.5 flex flex-col gap-2 no-underline"
+                  className="rounded-[20px] px-[14px] py-3.5 flex flex-col gap-2 no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
                   <span className="text-[15px] font-extrabold [overflow-wrap:anywhere]">{course.title}</span>
@@ -223,10 +230,11 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
             </div>
           )}
 
-          <span className="text-[13px] font-extrabold tracking-[0.04em] mt-1.5" style={{ color: fv("muted") }}>
-            {query || filter ? "RESULTS" : "POPULAR"}
+          {/* Same label style; 12 under the Continue card, 8 above the first card (frame check). */}
+          <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+            {query || filter ? "Results" : "Popular"}
           </span>
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 -mt-1">
             {shown.map((c) => {
               const weeks = data.modules.filter((m) => m.courseId === c.id).length;
               const s = data.stats.get(c.id);
@@ -260,7 +268,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                           </>
                         )}
                       </span>
-                      <strong className="text-[13px] shrink-0" style={{ color: fv("text") }}>
+                      {/* 14 (measured: 10 pt digits), not in the table. */}
+                      <strong className="text-[14px] shrink-0" style={{ color: fv("text") }}>
                         {formatPrice(c.priceCents)}
                       </strong>
                     </span>

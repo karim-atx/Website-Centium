@@ -60,7 +60,9 @@ export const SegmentedTabs: React.FC<{
    *  (MO1.2's rail: natural width, 14 each side, so "All" is 43). */
   scrollTabPadding?: string;
   scrollMinWidth?: number;
-}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight, idleWeight = 700, scrollTabPadding = "0 16px", scrollMinWidth = 86 }) => {
+  /** Tab radius when a frame draws other than 12 (Foundations' FO3 sub-tabs: 9). */
+  tabRadius?: number;
+}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight, idleWeight = 700, scrollTabPadding = "0 16px", scrollMinWidth = 86, tabRadius = 12 }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -98,7 +100,7 @@ export const SegmentedTabs: React.FC<{
               height: tabHeight ?? (size === "compact" ? 38 : 44),
               gap: item.icon ? 6 : undefined,
               padding: scroll ? scrollTabPadding : "0 6px",
-              borderRadius: 12,
+              borderRadius: tabRadius,
               background: lit
                 ? active ? lit.activeFill : lit.idleFill
                 : active ? (dark ? "rgb(var(--c-primary-fill))" : "rgb(var(--th-a79ad5))") : dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f5f4fe))",
