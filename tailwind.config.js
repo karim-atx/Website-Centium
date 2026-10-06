@@ -1,11 +1,12 @@
 import plugin from "tailwindcss/plugin";
-import fs from "node:fs";
+// Imported (not read with fs) so Tailwind reloads its config when the
+// generator rewrites the list.
+import THEME_COLORS from "./src/styles/theme-colors.json";
 
 // R20 (batch D): every lavender or teal colour the app used as a literal is a
 // `th-<hex>` colour now (bg-th-aea1dc, text-th-7d6bb5, ...), backed by
 // --th-<hex> in styles/theme-palette.css: the literal itself in Centium, the
 // mapped shade in the other themes. The list is written by the generator.
-const THEME_COLORS = JSON.parse(fs.readFileSync(new URL("./src/styles/theme-colors.json", import.meta.url), "utf8"));
 const th = Object.fromEntries(THEME_COLORS.map((h) => [h, `rgb(var(--th-${h}) / <alpha-value>)`]));
 // Text takes each colour's ink twin: identical in Centium, and in the other
 // themes the shade that reaches 4.5:1 on the page (D6, D8).
