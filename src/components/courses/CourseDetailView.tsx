@@ -270,8 +270,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             all" the last row. */}
         {modules.length > 0 && (
           <div className="flex flex-col gap-2">
-            {/* Foundations `label.section` (decision 20), 4 in; colour stays (decision 22). */}
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+            {/* Foundations `label.section` (decision 20), 4 in. The heading
+                existed before the redesign, so light keeps its text colour
+                (decision 22; the frame draws the muted grey); dark is muted. */}
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : fv("text") }}>
               Syllabus
             </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
@@ -313,7 +315,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
         {paidCourse && !hasPaid && (
           <div className="flex flex-col gap-2">
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : fv("text") }}>
               Choose how to take it
             </span>
             <div className="flex gap-2">

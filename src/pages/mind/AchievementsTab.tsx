@@ -296,14 +296,20 @@ export default function AchievementsTab() {
           scroll
           className="-mr-4 mb-3"
           // MO1.1.3 #4 (2x frame): a 52 pt track, 40 pt tabs at their
-          // natural width (12 each side: "All" 40), 8 apart. The strip is new
-          // since the redesign, so it takes the handover's colours (decision
-          // 22): active #A79AD5 / white, idle #F5F4FE / #5B5349.
+          // natural width (12 each side: "All" 40), 8 apart. The category
+          // chips existed before the redesign, so light keeps their colours
+          // (decision 22; the frame draws active #A79AD5 / white, idle
+          // #F5F4FE / #5B5349).
           trackStyle={{ borderRadius: "16px 0 0 16px", gap: 8 }}
           tabHeight={40}
           scrollTabPadding="0 12px"
           scrollMinWidth={0}
-          idleInk="rgb(var(--c-charcoal-soft))"
+          light={{
+            activeFill: "rgb(var(--c-primary-fill))",
+            activeInk: "rgb(var(--c-on-primary-fill))",
+            idleFill: "rgb(var(--c-cream-card))",
+            idleInk: "rgb(var(--c-charcoal-soft))",
+          }}
           items={[{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: CATEGORY_LABEL[c] }))]}
           activeKey={category}
           onChange={(k) => setCategory(k as AchievementCategory | "all")}

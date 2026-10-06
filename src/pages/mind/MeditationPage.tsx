@@ -9,9 +9,10 @@ type SubTab = "breathing" | "stretching" | "yoga";
 // Meditation, mobile v5.1 MO1.1.4: its own page (/app/mind/meditation) rather
 // than a bottom sheet, opened from the Meditation tile on Mind.
 //
-// LIGHT MODE: the segmented controls are new since the redesign, so they take
-// the handover's colours (decision 22): active #A79AD5 / white, idle #F5F4FE
-// with #5B5349 labels (MO1.1.4 #2, #3).
+// LIGHT MODE: these segmented controls replace the old sheet's chips, which
+// existed before the redesign, so light keeps the chips' colours (decision
+// 22; the frame draws active #A79AD5 / white, idle #F5F4FE with #5B5349
+// labels, MO1.1.4 #2, #3).
 
 // Mobile v5.1 R3, dark mode (no light islands): the level pills sit on a
 // surface.soft row. Advanced is danger.tint #3C2A30 / danger #FF6B5E (4.8:1),
@@ -24,7 +25,12 @@ const difficultyColor: Record<string, string> = {
   advanced: "text-[#C0392B] bg-[#FBE7E4] dark:text-[#FF6B5E] dark:bg-[#3C2A30]",
 };
 
-const IDLE_INK = "rgb(var(--c-charcoal-soft))";
+const CHIP_LIGHT = {
+  activeFill: "rgb(var(--c-primary-fill))",
+  activeInk: "rgb(var(--c-on-primary-fill))",
+  idleFill: "rgb(var(--c-cream-card))",
+  idleInk: "rgb(var(--c-charcoal-soft))",
+};
 
 /** Yoga poses have no durations in the content; each holds 30 s (A15). */
 const YOGA_SECONDS = 30;
@@ -62,7 +68,7 @@ export default function MeditationPage() {
         ]}
         activeKey={subTab}
         onChange={(k) => setSubTab(k as SubTab)}
-        idleInk={IDLE_INK}
+        light={CHIP_LIGHT}
         className="mb-[15px]"
       />
 
@@ -77,7 +83,7 @@ export default function MeditationPage() {
             items={breathingPatterns.map((p) => ({ key: p.id, label: p.name }))}
             activeKey={patternId}
             onChange={setPatternId}
-            idleInk={IDLE_INK}
+            light={CHIP_LIGHT}
           />
           {/* MO1.1.4 #4: x 21, 350 wide, 12/400 #8C8378, two lines in 34; 12
               above (#3 ends y 230, #4 at 242) and 12 below (the flower at 288). */}

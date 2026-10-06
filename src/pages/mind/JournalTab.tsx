@@ -35,10 +35,10 @@ const dateLabel = (iso: string) => {
 // MO1.1.2.3 (new entry). MO1.1.2.2, the Face ID locked folder, is native-only
 // and not built; so the folder menu has no Lock.
 //
-// LIGHT MODE (decision 22): the parts new since the redesign — the segmented
-// folder card, the swipe tiles and the pinned CTA row — take the handover's
-// own colours; the FolderPlus toggle and the entry cards existed before and
-// keep theirs (decision 15). Delete is the shared destructive red in both
+// LIGHT MODE (decision 22): the parts new since the redesign — the swipe
+// tiles and the pinned CTA row — take the handover's own colours; the folder
+// tabs (the old folder chips), the FolderPlus toggle and the entry cards
+// existed before and keep theirs (decision 15). Delete is the shared destructive red in both
 // modes. Dark mode is the v5.1 dark set throughout.
 //
 // FOLDERS AND ENTRIES ARE SERVER ROWS NOW (journal_folders +
@@ -199,10 +199,10 @@ export default function JournalTab() {
       )}
 
       {/* MO1.1.2 #2: the folders as a segmented card (358 × 56), scrolling
-          sideways once they outgrow it. The segmented card is new since the
-          redesign, so it takes the handover's colours (decision 22): active
-          #A79AD5 / white, idle #F5F4FE / #5B5349. Tabs keep their natural
-          width, 16 each side (2x frame: Personal 84, Training 80). */}
+          sideways once they outgrow it. The folder chips existed before the
+          redesign, so light keeps their colours (decision 22; the frame draws
+          active #A79AD5 / white, idle #F5F4FE / #5B5349). Tabs keep their
+          natural width, 16 each side (2x frame: Personal 84, Training 80). */}
       {journalFolders.length > 0 && (
         <SegmentedTabs
           scroll
@@ -210,7 +210,12 @@ export default function JournalTab() {
           items={journalFolders.map((f) => ({ key: f.id, label: f.name }))}
           activeKey={selected}
           onChange={setActiveFolder}
-          idleInk="rgb(var(--c-charcoal-soft))"
+          light={{
+            activeFill: "rgb(var(--c-primary-fill))",
+            activeInk: "rgb(var(--c-on-primary-fill))",
+            idleFill: "rgb(var(--c-cream-card))",
+            idleInk: "rgb(var(--c-charcoal-soft))",
+          }}
         />
       )}
 

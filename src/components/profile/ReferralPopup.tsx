@@ -163,11 +163,13 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
         )}
 
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
-            box 48 tall, radius 12, a 12% hairline (#E4E4E3), the code 16/800
-            (cap 11.5) spaced 0.18em; the Copy button radius 12. */}
+            box 48 tall, radius 12, the code 16/800 (cap 11.5) spaced 0.18em;
+            the Copy button radius 12. The code box existed before the
+            redesign, so light keeps its charcoal 10% border (decision 22; the
+            frame draws a 12% hairline, #E4E4E3); dark is unchanged. */}
         <div className="mt-3.5">{label("Your code")}</div>
         <div className="flex items-center gap-2">
-          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
+          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/10 dark:border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
             {myCode ?? (codeError ? "Unavailable" : "…")}
           </span>
           <button
@@ -242,13 +244,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                 placeholder="Enter a code"
                 aria-label="A friend's referral code"
                 aria-invalid={(result && !result.success) || undefined}
-                // MO1.10 (2x frame): 48 tall, radius 12, #F5F5F6 with no
-                // visible border (y 1408–1503); MO1.10.2: the border turns
-                // danger on a refusal.
+                // MO1.10 (2x frame): 48 tall, radius 12, #F5F5F6 (y 1408–1503);
+                // MO1.10.2: the border turns danger on a refusal. The field
+                // existed before the redesign, so light keeps its charcoal 10%
+                // border (decision 22; the frame draws none); dark has none.
                 // The typed code 14/600 (Foundations Inputs; MO1.10.2 cap
                 // 10 on the 2x frame); the danger border is 1.5 (y 1340–1342).
                 className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft border-[1.5px] px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  result && !result.success ? "border-status-high" : "border-transparent"
+                  result && !result.success ? "border-status-high" : "border-charcoal/10 dark:border-transparent"
                 }`}
               />
               {/* MO1.10 / MO1.10.2: a tinted Apply, #F0EDF9 with #7D67D9

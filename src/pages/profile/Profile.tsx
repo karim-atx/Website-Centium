@@ -290,10 +290,12 @@ export default function Profile() {
   ) => (
     // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
     // 2x frame: border x 32–211, y 216–501), divider inset 22 (x 78–163).
-    // Decision 22 (new tile, not in pre-R1): the handover's own colours, as
-    // theme tokens: 1px #6F9993 border and divider (teal-dark), values
-    // 17/700 #5F5093 (primary-deep-text), units 11/400 #AEA1DC (primary).
-    <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
+    // The weight / height / sex / age cards existed before the redesign, so
+    // light keeps their colours (decision 22): charcoal 8% border and divider,
+    // charcoal values, charcoal-faint units. The frame draws a 1px #6F9993
+    // border and divider, values #5F5093 and units #AEA1DC; dark keeps those
+    // as theme tokens (teal-dark, primary-deep-text, primary).
+    <div className="h-[143px] rounded-2xl bg-cream-card border border-charcoal/[0.08] dark:border-teal-dark flex flex-col overflow-hidden min-w-0">
       {[top, bottom].map((part, i) => (
         <button
           key={part.unit}
@@ -302,12 +304,12 @@ export default function Profile() {
           aria-label={part.label}
           className={clsx(
             "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
-            i === 1 && "border-t border-teal-dark mx-[22px]"
+            i === 1 && "border-t border-charcoal/[0.08] dark:border-teal-dark mx-[22px]"
           )}
         >
           {/* MO1.5 anatomy row 2: values 17px/700. */}
-          <span className="text-[17px] font-bold leading-tight text-primary-deep-text tabular-nums capitalize">{part.value}</span>
-          <span className="text-[11px] text-primary">{part.unit}</span>
+          <span className="text-[17px] font-bold leading-tight text-charcoal dark:text-primary-deep-text tabular-nums capitalize">{part.value}</span>
+          <span className="text-[11px] text-charcoal-faint dark:text-primary">{part.unit}</span>
         </button>
       ))}
     </div>
