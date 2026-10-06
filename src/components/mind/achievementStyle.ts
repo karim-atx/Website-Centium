@@ -32,8 +32,10 @@ const LEVEL_HEX: Record<AchievementLevel, string> = {
 
 /** Unknown tiers fall back to Bronze rather than to nothing. */
 export const tierHex = (name: string | null | undefined): string => (name && TIER_HEX[name]) || TIER_HEX.Bronze;
+/** MO1.1.3.2 always draws a level colour; a badge with no level (a one-off)
+    takes the first rung's, Bronze, with a "Bronze" chip (see the toast). */
 export const levelHex = (level: AchievementLevel | null | undefined): string =>
-  (level && LEVEL_HEX[level]) || "#7D6BB5";
+  (level && LEVEL_HEX[level]) || LEVEL_HEX.bronze;
 
 export interface ColourSet {
   /** Text and icons in the colour. */

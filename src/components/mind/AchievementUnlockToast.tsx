@@ -93,7 +93,9 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   }, [reduced]);
 
   const set = colourSet(levelHex(achievement.level), dark);
-  const level = achievement.level ? LEVEL_LABEL[achievement.level] : null;
+  // A one-off has no level; MO1.1.3.2 still draws the chip, so it reads as
+  // the first rung, Bronze (matching levelHex's fallback colour).
+  const level = LEVEL_LABEL[achievement.level ?? "bronze"];
 
   const finish = () => {
     setFlung(true);

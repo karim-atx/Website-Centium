@@ -49,8 +49,16 @@ export const SwipeActions: React.FC<{
    *  (default 0). MO1.1.1 Habits draws 45 pt tiles 10 pt in from the card. */
   tileMax?: number;
   edgeInset?: number;
+  /**
+   * D12 (MO1.1.1, MO1.1.2): the same actions without a swipe. Holding the row
+   * still for 500 ms (touch or mouse), or a right-click, calls this with the
+   * row, so the caller can open its Edit / Delete menu there; the tap that
+   * ends the hold is swallowed so it doesn't also act on the row. Off when
+   * not given, so every other swipe row is unchanged.
+   */
+  onLongPress?: (row: HTMLElement) => void;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, onLongPress, children }) => {
   const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -92,9 +100,33 @@ export const SwipeActions: React.FC<{
     };
   }, []);
 
+  // D12 long-press: a timer from pointer-down, cancelled by any movement that
+  // picks an axis (a swipe or a scroll) or by letting go.
+  const longTimer = useRef<number | null>(null);
+  const longFired = useRef(false);
+  const lastPointer = useRef("mouse");
+  const clearLong = () => {
+    if (longTimer.current !== null) window.clearTimeout(longTimer.current);
+    longTimer.current = null;
+  };
+  useEffect(() => clearLong, []);
+  const fireLong = () => {
+    if (!onLongPress || !rowRef.current) return;
+    longFired.current = true;
+    start.current = null;
+    setOffset(0);
+    onLongPress(rowRef.current);
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
+    longFired.current = false;
+    lastPointer.current = e.pointerType;
     start.current = { x: e.clientX, y: e.clientY, base: offset, axis: null };
+    if (onLongPress && e.button === 0) {
+      clearLong();
+      longTimer.current = window.setTimeout(fireLong, 500);
+    }
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const s = start.current;
@@ -103,6 +135,7 @@ export const SwipeActions: React.FC<{
     const dy = e.clientY - s.y;
     if (!s.axis) {
       if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      clearLong();
       s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
       if (s.axis === "x") {
         setDragging(true);
@@ -113,6 +146,7 @@ export const SwipeActions: React.FC<{
     setOffset(Math.min(0, Math.max(-openWidth, s.base + dx)));
   };
   const onPointerUp = () => {
+    clearLong();
     const s = start.current;
     start.current = null;
     if (!s || s.axis !== "x") return;
@@ -170,10 +204,39 @@ export const SwipeActions: React.FC<{
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClickCapture={
+          onLongPress
+            ? (e) => {
+                // The tap that ends a long-press opened the menu; it must not
+                // also tick the habit or open the entry.
+                if (!longFired.current) return;
+                longFired.current = false;
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            : undefined
+        }
+        onContextMenu={
+          onLongPress
+            ? (e) => {
+                // A touch long-press raises this too (after the timer has
+                // fired); a right-click opens the menu by itself.
+                e.preventDefault();
+                if (!longFired.current && !disabled) {
+                  clearLong();
+                  fireLong();
+                  // A mouse right-click is followed by no click to swallow.
+                  if (lastPointer.current === "mouse") longFired.current = false;
+                }
+              }
+            : undefined
+        }
         className="relative overflow-hidden"
         style={{
           borderRadius: radius,
           touchAction: "pan-y",
+          // No iOS callout or text selection on a held row.
+          ...(onLongPress ? { WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" } : null),
           ...(shrink
             ? {
                 width: `calc(100% - ${-offset}px)`,

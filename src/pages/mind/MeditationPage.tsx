@@ -67,20 +67,25 @@ export default function MeditationPage() {
         activeKey={subTab}
         onChange={(k) => setSubTab(k as SubTab)}
         light={CHIP_LIGHT}
-        className="mb-4"
+        className="mb-[15px]"
       />
 
       {subTab === "breathing" && (
         <div>
+          {/* MO1.1.4 #3: a 358 × 52 track (40 tall tabs), labels 11.5/700,
+              15 below the main control (#2 ends y 163, #3 starts y 178). */}
           <SegmentedTabs
-            size="compact"
+            tabHeight={40}
+            labelSize={11.5}
             wrapLabels
             items={breathingPatterns.map((p) => ({ key: p.id, label: p.name }))}
             activeKey={patternId}
             onChange={setPatternId}
             light={CHIP_LIGHT}
           />
-          <p className="mt-3 mb-4 px-3 text-center text-[12.5px] leading-relaxed text-charcoal-muted">{pattern.desc}</p>
+          {/* MO1.1.4 #4: x 21, 350 wide, 12/400 #8C8378, two lines in 34; 12
+              above (#3 ends y 230, #4 at 242) and 12 below (the flower at 288). */}
+          <p className="mt-3 mb-3 px-1 text-center text-[12px] leading-[17px] text-charcoal-muted">{pattern.desc}</p>
           <BreathingRunner pattern={pattern} />
         </div>
       )}

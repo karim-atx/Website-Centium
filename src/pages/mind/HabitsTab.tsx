@@ -4,7 +4,8 @@ import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useApp } from "../../context/AppContext";
-import { Check, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { Check, EllipsisVertical, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
@@ -61,6 +62,13 @@ export default function HabitsTab() {
   // Deleting a habit erases its history and streak, so it asks first (the
   // same confirm as a Journal folder).
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
+  // D12: Edit and Delete without a swipe, from a long-press on the row or
+  // its ⋮ button, in the shared dropdown menu.
+  const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
+  const startEdit = (h: HabitItem) => {
+    setEditingId(h.id);
+    setEditDraft(h.label);
+  };
 
   const week = weekOf(today);
   const todayIndex = week.indexOf(today);
@@ -129,13 +137,11 @@ export default function HabitsTab() {
             key: "edit",
             label: "Edit",
             icon: <Pencil size={16} />,
-            onClick: () => {
-              setEditingId(h.id);
-              setEditDraft(h.label);
-            },
+            onClick: () => startEdit(h),
           },
           { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
         ]}
+        onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
           {/* Tapping the habit still ticks today, as it always has. */}
@@ -151,6 +157,16 @@ export default function HabitsTab() {
                 </span>
               )}
             </span>
+          </button>
+          {/* D12: the keyboard and mouse path to Edit / Delete. */}
+          <button
+            onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
+            aria-label={`${h.label}, more options`}
+            aria-haspopup="menu"
+            aria-expanded={menu?.habit.id === h.id}
+            className="tap w-5 h-8 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint"
+          >
+            <EllipsisVertical size={16} />
           </button>
           <div className="flex shrink-0">
             {week.map((day, i) => {
@@ -256,6 +272,21 @@ export default function HabitsTab() {
         </Card>
       )}
 
+      <PopupMenu
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!menu) return;
+          if (v === "edit") startEdit(menu.habit);
+          else setDeleting(menu.habit);
+        }}
+      />
+
       <ConfirmCard
         open={!!deleting}
         title="Delete this habit?"
@@ -339,7 +370,8 @@ export default function HabitsTab() {
                 }}
                 placeholder="New habit…"
                 aria-label="New habit"
-                className="flex-1 min-w-0 h-[34px] rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                // MO1.1.1.1: 36 tall (level with the 36 pt ✓ and ×), about r14.
+                className="flex-1 min-w-0 h-9 rounded-[14px] bg-cream-soft border border-charcoal/10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={create}

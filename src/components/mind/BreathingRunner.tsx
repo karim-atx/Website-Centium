@@ -171,11 +171,35 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
   const teal = running && (isExhale || (isHold && holdTargetScale(pattern, phaseIdx) < 1));
   const transition = isHold ? "0.4s" : `${phase.seconds}s`;
 
+  // MO1.1.4: the arc's track is one segment per phase, as long as its phase,
+  // with a small gap between them (about 3 pt, measured on the 2x frame), each
+  // tinted by its phase: PHASE_COLOUR at 30% (the frame's pale lavender,
+  // paler lavender and pale teal quarters).
+  const segments = pattern.phases.reduce<{ start: number; len: number; label: string }[]>((acc, p) => {
+    const start = acc.length ? acc[acc.length - 1].start + acc[acc.length - 1].len : 0;
+    acc.push({ start, len: (p.seconds * 1000 * ARC_C) / cycleMs, label: p.label });
+    return acc;
+  }, []);
+  const SEG_GAP = 3 + 3; // the visible gap plus the round caps' 1.5 pt each side
+
   return (
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 -rotate-90" aria-hidden>
-          <circle cx={SIZE / 2} cy={SIZE / 2} r={ARC_R} fill="none" strokeWidth={3} className="stroke-charcoal/[0.07]" />
+          {segments.map((s, i) => (
+            <circle
+              key={i}
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={ARC_R}
+              fill="none"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeDasharray={`${Math.max(0, s.len - SEG_GAP)} ${ARC_C}`}
+              strokeDashoffset={-(s.start + SEG_GAP / 2)}
+              style={{ stroke: PHASE_COLOUR(s.label), strokeOpacity: 0.3 }}
+            />
+          ))}
           <circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -190,8 +214,33 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
           />
         </svg>
 
-        {/* The petals. */}
+        {/* The petals, on a soft radial glow (MO1.1.4.3: "glow settles in
+            0.4 s"): lavender, drifting to teal with the petals. */}
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0" aria-hidden>
+          <defs>
+            <radialGradient id="breath-glow-lav">
+              <stop offset="0%" style={{ stopColor: "rgb(var(--th-aea1dc))", stopOpacity: 0.28 }} />
+              <stop offset="100%" style={{ stopColor: "rgb(var(--th-aea1dc))", stopOpacity: 0 }} />
+            </radialGradient>
+            <radialGradient id="breath-glow-teal">
+              <stop offset="0%" style={{ stopColor: "rgb(var(--th-a2c8c2))", stopOpacity: 0.32 }} />
+              <stop offset="100%" style={{ stopColor: "rgb(var(--th-a2c8c2))", stopOpacity: 0 }} />
+            </radialGradient>
+          </defs>
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={ARC_R - 4}
+            fill="url(#breath-glow-lav)"
+            style={{ opacity: running && !teal ? 1 : 0, transition: "opacity 0.4s ease" }}
+          />
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={ARC_R - 4}
+            fill="url(#breath-glow-teal)"
+            style={{ opacity: running && teal ? 1 : 0, transition: "opacity 0.4s ease" }}
+          />
           <g
             style={{
               transformOrigin: "50% 50%",
@@ -203,11 +252,12 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
               <ellipse
                 key={i}
                 cx={SIZE / 2}
-                // Tips 74 from the centre at rest, about 87 in full bloom:
-                // two thirds of the arc, as on the frame.
-                cy={SIZE / 2 - 38}
-                rx={27}
-                ry={36}
+                // Measured on the 2x MO1.1.4 frame mid-inhale (scale 1): the
+                // upright petal's tip 98 pt from the centre, 68 pt wide. Its
+                // inner end passes the centre, so the petals overlap.
+                cy={SIZE / 2 - 48}
+                rx={34}
+                ry={50}
                 transform={`rotate(${(360 / PETALS) * i} ${SIZE / 2} ${SIZE / 2})`}
                 style={{
                   fill: teal ? "rgb(var(--th-a2c8c2) / 0.30)" : "rgb(var(--th-aea1dc) / 0.24)",
@@ -220,14 +270,25 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
 
         {/* The centre disc: the phase and its countdown. */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-cream-card flex flex-col items-center justify-center shadow-soft">
-          <p className="text-[14px] font-bold text-primary-dark leading-tight">{phase.label}</p>
-          <p className="text-[34px] font-extrabold leading-none text-charcoal tabular-nums">{secondsLeft}</p>
-          <p className="text-[10.5px] text-charcoal-muted">seconds</p>
+          {/* MO1.1.4 #5: 13.5/700 #7D6BB5, 35.3/800, 10.4/600 #8C8378. The
+              label is the theme's secondary (teal) on the exhale and while
+              resting folded (MO1.1.4.3). */}
+          <p
+            className={clsx(
+              "text-[13.5px] font-bold leading-tight",
+              teal ? "text-team-teal-deep dark:text-team-teal-ink" : "text-primary-dark"
+            )}
+          >
+            {phase.label}
+          </p>
+          <p className="text-[35.3px] font-extrabold leading-none text-charcoal tabular-nums">{secondsLeft}</p>
+          <p className="text-[10.4px] font-semibold text-charcoal-muted">seconds</p>
         </div>
       </div>
 
-      {/* The phase rail, each segment as long as its phase, labelled. */}
-      <div className="flex w-full gap-1 mt-3">
+      {/* The phase rail, each segment as long as its phase, labelled.
+          MO1.1.4 #6: directly under the flower, padding 0 8px. */}
+      <div className="flex w-full gap-1 px-2">
         {pattern.phases.map((p, i) => (
           <div key={i} className="min-w-0" style={{ flex: p.seconds }}>
             <div className="h-[5px] rounded-full bg-charcoal/[0.08] overflow-hidden">
@@ -242,8 +303,8 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
             </div>
             <p
               className={clsx(
-                "mt-1.5 text-center text-[11px] truncate",
-                running && i === phaseIdx ? "font-bold text-primary-dark" : "text-charcoal-muted"
+                "mt-1.5 text-center text-[9.5px] truncate",
+                running && i === phaseIdx ? "font-extrabold text-primary-dark" : "font-semibold text-charcoal-muted"
               )}
             >
               {p.label}
@@ -251,7 +312,8 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] font-medium text-charcoal-muted">Cycle {cycles}</p>
+      {/* MO1.1.4 #7: 10.5/500, 10 pt below the rail. */}
+      <p className="mt-2.5 text-[10.5px] font-medium text-charcoal-muted">Cycle {cycles}</p>
       {note && (
         <p className="mt-2 text-[11px] font-semibold text-charcoal-soft text-center" role="status">
           {note}
@@ -266,7 +328,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
           onClick: toggle,
         }}
         trailing={{
-          icon: <RotateCcw size={16} />,
+          icon: <RotateCcw size={15} />,
           label: "Reset",
           onClick: reset,
           width: 44,

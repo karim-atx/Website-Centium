@@ -14,6 +14,7 @@ import {
   ArrowUpDown,
   CalendarDays,
   ChevronDown,
+  EllipsisVertical,
   Folder,
   FolderCog,
   FolderPlus,
@@ -76,6 +77,8 @@ export default function JournalTab() {
   // Menu anchors, held as state (not refs) since the menus read them in render.
   const [cogEl, setCogEl] = useState<HTMLButtonElement | null>(null);
   const [pickerEl, setPickerEl] = useState<HTMLButtonElement | null>(null);
+  // D12: the entry whose Edit / Delete menu is open, and what it anchors to.
+  const [entryMenu, setEntryMenu] = useState<{ entry: JournalEntry; anchor: HTMLElement } | null>(null);
 
   // THE SELECTION FOLLOWS THE LIST. Folders load after the first render, and
   // a folder can be deleted from another device — either way, a selection
@@ -274,9 +277,25 @@ export default function JournalTab() {
                 destructive: true,
               },
             ]}
+            onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
           >
             <Card interactive onClick={() => setOpenEntry(e)} className="px-5 py-[19px]">
-              <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+              <div className="flex items-center justify-between gap-2 h-4">
+                <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+                {/* D12: the keyboard and mouse path to Edit / Delete. */}
+                <button
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setEntryMenu({ entry: e, anchor: ev.currentTarget });
+                  }}
+                  aria-label={`${e.title}, more options`}
+                  aria-haspopup="menu"
+                  aria-expanded={entryMenu?.entry.id === e.id}
+                  className="tap -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint"
+                >
+                  <EllipsisVertical size={16} />
+                </button>
+              </div>
               <div
                 aria-hidden
                 className="mt-[9px] h-px"
@@ -343,6 +362,22 @@ export default function JournalTab() {
         onSelect={(v) => selectedFolder && moveJournalFolder(selectedFolder.id, v === "left" ? -1 : 1)}
       />
 
+      {/* D12: an entry's Edit / Delete without a swipe (long-press or ⋮). */}
+      <PopupMenu<"edit" | "delete">
+        open={!!entryMenu}
+        onClose={() => setEntryMenu(null)}
+        anchor={entryMenu?.anchor ?? null}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!entryMenu) return;
+          if (v === "edit") startEdit(entryMenu.entry);
+          else removeJournalEntry(entryMenu.entry.id);
+        }}
+      />
+
       <ConfirmCard
         open={deletingFolder && !!selectedFolder}
         title="Delete this folder?"
@@ -382,7 +417,9 @@ export default function JournalTab() {
               aria-haspopup="menu"
               className={`tap flex items-center gap-2 text-left ${field}`}
             >
-              <Folder size={15} strokeWidth={1.75} className="flex-none text-charcoal-faint" />
+              {/* MO1.1.2.3: the Folder icon is the theme's lavender (the Date
+                  field's CalendarDays stays grey). */}
+              <Folder size={15} strokeWidth={1.75} className="flex-none text-primary-accent" />
               <span className="flex-1 min-w-0 truncate">{composeFolderName}</span>
               <ChevronDown size={15} className="flex-none text-charcoal-faint" />
             </button>
@@ -417,7 +454,9 @@ export default function JournalTab() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="block w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/15 resize-none"
-              style={{ height: "min(376px, 40dvh)" }}
+              // MO1.1.2.3 draws the Entry field 376 tall; the sheet body
+              // scrolls inside on a short screen.
+              style={{ height: 376 }}
             />
             {!text && (
               <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 px-[17px] py-[15px] text-sm text-charcoal-faint">

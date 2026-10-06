@@ -29,7 +29,32 @@ export const CentredPopup: React.FC<{
   /** The full-width button at the bottom of the card. */
   cta?: Omit<CtaButtonProps, "size" | "variant">;
   className?: string;
-}> = ({ open, onClose, title, icon, body, children, cta, className }) => {
+  /** Title size. 18 (Foundations) unless a frame draws otherwise; Referral
+      (MO1.10) draws 19 / 800. */
+  titleSize?: 18 | 19;
+  /** Card width cap. 342 (Foundations) unless a frame draws otherwise;
+      achievement detail (MO1.1.3.1) is padded 0 28, so 334 at 390. */
+  maxWidth?: number;
+  /** Body weight. 500 (Foundations) unless a frame draws otherwise;
+      MO1.1.3.1 draws 13 / 400. */
+  bodyWeight?: 400 | 500;
+  /** The icon tile's size and radius. 48 / 14 (Foundations) unless a frame
+      draws otherwise; MO1.1.3.1's medallion tile is 76 / 20. */
+  iconWell?: { size: number; radius: number };
+}> = ({
+  open,
+  onClose,
+  title,
+  icon,
+  body,
+  children,
+  cta,
+  className,
+  titleSize = 18,
+  maxWidth,
+  bodyWeight = 500,
+  iconWell,
+}) => {
   const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -83,18 +108,39 @@ export const CentredPopup: React.FC<{
           "bg-cream-card rounded-[20px] px-5 py-6 outline-none animate-popup-in",
           className
         )}
-        style={{ boxShadow: "var(--shadow-sheet)" }}
+        style={{ boxShadow: "var(--shadow-sheet)", ...(maxWidth ? { maxWidth } : null) }}
       >
         <div className="flex flex-col items-center text-center">
           {icon && (
-            <span className="w-12 h-12 rounded-[14px] bg-primary-pale text-primary-accent flex items-center justify-center mb-3.5 shrink-0">
+            <span
+              className={clsx(
+                "bg-primary-pale text-primary-accent flex items-center justify-center mb-3.5 shrink-0",
+                !iconWell && "w-12 h-12 rounded-[14px]"
+              )}
+              style={iconWell ? { width: iconWell.size, height: iconWell.size, borderRadius: iconWell.radius } : undefined}
+            >
               {icon}
             </span>
           )}
-          <h2 id={titleId} className="text-[18px] font-extrabold leading-tight text-charcoal text-balance">
+          <h2
+            id={titleId}
+            className={clsx(
+              titleSize === 19 ? "text-[19px]" : "text-[18px]",
+              "font-extrabold leading-tight text-charcoal text-balance"
+            )}
+          >
             {title}
           </h2>
-          {body && <div className="mt-1.5 text-[13px] font-medium leading-[1.55] text-charcoal-soft">{body}</div>}
+          {body && (
+            <div
+              className={clsx(
+                "mt-1.5 text-[13px] leading-[1.55] text-charcoal-soft",
+                bodyWeight === 400 ? "font-normal" : "font-medium"
+              )}
+            >
+              {body}
+            </div>
+          )}
         </div>
         {children && <div className="mt-4">{children}</div>}
         {cta && <CtaButton {...cta} size="page" className={clsx("mt-5", cta.className)} />}
