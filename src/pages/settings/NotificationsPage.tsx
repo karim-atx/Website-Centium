@@ -20,8 +20,8 @@ import { pushUnavailableReason } from "./platform";
 // permission plus this account's push_subscriptions row for this browser:
 // on asks the browser (Notification.requestPermission) and registers the
 // device; off removes the row, so nothing is sent here any more. While it is
-// off the device rows below are dimmed and disabled (BR-12); Messages stays
-// live, because switching it on asks for permission itself. This used to be the
+// off every row below is dimmed and disabled (BR-12), Messages included,
+// unless the browser has blocked notifications (see messagesDimmed). This used to be the
 // Push notifications row's "Allow / Re-check" pill on Settings.
 //
 // THE ROWS ARE THE ONES WITH DATA, under the board's group names. Messages is
@@ -115,6 +115,11 @@ export default function NotificationsPage() {
   // receive push at all, dimming would trap the account-wide Messages setting
   // behind a switch that can never move.
   const dimmed = pushAvailable && !on;
+  // Messages dims with the others (MO1.8.3, BR-12 "every row dims"), except
+  // where the browser has blocked notifications: the switch above can't turn
+  // on from the app then, and dimming would lock the account-wide Messages
+  // setting (which applies on every device) out of reach on this one.
+  const messagesDimmed = dimmed && permission !== "denied";
 
   // --- Messages: the one server-backed row -----------------------------------
   const [messages, setMessages] = useState<boolean | null>(null);
@@ -165,14 +170,16 @@ export default function NotificationsPage() {
     <div>
       <PageHeader title="Notifications" showBack sub />
 
-      {/* The lead card: primary-pale, as the app's other tinted cards. */}
-      <div className="flex items-center gap-3.5 rounded-2xl bg-primary-pale px-4 py-3.5 mb-8">
-        <span className="w-11 h-11 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
-          <Bell size={18} />
+      {/* The lead card: primary-pale, as the app's other tinted cards. MO1.8.3:
+          radius 20, padding 20, gap 14, a 48 pt tile with Bell 22 / 1.75, the
+          title 17 / 600 and the status 13 / 700. */}
+      <div className="flex items-center gap-3.5 rounded-[20px] bg-primary-pale p-5 mb-8">
+        <span className="w-12 h-12 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
+          <Bell size={22} strokeWidth={1.75} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-charcoal">Allow notifications</p>
-          <p className="text-[12px] text-primary-deep-text leading-4 mt-px" role="status">
+          <p className="text-[17px] font-semibold text-charcoal">Allow notifications</p>
+          <p className="text-[13px] font-bold text-primary-deep-text mt-px" role="status">
             {deviceLine}
           </p>
         </div>
@@ -193,9 +200,8 @@ export default function NotificationsPage() {
                 icon={r.icon}
                 title={r.label}
                 subtitle={r.desc}
-                // Never dimmed: it is the account's setting, saved on the
-                // server for every device, and switching it on is what asks
-                // this device for permission (above).
+                // The account's setting, saved on the server for every device.
+                dimmed={messagesDimmed}
                 toggle={{
                   checked: messages ?? true,
                   disabled: messages === null || saving,

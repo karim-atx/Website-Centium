@@ -148,24 +148,49 @@ export default function TwoFactorPage() {
       </p>
 
       {/* The Authenticator app widget (Foundations 2.5 Widgets): primary-pale
-          while on, greyed at 40% with dashes while off. */}
+          while on, greyed at 40% with dashes while off. MO1.8.4 / MO1.8.4.3:
+          radius 20, padding 16; header 10.5 / 700, title 16 / 800, status
+          13.5 / 700; a 40 pt tile at radius 12 with Smartphone 19 / 1.75 on a
+          faint tint of the card. On and off cross-fade their colours over
+          300 ms, none with Reduce motion (the app's .reduce-motion rule, or the
+          system setting). */}
       <section
         aria-label="Authenticator app"
-        className={clsx("mt-6 rounded-2xl px-4 py-4", enabled ? "bg-primary-pale" : "bg-cream-soft")}
+        className={clsx(
+          "mt-6 rounded-[20px] px-4 py-4 transition-colors duration-300 motion-reduce:transition-none",
+          enabled ? "bg-primary-pale" : "bg-cream-soft"
+        )}
       >
-        <p className={clsx("text-xs font-semibold uppercase tracking-wide", enabled ? "text-primary-deep-text" : "text-charcoal-faint")}>
+        <p
+          className={clsx(
+            "text-[10.5px] font-bold uppercase tracking-wide transition-colors duration-300 motion-reduce:transition-none",
+            enabled ? "text-primary-deep-text" : "text-charcoal-faint"
+          )}
+        >
           Authenticator app
         </p>
-        <div className={clsx("mt-3 flex gap-3.5", !enabled && "opacity-40")}>
-          <span className="w-10 h-10 rounded-2xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
-            <Smartphone size={18} className={enabled ? "text-primary-dark" : "text-charcoal-faint"} />
+        <div
+          className={clsx(
+            "mt-3 flex gap-3.5 transition-opacity duration-300 motion-reduce:transition-none",
+            !enabled && "opacity-40"
+          )}
+        >
+          <span
+            className={clsx(
+              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 motion-reduce:transition-none",
+              enabled ? "bg-primary/5" : "bg-charcoal/5"
+            )}
+            aria-hidden
+          >
+            <Smartphone size={19} strokeWidth={1.75} className={enabled ? "text-primary-dark" : "text-charcoal-faint"} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-bold text-charcoal">Authenticator app</p>
+            <p className="text-[16px] font-extrabold text-charcoal">Authenticator app</p>
             {enabled ? (
               <>
-                <p className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-charcoal">
-                  <CircleCheck size={16} className="text-primary-dark shrink-0" aria-hidden />
+                <p className="mt-1 flex items-center gap-1.5 text-[13.5px] font-bold text-charcoal">
+                  {/* MO1.8.4.3 swaps the theme secondary here: teal-dark follows the colour theme. */}
+                  <CircleCheck size={16} className="text-teal-dark shrink-0" aria-hidden />
                   Connected
                 </p>
                 <p className="mt-0.5 text-[12px] text-charcoal-faint">Added {addedLabel(factor.created_at)}</p>
@@ -179,8 +204,8 @@ export default function TwoFactorPage() {
               </>
             ) : (
               <>
-                <p className="mt-1 text-[14px] font-semibold text-charcoal-faint">Status: –</p>
-                <p className="mt-0.5 text-[12px] text-charcoal-faint">Added –</p>
+                <p className="mt-1 text-[13.5px] font-bold text-charcoal-faint">Status: ––</p>
+                <p className="mt-0.5 text-[12px] text-charcoal-faint">Added ––</p>
                 <span className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 text-[13px] font-semibold text-charcoal-faint">
                   Change app
                 </span>

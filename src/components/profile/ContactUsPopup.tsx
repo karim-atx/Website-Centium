@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronRight, Headphones, Mail } from "lucide-react";
+import { ChevronRight, Headset, Mail } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { SUPPORT_EMAIL } from "../../services/support";
 
@@ -16,7 +16,7 @@ import { SUPPORT_EMAIL } from "../../services/support";
 // in. The address is also shown in full, so anyone without a mail app can
 // copy it.
 export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headphones size={22} />}>
+  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />}>
     <a
       href={`mailto:${SUPPORT_EMAIL}`}
       className="tap flex items-center gap-3.5 py-[13px] text-start"

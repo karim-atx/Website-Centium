@@ -5,7 +5,7 @@ import { Toggle } from "./Toggle";
 
 // Mobile v5.1 handover, MO1.8 Settings and its sub-pages (Foundations 2.3,
 // 2.4): a labelled section of rows, laid out as the board draws it. Each row
-// is padding 13 0, gap 14, a 36 pt icon tile, a 14 / 600 title, an optional
+// is padding 13 0, gap 14, a 36 pt icon tile (radius 11, glyph 17 / 1.75), a 14 / 600 title, an optional
 // 12 / 400 muted subtitle, and on the right a value (12.5 / 400 muted) with a
 // 16 pt chevron, a toggle, or nothing. Rows are divided by a 1 px hairline
 // that starts at the text column (50 pt in) and is absent under the last row.
@@ -97,11 +97,13 @@ export const SettingsRow: React.FC<RowProps> = ({
         <span
           aria-hidden
           className={clsx(
-            "w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden",
+            // MO1.8 / Foundations 2.4: the 36 pt tile at radius 11, a rounded square.
+            "w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 overflow-hidden",
             tile ? "" : destructive ? "bg-status-high-bg text-status-high" : "bg-cream-soft text-charcoal-soft"
           )}
         >
-          {tile ?? (Icon && <Icon size={16} />)}
+          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}
+          {tile ?? (Icon && <Icon size={17} strokeWidth={1.75} />)}
         </span>
       )}
       <span className="flex-1 min-w-0">

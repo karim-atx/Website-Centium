@@ -29,8 +29,9 @@ export default function LanguagePage() {
                 onClick={() => setLanguage(l.code)}
                 className="tap relative w-full flex items-center justify-between gap-3 text-start [padding-block:calc(13px_+_var(--row-extra,0px)_/_2)] before:content-[''] before:absolute before:bottom-0 before:start-[50px] before:end-0 before:h-px before:bg-charcoal/[0.06] before:pointer-events-none last:before:hidden"
               >
-                <span className="text-[15px] font-medium text-charcoal">{l.name}</span>
-                {selected && <Check size={18} className="text-primary shrink-0" aria-hidden />}
+                {/* MO1.8.5: rows 45 pt apart, so 13 + 19 + 13; the check is 18 / 2.4. */}
+                <span className="text-[15px] leading-[19px] font-medium text-charcoal">{l.name}</span>
+                {selected && <Check size={18} strokeWidth={2.4} className="text-primary shrink-0" aria-hidden />}
               </button>
             );
           })}

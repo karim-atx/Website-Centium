@@ -92,7 +92,7 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         rows={3}
         aria-label="Your review (optional)"
         placeholder="What works well, and what doesn't? (optional)"
-        className="mt-2 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+        className="mt-2 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
       />
 
       {reviewText.length > MAX_REVIEW_TEXT * 0.75 && (

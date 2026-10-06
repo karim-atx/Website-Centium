@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
 
@@ -67,8 +67,9 @@ export default function TermsPage() {
         rel="noopener noreferrer"
         className="tap mt-4 block rounded-2xl bg-primary-pale px-4 py-3.5"
       >
-        <span className="block text-[13px] font-semibold leading-snug text-charcoal">{HEALTH_DISCLAIMER}</span>
-        <span className="mt-2 flex items-center justify-between gap-2 text-[12.5px] font-semibold text-primary-deep-text">
+        {/* MO1.8.8: the statement 14 / 600, the link 13.5 / 700. */}
+        <span className="block text-[14px] font-semibold leading-snug text-charcoal">{HEALTH_DISCLAIMER}</span>
+        <span className="mt-2 flex items-center justify-between gap-2 text-[13.5px] font-bold text-primary-deep-text">
           Health and Medical Disclaimer
           <ChevronRight size={15} aria-hidden className="shrink-0 rtl:-scale-x-100" />
         </span>
@@ -77,8 +78,10 @@ export default function TermsPage() {
       <div className="mt-6 space-y-5">
         {sections.map((s) => (
           <section key={s.heading}>
-            <h2 className="text-[14px] font-bold text-charcoal mb-1">{s.heading}</h2>
-            <p className="text-[14px] leading-[1.6] text-charcoal-soft">{s.body}</p>
+            {/* MO1.8.8: headings 15 / 700 in the theme's primary text colour,
+                body 15 / 400 in the main text colour. */}
+            <h2 className="text-[15px] font-bold text-primary-deep-text mb-1">{s.heading}</h2>
+            <p className="text-[15px] leading-[1.6] text-charcoal">{s.body}</p>
           </section>
         ))}
       </div>
@@ -87,10 +90,11 @@ export default function TermsPage() {
         href="/legal#terms"
         target="_blank"
         rel="noopener noreferrer"
-        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-semibold text-primary-deep-text"
+        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-deep-text"
       >
         Read the full Terms of Service
-        <ExternalLink size={16} aria-hidden className="shrink-0" />
+        {/* MO1.8.8: 14 / 700 with ChevronRight 16 / 2. */}
+        <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
       </a>
     </div>
   );

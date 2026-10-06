@@ -79,13 +79,14 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       }}
     >
       <label className="block">
-        <span className="block text-[12px] font-semibold text-charcoal-soft mb-1.5">What happened?</span>
+        {/* MO1.8.10: the label in the muted grey (text.muted), the field 13 / 400. */}
+        <span className="block text-[12px] font-semibold text-charcoal-muted mb-1.5">What happened?</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="The weight I logged this morning isn't showing on Home…"
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
         />
       </label>
 

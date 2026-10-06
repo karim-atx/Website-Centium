@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCheck, ExternalLink, Trash2, Users } from "lucide-react";
+import { CheckCheck, ChevronRight, Trash2, Users } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
@@ -98,7 +98,8 @@ export default function PrivacyPage() {
       </SettingsSection>
       {receiptsError && <p className="text-[11.5px] text-status-high mt-2">{receiptsError}</p>}
 
-      <div className="mt-8 space-y-3 text-[14px] leading-[1.6] text-charcoal-soft">
+      {/* MO1.8.7 body: 15 / 400 in the main text colour. */}
+      <div className="mt-8 space-y-3 text-[15px] leading-[1.6] text-charcoal">
         <p>
           Your health data is stored securely on Centium's servers, and connecting with a professional
           doesn't give them access to it. You choose what each one can see, category by category, and
@@ -110,10 +111,11 @@ export default function PrivacyPage() {
         href="/legal#privacy"
         target="_blank"
         rel="noopener noreferrer"
-        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-semibold text-primary-deep-text"
+        className="tap mt-6 flex items-center justify-between gap-3 border-t border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-deep-text"
       >
         Read the full Privacy Policy
-        <ExternalLink size={16} aria-hidden className="shrink-0" />
+        {/* MO1.8.7: 14 / 700 with ChevronRight 16 / 2. */}
+        <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
       </a>
 
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
