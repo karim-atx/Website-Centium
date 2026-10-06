@@ -245,7 +245,8 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
                 <span
                   aria-hidden="true"
                   className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-                  style={{ background: fv("rules-bg"), color: fv("accent") }}
+                  // The forum's lavender ink, lifted in dark mode (the accent read 2.35:1 on the dark tile).
+                  style={{ background: fv("rules-bg"), color: fv("link") }}
                 >
                   <Check size={12} strokeWidth={2.4} />
                 </span>
