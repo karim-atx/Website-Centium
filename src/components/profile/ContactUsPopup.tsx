@@ -16,9 +16,9 @@ import { SUPPORT_EMAIL } from "../../services/support";
 // in. The address is also shown in full, so anyone without a mail app can
 // copy it.
 export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  // MO1.8.9: the overlay is padded 0 22, so the card is 346 wide at 390
-  // (measured 44 to 735 on the 2x board).
-  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />} maxWidth={346}>
+  // The card is the Foundations 342 wide (decision 23 flag; the board's
+  // overlay padding drew 346).
+  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />}>
     {/* Rows 60 apart on the board (dividers at 790 and 850 on the 2x board):
         12 above and below a 36 pt tile. The value is 12 / 400 muted, Mail
         17 / 1.75 (MO1.8.9 table and icon list). */}

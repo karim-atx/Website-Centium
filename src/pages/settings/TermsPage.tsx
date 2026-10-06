@@ -81,12 +81,15 @@ export default function TermsPage() {
         </span>
       </a>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-6">
         {sections.map((s) => (
           <section key={s.heading}>
-            {/* MO1.8.8: headings 15 / 700 in the theme's primary text colour,
-                body 15 / 400 in the main text colour. */}
-            <h2 className="text-[15px] font-bold text-primary-deep-text mb-1">{s.heading}</h2>
+            {/* MO1.8.8 (decision 23, as the frame): headings 15 / 700 #7D67D9
+                (primary.accent), body 15 / 400 rgb(36,31,27) on a 24 line.
+                Blocks are 24 apart (5 at 312 → 6 at 462) and measure
+                30 + 24 × body lines (78 / 102 / 126), so heading line 24 plus
+                6 before the body (measured). */}
+            <h2 className="text-[15px] font-bold leading-6 text-primary-accent mb-1.5">{s.heading}</h2>
             <p className="text-[15px] leading-[1.6] text-charcoal">{s.body}</p>
           </section>
         ))}

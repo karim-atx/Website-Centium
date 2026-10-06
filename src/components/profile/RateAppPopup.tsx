@@ -74,9 +74,8 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
       open={open}
       onClose={onClose}
       title="Rate this app"
-      // MO1.8.11: Star 22 / 1.75; the card 346 wide (overlay padded 0 22).
+      // MO1.8.11: Star 22 / 1.75; the card the Foundations 342 wide (decision 23 flag).
       icon={<Star size={22} strokeWidth={1.75} />}
-      maxWidth={346}
       cta={{
         label: busy ? "Sending…" : "Send",
         disabled: busy || rating < 1 || tooLong,

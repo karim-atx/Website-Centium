@@ -71,9 +71,8 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       open={open}
       onClose={onClose}
       title="Report a bug"
-      // MO1.8.10: Bug 22 / 1.75; the card 346 wide (overlay padded 0 22).
+      // MO1.8.10: Bug 22 / 1.75; the card the Foundations 342 wide (decision 23 flag).
       icon={<Bug size={22} strokeWidth={1.75} />}
-      maxWidth={346}
       cta={{
         label: busy ? "Sending…" : "Send report",
         disabled: busy || !description.trim() || tooLong,

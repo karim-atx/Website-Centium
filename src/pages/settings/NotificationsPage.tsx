@@ -168,10 +168,9 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      {/* MO1.8.3 is the one Settings sub-page whose title is 27 / 700 on a
-          40 pt line (header 350 × 40; the "N" measures 19 pt tall), not the
-          24 of the others. */}
-      <PageHeader title="Notifications" showBack tightBack />
+      {/* The frame draws 27 / 700 here, but the user's flag (decision 23,
+          C-02) gives every Settings sub-page the 24 / 700 title on a 36 line. */}
+      <PageHeader title="Notifications" showBack sub tightBack />
 
       {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title. */}
       <SettingsBody className="-mt-1.5">
@@ -195,6 +194,8 @@ export default function NotificationsPage() {
           onChange={(v) => void setDevice(v)}
           disabled={!pushAvailable || busy || registered === null}
           label="Allow notifications on this device"
+          // MO1.8.3's lead switch, drawn larger than the rows' (decision 23).
+          lead
         />
       </div>
 

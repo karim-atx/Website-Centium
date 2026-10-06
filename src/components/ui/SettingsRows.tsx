@@ -15,10 +15,9 @@ import { Toggle } from "./Toggle";
 // pre-R1 grey ink (the line is the theme primary, decision 20); the hairline is
 // the 6% charcoal one the old Settings cards drew between rows. The icon tile
 // is the handover's own primary.tint tile with a primary.accent glyph (MO1.8,
-// measured #F0EDF9 / #7D67D9; dark rgba(174,161,220,0.14) / #9A8CD6), because
-// the old Settings had no tile on most of these rows. The rows that DID have
-// one before the redesign (Appearance, Permissions, the Health Connect device)
-// pass `legacyTile` and keep that cream-soft tile with its charcoal-soft glyph.
+// measured #F0EDF9 / #7D67D9; dark rgba(174,161,220,0.14) / #9A8CD6) on every
+// row, in light, dark and every theme (decision 23: one tile style; the rows
+// that had a pre-R1 cream-soft tile were unified with the rest).
 //
 // The first row starts right under the section line (MO1.8: line bottom 96,
 // row 97; MO1.8.3: 222, 222), so the label has no bottom margin.
@@ -64,9 +63,6 @@ type RowBase = {
   destructive?: boolean;
   /** Greys the whole row out (BR-12: rows under a switched-off master). */
   dimmed?: boolean;
-  /** The pre-R1 cream-soft tile and charcoal-soft glyph, for the rows that had
-      a tile before the redesign (decision 22). */
-  legacyTile?: boolean;
   className?: string;
   id?: string;
 };
@@ -105,7 +101,6 @@ export const SettingsRow: React.FC<RowProps> = ({
   subtitle,
   destructive,
   dimmed,
-  legacyTile,
   className,
   id,
   onClick,
@@ -124,9 +119,7 @@ export const SettingsRow: React.FC<RowProps> = ({
               ? ""
               : destructive
                 ? "bg-status-high-bg text-status-high"
-                : legacyTile
-                  ? "bg-cream-soft text-charcoal-soft"
-                  : "bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]"
+                : "bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]"
           )}
         >
           {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}

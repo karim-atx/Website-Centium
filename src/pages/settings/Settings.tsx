@@ -40,9 +40,8 @@ import { AppleHealthMark, WhoopMark } from "../../components/settings/DeviceMark
 // flat icon-tile rows instead of cards, sub-screens as routed pages
 // (/app/settings/notifications, two-factor, accessibility, privacy, terms,
 // language) and centred popups (Contact us, Report a bug, Rate this app).
-// Section labels have the line (decision 20); colours follow decision 22:
-// rows tiled before the redesign keep the pre-R1 tile (legacyTile), the
-// others take the handover's tile.
+// Section labels have the line (decision 20). Every row takes the handover's
+// lavender tile (decision 23: one tile style).
 //
 // EVERY ROW THE BOARD DROPS IS KEPT (C13): Change password, Storage, Time
 // zone and Forum blocks live in a "Data & account" section above General; the
@@ -164,7 +163,6 @@ export default function Settings() {
       <SettingsSection label={t("Appearance")}>
         <SettingsRow
           icon={theme === "dark" ? Moon : Sun}
-          legacyTile
           title={t("Dark Mode")}
           subtitle={`${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`}
           toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
@@ -180,25 +178,20 @@ export default function Settings() {
       </SettingsSection>
 
       <SettingsSection label={t("Permissions")}>
-        {/* These four rows had their tile before the redesign: they keep its
-            colours (decision 22). */}
         <SettingsRow
           icon={Mic}
-          legacyTile
           title={t("Microphone")}
           subtitle={t(permissionLine(mic, "Needed for AI voice logging"))}
           toggle={permissionToggle(mic, () => void requestMedia("audio"))}
         />
         <SettingsRow
           icon={Camera}
-          legacyTile
           title={t("Camera")}
           subtitle={t(permissionLine(camera, "Needed for scanning biomarkers & photos"))}
           toggle={permissionToggle(camera, () => void requestMedia("video"))}
         />
         <SettingsRow
           icon={MapPin}
-          legacyTile
           title={t("Location")}
           subtitle={t(permissionLine(location, "Needed to find gyms & businesses near you"))}
           toggle={permissionToggle(location, requestLocation)}
@@ -208,7 +201,6 @@ export default function Settings() {
             can't work in this browser at all. */}
         <SettingsRow
           icon={BellRing}
-          legacyTile
           title={t("Push notifications")}
           subtitle={pushAvailable ? undefined : t(pushUnavailableReason())}
           onClick={() => navigate("/app/settings/notifications")}
@@ -221,16 +213,19 @@ export default function Settings() {
       {user.accountType === "customer" && (
         <SettingsSection label={t("Connected devices")}>
           {/* MO1.8: the Apple Health and Whoop brand tiles (handover assets);
-              the board has no Health Connect mark, so Android keeps the
-              pre-redesign tile and glyph. */}
+              the board has no Health Connect mark, so Android shows the
+              Smartphone glyph on the standard lavender tile until one is
+              supplied (kept-list 49). */}
           <SettingsRow
-            {...(isIos ? { tile: <AppleHealthMark /> } : { icon: Smartphone, legacyTile: true })}
+            {...(isIos ? { tile: <AppleHealthMark /> } : { icon: Smartphone })}
             title={isIos ? "Apple Health" : "Health Connect"}
             subtitle="Would sync steps, sleep, heart rate and calories burned"
             value="Coming soon"
           />
           <SettingsRow tile={<WhoopMark />} title="Whoop" value="Coming soon" />
-          <p className="mt-2 text-[11px] text-charcoal-faint">
+          {/* dir="auto": the English line keeps its full stop at its own end
+              inside an Arabic page (kept-list 144). */}
+          <p dir="auto" className="mt-2 text-[11px] text-charcoal-faint">
             Device sync isn't available yet. Until it is, weight and water are the metrics you can log yourself.
           </p>
         </SettingsSection>
