@@ -322,15 +322,16 @@ export default function JournalTab() {
             primary={{
               label: "New entry",
               icon: <Plus size={15} />,
-              // MO1.1.2 #10: the pinned CTA row is new since the redesign
-              // (decision 22): New entry filled #A198DF, FolderCog on #EFEEFD
-              // with a #7D67D9 icon. 48/r14 per C-01.
-              className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
+              // MO1.1.2 #10: 13.5/700, 48/r14 per C-01. New entry and Folder
+              // options existed before the redesign, so light mode keeps the
+              // outline button and the default tile (decision 22; the frame
+              // draws #A198DF filled and #EFEEFD / #7D67D9); dark is the filled primary.
+              className:
+                "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
               onClick: startNew,
             }}
             trailing={{
               icon: <FolderCog size={18} strokeWidth={1.75} />,
-              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
               label: "Folder options",
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,
