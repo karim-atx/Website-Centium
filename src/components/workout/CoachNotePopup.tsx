@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { MessageSquareText } from "lucide-react";
 import { fetchConnectedProfessional, professionalRole } from "../../services/connected-professional";
 import { useIsDark } from "../../hooks/useIsDark";
+import { linePx, textPx } from "../../theme/textSize";
 
 /** "Updated 2d ago" (WO25). Beyond a week, the date. */
 function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
@@ -83,7 +84,7 @@ export const CoachNotePopup: React.FC<{
           boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
         }}
       >
-        <p className="flex items-center" style={{ margin: "0 0 12px", gap: 8, fontSize: 16, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+        <p className="flex items-center" style={{ margin: "0 0 12px", gap: 8, fontSize: textPx(16), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
           <MessageSquareText size={16} style={{ color: c("icon") }} /> Coach's note
         </p>
         {note ? (
@@ -92,16 +93,16 @@ export const CoachNotePopup: React.FC<{
               <span
                 aria-hidden
                 className="flex-none flex items-center justify-center rounded-full"
-                style={{ width: 36, height: 36, background: "rgb(var(--thw-a2c8c2))", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
+                style={{ width: 36, height: 36, background: "rgb(var(--thw-a2c8c2))", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 700 }}
               >
                 {initials || <MessageSquareText size={15} />}
               </span>
               <div className="min-w-0">
-                <p className="truncate" style={{ margin: 0, fontSize: 13 }}>
+                <p className="truncate" style={{ margin: 0, fontSize: textPx(13) }}>
                   <span style={{ fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{name}</span>
                   {coach?.role && <span style={{ color: "rgb(var(--c-charcoal-muted))" }}> · {coach.role}</span>}
                 </p>
-                {ago && <p style={{ margin: "1px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{ago}</p>}
+                {ago && <p style={{ margin: "1px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{ago}</p>}
               </div>
             </div>
             {/* Long notes scroll here; Close stays pinned below. */}
@@ -109,20 +110,20 @@ export const CoachNotePopup: React.FC<{
               className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
               style={{ background: c("noteBox"), borderRadius: 12, padding: "12px 14px" }}
             >
-              <p className="whitespace-pre-wrap" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: c("noteText") }}>
+              <p className="whitespace-pre-wrap" style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(20), color: c("noteText") }}>
                 {note}
               </p>
             </div>
           </>
         ) : (
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "rgb(var(--c-charcoal-soft))" }}>
+          <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(20), color: "rgb(var(--c-charcoal-soft))" }}>
             Your professional hasn't left a note for this routine yet.
           </p>
         )}
         <button
           onClick={onClose}
           className="tap w-full flex-none"
-          style={{ marginTop: 16, height: 44, borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
+          style={{ marginTop: 16, height: 44, borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
         >
           Close
         </button>

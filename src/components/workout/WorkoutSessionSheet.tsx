@@ -43,6 +43,7 @@ import { PR_BAR, typeStyles } from "./setTypeStyle";
 import { BlockRunner } from "./BlockRunner";
 import { EnduranceRunner } from "./EnduranceRunner";
 import clsx from "clsx";
+import { linePx, textPx } from "../../theme/textSize";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -567,18 +568,18 @@ export const WorkoutSessionSheet: React.FC<{
         style={{ border: "1px solid rgb(var(--c-charcoal) / 0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12, scrollMarginTop: 12 }}
       >
         <div className="flex items-center" style={{ gap: 6, padding: "13px 14px 8px" }}>
-          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.01em" }}>
+          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.01em" }}>
             {ex.name}
           </p>
           {superset && (
             <span
               className="flex-none"
-              style={{ fontSize: 9, fontWeight: 800, color: sessionColor("ssBadgeInk", dark), background: sessionColor("ssBadgeBg", dark), borderRadius: 4, padding: "1px 5px", lineHeight: "13px" }}
+              style={{ fontSize: textPx(9), fontWeight: 800, color: sessionColor("ssBadgeInk", dark), background: sessionColor("ssBadgeBg", dark), borderRadius: 4, padding: "1px 5px", lineHeight: linePx(13) }}
             >
               SS
             </span>
           )}
-          <span className="flex-1 min-w-0 truncate" style={{ fontSize: 11, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
+          <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(11), fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
             {line}
           </span>
           <button
@@ -589,7 +590,7 @@ export const WorkoutSessionSheet: React.FC<{
           >
             <EllipsisVertical size={16} />
           </button>
-          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>
+          <span className="flex-none tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>
             {exIdx + 1} of {logged.length}
           </span>
         </div>
@@ -598,7 +599,7 @@ export const WorkoutSessionSheet: React.FC<{
         {meta.pinnedNote && (
           <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: shades.banner, color: shades.ink }}>
             <Pin size={13} className="flex-none" style={{ marginTop: 2 }} />
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, lineHeight: "17px" }}>{meta.pinnedNote}</p>
+            <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 500, lineHeight: linePx(17) }}>{meta.pinnedNote}</p>
           </div>
         )}
         {meta.endurancePlan ? (
@@ -616,7 +617,7 @@ export const WorkoutSessionSheet: React.FC<{
           <>
             <div
               className="flex items-center uppercase"
-              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
+              style={{ padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
             >
               <span style={{ width: 58 }}>Set</span>
               <span className="flex-1">Weight (kg)</span>
@@ -655,7 +656,7 @@ export const WorkoutSessionSheet: React.FC<{
                   {showRest && (
                     <div className="flex items-center" style={{ gap: 10, padding: "0 15px", height: 19 }}>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
-                      <span className="tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: playInk(family, dark) }}>
+                      <span className="tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 600, color: playInk(family, dark) }}>
                         {formatClock(counting !== null && counting > 0 ? counting : restSec)}
                       </span>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
@@ -665,12 +666,12 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{asked} asked for · the rest are yours if you want them.</p>
+              <p style={{ margin: "6px 15px 0", fontSize: textPx(10.5), color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{asked} asked for · the rest are yours if you want them.</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
               className="tap flex items-center"
-              style={{ gap: 6, margin: "8px 15px 0", fontSize: 12, fontWeight: 600, color: sessionColor("addSet", dark) }}
+              style={{ gap: 6, margin: "8px 15px 0", fontSize: textPx(12), fontWeight: 600, color: sessionColor("addSet", dark) }}
             >
               <Plus size={12} /> Add set
             </button>
@@ -761,10 +762,10 @@ export const WorkoutSessionSheet: React.FC<{
           <div className="text-center min-w-0">
             {/* Wraps to two lines rather than cutting the name to "Regres…" when the
                 cycle chip takes room (as the WO8 frame wraps "Push Pull / Legs"). */}
-            <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))", lineHeight: "19px" }}>
+            <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", lineHeight: linePx(19) }}>
               {routineName}
             </p>
-            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: "14px" }}>
+            <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: linePx(14) }}>
               {started
                 ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
                 : elapsed > 0
@@ -868,11 +869,11 @@ export const WorkoutSessionSheet: React.FC<{
                 className="bg-cream-card"
                 style={{ border: "1px dashed rgb(var(--c-charcoal) / 0.18)", borderRadius: 16, padding: "12px 14px" }}
               >
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
-                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>
+                <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
+                <p style={{ margin: "2px 0 8px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>
                   Removed from this routine · logged sets are kept
                 </p>
-                <p className="tabular-nums" style={{ margin: 0, fontSize: 12.5, color: "rgb(var(--c-charcoal-soft))" }}>
+                <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
                   {ex.sets
                     .filter(isTouched)
                     .map((s) => `${formatSetWeight(s.weightKg ?? 0, true)} × ${s.reps}`)
@@ -889,10 +890,10 @@ export const WorkoutSessionSheet: React.FC<{
         >
           <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
             <div>
-              <p className="uppercase" style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-faint))" }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-faint))" }}>
                 Total volume
               </p>
-              <p className="tabular-nums" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: "30px" }}>
+              <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: linePx(30) }}>
                 {totalVolume.toLocaleString()} kg
               </p>
             </div>
@@ -900,7 +901,7 @@ export const WorkoutSessionSheet: React.FC<{
               <button
                 onClick={() => setRpeOpen(true)}
                 className="tap flex items-center justify-center"
-                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: 12, fontWeight: 600 }}
+                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), fontWeight: 600 }}
               >
                 <Calculator size={13} /> RPE
               </button>
@@ -915,7 +916,7 @@ export const WorkoutSessionSheet: React.FC<{
             </div>
           </div>
           {saveError && (
-            <p className="text-center" style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 600, color: sessionColor("danger", dark) }}>
+            <p className="text-center" style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
               {saveError}
             </p>
           )}
@@ -923,7 +924,7 @@ export const WorkoutSessionSheet: React.FC<{
             onClick={() => void finishWorkout()}
             disabled={finished || saving}
             className="tap w-full flex items-center justify-center disabled:opacity-70"
-            style={{ gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+            style={{ gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: textPx(15), fontWeight: 700 }}
           >
             {finished ? (
               "Workout Saved ✓"
@@ -993,7 +994,7 @@ export const WorkoutSessionSheet: React.FC<{
             label: "Rest timer",
             icon: <Timer size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
             trailing: (
-              <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 600, color: playInk(family, dark) }}>
+              <span className="tabular-nums" style={{ fontSize: textPx(12), fontWeight: 600, color: playInk(family, dark) }}>
                 {exMenuEx?.restSeconds ? formatClock(exMenuEx.restSeconds) : "Off"}
               </span>
             ),
@@ -1052,7 +1053,7 @@ export const WorkoutSessionSheet: React.FC<{
           placeholder="e.g. Pin safety rack at level 3"
           rows={3}
           className="w-full bg-transparent focus:outline-none"
-          style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "rgb(var(--c-charcoal))", resize: "none" }}
+          style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: textPx(14), color: "rgb(var(--c-charcoal))", resize: "none" }}
         />
       </BottomSheet>
 
@@ -1183,7 +1184,7 @@ const SetRow: React.FC<{
     background: field,
     color: ink,
     padding: "0 10px",
-    fontSize: 14,
+    fontSize: textPx(14),
     fontWeight: 600,
     ["--ph" as string]: ink,
     // The board's 46% in light mode (the CSS default); dark mode clears 4.5:1.
@@ -1214,15 +1215,15 @@ const SetRow: React.FC<{
         <span className="flex items-center" style={{ gap: 2 }}>
           {number !== null ? (
             <span className="flex flex-col items-center" style={{ lineHeight: 1 }}>
-              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: t?.label ?? "rgb(var(--c-charcoal-faint))" }}>
+              <span className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 700, color: t?.label ?? "rgb(var(--c-charcoal-faint))" }}>
                 {number}
               </span>
               {t && (
-                <span style={{ fontSize: 7.5, fontWeight: 800, color: t.label, marginTop: 1 }}>{t.short}</span>
+                <span style={{ fontSize: textPx(7.5), fontWeight: 800, color: t.label, marginTop: 1 }}>{t.short}</span>
               )}
             </span>
           ) : (
-            <span style={{ fontSize: 10.5, fontWeight: 600, color: t?.label }}>{t?.short}</span>
+            <span style={{ fontSize: textPx(10.5), fontWeight: 600, color: t?.label }}>{t?.short}</span>
           )}
           <ChevronDown size={10} style={{ color: t?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
         </span>
@@ -1284,7 +1285,7 @@ const SetRow: React.FC<{
         <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: sessionColor("strike", dark) }} />
       )}
       {needsReps && (
-        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: 10.5, fontWeight: 600, color: sessionColor("danger", dark) }}>
+        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
           Enter the reps you did to log this set.
         </p>
       )}

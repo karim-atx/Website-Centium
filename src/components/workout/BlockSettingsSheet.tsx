@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import type { BlockKind, WorkoutBlock } from "../../types";
 import { checkBlock, defaultBlockParams, normalizeBlock } from "../../services/workout/blocks";
 import { blockHeading } from "../../services/workout/prescription";
+import { textPx } from "../../theme/textSize";
 
 // Choosing what a group of exercises IS, and what governs its repetition.
 //
@@ -27,7 +28,7 @@ const KINDS: { value: BlockKind; label: string; blurb: string }[] = [
 ];
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: textPx(12),
   fontWeight: 600,
   color: "rgb(var(--c-charcoal-soft))",
   marginBottom: 6,
@@ -40,7 +41,7 @@ const inputStyle: React.CSSProperties = {
   background: "rgb(var(--c-cream-card))",
   border: "1px solid rgb(var(--c-charcoal) / 0.1)",
   padding: "9px 11px",
-  fontSize: 14,
+  fontSize: textPx(14),
   color: "rgb(var(--c-charcoal))",
 };
 
@@ -56,7 +57,7 @@ const Num: React.FC<{
   placeholder?: string;
 }> = ({ label, value, onChange, placeholder }) => (
   <label className="block" style={{ flex: 1, minWidth: 0 }}>
-    <span style={{ ...labelStyle, fontSize: 11 }}>{label}</span>
+    <span style={{ ...labelStyle, fontSize: textPx(11) }}>{label}</span>
     <input
       value={value === undefined ? "" : String(value)}
       onChange={(e) => onChange(digits(e.target.value))}
@@ -124,7 +125,7 @@ export const BlockSettingsSheet: React.FC<{
               </button>
             ))}
           </div>
-          <p style={{ margin: "7px 2px 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: "7px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
             {KINDS.find((k) => k.value === draft.kind)?.blurb}
           </p>
         </div>
@@ -182,7 +183,7 @@ export const BlockSettingsSheet: React.FC<{
             className="placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             style={inputStyle}
           />
-          <span style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))", marginTop: 6, display: "block" }}>
+          <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", marginTop: 6, display: "block" }}>
             Shown instead of “{blockHeading({ ...draft, label: undefined })}”.
           </span>
         </label>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useIsDark } from "../../hooks/useIsDark";
 import { BARS, COLLARS, nearestKgPlate, plateLoad, type PlateUnit } from "../../services/workout/plates";
+import { linePx, textPx } from "../../theme/textSize";
 
 // IPF plate colours (WO24): 25 red, 20 blue, 15 yellow, 10 green, 5 white,
 // 2.5 black, 1.25 chrome. Red, white and black are measured from the frame;
@@ -51,7 +52,7 @@ const PLATE_COLORS = {
 } as const;
 const pc = (key: keyof typeof PLATE_COLORS, dark: boolean): string => PLATE_COLORS[key][dark ? 1 : 0];
 
-const label: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "rgb(var(--c-charcoal-soft))", marginBottom: 8 };
+const label: React.CSSProperties = { display: "block", fontSize: textPx(13), fontWeight: 500, color: "rgb(var(--c-charcoal-soft))", marginBottom: 8 };
 
 const fmt = (n: number) => String(+n.toFixed(2));
 
@@ -132,7 +133,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
         <line key={t} x1={t} y1={cy - shaftH / 2} x2={t + 2} y2={cy + shaftH / 2} stroke={KNURL} strokeWidth={0.8} />
       ))}
       {barLabel && (
-        <text x={W / 2} y={cy - 8} fontSize={7} fontWeight={700} fill="rgb(var(--c-charcoal-soft))" textAnchor="middle">
+        <text x={W / 2} y={cy - 8} style={{ fontSize: textPx(7) }} fontWeight={700} fill="rgb(var(--c-charcoal-soft))" textAnchor="middle">
           {barLabel}
         </text>
       )}
@@ -181,7 +182,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
     borderRadius: 10,
     background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-soft))",
     color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
-    fontSize: 12.5,
+    fontSize: textPx(12.5),
     fontWeight: on ? 700 : 600,
   });
 
@@ -203,7 +204,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               inputMode="decimal"
               aria-label={`Target weight (${u})`}
               className="flex-1 min-w-0 text-center focus:outline-none focus:ring-2 focus:ring-primary/20"
-              style={{ height: 43, borderRadius: 12, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.11)", fontSize: 15, fontWeight: 500, color: "rgb(var(--c-charcoal))" }}
+              style={{ height: 43, borderRadius: 12, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(15), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}
             />
             {/* 02: the one pill control, with a sliding highlight. */}
             <div
@@ -236,7 +237,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                     if (barChoice === "other") setCustomBarDraft("");
                   }}
                   className="tap relative flex-1 uppercase"
-                  style={{ fontSize: 12, fontWeight: 700, color: unit === v ? "rgb(var(--c-on-primary-fill))" : pc("unitIdle", dark) }}
+                  style={{ fontSize: textPx(12), fontWeight: 700, color: unit === v ? "rgb(var(--c-on-primary-fill))" : pc("unitIdle", dark) }}
                 >
                   {v}
                 </button>
@@ -286,7 +287,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         <div>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
             <span style={{ ...label, marginBottom: 0 }}>Percentage</span>
-            <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: pc("pct", dark) }}>
+            <span className="tabular-nums" style={{ fontSize: textPx(12), fontWeight: 700, color: pc("pct", dark) }}>
               {pct}%
             </span>
           </div>
@@ -311,37 +312,37 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         <div style={{ background: pc("resultBox", dark), borderRadius: 14, padding: "14px 16px" }}>
           <div className="flex items-end justify-between" style={{ gap: 12 }}>
             <div className="min-w-0">
-              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
                 Working
               </p>
-              <p className="tabular-nums" style={{ margin: 0, lineHeight: "36px" }}>
-                <span style={{ fontSize: 30, fontWeight: 800, color: pc("resultValue", dark), letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
-                {load && <span style={{ fontSize: 13, fontWeight: 600, color: pc("resultLabel", dark), marginLeft: 4 }}>{u}</span>}
+              <p className="tabular-nums" style={{ margin: 0, lineHeight: linePx(36) }}>
+                <span style={{ fontSize: textPx(30), fontWeight: 800, color: pc("resultValue", dark), letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
+                {load && <span style={{ fontSize: textPx(13), fontWeight: 600, color: pc("resultLabel", dark), marginLeft: 4 }}>{u}</span>}
               </p>
             </div>
             <div className="text-right flex-none">
-              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
                 Per side
               </p>
-              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 800, color: pc("resultValue", dark) }}>
+              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: textPx(18), fontWeight: 800, color: pc("resultValue", dark) }}>
                 {!load ? "–" : barOnly ? "Bar only" : `${fmt(load.perSide)} ${u}`}
               </p>
               {load && (
-                <p style={{ margin: "2px 0 0", fontSize: 10.5, color: pc("resultSub", dark) }}>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: pc("resultSub", dark) }}>
                   {pct}% of {fmt(target)} {u}
                 </p>
               )}
             </div>
           </div>
           {load?.closest != null && (
-            <p style={{ margin: "8px 0 0", fontSize: 11.5, fontWeight: 700, color: pc("resultSub", dark) }}>
+            <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: pc("resultSub", dark) }}>
               Closest: {fmt(load.closest)} {u}
             </p>
           )}
         </div>
 
         <div style={{ background: "rgb(var(--c-surface-raised))", border: `1px solid ${pc("panelBorder", dark)}`, borderRadius: 14, padding: "12px 12px 14px" }}>
-          {caption && <p style={{ margin: "0 0 10px", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>{caption}</p>}
+          {caption && <p style={{ margin: "0 0 10px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>{caption}</p>}
           <Barbell
             plates={load?.plates ?? []}
             unit={unit}
@@ -356,16 +357,16 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 return (
                   <span key={p.kg} className="flex items-center" style={{ gap: 6, background: "rgb(var(--c-cream-soft))", borderRadius: 8, padding: "6px 10px" }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: s.fill, border: `1px solid ${pc("swatchEdge", dark)}` }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+                    <span style={{ fontSize: textPx(12), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                       {fmt(p.kg)} {u}
                     </span>
-                    <span style={{ fontSize: 10.5, color: "rgb(var(--c-charcoal-faint))" }}>× {p.count}</span>
+                    <span style={{ fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-faint))" }}>× {p.count}</span>
                   </span>
                 );
               })}
             </div>
           ) : barOnly ? (
-            <p style={{ margin: "10px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>Bar only</p>
+            <p style={{ margin: "10px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>Bar only</p>
           ) : null}
         </div>
       </div>

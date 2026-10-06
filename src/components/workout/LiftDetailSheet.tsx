@@ -11,6 +11,7 @@ import {
   type LiftMax,
   type LiftRange,
 } from "../../services/workout/oneRepMax";
+import { linePx, textPx } from "../../theme/textSize";
 
 const RANGES: LiftRange[] = ["3M", "6M", "All"];
 /** The frame shows the four most recent sessions. */
@@ -55,13 +56,13 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
     <BottomSheet open onClose={onClose} title={lift.name} handle>
       <div className="animate-fade-slide-up">
         <div className="flex items-baseline" style={{ gap: 10 }}>
-          <p style={{ color: "rgb(var(--c-charcoal))", fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+          <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(30), fontWeight: 800, lineHeight: 1 }}>
             {kgWhole(lift.oneRm)}
-            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: 15, fontWeight: 700, marginLeft: 4 }}>kg</span>
+            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginLeft: 4 }}>kg</span>
           </p>
-          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>estimated 1RM</span>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>estimated 1RM</span>
         </div>
-        <p style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: 12, marginTop: 8 }}>
+        <p style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), marginTop: 8 }}>
           {setLine(lift.best)} · {shortDate(dayMs(lift.best.date))}
         </p>
 
@@ -74,7 +75,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
           }}
         >
           <div className="flex items-center justify-between" style={{ padding: "0 14px" }}>
-            <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em" }}>
+            <span style={{ color: "rgba(255,255,255,0.75)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
               ESTIMATED 1RM
             </span>
             <div
@@ -94,7 +95,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                     minWidth: 32,
                     padding: "0 7px",
                     borderRadius: 7,
-                    fontSize: 11,
+                    fontSize: textPx(11),
                     fontWeight: 700,
                     background: range === r ? "#FFFFFF" : "transparent",
                     color: range === r ? "rgb(var(--thi-463a80))" : "#FFFFFF",
@@ -121,13 +122,13 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
             <div style={{ height: CARD_GEOMETRY.height }} />
           )}
           {lift.sessions.length === 1 && (
-            <p className="text-center" style={{ color: "rgba(255,255,255,0.78)", fontSize: 11, padding: "0 14px 14px" }}>
+            <p className="text-center" style={{ color: "rgba(255,255,255,0.78)", fontSize: textPx(11), padding: "0 14px 14px" }}>
               Log another session to see your trend.
             </p>
           )}
         </div>
 
-        <p style={{ marginTop: 20, color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em" }}>
+        <p style={{ marginTop: 20, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em" }}>
           RECENT SESSIONS
         </p>
         <ul style={{ marginTop: 6 }}>
@@ -137,11 +138,11 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
               className="flex items-center"
               style={{ height: 40, gap: 10, borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}
             >
-              <span className="flex-none" style={{ width: 48, color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5 }}>
+              <span className="flex-none" style={{ width: 48, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5) }}>
                 {shortDate(dayMs(s.date))}
               </span>
               <span className="flex-1 min-w-0 flex items-center" style={{ gap: 8 }}>
-                <span className="truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13, fontWeight: 700 }}>
+                <span className="truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(13), fontWeight: 700 }}>
                   {setLine(s.set)}
                 </span>
                 {s.isPr && (
@@ -153,18 +154,18 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                       borderRadius: 5,
                       background: PR_CHIP_BG[dark ? 1 : 0],
                       color: typeStyles(dark).pr.ink,
-                      fontSize: 9.5,
+                      fontSize: textPx(9.5),
                       fontWeight: 800,
-                      lineHeight: "16px",
+                      lineHeight: linePx(16),
                     }}
                   >
                     PR
                   </span>
                 )}
               </span>
-              <span className="flex-none" style={{ color: "rgb(var(--c-charcoal))", fontSize: 15, fontWeight: 800 }}>
+              <span className="flex-none" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(15), fontWeight: 800 }}>
                 {kgWhole(s.oneRm)}
-                <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
               </span>
             </li>
           ))}
