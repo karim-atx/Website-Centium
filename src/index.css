@@ -580,6 +580,8 @@ html.high-contrast {
   --c-charcoal-faint: 17 17 17;
   --c-charcoal-tertiary: 17 17 17;
   --c-charcoal-muted: 17 17 17;
+  /* nav.idle is a text grey too (inactive navbar labels and icons). */
+  --c-team-nav-idle: 17 17 17;
   --border-row: rgb(17 17 17 / 0.3);
 }
 html.high-contrast.dark {
@@ -588,6 +590,7 @@ html.high-contrast.dark {
   --c-charcoal-faint: 245 243 250;
   --c-charcoal-tertiary: 245 243 250;
   --c-charcoal-muted: 245 243 250;
+  --c-team-nav-idle: 245 243 250;
   --border-row: rgb(245 243 250 / 0.3);
 }
 html.high-contrast[data-accent="centium"]:not(.dark) {
