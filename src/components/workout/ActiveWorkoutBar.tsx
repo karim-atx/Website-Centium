@@ -5,6 +5,7 @@ import { activeBarShades } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { activeBarLine, loggedFraction } from "../../services/workout/activeBar";
 import { WorkoutSessionSheet } from "./WorkoutSessionSheet";
+import { linePx, textPx } from "../../theme/textSize";
 
 /**
  * True while any sheet, popup or full-screen view is open (the logger among
@@ -129,13 +130,13 @@ export const ActiveWorkoutBar: React.FC = () => {
             <span className="flex-1 min-w-0 block">
               <span
                 className="block truncate"
-                style={{ fontSize: 13, lineHeight: "16px", fontWeight: 600, color: "#FFFFFF" }}
+                style={{ fontSize: textPx(13), lineHeight: linePx(16), fontWeight: 600, color: "#FFFFFF" }}
               >
                 {routine.name}
               </span>
               <span
                 className="block truncate"
-                style={{ fontSize: 10.5, lineHeight: "14px", fontWeight: 500, color: "rgba(255,255,255,0.78)" }}
+                style={{ fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: "rgba(255,255,255,0.78)" }}
               >
                 {bar.subline}
               </span>

@@ -1,5 +1,6 @@
 import React, { useId } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
 // as [light, dark], the dark values the v5.1 chart rules (grid
@@ -78,7 +79,7 @@ export const WeightTrendChart: React.FC<{
       {/* y-axis ticks */}
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
-          <text x={0} y={y(v) + 3} fontSize={9} fill={axis}>
+          <text x={0} y={y(v) + 3} style={{ fontSize: textPx(9) }} fill={axis}>
             {v.toFixed(0)}kg
           </text>
           <line
@@ -133,10 +134,10 @@ export const WeightTrendChart: React.FC<{
       ))}
 
       {/* x-axis: first, today/last-actual, and goal date */}
-      <text x={x(0)} y={height - 4} fontSize={9} fill={axis} textAnchor="start">
+      <text x={x(0)} y={height - 4} style={{ fontSize: textPx(9) }} fill={axis} textAnchor="start">
         {shortDate(points[0].date)}
       </text>
-      <text x={x(points.length - 1)} y={height - 4} fontSize={9} fill={axis} textAnchor="end">
+      <text x={x(points.length - 1)} y={height - 4} style={{ fontSize: textPx(9) }} fill={axis} textAnchor="end">
         {shortDate(points[points.length - 1].date)}
       </text>
     </svg>

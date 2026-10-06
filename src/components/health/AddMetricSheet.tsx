@@ -8,6 +8,7 @@ import { BP_CATEGORY_LABEL } from "../../services/blood-pressure/guidance";
 import { BloodPressureSheet } from "./BloodPressureSheet";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
 // frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
@@ -321,7 +322,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         }}
       >
         <div className="relative shrink-0 flex items-center justify-center" style={{ height: 42 }}>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: am("title"), whiteSpace: "nowrap" }}>
+          <p style={{ margin: 0, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", color: am("title"), whiteSpace: "nowrap" }}>
             Add Metric
           </p>
           <button
@@ -338,12 +339,12 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             stays overflow hidden per the handover. */}
         <div className="bg-cream-card min-h-0 overflow-y-auto" style={{ borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
-            <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>WATER</p>
+            <p style={{ margin: 0, fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>WATER</p>
             <div style={{ textAlign: "right" }}>
               <p
                 style={{
                   margin: 0,
-                  fontSize: 22,
+                  fontSize: textPx(22),
                   fontWeight: 800,
                   lineHeight: 1,
                   letterSpacing: "-0.02em",
@@ -353,7 +354,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               >
                 {(water / 1000).toFixed(2)}L
               </p>
-              <p style={{ margin: "3px 0 0", fontSize: 10, color: am("caption") }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
+              <p style={{ margin: "3px 0 0", fontSize: textPx(10), color: am("caption") }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
             </div>
           </div>
 
@@ -376,7 +377,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   }}
                 >
                   <Glyph />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: am("waterInk") }}>+{ml}ml</span>
+                  <span style={{ fontSize: textPx(14), fontWeight: 700, color: am("waterInk") }}>+{ml}ml</span>
                 </button>
               );
             })}
@@ -384,7 +385,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
           <div className="grid grid-cols-2 gap-[10px]" style={{ marginBottom: 13 }}>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>
+              <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>
                 {isToday ? "WEIGHT TODAY" : "WEIGHT FOR THIS DAY"}
               </p>
               <div
@@ -407,16 +408,16 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     borderRadius: 8,
                     padding: "6px 8px",
                     textAlign: "center",
-                    fontSize: 15,
+                    fontSize: textPx(15),
                     fontWeight: 700,
                     color: "rgb(var(--c-charcoal))",
                   }}
                 />
-                <span style={{ fontSize: 11, color: am("caption"), flex: "none" }}>kg</span>
+                <span style={{ fontSize: textPx(11), color: am("caption"), flex: "none" }}>kg</span>
               </div>
             </div>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>ADD RECORDS</p>
+              <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>ADD RECORDS</p>
               <button
                 onClick={handleAddRecords}
                 aria-label="Add records"
@@ -425,10 +426,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               >
                 <Camera size={21} strokeWidth={1.8} style={{ color: am("icon"), flex: "none" }} />
                 <span className="flex-1 min-w-0">
-                  <span style={{ display: "block", fontSize: 8.5, fontWeight: 600, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: textPx(8.5), fontWeight: 600, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                     Add Photo / Upload File
                   </span>
-                  <span style={{ display: "block", fontSize: 7.5, color: am("caption"), whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: textPx(7.5), color: am("caption"), whiteSpace: "nowrap" }}>
                     Lab results, reports, etc.
                   </span>
                 </span>
@@ -437,7 +438,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             </div>
           </div>
 
-          <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>BLOOD PRESSURE</p>
+          <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>BLOOD PRESSURE</p>
           {/* THE DAY'S LATEST READING, or nothing. This was two number fields
               pre-filled with 120/80 for everybody, saving themselves on a
               debounce. A reading needs a time, an arm and a position to be
@@ -451,21 +452,21 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             <span className="flex-1 min-w-0">
               {bpLatest ? (
                 <>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+                  <span style={{ display: "block", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                     {bpLatest.systolic}/{bpLatest.diastolic}
-                    <span style={{ fontSize: 11, fontWeight: 500, color: am("caption") }}> mmHg</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 500, color: am("caption") }}> mmHg</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 10.5, color: am("label") }}>
+                  <span style={{ display: "block", fontSize: textPx(10.5), color: am("label") }}>
                     {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
                     {bpLatest.pulse != null && ` · ${bpLatest.pulse} bpm`}
                   </span>
                 </>
               ) : (
                 <>
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+                  <span style={{ display: "block", fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                     Add a reading
                   </span>
-                  <span style={{ display: "block", fontSize: 10.5, color: am("caption") }}>
+                  <span style={{ display: "block", fontSize: textPx(10.5), color: am("caption") }}>
                     Nothing recorded for this day
                   </span>
                 </>
@@ -486,14 +487,14 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             ) : (
               <CheckCircleGlyph />
             )}
-            <span style={{ fontSize: 12, fontWeight: 600, color: am("stripInk") }}>{confirmationText}</span>
+            <span style={{ fontSize: textPx(12), fontWeight: 600, color: am("stripInk") }}>{confirmationText}</span>
           </div>
 
           {/* Steps, sleep and calories burned are not manually loggable and
               nothing syncs them either -- device sync is not built. The old
               line said they "sync automatically from Apple/Android Health",
               which no account has ever done. */}
-          <p style={{ margin: "13px 4px 2px", fontSize: 10, lineHeight: 1.5, color: am("caption"), textAlign: "center" }}>
+          <p style={{ margin: "13px 4px 2px", fontSize: textPx(10), lineHeight: 1.5, color: am("caption"), textAlign: "center" }}>
             Steps, sleep and calories burned would come from a connected device. Device sync isn't
             available yet.
           </p>

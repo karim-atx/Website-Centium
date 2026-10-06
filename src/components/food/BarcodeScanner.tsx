@@ -5,6 +5,7 @@ import { canUseBarcodeScanner, createFrameReader } from "../../services/barcode/
 import { normalizeGtin } from "../../utils/gtin";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
+import { textPx } from "../../theme/textSize";
 
 type CameraState = "starting" | "scanning" | "denied" | "unavailable";
 
@@ -113,7 +114,7 @@ export const BarcodeScanner: React.FC<{
             />
             <p
               className="absolute inset-x-0 text-center"
-              style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}
+              style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}
             >
               {camera === "starting" ? "Starting the camera…" : "Point the camera at the barcode"}
             </p>
@@ -121,7 +122,7 @@ export const BarcodeScanner: React.FC<{
         ) : (
           <div className="flex items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? FOOD_DARK.box : "#F4F4F6" }}>
             <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", marginTop: 1 }} />
-            <p style={{ margin: 0, fontSize: 12.5, color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
+            <p style={{ margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
               {camera === "denied"
                 ? "Camera access is off for this site. Allow it in your browser settings, or type the number below."
                 : "This browser can't use the camera for scanning. Type the number under the barcode instead."}
@@ -129,7 +130,7 @@ export const BarcodeScanner: React.FC<{
           </div>
         )}
 
-        <p style={{ margin: "16px 0 6px", fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Or type the number</p>
+        <p style={{ margin: "16px 0 6px", fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Or type the number</p>
         <div className="flex" style={{ gap: 8 }}>
           <input
             value={typed}
@@ -142,13 +143,13 @@ export const BarcodeScanner: React.FC<{
             placeholder="Enter number manually"
             aria-label="Barcode number"
             className="flex-1 min-w-0 focus:outline-none"
-            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: 14, color: "rgb(var(--c-charcoal))" }}
+            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
           />
           <button
             onClick={submitTyped}
             disabled={!typed.trim()}
             className="tap flex-none disabled:opacity-50"
-            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
           >
             Use
           </button>

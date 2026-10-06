@@ -818,7 +818,8 @@ const RoutineCardFace: React.FC<{
       ) : (
         <button onClick={onToggle} className="hit flex-1 text-left min-w-0">
           <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "rgb(var(--c-charcoal))" }}>
-            {routine.name}
+            {/* The name ellipsizes on its own so the state badge is never cut (D18). */}
+            <span className="truncate min-w-0">{routine.name}</span>
             {isOngoing && (
               // WO17: the same running / paused state the bar shows.
               <span className="text-[10px] font-bold uppercase text-[#E9736A] dark:text-[#EE8A82] flex items-center gap-1 shrink-0">

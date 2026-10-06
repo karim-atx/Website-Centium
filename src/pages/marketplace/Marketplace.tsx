@@ -13,6 +13,7 @@ import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import { useIsDark } from "../../hooks/useIsDark";
 import ProfessionalExplore from "./ProfessionalExplore";
+import { textPx } from "../../theme/textSize";
 
 // Iteration 6 "Team" §5 Explore: each "More categories" tile gets its own
 // icon colour and light row tint — extending the same colour family used
@@ -230,10 +231,10 @@ function RewardRow({ reward }: { reward: EarnedReward }) {
         <Gift size={15} className="text-white" />
       </span>
       <span className="min-w-0">
-        <span className="block" style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+        <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
           {reward.title}
         </span>
-        <span className="block" style={{ fontSize: 10.5, color: dark ? "rgb(var(--thi-a3c7c0))" : "rgb(var(--thi-4f7f78))", marginTop: 1 }}>
+        <span className="block" style={{ fontSize: textPx(10.5), color: dark ? "rgb(var(--thi-a3c7c0))" : "rgb(var(--thi-4f7f78))", marginTop: 1 }}>
           {reward.detail}
         </span>
       </span>

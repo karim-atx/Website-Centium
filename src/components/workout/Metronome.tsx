@@ -3,6 +3,7 @@ import { Minus, Plus } from "lucide-react";
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { textPx } from "../../theme/textSize";
 
 // Design refinement §6.6: a real metronome mark, drawn at lucide's stroke
 // weight so it sits with the rest of the set — replaces the generic timer
@@ -146,7 +147,7 @@ export const Metronome: React.FC = () => {
           <style>{`@keyframes metro-beat { 0% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } } @keyframes metro-beat-soft { 0% { opacity: 0.25; } 100% { opacity: 1; } }`}</style>
           <p
             className="uppercase"
-            style={{ margin: "0 0 8px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-muted))" }}
+            style={{ margin: "0 0 8px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-muted))" }}
           >
             Metronome
           </p>
@@ -160,7 +161,7 @@ export const Metronome: React.FC = () => {
             >
               <Minus size={13} />
             </button>
-            <span className="tabular-nums" style={{ fontSize: 20, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
+            <span className="tabular-nums" style={{ fontSize: textPx(20), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
               {bpm} BPM
             </span>
             <button
@@ -183,7 +184,7 @@ export const Metronome: React.FC = () => {
               // mode; dark mode uses the deeper brand shade.
               background: running ? (dark ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--th-7d67d9))") : "rgb(var(--c-primary-fill))",
               color: "rgb(var(--c-on-primary-fill))",
-              fontSize: 14,
+              fontSize: textPx(14),
               fontWeight: 700,
             }}
           >

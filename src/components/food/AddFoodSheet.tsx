@@ -31,6 +31,7 @@ import { offAsFood, resolveBarcode, type OffProduct } from "../../services/barco
 import { mealForCurrentTime } from "../../utils/mealForTime";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
+import { textPx } from "../../theme/textSize";
 
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
@@ -584,7 +585,7 @@ export const AddFoodSheet: React.FC<{
       >
         {advancedOpen ? (
           <div className="animate-fade-slide-up flex flex-col gap-2.5">
-            <p style={{ fontSize: 13, color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
+            <p style={{ fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
               {selectedFood.name} ·{" "}
               {multiplierDisplay === 1 ? selectedFood.servingLabel : `${multiplierDisplay} × ${selectedFood.servingLabel}`}
             </p>
@@ -601,7 +602,7 @@ export const AddFoodSheet: React.FC<{
               />
             )}
 
-            <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
+            <p style={{ fontSize: textPx(10.5), lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
               % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
               Goals.
             </p>
@@ -619,13 +620,13 @@ export const AddFoodSheet: React.FC<{
                 <FoodIcon category={selectedFood.category} size={20} />
               </span>
               <div className="min-w-0">
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
+                <p style={{ margin: 0, fontSize: textPx(18), fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
                   {selectedFood.name}
                 </p>
                 {/* The verified/estimate note isn't in the handoff's header
                     spec; kept (restyled) because it tells the user whether the
                     figures are sourced or approximate. */}
-                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
                   {adjusting
                     ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
                     : `${selectedFood.servingLabel}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
@@ -637,7 +638,7 @@ export const AddFoodSheet: React.FC<{
               className="flex items-center"
               style={{ ...sheetGreyStyle, gap: 12, marginBottom: 10 }}
             >
-              <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
+              <span style={{ flex: "none", fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
               <input
                 value={quantityDraft}
                 onChange={(e) => {
@@ -649,7 +650,7 @@ export const AddFoodSheet: React.FC<{
                 onBlur={() => setQuantityDraft(String(quantity))}
                 inputMode="decimal"
                 className="min-w-0 text-center focus:outline-none"
-                style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
+                style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
               />
             </div>
 
@@ -702,8 +703,8 @@ export const AddFoodSheet: React.FC<{
                   className="text-center"
                   style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                 >
-                  <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
+                  <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: cell.color }}>{cell.value}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
                 </div>
               ))}
             </div>
@@ -719,7 +720,7 @@ export const AddFoodSheet: React.FC<{
                 type="button"
                 onClick={confirmAdjust}
                 className="tap w-full inline-flex items-center justify-center gap-2"
-                style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
+                style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
               >
                 <Check size={16} /> Confirm
               </button>
@@ -730,7 +731,7 @@ export const AddFoodSheet: React.FC<{
                 onClick={handleAdd}
                 disabled={justAdded || saving}
                 className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
+                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
               >
                 {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
               </button>
@@ -821,8 +822,8 @@ export const AddFoodSheet: React.FC<{
         <div className="flex flex-col animate-fade-slide-up" style={{ gap: 14 }}>
           {barcode && (
             <div className="flex items-center justify-between" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "11px 14px" }}>
-              <span style={{ fontSize: 13, color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
+              <span style={{ fontSize: textPx(13), color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
+              <span style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
             </div>
           )}
 
@@ -894,7 +895,7 @@ export const AddFoodSheet: React.FC<{
               <button
                 onClick={scanAgain}
                 className="tap flex-1"
-                style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 600 }}
+                style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
               >
                 Scan again
               </button>
@@ -902,7 +903,7 @@ export const AddFoodSheet: React.FC<{
                 <button
                   onClick={enterManually}
                   className="tap flex-1"
-                  style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 600 }}
+                  style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
                 >
                   Enter it myself
                 </button>
@@ -965,15 +966,15 @@ export const AddFoodSheet: React.FC<{
         </button>
         <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-left" style={{ gap: 10 }}>
           <span className="min-w-0">
-            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: 14, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: textPx(14), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
               {r.name}
               {r.star && <Star size={10} className="text-gold fill-gold shrink-0" />}
             </span>
-            <span className="block truncate" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
+            <span className="block truncate" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
               {r.sub}
             </span>
           </span>
-          <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
+          <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
             {r.kcal} kcal
           </span>
         </button>
@@ -992,7 +993,7 @@ export const AddFoodSheet: React.FC<{
         footer={
           multi ? (
             <div>
-              <p style={{ margin: "0 0 8px", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{picked.size} selected</p>
+              <p style={{ margin: "0 0 8px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{picked.size} selected</p>
               {multiError && (
                 <p className="text-xs font-semibold text-status-high" style={{ margin: "0 0 8px" }}>
                   {multiError}
@@ -1003,7 +1004,7 @@ export const AddFoodSheet: React.FC<{
                   onClick={(e) => (suggestMeal ? void logPicked(meal) : setMealAnchor(e.currentTarget))}
                   disabled={multiSaving}
                   className="tap flex-1 inline-flex items-center justify-center disabled:opacity-60"
-                  style={{ height: 50, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
+                  style={{ height: 50, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
                 >
                   <Plus size={16} /> {multiSaving ? "Adding…" : `Add food (${picked.size})`}
                 </button>
@@ -1013,7 +1014,7 @@ export const AddFoodSheet: React.FC<{
                     setMultiError(null);
                   }}
                   className="tap"
-                  style={{ padding: "0 10px", height: 44, color: "rgb(var(--c-charcoal-muted))", fontSize: 14, fontWeight: 500 }}
+                  style={{ padding: "0 10px", height: 44, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(14), fontWeight: 500 }}
                 >
                   Cancel
                 </button>
@@ -1143,7 +1144,7 @@ export const AddFoodSheet: React.FC<{
                     whiteSpace: "nowrap",
                     borderRadius: 8,
                     padding: "7px 13px",
-                    fontSize: 12,
+                    fontSize: textPx(12),
                     // The active chip: the board's #A299DE in light, primary-fill in dark.
                     border: `1px solid ${active ? "rgb(var(--c-fill-sheet))" : dark ? FOOD_DARK.outline : "#E7E7EC"}`,
                     background: active ? "rgb(var(--c-fill-sheet))" : "rgb(var(--c-cream-card))",

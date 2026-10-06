@@ -21,6 +21,7 @@ import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // of a second, drifting copy of them.
 import { foodTabs, type Tab } from "./foodTabs";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // FO2.2 / FO4.2 / FO5.2: each Weight Goal button carries its trend icon.
 const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[] = [
@@ -33,7 +34,7 @@ const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[
 // frames: white cards with a 1px #E7E6E6 (rgba(36,31,27,0.11)) hairline,
 // radius 16, 14px sides, 10px apart; titles are bold purple caps with no icon.
 const CARD_LIGHT: React.CSSProperties = { background: "rgb(var(--c-cream-card))", border: "1px solid #E7E6E6", borderRadius: 16, padding: "11px 14px 12px" };
-const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--thi-6d50d3))" };
+const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--thi-6d50d3))" };
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Colours whose light value is
@@ -66,7 +67,7 @@ const CARD_DARK: React.CSSProperties = { ...CARD_LIGHT, border: `1px solid ${GOA
 const TITLE_DARK: React.CSSProperties = { ...TITLE_LIGHT, color: GOALS_COLORS.title[1] };
 // "Use suggested" and "Use custom": one size (FO2.2 "both buttons the same size").
 // Both measure 92 x 28 in the frame.
-const ACTION: React.CSSProperties = { width: 92, height: 28, padding: 0, borderRadius: 10, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" };
+const ACTION: React.CSSProperties = { width: 92, height: 28, padding: 0, borderRadius: 10, fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap" };
 
 // V4: "Existing plan" applies a dietitian-provided target — a plausible
 // stand-in preset, since the prototype doesn't wire real template content
@@ -273,7 +274,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   borderRadius: 8,
                   background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-soft))",
                   color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
-                  fontSize: 12,
+                  fontSize: textPx(12),
                   fontWeight: 600,
                   whiteSpace: "nowrap",
                 }}
@@ -290,7 +291,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           // weekly rate share one row; the slider fills in its goal colour.
           <div className="flex items-end" style={{ gap: 18, marginTop: 14 }}>
             <label className="block flex-none">
-              <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
+              <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
                 Desired weight
               </span>
               <span className="flex items-center" style={{ gap: 7 }}>
@@ -304,13 +305,13 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   enterKeyHint="done"
                   aria-label="Desired weight in kg"
                   className="text-center focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
-                  style={{ width: 64, height: 28, borderRadius: 8, background: "rgb(var(--c-cream-soft))", border: `1px solid ${goalsColor("fieldBorder", dark)}`, fontSize: 13, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}
+                  style={{ width: 64, height: 28, borderRadius: 8, background: "rgb(var(--c-cream-soft))", border: `1px solid ${goalsColor("fieldBorder", dark)}`, fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}
                 />
-                <span style={{ fontSize: 11.5, color: "rgb(var(--c-charcoal-muted))" }}>kg</span>
+                <span style={{ fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>kg</span>
               </span>
             </label>
             <label className="block flex-1 min-w-0">
-              <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
+              <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
                 Desired weekly rate
               </span>
               <span className="flex items-center" style={{ gap: 8, height: 28 }}>
@@ -331,7 +332,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                     backgroundImage: `linear-gradient(to right, ${rateTint} ${rateFrac}%, rgb(var(--c-cream-soft)) ${rateFrac}%)`,
                   }}
                 />
-                <span className="flex-none" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))", whiteSpace: "nowrap" }}>
+                <span className="flex-none" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", whiteSpace: "nowrap" }}>
                   {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
                   {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
                 </span>
@@ -357,15 +358,15 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         <div className="flex" style={{ gap: 6 }}>
           <section style={{ ...CARD, flex: 138, minWidth: 0 }}>
             <p style={{ ...TITLE, marginBottom: 10 }}>Current weight</p>
-            <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>Last logged</p>
+            <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Last logged</p>
             {weight.current === null ? (
               <p className="text-[13px] font-semibold text-charcoal-tertiary" style={{ marginTop: 2 }}>
                 No weigh-ins yet
               </p>
             ) : (
-              <p style={{ margin: "1px 0 0", fontSize: 19, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
+              <p style={{ margin: "1px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                 {weight.current}
-                <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kg</span>
+                <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kg</span>
               </p>
             )}
           </section>
@@ -380,16 +381,16 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
               </>
             ) : (
               <>
-                <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
+                <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
                 {/* Wraps at 360, where the figure and the button don't both fit. */}
                 <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 6, marginTop: 1 }}>
-                  <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
+                  <p style={{ margin: 0, fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                     {tdee.toLocaleString()}
-                    <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
                   </p>
                   {useSuggestedButton}
                 </div>
-                <p style={{ margin: "6px 0 0", fontSize: 8.5, color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
+                <p style={{ margin: "6px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
               </>
             )}
           </section>
@@ -407,9 +408,9 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">No weigh-ins yet</p>
                 ) : (
                   <>
-                    <p style={{ margin: 0, fontSize: 24, fontWeight: 800, lineHeight: 1.1, color: "rgb(var(--c-charcoal))" }}>
+                    <p style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, lineHeight: 1.1, color: "rgb(var(--c-charcoal))" }}>
                       {weight.current}
-                      <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 3 }}>kg</span>
+                      <span style={{ fontSize: textPx(13), fontWeight: 700, marginLeft: 3 }}>kg</span>
                     </p>
                     {trendLabel(weightMeta) && <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>}
                   </>
@@ -452,25 +453,25 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                 <div className="flex items-center" style={{ gap: 10 }}>
                   {/* Content-sized: one line from 390 up, the label wraps at 360. */}
                   <div className="min-w-0" style={{ flex: "1 1 auto" }}>
-                    <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 19, fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
+                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
+                    <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                       {tdee.toLocaleString()}
-                      <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
                     </p>
                   </div>
                   <div className="min-w-0 self-stretch" style={{ flex: "1 1 auto", borderLeft: `1px solid ${goalsColor("hairline", dark)}`, paddingLeft: 10 }}>
-                    <p style={{ margin: 0, fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>Target calories</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 19, fontWeight: 800, color: rateColor, whiteSpace: "nowrap" }}>
+                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Target calories</p>
+                    <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: rateColor, whiteSpace: "nowrap" }}>
                       {(suggestedForGoal ?? tdee).toLocaleString()}
-                      <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
                     </p>
-                    <p style={{ margin: "1px 0 0", fontSize: 10.5, color: rateColor, opacity: 0.6 }}>
+                    <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: rateColor, opacity: 0.6 }}>
                       to {nutritionGoal.weightGoal} weight
                     </p>
                   </div>
                   {useSuggestedButton}
                 </div>
-                <p style={{ margin: "8px 0 0", fontSize: 8.5, color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
+                <p style={{ margin: "8px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
               </>
             )}
           </section>
@@ -506,9 +507,9 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                 disabled={locked}
                 aria-label="Daily calorie target"
                 className="text-right focus:outline-none disabled:opacity-60 bg-transparent self-center"
-                style={{ width: 38, padding: 0, fontSize: 14, fontWeight: 800, color: goalsColor("stepperFigure", dark) }}
+                style={{ width: 38, padding: 0, fontSize: textPx(14), fontWeight: 800, color: goalsColor("stepperFigure", dark) }}
               />
-              <span className="self-center" style={{ fontSize: 9.5, color: goalsColor("stepperUnit", dark) }}>kcal</span>
+              <span className="self-center" style={{ fontSize: textPx(9.5), color: goalsColor("stepperUnit", dark) }}>kcal</span>
             </span>
             <button
               onClick={() => !locked && setCalorieDraft(String(Number(calorieDraft || 0) + 50))}
@@ -554,7 +555,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Macro distribution</p>
         <MacroSplitEditor split={nutritionGoal.macroSplit} calories={targets.calories} onChange={setMacroSplit} disabled={locked} squares />
-        <p className="text-charcoal-faint" style={{ margin: "12px 0 0", fontSize: 9.5, lineHeight: 1.4 }}>
+        <p className="text-charcoal-faint" style={{ margin: "12px 0 0", fontSize: textPx(9.5), lineHeight: 1.4 }}>
           {MACRO_REBALANCE_NOTE}
         </p>
       </section>

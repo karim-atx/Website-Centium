@@ -16,6 +16,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { logoTone } from "../../components/food/logoTones";
 import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
+import { textPx } from "../../theme/textSize";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
 // load-error lines ask the user to "Pull to retry" (Part 4 Q7).
@@ -212,7 +213,7 @@ export default function MealPrepPanel() {
               borderRadius: 9,
               background: sub === k ? SUB[k].color : "transparent",
               color: sub === k ? SUB[k].ink : "rgb(var(--c-charcoal-soft))",
-              fontSize: 12,
+              fontSize: textPx(12),
               fontWeight: sub === k ? 700 : 600,
             }}
           >
@@ -223,10 +224,10 @@ export default function MealPrepPanel() {
 
       <div className="flex flex-col" style={{ gap: 8, marginTop: 12, paddingBottom: 72 }}>
         {error ? (
-          <p style={{ margin: 0, fontSize: 13, color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
+          <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
         ) : rows.length === 0 ? (
           <div className="flex items-center justify-center" style={{ height: 76, borderRadius: 16, background: t.row }}>
-            <p style={{ margin: 0, fontSize: 13, color: t.emptyText }}>{t.empty}</p>
+            <p style={{ margin: 0, fontSize: textPx(13), color: t.emptyText }}>{t.empty}</p>
           </div>
         ) : (
           rows.map((r) => (
@@ -243,10 +244,10 @@ export default function MealPrepPanel() {
                   {r.icon}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate" style={{ fontSize: 14, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+                  <span className="block truncate" style={{ fontSize: textPx(14), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                     {r.name}
                   </span>
-                  <span className="block truncate" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
+                  <span className="block truncate" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
                     {r.detail}
                   </span>
                 </span>
@@ -281,7 +282,7 @@ export default function MealPrepPanel() {
           borderRadius: 12,
           background: t.color,
           color: t.ink,
-          fontSize: 13.5,
+          fontSize: textPx(13.5),
           fontWeight: 700,
         }}
       >

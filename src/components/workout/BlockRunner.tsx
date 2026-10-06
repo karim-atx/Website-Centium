@@ -17,6 +17,7 @@ import {
   stoppedStopwatch,
   type Stopwatch,
 } from "../../services/workout/clock";
+import { textPx } from "../../theme/textSize";
 
 // Running a block, as opposed to reading one.
 //
@@ -160,8 +161,8 @@ export const BlockRunner: React.FC<{
       }}
     >
       <div style={{ padding: "10px 12px 8px" }}>
-        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 800, color: colors.ink }}>{heading}</p>
-        <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>{blockRunHint(block)}</p>
+        <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 800, color: colors.ink }}>{heading}</p>
+        <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>{blockRunHint(block)}</p>
       </div>
 
       {block.kind !== "superset" && (
@@ -396,11 +397,11 @@ const Clock: React.FC<{ value: string; ink: string; label: string }> = ({ value,
   <div style={{ minWidth: 78 }}>
     <p
       className="tabular-nums"
-      style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: "-0.03em", color: ink }}
+      style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, letterSpacing: "-0.03em", color: ink }}
     >
       {value}
     </p>
-    <p style={{ margin: 0, fontSize: 9.5, fontWeight: 600, color: "rgb(var(--c-charcoal-muted))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+    <p style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 600, color: "rgb(var(--c-charcoal-muted))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
       {label}
     </p>
   </div>
@@ -446,10 +447,10 @@ const Counter: React.FC<{ label: string; value: number; onChange: (by: number) =
       <Minus size={13} />
     </button>
     <span style={{ minWidth: 38, textAlign: "center" }}>
-      <span className="tabular-nums" style={{ display: "block", fontSize: 19, fontWeight: 800, color: ink }}>
+      <span className="tabular-nums" style={{ display: "block", fontSize: textPx(19), fontWeight: 800, color: ink }}>
         {value}
       </span>
-      <span style={{ display: "block", fontSize: 9, color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
+      <span style={{ display: "block", fontSize: textPx(9), color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
     </span>
     <button
       onClick={() => onChange(1)}
@@ -469,7 +470,7 @@ const NumberBox: React.FC<{
   placeholder?: string;
 }> = ({ label, value, onChange, placeholder }) => (
   <label className="block" style={{ width: 84 }}>
-    <span style={{ display: "block", fontSize: 9, color: "rgb(var(--c-charcoal-muted))", marginBottom: 3 }}>{label}</span>
+    <span style={{ display: "block", fontSize: textPx(9), color: "rgb(var(--c-charcoal-muted))", marginBottom: 3 }}>{label}</span>
     <input
       value={value == null ? "" : String(value)}
       onChange={(e) => {
@@ -485,7 +486,7 @@ const NumberBox: React.FC<{
         background: "rgb(var(--c-cream-card))",
         border: "1px solid rgb(var(--c-charcoal) / 0.1)",
         padding: "6px 9px",
-        fontSize: 14,
+        fontSize: textPx(14),
         textAlign: "center",
         color: "rgb(var(--c-charcoal))",
       }}

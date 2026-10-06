@@ -21,6 +21,7 @@ import {
 } from "../../services/workout/history";
 import { Calendar, CalendarDays, ChevronDown, ChevronUp, Dumbbell, Pencil, Plus, Trash2 } from "lucide-react";
 import type { WorkoutSession } from "../../types";
+import { linePx, textPx } from "../../theme/textSize";
 
 // WO3.1 · History as a card stack: a hero summary for the chosen period
 // (Total volume, Time taken, the comparison phrase, workouts and sets), then
@@ -133,7 +134,7 @@ export default function HistoryTab() {
           aria-haspopup="menu"
         >
           <Calendar size={13} style={{ color: chipColor("icon") }} />
-          <span style={{ fontSize: 12.5, fontWeight: 500, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: textPx(12.5), fontWeight: 500, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
             {(period === "custom" || period === "day") && custom
               ? custom.from === custom.to
                 ? shortDate(custom.from)
@@ -151,28 +152,28 @@ export default function HistoryTab() {
           <>
             <div className="flex items-start justify-between" style={{ gap: 12 }}>
               <div className="min-w-0">
-                <p style={{ margin: 0, fontSize: 8.5, lineHeight: "12px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
+                <p style={{ margin: 0, fontSize: textPx(8.5), lineHeight: linePx(12), fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
                   TOTAL VOLUME
                 </p>
                 <p className="flex items-baseline" style={{ margin: "3px 0 0", height: 28, whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{summary.volumeKg.toLocaleString()}</span>
-                  <span style={{ fontSize: 11, lineHeight: "14px", fontWeight: 600, color: "rgba(255,255,255,0.86)", marginLeft: 4 }}>kg</span>
+                  <span style={{ fontSize: textPx(24), lineHeight: linePx(28), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{summary.volumeKg.toLocaleString()}</span>
+                  <span style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, color: "rgba(255,255,255,0.86)", marginLeft: 4 }}>kg</span>
                 </p>
               </div>
               <div className="text-right flex-none">
-                <p style={{ margin: 0, fontSize: 8.5, lineHeight: "12px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
+                <p style={{ margin: 0, fontSize: textPx(8.5), lineHeight: linePx(12), fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
                   TIME TAKEN
                 </p>
-                <p style={{ margin: "3px 0 0", fontSize: 18, lineHeight: "24px", fontWeight: 800 }}>{formatCompactDuration(summary.seconds)}</p>
+                <p style={{ margin: "3px 0 0", fontSize: textPx(18), lineHeight: linePx(24), fontWeight: 800 }}>{formatCompactDuration(summary.seconds)}</p>
               </div>
             </div>
             {phrase && (
-              <p style={{ margin: "4px 0 0", fontSize: 10.5, lineHeight: "15px", color: "rgba(255,255,255,0.86)" }}>{phrase}</p>
+              <p style={{ margin: "4px 0 0", fontSize: textPx(10.5), lineHeight: linePx(15), color: "rgba(255,255,255,0.86)" }}>{phrase}</p>
             )}
           </>
         }
         bottom={
-          <div className="flex items-center justify-between" style={{ fontSize: 12.5, lineHeight: "16px" }}>
+          <div className="flex items-center justify-between" style={{ fontSize: textPx(12.5), lineHeight: linePx(16) }}>
             <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <CalendarDays size={12} />
               <span>
@@ -350,18 +351,18 @@ const SessionCard: React.FC<{
             // folder colours, white on Black, so the date reads at 4.5:1.
             style={{ width: 56, background: family.head, color: headInk(family) }}
           >
-            <span style={{ fontSize: 19, lineHeight: "20px", fontWeight: 800 }}>{d.getDate()}</span>
-            <span style={{ fontSize: 11, lineHeight: "13px", fontWeight: 700, marginTop: 2 }}>
+            <span style={{ fontSize: textPx(19), lineHeight: linePx(20), fontWeight: 800 }}>{d.getDate()}</span>
+            <span style={{ fontSize: textPx(11), lineHeight: linePx(13), fontWeight: 700, marginTop: 2 }}>
               {d.toLocaleDateString("en-US", { month: "short" })}
             </span>
-            <span style={{ fontSize: 8.5, lineHeight: "10px", fontWeight: 600, color: headInkSoft(family) }}>{d.getFullYear()}</span>
+            <span style={{ fontSize: textPx(8.5), lineHeight: linePx(10), fontWeight: 600, color: headInkSoft(family) }}>{d.getFullYear()}</span>
           </button>
           <button onClick={onToggle} aria-expanded={expanded} className="tap flex-1 min-w-0 flex items-center text-left" style={{ padding: "0 14px 0 15px", gap: 10 }}>
             <span className="flex-1 min-w-0">
-              <span className="block truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+              <span className="block truncate" style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                 {session.routineName}
               </span>
-              <span className="block truncate" style={{ marginTop: 3, fontSize: 11.5, lineHeight: "15px", color: "rgb(var(--c-charcoal-muted))" }}>
+              <span className="block truncate" style={{ marginTop: 3, fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgb(var(--c-charcoal-muted))" }}>
                 {session.totalVolumeKg.toLocaleString()} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
               </span>
             </span>
@@ -382,10 +383,10 @@ const SessionCard: React.FC<{
                 <div key={ex.exerciseId} className="flex items-center" style={{ padding: "7px 0", gap: 8 }}>
                   {/* Dark: the dot lifted to 3:1 on the dark row (only Black's bar is under it). */}
                   <span aria-hidden className="flex-none rounded-full" style={{ width: 6, height: 6, background: dark ? liftTo(family.bar, family.row, 3) : family.bar }} />
-                  <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "19px", fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
+                  <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13), lineHeight: linePx(19), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                     {ex.name}
                   </span>
-                  <span className="flex-none" style={{ fontSize: 12, lineHeight: "19px", color: "rgb(var(--c-charcoal-soft))", whiteSpace: "nowrap" }}>
+                  <span className="flex-none" style={{ fontSize: textPx(12), lineHeight: linePx(19), color: "rgb(var(--c-charcoal-soft))", whiteSpace: "nowrap" }}>
                     {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? `${done} ${done === 1 ? "set" : "sets"}` : ""}
                   </span>
                 </div>
@@ -395,7 +396,7 @@ const SessionCard: React.FC<{
               <button
                 onClick={() => setShowAll(true)}
                 className="tap flex items-center"
-                style={{ padding: "7px 0 0 2px", gap: 12, fontSize: 12, lineHeight: "16px", fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
+                style={{ padding: "7px 0 0 2px", gap: 12, fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
               >
                 <Plus size={12} strokeWidth={2.4} /> {more} more {more === 1 ? "exercise" : "exercises"}
               </button>

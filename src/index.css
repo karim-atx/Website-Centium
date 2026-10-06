@@ -558,11 +558,19 @@ body {
   transition-duration: 0.001ms !important;
 }
 
+/* R21 / D15–D16: Larger text adds 2px to every font size (max 34px) and to
+   every fixed line height. The sizes read this variable through the
+   build-time rule in scripts/postcss/larger-text.js and, for inline sizes,
+   src/theme/textSize.ts; the root font size stays 100%. */
+html.larger-text {
+  --text-boost: 2px;
+}
+
 /* V8 (QA 8.0): "the button should have larger text and icons as well" —
-   Larger text already scales the root font-size; icons are lucide-react
-   SVGs sized in raw px, which font-size scaling doesn't reach, so scale
-   them visually in step. transform leaves layout boxes untouched, which
-   is an acceptable trade-off for this accessibility toggle. */
+   icons are lucide-react SVGs sized in raw px, which the text boost doesn't
+   reach, so scale them visually in step (D17 keeps this). transform leaves
+   layout boxes untouched, which is an acceptable trade-off for this
+   accessibility toggle. */
 .larger-icons svg {
   transform: scale(1.15);
 }

@@ -23,6 +23,7 @@ import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 import { HabitPages } from "../mind/HabitPages";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
 // 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
@@ -277,19 +278,19 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
 
       <p
         className="absolute uppercase"
-        style={{ left: 25, top: 19, margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
+        style={{ left: 25, top: 19, margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
       >
         Water
       </p>
       <p
         className="absolute tabular-nums"
-        style={{ left: 25, top: 37, margin: 0, fontSize: 29, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
+        style={{ left: 25, top: 37, margin: 0, fontSize: textPx(29), fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
       >
         {(water / 1000).toFixed(1)} L
       </p>
       <p
         className="absolute"
-        style={{ left: 25, top: 70, margin: 0, fontSize: 13.5, fontWeight: 500, lineHeight: 1.2, whiteSpace: "nowrap", color: subColor, textShadow }}
+        style={{ left: 25, top: 70, margin: 0, fontSize: textPx(13.5), fontWeight: 500, lineHeight: 1.2, whiteSpace: "nowrap", color: subColor, textShadow }}
       >
         {subLabel}
       </p>
@@ -301,7 +302,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
           top: 15,
           height: 28,
           padding: "0 14px",
-          fontSize: 13.5,
+          fontSize: textPx(13.5),
           fontWeight: 700,
           lineHeight: 1,
           whiteSpace: "nowrap",
@@ -341,7 +342,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       {/* Goal marker: a hairline beside the goal figure. */}
       <span className="absolute flex items-stretch" style={{ right: 21, top: 82, gap: 8 }}>
         <span style={{ width: 1, background: "#FFFFFF", flex: "none" }} />
-        <span className="flex flex-col justify-center" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.16, color: goalColor }}>
+        <span className="flex flex-col justify-center" style={{ fontSize: textPx(11), fontWeight: 500, lineHeight: 1.16, color: goalColor }}>
           <span>{(waterGoalMl / 1000).toFixed(1)} L</span>
           <span>Goal</span>
         </span>
@@ -1082,13 +1083,13 @@ export const HomeWidget: React.FC<{
                         y={p.y - 7}
                         textAnchor="middle"
                         fontFamily="Manrope"
-                        fontSize={8}
+                        style={{ fontSize: textPx(8) }}
                         fontWeight={700}
                         fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .6)"}
                       >
                         {p.v.toFixed(1)}
                       </text>
-                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .5)"}>
+                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" style={{ fontSize: textPx(7.5) }} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .5)"}>
                         {dayLetter(p.date)}
                       </text>
                     </React.Fragment>

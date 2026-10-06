@@ -6,6 +6,7 @@ import { MUSCLE_GROUP_LABEL, SELECTABLE_MUSCLE_GROUPS } from "../../utils/muscle
 import { disciplineSummary } from "../../utils/exerciseTags";
 import { classificationLabel } from "../../utils/exerciseClassification";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 export interface BuiltInExercise {
   name: string;
@@ -40,7 +41,7 @@ const fieldStyle = (dark: boolean): React.CSSProperties => ({
   background: COLORS.field[dark ? 1 : 0],
   border: "1px solid rgb(var(--c-charcoal) / 0.1)",
   padding: "0 14px",
-  fontSize: 14,
+  fontSize: textPx(14),
   color: "rgb(var(--c-charcoal))",
 });
 
@@ -69,7 +70,7 @@ export const BuiltInExerciseSheet: React.FC<{
             onClick={onInfo}
             disabled={!onInfo}
             className="tap w-full flex items-center justify-center disabled:opacity-60"
-            style={{ height: 48, borderRadius: 14, background: c("infoBg"), border: `1px solid ${c("infoBorder")}`, color: c("ink"), gap: 8, fontSize: 14, fontWeight: 700 }}
+            style={{ height: 48, borderRadius: 14, background: c("infoBg"), border: `1px solid ${c("infoBorder")}`, color: c("ink"), gap: 8, fontSize: textPx(14), fontWeight: 700 }}
           >
             <Eye size={18} /> Information
           </button>
@@ -119,7 +120,7 @@ export const BuiltInExerciseSheet: React.FC<{
             onClick={onHistory}
             disabled={!onHistory}
             className="tap w-full flex items-center justify-center disabled:opacity-60"
-            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", gap: 8, fontSize: 14, fontWeight: 700 }}
+            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", gap: 8, fontSize: textPx(14), fontWeight: 700 }}
           >
             <BookOpen size={18} /> History
           </button>

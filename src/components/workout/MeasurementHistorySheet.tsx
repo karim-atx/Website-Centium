@@ -18,6 +18,7 @@ import {
 } from "../../services/measurements/trend";
 import { useIsDark } from "../../hooks/useIsDark";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
+import { textPx } from "../../theme/textSize";
 
 // Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the goal
 // button's border takes option-border dark and the reading rows surface.raised
@@ -108,11 +109,11 @@ export const MeasurementHistorySheet: React.FC<{
       <div className="animate-fade-slide-up">
         {latest && (
           <div className="flex items-start justify-between" style={{ gap: 12 }}>
-            <p style={{ color: "rgb(var(--c-charcoal))", fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+            <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(24), fontWeight: 800, lineHeight: 1.1 }}>
               {latest.value}
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 15, fontWeight: 500, marginLeft: 4 }}>{unit}</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(15), fontWeight: 500, marginLeft: 4 }}>{unit}</span>
             </p>
-            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, marginTop: 4 }}>
+            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), marginTop: 4 }}>
               {readings.length} reading{readings.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -130,7 +131,7 @@ export const MeasurementHistorySheet: React.FC<{
             borderRadius: 8,
             background: "rgb(var(--c-cream-soft))",
             border: `1px solid ${COLORS.goalBorder[dark ? 1 : 0]}`,
-            fontSize: 11.5,
+            fontSize: textPx(11.5),
           }}
         >
           <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>Goal:</span>
@@ -152,7 +153,7 @@ export const MeasurementHistorySheet: React.FC<{
         />
 
         {summary && (
-          <p style={{ marginTop: 10, color: dark ? liftTo(color, DARK_SURFACE.card) : color, fontSize: 11, fontWeight: 600 }}>{summary}</p>
+          <p style={{ marginTop: 10, color: dark ? liftTo(color, DARK_SURFACE.card) : color, fontSize: textPx(11), fontWeight: 600 }}>{summary}</p>
         )}
 
         {points.length > 0 && (
@@ -196,7 +197,7 @@ export const MeasurementHistorySheet: React.FC<{
                   className="flex items-center justify-between"
                   style={{ height: 44, padding: "0 12px", gap: 10, borderRadius: 12, background: COLORS.row[dark ? 1 : 0] }}
                 >
-                  <span className="truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5 }}>
+                  <span className="truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5) }}>
                     {date}
                   </span>
                   {editingId === reading.id ? (
@@ -226,7 +227,7 @@ export const MeasurementHistorySheet: React.FC<{
                         background: "rgb(var(--c-cream-card))",
                         border: "2px solid rgb(var(--th-aea1dc))",
                         color: "rgb(var(--c-charcoal))",
-                        fontSize: 14,
+                        fontSize: textPx(14),
                       }}
                     />
                   ) : (
@@ -238,10 +239,10 @@ export const MeasurementHistorySheet: React.FC<{
                       }}
                       aria-label={`Edit ${site.label} from ${date}`}
                       className="tap flex-none"
-                      style={{ color: "rgb(var(--c-charcoal))", fontSize: 14, fontWeight: 700 }}
+                      style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(14), fontWeight: 700 }}
                     >
                       {reading.value}
-                      <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>{unit}</span>
+                      <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginLeft: 3 }}>{unit}</span>
                     </button>
                   )}
                 </div>
@@ -253,7 +254,7 @@ export const MeasurementHistorySheet: React.FC<{
         <button
           onClick={onClose}
           className="tap w-full flex items-center justify-center"
-          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
+          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
           Done
         </button>

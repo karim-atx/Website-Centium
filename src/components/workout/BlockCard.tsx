@@ -3,6 +3,7 @@ import type { BlockKind, Exercise, WorkoutBlock } from "../../types";
 import { blockHeading, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { liftTo, tintOn, DARK_SURFACE } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 export type { RenderRun } from "../../services/workout/blocks";
 
 // A block, as it reads in a routine, a template or a curated program.
@@ -94,8 +95,8 @@ export const BlockCard: React.FC<{
           style: { display: "block", width: "100%", padding: "9px 12px 7px" },
         },
         <>
-          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 800, color: colors.ink }}>{heading}</p>
-          <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 800, color: colors.ink }}>{heading}</p>
+          <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>
             {EXPLANATION[block.kind]}
             {block.label?.trim() ? "" : ""}
           </p>
@@ -104,7 +105,7 @@ export const BlockCard: React.FC<{
 
       <div style={{ background: "rgb(var(--c-cream-card))", margin: "0 6px 6px", borderRadius: 10 }}>
         {members.length === 0 ? (
-          <p style={{ margin: 0, padding: "10px 12px", fontSize: 11.5, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: 0, padding: "10px 12px", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
             Nothing in this block yet.
           </p>
         ) : (
@@ -121,9 +122,9 @@ export const BlockCard: React.FC<{
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
+                  <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
                   {line && (
-                    <p style={{ margin: "1px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{line}</p>
+                    <p style={{ margin: "1px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{line}</p>
                   )}
                 </div>
                 {renderMemberAction?.(ex)}

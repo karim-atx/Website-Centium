@@ -1,5 +1,6 @@
 import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the purple
@@ -56,7 +57,7 @@ export const HeroCard: React.FC<{
 /** The bottom band's figure / label pair (#2E2560 / #463A80). */
 export const HeroStat: React.FC<{ value: React.ReactNode; label: string }> = ({ value, label }) => (
   <div className="min-w-0">
-    <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--hero-value)", fontVariantNumeric: "tabular-nums" }}>{value}</p>
-    <p style={{ margin: "1px 0 0", fontSize: 11, fontWeight: 600, color: "var(--hero-label)" }}>{label}</p>
+    <p style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: "var(--hero-value)", fontVariantNumeric: "tabular-nums" }}>{value}</p>
+    <p style={{ margin: "1px 0 0", fontSize: textPx(11), fontWeight: 600, color: "var(--hero-label)" }}>{label}</p>
   </div>
 );

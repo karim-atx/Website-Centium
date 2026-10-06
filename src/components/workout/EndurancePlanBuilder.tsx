@@ -8,6 +8,7 @@ import type {
   EnduranceTarget,
 } from "../../types";
 import { clockToSeconds, emptyStep, secondsToClock } from "../../services/workout/endurance";
+import { textPx } from "../../theme/textSize";
 
 // The structured cardio prescription, as a form.
 //
@@ -25,7 +26,7 @@ import { clockToSeconds, emptyStep, secondsToClock } from "../../services/workou
 // prescription.
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: textPx(12),
   fontWeight: 600,
   color: "rgb(var(--c-charcoal-soft))",
   marginBottom: 6,
@@ -38,7 +39,7 @@ const numberInputStyle: React.CSSProperties = {
   background: "rgb(var(--c-cream-card))",
   border: "1px solid rgb(var(--c-charcoal) / 0.1)",
   padding: "9px 11px",
-  fontSize: 14,
+  fontSize: textPx(14),
   color: "rgb(var(--c-charcoal))",
   textAlign: "center",
 };
@@ -70,7 +71,7 @@ const NumberField: React.FC<{
   ariaLabel: string;
 }> = ({ label, value, onChange, placeholder, ariaLabel }) => (
   <label className="block" style={{ flex: 1, minWidth: 0 }}>
-    <span style={{ ...labelStyle, fontSize: 11 }}>{label}</span>
+    <span style={{ ...labelStyle, fontSize: textPx(11) }}>{label}</span>
     <input
       value={value === undefined ? "" : String(value)}
       onChange={(e) => onChange(digits(e.target.value))}
@@ -226,7 +227,7 @@ const StepEditor: React.FC<{
 
       {target.kind === "pace" && (
         <div>
-          <span style={{ ...labelStyle, fontSize: 11 }}>Per km, faster end first</span>
+          <span style={{ ...labelStyle, fontSize: textPx(11) }}>Per km, faster end first</span>
           <div className="flex items-end" style={{ gap: 8 }}>
             <NumberField
               label="Min"

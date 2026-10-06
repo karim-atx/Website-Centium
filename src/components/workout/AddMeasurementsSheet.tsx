@@ -21,6 +21,7 @@ import {
   type MeasurementType,
 } from "../../services/measurements/sites";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Recording one set of tape measurements.
 //
@@ -129,7 +130,7 @@ export const AddMeasurementsSheet: React.FC<{
       <div className="animate-fade-slide-up">
         {/* WO4.1: "Measured" centred, bold and purple; the field opens the
             calendar popup with a wheel time picker (no future). */}
-        <p className="text-center" style={{ color: c("purple"), fontSize: 13, fontWeight: 700 }}>
+        <p className="text-center" style={{ color: c("purple"), fontSize: textPx(13), fontWeight: 700 }}>
           Measured
         </p>
         <button
@@ -147,7 +148,7 @@ export const AddMeasurementsSheet: React.FC<{
             background: "rgb(var(--c-cream-soft))",
             border: `1px solid ${c("whenBorder")}`,
             color: "rgb(var(--c-charcoal))",
-            fontSize: 14,
+            fontSize: textPx(14),
           }}
         >
           {formatMeasured(when)}
@@ -165,7 +166,7 @@ export const AddMeasurementsSheet: React.FC<{
                   borderRadius: "10px 10px 0 0",
                   padding: "4px 11px 3px",
                   color: "rgb(var(--c-charcoal))",
-                  fontSize: 12,
+                  fontSize: textPx(12),
                   fontWeight: 800,
                 }}
               >
@@ -176,7 +177,7 @@ export const AddMeasurementsSheet: React.FC<{
             <div className="grid grid-cols-2" style={{ gap: "10px 8px", marginTop: 10 }}>
               {MEASUREMENT_SITES.filter((s) => s.group === group).map((site) => (
                 <label key={site.type} className="block">
-                  <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, marginBottom: 5 }}>
+                  <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), marginBottom: 5 }}>
                     {site.label}
                   </span>
                   <span className="relative block">
@@ -194,7 +195,7 @@ export const AddMeasurementsSheet: React.FC<{
                         background: "rgb(var(--c-cream-soft))",
                         border: `1px solid ${c("fieldBorder")}`,
                         color: "rgb(var(--c-charcoal))",
-                        fontSize: 14,
+                        fontSize: textPx(14),
                       }}
                     />
                     {/* The unit is stated on every field rather than once in a
@@ -202,7 +203,7 @@ export const AddMeasurementsSheet: React.FC<{
                         number means is only ever what the label says. */}
                     <span
                       className="absolute pointer-events-none"
-                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5 }}
+                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5) }}
                     >
                       {site.unit}
                     </span>
@@ -223,7 +224,7 @@ export const AddMeasurementsSheet: React.FC<{
           onClick={() => void save()}
           disabled={saving || filled === 0}
           className="tap w-full flex items-center justify-center disabled:opacity-60"
-          style={{ marginTop: 18, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
+          style={{ marginTop: 18, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
           {saving
             ? "Saving…"
@@ -249,7 +250,7 @@ export const AddMeasurementsSheet: React.FC<{
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)" }}>
               <p
                 className="text-center"
-                style={{ color: c("timeLabel"), fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
+                style={{ color: c("timeLabel"), fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
               >
                 TIME
               </p>

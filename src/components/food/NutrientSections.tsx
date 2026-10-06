@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { NUTRIENT_SECTIONS, CALC_KEYS, type NutrientRow, type NutrientSection } from "../../data/nutrientSchema";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Colours whose light value is
@@ -194,7 +195,7 @@ function rowHasData(view: RowView): boolean {
 // percent slot on one baseline, the target line beneath with the partial and
 // calculated chips, then the bar, the over-limit strip and the notes.
 
-const chipStyle = { fontSize: 8.5, fontWeight: 700, borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap" } as const;
+const chipStyle = { fontSize: textPx(8.5), fontWeight: 700, borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap" } as const;
 
 function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: string }) {
   const { row, target, percent, isOverLimit, partial } = view;
@@ -235,7 +236,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
         <p
           style={{
             margin: "0 0 8px",
-            fontSize: 9,
+            fontSize: textPx(9),
             fontWeight: 700,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
@@ -246,19 +247,19 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
         </p>
       )}
       <div className="flex items-baseline" style={{ gap: 8 }}>
-        <span className="flex-1 min-w-0" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+        <span className="flex-1 min-w-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
           {row.name}
         </span>
         <span
           className="flex-none tabular-nums whitespace-nowrap"
-          style={{ fontSize: 12, fontWeight: 700, color: hasAmount ? "rgb(var(--c-charcoal))" : nsColor("noAmount", dark) }}
+          style={{ fontSize: textPx(12), fontWeight: 700, color: hasAmount ? "rgb(var(--c-charcoal))" : nsColor("noAmount", dark) }}
         >
           {amountText}
         </span>
         {showPercent && percent !== null ? (
           <span
             className="flex-none tabular-nums"
-            style={{ width: 42, textAlign: "right", fontSize: 10, fontWeight: 700, color: isOver ? nsColor("over", dark) : nsColor("lav", dark) }}
+            style={{ width: 42, textAlign: "right", fontSize: textPx(10), fontWeight: 700, color: isOver ? nsColor("over", dark) : nsColor("lav", dark) }}
           >
             {Math.round(percent)}%
           </span>
@@ -270,7 +271,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
       <div className="flex items-center" style={{ gap: 6, marginTop: 3 }}>
         <span
           className="flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis"
-          style={{ fontSize: 9.5, color: "rgb(var(--c-charcoal-muted))" }}
+          style={{ fontSize: textPx(9.5), color: "rgb(var(--c-charcoal-muted))" }}
         >
           {targetText}
         </span>
@@ -313,17 +314,17 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
           style={{ gap: 5, marginTop: 6, background: nsColor("goldTint", dark), borderRadius: 8, padding: "5px 8px" }}
         >
           <AlertTriangle size={11} color={nsColor("over", dark)} strokeWidth={2} className="flex-none" style={{ display: "block" }} />
-          <span className="whitespace-nowrap" style={{ fontSize: 9.5, fontWeight: 600, color: nsColor("goldText", dark) }}>
+          <span className="whitespace-nowrap" style={{ fontSize: textPx(9.5), fontWeight: 600, color: nsColor("goldText", dark) }}>
             Over the {formatAmount(target)}
             {unitSuffix} limit
           </span>
         </span>
       )}
 
-      {row.note && <p style={{ margin: "5px 0 0", fontSize: 9, lineHeight: 1.45, color: "rgb(var(--c-charcoal-muted))" }}>{row.note}</p>}
+      {row.note && <p style={{ margin: "5px 0 0", fontSize: textPx(9), lineHeight: 1.45, color: "rgb(var(--c-charcoal-muted))" }}>{row.note}</p>}
 
       {hasPartial && partial && (
-        <p style={{ margin: "4px 0 0", fontSize: 9, lineHeight: 1.45, color: nsColor("goldText", dark) }}>
+        <p style={{ margin: "4px 0 0", fontSize: textPx(9), lineHeight: 1.45, color: nsColor("goldText", dark) }}>
           Based on {partial.shown} of {partial.of} foods
         </p>
       )}
@@ -385,7 +386,7 @@ function NutrientSectionBlock({
         <span
           className="shrink-0 tabular-nums whitespace-nowrap"
           style={{
-            fontSize: 9.5,
+            fontSize: textPx(9.5),
             fontWeight: 700,
             color: nsColor("lav", dark),
             background: "rgb(var(--th-aea1dc) / 0.18)",
@@ -405,7 +406,7 @@ function NutrientSectionBlock({
       {expanded && (
         <div style={{ marginTop: 12, animation: "fade-slide-up .35s cubic-bezier(.22,1,.36,1) both" }}>
           {rows.length === 0 ? (
-            <p style={{ margin: 0, padding: "14px 0", textAlign: "center", fontSize: 11.5, color: "rgb(var(--c-charcoal-muted))" }}>
+            <p style={{ margin: 0, padding: "14px 0", textAlign: "center", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
               Nothing logged in this group yet
             </p>
           ) : (
@@ -512,10 +513,10 @@ function NutrientDetailSection({
         style={{ padding: "10px 12px", gap: 8, background: expanded ? "rgb(var(--th-aea1dc) / 0.12)" : "rgb(var(--c-cream-card))" }}
         aria-expanded={expanded}
       >
-        <span className="flex-1 min-w-0" style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+        <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
           {section.name}
         </span>
-        <span className="shrink-0 tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: "rgb(var(--c-charcoal-muted))" }}>
+        <span className="shrink-0 tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 600, color: "rgb(var(--c-charcoal-muted))" }}>
           {withAmounts.length} of {rows.length}
         </span>
         <ChevronDown
@@ -528,7 +529,7 @@ function NutrientDetailSection({
       {expanded && (
         <div style={{ padding: "2px 12px 10px" }}>
           {visible.length === 0 ? (
-            <p style={{ margin: "8px 0", fontSize: 11.5, color: "rgb(var(--c-charcoal-muted))" }}>
+            <p style={{ margin: "8px 0", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
               No data for this food in this group.
             </p>
           ) : (
@@ -550,13 +551,13 @@ function NutrientDetailSection({
               return (
                 <div key={row.key} style={{ padding: "7px 0", borderTop: i > 0 ? "1px solid rgb(var(--c-charcoal) / 0.05)" : undefined }}>
                 <div className="flex items-center" style={{ gap: 8 }}>
-                  <span className="flex-1 min-w-0" style={{ fontSize: 12.5, color: "rgb(var(--c-charcoal))" }}>
+                  <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), color: "rgb(var(--c-charcoal))" }}>
                     {row.name}
                     {LIMIT_NUTRIENTS.has(row.name) && (
                       <span
                         style={{
                           marginLeft: 6,
-                          fontSize: 9,
+                          fontSize: textPx(9),
                           fontWeight: 700,
                           color: nsColor("goldText", dark),
                           background: "rgba(217,164,65,0.16)",
@@ -571,7 +572,7 @@ function NutrientDetailSection({
                       <span
                         style={{
                           marginLeft: 6,
-                          fontSize: 9,
+                          fontSize: textPx(9),
                           fontWeight: 700,
                           color: nsColor("goldText", dark),
                           background: "rgba(217,164,65,0.22)",
@@ -585,7 +586,7 @@ function NutrientDetailSection({
                   </span>
                   <span
                     className="shrink-0 tabular-nums"
-                    style={{ fontSize: 12.5, fontWeight: hasValue ? 700 : 500, color: hasValue ? "rgb(var(--c-charcoal))" : nsColor("noValue", dark) }}
+                    style={{ fontSize: textPx(12.5), fontWeight: hasValue ? 700 : 500, color: hasValue ? "rgb(var(--c-charcoal))" : nsColor("noValue", dark) }}
                   >
                     {amountText}
                   </span>
@@ -594,7 +595,7 @@ function NutrientDetailSection({
                     style={{
                       width: 46,
                       textAlign: "right",
-                      fontSize: 11.5,
+                      fontSize: textPx(11.5),
                       fontWeight: 700,
                       color: percent === null ? "transparent" : overLimit ? nsColor("overLimit", dark) : nsColor("lav", dark),
                     }}
@@ -603,7 +604,7 @@ function NutrientDetailSection({
                   </span>
                 </div>
                 {partial && (
-                  <p style={{ margin: "2px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>
+                  <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>
                     Based on {known} of {n} ingredients
                   </p>
                 )}

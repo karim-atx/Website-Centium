@@ -17,6 +17,7 @@ import {
 import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import type { PrepKind } from "./MealPrepFlowSheet";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
@@ -28,7 +29,7 @@ const fieldStyleLight: React.CSSProperties = {
   border: "none",
   borderRadius: 14,
   padding: "11px 14px",
-  fontSize: 14,
+  fontSize: textPx(14),
   color: PREP_CHARCOAL,
   width: "100%",
 };
@@ -454,7 +455,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                         inputMode="decimal"
                         aria-label={`${it.food.name} quantity`}
                         className="w-14 shrink-0 text-center focus:outline-none"
-                        style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: 13.5, fontWeight: 700, color: PREP_CHARCOAL }}
+                        style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: textPx(13.5), fontWeight: 700, color: PREP_CHARCOAL }}
                       />
                       <div className="flex gap-1.5 scroll-row no-scrollbar min-w-0">
                         {servingUnitOptions.map((u) => (
@@ -462,7 +463,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                             key={u}
                             onClick={() => patchItem(i, { unit: u })}
                             className="tap"
-                            style={{ ...sheetChipStyle((it.unit ?? "serving") === u), padding: "5px 10px", fontSize: 12 }}
+                            style={{ ...sheetChipStyle((it.unit ?? "serving") === u), padding: "5px 10px", fontSize: textPx(12) }}
                           >
                             {u}
                           </button>
@@ -521,7 +522,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
               onClick={() => void save()}
               disabled={!title.trim() || items.length === 0 || saving}
               className="tap flex-1 disabled:opacity-40 disabled:pointer-events-none"
-              style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind], fontSize: 15.5, fontWeight: 700 }}
+              style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind], fontSize: textPx(15.5), fontWeight: 700 }}
             >
               {saving ? "Saving…" : editing ? "Save changes" : "Save"}
             </button>

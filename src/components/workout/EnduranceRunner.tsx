@@ -15,6 +15,7 @@ import {
 } from "../../services/workout/clock";
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Mobile v5.1 R3 (no light islands): the plan box's pale lavender has no
 // token of the same light value; dark is primary.tint.2 on the card
@@ -219,7 +220,7 @@ const Field: React.FC<{
 }> = ({ label, placeholder, value, onChange, hint, onHint }) => (
   <label className="block" style={{ width: 104 }}>
     <span className="flex items-baseline justify-between" style={{ marginBottom: 3 }}>
-      <span style={{ fontSize: 9.5, color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
+      <span style={{ fontSize: textPx(9.5), color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
       {hint && (
         <button onClick={onHint} className="tap text-[9.5px] font-bold text-primary">
           {hint}
@@ -238,7 +239,7 @@ const Field: React.FC<{
         background: "rgb(var(--c-cream-card))",
         border: "1px solid rgb(var(--c-charcoal) / 0.1)",
         padding: "7px 9px",
-        fontSize: 14,
+        fontSize: textPx(14),
         textAlign: "center",
         color: "rgb(var(--c-charcoal))",
       }}

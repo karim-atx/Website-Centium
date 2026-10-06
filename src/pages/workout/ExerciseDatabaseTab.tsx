@@ -13,6 +13,7 @@ import { ExerciseHistorySheet } from "../../components/workout/ExerciseHistorySh
 import type { FigureKey, ZoneKey } from "../../data/bodyZones";
 import { BodyFigure } from "../../components/workout/BodyFigure";
 import { useIsDark } from "../../hooks/useIsDark";
+import { linePx, textPx } from "../../theme/textSize";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -116,7 +117,7 @@ const controlStyle = (on: boolean): React.CSSProperties => ({
   height: 30,
   borderRadius: 10,
   padding: "0 11px",
-  fontSize: 11.5,
+  fontSize: textPx(11.5),
   fontWeight: 600,
   whiteSpace: "nowrap",
   border: `1px solid ${on ? "rgb(var(--th-aea1dc))" : "rgb(var(--c-charcoal) / 0.11)"}`,
@@ -332,7 +333,7 @@ export default function ExerciseDatabaseTab() {
                   borderRadius: 9,
                   padding: "0 13px",
                   gap: 6,
-                  fontSize: 12,
+                  fontSize: textPx(12),
                   fontWeight: 700,
                   background: on ? "rgb(var(--c-primary-fill))" : "transparent",
                   color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-muted))",
@@ -355,7 +356,7 @@ export default function ExerciseDatabaseTab() {
           placeholder="Search exercises…"
           aria-label="Search exercises"
           className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: 14 }}
+          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: textPx(14) }}
         />
       </div>
 
@@ -397,7 +398,7 @@ export default function ExerciseDatabaseTab() {
           )}
           </div>
 
-          <p style={{ margin: "0 0 8px 2px", fontSize: 11, fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ margin: "0 0 8px 2px", fontSize: textPx(11), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
             {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
           </p>
 
@@ -426,7 +427,7 @@ export default function ExerciseDatabaseTab() {
                           {e.isCustom && (
                             <span
                               style={{
-                                fontSize: 9,
+                                fontSize: textPx(9),
                                 fontWeight: 800,
                                 letterSpacing: "0.06em",
                                 textTransform: "uppercase",
@@ -439,12 +440,12 @@ export default function ExerciseDatabaseTab() {
                               Yours
                             </span>
                           )}
-                          <span className="truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
+                          <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                             {e.name}
                           </span>
                         </span>
                         {e.tags.length > 0 && (
-                          <span className="block truncate" style={{ fontSize: 11, lineHeight: "14px", color: "rgb(var(--c-charcoal-muted))" }}>
+                          <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(14), color: "rgb(var(--c-charcoal-muted))" }}>
                             {e.tags.map((t) => EXERCISE_TAG_LABEL[t]).join(" · ")}
                           </span>
                         )}
@@ -479,7 +480,7 @@ export default function ExerciseDatabaseTab() {
               className="whitespace-nowrap"
               style={{
                 margin: 0,
-                fontSize: 11,
+                fontSize: textPx(11),
                 fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
@@ -497,7 +498,7 @@ export default function ExerciseDatabaseTab() {
                 borderRadius: 9,
                 border: "1px solid rgb(var(--c-border-option))",
                 background: "rgb(var(--c-surface-raised))",
-                fontSize: 12,
+                fontSize: textPx(12),
                 fontWeight: 700,
                 color: tabColor("flipInk"),
               }}
@@ -532,7 +533,7 @@ export default function ExerciseDatabaseTab() {
               alt={figureAlt}
               label={(zone) => ZONE_LABEL[zone]}
             />
-            <p className="absolute" style={{ left: 12, bottom: 10, margin: 0, fontSize: 10, color: "#A79E93" }}>
+            <p className="absolute" style={{ left: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#A79E93" }}>
               {figureAlt}
             </p>
           </div>
@@ -540,7 +541,7 @@ export default function ExerciseDatabaseTab() {
           <p
             style={{
               margin: "16px 0 8px",
-              fontSize: 11,
+              fontSize: textPx(11),
               fontWeight: 700,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
@@ -561,7 +562,7 @@ export default function ExerciseDatabaseTab() {
                   style={{
                     borderRadius: 8,
                     padding: "8px 14px",
-                    fontSize: 13,
+                    fontSize: textPx(13),
                     whiteSpace: "nowrap",
                     ...(selected
                       ? // The board's #A092E0 in light, primary-fill in dark.
@@ -580,7 +581,7 @@ export default function ExerciseDatabaseTab() {
               classification on the right. */}
           {selectedGroup && (
             <div style={{ marginTop: 16, animation: "cb-fade .3s ease both" }}>
-              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+              <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                 {`${selectedMuscleLabel} · ${filtered.length} ${filtered.length === 1 ? "exercise" : "exercises"}`}
               </p>
               {filtered.length === 0 ? (
@@ -599,8 +600,8 @@ export default function ExerciseDatabaseTab() {
                         padding: "11px 13px",
                       }}
                     >
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{e.name}</span>
-                      <span style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{classificationLabel[e.classification]}</span>
+                      <span style={{ fontSize: textPx(13.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{e.name}</span>
+                      <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{classificationLabel[e.classification]}</span>
                     </button>
                   ))}
                 </div>

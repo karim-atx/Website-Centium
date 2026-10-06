@@ -22,6 +22,7 @@ import {
 } from "./mealPrepShared";
 import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 export type PrepKind = "meals" | "recipes";
 
@@ -147,7 +148,7 @@ export const MealPrepFlowSheet: React.FC<{
             <button
               onClick={() => setScreen("edit")}
               className="tap w-full inline-flex items-center justify-center"
-              style={{ height: 48, gap: 8, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: 15, fontWeight: 700 }}
+              style={{ height: 48, gap: 8, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: textPx(15), fontWeight: 700 }}
             >
               <Pencil size={15} /> Edit
             </button>
@@ -171,7 +172,7 @@ export const MealPrepFlowSheet: React.FC<{
             logError={logError}
           />
         )}
-        {!item && <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>}
+        {!item && <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>}
         {screen === "advanced" && <AdvancedScreen kind={kind} item={item} qty={qty} />}
       </BottomSheet>
 
@@ -206,7 +207,7 @@ export const MealPrepFlowSheet: React.FC<{
 const prepPillStyle = (on: boolean, accent: string, ink: string): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",
-  fontSize: 13,
+  fontSize: textPx(13),
   fontWeight: on ? 700 : 500,
   border: `1px solid ${on ? accent : "rgb(var(--c-border-option))"}`,
   background: on ? accent : "rgb(var(--c-surface-raised))",
@@ -252,7 +253,7 @@ const DetailScreen: React.FC<{
       <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
 
       <div style={GREY}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
+        <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           {isR ? "Ingredients" : "Foods"}
         </p>
         <div className="mt-2.5 flex flex-col gap-1.5">
@@ -285,7 +286,7 @@ const DetailScreen: React.FC<{
 
       {isR && recipe!.steps && (
         <div style={GREY}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
+          <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
             Steps
           </p>
           <p className="mt-2.5 text-[13px] whitespace-pre-line" style={{ color: PREP_SOFT, lineHeight: 1.6 }}>
@@ -295,7 +296,7 @@ const DetailScreen: React.FC<{
       )}
 
       <div className="flex items-center gap-3" style={GREY}>
-        <span className="flex-none" style={{ fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>
+        <span className="flex-none" style={{ fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>
           {isR ? "Servings" : "Quantity"}
         </span>
         <input
@@ -303,12 +304,12 @@ const DetailScreen: React.FC<{
           inputMode="decimal"
           onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
           className="flex-1 min-w-0 text-center outline-none"
-          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: PREP_CHARCOAL }}
+          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: PREP_CHARCOAL }}
         />
       </div>
 
       <div style={GREY}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
+        <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           Meal
         </p>
         <div className="flex" style={{ gap: 6, marginTop: 9 }}>
@@ -404,11 +405,11 @@ const AdvancedScreen: React.FC<{
     };
   }, [item, isR, q]);
 
-  if (!item) return <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>;
+  if (!item) return <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>;
 
   return (
     <div className="flex flex-col gap-2.5 animate-fade-slide-up">
-      <p style={{ margin: "0 2px 2px", fontSize: 13, color: PREP_SOFT }}>
+      <p style={{ margin: "0 2px 2px", fontSize: textPx(13), color: PREP_SOFT }}>
         {isR ? `${item.title} · ${q} serving${q === 1 ? "" : "s"}` : `${item.title} × ${q}`}
       </p>
       {state.loading ? (

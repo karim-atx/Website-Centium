@@ -1,4 +1,5 @@
 import type React from "react";
+import { textPx } from "../../theme/textSize";
 
 // CentiumFrame.dc.html sessionSheetBody(): option-button styling. Since the
 // 2026-09-29 handover (WO23, WO24) only the Set options RPE chips use it. Selected = #A299DE
@@ -14,7 +15,7 @@ const sessionOptionStyle = (
   dark: boolean
 ): React.CSSProperties => ({
   ...shape,
-  fontSize: 12,
+  fontSize: textPx(12),
   fontWeight: 600,
   border: `1px solid ${selected ? "rgb(var(--c-fill-sheet))" : dark ? "rgba(238,239,242,0.10)" : "#E7E7EC"}`,
   background: selected ? "rgb(var(--c-fill-sheet))" : "rgb(var(--c-cream-card))",

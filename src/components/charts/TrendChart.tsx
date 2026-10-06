@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { trendTicks } from "../../utils/chartTicks";
 import { useIsDark } from "../../hooks/useIsDark";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
+import { textPx } from "../../theme/textSize";
 
 export interface TrendPoint {
   /** Milliseconds; points are placed along x by time. */
@@ -200,12 +201,12 @@ export const TrendChart: React.FC<{
           {ticks.map((v, i) => (
             <g key={i}>
               <line x1={g.left} x2={width - g.right} y1={tickY(v)} y2={tickY(v)} stroke={t.grid} strokeWidth={1} />
-              <text x={g.labelX} y={tickY(v) + 3} fontSize={8.5} fill={t.axis}>
+              <text x={g.labelX} y={tickY(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
                 {formatTick(v)}
               </text>
             </g>
           ))}
-          <text x={(g.left + width - g.right) / 2} y={g.plotTop + g.plotH / 2 + 4} fontSize={12} fontWeight={700} fill={tone === "card" ? "#FFFFFF" : t.axis} textAnchor="middle">
+          <text x={(g.left + width - g.right) / 2} y={g.plotTop + g.plotH / 2 + 4} style={{ fontSize: textPx(12) }} fontWeight={700} fill={tone === "card" ? "#FFFFFF" : t.axis} textAnchor="middle">
             {emptyText}
           </text>
         </svg>
@@ -222,7 +223,7 @@ export const TrendChart: React.FC<{
           {ticks.map((v, i) => (
             <g key={i}>
               <line x1={g.left} x2={width - g.right} y1={yAt(v)} y2={yAt(v)} stroke={t.grid} strokeWidth={1} />
-              <text x={g.labelX} y={yAt(v) + 3} fontSize={8.5} fill={t.axis}>
+              <text x={g.labelX} y={yAt(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
                 {i === 2 && unitOnAxis ? `${formatTick(v)} ${unit}` : formatTick(v)}
               </text>
             </g>
@@ -234,7 +235,7 @@ export const TrendChart: React.FC<{
           )}
 
           <line x1={sx} x2={sx} y1={g.scrubY + 4} y2={bottom} stroke={ink} strokeWidth={tone === "card" ? 1.5 : 1} />
-          <text x={sx} y={g.scrubY} fontSize={9.5} fontWeight={700} fill={ink} textAnchor={labelAnchor}>
+          <text x={sx} y={g.scrubY} style={{ fontSize: textPx(9.5) }} fontWeight={700} fill={ink} textAnchor={labelAnchor}>
             {scrubLabel}
           </text>
 
@@ -266,7 +267,7 @@ export const TrendChart: React.FC<{
             [0, 1, 2, 3].map((k) => {
               const i = Math.round((k * (n - 1)) / 3);
               return (
-                <text key={k} x={xAt(i)} y={g.datesY} fontSize={8.5} fill={t.axis} textAnchor={k === 0 ? "start" : k === 3 ? "end" : "middle"}>
+                <text key={k} x={xAt(i)} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor={k === 0 ? "start" : k === 3 ? "end" : "middle"}>
                   {points[i].label}
                 </text>
               );
@@ -274,16 +275,16 @@ export const TrendChart: React.FC<{
           ) : (
             <>
               {/* A single point sits at the right edge; its date goes under it. */}
-              <text x={n < 2 ? xAt(0) : g.left} y={g.datesY} fontSize={8.5} fill={t.axis} textAnchor={n < 2 ? "end" : "start"}>
+              <text x={n < 2 ? xAt(0) : g.left} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor={n < 2 ? "end" : "start"}>
                 {points[0].label}
               </text>
               {n > 2 && span > 0 && (
-                <text x={g.left + plotW / 2} y={g.datesY} fontSize={8.5} fill={t.axis} textAnchor="middle">
+                <text x={g.left + plotW / 2} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="middle">
                   {formatDate(t0 + span / 2)}
                 </text>
               )}
               {n > 1 && (
-                <text x={width - g.right} y={g.datesY} fontSize={8.5} fill={t.axis} textAnchor="end">
+                <text x={width - g.right} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="end">
                   {points[n - 1].label}
                 </text>
               )}

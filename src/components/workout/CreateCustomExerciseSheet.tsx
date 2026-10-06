@@ -9,6 +9,7 @@ import { EXERCISE_TAGS, EXERCISE_TAG_LABEL, disciplineSummary } from "../../util
 import { classificationOptions } from "../../utils/exerciseClassification";
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // Derived from SELECTABLE_MUSCLE_GROUPS rather than listed again here. The
 // two copies had already drifted apart once, and this one carried `olympic`
@@ -37,7 +38,7 @@ const dropdownStyle: React.CSSProperties = {
   background: "rgb(var(--c-cream-card))",
   padding: "0 14px 0 14px",
   gap: 8,
-  fontSize: 14,
+  fontSize: textPx(14),
 };
 
 /**
@@ -167,7 +168,7 @@ export const CreateCustomExerciseSheet: React.FC<{
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Abdallah's Bungees"
               className="flex-1 min-w-0 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              style={{ height: 46, borderRadius: 16, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "0 16px", fontSize: 14 }}
+              style={{ height: 46, borderRadius: 16, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "0 16px", fontSize: textPx(14) }}
             />
             <button
               onClick={() => onInfo?.(name.trim() || "New Custom Exercise")}
@@ -270,7 +271,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             onClick={save}
             disabled={!name.trim()}
             className="tap flex-1 flex items-center justify-center disabled:opacity-60"
-            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
           >
             Save exercise
           </button>

@@ -6,9 +6,10 @@ import {
   type ExerciseInstructions,
 } from "../../services/exercises";
 import { useIsDark } from "../../hooks/useIsDark";
+import { linePx, textPx } from "../../theme/textSize";
 
-const heading: React.CSSProperties = { margin: "0 0 10px", fontSize: 14, lineHeight: "18px", fontWeight: 700, color: "rgb(var(--c-charcoal))" };
-const body: React.CSSProperties = { fontSize: 13, lineHeight: "19px", color: "rgb(var(--c-charcoal-soft))" };
+const heading: React.CSSProperties = { margin: "0 0 10px", fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 700, color: "rgb(var(--c-charcoal))" };
+const body: React.CSSProperties = { fontSize: textPx(13), lineHeight: linePx(19), color: "rgb(var(--c-charcoal-soft))" };
 
 // Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the lavender
 // ink takes primary.deeper dark, the step badge primary.tint dark and the
@@ -22,7 +23,7 @@ const COLORS = {
 const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
   <ul style={{ margin: 0, padding: 0, listStyle: "none" }} className="flex flex-col" >
     {items.map((t, i) => (
-      <li key={i} className="flex items-start" style={{ gap: 11, marginTop: i ? 6 : 0, ...body, fontSize: 12.5 }}>
+      <li key={i} className="flex items-start" style={{ gap: 11, marginTop: i ? 6 : 0, ...body, fontSize: textPx(12.5) }}>
         <span aria-hidden className="flex-none rounded-full" style={{ width: 4, height: 4, marginTop: 8, background: "rgb(var(--th-aea1dc))" }} />
         <span className="min-w-0">{t}</span>
       </li>
@@ -92,7 +93,7 @@ export const ExerciseInfoSheet: React.FC<{
           i && (
             <div className="flex flex-col" style={{ gap: 22 }}>
               {i.difficulty && (
-                <p style={{ margin: "-8px 0 -8px", fontSize: 11.5, fontWeight: 700, color: c("ink") }}>
+                <p style={{ margin: "-8px 0 -8px", fontSize: textPx(11.5), fontWeight: 700, color: c("ink") }}>
                   {i.difficulty[0].toUpperCase() + i.difficulty.slice(1)}
                 </p>
               )}
@@ -110,7 +111,7 @@ export const ExerciseInfoSheet: React.FC<{
                       <li key={n} className="flex items-start" style={{ gap: 10, marginTop: n ? 8 : 0 }}>
                         <span
                           className="flex-none flex items-center justify-center rounded-full"
-                          style={{ width: 20, height: 20, background: c("badge"), color: c("ink"), fontSize: 11, fontWeight: 700 }}
+                          style={{ width: 20, height: 20, background: c("badge"), color: c("ink"), fontSize: textPx(11), fontWeight: 700 }}
                         >
                           {n + 1}
                         </span>

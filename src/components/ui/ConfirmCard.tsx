@@ -2,6 +2,7 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 /**
  * The shared compact confirmation, handover 2026-09-29 02 "Compact
@@ -48,15 +49,15 @@ export const ConfirmCard: React.FC<{
             <Trash2 size={18} />
           </span>
           <div className="min-w-0">
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
-            {subtitle && <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>{subtitle}</p>}
+            <p style={{ margin: 0, fontSize: textPx(16), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
+            {subtitle && <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{subtitle}</p>}
           </div>
         </div>
         <div className="flex" style={{ gap: 10, marginTop: 18 }}>
           <button
             onClick={onCancel}
             className="tap flex-1"
-            style={{ height: 44, borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? "rgba(238,239,242,0.10)" : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 44, borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? "rgba(238,239,242,0.10)" : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(14), fontWeight: 700 }}
           >
             Cancel
           </button>
@@ -64,7 +65,7 @@ export const ConfirmCard: React.FC<{
             onClick={onConfirm}
             disabled={busy}
             className="tap flex-1 disabled:opacity-60"
-            style={{ height: 44, borderRadius: 12, background: "#C0392B", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 44, borderRadius: 12, background: "#C0392B", color: "#FFFFFF", fontSize: textPx(14), fontWeight: 700 }}
           >
             {confirmLabel}
           </button>

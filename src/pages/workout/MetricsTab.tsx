@@ -35,6 +35,7 @@ import { Toast } from "../../components/ui/Toast";
 import { MEASUREMENT_SITES, type MeasurementType } from "../../services/measurements/sites";
 import { AddMeasurementsSheet } from "../../components/workout/AddMeasurementsSheet";
 import { MeasurementHistorySheet } from "../../components/workout/MeasurementHistorySheet";
+import { textPx } from "../../theme/textSize";
 
 // Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
 // the scrubbed point's stats), One-rep maxes (the six highest; All opens
@@ -282,7 +283,7 @@ export default function MetricsTab() {
         top={
           <>
             <div className="flex items-center justify-between" style={{ padding: "0 17px", height: 26 }}>
-              <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em" }}>
+              <span style={{ color: "rgba(255,255,255,0.75)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.14em" }}>
                 VOLUME
               </span>
               <div
@@ -304,7 +305,7 @@ export default function MetricsTab() {
                     style={{
                       padding: "0 9px",
                       borderRadius: 7,
-                      fontSize: 11,
+                      fontSize: textPx(11),
                       fontWeight: 700,
                       // Dark: the selected segment is the dark card, not a white pill.
                       background: volumeMode === m ? (dark ? "rgb(var(--c-cream-card))" : "#FFFFFF") : "transparent",
@@ -357,12 +358,12 @@ export default function MetricsTab() {
         title="One-rep maxes"
         right={
           lifts.length === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>None yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>None yet</span>
           ) : (
             <button
               onClick={() => setOneRmOpen(true)}
               className="tap flex items-center"
-              style={{ color: c("teal"), fontSize: 12.5, fontWeight: 600, gap: 3 }}
+              style={{ color: c("teal"), fontSize: textPx(12.5), fontWeight: 600, gap: 3 }}
             >
               All {lifts.length} <ChevronRight size={13} />
             </button>
@@ -378,12 +379,12 @@ export default function MetricsTab() {
                 className="tap text-left min-w-0"
                 style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55 }}
               >
-                <span className="block truncate" style={{ color: c("teal"), fontSize: 11, fontWeight: 500 }}>
+                <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500 }}>
                   {lift.name}
                 </span>
-                <span className="block" style={{ color: c("teal"), fontSize: 15, fontWeight: 800, marginTop: 2 }}>
+                <span className="block" style={{ color: c("teal"), fontSize: textPx(15), fontWeight: 800, marginTop: 2 }}>
                   {kgWhole(lift.oneRm)}
-                  <span style={{ color: c("tealUnit"), fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                  <span style={{ color: c("tealUnit"), fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
                 </span>
               </button>
             ))}
@@ -396,10 +397,10 @@ export default function MetricsTab() {
         title="Balance"
         right={
           totalSets === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>No sets yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>No sets yet</span>
           ) : chip ? (
             <span
-              style={{ ...chip, borderRadius: 6, padding: "2px 7px", fontSize: 11.5, fontWeight: 600 }}
+              style={{ ...chip, borderRadius: 6, padding: "2px 7px", fontSize: textPx(11.5), fontWeight: 600 }}
             >
               {groupLabel(dominant!)}-heavy lately
             </span>
@@ -416,11 +417,11 @@ export default function MetricsTab() {
             <div className="grid grid-cols-4" style={{ marginTop: 10, gap: 6 }}>
               {sortedGroups.slice(0, 4).map(([group, count]) => (
                 <div key={group} className="min-w-0">
-                  <span className="flex items-center truncate" style={{ gap: 4, color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5 }}>
+                  <span className="flex items-center truncate" style={{ gap: 4, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5) }}>
                     <span className="flex-none" style={{ width: 6, height: 6, borderRadius: 3, background: balanceColors[group] ?? "#B8AFC8" }} />
                     {groupLabel(group)}
                   </span>
-                  <span className="block" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13, fontWeight: 800, marginTop: 2 }}>
+                  <span className="block" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(13), fontWeight: 800, marginTop: 2 }}>
                     {Math.round((count / totalSets) * 100)}%
                   </span>
                 </div>
@@ -430,7 +431,7 @@ export default function MetricsTab() {
               <button
                 onClick={() => setBalanceOpen(true)}
                 className="tap flex items-center"
-                style={{ color: c("purple"), fontSize: 12, fontWeight: 700, gap: 3 }}
+                style={{ color: c("purple"), fontSize: textPx(12), fontWeight: 700, gap: 3 }}
               >
                 Full breakdown <ChevronRight size={13} />
               </button>
@@ -444,11 +445,11 @@ export default function MetricsTab() {
         title="Training frequency"
         right={
           workoutSessions.length === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>No sessions yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>No sessions yet</span>
           ) : (
-            <span style={{ color: "rgb(var(--c-charcoal))", fontSize: 20, fontWeight: 800 }}>
+            <span style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(20), fontWeight: 800 }}>
               {frequency.perWeek}
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>/ week</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginLeft: 3 }}>/ week</span>
             </span>
           )
         }
@@ -466,7 +467,7 @@ export default function MetricsTab() {
             />
           ))}
         </div>
-        <div className="flex justify-between" style={{ marginTop: 6, fontSize: 9.5 }}>
+        <div className="flex justify-between" style={{ marginTop: 6, fontSize: textPx(9.5) }}>
           <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>8 wks ago</span>
           <span style={{ color: c("purple"), fontWeight: 700 }}>
             This week{workoutSessions.length ? ` · ${frequency.weeks[7]}` : ""}
@@ -482,7 +483,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "rgb(var(--th-6f9993))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
+              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "rgb(var(--th-6f9993))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12), fontWeight: 700 }}
             >
               <Plus size={12} /> Add
             </button>
@@ -490,7 +491,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ color: c("teal"), fontSize: 12.5, fontWeight: 700, gap: 4 }}
+              style={{ color: c("teal"), fontSize: textPx(12.5), fontWeight: 700, gap: 4 }}
             >
               <Plus size={13} /> Add
             </button>
@@ -521,9 +522,9 @@ export default function MetricsTab() {
                     style={{ background: c("tealTile"), borderRadius: 10, padding: "9px 10px" }}
                   >
                     <span className="flex items-start justify-between" style={{ gap: 4 }}>
-                      <span style={{ color: "rgb(var(--c-charcoal))", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>
+                      <span style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(16), fontWeight: 800, whiteSpace: "nowrap" }}>
                         {latest.value}
-                        <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10, fontWeight: 500, marginLeft: 2 }}>{unit}</span>
+                        <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 500, marginLeft: 2 }}>{unit}</span>
                       </span>
                       {/* The trend, where there is one to draw. Two points is
                           the minimum that says anything. */}
@@ -531,11 +532,11 @@ export default function MetricsTab() {
                         <Sparkline values={[...readings].reverse().map((r) => r.value)} color={c("spark")} width={34} height={12} />
                       )}
                     </span>
-                    <span className="block truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, marginTop: 3 }}>
+                    <span className="block truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), marginTop: 3 }}>
                       {site.label}
                     </span>
                     {change != null && change !== 0 && (
-                      <span className="block" style={{ color: change > 0 ? c("up") : c("down"), fontSize: 10.5, fontWeight: 700 }}>
+                      <span className="block" style={{ color: change > 0 ? c("up") : c("down"), fontSize: textPx(10.5), fontWeight: 700 }}>
                         {change > 0 ? "+" : "−"}
                         {Math.abs(change)} {unit}
                       </span>
@@ -669,11 +670,11 @@ function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; un
   const ink = accent ? accentInk : "var(--hero-value)";
   return (
     <div className="min-w-0">
-      <p style={{ color: ink, fontSize: 17, fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+      <p style={{ color: ink, fontSize: textPx(17), fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
         {value ?? "–"}
-        {value != null && unit && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
+        {value != null && unit && <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
       </p>
-      <p style={{ color: accent ? accentInk : "var(--hero-label)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
+      <p style={{ color: accent ? accentInk : "var(--hero-label)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
         {label.toUpperCase()}
       </p>
     </div>
@@ -687,7 +688,7 @@ function MetricCard({ icon, title, right, children }: { icon: string; title: str
     <section style={{ background: "rgb(var(--c-cream-card))", border: `1px solid ${metricColor("cardBorder", dark)}`, borderRadius: 16, padding: 14 }}>
       <div className="flex items-center" style={{ gap: 10 }}>
         <img src={icon} alt="" width={30} height={30} style={{ borderRadius: 8 }} />
-        <h3 className="flex-1 min-w-0 truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 14, fontWeight: 700 }}>
+        <h3 className="flex-1 min-w-0 truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(14), fontWeight: 700 }}>
           {title}
         </h3>
         {right}

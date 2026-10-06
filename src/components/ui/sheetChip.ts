@@ -1,4 +1,5 @@
 import type React from "react";
+import { textPx } from "../../theme/textSize";
 
 // Mobile handoff item 1: the option chip used inside every bottom sheet —
 // an 8px-radius rectangle, never a pill. Rows of these stay on one line and
@@ -12,7 +13,7 @@ import type React from "react";
 export const sheetChipStyle = (selected: boolean): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",
-  fontSize: 13.5,
+  fontSize: textPx(13.5),
   whiteSpace: "nowrap",
   flex: "none",
   ...(selected
@@ -30,7 +31,7 @@ export const sheetChipStyle = (selected: boolean): React.CSSProperties => ({
 // here rather than in AddFoodSheet because SheetField and the custom-food
 // form both draw them and neither lives there any more.
 export const sheetGreyStyle: React.CSSProperties = { background: "#F2F3F5", borderRadius: 14, padding: "12px 14px" };
-export const sheetLabelStyle: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 500, color: "#575863" };
+export const sheetLabelStyle: React.CSSProperties = { margin: 0, fontSize: textPx(13), fontWeight: 500, color: "#575863" };
 
 // The same two for the current mode. #F2F3F5 and #575863 have no token with
 // the same light value, so dark mode is spelled out: the grey container is

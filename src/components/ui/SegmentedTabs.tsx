@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 export interface SegmentedTabItem {
   key: string;
@@ -98,7 +99,7 @@ export const SegmentedTabs: React.FC<{
               color: lit
                 ? active ? lit.activeInk : lit.idleInk
                 : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
-              fontSize: labelSize,
+              fontSize: textPx(labelSize),
               fontWeight: 700,
             }}
           >

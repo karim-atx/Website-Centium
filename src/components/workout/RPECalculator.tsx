@@ -2,11 +2,12 @@ import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { rpeOptions, percentFromRpe, weightFromRpe } from "../../services/workout";
 import { useIsDark } from "../../hooks/useIsDark";
+import { linePx, textPx } from "../../theme/textSize";
 
 // WO23: RPE chips run ascending, 6 → 10.
 const RPE_ASCENDING = [...rpeOptions].sort((a, b) => a - b);
 
-const fieldLabel: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "rgb(var(--c-charcoal-soft))", marginBottom: 8 };
+const fieldLabel: React.CSSProperties = { display: "block", fontSize: textPx(13), fontWeight: 500, color: "rgb(var(--c-charcoal-soft))", marginBottom: 8 };
 const fieldInput: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
@@ -15,7 +16,7 @@ const fieldInput: React.CSSProperties = {
   background: "rgb(var(--c-cream-soft))",
   border: "1px solid rgb(var(--c-charcoal) / 0.11)",
   padding: "0 14px",
-  fontSize: 15,
+  fontSize: textPx(15),
   fontWeight: 500,
   color: "rgb(var(--c-charcoal))",
 };
@@ -103,7 +104,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
                     border: `1px solid ${on ? "rgb(var(--th-aea1dc))" : rpeColor("chipBorder", dark)}`,
                     background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
                     color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
-                    fontSize: 12,
+                    fontSize: textPx(12),
                     fontWeight: on ? 700 : 500,
                   }}
                 >
@@ -118,23 +119,23 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
           <div className="min-w-0">
             <p
               className="uppercase"
-              style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: rpeColor("label", dark) }}
+              style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: rpeColor("label", dark) }}
             >
               Suggested weight
             </p>
-            <p className="tabular-nums" style={{ margin: 0, lineHeight: "34px" }}>
-              <span style={{ fontSize: 30, fontWeight: 800, color: rpeColor("hero", dark), letterSpacing: "-0.02em" }}>
+            <p className="tabular-nums" style={{ margin: 0, lineHeight: linePx(34) }}>
+              <span style={{ fontSize: textPx(30), fontWeight: 800, color: rpeColor("hero", dark), letterSpacing: "-0.02em" }}>
                 {suggested ?? "–"}
               </span>
-              {suggested != null && <span style={{ fontSize: 13, fontWeight: 600, color: rpeColor("label", dark), marginLeft: 4 }}>kg</span>}
+              {suggested != null && <span style={{ fontSize: textPx(13), fontWeight: 600, color: rpeColor("label", dark), marginLeft: 4 }}>kg</span>}
             </p>
           </div>
           {ready && (
             <div className="text-right flex-none" style={{ paddingBottom: 4 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: rpeColor("support", dark) }}>
+              <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, color: rpeColor("support", dark) }}>
                 {r} {r === 1 ? "rep" : "reps"} @ RPE {rpe}
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: rpeColor("support", dark) }}>{pct}% of 1RM</p>
+              <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: rpeColor("support", dark) }}>{pct}% of 1RM</p>
             </div>
           )}
         </div>

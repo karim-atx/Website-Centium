@@ -1,6 +1,7 @@
 import React from "react";
 import { Star, User } from "lucide-react";
 import type { ReviewRow } from "../../services/professional-reviews";
+import { textPx } from "../../theme/textSize";
 
 // One review, rendered the same way everywhere it appears: the listing's
 // reviews sheet, the reviewer's own card, and the professional's Profile.
@@ -25,7 +26,7 @@ const Body: React.FC<{
   redacted: boolean;
   replyLabel: string;
   actions?: React.ReactNode;
-  size: string;
+  size: number;
 }> = ({ review, redacted, replyLabel, actions, size }) => {
   const reply = review.reply;
   return (
@@ -33,9 +34,9 @@ const Body: React.FC<{
         {redacted ? (
           // Not counted anywhere: professional_rating_summary leaves redacted
           // reviews out of the average and the count.
-          <p className="text-charcoal-faint italic" style={{ fontSize: size }}>A moderator removed this review. It no longer counts toward the rating.</p>
+          <p className="text-charcoal-faint italic" style={{ fontSize: textPx(size) }}>A moderator removed this review. It no longer counts toward the rating.</p>
         ) : (
-          review.body && <p className="text-charcoal-soft leading-relaxed whitespace-pre-line break-words" style={{ fontSize: size }}>{review.body}</p>
+          review.body && <p className="text-charcoal-soft leading-relaxed whitespace-pre-line break-words" style={{ fontSize: textPx(size) }}>{review.body}</p>
         )}
         {reply && (
           <div className="mt-2.5 ml-1 pl-3 border-l-2 border-primary/30">
@@ -99,7 +100,7 @@ export const ReviewItem: React.FC<{
               {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </span>
           </div>
-          <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size="13px" />
+          <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={13} />
         </div>
       </div>
     );
@@ -117,7 +118,7 @@ export const ReviewItem: React.FC<{
         )}
       </div>
       {showName && <p className="text-xs font-semibold text-charcoal-soft mb-0.5">{review.reviewerName ?? "A client"}</p>}
-      <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size="14px" />
+      <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={14} />
     </div>
   );
 };

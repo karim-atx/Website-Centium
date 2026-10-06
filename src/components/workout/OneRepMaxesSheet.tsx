@@ -13,6 +13,7 @@ import {
   type LiftMax,
   type LiftSort,
 } from "../../services/workout/oneRepMax";
+import { textPx } from "../../theme/textSize";
 
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
@@ -63,14 +64,14 @@ export const OneRepMaxesSheet: React.FC<{
         {lifts.length === 0 ? (
           <div className="flex flex-col items-center text-center" style={{ padding: "28px 12px", gap: 14 }}>
             <OrmIcon size={36} />
-            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5, lineHeight: 1.5 }}>
+            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5), lineHeight: 1.5 }}>
               No lifts yet. Log a set to see your one-rep maxes here.
             </p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between" style={{ marginBottom: 9 }}>
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>
                 {lifts.length} lift{lifts.length === 1 ? "" : "s"}
               </span>
               <button
@@ -85,7 +86,7 @@ export const OneRepMaxesSheet: React.FC<{
                   background: "rgb(var(--c-cream-soft))",
                   border: `1px solid ${ormColor("sortBorder", dark)}`,
                   color: "rgb(var(--c-charcoal))",
-                  fontSize: 12,
+                  fontSize: textPx(12),
                   fontWeight: 600,
                 }}
               >
@@ -115,17 +116,17 @@ export const OneRepMaxesSheet: React.FC<{
                     style={{ height: 62, gap: 10 }}
                   >
                     <span className="flex-1 min-w-0">
-                      <span className="block truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 700 }}>
+                      <span className="block truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 700 }}>
                         {lift.name}
                       </span>
-                      <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, marginTop: 2 }}>
+                      <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), marginTop: 2 }}>
                         Last trained {shortDate(lift.lastTrained)}
                       </span>
                     </span>
                     <span className="flex flex-col items-end flex-none">
-                      <span style={{ color: ormColor("teal", dark), fontSize: 15, fontWeight: 800 }}>
+                      <span style={{ color: ormColor("teal", dark), fontSize: textPx(15), fontWeight: 800 }}>
                         {kgWhole(lift.oneRm)}
-                        <span style={{ color: ormColor("tealUnit", dark), fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                        <span style={{ color: ormColor("tealUnit", dark), fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
                       </span>
                       <Change value={lift.change30} dark={dark} />
                     </span>
@@ -145,13 +146,13 @@ export const OneRepMaxesSheet: React.FC<{
 const Change: React.FC<{ value: number | null; dark: boolean }> = ({ value, dark }) => {
   const kg = value == null ? 0 : kgWhole(value);
   if (kg === 0)
-    return <span style={{ color: ormColor("faint", dark), fontSize: 10, marginTop: 2 }}>–</span>;
+    return <span style={{ color: ormColor("faint", dark), fontSize: textPx(10), marginTop: 2 }}>–</span>;
   const up = kg > 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
     <span
       className="inline-flex items-center"
-      style={{ color: up ? ormColor("teal", dark) : "rgb(var(--c-charcoal-tertiary))", fontSize: 10, fontWeight: 600, marginTop: 2, gap: 3 }}
+      style={{ color: up ? ormColor("teal", dark) : "rgb(var(--c-charcoal-tertiary))", fontSize: textPx(10), fontWeight: 600, marginTop: 2, gap: 3 }}
     >
       <Icon size={11} />
       {up ? `+${kg}` : Math.abs(kg)} kg

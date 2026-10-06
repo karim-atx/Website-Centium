@@ -30,6 +30,7 @@ import MealPrepPanel from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands): the meal cards follow the
@@ -430,11 +431,12 @@ export default function Food() {
                   <button
                     key={meal}
                     onClick={() => openAdd(meal)}
-                    className="tap flex-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
+                    className="tap flex-1 min-w-0 px-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
                     style={{ background: dark ? fillDark : fill }}
                   >
                     <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                    {label}
+                    {/* Ends in "…" rather than running into the corner under Larger text (D18). */}
+                    <span className="min-w-0 truncate">{label}</span>
                   </button>
                 );
               })}
@@ -685,7 +687,7 @@ export default function Food() {
                             }}
                             disabled={activeSelection.ids.size === 0}
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
-                            style={{ height: 36, gap: 6, borderRadius: 10, background: dc("deleteBg", dark), border: `1px solid ${dc("deleteBorder", dark)}`, color: dc("deleteInk", dark), fontSize: 12.5, fontWeight: 700 }}
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: dc("deleteBg", dark), border: `1px solid ${dc("deleteBorder", dark)}`, color: dc("deleteInk", dark), fontSize: textPx(12.5), fontWeight: 700 }}
                           >
                             <Trash2 size={13} /> Delete ({activeSelection.ids.size})
                           </button>
@@ -696,7 +698,7 @@ export default function Food() {
                             }}
                             disabled={activeSelection.ids.size === 0}
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
-                            style={{ height: 36, gap: 6, borderRadius: 10, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12.5, fontWeight: 700 }}
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12.5), fontWeight: 700 }}
                           >
                             <Copy size={13} /> Copy ({activeSelection.ids.size})
                           </button>
@@ -706,7 +708,7 @@ export default function Food() {
                               setSelecting(null);
                             }}
                             className="tap shrink-0"
-                            style={{ padding: "0 8px", height: 36, color: "rgb(var(--c-charcoal-faint))", fontSize: 12.5, fontWeight: 500 }}
+                            style={{ padding: "0 8px", height: 36, color: "rgb(var(--c-charcoal-faint))", fontSize: textPx(12.5), fontWeight: 500 }}
                           >
                             Cancel
                           </button>
