@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Calendar as CalendarIcon, ChevronDown, Clock, Link as LinkIcon, Repeat, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, Clock, Link as LinkIcon, Repeat } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
@@ -326,10 +326,18 @@ export const EventComposeSheet: React.FC<{
           {saving ? "Saving…" : editing ? "Save changes" : "Save event"}
         </Button>
 
+        {/* Decision 23 (item 118): the Foundations destructive text action
+            (danger 13/700, centred), still tap-twice; 44 tall to keep the
+            tap target. */}
         {editing && (
-          <Button fullWidth variant="outline" disabled={saving} className="!border-teal/30 !text-teal-dark" onClick={onDelete}>
-            <Trash2 size={15} /> {confirmDelete ? "Tap again to confirm" : "Delete event"}
-          </Button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onDelete}
+            className="tap w-full min-h-11 text-center text-[13px] font-bold text-status-high disabled:opacity-40"
+          >
+            {confirmDelete ? "Tap again to confirm" : "Delete event"}
+          </button>
         )}
       </div>
 

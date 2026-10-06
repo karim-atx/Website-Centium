@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
 
-import { Button } from "../../components/ui/Button";
+import { CtaButton } from "../../components/ui/PinnedCta";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { YearScroll } from "../../components/calendar/YearScroll";
@@ -53,12 +53,14 @@ async function openAttachment(path: string) {
 type View = "year" | "month" | "week" | "day";
 const VIEWS: View[] = ["year", "month", "week", "day"];
 
-/** The view pills' own light colours, kept on the segmented tabs (decision 15). */
+/** The view pills' light colours. The active pill keeps its own (decision 15);
+    decision 23 (item 119): an idle tab is transparent with #5B5349
+    (charcoal-soft) as MO1.6 draws it. Dark mode is SegmentedTabs' own. */
 const TAB_LIGHT = {
   activeFill: "rgb(var(--c-primary-fill))",
   activeInk: "rgb(var(--c-on-primary-fill))",
-  idleFill: "rgb(var(--c-team-lavender) / 0.15)",
-  idleInk: "rgb(var(--c-primary-deep-text))",
+  idleFill: "transparent",
+  idleInk: "rgb(var(--c-charcoal-soft))",
 };
 
 const monthNames = Array.from({ length: 12 }, (_, i) =>
@@ -544,15 +546,20 @@ export default function ClientCalendarTab() {
               </p>
             )}
           </button>
+          {/* Decision 23 (item 111): the badges as the class card's spots
+              line (Foundations Cards: 11/600), straight on the event tint
+              with no pill of their own. The gold ones take the Foundations
+              gold.text #9A7424 (dark #CAB082), fixed in every theme, since
+              the gold itself is not readable as text on a tint. */}
           {status ? (
             <span
               className={clsx(
-                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                "shrink-0 text-[11px] font-semibold",
                 status === "accepted"
-                  ? "bg-primary-pale text-primary-dark"
+                  ? "text-primary-dark"
                   : status === "declined"
-                  ? "bg-cream-soft text-charcoal-faint"
-                  : "bg-gold/15 text-gold"
+                  ? "text-charcoal-faint"
+                  : "text-[#9A7424] dark:text-[#CAB082]"
               )}
             >
               {inviteLabel[status]}
@@ -562,14 +569,14 @@ export default function ClientCalendarTab() {
             // I not edit this?". The card is otherwise indistinguishable from
             // one the client typed, and a tap that does nothing with no
             // explanation reads as a broken screen.
-            <span className="shrink-0 flex items-center gap-1 rounded-full bg-teal-pale px-2 py-0.5 text-[10px] font-bold text-teal-dark">
-              <Dumbbell size={10} /> Scheduled
+            <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-teal-dark dark:text-teal-deep-text">
+              <Dumbbell size={11} aria-hidden /> Scheduled
             </span>
           ) : booked ? (
             // Same reasoning as the badge above, for the other kind of card
             // this screen cannot edit.
-            <span className="shrink-0 flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">
-              <Ticket size={10} /> Booked
+            <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#9A7424] dark:text-[#CAB082]">
+              <Ticket size={11} aria-hidden /> Booked
             </span>
           ) : null}
         </div>
@@ -605,26 +612,26 @@ export default function ClientCalendarTab() {
             Everything above is read-only for an invitation; the grant is
             column-scoped to responded_at and accepted, so this is not a UI
             convention but the shape of what the server will accept. */}
+        {/* Decision 23 (item 111): Accept / Decline as a Pinned CTA row pair
+            in place: primary.tint secondary first, the filled primary
+            second, 48 r14, gap 8, 15 icons. */}
         {e.invite && (
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              fullWidth
-              variant={status === "accepted" ? "primary" : "secondary"}
-              disabled={respondingTo === e.invite.id || status === "accepted"}
-              onClick={() => void respond(e, true)}
-            >
-              <Check size={13} /> {status === "accepted" ? "Going" : "Accept"}
-            </Button>
-            <Button
-              size="sm"
-              fullWidth
-              variant="outline"
+            <CtaButton
+              size="page"
+              variant="secondary"
+              label={status === "declined" ? "Declined" : "Decline"}
+              icon={<X size={15} aria-hidden />}
               disabled={respondingTo === e.invite.id || status === "declined"}
               onClick={() => void respond(e, false)}
-            >
-              <X size={13} /> {status === "declined" ? "Declined" : "Decline"}
-            </Button>
+            />
+            <CtaButton
+              size="page"
+              label={status === "accepted" ? "Going" : "Accept"}
+              icon={<Check size={15} aria-hidden />}
+              disabled={respondingTo === e.invite.id || status === "accepted"}
+              onClick={() => void respond(e, true)}
+            />
           </div>
         )}
       </div>
@@ -633,15 +640,17 @@ export default function ClientCalendarTab() {
 
   const jump = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
 
-  /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30). */
+  /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30).
+      Decision 23 (item 120): the chevrons #5B3FE4, as the date popup
+      (MO1.6.4.1), with its dark #B7ABDE. */
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
     <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f6f4fe))" }}>
-      <button onClick={onPrev} aria-label={prevLabel} className="tap w-7 h-7 -ml-1 flex items-center justify-center text-primary-deep-text shrink-0">
+      <button onClick={onPrev} aria-label={prevLabel} className="tap w-7 h-7 -ml-1 flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
         <ChevronLeft size={16} strokeWidth={2.2} />
       </button>
       <p className="flex-1 min-w-0 text-center text-[15px] font-semibold text-charcoal truncate">{label}</p>
       {jump.show && <JumpToToday onClick={jump.jump} />}
-      <button onClick={onNext} aria-label={nextLabel} className="tap w-7 h-7 -mr-1 flex items-center justify-center text-primary-deep-text shrink-0">
+      <button onClick={onNext} aria-label={nextLabel} className="tap w-7 h-7 -mr-1 flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
         <ChevronRight size={16} strokeWidth={2.2} />
       </button>
     </div>
@@ -706,35 +715,16 @@ export default function ClientCalendarTab() {
         light={TAB_LIGHT}
       />
 
-      {/* "Next up": the real nearest event, not the mockup's fixed example
-          — hidden entirely when there is nothing upcoming to show. Not drawn
-          on MO1.6, kept (B30). */}
-      {view === "month" && nextUp && (
-        <div
-          className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
-          style={{ background: "var(--gradient-board)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white/[0.8]">Next up</p>
-          <div className="flex items-end justify-between gap-3 mt-[9px]">
-            <div className="min-w-0">
-              <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
-              <p className="mt-[5px] text-[10.5px] text-white/[0.78]">{nextUp.when}</p>
-            </div>
-            {nextUp.rel && (
-              <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{nextUp.rel}</span>
-            )}
-          </div>
-        </div>
-      )}
-
       {view === "month" && (
         <>
           <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
             {headerCard(`${monthNames[cursor.month]} ${cursor.year}`, () => goMonth(-1), () => goMonth(1), "Previous month", "Next month")}
 
+            {/* Decision 23 (item 121): weekday letters #5B3FE4, as the date
+                popup (dark #B7ABDE). */}
             <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-1">
               {"SMTWTFS".split("").map((d, i) => (
-                <div key={i} className="h-[31px] flex items-center justify-center text-[13px] font-semibold text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+                <div key={i} className="h-[31px] flex items-center justify-center text-[13px] font-semibold text-th-5b3fe4 dark:text-th-b7abde">
                   {d}
                 </div>
               ))}
@@ -752,14 +742,20 @@ export default function ClientCalendarTab() {
                     onClick={() => setSelectedDate(iso)}
                     aria-label={new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                     aria-pressed={isSelected}
+                    // Decision 23 (item 122): the selected day is flat #AEA1DC
+                    // (primary-fill, with its own ink in every theme), not the
+                    // gradient.
                     className={clsx(
                       "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[15px]",
-                      isSelected ? "font-semibold text-white" : isToday ? "bg-team-lavender/[0.16] text-primary-deep-text font-semibold" : "font-medium text-charcoal"
+                      isSelected
+                        ? "font-semibold bg-primary-fill text-on-primary-fill"
+                        : isToday
+                        ? "bg-team-lavender/[0.16] text-primary-deep-text font-semibold"
+                        : "font-medium text-charcoal"
                     )}
-                    style={isSelected ? { background: "var(--gradient-lavender-accent)" } : undefined}
                   >
                     {day}
-                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "#fff" : "rgb(var(--th-6f9993))") : "transparent" }} />
+                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--th-6f9993))") : "transparent" }} />
                   </button>
                 );
               })}
@@ -815,6 +811,29 @@ export default function ClientCalendarTab() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* "Next up": the real nearest event, not the mockup's fixed
+              example — hidden entirely when there is nothing upcoming to
+              show. Not drawn on MO1.6, kept (B30); decision 23 (item 47)
+              moved it under the day's event list, so the month card sits
+              under the tabs as drawn. */}
+          {nextUp && (
+            <div
+              className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mt-[13px]"
+              style={{ background: "var(--gradient-board)" }}
+            >
+              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white/[0.8]">Next up</p>
+              <div className="flex items-end justify-between gap-3 mt-[9px]">
+                <div className="min-w-0">
+                  <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
+                  <p className="mt-[5px] text-[10.5px] text-white/[0.78]">{nextUp.when}</p>
+                </div>
+                {nextUp.rel && (
+                  <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{nextUp.rel}</span>
+                )}
+              </div>
             </div>
           )}
         </>
@@ -906,9 +925,11 @@ export default function ClientCalendarTab() {
               date in Month view lands. Without this, an invitation to a 4pm
               session was visible and unanswerable on the screen most people
               reach first. */}
+          {/* Decision 23 (item 114): both list headings as the MO1.6 day
+              label (9/700, charcoal 42%, tracked, uppercase). */}
           {invitedEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">
+              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
                 Invitations
               </p>
               {invitedEvents.map(eventCard)}
@@ -917,7 +938,7 @@ export default function ClientCalendarTab() {
 
           {allDayEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">All day</p>
+              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">All day</p>
               {allDayEvents.map(eventCard)}
             </div>
           )}

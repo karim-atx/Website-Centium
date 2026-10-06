@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { CentredPopup } from "../ui/CentredPopup";
+import { CtaButton } from "../ui/PinnedCta";
 import { PopupMenu } from "../ui/PopupMenu";
 import { SwipeActions } from "../ui/SwipeActions";
 import { useApp } from "../../context/AppContext";
@@ -146,8 +147,9 @@ export const MembershipsCard: React.FC = () => {
     <div
       className={clsx(
         // MO1.5.1 anatomy row 3 (2x frame): 72 tall, radius 18, padding 16,
-        // a 40 white tile radius 12 (x 64–143, y 672–751).
-        "flex items-center gap-3 rounded-[18px] bg-cream-soft p-4",
+        // a 40 white tile radius 12 (x 64–143, y 672–751). Decision 23
+        // (item 83): the frame's #F0EDF9 row (primary-pale) and white pill.
+        "flex items-center gap-3 rounded-[18px] bg-primary-pale p-4",
         m.status === "ended" && "opacity-60"
       )}
     >
@@ -168,7 +170,9 @@ export const MembershipsCard: React.FC = () => {
             : dateLabel(m.invitedAt)}
         </p>
       </div>
-      <MembershipStatusBadge status={m.status} />
+      {/* White on the lavender row, as drawn; the shared badge's own fills
+          stay for the business's member list. */}
+      <MembershipStatusBadge status={m.status} className="!bg-cream-card" />
       {m.status === "active" && (
         <button
           type="button"
@@ -229,14 +233,26 @@ export const MembershipsCard: React.FC = () => {
               {/* THE ONLY THING THIS SCREEN MAY WRITE ABOUT AN INVITATION:
                   respond_to_business_membership refuses anyone but the
                   invited person. */}
+              {/* Decision 23 (item 85): the Pinned CTA row pair, in place:
+                  primary.tint secondary first, then the filled primary
+                  (48, radius 14, gap 8, 15 icons). */}
               {m.status === "pending" && (
                 <div className="flex gap-2 mt-2">
-                  <Button size="sm" fullWidth disabled={busyId === m.id} onClick={() => void answer(m.id, true)}>
-                    <Check size={13} /> Accept
-                  </Button>
-                  <Button size="sm" fullWidth variant="outline" disabled={busyId === m.id} onClick={() => void answer(m.id, false)}>
-                    <X size={13} /> Decline
-                  </Button>
+                  <CtaButton
+                    size="page"
+                    variant="secondary"
+                    label="Decline"
+                    icon={<X size={15} aria-hidden />}
+                    disabled={busyId === m.id}
+                    onClick={() => void answer(m.id, false)}
+                  />
+                  <CtaButton
+                    size="page"
+                    label="Accept"
+                    icon={<Check size={15} aria-hidden />}
+                    disabled={busyId === m.id}
+                    onClick={() => void answer(m.id, true)}
+                  />
                 </div>
               )}
             </div>

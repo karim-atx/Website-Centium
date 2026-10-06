@@ -26,7 +26,11 @@ function dismissedThisSession(userId: string): boolean {
  * the public listing sheet), which asks for the same date for a reason that
  * matters to them.
  */
-export const DobPromptCard: React.FC<{ className?: string }> = ({ className }) => {
+export const DobPromptCard: React.FC<{
+  className?: string;
+  /** Profile: the Recovery-card style (DobInline `tile`). Home keeps its own. */
+  tile?: boolean;
+}> = ({ className, tile }) => {
   const { authUserId, user } = useApp();
   const [needs, setNeeds] = useState<{ userId: string; value: boolean } | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -50,6 +54,7 @@ export const DobPromptCard: React.FC<{ className?: string }> = ({ className }) =
   return (
     <div className={className}>
       <DobInline
+        tile={tile}
         title="Add your date of birth"
         body="It keeps your age, calorie targets and health suggestions right. Check it before saving: it can't be changed afterwards without contacting support."
         onSaved={() => setNeeds({ userId: authUserId, value: false })}

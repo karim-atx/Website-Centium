@@ -186,12 +186,11 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       open={open}
       onClose={onClose}
       title="Credentials"
-      // MO1.5.4 (2x frame): the card is 350 wide (20 from each edge of the
-      // 390 board, row 10 "padding 0 20px") with the fields 18 in (x 76–703),
-      // the icon tile 22 under the top (y 656 → 700) and Save 18 above the
-      // bottom (y 1893 → 1929); KeyRound 22/1.75 in #7D6BB5 on the #F0EDF9
-      // tile (new popup, decision 22).
-      maxWidth={350}
+      // MO1.5.4 (2x frame): the fields 18 in, the icon tile 22 under the top
+      // (y 656 → 700) and Save 18 above the bottom (y 1893 → 1929); KeyRound
+      // 22/1.75 in #7D6BB5 on the #F0EDF9 tile (new popup, decision 22).
+      // Decision 23 (flag): the Foundations 342 width (16 side margins)
+      // rather than the frame's 350.
       className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<KeyRound size={22} strokeWidth={1.75} className="text-primary-dark" />}
       cta={{ label: done ? "Saved" : busy ? "Saving…" : "Save", disabled: busy || done, onClick: () => void save() }}

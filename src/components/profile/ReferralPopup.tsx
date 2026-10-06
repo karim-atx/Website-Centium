@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles, UserPlus } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
-import { Button } from "../ui/Button";
+import { CtaButton } from "../ui/PinnedCta";
 import { useApp } from "../../context/AppContext";
 import {
   getOrCreateMyReferralCode,
@@ -118,15 +118,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
 
   return (
     // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75. Row 3 "padding 0
-    // 18px": the card is 354 wide at 390 (2x frame x 36–743), its content 18
-    // in (x 72), the Gift tile 22 under the top (y 148 → 192) and Apply 18
-    // above the bottom (y 1503 → 1539).
+    // 18px": content 18 in, the Gift tile 22 under the top (y 148 → 192) and
+    // Apply 18 above the bottom (y 1503 → 1539). Decision 23 (flag): the
+    // Foundations 342 width (16 side margins) rather than the frame's 354.
     <CentredPopup
       open={open}
       onClose={onClose}
       title="Invite friends"
       titleSize={19}
-      maxWidth={354}
       className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<Gift size={23} strokeWidth={1.75} />}
     >
@@ -164,12 +163,11 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
             box 48 tall, radius 12, the code 16/800 (cap 11.5) spaced 0.18em;
-            the Copy button radius 12. The code box existed before the
-            redesign, so light keeps its charcoal 10% border (decision 22; the
-            frame draws a 12% hairline, #E4E4E3); dark is unchanged. */}
+            the Copy button radius 12. Decision 23 (item 25): the frame's 1px
+            #E4E4E3 hairline (charcoal 12% on white) in light, as in dark. */}
         <div className="mt-3.5">{label("Your code")}</div>
         <div className="flex items-center gap-2">
-          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/10 dark:border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
+          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
             {myCode ?? (codeError ? "Unavailable" : "…")}
           </span>
           <button
@@ -214,22 +212,23 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
               {referralDiscountPct > 0 ? `. ${referralDiscountPct}% off is applied to your subscription.` : "."}
             </p>
           ) : preview ? (
-            // The confirmation, before anything is redeemed.
-            <div className="rounded-2xl bg-primary-pale p-3.5 animate-fade-slide-up">
-              <p className="text-sm font-semibold text-primary-deep-text mb-1">{preview.referrerFirstName} invited you</p>
-              <p className="text-xs text-primary-dark mb-3">
-                You'll get {preview.refereeDiscountPct}% off your subscription
-                {preview.referrerDiscountPct > 0
-                  ? `, and ${preview.referrerFirstName} gets ${preview.referrerDiscountPct}% off theirs.`
-                  : "."}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button size="md" onClick={confirm} disabled={busy}>
-                  {busy ? "Applying…" : "Confirm"}
-                </Button>
-                <Button size="md" variant="ghost" onClick={() => setPreview(null)} disabled={busy}>
-                  Cancel
-                </Button>
+            // The confirmation, before anything is redeemed. Decision 23
+            // (item 131): an r12 #F0EDF9 row in the field's place (at least
+            // the field's 48), then Cancel / Confirm as a Pinned CTA row
+            // (primary.tint secondary first, gap 8, 48 r14).
+            <div className="animate-fade-slide-up">
+              <div className="min-h-12 rounded-xl bg-primary-pale px-3.5 py-2.5 flex flex-col justify-center">
+                <p className="text-sm font-semibold text-primary-deep-text">{preview.referrerFirstName} invited you</p>
+                <p className="text-xs text-primary-dark">
+                  You'll get {preview.refereeDiscountPct}% off your subscription
+                  {preview.referrerDiscountPct > 0
+                    ? `, and ${preview.referrerFirstName} gets ${preview.referrerDiscountPct}% off theirs.`
+                    : "."}
+                </p>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <CtaButton size="page" variant="secondary" label="Cancel" onClick={() => setPreview(null)} disabled={busy} />
+                <CtaButton size="page" label={busy ? "Applying…" : "Confirm"} onClick={() => void confirm()} disabled={busy} />
               </div>
             </div>
           ) : (
@@ -245,13 +244,13 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                 aria-label="A friend's referral code"
                 aria-invalid={(result && !result.success) || undefined}
                 // MO1.10 (2x frame): 48 tall, radius 12, #F5F5F6 (y 1408–1503);
-                // MO1.10.2: the border turns danger on a refusal. The field
-                // existed before the redesign, so light keeps its charcoal 10%
-                // border (decision 22; the frame draws none); dark has none.
-                // The typed code 14/600 (Foundations Inputs; MO1.10.2 cap
-                // 10 on the 2x frame); the danger border is 1.5 (y 1340–1342).
+                // MO1.10.2: the border turns danger on a refusal. Decision 23
+                // (item 26): no visible border otherwise, as drawn, in light
+                // and dark. The typed code 14/600 (Foundations Inputs;
+                // MO1.10.2 cap 10 on the 2x frame); the danger border is 1.5
+                // (y 1340–1342).
                 className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft border-[1.5px] px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  result && !result.success ? "border-status-high" : "border-charcoal/10 dark:border-transparent"
+                  result && !result.success ? "border-status-high" : "border-transparent"
                 }`}
               />
               {/* MO1.10 / MO1.10.2: a tinted Apply, #F0EDF9 with #7D67D9

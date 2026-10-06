@@ -9,6 +9,9 @@ import { ProfessionalBioCard } from "../../components/profile/ProfessionalBioCar
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { CentredPopup } from "../../components/ui/CentredPopup";
+import { CtaButton } from "../../components/ui/PinnedCta";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
 import { ReviewsAboutMeCard } from "../../components/professionals/ReviewsAboutMeCard";
@@ -30,6 +33,7 @@ import {
 import {
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   LogOut,
   Camera,
   Image,
@@ -98,7 +102,8 @@ export default function Profile() {
   const [dobDraft, setDobDraft] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
   const [savingDob, setSavingDob] = useState(false);
-  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  // The avatar's options menu, anchored to the avatar (decision 23, item 99).
+  const [avatarAnchor, setAvatarAnchor] = useState<HTMLElement | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
@@ -126,7 +131,6 @@ export default function Profile() {
       return;
     }
     updateProfile({ avatarUrl: result.url });
-    setAvatarSheetOpen(false);
   };
 
   const handleAvatarRemove = async () => {
@@ -140,7 +144,6 @@ export default function Profile() {
       return;
     }
     updateProfile({ avatarUrl: undefined });
-    setAvatarSheetOpen(false);
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
@@ -230,11 +233,7 @@ export default function Profile() {
   };
 
   const handleSignOut = () => {
-    if (!confirmSignOut) {
-      setConfirmSignOut(true);
-      setTimeout(() => setConfirmSignOut(false), 3000);
-      return;
-    }
+    setConfirmSignOut(false);
     signOut();
     navigate("/app/onboarding");
   };
@@ -290,12 +289,10 @@ export default function Profile() {
   ) => (
     // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
     // 2x frame: border x 32–211, y 216–501), divider inset 22 (x 78–163).
-    // The weight / height / sex / age cards existed before the redesign, so
-    // light keeps their colours (decision 22): charcoal 8% border and divider,
-    // charcoal values, charcoal-faint units. The frame draws a 1px #6F9993
-    // border and divider, values #5F5093 and units #AEA1DC; dark keeps those
-    // as theme tokens (teal-dark, primary-deep-text, primary).
-    <div className="h-[143px] rounded-2xl bg-cream-card border border-charcoal/[0.08] dark:border-teal-dark flex flex-col overflow-hidden min-w-0">
+    // Decision 23 (items 16–18): the frame's colours in light and dark, as
+    // theme tokens: a 1px #6F9993 border and divider (teal-dark), values
+    // #5F5093 (primary-deep-text) and units #AEA1DC (primary).
+    <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
       {[top, bottom].map((part, i) => (
         <button
           key={part.unit}
@@ -304,12 +301,12 @@ export default function Profile() {
           aria-label={part.label}
           className={clsx(
             "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
-            i === 1 && "border-t border-charcoal/[0.08] dark:border-teal-dark mx-[22px]"
+            i === 1 && "border-t border-teal-dark mx-[22px]"
           )}
         >
           {/* MO1.5 anatomy row 2: values 17px/700. */}
-          <span className="text-[17px] font-bold leading-tight text-charcoal dark:text-primary-deep-text tabular-nums capitalize">{part.value}</span>
-          <span className="text-[11px] text-charcoal-faint dark:text-primary">{part.unit}</span>
+          <span className="text-[17px] font-bold leading-tight text-primary-deep-text tabular-nums capitalize">{part.value}</span>
+          <span className="text-[11px] text-primary">{part.unit}</span>
         </button>
       ))}
     </div>
@@ -354,19 +351,25 @@ export default function Profile() {
 
         <div className="flex flex-col items-center text-center min-w-0">
           <button
-            onClick={() => setAvatarSheetOpen(true)}
+            type="button"
+            onClick={(e) => setAvatarAnchor(e.currentTarget)}
             aria-label="Change profile picture"
+            aria-haspopup="menu"
+            aria-expanded={!!avatarAnchor}
             className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[30px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
           >
             {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
           </button>
-          <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-1.5 max-w-full">
+          {/* Decision 23 (item 98): the Premium crown and Ambassador badge are
+              16 badges after the name, 5 apart, as the Professional card's
+              verified badge (DirectoryCard). */}
+          <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-[5px] max-w-full">
             {/* Wraps rather than truncating: the centre column is narrow. */}
             <span className="min-w-0 line-clamp-2 [overflow-wrap:anywhere]">{user.firstName}</span>
-            {premiumPlan && <Crown size={15} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
             {/* QA 11.0 ambassador badge: a granted status (ambassador_grants,
                 read through is_ambassador()), not "one referral". */}
-            {isAmbassador && <Award size={15} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
+            {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
           </h2>
           <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
             {accountTypeLabel[user.accountType]}
@@ -388,6 +391,19 @@ export default function Profile() {
               <KeyRound size={14} strokeWidth={1.75} aria-hidden />
               Credentials
             </button>
+          )}
+          {/* The avatar menu closes when an option is picked, so the upload's
+              two outcomes land here, under the hero: "Saving…" while it runs,
+              and a failure as the Foundations inline danger line
+              (CircleAlert 13 + 12/600 danger). */}
+          {avatarBusy && (
+            <p role="status" className="mt-2 text-xs font-semibold text-charcoal-faint">Saving…</p>
+          )}
+          {avatarError && (
+            <p role="alert" className="mt-2 flex items-start gap-2 text-start text-xs font-semibold text-status-high">
+              <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
+              {avatarError}
+            </p>
           )}
         </div>
 
@@ -415,38 +431,41 @@ export default function Profile() {
       {user.accountType === "professional" && <ProfessionalBioCard />}
       {/* V7 (QA 7.0): the ratings and reviews clients left. */}
       {user.accountType === "professional" && <ReviewsAboutMeCard className="mb-6 animate-fade-slide-up" />}
-      {/* My CV: licences, experience, education and the rest. */}
+      {/* My CV (licences, experience, education and the rest), then
+          certification (V8, QA 8.0). Decision 23 (item 103): both as the
+          MO1.5.1 Join row: r18, a 32 r10 #F0EDF9 tile with a 16/1.75 glyph,
+          15/600, ChevronRight 15, 8 between the rows. */}
       {user.accountType === "professional" && (
-        <Card padded={false} className="mb-3 animate-fade-slide-up">
-          <button onClick={() => navigate("/app/profile/cv")} className="tap w-full flex items-center justify-between px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <FileText size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">My CV</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
-      )}
-      {/* V8 (QA 8.0): certification lives in My Profile. */}
-      {user.accountType === "professional" && (
-        <Card padded={false} className="mb-6 animate-fade-slide-up">
-          <button onClick={() => setCertOpen(true)} className="tap w-full flex items-center justify-between px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <BadgeCheck size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">Certification</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
+        <div className="mb-6 space-y-2 animate-fade-slide-up">
+          {[
+            { icon: FileText, label: "My CV", onClick: () => navigate("/app/profile/cv") },
+            { icon: BadgeCheck, label: "Certification", onClick: () => setCertOpen(true) },
+          ].map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={r.onClick}
+              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+            >
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
+              </span>
+              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Task R: right under the sex tile, because switching to female or
           other is when a tracker somebody never chose to switch off is found
           off. Also on Health, where the Cycle card would be. */}
-      <TrackerQuestion className="mb-6" />
+      {/* Decision 23 (item 100): both as r18 cards with a 36 #F0EDF9 icon
+          tile, like the Recovery card (`tile`; Health and Home keep theirs). */}
+      <TrackerQuestion className="mb-6" tile />
 
       {/* Task T: only for an older account with no date of birth. */}
-      <DobPromptCard className="mb-6" />
+      <DobPromptCard className="mb-6" tile />
 
       {/* Business memberships: invitations to answer, memberships to leave,
           and the code box. Customers only. */}
@@ -653,16 +672,36 @@ export default function Profile() {
         </section>
       )}
 
-      {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. A 48
-          block (MO1.5 row 10: 358 × 48), 24 under the section above. */}
+      {/* Sign Out as a text link (MO1.5). A 48 block (MO1.5 row 10: 358 ×
+          48), 24 under the section above. Decision 23: neutral #5B5349
+          (charcoal-soft) as MO1.5, MO1.5.1 and MO1.5.4 draw it (item 97), and
+          the confirm is a centred popup like End membership (item 102). */}
       <button
-        onClick={handleSignOut}
-        className="tap mx-auto flex items-center justify-center gap-2 px-4 py-3.5 text-[14px] font-semibold text-teal-dark"
+        type="button"
+        onClick={() => setConfirmSignOut(true)}
+        className="tap mx-auto flex items-center justify-center gap-2 px-4 py-3.5 text-[14px] font-semibold text-charcoal-soft"
       >
         {/* MO1.5: 14/600 with LogOut 15/1.75. */}
         <LogOut size={15} strokeWidth={1.75} aria-hidden />
-        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
+        Sign Out
       </button>
+
+      <CentredPopup
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        title="Sign out?"
+        icon={<LogOut size={22} />}
+        body="You can sign back in at any time."
+      >
+        <CtaButton size="page" label="Sign Out" onClick={handleSignOut} />
+        <button
+          type="button"
+          onClick={() => setConfirmSignOut(false)}
+          className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Cancel
+        </button>
+      </CentredPopup>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
@@ -849,44 +888,33 @@ export default function Profile() {
         {sharingFor && <DataSharingSection professionalId={sharingFor.professionalId} />}
       </BottomSheet>
 
-      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} hideHeader>
-        <div className="space-y-2.5 animate-fade-slide-up">
-          <button
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Camera size={18} className="text-primary" />
-            <span className="text-sm font-semibold text-charcoal">Take a photo</span>
-          </button>
-          <button
-            onClick={() => galleryInputRef.current?.click()}
-            disabled={avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Image size={18} className="text-primary" />
-            <span className="text-sm font-semibold text-charcoal">Choose from library</span>
-          </button>
-          <button
-            onClick={() => void handleAvatarRemove()}
-            disabled={!user.avatarUrl || avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Trash2 size={18} className="text-[#C0392B]" />
-            <span className="text-sm font-semibold text-charcoal">Remove photo</span>
-          </button>
-
-          {/* The sheet stays open while this runs, so there is somewhere for
-              both states to land. Uploading a picture is a round trip now
-              rather than a local read, and it can genuinely fail. */}
-          {avatarBusy && (
-            <p className="text-center text-xs font-semibold text-charcoal-faint">Saving…</p>
-          )}
-          {avatarError && (
-            <p className="text-center text-xs font-semibold text-status-high">{avatarError}</p>
-          )}
-        </div>
-      </BottomSheet>
+      {/* Decision 23 (item 99): the avatar's options as the Foundations
+          dropdown menu anchored to the avatar, in place of a bottom sheet.
+          Uploading is a round trip and can fail; its states show under the
+          hero (above). */}
+      <PopupMenu
+        open={!!avatarAnchor}
+        onClose={() => setAvatarAnchor(null)}
+        anchor={avatarAnchor}
+        width={200}
+        align="left"
+        options={[
+          { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          { value: "library", label: "Choose from library", icon: <Image size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          {
+            value: "remove",
+            label: "Remove photo",
+            icon: <Trash2 size={15} strokeWidth={1.75} />,
+            destructive: true,
+            disabled: !user.avatarUrl || avatarBusy,
+          },
+        ]}
+        onSelect={(v) => {
+          if (v === "camera") cameraInputRef.current?.click();
+          else if (v === "library") galleryInputRef.current?.click();
+          else void handleAvatarRemove();
+        }}
+      />
     </div>
   );
 }
