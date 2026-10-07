@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import { stage4Message, type Billing, type PassState, type PlanLite } from "./venueLogic";
+import { hostedImageUrl, stage4Message, storagePath, type Billing, type PassState, type PlanLite } from "./venueLogic";
+import type { HoursRow } from "./hours";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -25,6 +26,12 @@ import { stage4Message, type Billing, type PassState, type PlanLite } from "./ve
 //
 // The generated types come from production, where stage 4 isn't yet, so the
 // new columns and functions go through narrow casts at this boundary.
+//
+// STAGE A4 ("The business side of a venue"): gyms.timezone, gyms.cover_url
+// and business_profiles.logo_url (object paths in the PUBLIC gym-covers /
+// business-logos buckets, turned into public URLs here), and the public
+// readers gym_hours_for() / venue_is_open_at(). The venue console's readers
+// are not wrapped here.
 
 export interface Venue {
   id: string;
@@ -39,6 +46,16 @@ export interface Venue {
   /** MO1.4.2.5 Call's numbers, in display order (max 5). */
   phones: string[];
   access: { qr: boolean; nfc: boolean; bluetooth: boolean };
+  /** A4: the venue's own clock (gyms.timezone), which "today" and "open now" are about. */
+  timezone: string;
+  /** A4: the cover photo's public URL (gyms.cover_url in gym-covers), or null. May 404: draw with a fallback. */
+  coverUrl: string | null;
+  /**
+   * The logos to try, best first: the venue's own (gyms.logo_url, a hosted
+   * URL, stage 4d), then its business's (A4 business_profiles.logo_url in
+   * business-logos). Any may 404: draw with the initials as the fallback.
+   */
+  logoUrls: string[];
 }
 
 export interface VenuePlan extends PlanLite {
@@ -78,6 +95,9 @@ type VenueRow = {
   access_qr: boolean;
   access_nfc: boolean;
   access_bluetooth: boolean;
+  timezone: string | null;
+  cover_url: string | null;
+  logo_url: string | null;
 };
 
 type MembershipRow = {
@@ -100,11 +120,17 @@ type MembershipRow = {
 };
 
 const VENUE_COLUMNS =
-  "id, name, location, bio, lat, lng, business_id, venue_kind, public_phones, access_qr, access_nfc, access_bluetooth";
+  "id, name, location, bio, lat, lng, business_id, venue_kind, public_phones, access_qr, access_nfc, access_bluetooth, timezone, cover_url, logo_url";
+
+/** A4's two buckets are public: an object's URL is built, not signed. */
+const publicUrl = (bucket: "business-logos" | "gym-covers", value: string | null): string | null => {
+  const path = storagePath(value);
+  return path ? supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl : null;
+};
 
 const num = (v: number | string | null): number | null => (v === null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 
-const toVenue = (r: VenueRow): Venue => ({
+const toVenue = (r: VenueRow, businessLogos: Map<string, string>): Venue => ({
   id: r.id,
   name: r.name,
   location: r.location,
@@ -115,7 +141,40 @@ const toVenue = (r: VenueRow): Venue => ({
   kind: r.venue_kind,
   phones: (r.public_phones ?? []).filter((p) => p.trim()),
   access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
+  timezone: r.timezone || "Asia/Beirut",
+  coverUrl: publicUrl("gym-covers", r.cover_url),
+  logoUrls: [hostedImageUrl(r.logo_url), r.business_id ? (businessLogos.get(r.business_id) ?? null) : null].filter((u): u is string => !!u),
 });
+
+type LogoQuery = {
+  from: (t: "business_profiles") => {
+    select: (c: string) => {
+      in: (col: string, v: string[]) => PromiseLike<{ data: { id: string; logo_url: string | null }[] | null; error: PostgrestError | null }>;
+    };
+  };
+};
+
+/**
+ * A4: the businesses' logos (business_profiles.logo_url, readable like the
+ * rest of a listed business's row) as public URLs, by business id. A failed
+ * read costs only the logos: the initials show instead.
+ */
+async function businessLogos(rows: VenueRow[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(rows.flatMap((r) => (r.business_id ? [r.business_id] : [])))];
+  if (ids.length === 0) return out;
+  // logo_url is A4's and not in the production-generated types.
+  const { data, error } = await (supabase as unknown as LogoQuery).from("business_profiles").select("id, logo_url").in("id", ids);
+  if (error) {
+    console.warn("[venues] Could not read business logos:", error.message);
+    return out;
+  }
+  for (const b of data ?? []) {
+    const url = publicUrl("business-logos", b.logo_url);
+    if (url) out.set(b.id, url);
+  }
+  return out;
+}
 
 type VenueQuery = {
   select: (cols: string) => VenueQuery & PromiseLike<{ data: VenueRow[] | null; error: PostgrestError | null }>;
@@ -141,7 +200,9 @@ export async function fetchVenues(): Promise<Result<Venue[]>> {
     console.error("[venues] Could not read venues:", error.message);
     return fail(error, "Couldn't load gyms right now.");
   }
-  return { ok: true, value: (data ?? []).map(toVenue) };
+  const rows = data ?? [];
+  const logos = await businessLogos(rows);
+  return { ok: true, value: rows.map((r) => toVenue(r, logos)) };
 }
 
 /** One venue, or null when it doesn't exist or is hidden (MO1.4.2.1). */
@@ -152,7 +213,8 @@ export async function fetchVenue(id: string): Promise<Result<Venue | null>> {
     return fail(error, "Couldn't load this gym right now.");
   }
   const row = (data ?? [])[0];
-  return { ok: true, value: row ? toVenue(row) : null };
+  if (!row) return { ok: true, value: null };
+  return { ok: true, value: toVenue(row, await businessLogos([row])) };
 }
 
 /**
@@ -219,6 +281,45 @@ export async function purchaseGymMembership(gymId: string, planId: string): Prom
     return error ? fail(error, "Couldn't book that membership. Try again.") : { ok: false, message: "Couldn't book that membership. Try again." };
   }
   return { ok: true, value: data };
+}
+
+// ---------------------------------------------------------------------------
+// Stage A4: opening hours and "open now" (MO1.4.2.1 #8-9). Both functions are
+// public (anon + authenticated) and raise no ATX code; gym_hours_for()
+// returns nothing for a hidden venue, which the page never shows anyway.
+
+/** The venue's hours, Monday first (up to seven rows; a missing day is "not published"). */
+export async function fetchGymHours(gymId: string): Promise<Result<HoursRow[]>> {
+  type Row = { weekday: number; closed: boolean; open_24h: boolean; opens_at: string | null; closes_at: string | null; wraps_midnight: boolean | null };
+  const { data, error } = await rpc<Row[]>("gym_hours_for", { p_gym_id: gymId });
+  if (error) {
+    console.error("[venues] Could not read opening hours:", error.message);
+    return fail(error, "Couldn't load opening hours right now.");
+  }
+  return {
+    ok: true,
+    value: (data ?? []).map((r) => ({
+      weekday: Number(r.weekday),
+      closed: r.closed,
+      open24h: r.open_24h,
+      opensAt: r.opens_at,
+      closesAt: r.closes_at,
+      wrapsMidnight: !!r.wraps_midnight,
+    })),
+  };
+}
+
+/**
+ * venue_is_open_at(id, now()), on the venue's clock. Three-valued: null is
+ * "no hours for now", which is not "closed".
+ */
+export async function fetchVenueOpenNow(gymId: string): Promise<Result<boolean | null>> {
+  const { data, error } = await rpc<boolean>("venue_is_open_at", { p_gym_id: gymId });
+  if (error) {
+    console.error("[venues] Could not check whether the venue is open:", error.message);
+    return fail(error, "Couldn't check whether this gym is open.");
+  }
+  return { ok: true, value: typeof data === "boolean" ? data : null };
 }
 
 // ---------------------------------------------------------------------------

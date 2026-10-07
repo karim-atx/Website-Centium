@@ -5,6 +5,7 @@ import {
   cancellationLine,
   currentMembership,
   dayMonthYear,
+  hostedImageUrl,
   isLateCancellation,
   memberTag,
   membershipFromLine,
@@ -14,6 +15,7 @@ import {
   reviewAge,
   sortPlans,
   stage4Message,
+  storagePath,
   validRange,
   type PlanLite,
 } from "./venueLogic.ts";
@@ -98,4 +100,22 @@ test("reviewAge reads as the frame's", () => {
   assert.equal(reviewAge("2026-09-30T12:00:00Z", now), "1 week ago");
   assert.equal(reviewAge("2026-09-16T12:00:00Z", now), "3 weeks ago");
   assert.equal(reviewAge("2026-09-01T12:00:00Z", now), "1 month ago");
+});
+
+test("storagePath: an A4 object path is kept; URLs, absolute and traversal paths are not", () => {
+  assert.equal(storagePath("0b1c/logo.png"), "0b1c/logo.png");
+  assert.equal(storagePath(" 0b1c/e1/cover.jpg "), "0b1c/e1/cover.jpg");
+  assert.equal(storagePath(null), null);
+  assert.equal(storagePath(""), null);
+  assert.equal(storagePath("https://x.test/a.png"), null);
+  assert.equal(storagePath("/abs/a.png"), null);
+  assert.equal(storagePath("a/../b.png"), null);
+  assert.equal(storagePath("javascript:alert(1)"), null);
+});
+
+test("hostedImageUrl: gyms.logo_url is drawn only when it is http(s)", () => {
+  assert.equal(hostedImageUrl("https://probe.local/fg.png"), "https://probe.local/fg.png");
+  assert.equal(hostedImageUrl("javascript:alert(1)"), null);
+  assert.equal(hostedImageUrl("0b1c/logo.png"), null);
+  assert.equal(hostedImageUrl(null), null);
 });

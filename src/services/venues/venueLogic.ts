@@ -188,3 +188,23 @@ export function reviewAge(iso: string, now: Date = new Date()): string {
   if (days < 365) return unit(Math.floor(days / 30), "month");
   return unit(Math.floor(days / 365), "year");
 }
+
+/**
+ * Stage A4: business_profiles.logo_url and gyms.cover_url hold an object path
+ * in a public bucket (<owner_uid>/… ), not a URL. A usable path is non-empty,
+ * relative and has no "..". Anything else is not drawn (the initials show).
+ */
+export function storagePath(value: string | null | undefined): string | null {
+  const p = value?.trim();
+  if (!p || /^[a-z][a-z0-9+.-]*:/i.test(p) || p.startsWith("/") || p.split("/").includes("..")) return null;
+  return p;
+}
+
+/**
+ * gyms.logo_url (stage 4d) is different: a business points it at an image it
+ * already hosts, so it is a full URL. Only http(s) is drawn.
+ */
+export function hostedImageUrl(value: string | null | undefined): string | null {
+  const u = value?.trim();
+  return u && /^https?:\/\//i.test(u) ? u : null;
+}

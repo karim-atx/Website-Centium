@@ -15,6 +15,7 @@ import {
 import { fetchMyGymMemberships, fetchPlansFor, fetchVenues, type GymMembership, type Venue, type VenuePlan } from "../../services/venues";
 import { currentMembership, memberTag, membershipFromLine } from "../../services/venues/venueLogic";
 import { MemberTag } from "../../components/marketplace/MemberTag";
+import { VenueImage } from "../../components/marketplace/VenueImage";
 import { CalendarDays, Search, Store, Dumbbell, Check, ChevronRight } from "lucide-react";
 
 // Marketplace discovery: real classes, real venues, real bookings.
@@ -53,8 +54,11 @@ import { CalendarDays, Search, Store, Dumbbell, Check, ChevronRight } from "luci
 // GYMS (backend stage 4a / 4b): the cards read public.gyms itself (the
 // Explore view predates 4a), "Membership from $X/month" comes from the
 // venue's business's membership_plans, and the Member / "Pay on your first
-// visit" tag from my_gym_memberships(). Cover photos, logos and distances have
-// no data yet. An empty table is a state, not a bug: the section says so.
+// visit" tag from my_gym_memberships(). Stage A4: the cover photo
+// (gyms.cover_url) and logo (gyms.logo_url, else business_profiles.logo_url),
+// each falling back to the tint / initials when missing or not loadable.
+// Distances have no data yet. An empty table is a state, not a bug: the
+// section says so.
 
 const priceCeilings = [
   { label: "Any price", value: null },
@@ -408,14 +412,22 @@ export default function Discover() {
               onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(v.id)}`)}
               className="tap block w-full text-left rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up"
             >
-              {/* No cover photos yet (4a stores none): the primary tint with
-                  the gym's initials, as MO1.4.2 draws a gym without one. 84
-                  tall of the 172 card. The Member tag sits on the cover, 10
-                  in from the top right (measured). */}
-              <span className="relative h-[84px] bg-primary-pale flex items-center justify-center">
-                <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
-                  {initials(v.name)}
-                </span>
+              {/* The cover, 84 tall of the 172 card (MO1.4.2 #5-6): the gym's
+                  own photo (A4 gyms.cover_url) across it. With no photo, or
+                  one that fails to load, the primary tint with the logo tile
+                  (#7: the venue's logo, else its business's; else the
+                  initials). The Member tag sits on the cover, 10 in from the
+                  top right (measured). */}
+              <span className="relative h-[84px] bg-primary-pale flex items-center justify-center overflow-hidden">
+                <VenueImage
+                  srcs={[v.coverUrl]}
+                  className="absolute inset-0 w-full h-full"
+                  fallback={
+                    <span className="relative w-11 h-11 rounded-[12px] overflow-hidden bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
+                      <VenueImage srcs={v.logoUrls} className="absolute inset-0 w-full h-full" fallback={initials(v.name)} />
+                    </span>
+                  }
+                />
                 {tag && <MemberTag label={tag.label} tone={tag.tone} className="absolute top-2.5 right-2.5" />}
               </span>
               <span className="px-4 py-3 flex items-center gap-3">
