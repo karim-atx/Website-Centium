@@ -1302,7 +1302,21 @@ export type HabitIconKey =
   | "meditation"
   | "sleep"
   | "book"
-  | "custom";
+  | "custom"
+  // Stage A1: the 12 the MO1.1.1.1 picker adds, named after their Lucide icon
+  // (the database enum public.habit_icon, 20 values).
+  | "glass_water"
+  | "moon"
+  | "sun"
+  | "apple"
+  | "salad"
+  | "coffee"
+  | "bike"
+  | "heart"
+  | "smile"
+  | "music"
+  | "phone_off"
+  | "timer";
 
 export interface HabitItem {
   id: string;

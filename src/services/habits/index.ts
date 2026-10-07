@@ -3,6 +3,8 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import type { HabitIconKey } from "../../types";
 
 export * from "./streak";
+export * from "./icons";
+import { toHabitIcon, validateHabitIcon } from "./icons";
 
 // Habits, in public.habit_items and public.habit_completions.
 //
@@ -49,6 +51,9 @@ function describe(error: PostgrestError): string {
     return "Your session expired. Sign in again to save this.";
   }
   if (code === "23514") return `Give the habit a name, up to ${HABIT_LIMITS.labelMax} characters.`;
+  // 22P02: not a habit_icon value. validateHabitIcon catches it first; this
+  // covers a build whose list ran ahead of the database.
+  if (code === "22P02") return "That icon isn't available. Pick another one.";
   if (code === "42501") {
     return "You don't have permission to save this. Sign in again and try once more.";
   }
@@ -91,7 +96,7 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
   const rows: HabitRow[] = (items ?? []).map((r) => ({
     id: r.id,
     label: r.label,
-    icon: r.icon as HabitIconKey,
+    icon: toHabitIcon(r.icon),
     position: r.position,
   }));
   const completions: Record<string, string[]> = {};
@@ -123,11 +128,13 @@ export async function createHabit(
   userId: string,
   habit: { label: string; icon: HabitIconKey; position: number }
 ): Promise<Result<HabitRow>> {
-  const invalid = validateLabel(habit.label);
+  const invalid = validateLabel(habit.label) ?? validateHabitIcon(habit.icon);
   if (invalid) return { ok: false, message: invalid };
 
   const { data, error } = await supabase
     .from("habit_items")
+    // The cast also covers the 12 Stage A1 icon values, which the generated
+    // types (read from production) do not list until the enum ships there.
     .insert({
       owner_id: userId,
       label: habit.label.trim(),
@@ -144,7 +151,7 @@ export async function createHabit(
   }
   return {
     ok: true,
-    value: { id: data.id, label: data.label, icon: data.icon as HabitIconKey, position: data.position },
+    value: { id: data.id, label: data.label, icon: toHabitIcon(data.icon), position: data.position },
   };
 }
 
