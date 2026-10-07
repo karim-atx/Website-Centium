@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { Card } from "../ui/Card";
+import { CentredPopup } from "../ui/CentredPopup";
 import { VenueImage } from "./VenueImage";
 import { initials } from "../professionals/typeColour";
 import { useApp } from "../../context/AppContext";
@@ -25,6 +26,9 @@ export function VenueImagesCard({ gymId, businessId, venueName }: { gymId: strin
   const [images, setImages] = useState<{ gymId: string; value: VenueImages } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Kind | null>(null);
+  // Removing asks first (user decision, 7 October 2026): it deletes the
+  // stored image, which cannot be brought back.
+  const [confirming, setConfirming] = useState<Kind | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
 
@@ -94,7 +98,7 @@ export function VenueImagesCard({ gymId, businessId, venueName }: { gymId: strin
       </button>
       {has && (
         <button
-          onClick={() => void remove(kind)}
+          onClick={() => setConfirming(kind)}
           disabled={!!busy}
           aria-label={kind === "logo" ? "Remove logo" : "Remove cover"}
           className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-status-high disabled:opacity-40"
@@ -154,6 +158,38 @@ export function VenueImagesCard({ gymId, businessId, venueName }: { gymId: strin
           e.target.value = "";
         }}
       />
+      <CentredPopup
+        open={!!confirming}
+        onClose={() => !busy && setConfirming(null)}
+        title={confirming === "logo" ? "Remove the logo?" : "Remove the cover photo?"}
+        icon={<Trash2 size={22} />}
+        body={
+          confirming === "logo"
+            ? "Your venues will show your initials instead. You can upload a new logo at any time."
+            : "This venue's page will show its colour instead. You can upload a new cover at any time."
+        }
+      >
+        {/* The shared destructive fill, as the other confirms. */}
+        <button
+          type="button"
+          onClick={() => {
+            const kind = confirming;
+            setConfirming(null);
+            if (kind) void remove(kind);
+          }}
+          disabled={!!busy}
+          className="tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"
+        >
+          Remove
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(null)}
+          className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Keep it
+        </button>
+      </CentredPopup>
     </div>
   );
 }

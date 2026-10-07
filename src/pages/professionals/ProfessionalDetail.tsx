@@ -368,6 +368,7 @@ export default function ProfessionalDetail() {
   // The pinned row waits for the connection check, so Message never flashes
   // the non-client outline at someone who is already a client.
   const showPinned = isReal && activeClient !== null;
+  const isOwnProfile = realProfessionalId !== null && realProfessionalId === authUserId;
 
   return (
     <div className={showPinned ? "pb-[172px]" : ""}>
@@ -554,7 +555,18 @@ export default function ProfessionalDetail() {
           #6F9993), Handshake 15, for a client and a non-client alike, as
           MO1.2.1 draws it: it opens the hire sheet (MO1.2.1.5). A paid hire on
           top of an existing relationship is ordinary (the contract). */}
-      {showPinned && (
+      {/* Your own profile (user decision, 7 October 2026): no Hire — you
+          cannot hire yourself — so Message stands alone. */}
+      {showPinned && isOwnProfile && <PinnedCta size="base" primary={{
+            label: "Message",
+            icon: <MessageCircle size={15} />,
+            loading: threadBusy,
+            onClick: () => void openThread(),
+            style: isConnected
+              ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
+              : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
+          }} />}
+      {showPinned && !isOwnProfile && (
         <PinnedCta
           size="base"
           secondary={{

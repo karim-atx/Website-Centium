@@ -28,7 +28,8 @@ export default function BusinessDashboard() {
   const { plans } = useMembershipPlans();
   const { discounts } = useBusinessDiscounts();
   const isGym = user.businessType === "gym";
-  const views = businessListing.membersReached * 6 + 128;
+  // The computed "Views (30d)" (membersReached * 6 + 128, not a real figure)
+  // is gone by user decision (7 October 2026); the real stats stay.
   const [editingPerk, setEditingPerk] = useState(false);
   const [perkDraft, setPerkDraft] = useState(businessListing.perk);
 
@@ -71,10 +72,6 @@ export default function BusinessDashboard() {
           <div className="flex-1 text-center py-3.5">
             <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{businessListing.membersReached}</p>
             <p className="text-[10px] text-charcoal-faint mt-1.5">Members reached</p>
-          </div>
-          <div className="flex-1 text-center py-3.5">
-            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{views.toLocaleString()}</p>
-            <p className="text-[10px] text-charcoal-faint mt-1.5">Views (30d)</p>
           </div>
           {isGym ? (
             <div className="flex-1 text-center py-3.5">
