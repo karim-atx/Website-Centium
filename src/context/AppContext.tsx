@@ -198,11 +198,6 @@ import {
   AUTO_STREAK_LABEL_BY_CATEGORY,
   ensureAutoStreaks,
   getAutoStreaks,
-  getCustomStreaks,
-  createCustomStreak,
-  updateCustomStreak,
-  deleteCustomStreak,
-  type CustomStreakRow,
 } from "../services/streaks";
 import {
   getRecoveryPendingUserId,
@@ -659,12 +654,9 @@ interface AppState {
   removeHabit: (id: string) => void;
   renameHabit: (id: string, label: string) => void;
 
+  // The four automatic streaks only: manual streaks were removed on 7 October
+  // 2026 (decision 23, kept-list items 27–28).
   streaks: Streak[];
-  updateStreak: (id: string, patch: Partial<Streak>) => void;
-  // V4 (QA 4.0): a new streak is linked to an existing habit — its days
-  // count is kept in sync with that habit's own streakDays.
-  addStreak: (habitId: string, goalDays: number) => void;
-  removeStreak: (id: string) => void;
 
   // Iteration 6 "Team" §8: the Home streak board's plant. See the
   // definitions above AppContext for what each holds and why.
@@ -1332,8 +1324,6 @@ if (typeof window !== "undefined") migrateLegacyStorage();
 // reloading. Guarded, so a session the cookie parser cannot read never loops.
 const REBIND_MARK = "centium-tab-rebind";
 
-// Set once this account's device-only streaks are all in the streaks table.
-const CUSTOM_STREAKS_MARKER = "customStreaksUploaded";
 function reloadToRebind(): boolean {
   try {
     const last = Number(sessionStorage.getItem(REBIND_MARK) ?? 0);
@@ -2220,8 +2210,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // days from services/habits/streak — not the old tap counter, which added 1
   // per tick and never reset on a missed day.
   //
-  // The shape handed to consumers is unchanged, so HabitsTab, the Home widget
-  // and AddStreakSheet did not have to move with it.
+  // The shape handed to consumers is unchanged, so HabitsTab and the Home
+  // widget did not have to move with it.
   const [habitSnapshot, setHabitSnapshot] = useState<HabitsSnapshot>({ items: [], completions: {} });
   const [habitsLoading, setHabitsLoading] = useState(true);
   const [habitsError, setHabitsError] = useState<string | null>(null);
@@ -4766,113 +4756,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // USER-ADDED STREAKS LIVE IN THE STREAKS TABLE (2026-09-30), as non-auto
-  // rows; this state is the screen's copy. Each write shows at once and is
-  // put back if the database refuses it (streaksError says why). Signed out,
-  // they stay on the device as before.
-  const updateStreak = (id: string, patch: Partial<Streak>) => {
-    const before = streaks;
-    setStreaks((prev) => prev.map((s) => (s.id === id && !s.auto ? { ...s, ...patch } : s)));
-    if (!authUserId || !isUuid(id)) return;
-    void updateCustomStreak(id, { label: patch.label, goalDays: patch.goalDays, days: patch.days }).then((r) => {
-      if (r.ok) return setStreaksError(null);
-      setStreaks(before);
-      setStreaksError(r.message ?? "Couldn't save that streak.");
-    });
-  };
-  const addStreak = (habitId: string, goalDays: number) => {
-    const habit = habits.find((h) => h.id === habitId);
-    if (!habit) return;
-    const local: Streak = { id: `s${Date.now()}`, label: habit.label, days: habit.streakDays, goalDays, habitId };
-    setStreaks((prev) => [...prev, local]);
-    if (!authUserId) return;
-    void createCustomStreak(authUserId, { label: local.label, days: local.days, goalDays, habitId }).then((r) => {
-      if (r.ok && r.value) {
-        setStreaksError(null);
-        const row = r.value;
-        return setStreaks((prev) => prev.map((s) => (s.id === local.id ? { ...s, id: row.id } : s)));
-      }
-      setStreaks((prev) => prev.filter((s) => s.id !== local.id));
-      setStreaksError(r.message ?? "Couldn't save that streak.");
-    });
-  };
-  const removeStreak = (id: string) => {
-    const before = streaks;
-    setStreaks((prev) => prev.filter((s) => s.id !== id));
-    if (!authUserId || !isUuid(id)) return;
-    void deleteCustomStreak(id).then((r) => {
-      if (r.ok) return setStreaksError(null);
-      setStreaks(before);
-      setStreaksError(r.message ?? "Couldn't delete that streak.");
-    });
-  };
-
-  // A streak linked to a habit tracks that habit's own run automatically,
-  // including its label if the habit is renamed, instead of drifting out of
-  // sync as a separate counter.
-  //
-  // THE NUMBER IT COPIES IS A DIFFERENT NUMBER NOW. habit.streakDays used to
-  // be a tap counter kept in localStorage — +1 per tick, -1 per untick, never
-  // reset on a missed day. It is a real run of consecutive days from
-  // habit_completions, so a linked streak can now go down, which is what a
-  // streak is supposed to do.
-  useEffect(() => {
-    setStreaks((prev) =>
-      prev.map((s) => {
-        if (!s.habitId) return s;
-        const habit = habits.find((h) => h.id === s.habitId);
-        if (!habit) return s;
-        return { ...s, days: habit.streakDays, label: habit.label };
-      })
-    );
-    // The stored row follows too, so another device reads the same numbers.
-    // Worked out from the streaks on screen here, not inside the updater
-    // above, which React runs later.
-    if (authUserId) {
-      for (const s of streaks) {
-        const habit = s.habitId ? habits.find((h) => h.id === s.habitId) : undefined;
-        if (!habit || !isUuid(s.id)) continue;
-        if (s.days !== habit.streakDays || s.label !== habit.label) {
-          void updateCustomStreak(s.id, { days: habit.streakDays, label: habit.label });
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [habits]);
-
-  // --- user-added streaks: read, and the one-time upload ----------------
-  //
-  // THE ONE-TIME MOVE of streaks that only ever lived on this device, like
-  // the habits and journal import: once per account (the marker). A local
-  // streak whose name is already stored is not uploaded again (a second
-  // device, or a retry), and one that fails to upload stays on the device,
-  // alongside the stored ones, until a later load gets it up.
-  const fromCustomRow = (r: CustomStreakRow): Streak => ({
-    id: r.id,
-    label: r.label,
-    days: r.days,
-    ...(r.goalDays ? { goalDays: r.goalDays } : {}),
-    ...(r.habitId ? { habitId: r.habitId } : {}),
-  });
-  const syncCustomStreaks = async (userId: string): Promise<Streak[] | null> => {
-    const read = await getCustomStreaks(userId);
-    if (!read.ok || !read.value) return null;
-    const stored = read.value.map(fromCustomRow);
-    if (loadPersisted<boolean>(CUSTOM_STREAKS_MARKER, false)) return stored;
-    const storedLabels = new Set(read.value.map((r) => r.label.trim().toLowerCase()));
-    const pending = loadPersisted<Streak[]>("streaks", []).filter(
-      (s) => !s.auto && !isUuid(s.id) && !storedLabels.has(s.label.trim().toLowerCase())
-    );
-    const kept: Streak[] = [];
-    for (const s of pending) {
-      const r = await createCustomStreak(userId, { label: s.label, days: s.days, goalDays: s.goalDays ?? null, habitId: s.habitId ?? null });
-      if (r.ok && r.value) stored.push(fromCustomRow(r.value));
-      else kept.push(s);
-    }
-    if (kept.length === 0) writePersisted(CUSTOM_STREAKS_MARKER, true);
-    return [...stored, ...kept];
-  };
-
   // --- auto streak hydration ---------------------------------------------
   //
   // THE FOUR COUNTS COME FROM THE DATABASE NOW. They used to be recomputed
@@ -5064,12 +4947,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // auth listener already makes. `isAdmin !== false` rather than `=== true`
     // waits for the answer instead of guessing while it is still null.
     void ensureAutoStreaks(authUserId)
-      .then(() => Promise.all([getAutoStreaks(authUserId), syncCustomStreaks(authUserId)]))
-      .then(([result, custom]) => {
+      .then(() => getAutoStreaks(authUserId))
+      .then((result) => {
         if (cancelled) return;
-        // The account's own streaks, from the table. A failed read keeps what
-        // is on screen, the same rule as the four below.
-        if (custom) setStreaks((prev) => [...prev.filter((s) => s.auto), ...custom]);
         if (!result.ok) {
           // A failed read is not an empty account. Keep whatever is on screen,
           // the same rule the diary and custom meals follow.
@@ -5079,10 +4959,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setStreaksError(null);
 
         const byCategory = new Map(result.streaks.map((r) => [r.category, r]));
-        setStreaks((prev) => {
-          // User-created streaks are untouched here: they were just read from
-          // the table above, and the sweep knows nothing about them.
-          const own = prev.filter((s) => !s.auto);
+        // Only the four automatic streaks: anything else a device still holds
+        // from before manual streaks were removed is dropped here.
+        setStreaks(() => {
           const auto = AUTO_STREAK_CATEGORIES.map((category) => {
             const row = byCategory.get(category);
             return {
@@ -5096,7 +4975,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               category,
             };
           });
-          return [...auto, ...own];
+          return auto;
         });
       });
 
@@ -6343,9 +6222,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeHabit,
       renameHabit,
       streaks,
-      updateStreak,
-      addStreak,
-      removeStreak,
       plantStage,
       setPlantStage,
       plantSpecies,

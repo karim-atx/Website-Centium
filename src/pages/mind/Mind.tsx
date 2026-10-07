@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { useApp } from "../../context/AppContext";
-import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
-import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
@@ -23,8 +21,6 @@ import {
   Flame,
   Flower2,
   Footprints,
-  Pencil,
-  Plus,
   Trophy,
 } from "lucide-react";
 import type { HabitItem, Streak } from "../../types";
@@ -57,7 +53,6 @@ const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
   nutrition: Apple,
 };
 
-const sectionLabel = "text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
 // MO1.1 #4 "Today": 10.5/700 #8C8378; tracking measured on the 2x frame
 // ("TODAY" 39 pt wide, cap 8) at about 0.1em. Decision 23: the label takes
 // the frame's #8C8378 (text.muted); dark is unchanged.
@@ -97,9 +92,10 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 // can be linked to and the browser's back button leaves them (A7).
 //
 // WHAT THE DESIGN DROPS, AND WHERE IT WENT (decisions A1, A2, A8):
-// - Manual streaks stay, in "Your streaks" below the habits, with Add streak,
-//   tap-to-log, edit and the burst. The four auto streaks are the collapsible
-//   "Auto-tracked" group, without a check (they can't be ticked by hand).
+// - Manual streaks ("Your streaks", Add streak, tap-to-log, edit and the
+//   burst) were removed on 7 October 2026 (decision 23, kept-list 27–28). The
+//   four auto streaks are the collapsible "Auto-tracked" group, without a
+//   check (they can't be ticked by hand).
 // - The paging Habits widget stays on Home; points and tier stay on the
 //   Achievements page.
 // - The Meditation tile keeps the live minutes when there are any.
@@ -127,14 +123,7 @@ export default function Mind() {
   const dark = useIsDark();
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
-  const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
-  const [addStreakOpen, setAddStreakOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
-  // §7.2: which user-added streak just incremented, so its row can fire
-  // the one-shot celebration burst — never on the four auto-derived
-  // streaks, which can't be logged by hand.
-  const [burstKey, setBurstKey] = useState<string | null>(null);
-  const burstNonce = React.useRef(0);
 
   // OPENING MIND EVALUATES. my_achievements() awards before it returns, so this
   // is the sweep for anything earned on a screen that does not itself trigger
@@ -156,23 +145,7 @@ export default function Mind() {
 
   const achievementCounts = earnedCount(achievements ?? []);
 
-  // A user-added streak's `days` mirrors its linked habit's `streakDays`
-  // (see AppContext) — "tap to log" means checking off today's habit, not
-  // editing the streak's label/goal, which lives behind the pencil.
-  const logStreak = (s: Streak) => {
-    if (!s.habitId) return;
-    const habit = habits.find((h) => h.id === s.habitId);
-    if (!habit) return;
-    const wasDone = habit.done;
-    toggleHabit(habit.id);
-    if (!wasDone) {
-      burstNonce.current += 1;
-      setBurstKey(`${s.id}-b${burstNonce.current}`);
-    }
-  };
-
   const autoStreaks = streaks.filter((s) => s.auto);
-  const ownStreaks = streaks.filter((s) => !s.auto);
   const doneHabits = habits.filter((h) => h.done).length;
   // Local calendar days, from the app's local today (not UTC).
   const journalDays = journalStreakFrom(journalEntries.map((e) => e.date), today);
@@ -408,54 +381,7 @@ export default function Mind() {
         <p className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
           Auto streaks count from what you log across the app. To track something new, add a habit.
         </p>
-
-        {/* KEPT (A1): the streaks you made yourself, with a goal. */}
-        <div className="flex items-center justify-between mt-6 mb-2.5 px-1">
-          <p className={sectionLabel}>Your streaks</p>
-          <button
-            onClick={() => setAddStreakOpen(true)}
-            className="tap flex items-center gap-1 text-xs font-semibold text-primary"
-          >
-            <Plus size={12} /> Add streak
-          </button>
-        </div>
-        {ownStreaks.length > 0 && (
-          <div className="rounded-[20px] border border-charcoal/[0.11] dark:border-charcoal/[0.08] bg-cream-card overflow-hidden">
-            {ownStreaks.map((s, i) => {
-              const bursting = burstKey?.startsWith(`${s.id}-b`);
-              const habit = habits.find((h) => h.id === s.habitId);
-              const Icon = habit ? habitIcon[habit.icon] : Flame;
-              return (
-                <Row
-                  key={s.id}
-                  divider={i > 0}
-                  onClick={() => logStreak(s)}
-                  icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
-                  label={s.label}
-                  sub={s.goalDays ? `Goal ${s.goalDays} days` : undefined}
-                  days={s.days}
-                  bursting={bursting ? burstKey ?? undefined : undefined}
-                  check={
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingStreak(s);
-                      }}
-                      aria-label="Edit streak"
-                      className="tap w-6 h-6 rounded-full bg-white/60 dark:bg-cream-card/70 flex items-center justify-center text-primary-deep-text shrink-0"
-                    >
-                      <Pencil size={11} />
-                    </button>
-                  }
-                />
-              );
-            })}
-          </div>
-        )}
       </div>
-
-      <StreakEditSheet open={!!editingStreak} onClose={() => setEditingStreak(null)} streak={editingStreak} />
-      <AddStreakSheet open={addStreakOpen} onClose={() => setAddStreakOpen(false)} />
     </div>
   );
 }
@@ -509,55 +435,31 @@ function Tile({
 function Row({
   icon,
   label,
-  sub,
   days,
   check,
-  onClick,
-  bursting,
   divider,
 }: {
   icon: React.ReactNode;
   label: string;
-  sub?: string;
   days: number;
   check?: React.ReactNode;
-  onClick?: () => void;
-  bursting?: string;
   /** A rule above the row, inset to the label column (x 71 on the frame:
       14 padding + 28 tile + 12 gap) and stopping at the streak strip, so
       the strip runs unbroken (MO1.1 #6). */
   divider?: boolean;
 }) {
   return (
-    <div
-      role={onClick ? "button" : undefined}
-      onClick={onClick}
-      className={clsx("flex items-stretch h-14", onClick && "tap cursor-pointer")}
-    >
+    <div className="flex items-stretch h-14">
       <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
         {divider && <span aria-hidden className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
         <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">{icon}</span>
-        <span className="min-w-0">
-          <span className="block text-[13.5px] font-semibold text-charcoal truncate">{label}</span>
-          {sub && <span className="block text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">{sub}</span>}
-        </span>
+        <span className="min-w-0 block text-[13.5px] font-semibold text-charcoal truncate">{label}</span>
       </div>
       {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}
       <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
         <span className="relative flex items-center gap-1">
-          <Flame
-            key={bursting}
-            size={15}
-            className={clsx("text-team-teal-deep dark:text-teal-deep-text", bursting && "animate-streak-flame")}
-            style={{ transformOrigin: "50% 85%" }}
-          />
-          <span
-            key={bursting ? `${bursting}-count` : undefined}
-            className={clsx(
-              "text-[20px] font-extrabold leading-none text-team-teal-deep dark:text-teal-deep-text tabular-nums",
-              bursting && "animate-streak-count-roll"
-            )}
-          >
+          <Flame size={15} className="text-team-teal-deep dark:text-teal-deep-text" />
+          <span className="text-[20px] font-extrabold leading-none text-team-teal-deep dark:text-teal-deep-text tabular-nums">
             {days}
           </span>
         </span>
