@@ -1,55 +1,98 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles, UserPlus } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
-import { CtaButton } from "../ui/PinnedCta";
 import { useApp } from "../../context/AppContext";
 import {
-  getOrCreateMyReferralCode,
-  previewReferral,
-  redeemReferral,
-  type ReferralPreview,
+  getReferralSummary,
+  mintMyReferralCode,
+  redeemReferralCode,
+  type ReferralSummary,
 } from "../../services/redemption";
+import { appliedLine, redemptionsLine } from "../../services/redemption/referralLogic";
 
-// MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30),
-// ON TODAY'S TERMS: the rewards card says what redeem_referral() actually
-// does (10% off for the friend; 1,500 points, which are real in points_ledger,
-// plus 15% off the next month for you). The board's "3 of 12 rewards this
-// year" bar and its rule lines describe the referral model in the backlog
-// (D25), so they are left out until it exists.
+// MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30), on
+// the A6 backend ("Stage A6 · Referrals" in ../Database/docs/HANDOVER_API.md):
 //
-// KEPT FROM THE SHEET: the "{name} invited you" confirm before anything is
-// redeemed (KEEP-SAFETY: nothing is applied to the account unasked).
-// Handover-complete pass (2026-10-07): the "a referral succeeded" banner and
-// the local "already redeemed" note are removed (the frame draws neither; a
-// second code is refused by redeem_referral and shown as MO1.10.2's line).
-// MO1.10.1 and .2 use today's paths: the success row replaces the code box,
-// and a refusal is a red line with the RPC's own words. Still waiting on the
-// backend: the frame's reward wording, the per-reason refusal wording, the
-// "N of 12 rewards" progress line and MO1.10.3's subscribed state.
+// - referral_summary() on every open (free, creates nothing). Its `code` is
+//   NULL until my_referral_code() has minted one, so the code row shows
+//   "Get my code" until then; my_referral_code() is called from that button
+//   only, never just to look.
+// - The code is permanent: one per account, no expiry, shared as often as
+//   you like.
+// - "Have a code?" calls redeem_referral_code() straight from Apply (as the
+//   frame draws: Apply → MO1.10.1 or MO1.10.2) and words the outcome from its
+//   `reason`, never from `message`. An account that has already been referred
+//   (i_was_referred) sees MO1.10.1's applied row in the field's place, with
+//   its own discount (my_discount_pct).
+//
+// REMOVED in A6: the create_referral() / per-row code flow, and the
+// "{name} invited you" confirm step — it was built on preview_referral(),
+// which only knows legacy single-use codes and so cannot preview a permanent
+// one; the contract has no preview for those.
+//
+// Still waiting on the D25 reward model: the frame's reward wording ("first
+// payment", "a future bill"), the "N of 12 discount rewards" progress bar and
+// its three rule lines, "Codes apply to your first subscription only." and
+// MO1.10.3's subscribed state. The progress line's slot carries what the
+// summary does know: how many friends joined and the points earned.
 //
 // QA 11.0: shared across Client / Professional / Business More pages.
 export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { authUserId, applyReferralReward } = useApp();
+  const { authUserId } = useApp();
   const [codeDraft, setCodeDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState<ReferralPreview | null>(null);
 
-  // The user's own code, fetched once per mount and remembered, so reopening
-  // never mints a second code and orphans one that may already be shared.
-  const [myCode, setMyCode] = useState<string | null>(null);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const requested = useRef(false);
+  const [summary, setSummary] = useState<ReferralSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
+  const [mintError, setMintError] = useState<string | null>(null);
 
+  // Another account signed in: nothing of the last one's may show (reset
+  // during render, so no frame paints the previous account's code).
+  const [summaryFor, setSummaryFor] = useState(authUserId);
+  if (summaryFor !== authUserId) {
+    setSummaryFor(authUserId);
+    setSummary(null);
+    setSummaryError(null);
+    setMintError(null);
+    setResult(null);
+    setCodeDraft("");
+  }
+
+  const fetchSummary = useCallback(
+    () =>
+      getReferralSummary().then((r) => {
+        if (r.status === "ok") {
+          setSummary(r.summary);
+          setSummaryError(null);
+        } else setSummaryError(r.message);
+      }),
+    []
+  );
+
+  // Re-read on every open so the counts are current; the reader is free.
   useEffect(() => {
-    if (!open || !authUserId || requested.current) return;
-    requested.current = true;
-    void getOrCreateMyReferralCode(authUserId).then((r) => {
-      if (r.status === "ok") setMyCode(r.code);
-      else setCodeError(r.message);
-    });
-  }, [open, authUserId]);
+    if (!open || !authUserId) return;
+    void fetchSummary();
+  }, [open, authUserId, fetchSummary]);
+
+  const loadSummary = () => {
+    setSummaryError(null);
+    void fetchSummary();
+  };
+
+  const myCode = summary?.code ?? null;
+
+  const getMyCode = async () => {
+    setMintError(null);
+    setMinting(true);
+    const r = await mintMyReferralCode();
+    setMinting(false);
+    if (r.status === "ok") setSummary((s) => (s ? { ...s, code: r.code } : s));
+    else setMintError(r.message);
+  };
 
   const copyCode = async () => {
     if (!myCode) return false;
@@ -79,44 +122,42 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
     await copyCode();
   };
 
-  const lookUp = async () => {
+  const apply = async () => {
+    if (!codeDraft.trim()) return;
     setResult(null);
     setBusy(true);
-    const found = await previewReferral(codeDraft);
+    const outcome = await redeemReferralCode(codeDraft);
     setBusy(false);
-    if (found.status === "found") {
-      setPreview(found.data);
+    if (outcome.status === "redeemed") {
+      setCodeDraft("");
+      setResult({ success: true, message: outcome.line });
+      setSummary((s) => (s ? { ...s, iWasReferred: true, myDiscountPct: outcome.discountPct } : s));
       return;
     }
-    setResult({
-      success: false,
-      message: found.status === "not_found" ? "Code not found. Check it and try again." : found.message,
-    });
+    // A refusal (by reason) and a raised error (rate limit, offline, signed
+    // out) both show as MO1.10.2's line under the field.
+    setResult({ success: false, message: outcome.status === "refused" ? outcome.line : outcome.message });
   };
 
-  const confirm = async () => {
-    if (!preview) return;
-    setBusy(true);
-    const outcome = await redeemReferral(preview.code);
-    setBusy(false);
-    setPreview(null);
-    setCodeDraft("");
-    if (outcome.status === "success") {
-      // The returned row's number, not a hardcoded 10: only the friend's
-      // discount applies to THIS account.
-      const pct = outcome.discountPct ?? preview.refereeDiscountPct;
-      applyReferralReward(pct);
-      setResult({ success: true, message: outcome.message ?? `Code applied. ${pct}% off your subscription.` });
-      return;
-    }
-    setResult({ success: false, message: outcome.message });
-  };
+  // MO1.10.1 in the field's place: this session's redemption, or one made
+  // before (one per account, ever).
+  const appliedMessage = result?.success
+    ? result.message
+    : summary?.iWasReferred
+      ? appliedLine(summary.myDiscountPct)
+      : null;
+  const progressLine = summary ? redemptionsLine(summary) : null;
 
   // MO1.10 row 3: the popup's labels are 10.5/700 (cap 7.5 on the 2x frame),
   // 10 above what they name (no rule under them in the popup).
   const label = (text: string) => (
     <p className="text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide mb-2.5">{text}</p>
   );
+
+  // MO1.10 (2x frame): Copy, Share and (unspecified, same fill) Get my code
+  // take #9A8CD6 (th-9a8cd6, follows the theme) in light; dark keeps
+  // primary-fill.
+  const filled = "bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill";
 
   return (
     // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75. Row 3 "padding 0
@@ -152,9 +193,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             </div>
           ))}
         </div>
-        {/* The points are real: redeem_referral() writes 1,500 to
-            points_ledger, shown under "from referrals" on both tier cards.
-            What they are for is a tier and, so far, nothing else. */}
+        {/* The points are real: redeem_referral_code() writes them to the
+            referrer's points_ledger, shown under "from referrals" on both
+            tier cards. What they are for is a tier and, so far, nothing else. */}
         <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
 
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
@@ -162,39 +203,78 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             the Copy button radius 12. Decision 23 (item 25): the frame's 1px
             #E4E4E3 hairline (charcoal 12% on white) in light, as in dark. */}
         <div className="mt-3.5">{label("Your code")}</div>
-        <div className="flex items-center gap-2">
-          {/* Handover-complete pass: Copy and Share take the frame's #9A8CD6 fill
-              (th-9a8cd6, follows the theme) in light; dark keeps primary-fill. */}
-          <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
-            {myCode ?? (codeError ? "Unavailable" : "…")}
-          </span>
-          <button
-            type="button"
-            onClick={() => void copyCode()}
-            disabled={!myCode}
-            aria-label="Copy referral code"
-            className="tap w-12 h-12 rounded-xl bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
-          >
-            {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
-          </button>
-        </div>
-        {codeError && <p className="text-[11px] text-status-high mt-2">{codeError}</p>}
-        <button
-          type="button"
-          onClick={() => void shareCode()}
-          disabled={!myCode}
-          // MO1.10: 8 under the code row (2x frame y 943 → 960), radius 14.
-          className="tap mt-2 w-full h-12 rounded-[14px] bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
-        >
-          <Share size={16} strokeWidth={1.75} aria-hidden />
-          {copied ? "Code copied" : "Share code"}
-        </button>
+        {summary && !myCode ? (
+          // No code minted yet (referral_summary's code is NULL). Not drawn
+          // on the board: one full-width button in the Share code style.
+          <>
+            <button
+              type="button"
+              onClick={() => void getMyCode()}
+              disabled={minting}
+              className={`tap w-full h-12 rounded-[14px] ${filled} text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40`}
+            >
+              {minting ? "Getting your code…" : "Get my code"}
+            </button>
+            {mintError && <p role="alert" className="text-[11px] text-status-high mt-2">{mintError}</p>}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              {myCode ? (
+                <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
+                  {myCode}
+                </span>
+              ) : (
+                // Loading (not drawn): a skeleton block at the code box's
+                // place, surface.soft at the box's radius.
+                <span
+                  className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft flex items-center justify-center text-[13px] text-charcoal-faint ${summaryError ? "" : "animate-pulse"}`}
+                  aria-busy={!summaryError || undefined}
+                >
+                  {summaryError ? "Unavailable" : ""}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => void copyCode()}
+                disabled={!myCode}
+                aria-label="Copy"
+                className={`tap w-12 h-12 rounded-xl ${filled} flex items-center justify-center shrink-0 disabled:opacity-40`}
+              >
+                {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
+              </button>
+            </div>
+            {summaryError && (
+              <p role="alert" className="text-[11px] text-status-high mt-2">
+                {summaryError}{" "}
+                <button type="button" onClick={loadSummary} className="tap font-bold underline">
+                  Try again
+                </button>
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => void shareCode()}
+              disabled={!myCode}
+              // MO1.10: 8 under the code row (2x frame y 943 → 960), radius 14.
+              className={`tap mt-2 w-full h-12 rounded-[14px] ${filled} text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40`}
+            >
+              <Share size={16} strokeWidth={1.75} aria-hidden />
+              {copied ? "Code copied" : "Share code"}
+            </button>
+          </>
+        )}
+
+        {/* The frame's progress-line slot (2x y 1101, ≈13 regular, charcoal;
+            size measured, not given): referral_summary's redemptions and
+            points_earned, once anybody has used the code. */}
+        {progressLine && <p className="mt-4 text-[13px] text-charcoal">{progressLine}</p>}
 
         {/* MO1.10 (2x frame): the rule 16 under the block above (y 1290 →
             1330) and 14 above "Have a code?". */}
         <div className="mt-4 pt-3.5 border-t border-charcoal/[0.06]">
           {label("Have a code?")}
-          {result?.success ? (
+          {appliedMessage ? (
             // MO1.10.1: the success row replaces the code box.
             // MO1.10.1 (2x frame): 48 tall (y 1408–1503), radius 12, #E4F0EE
             // with #2F5F58 text and icon (new, decision 22; theme secondary),
@@ -202,28 +282,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             <p role="status" className="flex items-center gap-2.5 min-h-12 rounded-xl bg-th-e4f0ee dark:bg-teal-pale px-3.5 py-3 text-[13px] font-semibold text-th-2f5f58 dark:text-teal-deep-text">
               {/* MO1.10.1: CircleCheck 18/2. */}
               <CircleCheck size={18} strokeWidth={2} className="shrink-0" aria-hidden />
-              {result.message}
+              {appliedMessage}
             </p>
-          ) : preview ? (
-            // The confirmation, before anything is redeemed. Decision 23
-            // (item 131): an r12 #F0EDF9 row in the field's place (at least
-            // the field's 48), then Cancel / Confirm as a Pinned CTA row
-            // (primary.tint secondary first, gap 8, 48 r14).
-            <div className="animate-fade-slide-up">
-              <div className="min-h-12 rounded-xl bg-primary-pale px-3.5 py-2.5 flex flex-col justify-center">
-                <p className="text-sm font-semibold text-primary-deep-text">{preview.referrerFirstName} invited you</p>
-                <p className="text-xs text-primary-dark">
-                  You'll get {preview.refereeDiscountPct}% off your subscription
-                  {preview.referrerDiscountPct > 0
-                    ? `, and ${preview.referrerFirstName} gets ${preview.referrerDiscountPct}% off theirs.`
-                    : "."}
-                </p>
-              </div>
-              <div className="flex gap-2 mt-2">
-                <CtaButton size="page" variant="secondary" label="Cancel" onClick={() => setPreview(null)} disabled={busy} />
-                <CtaButton size="page" label={busy ? "Applying…" : "Confirm"} onClick={() => void confirm()} disabled={busy} />
-              </div>
-            </div>
           ) : (
             <div className="flex items-center gap-2">
               <input
@@ -232,7 +292,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                   setCodeDraft(e.target.value.toUpperCase());
                   setResult(null);
                 }}
-                onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && void lookUp()}
+                onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && !busy && void apply()}
                 placeholder="Enter a code"
                 aria-label="A friend's referral code"
                 aria-invalid={(result && !result.success) || undefined}
@@ -252,7 +312,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                   (x 562–707, y 1408–1503). */}
               <button
                 type="button"
-                onClick={() => void lookUp()}
+                onClick={() => void apply()}
                 disabled={!codeDraft.trim() || busy}
                 className="tap h-12 px-5 rounded-xl bg-primary-pale text-primary-accent text-[13px] font-bold shrink-0 disabled:pointer-events-none"
               >
@@ -260,7 +320,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
               </button>
             </div>
           )}
-          {/* MO1.10.2: a refusal, in the RPC's own words for now. */}
+          {/* MO1.10.2: a refusal, worded from redeem_referral_code's reason. */}
           {result && !result.success && (
             // MO1.10.2 (2x frame): 10 under the field, 8 between the 13 icon
             // and the 12/600 line.

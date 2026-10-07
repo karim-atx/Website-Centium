@@ -2,6 +2,17 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums, Tables } from "../../../lib/supabase/database.types";
 import { NOT_ACCEPTING_CLIENTS } from "../subscription-tiers/freePeriodCopy";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import {
+  interpretRedeemReferral,
+  toReferralSummary,
+  type RedeemReferralOutcome,
+  type RedeemReferralRow,
+  type ReferralSummary,
+  type ReferralSummaryRow,
+} from "./referralLogic";
+
+export type { RedeemReferralOutcome, ReferralSummary } from "./referralLogic";
 
 // Client-code and referral-code redemption, against the real RPCs.
 //
@@ -30,16 +41,6 @@ export interface ClientCodePreview {
   professionalFirstName: string;
   professionalAvatarUrl: string | null;
   professionalSubtype: Enums<"professional_subtype">;
-}
-
-export interface ReferralPreview {
-  code: string;
-  redeemed: boolean;
-  referrerId: string;
-  referrerFirstName: string;
-  referrerAvatarUrl: string | null;
-  refereeDiscountPct: number;
-  referrerDiscountPct: number;
 }
 
 export type PreviewResult<T> =
@@ -156,112 +157,78 @@ export async function redeemClientCode(code: string): Promise<RedeemResult> {
   }
 }
 
-// --- referrals ------------------------------------------------------------
+// --- referrals (A6) -------------------------------------------------------
+//
+// Contract: "Stage A6 · Referrals" in ../Database/docs/HANDOVER_API.md. A
+// code is an account (referral_codes, permanent, no expiry); a referrals row
+// is the redemption record. The old create_referral() / per-row-code flow,
+// preview_referral() and redeem_referral() are no longer called, and nothing
+// here reads referrals.code or referrals.expires_at (phase two drops them).
+// The generated types come from production, where these functions are not
+// yet, hence the narrow cast.
 
-export async function previewReferral(code: string): Promise<PreviewResult<ReferralPreview>> {
+type LooseRpc = (
+  fn: string,
+  args?: Record<string, unknown>
+) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+const referralRpc = (): LooseRpc => supabase.rpc.bind(supabase) as unknown as LooseRpc;
+
+function describeReferralError(error: { code?: string; message: string }, fallback: string): string {
+  if (isOffline(error)) return OFFLINE_MESSAGE;
+  // ATX08: my_referral_code() found no profile to take the prefix from.
+  if (error.code === "ATX08") return "Your profile isn't set up yet, so a code can't be made. Try again later.";
+  // ATX01 (no session), ATX02 (5 tries per 15 minutes, its message carries the
+  // retry hint) and a signed-out 42501 go through the shared mapper; anything
+  // else gets the plain fallback rather than a raw database string.
+  if (error.code === "ATX01" || error.code === "ATX02" || error.code === "42501" || error.code === "PGRST301") {
+    return describeRedemptionError(error as PostgrestError);
+  }
+  return fallback;
+}
+
+/** referral_summary(): the Referrals screen in one row. Free, creates nothing. */
+export async function getReferralSummary(): Promise<
+  { status: "ok"; summary: ReferralSummary } | { status: "error"; message: string }
+> {
+  const fallback = "Couldn't load your referrals. Try again.";
   try {
-    const { data, error } = await supabase.rpc("preview_referral", { p_code: code.trim() });
-    if (error) return { status: "error", message: describeRedemptionError(error) };
-    const row = data?.[0];
-    if (!row) return { status: "not_found" };
-    return {
-      status: "found",
-      data: {
-        code: row.code,
-        redeemed: row.redeemed,
-        referrerId: row.referrer_id,
-        referrerFirstName: row.referrer_first_name,
-        referrerAvatarUrl: row.referrer_avatar_url ?? null,
-        refereeDiscountPct: row.referee_discount_pct,
-        referrerDiscountPct: row.referrer_discount_pct,
-      },
-    };
+    const { data, error } = await referralRpc()("referral_summary", {});
+    if (error) return { status: "error", message: describeReferralError(error, fallback) };
+    const row = (Array.isArray(data) ? data[0] : data) as ReferralSummaryRow | null | undefined;
+    return { status: "ok", summary: toReferralSummary(row) };
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not check that code." };
+    return { status: "error", message: isOffline(e) ? OFFLINE_MESSAGE : fallback };
   }
 }
 
-export async function redeemReferral(
+/** my_referral_code(): mints the caller's permanent code on first call and
+ *  returns the same one forever after. Called from "Get my code" only, never
+ *  just to look. */
+export async function mintMyReferralCode(): Promise<{ status: "ok"; code: string } | { status: "error"; message: string }> {
+  const fallback = "Couldn't make your code. Try again.";
+  try {
+    const { data, error } = await referralRpc()("my_referral_code", {});
+    if (error) return { status: "error", message: describeReferralError(error, fallback) };
+    if (typeof data !== "string" || !data) return { status: "error", message: fallback };
+    return { status: "ok", code: data };
+  } catch (e) {
+    return { status: "error", message: isOffline(e) ? OFFLINE_MESSAGE : fallback };
+  }
+}
+
+/** redeem_referral_code(): a permanent code or a legacy single-use one. A
+ *  refusal comes back as a row with a `reason`, not as an error; only a
+ *  raised error (no session, the rate limit, offline) is "error". */
+export async function redeemReferralCode(
   code: string
-): Promise<RedeemResult & { discountPct?: number; bonusPoints?: number }> {
+): Promise<RedeemReferralOutcome | { status: "error"; message: string }> {
+  const fallback = "Couldn't apply that code. Try again.";
   try {
-    const { data, error } = await supabase.rpc("redeem_referral", { p_code: code.trim() });
-    if (error) return { status: "error", message: describeRedemptionError(error) };
-    const result = data as unknown as {
-      success: boolean | null;
-      message: string | null;
-      referral: Tables<"referrals"> | null;
-    } | null;
-    const base = interpretRedeem(result, result?.referral?.id);
-    if (base.status !== "success") return base;
-    // Real values off the row, so the UI stops asserting hardcoded numbers.
-    return {
-      ...base,
-      discountPct: result?.referral?.referee_discount_pct,
-      bonusPoints: result?.referral?.referrer_bonus_points,
-    };
+    const { data, error } = await referralRpc()("redeem_referral_code", { p_code: code.trim() });
+    if (error) return { status: "error", message: describeReferralError(error, fallback) };
+    const row = (Array.isArray(data) ? data[0] : data) as RedeemReferralRow | null | undefined;
+    return interpretRedeemReferral(row);
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not redeem that code." };
-  }
-}
-
-/**
- * What the user has earned as a REFERRER — i.e. from codes of theirs that
- * someone else redeemed. Separate from the referee-side discount, and it
- * lives on their own rows rather than on any redeem response, since the
- * crediting happens on the other person's action.
- *
- * Returns the best (highest) discount among redeemed referrals rather than
- * summing, which matches how the UI phrases it: one "% off next month".
- */
-export async function getMyReferrerReward(
-  userId: string
-): Promise<{ discountPct: number; bonusPoints: number }> {
-  try {
-    const { data, error } = await supabase
-      .from("referrals")
-      .select("referrer_discount_pct, referrer_bonus_points")
-      .eq("referrer_id", userId)
-      .eq("redeemed", true);
-
-    if (error || !data?.length) return { discountPct: 0, bonusPoints: 0 };
-    return {
-      discountPct: Math.max(...data.map((r) => r.referrer_discount_pct ?? 0)),
-      bonusPoints: data.reduce((sum, r) => sum + (r.referrer_bonus_points ?? 0), 0),
-    };
-  } catch {
-    return { discountPct: 0, bonusPoints: 0 };
-  }
-}
-
-/**
- * The signed-in user's own shareable referral code.
- *
- * Queries for an existing unredeemed one first and only calls
- * create_referral() when there isn't one — otherwise every open of the
- * Referral sheet would mint a fresh code and orphan the one the user may
- * already have shared.
- */
-export async function getOrCreateMyReferralCode(
-  userId: string
-): Promise<{ status: "ok"; code: string } | { status: "error"; message: string }> {
-  try {
-    const { data: existing, error: queryError } = await supabase
-      .from("referrals")
-      .select("code, redeemed, expires_at")
-      .eq("referrer_id", userId)
-      .eq("redeemed", false)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (queryError) return { status: "error", message: describeRedemptionError(queryError) };
-    if (existing?.[0]?.code) return { status: "ok", code: existing[0].code };
-
-    const { data: created, error: createError } = await supabase.rpc("create_referral", {});
-    if (createError) return { status: "error", message: describeRedemptionError(createError) };
-    if (!created?.code) return { status: "error", message: "Could not create a referral code." };
-    return { status: "ok", code: created.code };
-  } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not load your code." };
+    return { status: "error", message: isOffline(e) ? OFFLINE_MESSAGE : fallback };
   }
 }

@@ -214,7 +214,6 @@ import {
   clearRecoveryPending,
   isRecoveryExchangeInFlight,
 } from "../../lib/supabase/recovery";
-import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import {
   fetchClientImaging,
@@ -1111,23 +1110,8 @@ interface AppState {
   dismissUnlock: () => void;
   /** Record first use of a feature. Fire-and-forget; no UI of its own. */
   noteFeatureMilestone: (milestone: FeatureMilestone) => void;
-  // QA 11.0: "Put a referral tab... gives you a code when another client,
-  // professional and/or business subscribes to Centium. The code applies
-  // a 10% discount to the subscription model for a one time use per
-  // account. The client who succeeded in referral gets 1500 points in the
-  // tier list as well as 15% off of the next month subscription." One
-  // account in this prototype, so redeeming a code demonstrates both the
-  // redeemer's one-time 10% discount and the referrer's reward on the
-  // same account — there's no second account to actually credit.
-  referralRedeemed: boolean;
-  referralDiscountPct: number;
-  referralNextMonthDiscountPct: number;
-  // Records the outcome of a real redeem_referral() call locally so the
-  // subscription UI can show the discount. Only the referee's side is
-  // applied here — the referrer's points and next-month discount are
-  // credited to THEIR account by the RPC, not this one, which is the part
-  // the old single-account mock had to fake.
-  applyReferralReward: (discountPct: number) => void;
+  // Referral state is not held here: A6's referral_summary() is read by the
+  // Referrals popup itself (components/profile/ReferralPopup.tsx).
 
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
@@ -3561,41 +3545,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     []
   );
-
-  const [referralRedeemed, setReferralRedeemed] = usePersistentState<boolean>("referralRedeemed", false);
-  const [referralDiscountPct, setReferralDiscountPct] = usePersistentState<number>("referralDiscountPct", 0);
-  const [referralNextMonthDiscountPct, setReferralNextMonthDiscountPct] = usePersistentState<number>(
-    "referralNextMonthDiscountPct",
-    0
-  );
-  // The code itself now comes from the `referrals` table via
-  // getOrCreateMyReferralCode(), and every validation the mock did here
-  // (empty, already redeemed, own code) is enforced by redeem_referral()
-  // server-side. All that's left locally is recording the outcome.
-  const applyReferralReward: AppState["applyReferralReward"] = (discountPct) => {
-    setReferralRedeemed(true);
-    setReferralDiscountPct(discountPct);
-    // redeem_referral() credits 1,500 points to the REFERRER, not to this
-    // account -- so this re-read is for the balance the redeemer's own ledger
-    // may already have had, and for anything the redemption itself completed.
-    // The referrer sees their own credit on their next read.
-    refreshAchievements();
-  };
-
-  // The referrer-side reward is earned by someone ELSE redeeming this
-  // user's code, so it can't come from any response this client sees —
-  // it's read back from their own referral rows once a session exists.
-  useEffect(() => {
-    if (!authUserId) return;
-    let cancelled = false;
-    void getMyReferrerReward(authUserId).then((reward) => {
-      if (cancelled) return;
-      setReferralNextMonthDiscountPct(reward.discountPct);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [authUserId]);
 
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
@@ -6587,10 +6536,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      referralRedeemed,
-      referralDiscountPct,
-      referralNextMonthDiscountPct,
-      applyReferralReward,
       premiumPlan,
       setPremiumPlan,
       generateClientCode,
@@ -6724,9 +6669,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoveryModePending,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
-      referralRedeemed,
-      referralDiscountPct,
-      referralNextMonthDiscountPct,
       journalFolders,
       journalLoading,
       journalError,
