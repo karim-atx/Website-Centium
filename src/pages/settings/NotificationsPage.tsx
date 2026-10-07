@@ -1,8 +1,29 @@
 import { useEffect, useState } from "react";
-import { Bell, CalendarCheck, Dumbbell, MessagesSquare, Trophy, UtensilsCrossed } from "lucide-react";
+import {
+  AtSign,
+  Bell,
+  CalendarCheck,
+  CalendarDays,
+  ChevronDown,
+  Clock,
+  Dumbbell,
+  Gift,
+  GlassWater,
+  ListChecks,
+  MessageCircle,
+  MessagesSquare,
+  Moon,
+  NotebookPen,
+  Store,
+  Trophy,
+  UtensilsCrossed,
+} from "lucide-react";
+import clsx from "clsx";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Toggle } from "../../components/ui/Toggle";
-import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { Button } from "../../components/ui/Button";
+import { WheelPicker } from "../../components/ui/WheelPicker";
+import { SettingsBody, SettingsRow, SettingsSection, settingsRowClass } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { fetchMessageNotifications, setMessageNotifications } from "../../services/preferences";
 import {
@@ -11,10 +32,11 @@ import {
   pushSupported,
   unsubscribeFromPush,
 } from "../../services/push";
+import { fromParts, minuteOptions, toParts, type Meridiem } from "../../components/calendar/calendarTime";
 import { pushUnavailableReason } from "./platform";
 
-// MO1.8.3 Notifications, as a page (was a sheet), on the data that exists
-// today (C29).
+// MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
+// every group and row the frame draws, Quiet hours included.
 //
 // THE LEAD CARD IS THIS DEVICE. "Allow notifications" is the browser's push
 // permission plus this account's push_subscriptions row for this browser:
@@ -24,22 +46,31 @@ import { pushUnavailableReason } from "./platform";
 // unless the browser has blocked notifications (see messagesDimmed). This used to be the
 // Push notifications row's "Allow / Re-check" pill on Settings.
 //
-// THE ROWS ARE THE ONES WITH DATA, under the board's group names. Messages is
-// the one stored on the server (app_preferences.notification_professional_
-// messages, read by the message-push trigger); the other four are this
-// device's settings, as they were, and nothing sends those reminders yet
-// (backlog). Water, Habits, Journal, Community, Calendar events, Memberships,
-// Referral rewards and Quiet hours have no column and no sender, so they are
-// left out rather than drawn as switches that do nothing.
+// ONE ROW IS STORED ON THE SERVER: Messages (app_preferences.notification_
+// professional_messages, read by the message-push trigger). Every other row,
+// and Quiet hours with its From / To, is this device's setting
+// (notificationPrefs), and nothing sends those reminders yet: they need
+// preference columns and senders (backlog). Quiet hours starts off for that
+// reason, so it never promises a silence the message push would break.
+//
+// As drawn, the rows carry no subtitles; what each switch does is read to
+// screen readers instead.
 
-type LocalKey = "mealReminders" | "workoutReminders" | "streakAlerts" | "weeklySummary";
+type Prefs = ReturnType<typeof useApp>["notificationPrefs"];
+type LocalKey = Exclude<keyof Prefs, "professionalMessages" | "quietHours" | "quietFrom" | "quietTo">;
 
-const GROUPS: { label: string; rows: { key: LocalKey | "messages"; label: string; desc: string; icon: typeof Bell }[] }[] = [
+type Row = { key: LocalKey | "messages"; label: string; desc: string; icon: typeof Bell };
+
+// MO1.8.3's groups, rows, order and glyphs (all 17 / 1.75).
+const GROUPS: { label: string; rows: Row[] }[] = [
   {
     label: "Reminders",
     rows: [
       { key: "mealReminders", label: "Food logging", desc: "Nudges to log breakfast, lunch, dinner & snacks", icon: UtensilsCrossed },
       { key: "workoutReminders", label: "Workouts", desc: "Reminders for your scheduled routines", icon: Dumbbell },
+      { key: "waterReminders", label: "Water", desc: "Reminders to log your water", icon: GlassWater },
+      { key: "habitReminders", label: "Habits", desc: "Reminders for today's habits", icon: ListChecks },
+      { key: "journalReminders", label: "Journal", desc: "A nudge to write in your journal", icon: NotebookPen },
     ],
   },
   {
@@ -50,13 +81,116 @@ const GROUPS: { label: string; rows: { key: LocalKey | "messages"; label: string
     ],
   },
   {
+    label: "Community",
+    rows: [
+      { key: "forumReplies", label: "Replies to my posts", desc: "When someone replies to your forum posts", icon: MessageCircle },
+      { key: "forumMentions", label: "Mentions", desc: "When someone mentions you in the forum", icon: AtSign },
+    ],
+  },
+  {
     label: "Professionals",
     rows: [
       // V9 (QA 9.0): the label works for Client, Professional and Business alike.
       { key: "messages", label: "Messages", desc: "“New message from …” when someone writes to you. Never the message itself.", icon: MessagesSquare },
+      { key: "calendarEvents", label: "Calendar events", desc: "Reminders for events in your calendar", icon: CalendarDays },
+    ],
+  },
+  {
+    label: "Account",
+    rows: [
+      { key: "membershipUpdates", label: "Memberships", desc: "Updates about your gym and studio memberships", icon: Store },
+      { key: "referralRewards", label: "Referral rewards", desc: "When a referral earns you a reward", icon: Gift },
     ],
   },
 ];
+
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
+const MERIDIEMS: Meridiem[] = ["AM", "PM"];
+
+/**
+ * MO1.8.3 From / To: the label on the left, the time on the right in
+ * 14 / 700 primary.accent with a ChevronDown 16 / 1.75 in the muted grey, 6
+ * apart (measured on the 2x board). A tap opens the inline wheel under the
+ * row (Foundations "Inline wheel picker": hour, minute in 5-minute steps,
+ * AM/PM, then a full-width Done); the wheel updates as it turns.
+ */
+function TimeRow({
+  label,
+  value,
+  open,
+  onToggle,
+  onChange,
+  dimmed,
+  divider,
+}: {
+  label: string;
+  divider: boolean;
+  value: string;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (hhmm: string) => void;
+  dimmed: boolean;
+}) {
+  const parts = toParts(value);
+  const set = (p: Partial<typeof parts>) => onChange(fromParts({ ...parts, ...p }));
+  return (
+    <div inert={dimmed || undefined} aria-disabled={dimmed || undefined} className={clsx("relative", dimmed && "opacity-40")}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-label={`${label}, ${value}`}
+        // The row sits alone in its wrapper, so the shared last-row rule
+        // would hide every divider: From keeps its own, To (the section's
+        // last row) has none, and an open wheel hides it.
+        className={clsx("tap", settingsRowClass, open ? "before:!hidden" : divider && "before:!block")}
+      >
+        <span aria-hidden className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]">
+          <Clock size={17} strokeWidth={1.75} />
+        </span>
+        <span className="flex-1 min-w-0 text-[14px] font-semibold leading-5 text-charcoal">{label}</span>
+        <span className="shrink-0 flex items-center gap-1.5">
+          <span className="text-[14px] font-bold tabular-nums text-primary-accent">{value}</span>
+          <ChevronDown
+            size={16}
+            strokeWidth={1.75}
+            aria-hidden
+            className={clsx("text-charcoal-faint transition-transform", open && "rotate-180")}
+          />
+        </span>
+      </button>
+      {open && (
+        <div className="pb-3 ps-[50px]">
+          <WheelPicker
+            columns={[
+              {
+                label: "Hours",
+                value: parts.hour,
+                options: HOURS.map((h) => ({ value: h, label: String(h) })),
+                onChange: (v) => set({ hour: Number(v) }),
+              },
+              {
+                label: "Minutes",
+                value: parts.minute,
+                options: minuteOptions(parts.minute).map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
+                onChange: (v) => set({ minute: Number(v) }),
+              },
+              {
+                label: "AM or PM",
+                value: parts.meridiem,
+                options: MERIDIEMS.map((m) => ({ value: m, label: m })),
+                onChange: (v) => set({ meridiem: v as Meridiem }),
+              },
+            ]}
+          />
+          <Button fullWidth onClick={onToggle} className="mt-3 h-12 rounded-[14px] text-[15px]">
+            Done
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function NotificationsPage() {
   const { notificationPrefs, updateNotificationPrefs, authUserId } = useApp();
@@ -166,13 +300,16 @@ export default function NotificationsPage() {
     setSaving(false);
   };
 
+  // --- Quiet hours: one wheel open at a time ---------------------------------
+  const [wheel, setWheel] = useState<"from" | "to" | null>(null);
+  const quietOff = dimmed || !notificationPrefs.quietHours;
+
   return (
     <div>
-      {/* The frame draws 27 / 700 here, but the user's flag (decision 23,
-          C-02) gives every Settings sub-page the 24 / 700 title on a 36 line. */}
-      <PageHeader title="Notifications" showBack sub tightBack />
+      {/* MO1.8.3 draws the 27 / 700 title on a 40 line, gap 6 (as Settings). */}
+      <PageHeader title="Notifications" showBack tightBack />
 
-      {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title. */}
+      {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title (79). */}
       <SettingsBody className="-mt-1.5">
       {/* The lead card, new since the redesign, so the handover's own light
           colours (decision 22): rgba(154,140,214,0.12) (measured #F3F1FA), a
@@ -207,7 +344,7 @@ export default function NotificationsPage() {
                 key={r.key}
                 icon={r.icon}
                 title={r.label}
-                subtitle={r.desc}
+                srDescription={r.desc}
                 // The account's setting, saved on the server for every device.
                 dimmed={messagesDimmed}
                 toggle={{
@@ -221,7 +358,7 @@ export default function NotificationsPage() {
                 key={r.key}
                 icon={r.icon}
                 title={r.label}
-                subtitle={r.desc}
+                srDescription={r.desc}
                 dimmed={dimmed}
                 toggle={{
                   checked: notificationPrefs[r.key as LocalKey],
@@ -230,10 +367,49 @@ export default function NotificationsPage() {
               />
             )
           )}
+          {/* Inline error line in danger under the group it belongs to
+              (MO1.8.3 states: "Error ... under the affected element"). */}
+          {g.label === "Professionals" && note && (
+            <p role="alert" className="mt-2 text-[12px] text-status-high">
+              {note}
+            </p>
+          )}
         </SettingsSection>
       ))}
 
-      {note && <p className="mt-4 text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2">{note}</p>}
+      <SettingsSection label="Quiet hours">
+        <SettingsRow
+          icon={Moon}
+          title="Quiet hours"
+          srDescription="No reminders between these times"
+          dimmed={dimmed}
+          toggle={{
+            checked: notificationPrefs.quietHours,
+            onChange: (v) => {
+              if (!v) setWheel(null);
+              updateNotificationPrefs({ quietHours: v });
+            },
+          }}
+        />
+        <TimeRow
+          label="From"
+          value={notificationPrefs.quietFrom}
+          open={wheel === "from" && !quietOff}
+          onToggle={() => setWheel((w) => (w === "from" ? null : "from"))}
+          onChange={(v) => updateNotificationPrefs({ quietFrom: v })}
+          dimmed={quietOff}
+          divider
+        />
+        <TimeRow
+          label="To"
+          value={notificationPrefs.quietTo}
+          open={wheel === "to" && !quietOff}
+          onToggle={() => setWheel((w) => (w === "to" ? null : "to"))}
+          onChange={(v) => updateNotificationPrefs({ quietTo: v })}
+          dimmed={quietOff}
+          divider={false}
+        />
+      </SettingsSection>
       </SettingsBody>
     </div>
   );
