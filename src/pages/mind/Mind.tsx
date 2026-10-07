@@ -23,6 +23,7 @@ import {
   Footprints,
   Trophy,
 } from "lucide-react";
+import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import type { HabitItem, Streak } from "../../types";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
@@ -102,8 +103,9 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 // LIGHT MODE (decision 22): the tiles, the Today card's outline, the streak
 // strip and the checks are new since the redesign, so they take the frame's
 // own colours (lavender Journal, teal Meditation, gold Achievements; teal
-// checks, which supersedes A5). The flame stays until a leaf exists (A6,
-// decision 9).
+// checks, which supersedes A5). The habit streak mark is the handover's own
+// leaf (StreakLeaf; decision 9 superseded). The Journal tile's flame is the
+// journal streak, not a habit streak, so it stays.
 export default function Mind() {
   const {
     streaks,
@@ -458,7 +460,8 @@ function Row({
       {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}
       <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
         <span className="relative flex items-center gap-1">
-          <Flame size={15} className="text-team-teal-deep dark:text-teal-deep-text" />
+          {/* MO1.1 (2x frame): a filled leaf about 10 × 18.5 pt, slit showing. */}
+          <StreakLeaf variant="filled" height={18.5} className="text-team-teal-deep dark:text-teal-deep-text" />
           <span className="text-[20px] font-extrabold leading-none text-team-teal-deep dark:text-teal-deep-text tabular-nums">
             {days}
           </span>

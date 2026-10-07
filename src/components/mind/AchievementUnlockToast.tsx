@@ -21,36 +21,47 @@ import { tintOn } from "../../data/folderColors";
 // THE PAGE STAYS USABLE: no backdrop, no dim; only the pill takes pointer
 // events. Tap opens Achievements; a swipe up dismisses it early.
 //
-// MOTION (A12, about 6 s), entry easing cubic-bezier(.22,1,.36,1):
-//   0–600 ms     a dot grows into a circle
-//   400–1000     the Centium logo appears in it
-//   1000–1300    a 180° coin flip to the achievement's icon
-//   1300–1800    the pill widens, staying centred
+// MOTION, the board's motion strip (frames/MO1.1.3.2__board.png). Every entry
+// step eases out on cubic-bezier(.22,1,.36,1); t0 is the first frame after the
+// dot has painted.
+//   0–600 ms     a 12 pt dot in the level colour grows into the 58 pt circle
+//   400–1000     the Centium logo (in its 48 pt ringed coin) appears in it
+//   1000–1300    a 180° rotateY coin flip to the achievement's icon
+//   1300–1800    the pill widens right to 318, the whole unit staying centred
 //   1800–2100    the details fade in
-//   2100–5400    it holds, with one light sheen
-//   5400–6100    it reverses out (details, width, circle), easing in
-// With reduced motion it is a static pill: fades in, holds 4 s, fades out.
+//   2100–6000    it holds; one light sheen sweeps (2100–3500)
+//   6000–7000    "same steps in reverse with ease-in": details out (200),
+//                retract (300), flip back (300), shrink to the dot (200)
+// The board gives the reverse no durations ("Exit"); those four are the
+// app's own. With reduced motion (Foundations 2.6: 0 ms cross-fades, no flip
+// and no sheen) the full pill appears at once, holds 4 s, and goes at once.
 
 const EASE = "cubic-bezier(.22,1,.36,1)";
 const EASE_IN = "cubic-bezier(.55,0,1,.45)";
-const CIRCLE = 44;
+/** The collapsed circle: the pill's own height. */
+const CIRCLE = 58;
 const WIDE = 318;
+/** The dot it grows from: 12 pt on the motion strip. */
+const DOT_SCALE = 12 / 58;
+/** Reduced motion: how long the static pill stays (the board's "about 4 s"). */
+const REDUCED_HOLD = 4000;
+const END = 7000;
 
-type Phase = "dot" | "circle" | "logo" | "flip" | "wide" | "details" | "sheen" | "outDetails" | "outWide" | "outCircle" | "gone";
+type Phase = "dot" | "circle" | "logo" | "flip" | "wide" | "details" | "sheen" | "outDetails" | "outWide" | "outFlip" | "outCircle";
 
 const SCHEDULE: [number, Phase][] = [
-  [30, "circle"],
+  [0, "circle"],
   [400, "logo"],
   [1000, "flip"],
   [1300, "wide"],
   [1800, "details"],
   [2100, "sheen"],
-  [5400, "outDetails"],
-  [5600, "outWide"],
-  [5900, "outCircle"],
-  [6100, "gone"],
+  [6000, "outDetails"],
+  [6200, "outWide"],
+  [6500, "outFlip"],
+  [6800, "outCircle"],
 ];
-const ORDER: Phase[] = ["dot", "circle", "logo", "flip", "wide", "details", "sheen", "outDetails", "outWide", "outCircle", "gone"];
+const ORDER: Phase[] = ["dot", "circle", "logo", "flip", "wide", "details", "sheen", "outDetails", "outWide", "outFlip", "outCircle"];
 const at = (p: Phase, q: Phase) => ORDER.indexOf(p) >= ORDER.indexOf(q);
 
 export const AchievementUnlockToast: React.FC = () => {
@@ -70,7 +81,6 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   const { colorTheme } = useApp();
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("dot");
-  const [shown, setShown] = useState(false); // reduced motion: faded in
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [flung, setFlung] = useState(false);
@@ -82,15 +92,23 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
 
   useEffect(() => {
     const timers: number[] = [];
+    let raf = 0;
     if (reduced) {
-      timers.push(window.setTimeout(() => setShown(true), 30));
-      timers.push(window.setTimeout(() => setShown(false), 4000));
-      timers.push(window.setTimeout(() => dismissRef.current(), 4200));
+      timers.push(window.setTimeout(() => dismissRef.current(), REDUCED_HOLD));
     } else {
-      for (const [ms, p] of SCHEDULE) timers.push(window.setTimeout(() => setPhase(p), ms));
-      timers.push(window.setTimeout(() => dismissRef.current(), 6150));
+      // The clock starts once the dot is on screen (two frames), so the
+      // growth runs from t0 rather than from an unpainted mount.
+      raf = window.requestAnimationFrame(() => {
+        raf = window.requestAnimationFrame(() => {
+          for (const [ms, p] of SCHEDULE) timers.push(window.setTimeout(() => setPhase(p), ms));
+          timers.push(window.setTimeout(() => dismissRef.current(), END));
+        });
+      });
     }
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    return () => {
+      window.cancelAnimationFrame(raf);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
   }, [reduced]);
 
   const set = colourSet(levelHex(achievement.level), dark);
@@ -100,6 +118,12 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   // A one-off has no level; MO1.1.3.2 still draws the chip, so it reads as
   // the first rung, Bronze (matching levelHex's fallback colour).
   const level = LEVEL_LABEL[achievement.level ?? "bronze"];
+  // The dot it grows from: the motion strip's #B38E77 on its #F5F4F8 card,
+  // i.e. the level colour at 74%.
+  const dotFill = `${set.ink}BD`;
+  // The sheen: on the 2x frame its stripes peak at the level colour at 7% on
+  // the white pill. Dark is not drawn; there it stays a faint white.
+  const sheen = dark ? "rgba(255,255,255,0.10)" : `${levelHex(achievement.level)}12`;
 
   const finish = () => {
     setFlung(true);
@@ -133,12 +157,14 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   };
 
   // Geometry for the current phase.
-  const wide = reduced ? true : at(phase, "wide") && !at(phase, "outWide");
-  const scale = reduced ? 1 : at(phase, "circle") && !at(phase, "outCircle") ? 1 : 0;
-  const flipped = reduced || (at(phase, "flip") && !at(phase, "outWide"));
-  const showLogo = !reduced && at(phase, "logo");
-  const details = reduced ? true : at(phase, "details") && !at(phase, "outDetails");
-  const leaving = at(phase, "outDetails");
+  const grown = reduced || (at(phase, "circle") && !at(phase, "outCircle"));
+  const wide = reduced || (at(phase, "wide") && !at(phase, "outWide"));
+  const flipped = reduced || (at(phase, "flip") && !at(phase, "outFlip"));
+  const showLogo = !reduced && at(phase, "logo") && !at(phase, "outCircle");
+  const details = reduced || (at(phase, "details") && !at(phase, "outDetails"));
+  const leaving = !reduced && at(phase, "outDetails");
+  // Entry steps ease out; the reverse eases in.
+  const step = (enterMs: number, exitMs: number) => (leaving ? `${exitMs}ms ${EASE_IN}` : `${enterMs}ms ${EASE}`);
 
   return createPortal(
     <div
@@ -160,39 +186,43 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
         aria-label={`Achievement unlocked: ${achievement.title}. Open achievements`}
         style={{
           width: wide ? `min(${WIDE}px, calc(100vw - 32px))` : CIRCLE,
-          height: CIRCLE + 14,
+          height: CIRCLE,
           marginLeft: "auto",
           marginRight: "auto",
-          background: "rgb(var(--c-cream-card))",
+          background: grown ? "rgb(var(--c-cream-card))" : dotFill,
           borderColor: set.border.length === 9 ? `${set.border.slice(0, 7)}8C` : set.border, // 55%
           boxShadow: "0 10px 28px rgba(36,31,27,0.16)",
-          opacity: reduced ? (shown && !flung ? 1 : 0) : flung ? 0 : 1,
-          transform: `translateY(${flung ? -80 : dragY}px) scale(${scale})`,
+          opacity: flung ? 0 : 1,
+          transform: `translateY(${flung ? -80 : dragY}px) scale(${grown ? 1 : DOT_SCALE})`,
           transition: reduced
-            ? "opacity 200ms ease"
+            ? "none"
             : [
-                `width ${leaving ? `300ms ${EASE_IN}` : `500ms ${EASE}`}`,
-                `transform ${dragging ? "0ms" : leaving ? `200ms ${EASE_IN}` : `600ms ${EASE}`}`,
+                `width ${step(500, 300)}`,
+                `transform ${dragging ? "0ms" : step(600, 200)}`,
+                `background-color ${step(600, 200)}`,
                 "opacity 200ms ease",
               ].join(", "),
         }}
       >
-        {/* The circle: logo on the front, the badge's icon on the back. */}
-        <span
-          className="absolute top-[7px] left-[7px] w-11 h-11"
-          style={{ perspective: 400 }}
-        >
+        {/* The coin: 48 pt with a 1 pt ring in the level colour (2x frame),
+            centred in the circle; logo on the front, the icon on the back. */}
+        <span className="absolute top-1 left-1 w-12 h-12" style={{ perspective: 400 }}>
           <span
             className="relative block w-full h-full"
             style={{
               transformStyle: "preserve-3d",
               transform: `rotateY(${flipped ? 180 : 0}deg)`,
-              transition: reduced ? "none" : `transform 300ms ${EASE}`,
+              transition: reduced ? "none" : `transform ${step(300, 300)}`,
             }}
           >
             <span
-              className="absolute inset-0 rounded-full flex items-center justify-center bg-cream-card"
-              style={{ backfaceVisibility: "hidden", opacity: showLogo ? 1 : 0, transition: "opacity 300ms ease" }}
+              className="absolute inset-0 rounded-full border flex items-center justify-center bg-cream-card"
+              style={{
+                borderColor: set.ink,
+                backfaceVisibility: "hidden",
+                opacity: showLogo ? 1 : 0,
+                transition: reduced ? "none" : `opacity ${step(600, 200)}`,
+              }}
             >
               {colorTheme === "centium" ? (
                 <img src="/centium-logo-c.png" alt="" className="w-6 h-auto" />
@@ -201,18 +231,24 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
               )}
             </span>
             <span
-              className="absolute inset-0 rounded-full flex items-center justify-center text-[22px] leading-none"
-              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: tint }}
+              className="absolute inset-0 rounded-full border flex items-center justify-center bg-cream-card"
+              style={{ borderColor: set.ink, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
             >
-              {achievement.icon}
+              {/* The 39 pt medallion inside the ring. */}
+              <span
+                className="w-[39px] h-[39px] rounded-full flex items-center justify-center text-[22px] leading-none"
+                style={{ background: tint }}
+              >
+                {achievement.icon}
+              </span>
             </span>
           </span>
         </span>
 
-        {/* The details. */}
+        {/* The details: text from 65 pt, the points ending 21 pt in (2x frame). */}
         <span
-          className="absolute inset-y-0 left-[60px] right-4 flex items-center gap-3"
-          style={{ opacity: details ? 1 : 0, transition: "opacity 300ms ease" }}
+          className="absolute inset-y-0 left-[64px] right-5 flex items-center gap-3"
+          style={{ opacity: details ? 1 : 0, transition: reduced ? "none" : `opacity ${step(300, 200)}` }}
         >
           <span className="flex-1 min-w-0">
             <span className="block text-[9px] font-extrabold tracking-[.16em] uppercase" style={{ color: set.ink }}>
@@ -238,10 +274,22 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
           )}
         </span>
 
-        {/* One light sheen while it holds. */}
+        {/* One light sheen while it holds, as on the mid-sheen 2x frame: two
+            stripes leaning forward 20.6° (18 pt and 19 pt wide, 4 pt apart,
+            41 pt in all), each peaking off-centre. It starts just off the
+            left edge and leaves past the right one. */}
         {!reduced && at(phase, "sheen") && !leaving && (
           <span aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
-            <span className="absolute inset-y-0 -left-1/3 w-1/3 animate-unlock-sheen bg-gradient-to-r from-transparent via-white/50 dark:via-white/10 to-transparent" />
+            <span className="absolute inset-0 animate-unlock-sheen">
+              <span
+                className="absolute inset-y-0 w-[41px]"
+                style={{
+                  left: -56,
+                  transform: "skewX(-20.6deg)",
+                  background: `linear-gradient(90deg, transparent 0%, ${sheen} 27%, transparent 44%, transparent 54%, ${sheen} 72%, transparent 100%)`,
+                }}
+              />
+            </span>
           </span>
         )}
       </div>
