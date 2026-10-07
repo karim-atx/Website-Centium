@@ -336,26 +336,6 @@ export default {
           "0%": { backgroundColor: "var(--settle-from, #DED7F1)" },
           "100%": { backgroundColor: "var(--settle-to, #EFECF8)" },
         },
-        // §7.2: streak-increase burst — the app's one emotional moment,
-        // resolving in under 700ms and never looping.
-        "streak-flame": {
-          "0%": { transform: "scale(1) rotate(0deg)" },
-          "22%": { transform: "scale(1.5) rotate(-6deg)" },
-          "52%": { transform: "scale(0.94) rotate(4deg)" },
-          "100%": { transform: "scale(1) rotate(0deg)" },
-        },
-        "streak-ember-ring": {
-          "0%": { transform: "scale(0.4)", opacity: 0.65 },
-          "100%": { transform: "scale(2.6)", opacity: 0 },
-        },
-        "streak-ember-particle": {
-          "0%": { transform: "translateY(0) scale(1)", opacity: 1 },
-          "100%": { transform: "translateY(-19px) scale(0.3)", opacity: 0 },
-        },
-        "streak-count-roll": {
-          "0%": { transform: "translateY(14px)", opacity: 0 },
-          "100%": { transform: "translateY(0)", opacity: 1 },
-        },
         // §7.3: idle water-fill crests — alive without asking for attention.
         // Iteration 6.2 widget library: the small Heart Rate widget's
         // beating-heart glyph — a lub-dub double pulse, not a plain scale.
@@ -489,9 +469,6 @@ export default {
         "set-tick-ring": "set-tick-ring 0.55s cubic-bezier(0.22,1,0.36,1) both",
         "set-tick-check": "set-tick-check 0.34s cubic-bezier(0.22,1,0.36,1) 60ms both",
         "set-row-settle": "set-row-settle 0.55s ease-out both",
-        "streak-flame": "streak-flame 0.6s cubic-bezier(0.22,1,0.36,1) both",
-        "streak-ember-ring": "streak-ember-ring 0.62s cubic-bezier(0.22,1,0.36,1) both",
-        "streak-count-roll": "streak-count-roll 0.5s cubic-bezier(0.22,1,0.36,1) both",
         // Default duration matches the design's 62bpm example (60/62s); the
         // Heart Rate widget overrides style.animationDuration to 60/bpm.
         "cent-heartbeat": "cent-heartbeat 0.97s ease-in-out infinite",
