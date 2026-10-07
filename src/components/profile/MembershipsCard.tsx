@@ -14,7 +14,11 @@ import {
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
-import { Check, ChevronRight, LogOut, Plus, Store, Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MemberTag } from "../marketplace/MemberTag";
+import { fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { memberTag, validRange } from "../../services/venues/venueLogic";
+import { Check, ChevronRight, Dumbbell, LogOut, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -35,13 +39,22 @@ import { Check, ChevronRight, LogOut, Plus, Store, Trash2, X } from "lucide-reac
 // already accepted. With no memberships the code box shows straight away (the
 // board's empty card); once there is one, "Join another gym or studio"
 // reveals it.
+//
+// GYM MEMBERSHIPS BOUGHT ON EXPLORE (backend stage 4b, MO1.4.2.2.1 note:
+// "membership appears in Profile") are listed first, from
+// my_gym_memberships(), in the same row with the venue's tag (Member, or the
+// amber "Pay on your first visit" until the gym marks it paid). A row opens
+// the gym page, where the pass is. 4b has no member-side cancel, so these
+// rows don't swipe.
 
 const dateLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export const MembershipsCard: React.FC = () => {
   const { authUserId, profileReady } = useApp();
+  const navigate = useNavigate();
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [gymMemberships, setGymMemberships] = useState<GymMembership[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -67,9 +80,11 @@ export const MembershipsCard: React.FC = () => {
     if (!profileReady || !authUserId) return;
     let cancelled = false;
     void (async () => {
-      const result = await fetchMyMemberships(authUserId);
+      const [result, gyms] = await Promise.all([fetchMyMemberships(authUserId), fetchMyGymMemberships()]);
       if (cancelled) return;
       setLoaded(true);
+      if (gyms.ok) setGymMemberships(gyms.value);
+      else setError(gyms.message);
       if (!result.ok) {
         setError(result.message);
         return;
@@ -176,6 +191,29 @@ export const MembershipsCard: React.FC = () => {
     </div>
   );
 
+  const gymRow = (m: GymMembership) => {
+    const tag = memberTag(m.passState);
+    return (
+      <button
+        key={m.id}
+        type="button"
+        onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(m.gymId)}`)}
+        className={clsx("tap w-full text-start flex items-center gap-3 rounded-[18px] bg-primary-pale p-4", m.status !== "active" && "opacity-60")}
+      >
+        <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
+          <Dumbbell size={18} className="text-primary-dark" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-bold text-charcoal truncate">{m.gymName}</span>
+          <span className="block text-xs text-charcoal-faint truncate">
+            {m.planName} · {validRange(m.startedOn, m.expiresOn)}
+          </span>
+        </span>
+        <MemberTag label={tag.label} tone={tag.tone} />
+      </button>
+    );
+  };
+
   return (
     <section className="mb-6 animate-fade-slide-up" aria-labelledby="memberships-label">
       {/* MO1.5 row 3 (2x frame): "Section label" 10.5/700 uppercase, 14
@@ -192,7 +230,7 @@ export const MembershipsCard: React.FC = () => {
         // (surface.soft, the card's radius 18; the empty card is 113 tall on
         // the 2x frame, y 640–866), in place of the code box flashing in.
         <div className="h-[113px] rounded-[18px] bg-cream-soft animate-pulse" aria-hidden />
-      ) : memberships.length === 0 ? (
+      ) : memberships.length === 0 && gymMemberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
@@ -208,6 +246,7 @@ export const MembershipsCard: React.FC = () => {
       ) : (
         // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
         <div className="space-y-2">
+          {gymMemberships.map(gymRow)}
           {memberships.map((m) => (
             <div key={m.id}>
               {m.status === "active" ? (

@@ -301,6 +301,11 @@ type ScheduleRow = Row & {
  * table at all, so nothing in the app can create one yet; cancelling — the
  * DELETE the client does hold — is its own action on its own surface, not
  * something a calendar overlay should offer.
+ *
+ * STAGE 4c: A BOOKING MADE BY book_class() IS ALREADY ON THE CALENDAR, as a
+ * real calendar_events row (with a 15-minute alert) that the booking points
+ * at through calendar_event_id. Those are left out here, or the class would
+ * show twice; only older bookings without one are overlaid.
  */
 export async function fetchMyBookedClasses(): Promise<
   { ok: true; classes: BookedClass[] } | { ok: false }
@@ -329,9 +334,23 @@ export async function fetchMyBookedClasses(): Promise<
     return { ok: false };
   }
 
+  // calendar_event_id (4c) is newer than the generated types.
+  const linked = await (supabase as unknown as {
+    from: (t: "business_class_bookings") => {
+      select: (c: string) => PromiseLike<{ data: { id: string; calendar_event_id: string | null }[] | null; error: { message: string } | null }>;
+    };
+  })
+    .from("business_class_bookings")
+    .select("id, calendar_event_id");
+  if (linked.error) {
+    console.error("[business-classes] Could not read booking calendar links:", linked.error.message);
+    return { ok: false };
+  }
+  const onCalendar = new Set((linked.data ?? []).filter((b) => b.calendar_event_id).map((b) => b.id));
+
   return {
     ok: true,
-    classes: (data ?? []).map((r) => ({
+    classes: (data ?? []).filter((r) => !onCalendar.has(r.booking_id)).map((r) => ({
       // toClass wants the class's own id; the view exposes it as class_id
       // because booking_id is the row's identity here.
       ...toClass({ ...r, id: r.class_id }),

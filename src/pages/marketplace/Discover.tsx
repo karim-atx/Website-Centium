@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
-import { CentredPopup } from "../../components/ui/CentredPopup";
 import { useIsDark } from "../../hooks/useIsDark";
 import { initials } from "../../components/professionals/typeColour";
 import { useApp } from "../../context/AppContext";
 import { BUSINESS_TYPES, typeLabel } from "./venueTypes";
 import {
-  bookClass,
-  cancelBooking,
   fetchMarketplaceClasses,
   fetchMarketplaceVenues,
   fetchMyBookedClassIds,
   type MarketplaceClass,
   type MarketplaceVenue,
 } from "../../services/marketplace";
-import { CalendarDays, Search, Store, Dumbbell, Check, Info, ChevronRight } from "lucide-react";
+import { fetchMyGymMemberships, fetchPlansFor, fetchVenues, type GymMembership, type Venue, type VenuePlan } from "../../services/venues";
+import { currentMembership, memberTag, membershipFromLine } from "../../services/venues/venueLogic";
+import { MemberTag } from "../../components/marketplace/MemberTag";
+import { CalendarDays, Search, Store, Dumbbell, Check, ChevronRight } from "lucide-react";
 
 // Marketplace discovery: real classes, real venues, real bookings.
 //
@@ -39,13 +39,22 @@ import { CalendarDays, Search, Store, Dumbbell, Check, Info, ChevronRight } from
 //
 // Decision 23 (kept list): one price rail (the class-type rail is gone; the
 // search matches the type instead), a borderless search, a 24-hour date block
-// that carries the date for a class a week or more out, the booked state in
-// the Book slot with a centred confirm to cancel, and Businesses rows that
-// open the business's page (bio, classes, perk and listings moved there).
+// that carries the date for a class a week or more out, and Businesses rows
+// that open the business's page (bio, classes, perk and listings moved there).
 //
-// GYMS ARE EMPTY AND THAT IS A STATE, NOT A BUG. The gyms table has no rows
-// until real partnerships exist, so the section says so plainly. Filling it
-// with placeholders is exactly what this screen is replacing.
+// Handover-complete pass (2026-10-07): Book opens the class page (MO1.4.4,
+// ClassPage.tsx), where booking, the booked state and cancelling now live; a
+// booked class reads "Booked" in the Book slot and opens the same page. The
+// Info button and its popup are gone (the class page shows those details).
+// A gym card opens the gym page (MO1.4.2.1, GymPage.tsx); its bio and perk
+// lines are gone (the bio is on the gym page). The active sub-tab is the
+// frame's #9A8CD6 in light.
+//
+// GYMS (backend stage 4a / 4b): the cards read public.gyms itself (the
+// Explore view predates 4a), "Membership from $X/month" comes from the
+// venue's business's membership_plans, and the Member / "Pay on your first
+// visit" tag from my_gym_memberships(). Cover photos, logos and distances have
+// no data yet. An empty table is a state, not a bug: the section says so.
 
 const priceCeilings = [
   { label: "Any price", value: null },
@@ -61,12 +70,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "gyms", label: "Gyms" },
 ];
 
-const dateLabel = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
 
 /** A class 7 or more days out, whose weekday alone would not say which week. */
 const farOff = (iso: string) => {
@@ -94,9 +97,11 @@ export default function Discover() {
   const [classes, setClasses] = useState<MarketplaceClass[]>([]);
   const [venues, setVenues] = useState<MarketplaceVenue[]>([]);
   const [booked, setBooked] = useState<Set<string>>(new Set());
+  const [gyms, setGyms] = useState<Venue[]>([]);
+  const [gymPlans, setGymPlans] = useState<VenuePlan[]>([]);
+  const [gymMemberships, setGymMemberships] = useState<GymMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
@@ -106,43 +111,29 @@ export default function Discover() {
   const tab: Tab = params.get("tab") === "businesses" ? "businesses" : params.get("tab") === "gyms" ? "gyms" : "classes";
   const setTab = (t: Tab) => setParams(t === "classes" ? {} : { tab: t }, { replace: true });
   const [businessType, setBusinessType] = useState<string | null>(null);
-  const [infoFor, setInfoFor] = useState<MarketplaceClass | null>(null);
-  // Item 77: a booked class's slot asks before it cancels.
-  const [cancelFor, setCancelFor] = useState<MarketplaceClass | null>(null);
   const dark = useIsDark();
-
-  // One loader for all three reads, so a refresh after a booking cannot leave
-  // the list and the spot counts describing different moments.
-  const load = async () => {
-    const [cls, vns, mine] = await Promise.all([
-      fetchMarketplaceClasses(),
-      fetchMarketplaceVenues(),
-      fetchMyBookedClassIds(),
-    ]);
-    setLoading(false);
-    if (!cls.ok) {
-      // A failed read keeps whatever is on screen — the rule every hydration
-      // in this app follows. An empty marketplace and an unreachable server
-      // look identical once rendered.
-      setError(cls.message);
-      return;
-    }
-    setError(null);
-    setClasses(cls.classes);
-    setBooked(mine);
-    if (vns.ok) setVenues(vns.venues);
-  };
+  // MO1.4 interaction 10: Book opens the class page.
+  const openClass = (c: MarketplaceClass) => navigate(`/app/marketplace/class?id=${encodeURIComponent(c.classId)}`);
 
   useEffect(() => {
     if (!profileReady) return;
     let cancelled = false;
     void (async () => {
-      const [cls, vns, mine] = await Promise.all([
+      const [cls, vns, mine, gyms, memberships] = await Promise.all([
         fetchMarketplaceClasses(),
         fetchMarketplaceVenues(),
         fetchMyBookedClassIds(),
+        fetchVenues(),
+        fetchMyGymMemberships(),
       ]);
       if (cancelled) return;
+      if (gyms.ok) {
+        setGyms(gyms.value);
+        const plans = await fetchPlansFor(gyms.value.flatMap((g) => (g.businessId ? [g.businessId] : [])));
+        if (cancelled) return;
+        if (plans.ok) setGymPlans(plans.value);
+      }
+      if (memberships.ok) setGymMemberships(memberships.value);
       setLoading(false);
       if (!cls.ok) {
         setError(cls.message);
@@ -172,7 +163,6 @@ export default function Discover() {
   }, [classes, query, maxPrice]);
 
   const businesses = venues.filter((v) => v.kind === "business");
-  const gyms = venues.filter((v) => v.kind === "gym");
   // MO1.4.1's sub-tabs, plus any other business type actually listed, except
   // a gym (decision 23, item 29: gyms have their own tab; a gym-type business
   // still shows under All).
@@ -184,23 +174,6 @@ export default function Discover() {
   }, [businesses]);
   const shownBusinesses = businessType ? businesses.filter((b) => b.venueType === businessType) : businesses;
 
-  const book = async (c: MarketplaceClass) => {
-    if (!authUserId || busyId) return;
-    setBusyId(c.classId);
-    const result = booked.has(c.classId)
-      ? await cancelBooking(c.classId, authUserId)
-      : await bookClass(c.classId, authUserId);
-    setBusyId(null);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    setError(null);
-    // Re-read rather than adjusting the count locally: spots_remaining is the
-    // view's arithmetic over every booking, and guessing it here would be
-    // wrong the moment anyone else booked the same class.
-    await load();
-  };
 
   /** MO1.4's FO3 sub-tabs: a 40 pt rail (#F4F3F9 in light) of 32 pt tabs. */
   const subTabs = (
@@ -267,13 +240,13 @@ export default function Discover() {
       {tab === "classes" && (
         <>
           {/* One rail, as drawn (decision 23, item 31: the class-type rail is
-              gone and the search matches the type). Item 75: the active price
-              takes the primary fill like the other sub-tab rails. */}
+              gone and the search matches the type). The active sub-tab is
+              FO3's #9A8CD6 (th-9a8cd6, follows the theme) in light. */}
           {subTabs(
             priceCeilings.map((p) => ({ key: String(p.value), label: p.label })),
             String(maxPrice),
             (k) => setMaxPrice(k === "null" ? null : Number(k)),
-            { activeFill: "rgb(var(--c-primary-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
+            { activeFill: "rgb(var(--th-9a8cd6))", activeInk: "#FFFFFF", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
             "Price"
           )}
 
@@ -319,55 +292,32 @@ export default function Discover() {
                         <span className={`text-[11px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
                           {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
                         </span>
-                        {/* What the card no longer draws (MO1.4): the end time, the
-                            class type and the notes stay one tap away in the
-                            Info popup (decision 1; revision round, item 8). */}
-                        {(c.notes || c.classType || c.endTime) && (
-                          <button
-                            type="button"
-                            onClick={() => setInfoFor(c)}
-                            aria-haspopup="dialog"
-                            aria-label="Class details"
-                            className="tap w-8 h-8 -my-1 flex items-center justify-center text-charcoal-faint"
-                          >
-                            <Info size={15} strokeWidth={1.75} aria-hidden />
-                          </button>
-                        )}
                         {mine ? (
-                          // Decision 23 (item 77): booked, in the Book slot
-                          // (58 × 30, r10) in the teal check style of the
-                          // class page's booked note (MO1.4.4.3, measured:
-                          // #E7F2F0 fill, 1 px #C1D5D2, #3C6B65 ink), so the
-                          // card stays 117. A tap asks before it cancels.
-                          // Full is not a reason to disable a booking
-                          // somebody already holds (B24).
+                          // Booked, in the Book slot (58 × 30, r10) in the teal
+                          // check style of the class page's booked block
+                          // (MO1.4.4.3: #E7F2F0, 1 px #C1D5D2, #3C6B65), so the
+                          // card stays 117. Like Book, it opens the class page,
+                          // where the booking can be cancelled.
                           <button
                             type="button"
-                            onClick={() => setCancelFor(c)}
-                            disabled={busyId === c.classId || !authUserId}
-                            aria-haspopup="dialog"
-                            aria-label={`Booked: ${c.title}. Cancel booking`}
-                            className="tap ml-auto h-[30px] px-2.5 rounded-[10px] border inline-flex items-center gap-1 text-[12px] font-bold bg-th-e7f2f0 border-th-c1d5d2 text-th-3c6b65 dark:bg-teal-pale dark:border-teal-dark/50 dark:text-teal-deep-text disabled:opacity-50"
+                            onClick={() => openClass(c)}
+                            aria-label={`Booked: ${c.title}`}
+                            className="tap ml-auto h-[30px] px-2.5 rounded-[10px] border inline-flex items-center gap-1 text-[12px] font-bold bg-th-e7f2f0 border-th-c1d5d2 text-th-3c6b65 dark:bg-teal-pale dark:border-teal-dark/50 dark:text-teal-deep-text"
                           >
-                            {busyId === c.classId ? (
-                              "…"
-                            ) : (
-                              <>
-                                <Check size={13} strokeWidth={2.4} aria-hidden /> Booked
-                              </>
-                            )}
+                            <Check size={13} strokeWidth={2.4} aria-hidden /> Booked
                           </button>
                         ) : (
                           // MO1.4: Book is a rounded rectangle, radius 10,
                           // 58 × 30 (measured from the frame, 2x): a 1 px
-                          // #AEA1DC outline, 12/700 #7D67D9 label.
+                          // #AEA1DC outline, 12/700 #7D67D9 label. Interaction
+                          // 10: it opens the class page (MO1.4.4); a full
+                          // class opens it too (MO1.4.4.4, other times).
                           <button
                             type="button"
-                            onClick={() => void book(c)}
-                            disabled={busyId === c.classId || c.isFull || !authUserId}
-                            className="tap ml-auto h-[30px] px-[14px] rounded-[10px] border border-primary dark:border-primary-dark/50 text-[12px] font-bold text-th-7d67d9 dark:text-primary-dark disabled:opacity-50"
+                            onClick={() => openClass(c)}
+                            className="tap ml-auto h-[30px] px-[14px] rounded-[10px] border border-primary dark:border-primary-dark/50 text-[12px] font-bold text-th-7d67d9 dark:text-primary-dark"
                           >
-                            {busyId === c.classId ? "…" : c.isFull ? "Full" : "Book"}
+                            Book
                           </button>
                         )}
                       </div>
@@ -400,7 +350,7 @@ export default function Discover() {
             [{ key: "", label: "All" }, ...businessTypes],
             businessType ?? "",
             (k) => setBusinessType(k || null),
-            { activeFill: "rgb(var(--c-primary-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
+            { activeFill: "rgb(var(--th-9a8cd6))", activeInk: "#FFFFFF", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
             "Business type"
           )}
           <div className="space-y-2.5 mt-[14px]">
@@ -445,25 +395,41 @@ export default function Discover() {
 
       {tab === "gyms" && (
         <div className="space-y-2.5 mt-[14px]">
-          {gyms.map((v) => (
-            <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up">
-              {/* No cover photos yet: the primary tint with the gym's initials,
-                  as MO1.4.2 draws a gym without one. 84 tall of the 172 card
-                  (measured from the frame, unverified). */}
-              <div className="h-[84px] bg-primary-pale flex items-center justify-center">
+          {gyms.map((v) => {
+            const from = v.businessId ? membershipFromLine(gymPlans.filter((p) => p.businessId === v.businessId)) : null;
+            const mine = currentMembership(gymMemberships, v.id);
+            const tag = mine ? memberTag(mine.passState) : null;
+            return (
+            // The card opens the gym page (MO1.4.2 interactions 6–8,
+            // MO1.4.2.1), with the frame's ChevronRight 16/1.75.
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(v.id)}`)}
+              className="tap block w-full text-left rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up"
+            >
+              {/* No cover photos yet (4a stores none): the primary tint with
+                  the gym's initials, as MO1.4.2 draws a gym without one. 84
+                  tall of the 172 card. The Member tag sits on the cover, 10
+                  in from the top right (measured). */}
+              <span className="relative h-[84px] bg-primary-pale flex items-center justify-center">
                 <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
                   {initials(v.name)}
                 </span>
-              </div>
-              <div className="px-4 py-3">
-                <p className="text-[15px] font-bold text-charcoal truncate">{v.name}</p>
-                {v.location && <p className="text-[11.5px] text-charcoal-faint truncate">{v.location}</p>}
-                {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed line-clamp-2">{v.bio}</p>}
-                {/* Directly under the place line, as the frame's price line (frame check). */}
-                {v.perk && <p className="text-[12.5px] font-bold text-primary-dark">{v.perk}</p>}
-              </div>
-            </div>
-          ))}
+                {tag && <MemberTag label={tag.label} tone={tag.tone} className="absolute top-2.5 right-2.5" />}
+              </span>
+              <span className="px-4 py-3 flex items-center gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-bold text-charcoal truncate">{v.name}</span>
+                  {v.location && <span className="block text-[11.5px] text-charcoal-faint truncate">{v.location}</span>}
+                  {/* MO1.4.2 #5: 12.5/700 primary.accent under the place. */}
+                  {from && <span className="block text-[12.5px] font-bold text-th-7d67d9 dark:text-primary-dark truncate">{from}</span>}
+                </span>
+                <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
+              </span>
+            </button>
+            );
+          })}
           {/* THE HONEST EMPTY STATE. The gyms table has no rows until real
               partnerships exist; this says that rather than inventing three. */}
           {gyms.length === 0 && !loading && (
@@ -488,54 +454,6 @@ export default function Discover() {
         </div>
       )}
 
-      {/* Class details (revision round, item 8): what the MO1.4 card leaves
-          out, in the shared centred popup. */}
-      <CentredPopup
-        open={!!infoFor}
-        onClose={() => setInfoFor(null)}
-        title={infoFor?.title ?? ""}
-        icon={<Info size={22} strokeWidth={1.75} />}
-        body={infoFor?.businessName}
-      >
-        {infoFor && (
-          <dl className="mt-3 space-y-2 text-[13px]">
-            <div className="flex justify-between gap-3">
-              <dt className="text-charcoal-faint">Time</dt>
-              {/* 24-hour, as the card's date block now reads (decision 23,
-                  item 76) and as the class page draws it ("08:00 to 09:00"). */}
-              <dd className="font-semibold text-charcoal text-end tabular-nums">
-                {dateLabel(infoFor.date)} · {infoFor.startTime} to {infoFor.endTime}
-              </dd>
-            </div>
-            {infoFor.classType && (
-              <div className="flex justify-between gap-3">
-                <dt className="text-charcoal-faint">Type</dt>
-                <dd className="font-semibold text-charcoal text-end">{infoFor.classType}</dd>
-              </div>
-            )}
-            {infoFor.notes && <dd className="text-charcoal-soft leading-relaxed pt-1">{infoFor.notes}</dd>}
-          </dl>
-        )}
-      </CentredPopup>
-
-      {/* Decision 23 (item 77): "Cancel booking?" in the shared centred
-          popup; tapping outside (or Escape) keeps the booking. */}
-      <CentredPopup
-        open={!!cancelFor}
-        onClose={() => setCancelFor(null)}
-        title="Cancel booking?"
-        icon={<CalendarDays size={22} strokeWidth={1.75} />}
-        body={cancelFor ? `${cancelFor.title} · ${dateLabel(cancelFor.date)} · ${cancelFor.startTime} to ${cancelFor.endTime}` : undefined}
-        cta={{
-          label: "Cancel booking",
-          loading: !!cancelFor && busyId === cancelFor.classId,
-          onClick: () => {
-            const c = cancelFor;
-            if (!c) return;
-            void book(c).then(() => setCancelFor(null));
-          },
-        }}
-      />
     </div>
   );
 }
