@@ -68,7 +68,7 @@ test("storage keys: account data per user, device preferences shared", () => {
   assert.equal(storageKeyFor("foodLog_v2", A), `centium-state:u:${A}:foodLog_v2`);
   assert.equal(storageKeyFor("foodLog_v2", null), "centium-state:anon:foodLog_v2");
   assert.notEqual(storageKeyFor("user", A), storageKeyFor("user", B));
-  for (const k of ["theme", "colorTheme", "language", "accessibility", "notificationPrefs"]) {
+  for (const k of ["theme", "colorTheme", "language", "accessibility"]) {
     assert.equal(storageKeyFor(k, A), `centium-state:${k}`);
     assert.equal(storageKeyFor(k, A), storageKeyFor(k, B));
   }
@@ -80,6 +80,7 @@ test("legacy cache moves to the account that wrote it, never to the next sign-in
     "centium-state:workoutLog",
     "centium-state:theme",
     "centium-state:foodLog",
+    "centium-state:notificationPrefs",
     `centium-state:u:${B}:user`,
     "centium-onboarding:draft",
   ];

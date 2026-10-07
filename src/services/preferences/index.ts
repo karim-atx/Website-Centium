@@ -1,6 +1,16 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
+import {
+  describeNotificationError,
+  NOTIFICATION_SELECT,
+  notificationPatchToRow,
+  rowToNotificationPrefs,
+  type NotificationPrefs,
+  type NotificationRow,
+} from "./notifications";
+
+export * from "./notifications";
 
 // The caller's own cross-platform preferences.
 //
@@ -8,10 +18,8 @@ import type { PostgrestError } from "@supabase/supabase-js";
 // schema and was read by nothing. Its own migration comment calls it "the other
 // side of the split": one row per user, no `platform` column, deliberately
 // synced everywhere, as against device_presentation_settings which deliberately
-// is not. Everything else the app calls a preference — notifications, language,
-// theme — still lives in localStorage via usePersistentState. This is the first
-// column wired the way that table was designed for, so the shape below is the
-// precedent the rest will follow when they move.
+// is not. Read receipts were the first column wired the way that table was
+// designed for; since Stage A2 every MO1.8.3 notification switch is too (below).
 //
 // MOST USERS HAVE NO ROW. Nothing creates one at signup, so "no row" is the
 // normal state rather than an error, and every read has to mean the default
@@ -138,66 +146,108 @@ export async function setHideReadReceipts(
   }
 }
 
-export type MessageNotificationsPref =
-  | { status: "ok"; enabled: boolean }
+// --- MO1.8.3 Notifications (Stage A2) ----------------------------------------
+//
+// Every switch on the screen, the master and quiet hours, as app_preferences
+// columns (notifications.ts has the map). Read together, written one column
+// (or one From / To) at a time.
+
+type NotifRows = PromiseLike<{ data: Partial<NotificationRow>[] | null; error: PostgrestError | null }>;
+type NotifRow = PromiseLike<{ data: Partial<NotificationRow> | null; error: PostgrestError | null }>;
+
+// The generated types come from production, which does not have the twelve
+// A2 columns yet (notification_allow, notification_water ... quiet_hours_to).
+// This one handle is cast at the service boundary; everything above it is
+// typed by NotificationRow.
+const notifTable = () =>
+  supabase.from("app_preferences") as unknown as {
+    select: (columns: string) => { maybeSingle: () => NotifRow };
+    update: (values: Partial<NotificationRow>) => {
+      eq: (column: "owner_id", value: string) => { select: (columns: string) => NotifRows };
+    };
+    insert: (values: Partial<NotificationRow> & { owner_id: string }) => {
+      select: (columns: string) => { single: () => NotifRow };
+    };
+  };
+
+export type NotificationPrefsResult =
+  | { status: "ok"; prefs: NotificationPrefs }
   | { status: "error"; message: string };
 
-/**
- * Whether new messages send a notification, as the SERVER holds it.
- *
- * app_preferences.notification_professional_messages is what the message-push
- * trigger reads (Database 20261001060000): off means no notification is queued
- * at all. No row means the column's default, which is on.
- */
-export async function fetchMessageNotifications(): Promise<MessageNotificationsPref> {
-  const { data, error } = await supabase
-    .from("app_preferences")
-    .select("notification_professional_messages")
-    .maybeSingle();
-  if (error) {
-    console.error("[preferences] Could not read message notifications:", error.code, error.message);
-    return { status: "error", message: describe(error) };
-  }
-  return { status: "ok", enabled: data?.notification_professional_messages ?? true };
+function mapped(row: Partial<NotificationRow> | null | undefined, reading: boolean): NotificationPrefsResult {
+  const prefs = rowToNotificationPrefs(row);
+  if (prefs) return { status: "ok", prefs };
+  console.error("[preferences] Notification columns missing from the row");
+  return { status: "error", message: describeNotificationError(null, reading) };
 }
 
 /**
- * Turns message notifications on or off, on the server.
+ * The caller's MO1.8.3 values, as the database holds them.
+ *
+ * NO ROW YET IS NORMAL (nothing creates one at signup), and the defaults live
+ * in the column definitions, not here. So a missing row is created with
+ * owner_id alone and read back: the database fills in its own defaults (every
+ * category and the master on, quiet hours off at 22:00 to 07:00) and the
+ * screen shows exactly those. That changes nothing the senders see:
+ * should_notify() already reads "no row" as those same defaults. A 23505 is a
+ * second tab that created it first; read it again.
+ */
+export async function fetchNotificationPrefs(ownerId: string): Promise<NotificationPrefsResult> {
+  try {
+    const read = await notifTable().select(NOTIFICATION_SELECT).maybeSingle();
+    if (read.error) {
+      console.error("[preferences] Could not read notifications:", read.error.code, read.error.message);
+      return { status: "error", message: describeNotificationError(read.error, true) };
+    }
+    if (read.data) return mapped(read.data, true);
+
+    const inserted = await notifTable().insert({ owner_id: ownerId }).select(NOTIFICATION_SELECT).single();
+    if (!inserted.error) return mapped(inserted.data, true);
+    if (inserted.error.code === "23505") {
+      const again = await notifTable().select(NOTIFICATION_SELECT).maybeSingle();
+      if (!again.error && again.data) return mapped(again.data, true);
+    }
+    console.error("[preferences] Could not create the row:", inserted.error.code, inserted.error.message);
+    return { status: "error", message: describeNotificationError(inserted.error, true) };
+  } catch (e) {
+    return { status: "error", message: describeNotificationError(e, true) };
+  }
+}
+
+/**
+ * Saves only the changed values' columns, and returns the row as it now is.
  *
  * UPDATE FIRST, INSERT ONLY IF NOTHING MATCHED, never upsert: the same
  * column-scoped UPDATE grant and the same 23505 race as setHideReadReceipts.
+ * A 23514 is the quiet-hours CHECK (From = To); the screen refuses that before
+ * sending, so it reaches here only from a stale copy.
  */
-export async function setMessageNotifications(ownerId: string, enabled: boolean): Promise<MessageNotificationsPref> {
-  const updated = await supabase
-    .from("app_preferences")
-    .update({ notification_professional_messages: enabled })
-    .eq("owner_id", ownerId)
-    .select("notification_professional_messages");
-  if (updated.error) {
-    console.error("[preferences] Could not update:", updated.error.code, updated.error.message);
-    return { status: "error", message: describe(updated.error) };
-  }
-  if (updated.data && updated.data.length > 0) {
-    return { status: "ok", enabled: updated.data[0].notification_professional_messages };
-  }
-
-  const inserted = await supabase
-    .from("app_preferences")
-    .insert({ owner_id: ownerId, notification_professional_messages: enabled })
-    .select("notification_professional_messages")
-    .single();
-  if (!inserted.error) return { status: "ok", enabled: inserted.data.notification_professional_messages };
-
-  if (inserted.error.code === "23505") {
-    const retry = await supabase
-      .from("app_preferences")
-      .update({ notification_professional_messages: enabled })
-      .eq("owner_id", ownerId)
-      .select("notification_professional_messages");
-    if (!retry.error && retry.data && retry.data.length > 0) {
-      return { status: "ok", enabled: retry.data[0].notification_professional_messages };
+export async function saveNotificationPrefs(
+  ownerId: string,
+  patch: Partial<NotificationPrefs>
+): Promise<NotificationPrefsResult> {
+  const values = notificationPatchToRow(patch);
+  try {
+    const update = () => notifTable().update(values).eq("owner_id", ownerId).select(NOTIFICATION_SELECT);
+    const updated = await update();
+    if (updated.error) {
+      console.error("[preferences] Could not update notifications:", updated.error.code, updated.error.message);
+      return { status: "error", message: describeNotificationError(updated.error) };
     }
+    if (updated.data && updated.data.length > 0) return mapped(updated.data[0], false);
+
+    const inserted = await notifTable()
+      .insert({ owner_id: ownerId, ...values })
+      .select(NOTIFICATION_SELECT)
+      .single();
+    if (!inserted.error) return mapped(inserted.data, false);
+    if (inserted.error.code === "23505") {
+      const retry = await update();
+      if (!retry.error && retry.data && retry.data.length > 0) return mapped(retry.data[0], false);
+    }
+    console.error("[preferences] Could not insert notifications:", inserted.error.code, inserted.error.message);
+    return { status: "error", message: describeNotificationError(inserted.error) };
+  } catch (e) {
+    return { status: "error", message: describeNotificationError(e) };
   }
-  console.error("[preferences] Could not insert:", inserted.error.code, inserted.error.message);
-  return { status: "error", message: describe(inserted.error) };
 }

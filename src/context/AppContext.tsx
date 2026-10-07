@@ -470,30 +470,6 @@ interface AppState {
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
 
-  // V7 (QA 7.0): granular per-category notification toggles (was one
-  // all-or-nothing switch), and a couple of real accessibility settings.
-  // Future Supabase migration: app_preferences (syncs across all platforms).
-  notificationPrefs: Record<
-    "mealReminders" | "workoutReminders" | "streakAlerts" | "professionalMessages" | "weeklySummary",
-    boolean
-  > &
-    // MO1.8.3 (handover-complete pass): the frame's other rows and Quiet
-    // hours, kept on this device like the five above. Nothing sends these
-    // yet (no columns, no senders); the server's message push ignores them.
-    Record<
-      | "waterReminders"
-      | "habitReminders"
-      | "journalReminders"
-      | "forumReplies"
-      | "forumMentions"
-      | "calendarEvents"
-      | "membershipUpdates"
-      | "referralRewards"
-      | "quietHours",
-      boolean
-    > & { quietFrom: string; quietTo: string };
-  updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
-
   // device_presentation_settings, this website's 'web' row (Stage A1; per
   // platform, not shared with the phone), with a device copy that paints
   // first. R19 (batch C) High contrast and Bigger tap targets are optional so
@@ -2140,32 +2116,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const t = (key: string) => translations[language][key] ?? key;
   const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
-  const [notificationPrefs, setNotificationPrefs] = usePersistentState<AppState["notificationPrefs"]>(
-    "notificationPrefs",
-    {
-      mealReminders: true,
-      workoutReminders: true,
-      streakAlerts: true,
-      professionalMessages: true,
-      weeklySummary: true,
-      // MO1.8.3's drawn positions (Water and Journal off), except Quiet
-      // hours: off until a sender honours it, so it never claims a silence
-      // the message push would break.
-      waterReminders: false,
-      habitReminders: true,
-      journalReminders: false,
-      forumReplies: true,
-      forumMentions: true,
-      calendarEvents: true,
-      membershipUpdates: true,
-      referralRewards: true,
-      quietHours: false,
-      quietFrom: "22:00",
-      quietTo: "07:00",
-    }
-  );
-  const updateNotificationPrefs: AppState["updateNotificationPrefs"] = (patch) =>
-    setNotificationPrefs((prev) => ({ ...prev, ...patch }));
 
   const [accessibility, setAccessibility] = usePersistentState<AppState["accessibility"]>("accessibility", {
     largerText: false,
@@ -2382,10 +2332,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // HO5.1 removed the voice notice card; drop its old dismissal flag from
   // storage once (nothing reads it). The device-only forum went the same way
   // when the shared forum replaced it: its posts were mock data saved per
-  // account, under "forumPosts".
+  // account, under "forumPosts". Stage A2: the device copy of the
+  // notification switches ("notificationPrefs") is superseded by the
+  // account's app_preferences columns; it was shared by every account on the
+  // device, so it cannot be attributed to one and is dropped, not moved up.
   useEffect(() => {
     try {
       localStorage.removeItem("centium-state:voiceDisclosureSeen");
+      localStorage.removeItem("centium-state:notificationPrefs");
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith("centium-state:") && key.endsWith(":forumPosts")) localStorage.removeItem(key);
       }
@@ -6431,8 +6385,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language,
       setLanguage,
       t,
-      notificationPrefs,
-      updateNotificationPrefs,
       accessibility,
       updateAccessibility,
       presentationSaveError,
@@ -6706,7 +6658,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       passMfaWithRecoveryCode,
       theme,
       language,
-      notificationPrefs,
       accessibility,
       presentationSaveError,
       foodLog,

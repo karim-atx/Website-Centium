@@ -191,7 +191,6 @@ export const DEVICE_KEYS: ReadonlySet<string> = new Set([
   "colorTheme",
   "language",
   "accessibility",
-  "notificationPrefs",
   "presentationOwner",
 ]);
 
@@ -223,8 +222,10 @@ export function legacyMoves(keys: string[], legacyUserJson: string | null): [str
   const moves: [string, string][] = [];
   for (const k of keys) {
     const m = new RegExp(`^${STORAGE_PREFIX}:([^:]+)$`).exec(k);
-    // foodLog is a superseded key AppContext deletes; nothing to carry over.
-    if (!m || DEVICE_KEYS.has(m[1]) || m[1] === "foodLog") continue;
+    // foodLog and notificationPrefs (the device copy of the notification
+    // switches, superseded by app_preferences in Stage A2) are superseded keys
+    // AppContext deletes; nothing to carry over.
+    if (!m || DEVICE_KEYS.has(m[1]) || m[1] === "foodLog" || m[1] === "notificationPrefs") continue;
     moves.push([k, storageKeyFor(m[1], owner)]);
   }
   return moves;
