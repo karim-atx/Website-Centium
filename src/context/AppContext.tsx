@@ -201,6 +201,7 @@ import { isMfaChallengePending } from "../services/mfa";
 const MFA_RECOVERY_PASS_KEY = "centium-mfa-recovery-pass";
 import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
 import { ensureProfileRow, fetchProfile, updatePlantSpecies } from "../services/profile";
+import { migrateLocalSocialHandles } from "../services/profile/socialHandles";
 import {
   AUTO_STREAK_CATEGORIES,
   AUTO_STREAK_LABEL_BY_CATEGORY,
@@ -2043,6 +2044,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cancelled) return;
       if (result) {
         setUser((prev) => ({ ...prev, ...result.profile }));
+    // Stage A1: Instagram and X used to be kept only in this cached `user`.
+    // Moved up to profiles.instagram / .x once, then dropped from the cache.
+    // Only when the cache is THIS account's (it is not keyed by account).
+    const cachedUser = loadPersisted<Partial<UserProfile>>("user", {});
+    if (cachedUser.id === authUserId && (cachedUser.instagramHandle || cachedUser.xHandle)) {
+      void migrateLocalSocialHandles(authUserId, cachedUser).then((done) => {
+        if (done && !cancelled) setUser((prev) => ({ ...prev, instagramHandle: undefined, xHandle: undefined }));
+      });
+    }
         // The stored flower wins. None stored yet: this device's own choice,
         // if it ever made one, goes up once (the column being null is what
         // makes it once: after this it is set).

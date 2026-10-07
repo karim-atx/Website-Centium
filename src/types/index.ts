@@ -113,6 +113,8 @@ export interface UserProfile {
   phone?: string;
   // QA 12.0: "credentials which when pressed shows you all relevant info
   // including social media you can link like Instagram and X".
+  // LEGACY, read only by the one-time move to profiles.instagram / .x
+  // (Stage A1, AppContext hydration); nothing writes these any more.
   instagramHandle?: string;
   xHandle?: string;
   // QA 12.0: "a button called payments, whereby the professional can add
