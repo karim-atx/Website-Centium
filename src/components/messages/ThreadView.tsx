@@ -240,8 +240,10 @@ export const ThreadView: React.FC<{
   // (a short thread), the root pulls 16 into the page's 112 bottom padding to
   // land on the same line.
   const clientBar = !(user.accountType === "professional" || user.accountType === "business");
+  // Plus --active-bar (the minimised-workout bar's height + gap, Layout; 0
+  // without one), so the composer clears that bar as the page padding does.
   const footerBottom = clientBar
-    ? "bottom-[calc(env(safe-area-inset-bottom)+96px)]"
+    ? "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
     : "bottom-[calc(env(safe-area-inset-bottom)+64px)] lg:bottom-0";
   /**
    * The other participant has deleted their account.
@@ -1218,7 +1220,13 @@ export const ThreadView: React.FC<{
   })();
 
   return (
-    <div className={`flex flex-col ${clientBar ? "min-h-[calc(100dvh-120px)] -mb-4" : "min-h-[calc(100dvh-136px)]"}`}>
+    // --active-bar (the client's minimised-workout bar, Layout) comes off the
+    // height too, or a short thread's composer sits under that bar.
+    <div
+      className={`flex flex-col ${
+        clientBar ? "min-h-[calc(100dvh-120px-var(--active-bar,0px))] -mb-4" : "min-h-[calc(100dvh-136px)]"
+      }`}
+    >
       {infoOpen && authUserId ? (
         <ChatInfo
           online={theyAreOnline}
@@ -1455,16 +1463,18 @@ export const ThreadView: React.FC<{
       </div>
 
       {/* WHO THIS IS, stated rather than implied by a name in the header.
-          Centium opened this conversation, and a stranger calling themselves
-          "Centium Support" is exactly the shape of a phishing message. The
-          second sentence is the useful half: it stays true in an email, a DM
-          or a phone call, none of which this app can vouch for. */}
+          A stranger calling themselves "Centium Support" is exactly the shape
+          of a phishing message. The thread may be one Centium opened or one
+          the person started from Contact us (stage A5), so the notice says
+          what is true of both: it is the official support thread. The last
+          sentence is the useful half: it stays true in an email, a DM or a
+          phone call, none of which this app can vouch for. */}
       {thread.kind === "official_support" && (
         <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-charcoal-soft dark:text-teal-deep-text px-3 py-2.5 mb-2">
           <ShieldCheck size={15} className="shrink-0 mt-px" />
           <p className="text-[11px] leading-relaxed">
             <span className="font-semibold">You're talking with Centium Support.</span>{" "}
-            Centium started this conversation. It is not a message from
+            This is Centium's official support chat. It is not a message from
             another member. Centium Support will never ask for your password
             or payment details in a message.
           </p>

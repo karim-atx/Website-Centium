@@ -28,9 +28,10 @@ import { parseCard, type MessageCard } from "./cards";
  *
  * "peer" is every thread anyone opened by messaging someone: the default, the
  * shape the whole feature was built around, and what every existing thread
- * still is. "official_support" is a thread Centium started with the user
- * through the admin console, where the other side is an official identity
- * rather than a person the user chose to talk to.
+ * still is. "official_support" is the user's one thread with Centium support,
+ * opened either by the admin console or by the user from Contact us (stage A5,
+ * start_support_thread), where the other side is an official identity rather
+ * than a person.
  *
  * WHY THE CLIENT IS TOLD AT ALL. The recipient did not ask for the official
  * thread and did not pick who is in it. Arriving as an unexplained stranger
@@ -501,10 +502,16 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     // null and thread_name carries its name. Switched on kind first, so a
     // group is never mistaken for a chat with a deleted account.
     participantId: r.kind === "group" ? null : r.other_participant_id,
+    // SUPPORT IS ALWAYS "Centium Support" (stage A5), whatever first name the
+    // support identity's profile row carries (the local seed's is "Fixture
+    // Desk"), so the header, the list and the banner all name the same sender.
+    // The operator who typed a reply (authored_by) is never read here.
     participantName:
       r.kind === "group"
         ? r.thread_name?.trim() || "Group"
-        : r.other_participant_id === null
+        : r.kind === "official_support"
+          ? "Centium Support"
+          : r.other_participant_id === null
           ? "Deleted account"
           : r.other_first_name?.trim() || "Someone",
     participantAvatarUrl: r.kind === "group" ? null : r.other_avatar_url,
