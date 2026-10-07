@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
@@ -10,11 +10,10 @@ import { fetchClientSince, isActiveClientOf, professionalRole } from "../../serv
 import { fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import { CvView } from "../../components/cv/CvView";
 import { VerifiedCheck } from "../../components/cv/CvBadges";
-import {
-  fetchMyHireRequest,
-  sendHireRequest,
-  type HireRequestState,
-} from "../../services/hire-request";
+import { HireSheet } from "../../components/hire/HireSheet";
+import { YourHireCard } from "../../components/hire/YourHireCard";
+import { fetchMyHires, liveHireWith, type MyHire } from "../../services/hires";
+import { fetchMyHireRequest, sendHireRequest, type HireRequestState } from "../../services/hire-request";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
@@ -27,8 +26,7 @@ import { useBack } from "../../hooks/useBack";
 // MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
 // colours, the price and client-since pills, the gold reviews pill (which
 // opens the reviews page, MO1.2.1.1), section labels, and a 44 pinned row:
-// Message for a connected client, Message and Hire otherwise (Hire sends the
-// existing hire request until offers exist; see the row below). The reviews
+// Message and Hire (A3: Hire opens the hire sheet, MO1.2.1.5). The reviews
 // sheet that lived here is now that page.
 
 // V8 (QA 8.0): "pressing on the grey review text would open to all the
@@ -164,28 +162,28 @@ export default function ProfessionalDetail() {
   }, [realProfessionalId, activeClient]);
 
   /**
-   * Whether this client already has a hire request with this professional.
-   *
-   * Stamped by professional id for the same reason the connection check is —
-   * so switching between two listings cannot show the previous one's answer.
-   * On-demand, because pending_client_requests is not in the realtime
-   * publication; an acceptance therefore appears on the next visit rather than
-   * live, which is the same trade the pin banner made before it got a
-   * subscription.
+   * A3: the caller's hires, from my_hires() (professional_hires itself is
+   * unreadable). Stamped with the professional like the checks above. Only
+   * a LIVE hire with this professional is shown (pending or active); a
+   * cancelled or expired one does not block hiring again.
    */
-  const [requestState, setRequestState] = useState<{
-    id: string | null;
-    state: HireRequestState;
-  }>({ id: null, state: "none" });
-  const hireState: HireRequestState =
-    realProfessionalId !== null && requestState.id === realProfessionalId
-      ? requestState.state
-      : "none";
-  const [sending, setSending] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
+  const [hiresState, setHiresState] = useState<{ id: string | null; hires: MyHire[] }>({ id: null, hires: [] });
+  const liveHire = realProfessionalId !== null && hiresState.id === realProfessionalId ? liveHireWith(hiresState.hires, realProfessionalId) : null;
+  // Stamped with the professional it was written for, like the state above, so
+  // a cancel note never follows the client onto another professional's page.
+  const [cancelNoteState, setCancelNote] = useState<{ id: string | null; note: string } | null>(null);
+  const cancelNote = cancelNoteState && cancelNoteState.id === realProfessionalId ? cancelNoteState.note : null;
 
+  // THE FREE REQUEST (pending_client_requests), as before A3: kept for a
+  // professional with no plans, where the hire sheet would otherwise offer
+  // nothing but a message. Stamped with the professional like the state above.
+  const [requestState, setRequestState] = useState<{ id: string | null; state: HireRequestState }>({ id: null, state: "none" });
+  const hireRequestState: HireRequestState =
+    realProfessionalId !== null && requestState.id === realProfessionalId ? requestState.state : "none";
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   useEffect(() => {
-    if (!realProfessionalId) return;
+    if (!realProfessionalId || !authUserId) return;
     let cancelled = false;
     void fetchMyHireRequest(realProfessionalId).then((res) => {
       if (cancelled || res.status !== "ok") return;
@@ -194,17 +192,13 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId]);
-
-  const requestHire = async () => {
-    if (!realProfessionalId || !authUserId || sending) return;
-    setSending(true);
+  }, [realProfessionalId, authUserId]);
+  const sendRequest = async () => {
+    if (!realProfessionalId || !authUserId || requestSending) return;
+    setRequestSending(true);
+    setRequestError(null);
     const res = await sendHireRequest(realProfessionalId, authUserId);
-    setSending(false);
-    // Both refusals are states rather than errors, so each moves the card to
-    // the state it describes rather than surfacing a code. 23505 means a
-    // request is already open — reachable from a stale page or a double tap —
-    // and landing on "pending" is exactly right, because one is.
+    setRequestSending(false);
     if (res.status === "ok" || res.status === "already_pending") {
       setRequestState({ id: realProfessionalId, state: "pending" });
       return;
@@ -214,6 +208,41 @@ export default function ProfessionalDetail() {
       return;
     }
     setRequestError(res.message);
+  };
+
+  const loadHires = async (forId: string) => {
+    const r = await fetchMyHires();
+    if (r.ok) setHiresState({ id: forId, hires: r.hires });
+  };
+
+  useEffect(() => {
+    if (!realProfessionalId || !authUserId) return;
+    let cancelled = false;
+    void fetchMyHires().then((r) => {
+      if (!cancelled && r.ok) setHiresState({ id: realProfessionalId, hires: r.hires });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId, authUserId]);
+
+  // The hire sheet (MO1.2.1.5), and the ?hire=<planId> deep link from a chat
+  // plans card's Hire: the sheet opens on that plan's checkout while it is
+  // still offered, or on the plan list with a note. A bare ?hire (the chat
+  // header's Hire) opens the plan list with no note. The parameter is dropped
+  // when the sheet closes, so Back and a reload don't reopen it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const hireParam = searchParams.has("hire");
+  const deepLinkPlan = searchParams.get("hire") || null;
+  const [hireOpen, setHireOpen] = useState(false);
+  const hireSheetOpen = hireOpen || (hireParam && isReal);
+  const closeHire = () => {
+    setHireOpen(false);
+    if (hireParam) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("hire");
+      setSearchParams(next, { replace: true });
+    }
   };
 
   /**
@@ -336,8 +365,8 @@ export default function ProfessionalDetail() {
   // MO1.2.1: pills 26 tall (measured), 10 either side; the icon in the type's
   // main colour, the text in its deep colour (both sampled from the frame).
   const pill = "inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11px] font-semibold";
-  // The pinned row waits for the connection check, so a client is never
-  // shown "Request to hire" for a professional they already work with.
+  // The pinned row waits for the connection check, so Message never flashes
+  // the non-client outline at someone who is already a client.
   const showPinned = isReal && activeClient !== null;
 
   return (
@@ -460,6 +489,23 @@ export default function ProfessionalDetail() {
         </p>
       )}
 
+      {liveHire && (
+        <YourHireCard
+          hire={liveHire}
+          t={t}
+          sectionLabel={sectionLabel}
+          onChanged={(note) => {
+            if (note) setCancelNote({ id: realProfessionalId, note });
+            if (realProfessionalId) void loadHires(realProfessionalId);
+          }}
+        />
+      )}
+      {cancelNote && !liveHire && (
+        <p role="status" className="mb-5 px-1 text-[12px] text-charcoal-soft">
+          {cancelNote}
+        </p>
+      )}
+
       {isConnected && (
         // The data-sharing toggles live on the Professionals page
         // (DataSharingSection), where real consent hangs off real relationships.
@@ -471,11 +517,6 @@ export default function ProfessionalDetail() {
 
       {isReal && activeClient === false && (
         <>
-          {requestError && (
-            <p role="alert" className="text-[12.5px] font-medium text-status-high mb-3 px-1">
-              {requestError}
-            </p>
-          )}
           {/* MO1.2.1.4 #7: the client-code card (358, the type pill, r18,
               p16; title 13.5/700 deep, body 12/400 #5B5349 on a 20 line) with
               its own "Message {first}" outline button: white, 1 px type deep,
@@ -506,51 +547,63 @@ export default function ProfessionalDetail() {
         </p>
       )}
 
-      {/* MO1.2.1 #9 / MO1.2.1.4 #8: the pinned row, 358 × 44, r12, gap 8,
-          labels 13.5/700. Message (secondary): the type pill and deep ink,
-          with a 1 px deep outline when not yet a client (MO1.2.1.4). Hire
-          (primary): white on the type's CTA fill (#9A8CD6 / #6F9993), Handshake 15.
+      {/* MO1.2.1 #9 / MO1.2.1.4 #8 / MO1.2.1.5 #9: the pinned row, 358 × 44,
+          r12, gap 8, labels 13.5/700. Message (secondary): the type pill and
+          deep ink, with a 1 px deep outline when not yet a client
+          (MO1.2.1.4). Hire (primary): white on the type's CTA fill (#9A8CD6 /
+          #6F9993), Handshake 15, for a client and a non-client alike, as
+          MO1.2.1 draws it: it opens the hire sheet (MO1.2.1.5). A paid hire on
+          top of an existing relationship is ordinary (the contract). */}
+      {showPinned && (
+        <PinnedCta
+          size="base"
+          secondary={{
+            label: "Message",
+            icon: <MessageCircle size={15} />,
+            loading: threadBusy,
+            onClick: () => void openThread(),
+            style: isConnected
+              ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
+              : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
+          }}
+          primary={{
+            label: "Hire",
+            icon: <Handshake size={15} />,
+            disabled: !authUserId,
+            onClick: () => setHireOpen(true),
+            style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
+          }}
+        />
+      )}
 
-          HIRE IS THE EXISTING HIRE REQUEST until the offers and payments
-          backend exists (MO1.2.1.5 is not built): it sends the same
-          pending_client_requests row "Request to hire" sent, and its label
-          carries the request's state ("Request sent" / "Not taking clients",
-          deliberately vague: a rejection plus a 24-hour cooldown, and saying
-          either would tell someone they were turned down). A connected client
-          has nothing to request, so their row is Message alone until offers
-          exist (the frame's Hire there opens a plan to buy). */}
-      {showPinned &&
-        (isConnected ? (
-          <PinnedCta
-            size="base"
-            primary={{
-              label: "Message",
-              icon: <MessageCircle size={15} />,
-              loading: threadBusy,
-              onClick: () => void openThread(),
-              style: { background: t.pill, color: t.deep, fontSize: textPx(13.5) },
-            }}
-          />
-        ) : (
-          <PinnedCta
-            size="base"
-            secondary={{
-              label: "Message",
-              icon: <MessageCircle size={15} />,
-              loading: threadBusy,
-              onClick: () => void openThread(),
-              style: { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
-            }}
-            primary={{
-              label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Hire",
-              icon: <Handshake size={15} />,
-              loading: sending,
-              disabled: hireState !== "none" || !authUserId,
-              onClick: () => void requestHire(),
-              style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
-            }}
-          />
-        ))}
+      {isReal && (
+        <HireSheet
+          open={hireSheetOpen}
+          onClose={closeHire}
+          pro={{
+            id: professional.id,
+            name: professional.name,
+            first,
+            role: professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }) ?? "",
+            avatarUrl: listing?.avatarUrl ?? null,
+          }}
+          t={t}
+          initialPlanId={deepLinkPlan}
+          onHired={(hires) => {
+            setCancelNote(null);
+            if (hires) setHiresState({ id: professional.id, hires });
+            else void loadHires(professional.id);
+          }}
+          onMessage={() => void openThread()}
+          messageBusy={threadBusy}
+          // Not for someone already their client: there is nothing to ask for.
+          request={
+            isConnected
+              ? undefined
+              : { state: hireRequestState, busy: requestSending, error: requestError, onSend: () => void sendRequest() }
+          }
+        />
+      )}
 
       <ReviewFormSheet
         open={reviewOpen}
