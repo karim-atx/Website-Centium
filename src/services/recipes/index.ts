@@ -224,7 +224,16 @@ export async function createRecipe(
   return { ok: true, recipe: { id: data.id, title: title.trim(), items, servings, steps } };
 }
 
-/** Items are REPLACED, not diffed — same reasoning as updateCustomMeal. */
+/**
+ * Items are REPLACED, not diffed — same reasoning as updateCustomMeal.
+ *
+ * NO updated_at IN THE PAYLOAD. The UPDATE grant on recipes is (title,
+ * servings, steps, scoped_to_client_id) and nothing else; a column-level grant
+ * is checked at PLAN time, so naming updated_at made the whole statement 42501
+ * and editing a recipe failed outright in production. The column is maintained
+ * by the recipes_set_updated_at trigger, which is why it was never in the
+ * grant: the client has nothing to say about it.
+ */
 export async function updateRecipe(
   recipeId: string,
   title: string,
@@ -234,7 +243,7 @@ export async function updateRecipe(
 ): Promise<RecipeResult> {
   const { error } = await supabase
     .from("recipes")
-    .update({ title: title.trim(), servings, steps: steps?.trim() || null, updated_at: new Date().toISOString() })
+    .update({ title: title.trim(), servings, steps: steps?.trim() || null })
     .eq("id", recipeId);
 
   if (error) {
