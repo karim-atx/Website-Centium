@@ -1,10 +1,12 @@
 import type { Routine, RoutineFolder } from "../types";
+import { THEME_MAP } from "../styles/themeMap";
 
 /**
  * Folder colour families, handover 2026-09-29 02 "Folder colour tokens":
  * the five shades a folder's colour resolves to — header, tile (the dark
  * shade), row tint, bar and play. Shared by the Routines tab, the logger
- * (WO8), History (WO3.1) and the active-workout bar (WO17).
+ * (WO8) and History (WO3.1). (The active-workout bar is primary.fill since
+ * decision 23.)
  */
 export interface FolderFamily {
   head: string;
@@ -17,6 +19,34 @@ export interface FolderFamily {
 // The two families the handover specifies, literally.
 export const PURPLE: FolderFamily = { head: "#A797E3", tile: "#6E56C5", row: "#F0EEFE", bar: "#7C66CF", play: "#836BD6" };
 export const TEAL: FolderFamily = { head: "#8ABFB5", tile: "#4B786F", row: "#EBF4F3", bar: "#61958C", play: "#63968B" };
+
+// BATCH E (E11, 6 October): A ROUTINE WITH NO FOLDER AND NO COLOUR FOLLOWS THE
+// COLOUR THEME. Its family is the lavender one in Centium, exactly as before;
+// in the other themes each shade is the theme generator's mapping of it
+// (styles/themeMap.ts, the same values as the th-* CSS colours), so the
+// Routines card, the session sheet and the active bar take the theme's hue.
+// A colour someone picked (folder or routine) stays that colour.
+// The generator maps these shades because they are named here:
+// th-a797e3 th-6e56c5 th-f0eefe th-7c66cf th-836bd6 th-7d67d9 th-7d6bb5
+let activeColorTheme = "centium";
+/** Called by AppContext with the colour theme in use, before its children render. */
+export function setFolderColorTheme(theme: string): void {
+  activeColorTheme = theme;
+}
+/** A literal colour as the active colour theme maps it (itself in Centium). */
+export const themeHex = (hex: string, mode: "light" | "dark" = "light"): string =>
+  THEME_MAP[activeColorTheme]?.[mode]?.[hex.slice(1).toLowerCase()]?.toUpperCase() ?? hex;
+const unfiledCache = new Map<string, FolderFamily>();
+/** The family of an unfiled routine with no colour of its own (see above). */
+export function unfiledFamily(): FolderFamily {
+  if (activeColorTheme === "centium") return PURPLE;
+  let f = unfiledCache.get(activeColorTheme);
+  if (!f) {
+    f = { head: themeHex(PURPLE.head), tile: themeHex(PURPLE.tile), row: themeHex(PURPLE.row), bar: themeHex(PURPLE.bar), play: themeHex(PURPLE.play) };
+    unfiledCache.set(activeColorTheme, f);
+  }
+  return f;
+}
 
 /**
  * The picker, in order: twelve colours (2026-09-30). Every folder and routine
@@ -93,10 +123,14 @@ export const needsSavedColor = (folder: Pick<RoutineFolder, "color">): boolean =
  * whose family is the lavender one.
  */
 export function routineFamily(routine: Pick<Routine, "folderId" | "color"> | null | undefined, folders: RoutineFolder[]): FolderFamily {
-  if (!routine) return PURPLE;
+  if (!routine) return unfiledFamily();
   const folder = routine.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
   if (folder) return folderFamily(folder, folders.indexOf(folder));
-  return (routine.color && FOLDER_FAMILIES[routine.color]) || PURPLE;
+  // Every routine is saved with a colour, and the default is the Lavender
+  // swatch (CreateRoutineSheet, services/routines), so Lavender on an unfiled
+  // routine is the theme's colour (batch E), as is no colour at all.
+  if (!routine.color || routine.color === "#7D6BB5") return unfiledFamily();
+  return FOLDER_FAMILIES[routine.color] || unfiledFamily();
 }
 
 /**
@@ -151,14 +185,6 @@ export function loggerShades(family: FolderFamily, dark = false): LoggerShades {
 }
 
 /**
- * The WO17 active-workout bar: the folder family's dark (tile) shade behind
- * white text, and a lighter tint for the progress line. Per 03 "WO17" a
- * routine with no folder falls back to #7D67D9. The lighter tints are
- * measured from the WO17 frame (teal #A2C8C2, lavender #C2B3FA); the frame
- * has none for the other folder colours or the no-folder fallback, so those
- * are DERIVED: the bar colour 55% of the way to white.
- */
-/**
  * The lowest opacity at which a logger field's placeholder (last session's or
  * the template's value, drawn in the field's ink) reads at 4.5:1 on the field.
  * 46% measures about 2:1. Used in dark mode only (light keeps 46%).
@@ -171,22 +197,6 @@ export function placeholderOpacity(ink: string, field: string): number {
     if (contrastRatio(mixed, field) >= 4.5) return Math.round(op * 100) / 100;
   }
   return 1;
-}
-
-export function activeBarShades(
-  routine: Pick<Routine, "folderId"> | null | undefined,
-  folders: RoutineFolder[],
-  dark = false
-): { bg: string; line: string } {
-  const folder = routine?.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
-  // No folder: the board's #7D67D9 in light mode (decision 14); dark mode
-  // keeps #7D6BB5 (primary.deep), which carries the white text at 4.5:1.
-  const none = dark ? "#7D6BB5" : "#7D67D9";
-  if (!folder) return { bg: none, line: mixHex(none, "#FFFFFF", 0.55) };
-  const family = folderFamily(folder, folders.indexOf(folder));
-  if (family === TEAL) return { bg: TEAL.tile, line: "#A2C8C2" };
-  if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
-  return { bg: family.tile, line: mixHex(family.tile, "#FFFFFF", 0.55) };
 }
 
 /**

@@ -6,7 +6,7 @@ import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { AreaPicker } from "./AreaPicker";
 import { DirectoryCard } from "./DirectoryCard";
-import { initials, typeColours } from "./typeColour";
+import { initials, pinGround, typeColours } from "./typeColour";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import type { MapPin as Pin } from "./NearbyMap";
 import type { DirectoryListing } from "../../services/directory";
@@ -236,7 +236,7 @@ export const NearbyView: React.FC<{
       lng: g.lng,
       count: g.items.length,
       label,
-      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: t.pill, ink: t.deep },
+      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: pinGround(first.subtype, dark), ink: t.deep },
       selected: currentKey === g,
     };
   });
@@ -285,14 +285,23 @@ export const NearbyView: React.FC<{
       )}
 
       {phase === "ask" && (
-        <Card className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-charcoal">See professionals near you</p>
-          <p className="text-xs text-charcoal-soft leading-relaxed">
+        // Decision 23 (kept-list 240): Foundations › Empty state (56
+        // primary.tint tile with LocateFixed 26 thin-stroke in primary.accent,
+        // title 15/700, line 12.5/500 muted, max 260); the two actions and the
+        // location note are kept under it.
+        <div className="flex flex-col items-center text-center py-8">
+          <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+            <LocateFixed size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">See professionals near you</p>
+          <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
             Use your location, or choose an area. Your location stays on this device: Centium only uses a
             rough area (about 10 km) to find who's nearby, and never saves it.
           </p>
-          {locError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{locError}</p>}
-          <div className="grid grid-cols-2 gap-2">
+          {locError && (
+            <p className="mt-3 w-full text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{locError}</p>
+          )}
+          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
             <Button size="sm" onClick={() => void locateMe()}>
               <LocateFixed size={15} /> Use my location
             </Button>
@@ -300,7 +309,7 @@ export const NearbyView: React.FC<{
               <MapPin size={15} /> Choose an area
             </Button>
           </div>
-        </Card>
+        </div>
       )}
 
       {phase === "ready" && origin && (
@@ -338,7 +347,8 @@ export const NearbyView: React.FC<{
                 scroll-snap strip, so a keyboard or a mouse wheel moves it too. */}
             {cards.length > 0 && (
               // Sits above the tile credit line, which must stay visible.
-              <div className="absolute inset-x-2 bottom-[30px] z-[3]">
+              // MO1.2.2 #10: the card is 358 wide, flush with the map's edges.
+              <div className="absolute inset-x-0 bottom-[30px] z-[3]">
                 {cards.length > 1 && (
                   <p className="text-center text-[11px] font-semibold text-charcoal-soft mb-1" aria-live="polite">
                     <span className="inline-block rounded-full bg-cream-card/90 px-2 py-0.5 shadow-sm">
@@ -358,7 +368,7 @@ export const NearbyView: React.FC<{
                   aria-label="Professionals on the map, nearest first"
                 >
                   {cards.map(({ p }) => (
-                    <div key={p.profileId} className="w-full shrink-0 snap-center px-1">
+                    <div key={p.profileId} className="w-full shrink-0 snap-center">
                       <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
                     </div>
                   ))}
@@ -374,7 +384,7 @@ export const NearbyView: React.FC<{
             </p>
           )}
 
-          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1">
+          <h2 className="section-label text-charcoal-soft mt-1">
             Nearest first{nearby.length > 0 ? ` · ${nearby.length}` : ""}
           </h2>
           {nearby.length === 0 && !searching && (
@@ -388,7 +398,7 @@ export const NearbyView: React.FC<{
             ))}
             {notOnMap.length > 0 && (
               <>
-                <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft pt-2">Not on the map nearby</h2>
+                <h2 className="section-label text-charcoal-soft pt-2">Not on the map nearby</h2>
                 <p className="text-xs text-charcoal-faint -mt-2">
                   They haven't shared an area, or theirs is outside what you're looking at.
                 </p>

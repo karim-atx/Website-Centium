@@ -1,4 +1,4 @@
-import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { forumAccess, ADULTS_ONLY_TEXT, NEEDS_DOB_TEXT, type ForumCategory } from "../../services/forum/rules";
 import { useForumMe } from "../../components/forum/useForumMe";
@@ -14,6 +14,7 @@ import { LessonView } from "../../components/courses/LessonView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
 import { ForumPlaceholder } from "../../components/forum/parts";
 import { fv } from "../../components/forum/forumColor";
+import { useBack } from "../../hooks/useBack";
 
 // The Community page: Forum and Courses (design PgYuBboDr8DEL2bk7EJKtU,
 // screen 1), and the forum's own screens behind it.
@@ -82,23 +83,26 @@ function useForumGate(section: Section):
 
 // MO1.3 #1: a back chevron and the subtitle; the title keeps its 26/800 (A17).
 function Heading() {
-  const navigate = useNavigate();
+  const back = useBack();
   return (
-    <div className="flex items-start gap-2.5">
+    // Frame check (MO1.3 #1): the header starts at the content edge (chevron
+    // centred at x 34, title at 62 after the 10 gap) and the tabs sit 16 under
+    // the subtitle (measured: the page's 12 gap + 6).
+    <div className="flex items-start gap-2.5 mb-1.5">
       <button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={back}
         aria-label="Back"
-        className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 -ml-1.5 mt-0.5"
-        style={{ color: fv("muted") }}
+        className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-charcoal-soft"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6" />
         </svg>
       </button>
       <div className="min-w-0">
-        <h1 className="m-0 text-[26px] font-extrabold leading-tight" style={{ color: fv("text") }}>Community</h1>
-        <p className="mt-1 text-[13px] font-medium" style={{ color: fv("muted") }}>
+        <h1 className="m-0 text-[27px] font-bold leading-[1.5] tracking-[-0.022em]" style={{ color: fv("text") }}>Community</h1>
+        {/* New since R1, so the frame's text.muted rgb(140,131,120) (decision 22). */}
+        <p className="mt-1 text-[13px] font-medium text-charcoal-faint">
           Discuss with other clients, or learn from a course
         </p>
       </div>
@@ -172,7 +176,7 @@ export default function Community({ compose = false }: { compose?: boolean }) {
           <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
             <Heading />
             {/* MO1.3 #2: a 56 pt segmented control (44 pt tabs), in the
-                forum's own colours. */}
+                forum's own colours; labels 15/700 in both states. */}
             <div className="flex gap-[5px] rounded-2xl p-1.5" style={{ background: fv("track") }} role="tablist" aria-label="Community">
               {(["forum", "courses"] as const).map((t) => (
                 <button
@@ -184,8 +188,8 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                   className="tap grow basis-0 h-11 rounded-xl text-[15px]"
                   style={
                     tab === t
-                      ? { background: fv("track-active"), color: fv("text"), fontWeight: 800 }
-                      : { background: "transparent", color: fv("muted"), fontWeight: 600 }
+                      ? { background: fv("track-active"), color: fv("text"), fontWeight: 700 }
+                      : { background: "transparent", color: fv("muted"), fontWeight: 700 }
                   }
                 >
                   {t === "forum" ? "Forum" : "Courses"}
@@ -193,23 +197,11 @@ export default function Community({ compose = false }: { compose?: boolean }) {
               ))}
             </div>
             {tab === "courses" ? (
-              <>
-                {/* THE WAY INTO THE BUILDER, for the people who can use it.
-                    Only a professional sees it, because create_course refuses
-                    everybody else and a link to a screen that would only
-                    explain why is not worth a learner reading past. */}
-                {ctx.isProfessional && (
-                  <Link
-                    to="/app/forum/courses/mine"
-                    className="rounded-[14px] h-11 px-3.5 flex items-center justify-between gap-2 no-underline"
-                    style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
-                  >
-                    <span className="text-[13px] font-extrabold">My courses</span>
-                    <span className="text-[13px] font-bold">Write a course →</span>
-                  </Link>
-                )}
-                <CoursesCatalogue userId={ctx.userId} />
-              </>
+              // THE WAY INTO THE BUILDER, for the people who can use it: only
+              // a professional sees it, because create_course refuses everybody
+              // else. Since decision 23 (item 65) it is a "Write a course" text
+              // action on the catalogue's Popular row, not a row of its own.
+              <CoursesCatalogue userId={ctx.userId} isProfessional={ctx.isProfessional} />
             ) : (
               <>
               {compose && (

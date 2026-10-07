@@ -5,17 +5,22 @@ import { Toggle } from "./Toggle";
 
 // Mobile v5.1 handover, MO1.8 Settings and its sub-pages (Foundations 2.3,
 // 2.4): a labelled section of rows, laid out as the board draws it. Each row
-// is padding 13 0, gap 14, a 36 pt icon tile, a 14 / 600 title, an optional
+// is padding 13 0, gap 14, a 36 pt icon tile (radius 11, glyph 17 / 1.75), a 14 / 600 title, an optional
 // 12 / 400 muted subtitle, and on the right a value (12.5 / 400 muted) with a
 // 16 pt chevron, a toggle, or nothing. Rows are divided by a 1 px hairline
 // that starts at the text column (50 pt in) and is absent under the last row.
 // Sections are 32 pt apart.
 //
-// COLOURS ARE TODAY'S, NOT THE BOARD'S (decisions 15 and 17, batch C 1). The
-// section label is the app's 12 px grey caps label with no rule; the icon tile
-// is the cream-soft tile with a charcoal-soft glyph that Settings already drew
-// for Appearance and Permissions; the hairline is the 6% charcoal one used
-// between rows everywhere else. Dark mode follows from the same tokens.
+// COLOURS BY AGE (decision 22, refining 15). The section label keeps its
+// pre-R1 grey ink (the line is the theme primary, decision 20); the hairline is
+// the 6% charcoal one the old Settings cards drew between rows. The icon tile
+// is the handover's own primary.tint tile with a primary.accent glyph (MO1.8,
+// measured #F0EDF9 / #7D67D9; dark rgba(174,161,220,0.14) / #9A8CD6) on every
+// row, in light, dark and every theme (decision 23: one tile style; the rows
+// that had a pre-R1 cream-soft tile were unified with the rest).
+//
+// The first row starts right under the section line (MO1.8: line bottom 96,
+// row 97; MO1.8.3: 222, 222), so the label has no bottom margin.
 //
 // Directions are logical (start/end), so the layout mirrors in Arabic; the
 // chevron flips with it.
@@ -29,13 +34,24 @@ export const SettingsSection: React.FC<{
   const labelId = useId();
   return (
     <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
-      <h2 id={labelId} className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+      <h2 id={labelId} className="section-label text-charcoal-faint">
         {label}
       </h2>
       <div>{children}</div>
     </section>
   );
 };
+
+/**
+ * The content column of Settings and its sub-pages, under the PageHeader.
+ * Every MO1.8 frame draws the content 24 pt in from each edge (x 25 on the
+ * board, 342 wide), 8 inside the header's 16, so this adds 8 each side.
+ * `className` carries the page's own top offset: a negative margin that
+ * collapses with the header's 20 pt bottom margin to the frame's gap.
+ */
+export const SettingsBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={clsx("px-2", className)}>{children}</div>
+);
 
 type RowBase = {
   icon?: LucideIcon;
@@ -97,11 +113,17 @@ export const SettingsRow: React.FC<RowProps> = ({
         <span
           aria-hidden
           className={clsx(
-            "w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden",
-            tile ? "" : destructive ? "bg-status-high-bg text-status-high" : "bg-cream-soft text-charcoal-soft"
+            // MO1.8 / Foundations 2.4: the 36 pt tile at radius 11, a rounded square.
+            "w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 overflow-hidden",
+            tile
+              ? ""
+              : destructive
+                ? "bg-status-high-bg text-status-high"
+                : "bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]"
           )}
         >
-          {tile ?? (Icon && <Icon size={16} />)}
+          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}
+          {tile ?? (Icon && <Icon size={17} strokeWidth={1.75} />)}
         </span>
       )}
       <span className="flex-1 min-w-0">

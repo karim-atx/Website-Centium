@@ -5,7 +5,9 @@ import {
   describeForumError,
   filterChips,
   forumAccess,
+  forumAge,
   initialOf,
+  initialsOf,
   nicknameProblem,
   type ForumCategory,
 } from "./rules.ts";
@@ -64,6 +66,16 @@ test("refusal wording", () => {
 test("initials", () => {
   assert.equal(initialOf("runnerMaya"), "R");
   assert.equal(initialOf(""), "?");
+  assert.equal(initialsOf("Elie S."), "ES");
+  assert.equal(initialsOf("Rami"), "R");
+  assert.equal(initialsOf(""), "?");
+});
+
+test("forum age: day counts past a week (MO1.3)", () => {
+  const now = Date.parse("2026-10-06T12:00:00Z");
+  assert.equal(forumAge("2026-10-06T10:00:00Z", now), "2h");
+  assert.equal(forumAge("2026-10-05T11:00:00Z", now), "Yesterday");
+  assert.equal(forumAge("2026-08-29T12:00:00Z", now), "38d");
 });
 
 test("photo bytes: a re-drawn JPEG passes, Exif or a comment is refused", () => {

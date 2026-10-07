@@ -1,4 +1,5 @@
 import React from "react";
+import clsx from "clsx";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useIsDark } from "../../hooks/useIsDark";
 import { Check, Lock } from "lucide-react";
@@ -43,12 +44,21 @@ export const AchievementDetailSheet: React.FC<{
       open={open}
       onClose={onClose}
       title={badge.display.title}
+      // MO1.1.3.1 #16: title 19/800, body 13/400, padded 0 28 (334 at 390),
+      // and the medallion in a 76 pt tile (about r20; 314 to 466 at 2x)
+      // holding a 61 pt disc (the emoji stands in until the set exists, A11).
+      titleSize={19}
+      bodyWeight={400}
+      maxWidth={334}
+      iconWell={{ size: 76, radius: 20 }}
       icon={
-        <span
-          className="text-[26px] leading-none"
-          style={{ filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.45 }}
-        >
-          {badge.display.icon}
+        <span className="w-[61px] h-[61px] rounded-full bg-cream-card border border-charcoal/[0.08] dark:border-charcoal/[0.12] flex items-center justify-center">
+          <span
+            className="text-[30px] leading-none"
+            style={{ filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.45 }}
+          >
+            {badge.display.icon}
+          </span>
         </span>
       }
       body={badge.display.description}
@@ -74,7 +84,7 @@ export const AchievementDetailSheet: React.FC<{
                   }}
                 />
               </div>
-              <p className="mt-1.5 text-[10.5px] font-semibold tabular-nums text-charcoal-faint">
+              <p className="mt-1.5 text-[11px] font-semibold tabular-nums text-charcoal-muted">
                 {current.toLocaleString()} of {badge.next.threshold.toLocaleString()}
               </p>
             </div>
@@ -90,14 +100,19 @@ export const AchievementDetailSheet: React.FC<{
             const done = r.earnedAt !== null;
             return (
               <div key={r.key} className="flex items-center gap-3 px-3.5 py-2.5">
+                {/* MO1.1.3.1: a 32 pt white rounded square (64 px, about r10 at
+                    2x) with Lock 14/1.75; an earned rung keeps its gold tint. */}
                 <span
-                  className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: done ? "rgba(217,164,65,.18)" : "rgba(36,31,27,.05)" }}
+                  className={clsx(
+                    "w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0",
+                    !done && "bg-cream-card"
+                  )}
+                  style={done ? { background: "rgba(217,164,65,.18)" } : undefined}
                 >
                   {done ? (
-                    <Check size={13} className="text-team-gold-deep" />
+                    <Check size={14} className="text-team-gold-deep" />
                   ) : (
-                    <Lock size={11} className="text-charcoal-faint" />
+                    <Lock size={14} strokeWidth={1.75} className="text-charcoal-faint" />
                   )}
                 </span>
                 <div className="min-w-0 flex-1">

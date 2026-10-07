@@ -44,6 +44,7 @@ import { BlockRunner } from "./BlockRunner";
 import { EnduranceRunner } from "./EnduranceRunner";
 import clsx from "clsx";
 import { linePx, textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -132,6 +133,8 @@ export const WorkoutSessionSheet: React.FC<{
   // V10 (QA 10.0): a read-only note from the hired professional.
   coachNote?: string;
 }> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const {
     saveWorkoutSession,
     logWorkout,

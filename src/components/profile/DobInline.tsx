@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { useApp } from "../../context/AppContext";
 import { updateDateOfBirth } from "../../services/profile";
 import { ageFromDateOfBirth, isoDateYearsAgo, MAX_AGE, MIN_AGE, validateDateOfBirth } from "../../utils/date";
@@ -17,7 +19,11 @@ export const DobInline: React.FC<{
   body: string;
   /** Called after the date is saved, e.g. to retry what was refused. */
   onSaved: () => void;
-}> = ({ title, body, onSaved }) => {
+  /** Profile (decision 23 item 100): an r18 card with a 36 #F0EDF9 icon tile,
+      like the Recovery card. Unset keeps the gold inline block (Home, the
+      public listing sheet). */
+  tile?: boolean;
+}> = ({ title, body, onSaved, tile }) => {
   const { authUserId, user, updateProfile } = useApp();
   const [dob, setDob] = useState(user.dateOfBirth ?? "");
   const [saving, setSaving] = useState(false);
@@ -36,10 +42,8 @@ export const DobInline: React.FC<{
     onSaved();
   };
 
-  return (
-    <div className="rounded-xl bg-gold-pale/60 border border-gold/30 px-3.5 py-3 flex flex-col gap-2" role="region" aria-label="Date of birth">
-      <p className="text-sm font-semibold text-charcoal">{title}</p>
-      <p className="text-[11.5px] text-charcoal-soft leading-relaxed">{body}</p>
+  const field = (
+    <>
       <label className="block">
         <span className="text-xs font-semibold text-charcoal-soft mb-1 block">Date of birth</span>
         <input
@@ -58,6 +62,33 @@ export const DobInline: React.FC<{
       <Button size="sm" onClick={() => void save()} disabled={!dob || saving}>
         {saving ? "Saving…" : "Save date of birth"}
       </Button>
+    </>
+  );
+
+  if (tile)
+    // As the Recovery card (MO1.5 row 7): r18, padding 16 16 18, the glyph
+    // 17/1.5 #7D6BB5 in a 36 #F0EDF9 tile, the title 14/600 beside it, and
+    // the rest under the title's x, 10 below, 12/400 on an 18 line.
+    return (
+      <Card padded={false} className="!rounded-[18px] pt-4 px-4 pb-[18px]" role="region" aria-label="Date of birth">
+        <span className="flex items-center gap-3 min-w-0">
+          <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+            <CalendarDays size={17} strokeWidth={1.5} className="text-primary-dark" />
+          </span>
+          <span className="text-sm font-semibold text-charcoal">{title}</span>
+        </span>
+        <div className="ps-12 mt-2.5 flex flex-col gap-2">
+          <p className="text-xs text-charcoal-faint leading-normal">{body}</p>
+          {field}
+        </div>
+      </Card>
+    );
+
+  return (
+    <div className="rounded-xl bg-gold-pale/60 border border-gold/30 px-3.5 py-3 flex flex-col gap-2" role="region" aria-label="Date of birth">
+      <p className="text-sm font-semibold text-charcoal">{title}</p>
+      <p className="text-[11.5px] text-charcoal-soft leading-relaxed">{body}</p>
+      {field}
     </div>
   );
 };

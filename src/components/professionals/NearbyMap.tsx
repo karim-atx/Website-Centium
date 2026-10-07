@@ -17,7 +17,8 @@ import { resolveCssColor } from "../../theme/cssColor";
  * downloaded when a map is actually opened.
  *
  * TILES: OpenFreeMap vector styles, "positron" in light mode and "dark" in
- * dark mode. No colour filters: the dark map is a real dark style. The credit
+ * dark mode, recoloured to MO1.2.2's muted lavender at load (tintMap). No
+ * colour filters: the dark map is a real dark style. The credit
  * line comes from the tile source and is kept expanded (compact: false), so it
  * is always visible.
  *
@@ -35,6 +36,70 @@ const STYLE = {
   light: "https://tiles.openfreemap.org/styles/positron",
   dark: "https://tiles.openfreemap.org/styles/dark",
 };
+
+/**
+ * MO1.2.2: a muted lavender map, not positron's grey. The handover draws land
+ * #F3F3FD with lavender areas, white roads and a pale teal park (sampled from
+ * the frame: land 243,242,247, area 228,224,244, park 226,239,236). The
+ * OpenFreeMap style's own land, water, park and road layers are recoloured at
+ * load from theme tokens, so the map follows the colour theme; dark mode tints
+ * the dark style from the dark primary / teal tints the same way. Labels keep
+ * the style's own colours and halos, which are made to read on these grounds.
+ */
+const MAP_TINTS = {
+  light: {
+    // Revision round (decision 22, new element): the sampled values exactly.
+    land: "rgb(var(--th-f3f2f7))",
+    area: "rgb(var(--th-e4e0f4))",
+    water: "rgb(var(--th-e9e5f6))",
+    park: "rgb(var(--th-e1eeeb))",
+    road: "rgb(var(--c-cream-card))",
+    casing: "rgb(var(--th-ebeaf6))",
+  },
+  dark: {
+    land: "rgb(var(--th-2b2c3a))",
+    area: "rgb(var(--th-303141))",
+    water: "rgb(var(--th-27273d))",
+    park: "rgb(var(--th-283838))",
+    road: "rgb(var(--th-3a3547))",
+    casing: "rgb(var(--th-303141))",
+  },
+} as const;
+
+function tintMap(m: maplibregl.Map, dark: boolean) {
+  const raw = MAP_TINTS[dark ? "dark" : "light"];
+  const t = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, resolveCssColor(v)])) as Record<keyof typeof raw, string>;
+  let layers: maplibregl.LayerSpecification[];
+  try {
+    layers = m.getStyle().layers ?? [];
+  } catch {
+    return;
+  }
+  for (const l of layers) {
+    const id = l.id;
+    const set = (prop: "background-color" | "fill-color" | "line-color", value: string) => {
+      try {
+        m.setPaintProperty(id, prop, value);
+      } catch {
+        /* a layer without that property: leave it */
+      }
+    };
+    if (l.type === "background") set("background-color", t.land);
+    else if (l.type === "fill") {
+      if (/water/.test(id)) set("fill-color", t.water);
+      else if (/park|wood|grass/.test(id)) set("fill-color", t.park);
+      else if (/pier/.test(id)) set("fill-color", t.land);
+      else if (/aeroway/.test(id)) set("fill-color", t.road);
+      else set("fill-color", t.area);
+    } else if (l.type === "line") {
+      if (/boundary/.test(id)) continue;
+      if (/water/.test(id)) set("line-color", t.water);
+      else if (/dashline|pier/.test(id)) set("line-color", t.land);
+      else if (/casing|subtle|rail/.test(id)) set("line-color", t.casing);
+      else if (/highway|road|aeroway|tunnel|bridge|path/.test(id)) set("line-color", t.road);
+    }
+  }
+}
 
 export interface MapPin {
   key: string;
@@ -87,8 +152,10 @@ export default function NearbyMap({
   const pickMarker = useRef<maplibregl.Marker | null>(null);
   // Callbacks change every render; the map's listeners read the latest.
   const latest = useRef({ onSelectPin, onViewChange, pick });
+  const darkRef = useRef(dark);
   useEffect(() => {
     latest.current = { onSelectPin, onViewChange, pick };
+    darkRef.current = dark;
   });
 
   // Create the map once.
@@ -113,8 +180,16 @@ export default function NearbyMap({
       latest.current.onViewChange?.({ lat: c.lat, lng: c.lng }, radius);
     });
     m.on("click", (e: maplibregl.MapMouseEvent) => latest.current.pick?.onPick({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+    // MO1.2.2's lavender tint, on every style load (the first, and each
+    // light / dark switch), and again when the colour theme changes.
+    m.on("style.load", () => tintMap(m, darkRef.current));
+    const themeWatch = new MutationObserver(() => {
+      if (m.isStyleLoaded()) tintMap(m, darkRef.current);
+    });
+    themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-accent"] });
     map.current = m;
     return () => {
+      themeWatch.disconnect();
       m.remove();
       map.current = null;
     };
@@ -155,12 +230,16 @@ export default function NearbyMap({
         // An avatar in a ring of the type colour, over a small tail (38 x 45;
         // 50 x 57 when selected).
         const size = p.selected ? 50 : 38;
-        el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:ring-4 focus-visible:[&>span:first-child]:ring-primary/40";
+        // The focus mark is an outline: the disc's box-shadow carries the type ring.
+        el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:outline focus-visible:[&>span:first-child]:outline-4 focus-visible:[&>span:first-child]:outline-offset-2 focus-visible:[&>span:first-child]:outline-primary/40";
         el.style.zIndex = p.selected ? "2" : "1";
         const disc = document.createElement("span");
-        disc.className = "flex items-center justify-center rounded-full overflow-hidden font-bold shadow-md";
+        disc.className = "flex items-center justify-center rounded-full overflow-hidden font-bold";
         disc.style.width = disc.style.height = `${size}px`;
-        disc.style.border = `${p.selected ? 3 : 2.5}px solid ${p.face.ring}`;
+        // Measured on MO1.2.2: a 2 px white (card) ring inside the disc's
+        // size, then the type colour outside it, 1.5 (3 when selected).
+        disc.style.border = "2px solid rgb(var(--c-cream-card))";
+        disc.style.boxShadow = `0 0 0 ${p.selected ? 3 : 1.5}px ${p.face.ring}, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`;
         disc.style.background = p.face.fill;
         disc.style.color = p.face.ink;
         disc.style.fontSize = p.selected ? "15px" : "12px";
@@ -227,7 +306,9 @@ export default function NearbyMap({
         type="button"
         onClick={onRecentre}
         aria-label="Use my location"
-        className="tap absolute top-3 right-3 z-[3] w-11 h-11 rounded-full bg-cream-card shadow-md flex items-center justify-center text-primary-deep-text"
+        // MO1.2.2 #9: 40 x 40, white, round; the glyph #7D6BB5 (sampled; new
+        // in the redesign, so the handover's colour, decision 22).
+        className="tap absolute top-3 right-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-th-7d6bb5 dark:text-primary-deep-text"
       >
         <LocateFixed size={17} strokeWidth={1.75} />
       </button>

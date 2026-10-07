@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { CentredPopup } from "../ui/CentredPopup";
+import { CtaButton } from "../ui/PinnedCta";
 import { PopupMenu } from "../ui/PopupMenu";
 import { SwipeActions } from "../ui/SwipeActions";
 import { useApp } from "../../context/AppContext";
@@ -14,7 +15,7 @@ import {
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
-import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, X } from "lucide-react";
+import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -130,7 +131,9 @@ export const MembershipsCard: React.FC = () => {
           }}
           placeholder="Member code"
           aria-label="Member code"
-          className="flex-1 min-w-0 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          // Foundations Inputs (MO1.5 row 3, measured: 255 × 44, radius 12):
+          // height 44, radius 12, padding 0 14, value 14/600.
+          className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <Button onClick={() => void redeem()} disabled={!code.trim() || redeeming}>
           {redeeming ? "…" : "Join"}
@@ -143,15 +146,19 @@ export const MembershipsCard: React.FC = () => {
   const row = (m: Membership) => (
     <div
       className={clsx(
-        "flex items-center gap-3 rounded-2xl bg-cream-soft px-3.5 py-3",
+        // MO1.5.1 anatomy row 3 (2x frame): 72 tall, radius 18, padding 16,
+        // a 40 white tile radius 12 (x 64–143, y 672–751). Decision 23
+        // (item 83): the frame's #F0EDF9 row (primary-pale) and white pill.
+        "flex items-center gap-3 rounded-[18px] bg-primary-pale p-4",
         m.status === "ended" && "opacity-60"
       )}
     >
-      <span className="w-11 h-11 rounded-2xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
+      <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
         <Store size={18} className="text-primary-dark" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-charcoal truncate">{m.businessName ?? "A business"}</p>
+        {/* MO1.5.1 anatomy row 3: title 15/700. */}
+        <p className="text-[15px] font-bold text-charcoal truncate">{m.businessName ?? "A business"}</p>
         <p className="text-xs text-charcoal-faint truncate">
           {m.planName ? `${m.planName} · ` : ""}
           {m.status === "ended" && m.endedAt
@@ -163,7 +170,9 @@ export const MembershipsCard: React.FC = () => {
             : dateLabel(m.invitedAt)}
         </p>
       </div>
-      <MembershipStatusBadge status={m.status} />
+      {/* White on the lavender row, as drawn; the shared badge's own fills
+          stay for the business's member list. */}
+      <MembershipStatusBadge status={m.status} className="!bg-cream-card" />
       {m.status === "active" && (
         <button
           type="button"
@@ -179,7 +188,7 @@ export const MembershipsCard: React.FC = () => {
 
   return (
     <section className="mb-6 animate-fade-slide-up" aria-labelledby="memberships-label">
-      <p id="memberships-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p id="memberships-label" className="section-label text-charcoal-faint mb-2.5">
         Memberships
       </p>
 
@@ -188,16 +197,19 @@ export const MembershipsCard: React.FC = () => {
       {memberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.
-        <Card>
+        // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
+        // under the field.
+        <Card padded={false} className="!rounded-[18px] p-3.5">
           {codeBox}
           {!redeemNote && loaded && (
-            <p className="mt-2 text-xs text-charcoal-faint">
+            <p className="mt-2.5 text-xs text-charcoal-faint">
               Got a code from a gym or studio? Enter it here to become a member.
             </p>
           )}
         </Card>
       ) : (
-        <div className="space-y-2.5">
+        // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
+        <div className="space-y-2">
           {memberships.map((m) => (
             <div key={m.id}>
               {m.status === "active" ? (
@@ -206,7 +218,8 @@ export const MembershipsCard: React.FC = () => {
                     {
                       key: "end",
                       label: "End membership",
-                      icon: <LogOut size={16} />,
+                      // Foundations swipe-row (Membership card): a Trash2 16 tile.
+                      icon: <Trash2 size={16} />,
                       onClick: () => setEnding(m),
                       destructive: true,
                     },
@@ -220,32 +233,46 @@ export const MembershipsCard: React.FC = () => {
               {/* THE ONLY THING THIS SCREEN MAY WRITE ABOUT AN INVITATION:
                   respond_to_business_membership refuses anyone but the
                   invited person. */}
+              {/* Decision 23 (item 85): the Pinned CTA row pair, in place:
+                  primary.tint secondary first, then the filled primary
+                  (48, radius 14, gap 8, 15 icons). */}
               {m.status === "pending" && (
                 <div className="flex gap-2 mt-2">
-                  <Button size="sm" fullWidth disabled={busyId === m.id} onClick={() => void answer(m.id, true)}>
-                    <Check size={13} /> Accept
-                  </Button>
-                  <Button size="sm" fullWidth variant="outline" disabled={busyId === m.id} onClick={() => void answer(m.id, false)}>
-                    <X size={13} /> Decline
-                  </Button>
+                  <CtaButton
+                    size="page"
+                    variant="secondary"
+                    label="Decline"
+                    icon={<X size={15} aria-hidden />}
+                    disabled={busyId === m.id}
+                    onClick={() => void answer(m.id, false)}
+                  />
+                  <CtaButton
+                    size="page"
+                    label="Accept"
+                    icon={<Check size={15} aria-hidden />}
+                    disabled={busyId === m.id}
+                    onClick={() => void answer(m.id, true)}
+                  />
                 </div>
               )}
             </div>
           ))}
 
           {joinOpen ? (
-            <Card>{codeBox}</Card>
+            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox}</Card>
           ) : (
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
-              className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
             >
-              <span className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                <Plus size={18} className="text-primary-dark" />
+              {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row 58 with 12
+                  padding, radius 18 (2x frame: tile 826–889, row 800–915). */}
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Join another gym or studio</span>
-              <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
             </button>
           )}
         </div>

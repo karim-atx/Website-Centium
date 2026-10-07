@@ -1,7 +1,7 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useBack } from "../../hooks/useBack";
 
 interface PageHeaderProps {
   title: string;
@@ -20,26 +20,41 @@ interface PageHeaderProps {
   // Design refinement §5.4: a 10.5px/600 uppercase line above the title
   // (Home's date, a professional's name) — optional, screen-specific.
   eyebrow?: string;
-  // Mobile v5.1 C-02: a Settings sub-page title is 24/700 (MO1.8.3 – MO1.8.8),
-  // one step under the 27/700 of a top-level page.
+  // Mobile v5.1 C-02: a Settings sub-page title is 24/700 on a 36 pt line
+  // (MO1.8.4 – MO1.8.8: header 350 × 36), one step under the 27/700 of a
+  // top-level page. Used only by the Settings sub-pages.
   sub?: boolean;
+  // MO1.8 family: the back chevron's 36 pt button sits 6 from the title
+  // (header "gap 6px"; the title box measures x 58), not 10. Off by default.
+  tightBack?: boolean;
+  /**
+   * The space under the header in px when a frame draws other than the
+   * default 20 (mb-5). MO1.2 / MO1.2.1.1: 16 to the first element (decision
+   * 23 flag). Unset leaves every other screen as it is.
+   */
+  bottomGap?: number;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub }) => {
-  const navigate = useNavigate();
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub, tightBack, bottomGap }) => {
+  const back = useBack();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
   return (
-    <div className="flex items-start justify-between mb-5 animate-fade-slide-up">
-      <div className="flex items-start gap-2.5">
+    <div
+      className="flex items-start justify-between mb-5 animate-fade-slide-up"
+      style={bottomGap !== undefined ? { marginBottom: bottomGap } : undefined}
+    >
+      <div className={`flex items-start ${tightBack ? "gap-1.5" : "gap-2.5"}`}>
         {showBack && (
           // V5 (QA 5.0): plain arrow by default, circular outline only on
           // hover — was always-visible before, inconsistent with the
           // hover-only back buttons already used on Settings/Subscription.
           <button
-            onClick={onBack ?? (() => navigate(-1))}
+            onClick={onBack ?? back}
             aria-label={t("Back")}
-            className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 mt-0.5 transition-colors"
+            // `sub` (Settings sub-pages only): no top nudge, so the chevron
+            // sits at the 36 pt title line's centre (MO1.8.4 to MO1.8.8).
+            className={`tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 ${sub ? "" : "mt-0.5"} transition-colors`}
           >
             <BackIcon size={18} />
           </button>
@@ -50,7 +65,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitl
               {eyebrow}
             </p>
           )}
-          <h1 className={`font-display ${sub ? "text-[24px] leading-[1.25]" : "text-[27px]"} font-bold tracking-[-0.022em] text-charcoal`}>{title}</h1>
+          <h1 className={`font-display ${sub ? "text-[24px] leading-[1.5]" : "text-[27px]"} font-bold tracking-[-0.022em] text-charcoal`}>{title}</h1>
           {subtitle && (
             <p className={`text-[13px] font-medium mt-1.5 ${subtitleColor ? "" : "text-charcoal-faint"}`} style={subtitleColor ? { color: subtitleColor } : undefined}>
               {subtitle}

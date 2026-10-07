@@ -30,3 +30,43 @@ export const EVENT_SWATCHES = [
   "#5A6B7D",
   "#241F1B",
 ] as const;
+
+// OKLab a/b (hue and chroma, lightness left out: every swatch is a deep
+// shade, every theme's light primary a pale one).
+const lin = (c: number) => {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+};
+function okAB(hex: string): [number, number] {
+  const r = lin(parseInt(hex.slice(1, 3), 16));
+  const g = lin(parseInt(hex.slice(3, 5), 16));
+  const b = lin(parseInt(hex.slice(5, 7), 16));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+
+/**
+ * The swatch a NEW event starts on (Batch E, E11: "new calendar events
+ * default to the theme's primary"). Event colours stay fixed in every theme
+ * (R20), so the default is the swatch nearest the theme's primary rather
+ * than the primary itself: the picker always shows it selected, and saved
+ * events keep the colour they were saved with. Centium's #AEA1DC lands on
+ * #7D6BB5, today's default, so Centium is unchanged.
+ */
+export function nearestEventSwatch(hex: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return DEFAULT_EVENT_COLOUR;
+  const [a, b] = okAB(hex);
+  let best: string = EVENT_SWATCHES[0];
+  let bestD = Infinity;
+  for (const s of EVENT_SWATCHES) {
+    const [sa, sb] = okAB(s);
+    const d = Math.hypot(a - sa, b - sb);
+    if (d < bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+  return best;
+}

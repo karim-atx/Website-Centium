@@ -4,7 +4,6 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { useApp } from "../../context/AppContext";
 import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
-import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
@@ -22,6 +21,7 @@ import {
   ClipboardList,
   Dumbbell,
   Flame,
+  Flower2,
   Footprints,
   Pencil,
   Plus,
@@ -30,6 +30,8 @@ import {
 import type { HabitItem, Streak } from "../../types";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
+import { useBack } from "../../hooks/useBack";
+import { useIsDark } from "../../hooks/useIsDark";
 
 type Section = "habits" | "journal" | "achievements" | "meditation";
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
@@ -56,29 +58,34 @@ const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
 };
 
 const sectionLabel = "text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
+// MO1.1 #4 "Today": 10.5/700 #8C8378; tracking measured on the 2x frame
+// ("TODAY" 39 pt wide, cap 8) at about 0.1em. Decision 23: the label takes
+// the frame's #8C8378 (text.muted); dark is unchanged.
+const todayLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal-muted dark:text-charcoal-faint";
 
-/** MO1.1 hero ring: done-today out of all habits. */
+/** MO1.1 hero ring: done-today out of all habits. Measured on the 2x frame:
+ *  48 across the outside, a 5 pt stroke, the count 13/800. */
 function DoneRing({ done, total }: { done: number; total: number }) {
-  const r = 20;
+  const r = 21.5;
   const c = 2 * Math.PI * r;
   const frac = total ? done / total : 0;
   return (
     <span className="relative w-12 h-12 shrink-0">
       <svg viewBox="0 0 48 48" className="w-12 h-12 -rotate-90" aria-hidden>
-        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" className="stroke-cream-card" />
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="5" className="stroke-cream-card" />
         <circle
           cx="24"
           cy="24"
           r={r}
           fill="none"
-          strokeWidth="4"
+          strokeWidth="5"
           strokeLinecap="round"
           className="stroke-primary transition-[stroke-dashoffset] duration-500"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - frac)}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[12px] font-extrabold text-charcoal tabular-nums">
+      <span className="absolute inset-0 flex items-center justify-center text-[13px] font-extrabold text-charcoal tabular-nums">
         {done}/{total}
       </span>
     </span>
@@ -96,9 +103,11 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 // - The paging Habits widget stays on Home; points and tier stay on the
 //   Achievements page.
 // - The Meditation tile keeps the live minutes when there are any.
-// LIGHT MODE keeps the old tiles' colours (gold Journal and Achievements, teal
-// Meditation); the hero is primary-pale, the streak strip teal-pale, and the
-// checks lavender (A5). The flame stays until a leaf exists (A6).
+// LIGHT MODE (decision 22): the tiles, the Today card's outline, the streak
+// strip and the checks are new since the redesign, so they take the frame's
+// own colours (lavender Journal, teal Meditation, gold Achievements; teal
+// checks, which supersedes A5). The flame stays until a leaf exists (A6,
+// decision 9).
 export default function Mind() {
   const {
     streaks,
@@ -110,8 +119,12 @@ export default function Mind() {
     refreshAchievements,
     noteFeatureMilestone,
     today,
+    habitsLoading,
+    journalLoading,
   } = useApp();
   const navigate = useNavigate();
+  const back = useBack();
+  const dark = useIsDark();
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
@@ -185,7 +198,7 @@ export default function Mind() {
           title={SECTION_TITLE[section]}
           subtitle={SECTION_SUBTITLE[section]}
           showBack
-          onBack={() => navigate("/app/mind")}
+          onBack={back}
         />
         {section === "habits" && <HabitsTab />}
         {section === "journal" && <JournalTab />}
@@ -201,7 +214,7 @@ export default function Mind() {
           27px default — see the identical note in Food.tsx. MO1.1 #1. */}
       <div className="flex items-start gap-2.5 mb-[13px]">
         <button
-          onClick={() => navigate(-1)}
+          onClick={back}
           aria-label="Back"
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
         >
@@ -214,26 +227,37 @@ export default function Mind() {
       </div>
 
       <div className="animate-fade-slide-up">
-        {/* MO1.1 #2: three equal tiles. The fills are the old tiles'. */}
+        {/* MO1.1 #2: three equal tiles. New since the redesign, so light mode
+            takes the frame's own colours (decision 22), measured on the 2x
+            export: Journal fill #FAF9FD / well #E9E6F6 / icon #5F5093 (#AEA1DC
+            at 6% / 27%), Meditation #F7F9F9 / #E1EAE9 / #4F7F78 (#6F9993 at
+            5.6% / 20.6%), Achievements #FCF9F2 / #F6EBD6 / #A67C2E. The
+            lavender and teal follow the colour theme. Dark keeps the tints the
+            tiles had. */}
         <div className="grid grid-cols-3 gap-2 mb-5">
           <Tile
             onClick={() => navigate("/app/mind/journal")}
-            fill="rgba(217,164,65,.14)"
-            well="rgba(217,164,65,.22)"
-            icon={<BookOpen size={28} strokeWidth={1.5} className="text-team-gold-deep" />}
+            fill={dark ? "rgb(var(--th-aea1dc) / .14)" : "rgb(var(--th-aea1dc) / .06)"}
+            well={dark ? "rgb(var(--th-aea1dc) / .24)" : "rgb(var(--th-aea1dc) / .27)"}
+            icon={<BookOpen size={28} strokeWidth={1.5} className="text-primary-deep-text" />}
             title="Journal"
             line={
-              <span className="inline-flex items-center gap-1">
-                <Flame size={11} className="text-team-gold-ink dark:text-team-gold-ink" />
-                {journalDays} {journalDays === 1 ? "day" : "days"}
-              </span>
+              journalLoading ? (
+                <LineSkeleton />
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Flame size={11} className="text-team-gold-ink dark:text-team-gold-ink" />
+                  {journalDays} {journalDays === 1 ? "day" : "days"}
+                </span>
+              )
             }
           />
           <Tile
             onClick={() => navigate("/app/mind/meditation")}
-            fill="rgb(var(--th-a2c8c2) / .18)"
-            well="rgb(var(--th-a2c8c2) / .3)"
-            icon={<LotusGlyph size={30} stroke="rgb(var(--c-teal-dark))" />}
+            fill={dark ? "rgb(var(--th-a2c8c2) / .18)" : "rgb(var(--th-6f9993) / .056)"}
+            well={dark ? "rgb(var(--th-a2c8c2) / .3)" : "rgb(var(--th-6f9993) / .206)"}
+            // MO1.1 icons list: Flower2 28/1.5.
+            icon={<Flower2 size={28} strokeWidth={1.5} className="text-team-teal-deep dark:text-teal-dark" />}
             title="Meditation"
             line={meditationLine}
           />
@@ -241,38 +265,50 @@ export default function Mind() {
               0" before the first call would be a number nobody earned. */}
           <Tile
             onClick={() => navigate("/app/mind/achievements")}
-            fill="rgba(217,164,65,.15)"
-            well="rgba(217,164,65,.24)"
-            icon={<Trophy size={28} strokeWidth={1.5} className="text-team-gold-deep" />}
+            fill={dark ? "rgba(217,164,65,.15)" : "#FCF9F2"}
+            well={dark ? "rgba(217,164,65,.24)" : "#F6EBD6"}
+            icon={<Trophy size={28} strokeWidth={1.5} className="text-[#A67C2E] dark:text-team-gold-deep" />}
             title="Achievements"
-            line={achievements === null ? "Loading…" : `${achievementCounts.earned} of ${achievementCounts.total}`}
+            line={achievements === null ? <LineSkeleton /> : `${achievementCounts.earned} of ${achievementCounts.total}`}
           />
         </div>
 
         {/* MO1.1 #3: the hero, the habit with the highest current streak. */}
         {lead && LeadIcon ? (
-          <div className="flex items-center gap-3 rounded-[20px] bg-primary-pale px-4 py-3.5 mb-6">
+          // MO1.1 #3 (measured on the 2x frame): 84 tall; the count's
+          // baseline 19.5 above Personal best's; "days" 4 pt after the count
+          // and the habit 8 after "days"; the label at its natural width on
+          // two lines ("Habits" / "done today"), 12 after the ring.
+          <div className="flex items-center gap-3 rounded-[20px] bg-primary-pale px-4 py-3.5 mb-6 min-h-[84px]">
             <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0">
               <LeadIcon size={22} strokeWidth={1.75} className="text-team-teal-deep dark:text-team-teal-ink" />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="flex items-baseline gap-1.5 min-w-0">
+              <p className="flex items-baseline min-w-0">
                 <span className="text-[26px] leading-none font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">{lead.streakDays}</span>
-                <span className="text-[12px] font-semibold text-charcoal-soft">{lead.streakDays === 1 ? "day" : "days"}</span>
-                <span className="text-[12px] font-bold text-primary-dark truncate">{lead.label}</span>
+                <span className="ml-1 text-[12px] font-semibold text-charcoal-soft">{lead.streakDays === 1 ? "day" : "days"}</span>
+                <span className="ml-2 text-[12px] font-bold text-primary-dark truncate">{lead.label}</span>
               </p>
-              <p className="mt-1.5 text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">
+              <p className="mt-[5px] text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">
                 Personal best · <span className="font-bold text-charcoal">{leadBest} {leadBest === 1 ? "day" : "days"}</span>
               </p>
             </div>
             <DoneRing done={doneHabits} total={habits.length} />
-            <span className="text-[10.5px] leading-[1.3] text-charcoal-soft w-[64px] shrink-0">Habits done today</span>
+            <span className="text-[10.5px] leading-[1.3] text-charcoal-soft shrink-0 whitespace-nowrap">
+              Habits
+              <br />
+              done today
+            </span>
           </div>
+        ) : habitsLoading ? (
+          // MO1.1 States, Loading: a skeleton block where the hero sits
+          // (358 × 84, r20), in surface.soft.
+          <div aria-hidden className="h-[84px] rounded-[20px] bg-cream-soft mb-6" />
         ) : null}
 
         {/* MO1.1 #4–6: Today, with the Auto-tracked group and the habits. */}
         <div className="flex items-center justify-between mb-2.5 px-1">
-          <p className={sectionLabel}>Today</p>
+          <p className={todayLabel}>Today</p>
           <button
             onClick={() => navigate("/app/mind/habits")}
             className="tap flex items-center gap-0.5 text-[12px] font-bold text-primary-dark"
@@ -280,17 +316,21 @@ export default function Mind() {
             View all habits <ChevronRight size={13} />
           </button>
         </div>
-        <div className="rounded-[20px] border border-charcoal/[0.11] dark:border-charcoal/[0.08] bg-cream-card overflow-hidden">
+        {/* New since the redesign: the frame's 1 px #AEA1DC outline (decision 22). */}
+        <div className="rounded-[20px] border border-primary dark:border-charcoal/[0.08] bg-cream-card overflow-hidden">
           {autoStreaks.length > 0 && (
             <>
+              {/* The header's own full-width rule; the rows below it start
+                  their dividers at the label column (MO1.1 #5, #6). */}
               <button
                 onClick={() => setAutoOpen((v) => !v)}
                 aria-expanded={autoOpen}
-                className="tap w-full flex items-center gap-2 px-3.5 py-3 text-left"
+                className="tap w-full flex items-center gap-2 px-3.5 py-3 text-left border-b border-charcoal/[0.08]"
                 style={{ background: "rgb(var(--th-aea1dc) / 0.08)" }}
               >
                 <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint">Auto-tracked</span>
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary-pale text-[10px] font-bold text-primary-dark flex items-center justify-center tabular-nums">
+                {/* 20 × 13 pill (measured on the 2x frame). */}
+                <span className="min-w-[20px] h-[13px] px-1 rounded-full bg-primary-pale text-[10px] leading-[13px] font-bold text-primary-dark flex items-center justify-center tabular-nums">
                   {autoStreaks.length}
                 </span>
                 <ChevronRight
@@ -299,11 +339,12 @@ export default function Mind() {
                 />
               </button>
               {autoOpen &&
-                autoStreaks.map((s) => {
+                autoStreaks.map((s, i) => {
                   const Icon = s.category ? AUTO_ICON[s.category] : Flame;
                   return (
                     <Row
                       key={s.id}
+                      divider={i > 0}
                       icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
                       label={`${s.label.replace(/\s*streak$/i, "")}`}
                       days={s.days}
@@ -312,11 +353,12 @@ export default function Mind() {
                 })}
             </>
           )}
-          {habits.map((h) => {
+          {habits.map((h, i) => {
             const Icon = habitIcon[h.icon];
             return (
               <Row
                 key={h.id}
+                divider={i > 0 || (autoOpen && autoStreaks.length > 0)}
                 icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
                 label={h.label}
                 days={h.streakDays}
@@ -325,18 +367,36 @@ export default function Mind() {
                     onClick={() => toggleHabit(h.id)}
                     aria-label={`${h.label}, today: ${h.done ? "done" : "not done"}`}
                     aria-pressed={h.done}
+                    // MO1.1 #6 (2x frame): done #4F7F78 with a white tick, open
+                    // a 1 px #6F9993-at-35% ring on the strip (decision 22).
                     className={clsx(
                       "tap w-6 h-6 rounded-full flex items-center justify-center border shrink-0",
-                      h.done ? "bg-primary border-primary" : "border-charcoal/15 dark:border-[#807C93]"
+                      h.done ? "bg-team-teal-deep border-team-teal-deep" : "border-th-6f9993/[0.35] dark:border-[#807C93]"
                     )}
                   >
-                    {h.done && <Check size={13} strokeWidth={3} className="text-white dark:text-on-primary-fill" />}
+                    {h.done && <Check size={13} strokeWidth={3} className="text-white" />}
                   </button>
                 }
               />
             );
           })}
-          {habits.length === 0 && (
+          {habits.length === 0 && habitsLoading && (
+            // Loading: skeleton rows at the row positions (56 tall, 28 pt
+            // icon tile r8, the label, the teal strip), in surface.soft.
+            <div aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-stretch h-14">
+                  <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
+                    {i > 0 && <span className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
+                    <span className="w-7 h-7 rounded-lg bg-cream-soft shrink-0" />
+                    <span className="h-3 w-28 rounded bg-cream-soft" />
+                  </div>
+                  <div className="w-[110px] shrink-0 bg-th-6f9993/[0.12] dark:bg-teal-pale" />
+                </div>
+              ))}
+            </div>
+          )}
+          {habits.length === 0 && !habitsLoading && (
             <button
               onClick={() => navigate("/app/mind/habits")}
               className="tap w-full px-4 py-4 text-left text-[13px] text-charcoal-soft"
@@ -361,13 +421,14 @@ export default function Mind() {
         </div>
         {ownStreaks.length > 0 && (
           <div className="rounded-[20px] border border-charcoal/[0.11] dark:border-charcoal/[0.08] bg-cream-card overflow-hidden">
-            {ownStreaks.map((s) => {
+            {ownStreaks.map((s, i) => {
               const bursting = burstKey?.startsWith(`${s.id}-b`);
               const habit = habits.find((h) => h.id === s.habitId);
               const Icon = habit ? habitIcon[habit.icon] : Flame;
               return (
                 <Row
                   key={s.id}
+                  divider={i > 0}
                   onClick={() => logStreak(s)}
                   icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
                   label={s.label}
@@ -399,6 +460,16 @@ export default function Mind() {
   );
 }
 
+/** MO1.1 States, Loading: a tile line's skeleton block, in surface.soft. */
+function LineSkeleton() {
+  return (
+    <>
+      <span aria-hidden className="inline-block align-middle w-12 h-[11px] rounded bg-cream-soft" />
+      <span className="sr-only">Loading</span>
+    </>
+  );
+}
+
 /** MO1.1 #2: a hub tile. */
 function Tile({
   onClick,
@@ -418,14 +489,18 @@ function Tile({
   return (
     <button
       onClick={onClick}
-      className="tap min-w-0 h-[137px] rounded-[18px] border border-charcoal/[0.06] flex flex-col items-center justify-center px-1.5 text-center"
+      // MO1.1 #2 (measured on the 2x frame): 1 px charcoal 8% border, the
+      // 56 pt well r16 starting 19 pt from the tile's top, the title's cap
+      // height 14 pt under the well and the line's baseline 19 pt under the
+      // title's.
+      className="tap min-w-0 h-[137px] rounded-[18px] border border-charcoal/[0.08] flex flex-col items-center justify-start pt-[18px] px-1.5 text-center"
       style={{ background: fill }}
     >
-      <span className="w-14 h-14 rounded-[14px] flex items-center justify-center" style={{ background: well }}>
+      <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: well }}>
         {icon}
       </span>
-      <span className="mt-2.5 text-[13.5px] font-bold text-charcoal truncate max-w-full">{title}</span>
-      <span className="mt-1 text-[11px] text-charcoal-muted dark:text-charcoal-faint truncate max-w-full tabular-nums">{line}</span>
+      <span className="mt-[7px] text-[13.5px] font-bold text-charcoal truncate max-w-full">{title}</span>
+      <span className="mt-0.5 text-[11px] text-charcoal-muted dark:text-charcoal-faint truncate max-w-full tabular-nums">{line}</span>
     </button>
   );
 }
@@ -439,6 +514,7 @@ function Row({
   check,
   onClick,
   bursting,
+  divider,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -447,21 +523,27 @@ function Row({
   check?: React.ReactNode;
   onClick?: () => void;
   bursting?: string;
+  /** A rule above the row, inset to the label column (x 71 on the frame:
+      14 padding + 28 tile + 12 gap) and stopping at the streak strip, so
+      the strip runs unbroken (MO1.1 #6). */
+  divider?: boolean;
 }) {
   return (
     <div
       role={onClick ? "button" : undefined}
       onClick={onClick}
-      className={clsx("flex items-stretch h-14 border-t border-charcoal/[0.06] first:border-t-0", onClick && "tap cursor-pointer")}
+      className={clsx("flex items-stretch h-14", onClick && "tap cursor-pointer")}
     >
-      <div className="flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
+      <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
+        {divider && <span aria-hidden className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
         <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">{icon}</span>
         <span className="min-w-0">
           <span className="block text-[13.5px] font-semibold text-charcoal truncate">{label}</span>
           {sub && <span className="block text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">{sub}</span>}
         </span>
       </div>
-      <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-teal-pale">
+      {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}
+      <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
         <span className="relative flex items-center gap-1">
           <Flame
             key={bursting}

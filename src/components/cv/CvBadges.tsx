@@ -41,7 +41,10 @@ export const RejectionNote: React.FC<{ reason: string }> = ({ reason }) => (
 );
 
 /** The rosette check beside a name: at least one credential verified. */
-export const VerifiedCheck: React.FC<{ size?: number }> = ({ size = 16 }) => (
+export const VerifiedCheck: React.FC<{ size?: number; /** MO1.2.1 draws BadgeCheck 18/1.75. */ strokeWidth?: number }> = ({
+  size = 16,
+  strokeWidth = 2.2,
+}) => (
   <svg
     role="img"
     aria-label="Verified credentials"
@@ -49,7 +52,7 @@ export const VerifiedCheck: React.FC<{ size?: number }> = ({ size = 16 }) => (
     height={size}
     viewBox="0 0 24 24"
     fill="none"
-    strokeWidth={2.2}
+    strokeWidth={strokeWidth}
     strokeLinecap="round"
     strokeLinejoin="round"
     className="shrink-0 stroke-[#1F6A48] dark:stroke-status-good"

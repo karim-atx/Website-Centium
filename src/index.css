@@ -106,7 +106,8 @@
   --c-team-nav-accent: 143 104 246;
   /* The board's nav.idle #9A94B3, and nav.accent #8F68F6 for the active
      label (decision 14). Dark mode has its own values below. */
-  --c-team-nav-idle: 154 148 179;
+  /* Batch E (E11): follows the colour theme; Centium value unchanged. */
+  --c-team-nav-idle: var(--th-9a94b3);
   --c-team-nav-accent-text: 143 104 246;
 
   /* Iteration 6.2 canonical widget library — same reasoning as the nav
@@ -300,8 +301,6 @@
   --forum-removed-bg: #f1eef7;
   --forum-photo-bg: #ece9f4;
   --forum-rule: #ece9f4;
-  --forum-dashed: #8e80c2;
-  --forum-dashed-bg: #f7f6fb;
   --forum-danger: #a33a2f;
   --forum-handle: #dcd7e8;
   /* Courses (design screens 6-9). */
@@ -334,8 +333,6 @@
   --forum-removed-bg: #262932;
   --forum-photo-bg: #262932;
   --forum-rule: #2d3038;
-  --forum-dashed: #8e80c2;
-  --forum-dashed-bg: #1c1f28;
   --forum-danger: #b04236;
   --forum-handle: #4a4366;
   --forum-star: #e3b04b;
@@ -375,7 +372,7 @@
      the ones dark text would vanish at — actually change. */
   /* nav.idle dark, the board's #8A8698: 4.66:1 on the dark.navbar surface
      rgba(28,31,40,0.94). */
-  --c-team-nav-idle: 138 134 152;
+  --c-team-nav-idle: var(--th-8a8698);
   /* #8F68F6 is under 4.5:1 on the dark bar; 9% toward white clears it for
      the active label: #9976F7, 4.93:1 on #1C1F28. */
   --c-team-nav-accent-text: 153 118 247;
@@ -570,8 +567,9 @@ html.larger-text {
    icons are lucide-react SVGs sized in raw px, which the text boost doesn't
    reach, so scale them visually in step (D17 keeps this). transform leaves
    layout boxes untouched, which is an acceptable trade-off for this
-   accessibility toggle. */
-.larger-icons svg {
+   accessibility toggle. Batch E (E7): not the Home Quick actions shape, which
+   is a fixed drawing its buttons and glyphs are laid over (.qa-shape). */
+.larger-icons svg:not(.qa-shape) {
   transform: scale(1.15);
 }
 
@@ -619,6 +617,11 @@ html.high-contrast [class*="divide-charcoal/"] > :not([hidden]) ~ :not([hidden])
   border-color: rgb(var(--c-charcoal) / 0.3);
 }
 html.high-contrast [class*="before:bg-charcoal/"]::before {
+  background-color: rgb(var(--c-charcoal) / 0.3);
+}
+/* MO1.8.6.1: the toggle's off track is strengthened like the hairlines
+   (the frame measures about #B0B0B0, 30% ink). */
+html.high-contrast .toggle-off {
   background-color: rgb(var(--c-charcoal) / 0.3);
 }
 
@@ -731,14 +734,19 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   }
 }
 
-/* Design refinement: the one text role repeated on nearly every screen —
-   section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
-   the old 12px/600/wide-tracking convention. */
+/* Mobile v5.1, decision 20 (supersedes 17): the one section-label style, "with
+   the line" (C-05). Foundations label.section.settings: 11 / 600 uppercase,
+   0.14em, a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is NOT set
+   here: each label keeps its current colour class (decision 19, light mode
+   stays pre-R1). The SectionLabel component renders this same geometry. */
 .section-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  padding-bottom: 7.5px;
+  border-bottom: 1.5px solid rgb(var(--c-primary));
 }
 
 /* WO8 logger fields: placeholders (last session's or the template's values)

@@ -1,5 +1,5 @@
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { ColorThemePicker } from "../../components/profile/ColorThemePicker";
 import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
 import { ReportBugPopup } from "../../components/profile/ReportBugPopup";
@@ -32,17 +32,16 @@ import {
   FileText,
   ShieldCheck,
   KeyRound,
-  Apple,
   Smartphone,
-  Watch,
 } from "lucide-react";
+import { AppleHealthMark, WhoopMark } from "../../components/settings/DeviceMarks";
 
 // MO1.8 Settings (R17, batch C). The board's layout: labelled sections of
 // flat icon-tile rows instead of cards, sub-screens as routed pages
 // (/app/settings/notifications, two-factor, accessibility, privacy, terms,
 // language) and centred popups (Contact us, Report a bug, Rate this app).
-// Colours are today's (decision 15) and the section labels are the pre-R1
-// ones (decision 17, C1).
+// Section labels have the line (decision 20). Every row takes the handover's
+// lavender tile (decision 23: one tile style).
 //
 // EVERY ROW THE BOARD DROPS IS KEPT (C13): Change password, Storage, Time
 // zone and Forum blocks live in a "Data & account" section above General; the
@@ -154,14 +153,21 @@ export default function Settings() {
 
   return (
     <div>
-      <PageHeader title={t("Settings")} showBack />
+      <PageHeader title={t("Settings")} showBack tightBack />
 
+      {/* MO1.8 measured: the sections sit 24 in from each edge (x 24 to 366,
+          342 wide), 8 inside the header's 16; the first label starts 8 under
+          the title (73 against the title's 25 + 40), so the header's 20 bottom
+          margin collapses with -12 here. */}
+      <SettingsBody className="-mt-3">
       <SettingsSection label={t("Appearance")}>
         <SettingsRow
           icon={theme === "dark" ? Moon : Sun}
           title={t("Dark Mode")}
           subtitle={`${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`}
           toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
+          // MO1.8 draws no divider between Dark Mode and the colour theme.
+          className="before:hidden"
         />
         {/* The board puts the colour theme under the Dark Mode row, in the
             text column: padding 4 0 14 50 (MO1.8), the five R20 themes. */}
@@ -206,14 +212,20 @@ export default function Settings() {
           no switch (C16); "Health Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
         <SettingsSection label={t("Connected devices")}>
+          {/* MO1.8: the Apple Health and Whoop brand tiles (handover assets);
+              the board has no Health Connect mark, so Android shows the
+              Smartphone glyph on the standard lavender tile until one is
+              supplied (kept-list 49). */}
           <SettingsRow
-            icon={isIos ? Apple : Smartphone}
+            {...(isIos ? { tile: <AppleHealthMark /> } : { icon: Smartphone })}
             title={isIos ? "Apple Health" : "Health Connect"}
             subtitle="Would sync steps, sleep, heart rate and calories burned"
             value="Coming soon"
           />
-          <SettingsRow icon={Watch} title="Whoop" value="Coming soon" />
-          <p className="mt-2 text-[11px] text-charcoal-faint">
+          <SettingsRow tile={<WhoopMark />} title="Whoop" value="Coming soon" />
+          {/* dir="auto": the English line keeps its full stop at its own end
+              inside an Arabic page (kept-list 144). */}
+          <p dir="auto" className="mt-2 text-[11px] text-charcoal-faint">
             Device sync isn't available yet. Until it is, weight and water are the metrics you can log yourself.
           </p>
         </SettingsSection>
@@ -262,6 +274,7 @@ export default function Settings() {
       >
         Delete account
       </button>
+      </SettingsBody>
 
       <ContactUsPopup open={contactOpen} onClose={() => setContactOpen(false)} />
       {/* Keyed on open so each opening mounts fresh: no previous report text,

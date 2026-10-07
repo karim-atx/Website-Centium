@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import clsx from "clsx";
+import { Heart, MessageCircle } from "lucide-react";
 import type { Author, Identity } from "../../services/forum";
-import { initialOf } from "../../services/forum/rules";
+import { initialOf, initialsOf } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { textPx } from "../../theme/textSize";
 
@@ -23,27 +24,63 @@ export function AuthorInitial({
 }: {
   author: Author;
   identity: Identity;
-  size: 32 | 36 | 40;
+  size: 32 | 36 | 40 | 46;
 }) {
   const tone = author.professionalId
     ? { bg: fv("teal-bg"), ink: fv("teal-ink") }
     : identity === "nickname"
     ? { bg: fv("amber-bg"), ink: fv("amber-ink") }
     : { bg: fv("rules-bg"), ink: fv("rules-ink") };
+  // MO1.3: a nickname is one letter at 14/800 ("P"); a name is two letters at
+  // 14/700 ("ES" for Elie S.).
+  const nick = identity === "nickname";
   return (
     <div
       aria-hidden="true"
-      className="flex items-center justify-center shrink-0 font-extrabold"
-      style={{ width: size, height: size, borderRadius: size / 2, background: tone.bg, color: tone.ink }}
+      className="flex items-center justify-center shrink-0"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        background: tone.bg,
+        color: tone.ink,
+        fontSize: textPx(14),
+        fontWeight: nick ? 800 : 700,
+      }}
     >
-      {initialOf(author.label)}
+      {nick ? initialOf(author.label) : initialsOf(author.label)}
     </div>
+  );
+}
+
+const WHITE_MARK_LAYER: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background: "#FFFFFF",
+  maskSize: "100% 100%",
+  WebkitMaskSize: "100% 100%",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+};
+
+/**
+ * The Centium C and leaf in white, in every theme (MO1.3 rules card). Drawn
+ * the way ThemedMark draws its tinted mark: the brand's own C and leaf masks
+ * (public/centium-logo-c.png and -leaf.png, one 648 x 701 canvas) filled
+ * with a solid colour, at the canvas's own 648:701 proportions.
+ */
+export function WhiteMark({ width }: { width: number }) {
+  return (
+    <span aria-hidden="true" className="relative inline-block shrink-0" style={{ width, height: (width * 701) / 648 }}>
+      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-c.png)", WebkitMaskImage: "url(/centium-logo-c.png)" }} />
+      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-leaf.png)", WebkitMaskImage: "url(/centium-logo-leaf.png)" }} />
+    </span>
   );
 }
 
 export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
       <path d="M9 12l2 2 4-4" />
     </svg>
@@ -53,7 +90,8 @@ export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: st
 export function ProfessionalBadge() {
   return (
     <span
-      className="inline-flex items-center gap-[3px] h-5 px-[7px] rounded-full text-[11px] font-extrabold shrink-0"
+      // 18 tall, as MO1.3 and MO1.3.1 draw it (measured; was 20).
+      className="inline-flex items-center gap-[3px] h-[18px] px-[7px] rounded-full text-[10.5px] font-extrabold shrink-0"
       style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
     >
       <ShieldCheckIcon color={fv("teal-ink")} />
@@ -91,20 +129,14 @@ export function AuthorName({ author, size }: { author: Author; size: 13 | 14 | 1
   );
 }
 
-export function HeartIcon({ filled, color }: { filled?: boolean; color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-    </svg>
-  );
+/** Lucide Heart, filled when liked. MO1.3 cards draw it 14/1.75, MO1.3.3's action row 20/1.75 and replies 15/1.75. */
+export function HeartIcon({ filled, color, size }: { filled?: boolean; color: string; size: 14 | 15 | 20 }) {
+  return <Heart size={size} strokeWidth={1.75} color={color} fill={filled ? color : "none"} aria-hidden="true" />;
 }
 
-export function ReplyIcon({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 5h16v11H9l-5 4z" />
-    </svg>
-  );
+/** Lucide MessageCircle beside a reply count (MO1.3 cards: 14/1.75). */
+export function ReplyIcon({ color, size }: { color: string; size: 14 | 15 }) {
+  return <MessageCircle size={size} strokeWidth={1.75} color={color} aria-hidden="true" />;
 }
 
 /** "Post removed by a moderator" / "Reply removed by a moderator" (design screens 2 and 5). */
@@ -139,7 +171,8 @@ export function HeldNote() {
 
 /**
  * A filter or category chip (design screens 1 and 3). `inStrip` is mobile
- * v5.1 MO1.3's filter strip: 32 pt, radius 12, 12 pt text, same colours.
+ * v5.1 MO1.3's filter strip: 32 pt, radius 9 (Foundations › FO3 sub-tabs,
+ * measured on the frame; was 12), 12 pt text, same colours.
  */
 export function ForumChip({
   active,
@@ -157,7 +190,7 @@ export function ForumChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={clsx("tap shrink-0", inStrip ? "h-8 rounded-xl px-3 text-[12px]" : "h-[34px] rounded-full px-[14px] text-[13px]")}
+      className={clsx("tap shrink-0", inStrip ? "h-8 rounded-[9px] px-3 text-[12px]" : "h-[34px] rounded-full px-[14px] text-[13px]")}
       style={
         active
           ? { background: fv("accent"), color: fv("on-accent"), fontWeight: 700, border: "none" }
@@ -177,5 +210,37 @@ export function ForumPlaceholder({ height }: { height: number }) {
       className="animate-pulse"
       style={{ height, borderRadius: 18, background: fv("track"), border: `1px solid ${fv("border")}` }}
     />
+  );
+}
+
+/**
+ * Foundations › Empty state, for the forum and the course catalogue
+ * (decision 23, kept-list items 66 and 72): a 56 pt primary.tint tile with a
+ * 26 pt thin-stroke icon in primary.accent, a 15/700 title and one 12.5/500
+ * text.muted line, at most 260 wide, centred. The gaps and the block's
+ * padding are not given in Foundations: 10 between the parts (MO1.4.3's
+ * block) and 32 above and below (unspecified).
+ */
+export function EmptyBlock({ icon, title, line }: { icon: React.ReactNode; title: string; line: string }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-2.5 py-8 mx-auto max-w-[260px]">
+      <span className="w-14 h-14 rounded-[18px] bg-primary-pale text-primary-accent flex items-center justify-center" aria-hidden="true">
+        {icon}
+      </span>
+      <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>
+      <p className="m-0 text-[12.5px] font-medium text-charcoal-faint leading-[1.55]">{line}</p>
+    </div>
+  );
+}
+
+/**
+ * A plain inline error in danger, no box (decision 23, items 67, 69, 70, 73;
+ * Foundations' "inline error line in danger under the affected element").
+ */
+export function DangerLine({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p role="alert" className={clsx("m-0 text-[12px] font-semibold text-status-high", className)}>
+      {children}
+    </p>
   );
 }

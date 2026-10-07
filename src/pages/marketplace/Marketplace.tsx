@@ -1,38 +1,22 @@
 import { useNavigate } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
-import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
 import { useEffect } from "react";
-import { Sparkles, ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { ChevronLeft, Gift } from "lucide-react";
 import { rewardForUser, type EarnedReward } from "../../services/rewards";
 import { tierProgress } from "../../services/achievements";
-import { colourSet, tierHex } from "../../components/mind/achievementStyle";
+import { TIER_ICON, colourSet, tierHex } from "../../components/mind/achievementStyle";
 import { liftTo } from "../../data/folderColors";
-import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import { useIsDark } from "../../hooks/useIsDark";
 import ProfessionalExplore from "./ProfessionalExplore";
 import { textPx } from "../../theme/textSize";
-
-// Iteration 6 "Team" §5 Explore: each "More categories" tile gets its own
-// icon colour and light row tint — extending the same colour family used
-// for every other tinted-row list this pass touched. The four not shown in
-// the captured frame (the rest of
-// marketplaceCategories) get a neutral tile in the same spirit as
-// Explore/Referral/Settings on the More screen.
-const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
-  stores: { icon: "rgb(var(--th-7d6bb5))", bg: "rgb(var(--th-aea1dc) / .16)" },
-  supplements: { icon: "rgb(var(--th-4f7f78))", bg: "rgb(var(--th-a2c8c2) / .18)" },
-  equipment: { icon: "#C29A3D", bg: "rgba(36,31,27,.05)" },
-  wellness: { icon: "#9C4F7C", bg: "rgba(36,31,27,.05)" },
-  clothing: { icon: "rgb(var(--th-9b8ad0))", bg: "rgb(var(--th-aea1dc) / .16)" },
-  meal_prep: { icon: "rgb(var(--th-6f9993))", bg: "rgb(var(--th-a2c8c2) / .18)" },
-};
+import { useBack } from "../../hooks/useBack";
 
 export default function Marketplace() {
-  const { user, pointsSummary, noteFeatureMilestone } = useApp();
+  const { user, pointsSummary, pointTiers, noteFeatureMilestone } = useApp();
   const navigate = useNavigate();
+  const back = useBack();
   const dark = useIsDark();
 
   // Explorer milestone: "Out and about". Recorded once per account for ever —
@@ -79,11 +63,13 @@ export default function Marketplace() {
           27px default — see the identical note in Food.tsx. */}
       {/* Handover 2026-09-29 MO8.1: a back arrow beside the title, the
           same button Mind's header uses (Explore opens from More and Home). */}
-      <div className="flex items-start gap-2.5 mb-[13px]">
+      {/* MO1.4 #1 (frame check): the header at x 9 with a 6 gap, so the
+          title starts at 51; the chevron centred at y 42; 16 to the card. */}
+      <div className="flex items-start gap-1.5 mb-4">
         <button
-          onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate("/app/more"))}
+          onClick={back}
           aria-label="Back"
-          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-[7px] transition-colors"
         >
           <ChevronLeft size={18} />
         </button>
@@ -117,23 +103,28 @@ export default function Marketplace() {
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="flex items-baseline gap-2 min-w-0">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: tc.ink }}>
+                  {/* Frame check: letter-spacing measured from the frame
+                      (BRONZE 47 wide at 10/800: ~0.12em); the 22/800 figure
+                      keeps its normal line height, so the row is 33 tall and
+                      the pill centres on it as drawn. */}
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: tc.ink }}>
                     {pointsSummary.tierName}
                   </span>
-                  <span className="text-[22px] font-extrabold leading-none text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
+                  <span className="text-[22px] font-extrabold leading-[1.5] text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
                   <span className="text-[11px] font-semibold text-charcoal-faint">pts</span>
                 </p>
+                {/* MO1.4 #2: the pill alone, no chevron (the card still opens Achievements). */}
                 <span className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10.5px] font-bold rounded-full px-2.5 py-1 whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
+                  <span className="text-[10.5px] font-bold rounded-full px-[9px] py-[3px] whitespace-nowrap" // The ink is lifted against the pill itself, which is darker than the card in dark.
                     style={{ background: tc.track, color: dark ? liftTo(tierHex(pointsSummary.tierName), tc.track) : tc.ink }}>
                     {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
                       ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
                       : "Highest tier"}
                   </span>
-                  <ChevronRight size={15} className="text-charcoal-faint" aria-hidden />
                 </span>
               </div>
-              <div className="h-[5px] rounded-full overflow-hidden mt-3" style={{ background: tc.track }}>
+              {/* Frame check: the bar is 4 tall, 11 under the top row. */}
+              <div className="h-1 rounded-full overflow-hidden mt-[11px]" style={{ background: tc.track }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -143,15 +134,45 @@ export default function Marketplace() {
                   }}
                 />
               </div>
-              {/* WHERE THE BALANCE CAME FROM: the ledger's own sums by source;
-                  "other" only when a source outside these two credits anything. */}
-              <p className="mt-2.5 text-[11px] font-semibold text-charcoal-faint">
-                {pointsSummary.achievementPoints.toLocaleString()} from achievements · {pointsSummary.referralPoints.toLocaleString()} from referrals
-                {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString()} other` : ""}
-              </p>
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+                {/* WHERE THE BALANCE CAME FROM: the ledger's own sums by source;
+                    "other" only when a source outside these two credits anything. */}
+                <p className="min-w-0 text-[11px] font-semibold text-charcoal-faint">
+                  {pointsSummary.achievementPoints.toLocaleString()} from achievements · {pointsSummary.referralPoints.toLocaleString()} from referrals
+                  {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString()} other` : ""}
+                </p>
+                {/* Decision 23 (item 136): the tier ladder restored, right of
+                    the sources line as drawn — the tiers from point_tiers
+                    with AchievementsTab's icons (TIER_ICON) and colours
+                    (colourSet): Medal / Shield / Crown / Star / Gem 11/1.75
+                    in 22 discs, gap 5. The current tier is filled with the
+                    white icon; the others a 1 px ring in the tier colour at
+                    50% (measured from the frame, 2x) with the icon in it. */}
+                {pointTiers.length > 0 && (
+                  <span className="flex gap-[5px] shrink-0" aria-hidden>
+                    {pointTiers.map((t) => {
+                      const current = t.name === pointsSummary.tierName;
+                      const own = colourSet(tierHex(t.name), dark);
+                      const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
+                      return (
+                        <span
+                          key={t.name}
+                          className="w-[22px] h-[22px] rounded-full flex items-center justify-center border"
+                          style={{
+                            background: current ? own.solid : "transparent",
+                            borderColor: current ? own.solid : dark ? own.border : `${tierHex(t.name)}80`,
+                          }}
+                        >
+                          <Icon size={11} strokeWidth={1.75} style={{ color: current ? own.onSolid : own.ink }} />
+                        </span>
+                      );
+                    })}
+                  </span>
+                )}
+              </div>
               {/* SAYING SO, RATHER THAN IMPLYING ONE: points and a tier are
                   real; a reward to spend them on is not, yet. */}
-              <p className="mt-1.5 text-[11px] text-charcoal-faint">Rewards for your points are coming soon.</p>
+              <p className="mt-[7px] text-[11px] text-charcoal-faint">Rewards for your points are coming soon.</p>
             </button>
           );
         })()}
@@ -170,42 +191,11 @@ export default function Marketplace() {
           for gyms that do not exist. Real classes and real venues now live in
           the Discover section below, straight from marketplace_classes and
           marketplace_venues. */}
+      {/* Decision 23: the "More categories" grid is gone (item 46; each
+          category page is now reached from a business's page, which the
+          Businesses rows open) and so is the "More coming to Centium" card
+          (item 32; the empty states already say what will show). */}
       <Discover />
-
-      {/* V9 (QA 9.0): "Remove the browse a category and keep the choose a
-          category each with their own selectable button" — every category
-          is its own directly-tappable button again, no picker sheet
-          in between. */}
-      {/* Kept below the tabs (B28): the only way into the category pages. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">More categories</p>
-      <div className="grid grid-cols-2 gap-[7px] mb-[13px]">
-        {marketplaceCategories
-          .filter((c) => c.id !== "gyms" && c.id !== "classes")
-          .map((c) => {
-            const Icon = marketplaceCategoryIcon[c.id];
-            const style = CATEGORY_STYLE[c.id] ?? { icon: "#7E7568", bg: "rgba(36,31,27,.05)" };
-            return (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/app/marketplace/${c.id}`)}
-                className="tap flex flex-col items-start gap-2 rounded-[15px] px-3.5 py-3"
-                style={{ background: style.bg }}
-              >
-                <Icon size={17} style={{ color: style.icon }} />
-                <span className="text-[11px] font-bold leading-[1.25] text-charcoal text-left">{c.label}</span>
-              </button>
-            );
-          })}
-      </div>
-
-      <Card className="text-center py-8 animate-fade-slide-up">
-        <Sparkles size={22} className="text-berry mx-auto mb-3" />
-        <p className="font-display font-semibold text-charcoal mb-1.5">More coming to Centium</p>
-        <p className="text-xs text-charcoal-soft max-w-xs mx-auto leading-relaxed">
-          Stores, classes, equipment, supplements and wellness services: a full health marketplace,
-          built around your streaks and progress.
-        </p>
-      </Card>
     </div>
   );
 }

@@ -55,6 +55,21 @@ export function typeColours(subtype: DirectoryListing["subtype"] | string | null
   return { main: ink, deep: ink, pill, onMain: "#0D0B1A" };
 }
 
+/**
+ * A map pin's ground behind the initials or photo (MO1.2.2, sampled from the
+ * frame: #E7E2F6 for the purple family, #E1EEEB for teal — a step deeper than
+ * the pill so the pin reads on the tinted map). The avatar pins are new in
+ * the redesign, so they take the handover's colours (decision 22). "Other"
+ * isn't drawn on a pin and keeps its pill; dark keeps the dark pill.
+ */
+export function pinGround(subtype: DirectoryListing["subtype"] | string | null | undefined, dark: boolean): string {
+  if (dark) return typeColours(subtype, true).pill;
+  const family = typeFamily(subtype);
+  if (family === "purple") return "rgb(var(--th-e7e2f6))";
+  if (family === "teal") return "rgb(var(--th-e1eeeb))";
+  return FAMILIES.other.pill;
+}
+
 /** The reviews pill (MO1.2.1: "#D9A441 / #FBF3E2 / #9A7424"); dark keeps the gold on a dark tint (B7). */
 export function goldPill(dark: boolean): { bg: string; border: string; ink: string; star: string } {
   if (!dark) return { bg: "#FBF3E2", border: "#D9A441", ink: "#9A7424", star: "#D9A441" };

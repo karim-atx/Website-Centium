@@ -119,6 +119,27 @@ export async function fetchOfferingsByCategory(
   };
 }
 
+/**
+ * One business's listings, for its page on Explore (decision 23, kept-list
+ * item 43). The same public read as the category page, filtered by the
+ * business instead of the category; no new grant or policy is involved.
+ */
+export async function fetchOfferingsByBusiness(
+  businessId: string
+): Promise<{ ok: true; offerings: Offering[] } | { ok: false }> {
+  const { data, error } = await supabase
+    .from("business_offerings")
+    .select(COLUMNS)
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[business-offerings] Could not read the business's listings:", error.message);
+    return { ok: false };
+  }
+  return { ok: true, offerings: (data ?? []).map((r) => toOffering(r as Row)) };
+}
+
 export async function createOffering(
   businessId: string,
   draft: { title: string; category: OfferingCategory; price: string; description: string }

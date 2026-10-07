@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useBack } from "../../hooks/useBack";
 import { ArrowLeft, ChevronDown, EllipsisVertical, MessageCircle, Send } from "lucide-react";
 import {
   createReply,
@@ -22,7 +23,7 @@ import {
 import { forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { ForumSafetySheet } from "./ForumSafetySheet";
 import { OwnPostSheet } from "./OwnPostSheet";
-import { AuthorInitial, AuthorName, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
+import { AuthorInitial, AuthorName, DangerLine, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
 import { fv } from "./forumColor";
 import { PopupMenu } from "../ui/PopupMenu";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -60,7 +61,6 @@ export function ForumPostView({
   recoveryOn: boolean;
   recoveryPending: boolean;
 }) {
-  const navigate = useNavigate();
   const [thread, setThread] = useState<ForumThread | null | undefined>(undefined);
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
@@ -160,7 +160,8 @@ export function ForumPostView({
     if (r.value.status === "published") setThread((t) => (t ? { ...t, replyCount: t.replyCount + 1 } : t));
   };
 
-  const back = () => navigate("/app/forum");
+  // Batch E (E5): pops back to the forum; opened directly, replaces with it.
+  const back = useBack("/app/forum");
 
   const startEdit = () => {
     if (!own || !thread) return;
@@ -219,11 +220,7 @@ export function ForumPostView({
           className={`${kind === "post" ? "h-[140px]" : "h-[90px]"} rounded-xl px-3 py-2.5 text-sm resize-none outline-none`}
           style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
         />
-        {editError && (
-          <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3 py-2">
-            {editError}
-          </p>
-        )}
+        {editError && <DangerLine>{editError}</DangerLine>}
         <div className="flex gap-2 justify-end">
           <button
             type="button"
@@ -247,13 +244,20 @@ export function ForumPostView({
       </div>
     );
 
+  // MO1.3.3 #1: a 56 pt bar over the content, full width, padding 12 12 0,
+  // gap 10, 94% card fill and a hairline under it; title 17/800, ArrowLeft 19/2.
+  // Frame check: the bar sits at the very top (y 0), so it cancels the page's
+  // 24 pt top padding (and the safe area, which its own padding re-adds).
   const topBar = (
-    <div className="flex items-center justify-between -mx-1 pb-2">
-      <span className="flex items-center gap-1.5">
+    <div
+      className="sticky top-0 z-20 -mx-4 -mt-[calc(env(safe-area-inset-top)+24px)] mb-3.5 px-3 pt-[calc(env(safe-area-inset-top)+12px)] flex items-center justify-between"
+      style={{ background: `color-mix(in srgb, ${fv("card")} 94%, transparent)`, borderBottom: `1px solid ${fv("rule")}` }}
+    >
+      <span className="flex items-center gap-2.5">
         <button type="button" onClick={back} aria-label="Back" className="tap w-11 h-11 flex items-center justify-center">
-          <ArrowLeft size={22} strokeWidth={2} style={{ color: fv("text") }} />
+          <ArrowLeft size={19} strokeWidth={2} style={{ color: fv("text") }} />
         </button>
-        <span className="text-[18px] font-extrabold">Post</span>
+        <span className="text-[17px] font-extrabold">Post</span>
       </span>
       {thread && !hiddenByMode && !recoveryPending && thread.status !== "removed" && (authors.get(thread.id)?.isMine ?? false) ? (
         <button
@@ -317,31 +321,35 @@ export function ForumPostView({
         <RemovedNote kind="post" />
       ) : (
         <div className="flex flex-col gap-3">
-          {/* MO1.3.3: the header card in the category's colour. */}
+          {/* MO1.3.3 #2: the header card in the category's colour, radius 20,
+              padding 16 16 18. */}
           <div
-            className="relative overflow-hidden rounded-[22px] px-4 py-4 flex flex-col gap-3"
+            className="relative overflow-hidden rounded-[20px] px-4 pt-4 pb-[18px] flex flex-col gap-3"
             style={{ background: postColours.strong, color: postColours.onStrong }}
           >
             <span aria-hidden className="absolute -right-10 -top-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
             <div className="relative flex items-center gap-3">
+              {/* MO1.3.3: a 52 pt avatar, measured from the frame (2x, 106 px
+                  across), as a 3 pt white ring round 46. */}
               <span className="rounded-full p-[3px] shrink-0" style={{ background: "#FFFFFF" }}>
-                <AuthorInitial author={author} identity={thread.identity} size={40} />
+                <AuthorInitial author={author} identity={thread.identity} size={46} />
               </span>
               <div className="min-w-0 flex flex-col gap-1">
                 <span className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {author.professionalId ? (
-                    <Link to={`/app/professionals/${author.professionalId}`} className="text-[16px] font-bold no-underline [overflow-wrap:anywhere]" style={{ color: postColours.onStrong }}>
+                    <Link to={`/app/professionals/${author.professionalId}`} className="text-[15.5px] font-extrabold no-underline [overflow-wrap:anywhere]" style={{ color: postColours.onStrong }}>
                       {author.label}
                     </Link>
                   ) : (
-                    <span className="text-[16px] font-bold [overflow-wrap:anywhere]">{author.label}</span>
+                    <span className="text-[15.5px] font-extrabold [overflow-wrap:anywhere]">{author.label}</span>
                   )}
                   {author.professionalId && <ProfessionalBadge />}
                 </span>
                 <span className="flex items-center gap-2 flex-wrap">
+                  {/* MO1.3.3 #2: the tag 10.5/800 in the category colour on white. */}
                   {category && (
                     <span
-                      className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-bold"
+                      className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full text-[10.5px] font-extrabold"
                       style={{ background: "#FFFFFF", color: categoryColours(thread.categoryKey, false).strong }}
                     >
                       <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: categoryColours(thread.categoryKey, false).strong }} />
@@ -373,12 +381,12 @@ export function ForumPostView({
               {photoUrl && <img src={photoUrl} alt="Photo attached to the post" className="w-full max-h-[420px] object-cover" />}
             </div>
           )}
-          <p className="m-0 text-[12px]" style={{ color: fv("muted") }}>
+          <p className="m-0 text-[13px]" style={{ color: fv("muted") }}>
             {postTime(thread.createdAt)}
           </p>
           {thread.status === "published" && (
             <>
-              <div className="flex gap-5 py-3 text-[14px]" style={{ borderTop: `1px solid ${fv("rule")}`, borderBottom: `1px solid ${fv("rule")}`, color: fv("muted") }}>
+              <div className="flex gap-[18px] py-3 text-[14px]" style={{ borderTop: `1px solid ${fv("rule")}`, borderBottom: `1px solid ${fv("rule")}`, color: fv("muted") }}>
                 <span>
                   <strong className="font-extrabold" style={{ color: fv("text") }}>{thread.reactionCount}</strong>{" "}
                   {thread.reactionCount === 1 ? "Like" : "Likes"}
@@ -388,7 +396,8 @@ export function ForumPostView({
                   {thread.replyCount === 1 ? "Reply" : "Replies"}
                 </span>
               </div>
-              <div className="flex -mt-3 pb-1" style={{ borderBottom: `1px solid ${fv("rule")}` }}>
+              {/* 44 + the hairline = the frame's 46 row (was 4 more). */}
+              <div className="flex -mt-3" style={{ borderBottom: `1px solid ${fv("rule")}` }}>
                 <button
                   type="button"
                   onClick={() => replyInput.current?.focus()}
@@ -406,7 +415,7 @@ export function ForumPostView({
                   aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
                   className="tap flex-1 h-11 flex items-center justify-center"
                 >
-                  <HeartIcon filled={liked} color={fv("accent")} />
+                  <HeartIcon filled={liked} color={fv("accent")} size={20} />
                 </button>
               </div>
             </>
@@ -414,13 +423,12 @@ export function ForumPostView({
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {error}
-        </p>
-      )}
+      {/* Decision 23 (item 70): plain danger lines, no box (here, in the
+          edit fields and over the reply bar). */}
+      {error && <DangerLine className="mt-3">{error}</DangerLine>}
 
-      <div className="pt-4 flex flex-col gap-[18px] grow">
+      {/* First reply's avatar 12 under the action row (frame check; was 16). */}
+      <div className="pt-3 flex flex-col gap-[18px] grow">
         {visibleReplies.map((r) =>
           r.status === "removed" ? (
             <RemovedNote key={r.id} kind="reply" radius={12} />
@@ -446,11 +454,15 @@ export function ForumPostView({
             e.preventDefault();
             void send();
           }}
-          className="sticky z-20 bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:bottom-4 mt-4 -mx-3 px-3 pt-2.5 pb-3 flex flex-col gap-2 rounded-2xl"
+          // Frame check: the pill ends 20 above the navbar (pb 8, was 12).
+          className="sticky z-20 bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:bottom-4 mt-4 -mx-3 px-3 pt-2.5 pb-2 flex flex-col gap-2 rounded-2xl"
           style={{ borderTop: `1px solid ${fv("rule")}`, background: fv("card") }}
         >
           {!isProfessional && nickname && (
-            <span className="flex items-center gap-2 text-xs" style={{ color: fv("muted") }}>
+            // MO1.3.3 #9: "Reply as" 11.5/400, gap 6, and a 26 pt chip at 12/700
+            // (12 measured from the frame).
+            // Inset 6 from the pill's edge, as drawn (x 23; frame check).
+            <span className="pl-1.5 flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
               Reply as
               {/* MO1.3.3: a chip that opens the choice (was a native select). */}
               <button
@@ -459,27 +471,24 @@ export function ForumPostView({
                 onClick={() => setReplyMenu(true)}
                 aria-haspopup="menu"
                 aria-label={`Reply as ${replyAs === "nickname" ? nickname : firstName}`}
-                className="tap h-8 rounded-full px-3 flex items-center gap-1 text-[13px] font-bold"
+                className="tap h-[26px] rounded-full px-3 flex items-center gap-1 text-[12px] font-bold"
                 style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
               >
                 {replyAs === "nickname" ? nickname : firstName}
-                <ChevronDown size={14} />
+                <ChevronDown size={12} />
               </button>
             </span>
           )}
-          {replyError && (
-            <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3 py-2">
-              {replyError}
-            </p>
-          )}
+          {replyError && <DangerLine className="pl-1.5">{replyError}</DangerLine>}
           <div className="flex gap-2 items-center">
+            {/* MO1.3.3 #10: 49 tall, padding 5 5 5 6, gap 8; the letter 13/700, Send 15. */}
             <label
-              className="grow min-w-0 h-12 rounded-full flex items-center gap-2.5 pl-1.5 pr-1.5"
+              className="grow min-w-0 h-[49px] rounded-full flex items-center gap-2 py-[5px] pl-1.5 pr-[5px]"
               style={{ border: `1px solid ${fv("border")}` }}
             >
               <span
                 aria-hidden
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
                 style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
               >
                 {((replyAs === "nickname" && nickname ? nickname : firstName) || "?").charAt(0).toUpperCase()}
@@ -501,7 +510,7 @@ export function ForumPostView({
                 className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50"
                 style={{ background: fv("accent"), color: fv("on-accent") }}
               >
-                <Send size={16} />
+                <Send size={15} />
               </button>
             </label>
           </div>
@@ -622,21 +631,76 @@ function ReplyRow({
   onLike: () => void;
   onReply?: () => void;
 }) {
+  const hasMenu = author.isMine ? reply.status !== "removed" : reply.status === "published";
+  const openMenu = () => (author.isMine ? onOwn() : onSafety(author.label));
+
+  // Decision 23 (kept-list item 40): a long press on the reply opens the same
+  // menu the ⋮ does (edit / withdraw your own, report / block someone else's),
+  // as Messages' bubbles do: 500 ms held, cancelled by 10 px of movement so a
+  // scroll never fires it, and a right-click as the mouse's long press. The ⋮
+  // stays as the keyboard and screen-reader path to the same menu.
+  const pressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+  const fired = useRef(false);
+  const clearPress = () => {
+    if (pressTimer.current !== null) window.clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+  useEffect(() => clearPress, []);
+  // Not while the reply is being edited: a held finger there is selecting text.
+  const press = hasMenu && !editor
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          fired.current = false;
+          pressOrigin.current = { x: e.clientX, y: e.clientY };
+          clearPress();
+          pressTimer.current = window.setTimeout(() => {
+            fired.current = true;
+            openMenu();
+          }, 500);
+        },
+        onPointerMove: (e: React.PointerEvent) => {
+          const o = pressOrigin.current;
+          if (o && Math.hypot(e.clientX - o.x, e.clientY - o.y) > 10) clearPress();
+        },
+        onPointerUp: clearPress,
+        onPointerCancel: clearPress,
+        onPointerLeave: clearPress,
+        onContextMenu: (e: React.MouseEvent) => {
+          e.preventDefault();
+          clearPress();
+          if (!fired.current) openMenu();
+          fired.current = false;
+        },
+        // A press that opened the menu must not also tap the like or reply
+        // button it started on.
+        onClickCapture: (e: React.MouseEvent) => {
+          if (fired.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            fired.current = false;
+          }
+        },
+      }
+    : {};
+
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 [-webkit-touch-callout:none]" {...press}>
       <AuthorInitial author={author} identity={reply.identity} size={40} />
       <div className="flex flex-col gap-1 min-w-0 grow">
         <span className="flex gap-1.5 items-center flex-wrap">
           <AuthorName author={author} size={15} />
-          <span className="text-xs" style={{ color: fv("muted") }}>
+          {/* MO1.3.3 #7: age 12.5/400. */}
+          <span className="text-[12.5px]" style={{ color: fv("muted") }}>
             · {forumAge(reply.createdAt)}
             {reply.editedAt ? " · edited" : ""}
           </span>
-          {(author.isMine ? reply.status !== "removed" : reply.status === "published") && (
+          {hasMenu && (
             <button
               type="button"
               aria-label={author.isMine ? "Edit or withdraw" : "Report or block"}
-              onClick={() => (author.isMine ? onOwn() : onSafety(author.label))}
+              onClick={openMenu}
               className="tap ml-auto w-8 h-8 -my-1.5 flex items-center justify-center shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">
@@ -649,7 +713,7 @@ function ReplyRow({
         </span>
         {reply.status === "held" && <HeldNote />}
         {editor ?? (
-          <span className="text-[15px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+          <span className="text-[14px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
             {reply.body}
           </span>
         )}
@@ -657,7 +721,7 @@ function ReplyRow({
           <span className="flex items-center gap-5 mt-1 text-[13px]" style={{ color: fv("muted") }}>
             {onReply && (
               <button type="button" onClick={onReply} aria-label="Reply" className="tap -my-2 py-2">
-                <MessageCircle size={16} strokeWidth={1.75} />
+                <MessageCircle size={15} strokeWidth={1.75} />
               </button>
             )}
             <button
@@ -667,7 +731,7 @@ function ReplyRow({
               aria-label={`${liked ? "Unlike" : "Like"} reply, ${reply.reactionCount} ${reply.reactionCount === 1 ? "like" : "likes"}`}
               className="tap flex items-center gap-1.5 -my-2 py-2"
             >
-              <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} />
+              <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} size={15} />
               {reply.reactionCount > 0 && <span className="tabular-nums">{reply.reactionCount}</span>}
             </button>
           </span>

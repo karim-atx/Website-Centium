@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 
 interface QuickActionsProps {
   onLogFood: () => void;
@@ -23,6 +23,16 @@ interface QuickActionsProps {
 // drawn inset by half a round-joined stroke of their own colour, which gives
 // the artwork's rounded corners. The four white glyphs are cut from the same
 // artwork (public/quick-actions/*.png), so they are untouched too.
+//
+// BATCH E (E7): ONE SHAPE PER SIDE. The pills were CSS boxes beside an SVG
+// wing, and the two never met cleanly: a step on the top edge and a hard
+// corner where the wing's bulge met the pill's bottom. Each side is now a
+// single SVG outline (sideShape): the round pill end, the flat top, a rounded
+// corner into the mic cutout, the cutout, rounded corners at the wing tip, and
+// the artwork's wide fillet from the tip back into the pill's bottom. The SVG
+// spans the measured row width (in artwork units), so the pills still flex;
+// the buttons on top are transparent tap areas holding the glyphs. The shape
+// is excluded from the larger-icons scale (.qa-shape in index.css).
 const S = 358 / 1881;
 const PURPLE = "rgb(var(--th-9591dc))";
 const TEAL = "rgb(var(--th-95c0bb))";
@@ -43,21 +53,44 @@ const polar = (r: number, deg: number) => {
 };
 const fmt = (p: readonly [number, number]) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
 
-// Inset by the stroke's half-width (10): cutout 237, arc 221-307, pills 200-382.
+// The bottom arc is drawn inset by the stroke's half-width (10): r 221-307.
 const HALF = 10;
-const CUT = 227 + HALF;
-const A = [CX - Math.sqrt(CUT ** 2 - (PILL_TOP + HALF - CY) ** 2), PILL_TOP + HALF] as const;
-const B = polar(CUT, 155);
-const C = polar(316 - HALF, 155);
-const LEFT_WING = [
-  `M${CENTRE_LEFT - 20},${PILL_TOP + HALF}`,
-  `L${fmt(A)}`,
-  `A${CUT},${CUT} 0 0 0 ${fmt(B)}`,
-  `L${fmt(C)}`,
-  `C770,410 720,${PILL_TOP + PILL_H - HALF} 680,${PILL_TOP + PILL_H - HALF}`,
-  `L${CENTRE_LEFT - 20},${PILL_TOP + PILL_H - HALF}`,
-  "Z",
-].join(" ");
+// One side's outline in artwork units, outer edge (no stroke), for a row
+// whose left end is at x = left. The right side is its mirror about CX.
+const RC = 20; // corner radius at the cutout and the wing tip
+function sideShape(left: number): string {
+  const r = PILL_H / 2;
+  const top = PILL_TOP;
+  const bottom = PILL_TOP + PILL_H;
+  const cut = 227;
+  const deg = (r0: number, d: number) => polar(r0, d);
+  // Where the top edge meets the cutout, and the angle there.
+  const jx = CX - Math.sqrt(cut ** 2 - (top - CY) ** 2);
+  const jDeg = (Math.atan2(top - CY, jx - CX) * 180) / Math.PI + 360; // ~208
+  const step = (RC / cut) * (180 / Math.PI);
+  const tipIn = deg(cut, 155);
+  const tipOut = deg(316, 155);
+  // The fillet from the tip back to the pill bottom, starting RC along it.
+  const c1 = [760, 418] as const;
+  const dx = c1[0] - tipOut[0];
+  const dy = c1[1] - tipOut[1];
+  const len = Math.hypot(dx, dy);
+  const t2 = [tipOut[0] + (dx / len) * RC, tipOut[1] + (dy / len) * RC] as const;
+  return [
+    `M${fmt([left + r, top])}`,
+    `L${fmt([jx - RC, top])}`,
+    `Q${fmt([jx, top])} ${fmt(deg(cut, jDeg - step))}`,
+    `A${cut},${cut} 0 0 0 ${fmt(deg(cut, 155 + step))}`,
+    `Q${fmt(tipIn)} ${fmt(deg(cut + RC, 155))}`,
+    `L${fmt(deg(316 - RC, 155))}`,
+    `Q${fmt(tipOut)} ${fmt(t2)}`,
+    `C745,410 712,${bottom} 662,${bottom}`,
+    `L${fmt([left + r, bottom])}`,
+    `A${r},${r} 0 0 1 ${fmt([left + r, top])}`,
+    "Z",
+  ].join(" ");
+}
+
 const I1 = polar(211 + HALF, 145.5);
 const I2 = polar(211 + HALF, 34.5);
 const O1 = polar(317 - HALF, 145.5);
@@ -73,12 +106,26 @@ const glyph = (name: string, w: number, h: number): React.CSSProperties => ({
 });
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWorkout, onAddMetric, onVoiceLog }) => {
+  // The row's width in CSS px, measured, so the shapes span it exactly.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [rowW, setRowW] = useState(358);
+  useLayoutEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const read = () => setRowW(el.getBoundingClientRect().width || 358);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const artW = rowW / S;
+  const left = CX - artW / 2;
   const pill: React.CSSProperties = {
     flex: 1,
     minWidth: 0,
     height: px(PILL_H),
     marginTop: px(PILL_TOP - TOP),
-    background: PURPLE,
+    background: "transparent",
     position: "relative",
     border: "none",
     padding: 0,
@@ -87,7 +134,21 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
     <div className="animate-fade-slide-up">
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Quick actions</p>
 
-      <div className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>
+      <div ref={rowRef} className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>
+        {/* The drawing: both sides (pill and wing as one outline) and the
+            bottom arc, under the transparent buttons. */}
+        <svg
+          width={rowW}
+          height={px(BOTTOM - TOP)}
+          viewBox={`${left.toFixed(1)} ${TOP} ${artW.toFixed(1)} ${BOTTOM - TOP}`}
+          className="qa-shape absolute inset-0 block"
+          aria-hidden
+        >
+          <path d={sideShape(left)} fill={PURPLE} onClick={onLogFood} style={{ cursor: "pointer" }} />
+          <path d={sideShape(left)} fill={PURPLE} transform={`translate(${2 * CX} 0) scale(-1 1)`} onClick={onLogWorkout} style={{ cursor: "pointer" }} />
+          <path d={ARC} fill={PURPLE} stroke={PURPLE} strokeWidth={HALF * 2} strokeLinejoin="round" onClick={onAddMetric} style={{ cursor: "pointer" }} />
+        </svg>
+
         {/* Log food: the left pill, its glyph 22.6px in from the centre. */}
         <button
           onClick={onLogFood}
@@ -99,20 +160,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
           <span className="absolute" style={{ ...glyph("food", 150, 145), right: px(CENTRE_LEFT - 616), top: px(222 - PILL_TOP) }} />
         </button>
 
-        {/* The fixed centre: both wings and the bottom arc. */}
-        <svg
-          width={px(CENTRE_W)}
-          height={px(BOTTOM - TOP)}
-          viewBox={`${CENTRE_LEFT} ${TOP} ${CENTRE_W} ${BOTTOM - TOP}`}
-          className="flex-none block relative"
-          aria-hidden
-        >
-          <g fill={PURPLE} stroke={PURPLE} strokeWidth={HALF * 2} strokeLinejoin="round">
-            <path d={LEFT_WING} onClick={onLogFood} style={{ cursor: "pointer" }} />
-            <path d={LEFT_WING} transform={`translate(${2 * CX} 0) scale(-1 1)`} onClick={onLogWorkout} style={{ cursor: "pointer" }} />
-            <path d={ARC} onClick={onAddMetric} style={{ cursor: "pointer" }} />
-          </g>
-        </svg>
+        {/* The fixed centre's width, so the pills' tap areas and glyphs keep
+            their place. */}
+        <span aria-hidden className="flex-none block" style={{ width: px(CENTRE_W) }} />
 
         {/* Log workout: the right pill. */}
         <button

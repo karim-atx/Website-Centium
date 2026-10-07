@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { APP_LANGUAGES } from "../../i18n/languages";
 
@@ -14,7 +14,9 @@ export default function LanguagePage() {
 
   return (
     <div>
-      <PageHeader title={t("Language")} showBack sub />
+      <PageHeader title={t("Language")} showBack sub tightBack />
+      {/* MO1.8.5: 24 pt side insets; the label 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
       <SettingsSection label="App language">
         <div role="radiogroup" aria-label="App language">
           {APP_LANGUAGES.map((l) => {
@@ -29,13 +31,15 @@ export default function LanguagePage() {
                 onClick={() => setLanguage(l.code)}
                 className="tap relative w-full flex items-center justify-between gap-3 text-start [padding-block:calc(13px_+_var(--row-extra,0px)_/_2)] before:content-[''] before:absolute before:bottom-0 before:start-[50px] before:end-0 before:h-px before:bg-charcoal/[0.06] before:pointer-events-none last:before:hidden"
               >
-                <span className="text-[15px] font-medium text-charcoal">{l.name}</span>
-                {selected && <Check size={18} className="text-primary shrink-0" aria-hidden />}
+                {/* MO1.8.5: rows 45 pt apart, so 13 + 19 + 13; the check is 18 / 2.4. */}
+                <span className="text-[15px] leading-[19px] font-medium text-charcoal">{l.name}</span>
+                {selected && <Check size={18} strokeWidth={2.4} className="text-primary shrink-0" aria-hidden />}
               </button>
             );
           })}
         </div>
       </SettingsSection>
+      </SettingsBody>
     </div>
   );
 }

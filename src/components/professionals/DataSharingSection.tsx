@@ -6,6 +6,7 @@ import {
   Activity,
   Baby,
   Check,
+  CircleAlert,
   ClipboardList,
   Droplet,
   Dumbbell,
@@ -16,7 +17,7 @@ import {
   Scale,
   ShieldCheck,
   TrendingUp,
-  UtensilsCrossed,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
@@ -68,7 +69,8 @@ const groupsOf = () => {
 };
 
 const CATEGORY_ICON: Partial<Record<AccessCategory, LucideIcon>> = {
-  food_diary: UtensilsCrossed,
+  // MO1.5.1.1 icon list: Utensils 16/1.75.
+  food_diary: Utensils,
   workout_activity: Dumbbell,
   weight: Scale,
   progress: TrendingUp,
@@ -361,11 +363,14 @@ export const DataSharingSection: React.FC<{
   // ticks, and the changes that did not save.
   const header = (pro: LinkedProfessional) =>
     professionalId ? (
-      <div className="flex flex-col items-center text-center mb-4">
-        <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
+      // MO1.5.1.1 anatomy row 11: padding 4 8 2; the avatar is 60 (2x frame:
+      // y 1258–1377).
+      <div className="flex flex-col items-center text-center mb-4 pt-1 px-2 pb-0.5">
+        <span className="w-[60px] h-[60px] rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[20px] font-bold text-primary-dark">
           {pro.avatarUrl ? <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(pro.name)}
         </span>
-        <p className="mt-2.5 text-[17px] font-bold text-charcoal">{pro.name}</p>
+        {/* MO1.5.1.1 anatomy row 11: name 18/700. */}
+        <p className="mt-2.5 text-[18px] font-bold text-charcoal">{pro.name}</p>
         <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
         <p className="mt-2.5 text-[12.5px] text-charcoal-soft max-w-[300px]">
           Choose what they can see. Nothing is shared unless you turn it on.
@@ -394,10 +399,16 @@ export const DataSharingSection: React.FC<{
     <>
       {header(pro)}
 
+      {/* Decision 23 (item 80): an r16 #F0EDF9 notice with a 12.5/400 body
+          and a Foundations text action (13/700 primary.accent). */}
       {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
-        <div className="rounded-xl bg-primary-pale border border-primary/[0.16] px-3 py-2.5 mb-3">
-          <p className="text-[11.5px] font-semibold text-charcoal mb-1">Two things we should have asked separately</p>
-          <p className="text-[11px] text-charcoal-soft leading-relaxed">
+        <div
+          className="rounded-2xl bg-primary-pale px-3.5 pt-3 pb-1 mb-3"
+        >
+          <p className="text-[12.5px] font-semibold text-charcoal mb-1">
+            Two things we should have asked separately
+          </p>
+          <p className="text-[12.5px] text-charcoal-soft leading-normal">
             When you agreed to share health metrics with {pro.name}, that one switch also covered your lab results and
             your medical history. That was too much to bundle into a single question. We've split it out below. Your
             activity and vitals are still shared exactly as before, and{" "}
@@ -418,7 +429,7 @@ export const DataSharingSection: React.FC<{
           <button
             onClick={() => void declineAll(pro.professionalId)}
             disabled={saving === pro.professionalId}
-            className="tap mt-2.5 rounded-xl bg-cream-card text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
+            className="tap min-h-11 inline-flex items-center text-[13px] font-bold text-primary-accent disabled:opacity-50"
           >
             {saving === pro.professionalId
               ? "Saving…"
@@ -430,20 +441,26 @@ export const DataSharingSection: React.FC<{
       )}
 
       {groupsOf().map((g) => (
-        <div key={g.label} className="mt-4 first:mt-0">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">{g.label}</p>
-          <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
+        // MO1.5.1.1 rows 12–13 are section labels: the one section-label
+        // style (decision 20). Group cards radius 18 (2x frame).
+        <div key={g.label} className="mt-6 first:mt-0">
+          <p className="section-label text-charcoal-faint mb-2.5">{g.label}</p>
+          <div className="rounded-[18px] border border-charcoal/[0.08] px-3.5">
             {g.items.map(({ category, label, description }) => {
               // Absent means denied: no default-on.
               const granted = grants[pro.professionalId]?.[category] === true;
               const Icon = CATEGORY_ICON[category] ?? ShieldCheck;
               return (
+                // MO1.5.1.1 (2x frame): a 32 r10 #F0EDF9 tile with a #7D6BB5
+                // glyph (new tile, decision 22; x 72–135), and the rule from
+                // the label's x (160) at #F4F4F3 (5%).
                 <div
                   key={category}
-                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[48px] before:end-0 before:h-px before:bg-charcoal/[0.06] last:before:hidden"
+                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[44px] before:end-0 before:h-px before:bg-charcoal/[0.05] last:before:hidden"
                 >
-                  <span className="w-9 h-9 rounded-2xl bg-cream-soft text-charcoal-soft flex items-center justify-center shrink-0" aria-hidden>
-                    <Icon size={16} />
+                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale text-primary-dark flex items-center justify-center shrink-0" aria-hidden>
+                    {/* MO1.5.1.1: category icons 16/1.75. */}
+                    <Icon size={16} strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-charcoal flex items-center gap-1.5">
@@ -488,7 +505,7 @@ export const DataSharingSection: React.FC<{
       {/* The sheet that renders the single-professional variant carries its
           own title, so the section heading would just repeat it. */}
       {!professionalId && (
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <p className="section-label text-charcoal-faint mb-2 flex items-center gap-1.5">
           <ShieldCheck size={13} /> Data sharing
         </p>
       )}
@@ -499,13 +516,17 @@ export const DataSharingSection: React.FC<{
           database came back disagreeing with what this device asked for, so
           the change is not in effect. Named per professional even inside the
           single-professional sheet. */}
+      {/* Decision 23 (item 81): the Foundations
+          inline danger line (CircleAlert 13 + 12/600 danger), with which
+          switch it was under it at the text's x. */}
       {unsaved.length > 0 && (
-        <div className="rounded-2xl bg-status-high-bg border border-status-high/30 px-3.5 py-3 mb-2.5">
-          <p className="text-[11.5px] font-semibold text-status-high mb-1">
+        <div role="alert" className="mb-3">
+          <p className="flex items-start gap-2 text-xs font-semibold text-status-high">
+            <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
             {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
           </p>
           {unsaved.map((u) => (
-            <p key={`${u.professionalId}:${u.category}`} className="text-[11px] text-charcoal-soft leading-relaxed">
+            <p key={`${u.professionalId}:${u.category}`} className="ps-[21px] mt-0.5 text-xs text-charcoal-soft leading-normal">
               {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with {nameFor(u.professionalId)}. Set it
               again to retry.
             </p>

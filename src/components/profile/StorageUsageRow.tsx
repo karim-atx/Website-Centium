@@ -62,9 +62,11 @@ export const StorageUsageRow: React.FC = () => {
       icon={HardDrive}
       title="Storage"
       value={
-        <span className={`font-semibold ${warning ? "text-status-high" : "text-charcoal-faint"}`}>
+        // <bdi>: the English figure keeps its own order inside Arabic (RTL)
+        // pages (kept-list 144).
+        <bdi className={`font-semibold ${warning ? "text-status-high" : "text-charcoal-faint"}`}>
           {formatBytes(usage.usedBytes)} of {formatBytes(usage.capBytes)}
-        </span>
+        </bdi>
       }
       subtitle={
         <>

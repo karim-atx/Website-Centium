@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, CalendarCheck, Dumbbell, MessagesSquare, Trophy, UtensilsCrossed } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Toggle } from "../../components/ui/Toggle";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { fetchMessageNotifications, setMessageNotifications } from "../../services/preferences";
 import {
@@ -20,8 +20,8 @@ import { pushUnavailableReason } from "./platform";
 // permission plus this account's push_subscriptions row for this browser:
 // on asks the browser (Notification.requestPermission) and registers the
 // device; off removes the row, so nothing is sent here any more. While it is
-// off the device rows below are dimmed and disabled (BR-12); Messages stays
-// live, because switching it on asks for permission itself. This used to be the
+// off every row below is dimmed and disabled (BR-12), Messages included,
+// unless the browser has blocked notifications (see messagesDimmed). This used to be the
 // Push notifications row's "Allow / Re-check" pill on Settings.
 //
 // THE ROWS ARE THE ONES WITH DATA, under the board's group names. Messages is
@@ -115,6 +115,11 @@ export default function NotificationsPage() {
   // receive push at all, dimming would trap the account-wide Messages setting
   // behind a switch that can never move.
   const dimmed = pushAvailable && !on;
+  // Messages dims with the others (MO1.8.3, BR-12 "every row dims"), except
+  // where the browser has blocked notifications: the switch above can't turn
+  // on from the app then, and dimming would lock the account-wide Messages
+  // setting (which applies on every device) out of reach on this one.
+  const messagesDimmed = dimmed && permission !== "denied";
 
   // --- Messages: the one server-backed row -----------------------------------
   const [messages, setMessages] = useState<boolean | null>(null);
@@ -163,16 +168,24 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader title="Notifications" showBack sub />
+      {/* The frame draws 27 / 700 here, but the user's flag (decision 23,
+          C-02) gives every Settings sub-page the 24 / 700 title on a 36 line. */}
+      <PageHeader title="Notifications" showBack sub tightBack />
 
-      {/* The lead card: primary-pale, as the app's other tinted cards. */}
-      <div className="flex items-center gap-3.5 rounded-2xl bg-primary-pale px-4 py-3.5 mb-8">
-        <span className="w-11 h-11 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
-          <Bell size={18} />
+      {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title. */}
+      <SettingsBody className="-mt-1.5">
+      {/* The lead card, new since the redesign, so the handover's own light
+          colours (decision 22): rgba(154,140,214,0.12) (measured #F3F1FA), a
+          #9A8CD6 tile and the status in #7D67D9. MO1.8.3: radius 20, padding
+          20, gap 14, a 48 pt tile with Bell 22 / 1.75, the title 17 / 600 and
+          the status 13 / 700. */}
+      <div className="flex items-center gap-3.5 rounded-[20px] bg-th-9a8cd6/[0.12] dark:bg-primary-pale p-5 mb-8">
+        <span className="w-12 h-12 rounded-2xl bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
+          <Bell size={22} strokeWidth={1.75} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-charcoal">Allow notifications</p>
-          <p className="text-[12px] text-primary-deep-text leading-4 mt-px" role="status">
+          <p className="text-[17px] font-semibold text-charcoal">Allow notifications</p>
+          <p className="text-[13px] font-bold text-primary-accent mt-px" role="status">
             {deviceLine}
           </p>
         </div>
@@ -181,6 +194,8 @@ export default function NotificationsPage() {
           onChange={(v) => void setDevice(v)}
           disabled={!pushAvailable || busy || registered === null}
           label="Allow notifications on this device"
+          // MO1.8.3's lead switch, drawn larger than the rows' (decision 23).
+          lead
         />
       </div>
 
@@ -193,9 +208,8 @@ export default function NotificationsPage() {
                 icon={r.icon}
                 title={r.label}
                 subtitle={r.desc}
-                // Never dimmed: it is the account's setting, saved on the
-                // server for every device, and switching it on is what asks
-                // this device for permission (above).
+                // The account's setting, saved on the server for every device.
+                dimmed={messagesDimmed}
                 toggle={{
                   checked: messages ?? true,
                   disabled: messages === null || saving,
@@ -220,6 +234,7 @@ export default function NotificationsPage() {
       ))}
 
       {note && <p className="mt-4 text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2">{note}</p>}
+      </SettingsBody>
     </div>
   );
 }

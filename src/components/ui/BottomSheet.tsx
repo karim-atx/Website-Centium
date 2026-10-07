@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 interface BottomSheetProps {
   open: boolean;
@@ -78,6 +79,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   titleIcon,
   footerRule,
 }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   // The handover's light chrome, and its dark-mode counterpart, come from the
   // --sheet-* variables in index.css.
   const band = tone?.band ?? "var(--sheet-band)";

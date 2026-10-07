@@ -178,7 +178,7 @@ export const MedicalRecordsSection: React.FC<{
   return (
     <>
       <div className="flex items-center justify-between mb-2.5">
-        {hideLabel ? <span /> : <p className="section-label text-charcoal-faint">Records</p>}
+        {hideLabel ? <span /> : <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-charcoal-faint">Records</p>}
         {tab === "biomarkers" && (
           <div className="flex items-center gap-3">
             <button onClick={onShareAll} className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-primary-dark">

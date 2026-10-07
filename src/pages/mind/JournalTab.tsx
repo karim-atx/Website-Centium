@@ -14,6 +14,7 @@ import {
   ArrowUpDown,
   CalendarDays,
   ChevronDown,
+  EllipsisVertical,
   Folder,
   FolderCog,
   FolderPlus,
@@ -34,11 +35,10 @@ const dateLabel = (iso: string) => {
 // MO1.1.2.3 (new entry). MO1.1.2.2, the Face ID locked folder, is native-only
 // and not built; so the folder menu has no Lock.
 //
-// LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
-// folder tabs take the old folder chips' colours, the Edit tile the old round
-// button's, and the pinned New entry the old outline button's. Delete is the
-// shared destructive red in both modes. Dark mode is the v5.1 dark set
-// throughout.
+// LIGHT MODE (decisions 22, 23): the swipe tiles, the folder tabs and the
+// pinned CTA row take the handover's own colours; the FolderPlus toggle and
+// the entry cards existed before and keep theirs (decision 15). Delete is the shared destructive red in both
+// modes. Dark mode is the v5.1 dark set throughout.
 //
 // FOLDERS AND ENTRIES ARE SERVER ROWS NOW (journal_folders +
 // journal_entries), which changes two things on this screen. The folder list
@@ -76,6 +76,8 @@ export default function JournalTab() {
   // Menu anchors, held as state (not refs) since the menus read them in render.
   const [cogEl, setCogEl] = useState<HTMLButtonElement | null>(null);
   const [pickerEl, setPickerEl] = useState<HTMLButtonElement | null>(null);
+  // D12: the entry whose Edit / Delete menu is open, and what it anchors to.
+  const [entryMenu, setEntryMenu] = useState<{ entry: JournalEntry; anchor: HTMLElement } | null>(null);
 
   // THE SELECTION FOLLOWS THE LIST. Folders load after the first render, and
   // a folder can be deleted from another device — either way, a selection
@@ -173,11 +175,18 @@ export default function JournalTab() {
       {/* NO FOLDERS IS A REAL STARTING STATE NOW. Four were seeded into every
           account before — Personal, Training, Nutrition, General — as though
           somebody had made them. An entry needs a folder to live in, so this
-          asks for the first one rather than inventing it. */}
+          asks for the first one rather than inventing it. Decision 23 (kept
+          list 52): styled as Foundations › Empty state — a 56 primary.tint
+          tile with a 26 thin-stroke icon in primary.accent, title 15/700, one
+          line 12.5/500 muted, max width 260 — with the quick folder chips
+          kept under it. */}
       {journalFolders.length === 0 && !journalError && (
-        <Card className="text-center py-7 mb-4">
-          <p className="text-sm font-semibold text-charcoal mb-1">No folders yet</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4 mb-4">
+        <div className="flex flex-col items-center text-center py-8 mb-4">
+          <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
+            <Folder size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">No folders yet</p>
+          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 mb-4 leading-relaxed max-w-[260px]">
             Entries live in folders. Make the first one to start writing.
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
@@ -192,23 +201,22 @@ export default function JournalTab() {
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* MO1.1.2 #2: the folders as a segmented card (358 × 56), scrolling
-          sideways once they outgrow it. Light colours are the old chips'. */}
+          sideways once they outgrow it. Decision 23: the handover's colours,
+          active #A79AD5 / white, idle #F5F4FE / #5B5349 (SegmentedTabs'
+          defaults plus the #5B5349 idle ink). Tabs keep their natural width,
+          16 each side (2x frame: Personal 84, Training 80). */}
       {journalFolders.length > 0 && (
         <SegmentedTabs
           scroll
+          scrollMinWidth={0}
           items={journalFolders.map((f) => ({ key: f.id, label: f.name }))}
           activeKey={selected}
           onChange={setActiveFolder}
-          light={{
-            activeFill: "rgb(var(--c-primary-fill))",
-            activeInk: "rgb(var(--c-on-primary-fill))",
-            idleFill: "rgb(var(--c-cream-card))",
-            idleInk: "rgb(var(--c-charcoal-soft))",
-          }}
+          idleInk="rgb(var(--c-charcoal-soft))"
         />
       )}
 
@@ -261,8 +269,9 @@ export default function JournalTab() {
                 key: "edit",
                 label: "Edit",
                 icon: <Pencil size={16} />,
+                // The swipe tile is new since the redesign: the frame's
+                // #F0EEF9 tile with a #7D67D9 pencil, SwipeActions' default.
                 onClick: () => startEdit(e),
-                light: { fill: "rgb(var(--c-primary-fill))", ink: "rgb(var(--c-on-primary-fill))" },
               },
               {
                 key: "delete",
@@ -274,13 +283,30 @@ export default function JournalTab() {
                 destructive: true,
               },
             ]}
+            onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
           >
             <Card interactive onClick={() => setOpenEntry(e)} className="px-5 py-[19px]">
-              <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+              <div className="flex items-center justify-between gap-2 h-4">
+                <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+                {/* D12: the keyboard and mouse path to Edit / Delete. */}
+                <button
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setEntryMenu({ entry: e, anchor: ev.currentTarget });
+                  }}
+                  aria-label={`${e.title}, more options`}
+                  aria-haspopup="menu"
+                  aria-expanded={entryMenu?.entry.id === e.id}
+                  className="tap -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint"
+                >
+                  <EllipsisVertical size={16} />
+                </button>
+              </div>
               <div
                 aria-hidden
                 className="mt-[9px] h-px"
-                style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.5)" }}
+                // #D3CBEC on the 2x frame: #AEA1DC at 55%.
+                style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.55)" }}
               />
               <p className="mt-2 text-sm leading-5 font-semibold text-charcoal truncate">{e.title}</p>
             </Card>
@@ -302,14 +328,15 @@ export default function JournalTab() {
             primary={{
               label: "New entry",
               icon: <Plus size={15} />,
-              // Light mode keeps the outline New entry button this replaced;
-              // dark mode is the filled primary.
-              className:
-                "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
+              // MO1.1.2 #10 (decision 23): New entry filled #A198DF
+              // (--c-fill-cta), 13.5/700 white; FolderCog on #EFEEFD with a
+              // #7D67D9 icon. 48/r14 per C-01.
+              className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
               onClick: startNew,
             }}
             trailing={{
               icon: <FolderCog size={18} strokeWidth={1.75} />,
+              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
               label: "Folder options",
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,
@@ -341,6 +368,22 @@ export default function JournalTab() {
           { value: "right", label: "Move right", icon: <ArrowRight size={15} strokeWidth={1.75} />, disabled: selectedIndex >= journalFolders.length - 1 },
         ]}
         onSelect={(v) => selectedFolder && moveJournalFolder(selectedFolder.id, v === "left" ? -1 : 1)}
+      />
+
+      {/* D12: an entry's Edit / Delete without a swipe (long-press or ⋮). */}
+      <PopupMenu<"edit" | "delete">
+        open={!!entryMenu}
+        onClose={() => setEntryMenu(null)}
+        anchor={entryMenu?.anchor ?? null}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!entryMenu) return;
+          if (v === "edit") startEdit(entryMenu.entry);
+          else removeJournalEntry(entryMenu.entry.id);
+        }}
       />
 
       <ConfirmCard
@@ -382,7 +425,9 @@ export default function JournalTab() {
               aria-haspopup="menu"
               className={`tap flex items-center gap-2 text-left ${field}`}
             >
-              <Folder size={15} strokeWidth={1.75} className="flex-none text-charcoal-faint" />
+              {/* MO1.1.2.3: the Folder icon is the theme's lavender (the Date
+                  field's CalendarDays stays grey). */}
+              <Folder size={15} strokeWidth={1.75} className="flex-none text-primary-accent" />
               <span className="flex-1 min-w-0 truncate">{composeFolderName}</span>
               <ChevronDown size={15} className="flex-none text-charcoal-faint" />
             </button>
@@ -417,7 +462,9 @@ export default function JournalTab() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="block w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/15 resize-none"
-              style={{ height: "min(376px, 40dvh)" }}
+              // MO1.1.2.3 draws the Entry field 376 tall; the sheet body
+              // scrolls inside on a short screen.
+              style={{ height: 376 }}
             />
             {!text && (
               <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 px-[17px] py-[15px] text-sm text-charcoal-faint">

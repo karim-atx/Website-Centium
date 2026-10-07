@@ -4,10 +4,13 @@ import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useApp } from "../../context/AppContext";
-import { Check, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { Check, EllipsisVertical, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
+import { WhiteMark } from "../../components/forum/parts";
+import { textPx } from "../../theme/textSize";
 import type { HabitIconKey, HabitItem } from "../../types";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -33,8 +36,10 @@ function weekOf(today: string): string[] {
 // (and would count toward achievements), so it waits for a decision.
 //
 // LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
-// round check, the icon tile and the streak chip are the old row's; the
-// pinned Add habit is the old outline button. Edit and Delete sit behind a
+// round check, the icon tile and the streak chip are the old row's. Parts new
+// since the redesign take the frame's own colours (decision 22): the header
+// band and wordmark, today's column and date tile, and the filled pinned Add
+// habit. Edit and Delete sit behind a
 // swipe, as in Journal and Workout › History. Dark mode is the v5.1 set; a
 // tick there is the dark filled-control ink on the purple (white measured
 // about 2.6:1 on #A991FE). An empty ring for today or an earlier day is
@@ -61,6 +66,13 @@ export default function HabitsTab() {
   // Deleting a habit erases its history and streak, so it asks first (the
   // same confirm as a Journal folder).
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
+  // D12: Edit and Delete without a swipe, from a long-press on the row or
+  // its ⋮ button, in the shared dropdown menu.
+  const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
+  const startEdit = (h: HabitItem) => {
+    setEditingId(h.id);
+    setEditDraft(h.label);
+  };
 
   const week = weekOf(today);
   const todayIndex = week.indexOf(today);
@@ -129,13 +141,11 @@ export default function HabitsTab() {
             key: "edit",
             label: "Edit",
             icon: <Pencil size={16} />,
-            onClick: () => {
-              setEditingId(h.id);
-              setEditDraft(h.label);
-            },
+            onClick: () => startEdit(h),
           },
           { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
         ]}
+        onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
           {/* Tapping the habit still ticks today, as it always has. */}
@@ -145,12 +155,24 @@ export default function HabitsTab() {
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[13px] leading-[18px] font-medium text-charcoal">{h.label}</span>
+              {/* MO1.1.1 (2x frame): a 16 pt chip 3 pt under the name, the
+                  count 10.5 pt. The frame's leaf waits on the asset (decision 9). */}
               {h.streakDays > 0 && (
-                <span className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-1.5 py-0.5">
-                  <Flame size={10} /> {h.streakDays}
+                <span className="mt-[3px] h-4 inline-flex items-center gap-0.5 text-[10.5px] leading-none font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-1.5">
+                  <Flame size={11} /> {h.streakDays}
                 </span>
               )}
             </span>
+          </button>
+          {/* D12: the keyboard and mouse path to Edit / Delete. */}
+          <button
+            onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
+            aria-label={`${h.label}, more options`}
+            aria-haspopup="menu"
+            aria-expanded={menu?.habit.id === h.id}
+            className="tap w-5 h-8 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint"
+          >
+            <EllipsisVertical size={16} />
           </button>
           <div className="flex shrink-0">
             {week.map((day, i) => {
@@ -160,7 +182,9 @@ export default function HabitsTab() {
               return (
                 <span
                   key={day}
-                  className={clsx("flex items-center justify-center h-[59px]", isToday && "bg-primary-pale/70 dark:bg-primary-pale")}
+                  // Today's column: #F7F5FB on the frame, #AEA1DC at about 10%
+                  // (new since the redesign, decision 22).
+                  className={clsx("flex items-center justify-center h-[59px]", isToday && "bg-th-aea1dc/[0.102] dark:bg-primary-pale")}
                   style={{ width: COL }}
                 >
                   {isToday ? (
@@ -181,7 +205,7 @@ export default function HabitsTab() {
                       role="img"
                       className={clsx(
                         "w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary-fill border-primary-fill" : future ? "border-charcoal/[0.08]" : "border-charcoal/15 dark:border-[#807C93]"
+                        ticked ? "bg-primary-fill border-primary-fill" : future ? "border-charcoal/[0.06]" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
                     >
                       {ticked && <Check size={13} className="text-on-primary-fill" strokeWidth={3} />}
@@ -219,26 +243,44 @@ export default function HabitsTab() {
       {/* MO1.1.1 #2: the week grid. A header band with the days (today
           marked), then one 60 pt row per habit (59 plus its divider). */}
       {habits.length > 0 && (
-        <Card padded={false} className="overflow-hidden">
-          <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-primary/50 dark:bg-primary-pale">
-            <span className="flex-1" />
-            <div className="flex shrink-0">
+        // MO1.1.1 (2x frame): card r20; the header band #AEA1DC at 60%
+        // (#CEC7EA), 58 tall over a 1 pt hairline, with the white CENTIUM
+        // wordmark at its left (C-and-leaf mark 21 wide at x 32.5, ENTIUM
+        // caps 9 tall, spread to x 152.5) and today's column running through
+        // it; today's name #7D67D9, its date on a 26 × 22 #AB9ED7 tile.
+        <Card padded={false} className="overflow-hidden !rounded-[20px]">
+          <div className="flex items-center h-[59px] pl-3 pr-2.5 border-b border-charcoal/[0.04] bg-primary/60 dark:bg-primary-pale">
+            <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-[7px] pl-1" role="img" aria-label="Centium">
+              <WhiteMark width={21} />
+              <span
+                aria-hidden
+                className="text-white font-semibold uppercase leading-none whitespace-nowrap"
+                style={{ fontSize: textPx(12.5), letterSpacing: "0.73em" }}
+              >
+                entium
+              </span>
+            </span>
+            <div className="flex shrink-0 self-stretch">
               {week.map((day, i) => {
                 const isToday = i === todayIndex;
                 return (
-                  <span key={day} className="flex flex-col items-center" style={{ width: COL }}>
+                  <span
+                    key={day}
+                    className={clsx("flex flex-col items-center justify-center", isToday && "bg-th-aea1dc/[0.102] dark:bg-transparent")}
+                    style={{ width: COL }}
+                  >
                     <span
                       className={clsx(
                         "text-[10px] leading-[13px] font-semibold",
-                        isToday ? "text-primary-dark" : "text-charcoal-faint"
+                        isToday ? "text-primary-accent" : "text-charcoal-faint"
                       )}
                     >
                       {DAY_NAMES[i]}
                     </span>
                     <span
                       className={clsx(
-                        "mt-[3px] h-6 min-w-[26px] rounded-lg flex items-center justify-center text-[13px] tabular-nums",
-                        isToday ? "bg-primary-fill text-on-primary-fill font-semibold" : "font-bold text-charcoal"
+                        "mt-[3px] h-[22px] min-w-[26px] rounded-lg flex items-center justify-center text-[13px] tabular-nums",
+                        isToday ? "bg-[rgb(var(--c-fill-day))] text-on-primary-fill font-semibold" : "font-bold text-charcoal"
                       )}
                     >
                       {Number(day.slice(8))}
@@ -255,6 +297,21 @@ export default function HabitsTab() {
           </div>
         </Card>
       )}
+
+      <PopupMenu
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!menu) return;
+          if (v === "edit") startEdit(menu.habit);
+          else setDeleting(menu.habit);
+        }}
+      />
 
       <ConfirmCard
         open={!!deleting}
@@ -288,17 +345,17 @@ export default function HabitsTab() {
                 being offered. */}
             {suggestions.length > 0 && (
               <>
-                <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+                <p className="mb-1.5 text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
                   Suggestions
                 </p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5 mb-[7px]">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5 mb-2">
                   {suggestions.map((s) => {
                     const Icon = habitIcon[s.icon];
                     return (
                       <button
                         key={s.label}
                         onClick={() => addHabit(s.label, s.icon)}
-                        className="tap shrink-0 flex items-center gap-1.5 h-[25px] rounded-full bg-cream-soft px-3 text-[12px] font-semibold text-charcoal-soft"
+                        className="tap shrink-0 flex items-center gap-1.5 h-[26px] rounded-full bg-cream-soft px-3 text-[12px] font-semibold text-charcoal-soft"
                       >
                         <Icon size={13} className="text-primary-dark" />
                         {s.label}
@@ -319,7 +376,8 @@ export default function HabitsTab() {
                     aria-label={opt.label}
                     aria-pressed={newIcon === opt.key}
                     className={clsx(
-                      "tap shrink-0 w-[38px] h-[38px] rounded-xl flex items-center justify-center",
+                      // MO1.1.1.1 (2x frame): 36 pt tiles, 44 apart.
+                      "tap shrink-0 w-9 h-9 rounded-xl flex items-center justify-center",
                       newIcon === opt.key ? "bg-primary-pale ring-2 ring-primary" : "bg-cream-soft"
                     )}
                   >
@@ -339,7 +397,8 @@ export default function HabitsTab() {
                 }}
                 placeholder="New habit…"
                 aria-label="New habit"
-                className="flex-1 min-w-0 h-[34px] rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                // MO1.1.1.1: 36 tall (level with the 36 pt ✓ and ×), about r14.
+                className="flex-1 min-w-0 h-9 rounded-[14px] bg-cream-soft border border-charcoal/10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={create}
@@ -363,10 +422,9 @@ export default function HabitsTab() {
           primary={{
             label: "Add habit",
             icon: <Plus size={15} />,
-            // Light mode keeps the outline Add habit button this replaced;
-            // dark mode is the filled primary.
-            className:
-              "!text-[13.5px] !bg-cream-card !text-charcoal border !border-charcoal/[0.11] dark:!bg-primary-fill dark:!text-on-primary-fill dark:!border-transparent",
+            // MO1.1.1 #3: filled #A198DF (--c-fill-cta, primary.cta.alt),
+            // 13.5/700 white (decision 23); 48/r14 per C-01.
+            className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
             onClick: () => setAdding(true),
           }}
         />

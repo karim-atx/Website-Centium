@@ -9,6 +9,7 @@ import { BloodPressureSheet } from "./BloodPressureSheet";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useBackCloses } from "../../hooks/useBackCloses";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
 // frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
@@ -29,20 +30,23 @@ const quickAmounts = [100, 250, 500] as const;
  * #0A80E8 blue at 16% on the card with the label lifted to 4.5:1; line icons
  * primary.deep; the confirmation strip primary.tint.2 with primary.deeper
  * text (7.9:1). The bottle glyphs are illustrations and keep their colours.
+ * Batch E (E11): the lavender ones follow the colour theme (th-/thi- colours,
+ * Centium values unchanged), though the sheet lives with Health: it opens
+ * from Home.
  */
 const AM_COLORS = {
-  shell: ["#ECEBFE", "#303141"],
-  shellBorder: ["#B2A9F4", "#555376"],
-  title: ["#9C7EF8", "#A387F8"],
+  shell: ["rgb(var(--th-ecebfe))", "rgb(var(--th-303141))"],
+  shellBorder: ["rgb(var(--th-b2a9f4))", "rgb(var(--th-555376))"],
+  title: ["rgb(var(--thi-9c7ef8))", "rgb(var(--thi-a387f8))"],
   label: ["#655B69", "#B8B3C7"],
-  caption: ["#827C9C", "#918DA0"],
+  caption: ["rgb(var(--thi-827c9c))", "rgb(var(--thi-918da0))"],
   row: ["#F3F3F4", "#242730"],
   field: ["#FBFBFD", "#1C1F28"],
   waterTile: ["#E1F2FE", "#192F47"],
   waterInk: ["#0A80E8", "#3B99ED"],
-  icon: ["#4A22CE", "#B7ABDE"],
-  strip: ["#F0F0FD", "#2B2C3A"],
-  stripInk: ["#1A00E0", "#C8BFE9"],
+  icon: ["rgb(var(--thi-4a22ce))", "rgb(var(--thi-b7abde))"],
+  strip: ["rgb(var(--th-f0f0fd))", "rgb(var(--th-2b2c3a))"],
+  stripInk: ["rgb(var(--thi-1a00e0))", "rgb(var(--thi-c8bfe9))"],
 } as const;
 type AmKey = keyof typeof AM_COLORS;
 const amColor = (key: AmKey, dark: boolean): string => AM_COLORS[key][dark ? 1 : 0];
@@ -178,6 +182,8 @@ const CheckCircleGlyph: React.FC = () => (
 // V10 (QA 10.0): both water and weight now log against whichever day is
 // selected on Home, not always literal "today".
 export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
   const {
     water,
     waterGoalMl,

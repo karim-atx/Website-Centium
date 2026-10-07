@@ -73,33 +73,52 @@ export const ReviewItem: React.FC<{
    * only when the reviewer opted in, else "A client" with a plain person icon.
    */
   layout?: "default" | "row";
-}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default" }) => {
+  /**
+   * "row" only: a trailing control on the name line, e.g. MO1.2.1.1's ⋮ menu
+   * holding Report (decision 23, kept-list 190), which clears the row under
+   * the review.
+   */
+  menu?: React.ReactNode;
+}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default", menu }) => {
   const redacted = !!review.redactedAt;
   if (layout === "row") {
     const named = !!review.reviewerName;
+    // MO1.2.1.1: the body starts at the row's left edge, under the avatar.
+    // Measured on the frame at 2x: name 10 right of the 32 avatar on a 16
+    // line (cap top 3.5 under the avatar's top), date 6 after the stars, body
+    // 6 under the name column (its first cap 47 under the avatar's top).
     return (
-      <div className="flex gap-3">
-        <span
-          className="w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center shrink-0 text-[12px] font-bold text-charcoal-soft"
-          aria-hidden
-        >
-          {named ? review.reviewerName!.trim().charAt(0).toUpperCase() : <User size={15} />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[13px] font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
-            {review.editedAt && !redacted && (
-              <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide shrink-0">Edited</span>
-            )}
+      <div>
+        <div className="flex gap-2.5">
+          <span
+            className="w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center shrink-0 text-[12px] font-bold text-charcoal-soft"
+            aria-hidden
+          >
+            {named ? review.reviewerName!.trim().charAt(0).toUpperCase() : <User size={15} />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[13px] leading-4 font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
+              {(review.editedAt && !redacted) || menu ? (
+                <span className="flex items-center gap-1 shrink-0">
+                  {review.editedAt && !redacted && (
+                    <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
+                  )}
+                  {menu}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
+                {stars(review.rating, 11)}
+              </span>
+              <span className="text-[11px] text-charcoal-faint">
+                {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-0.5 mb-1.5">
-            <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
-              {stars(review.rating, 11)}
-            </span>
-            <span className="text-[11px] text-charcoal-faint">
-              {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </span>
-          </div>
+        </div>
+        <div className="mt-1.5">
           <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={13} />
         </div>
       </div>

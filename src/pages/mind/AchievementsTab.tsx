@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import clsx from "clsx";
 import { Card } from "../../components/ui/Card";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useApp } from "../../context/AppContext";
@@ -35,7 +36,10 @@ import {
 // until the medallion set exists (A11), inside a round medallion. The badge
 // cards and the recently-unlocked points keep their old light colours.
 
-const sectionLabel = "text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
+// MO1.1.3 #3 "Recently unlocked": the handover's 10.5/700 label (decision 20;
+// tracking measured on the 2x frame at about 0.1em). The label existed before
+// the redesign, so it keeps its light colour (decisions 20 and 22).
+const sectionLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
 
 /** A badge's emoji in a round medallion; greyed when locked. */
 function Medallion({ icon, earned, size }: { icon: string; earned: boolean; size: number }) {
@@ -138,15 +142,20 @@ export default function AchievementsTab() {
       {/* ---- MO1.1.3 #2: the tier card, in the current tier's colour ------- */}
       {pointsSummary && tier && (
         <div
-          className="rounded-[22px] px-[18px] pt-[18px] pb-4 mb-[22px] border"
+          // MO1.1.3 #2, 254 tall on the 2x frame. Measured there: the count
+          // 3 pt under the tier label; "13 of 59" / "earned" bottom-aligned
+          // with the balance (their baselines 18 apart); tier names 3 pt under
+          // the discs; the rule 12 under the floors; and 12 pt under the
+          // rewards line (the spec's 16 assumes a tighter line height).
+          className="rounded-[22px] px-[18px] pt-[18px] pb-3 mb-[22px] border"
           style={{ background: tier.fill, borderColor: tier.border }}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-extrabold tracking-[.16em] uppercase" style={{ color: tier.ink }}>
                 {pointsSummary.tierName} tier
               </p>
-              <p className="mt-1.5 flex items-baseline gap-1.5">
+              <p className="mt-[3px] flex items-baseline gap-1.5">
                 <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
                   {pointsSummary.balance.toLocaleString()}
                 </span>
@@ -154,7 +163,7 @@ export default function AchievementsTab() {
               </p>
             </div>
             <div className="text-right">
-              <p className="tabular-nums">
+              <p className="tabular-nums leading-[17px]">
                 <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
                 <span className="text-[12px] font-semibold text-charcoal-muted"> of {counts.total}</span>
               </p>
@@ -186,12 +195,28 @@ export default function AchievementsTab() {
           </div>
 
           {/* The tier rail, from point_tiers rather than a list in this file. */}
+          {/* MO1.1.3 #2 (measured on the 2x frame): a neutral 2 pt line,
+              charcoal 8% (234,230,227 on #FBF7F4), through the 31 pt discs'
+              centres, and a solid stub in the tier colour from the current
+              disc toward the next one, as far as the points have come. */}
           <div className="relative flex mt-[18px]">
-            <span
-              aria-hidden
-              className="absolute left-[10%] right-[10%] top-[17px] h-px"
-              style={{ background: tier.border }}
-            />
+            <span aria-hidden className="absolute left-[10%] right-[10%] top-[14.5px] h-[2px] bg-charcoal/[0.08]" />
+            {(() => {
+              const i = pointTiers.findIndex((t) => t.name === pointsSummary.tierName);
+              if (i < 0 || i >= pointTiers.length - 1) return null;
+              const step = 100 / pointTiers.length;
+              return (
+                <span
+                  aria-hidden
+                  className="absolute top-[14.5px] h-[2px]"
+                  style={{
+                    left: `${step * (i + 0.5)}%`,
+                    width: `${step * tierProgress(pointsSummary)}%`,
+                    background: tier.solid,
+                  }}
+                />
+              );
+            })()}
             {pointTiers.map((t) => {
               const reached = tierReached(t, pointsSummary);
               const current = t.name === pointsSummary.tierName;
@@ -200,7 +225,7 @@ export default function AchievementsTab() {
               return (
                 <div key={t.name} className="relative flex-1 flex flex-col items-center">
                   <span
-                    className="w-[34px] h-[34px] rounded-full flex items-center justify-center border-[1.5px]"
+                    className="relative w-[31px] h-[31px] rounded-full flex items-center justify-center border-[1.5px]"
                     style={{
                       background: current ? own.solid : "rgb(var(--c-cream-card))",
                       borderColor: reached ? own.solid : own.border,
@@ -210,7 +235,8 @@ export default function AchievementsTab() {
                     <Icon size={14} strokeWidth={1.75} style={{ color: current ? own.onSolid : own.ink }} />
                   </span>
                   <span
-                    className="mt-1.5 text-[11px] font-bold"
+                    // Only the current tier's name is bold, in its colour (MO1.1.3).
+                    className={clsx("mt-[3px] text-[11px]", current ? "font-bold" : "font-normal")}
                     style={{ color: current ? own.ink : "rgb(var(--c-charcoal-muted))" }}
                   >
                     {t.name}
@@ -224,7 +250,7 @@ export default function AchievementsTab() {
           {/* SAID PLAINLY, BECAUSE IT IS TRUE AND THE ALTERNATIVE IS TO IMPLY
               OTHERWISE. Points are earned and a tier is real; there is nothing
               yet to spend them on (A13). */}
-          <p className="mt-3.5 pt-3 border-t text-[12px] text-charcoal-muted" style={{ borderColor: tier.border }}>
+          <p className="mt-3 pt-3 border-t text-[12px] text-charcoal-muted" style={{ borderColor: tier.border }}>
             Rewards for your points are coming soon.
           </p>
         </div>
@@ -234,19 +260,30 @@ export default function AchievementsTab() {
       {recent.length > 0 && (
         <div className="mb-[22px]">
           <p className={`mb-2 px-1 ${sectionLabel}`}>Recently unlocked</p>
-          <Card padded={false} className="divide-y divide-charcoal/[0.06] px-3.5">
-            {recent.map((a) => (
-              <div key={a.key} className="flex items-center gap-3 py-3">
-                <Medallion icon={a.icon} earned size={40} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13.5px] font-bold text-charcoal truncate">{a.title}</p>
-                  <p className="text-[11.5px] text-charcoal-muted truncate">{a.description}</p>
+          {/* The dividers are inset to the text column, after the 40 pt
+              medallion (MO1.1.3 #3). */}
+          <Card padded={false} className="px-3.5">
+            {recent.map((a, i) => (
+              <div key={a.key} className="flex items-center gap-3">
+                <span className="flex py-3 shrink-0">
+                  <Medallion icon={a.icon} earned size={40} />
+                </span>
+                <div
+                  className={clsx(
+                    "min-w-0 flex-1 self-stretch flex items-center gap-3",
+                    i > 0 && "border-t border-charcoal/[0.06]"
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-bold text-charcoal truncate">{a.title}</p>
+                    <p className="text-[11.5px] text-charcoal-muted truncate">{a.description}</p>
+                  </div>
+                  {a.points > 0 && (
+                    <span className="text-[12px] font-extrabold text-team-gold-ink shrink-0 tabular-nums">
+                      +{a.points.toLocaleString()}
+                    </span>
+                  )}
                 </div>
-                {a.points > 0 && (
-                  <span className="text-[12px] font-extrabold text-team-gold-ink shrink-0 tabular-nums">
-                    +{a.points.toLocaleString()}
-                  </span>
-                )}
               </div>
             ))}
           </Card>
@@ -258,16 +295,18 @@ export default function AchievementsTab() {
         <SegmentedTabs
           scroll
           className="-mr-4 mb-3"
-          trackStyle={{ borderRadius: "16px 0 0 16px" }}
+          // MO1.1.3 #4 (2x frame): a 52 pt track, 40 pt tabs at their
+          // natural width (12 each side: "All" 40), 8 apart. Decision 23:
+          // the handover's colours, active #A79AD5 / white, idle #F5F4FE /
+          // #5B5349.
+          trackStyle={{ borderRadius: "16px 0 0 16px", gap: 8 }}
+          tabHeight={40}
+          scrollTabPadding="0 12px"
+          scrollMinWidth={0}
+          idleInk="rgb(var(--c-charcoal-soft))"
           items={[{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: CATEGORY_LABEL[c] }))]}
           activeKey={category}
           onChange={(k) => setCategory(k as AchievementCategory | "all")}
-          light={{
-            activeFill: "rgb(var(--c-primary-fill))",
-            activeInk: "rgb(var(--c-on-primary-fill))",
-            idleFill: "rgb(var(--c-cream-card))",
-            idleInk: "rgb(var(--c-charcoal-soft))",
-          }}
         />
       )}
 

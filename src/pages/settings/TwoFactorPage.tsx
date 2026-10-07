@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { BellRing, CircleCheck, ShieldCheck, Smartphone } from "lucide-react";
 import type { Factor } from "@supabase/supabase-js";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { CodeBoxes, CODE_LENGTH } from "../../components/ui/CodeBoxes";
@@ -109,8 +109,10 @@ export default function TwoFactorPage() {
 
   return (
     <div>
-      <PageHeader title="Two-factor authentication" showBack sub />
+      <PageHeader title="Two-factor authentication" showBack sub tightBack />
 
+      {/* MO1.8.4: 24 pt side insets; the label 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
       <SettingsSection label="Protection">
         <SettingsRow
           icon={ShieldCheck}
@@ -148,48 +150,83 @@ export default function TwoFactorPage() {
       </p>
 
       {/* The Authenticator app widget (Foundations 2.5 Widgets): primary-pale
-          while on, greyed at 40% with dashes while off. */}
+          while on, greyed at 40% with dashes while off. MO1.8.4 / MO1.8.4.3:
+          radius 20, padding 16; header 10.5 / 700, title 16 / 800, status
+          13.5 / 700; a 40 pt tile at radius 12 with Smartphone 19 / 1.75 on a
+          faint tint of the card. On and off cross-fade their colours over
+          300 ms, none with Reduce motion (the app's .reduce-motion rule, or the
+          system setting). */}
       <section
         aria-label="Authenticator app"
-        className={clsx("mt-6 rounded-2xl px-4 py-4", enabled ? "bg-primary-pale" : "bg-cream-soft")}
+        className={clsx(
+          "mt-6 rounded-[20px] px-4 py-4 transition-colors duration-300 motion-reduce:transition-none",
+          // New since the redesign, so the handover's own light colours
+          // (decision 22): on rgba(154,140,214,0.12), measured #F3F1FA.
+          enabled ? "bg-th-9a8cd6/[0.12] dark:bg-primary-pale" : "bg-cream-soft"
+        )}
       >
-        <p className={clsx("text-xs font-semibold uppercase tracking-wide", enabled ? "text-primary-deep-text" : "text-charcoal-faint")}>
+        {/* The header dims with the rest of the off card (measured #CBC7C4,
+            the muted grey at 40%); on, it is primary.accent #7D67D9. */}
+        <p
+          className={clsx(
+            "text-[10.5px] font-bold uppercase tracking-wide transition duration-300 motion-reduce:transition-none",
+            enabled ? "text-primary-accent" : "text-charcoal-faint opacity-40"
+          )}
+        >
           Authenticator app
         </p>
-        <div className={clsx("mt-3 flex gap-3.5", !enabled && "opacity-40")}>
-          <span className="w-10 h-10 rounded-2xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
-            <Smartphone size={18} className={enabled ? "text-primary-dark" : "text-charcoal-faint"} />
+        <div
+          className={clsx(
+            "mt-3 flex gap-3.5 transition-opacity duration-300 motion-reduce:transition-none",
+            !enabled && "opacity-40"
+          )}
+        >
+          <span
+            className={clsx(
+              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 motion-reduce:transition-none",
+              // On: primary.tint #F0EDF9 with a #7D67D9 glyph (MO1.8.4.3, measured).
+              enabled ? "bg-th-f0edf9 dark:bg-primary/5" : "bg-charcoal/5"
+            )}
+            aria-hidden
+          >
+            <Smartphone size={19} strokeWidth={1.75} className={enabled ? "text-primary-accent" : "text-charcoal-faint"} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-bold text-charcoal">Authenticator app</p>
+            <p className="text-[16px] font-extrabold text-charcoal">Authenticator app</p>
             {enabled ? (
               <>
-                <p className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-charcoal">
-                  <CircleCheck size={16} className="text-primary-dark shrink-0" aria-hidden />
+                <p className="mt-1 flex items-center gap-1.5 text-[13.5px] font-bold text-charcoal">
+                  {/* MO1.8.4.3 swaps the theme secondary here: teal-dark follows the colour theme. */}
+                  <CircleCheck size={16} className="text-teal-dark shrink-0" aria-hidden />
                   Connected
                 </p>
                 <p className="mt-0.5 text-[12px] text-charcoal-faint">Added {addedLabel(factor.created_at)}</p>
                 <button
                   type="button"
                   onClick={() => navigate("/app/settings/two-factor/setup?change=1")}
-                  className="tap mt-3 h-9 px-4 rounded-xl border border-primary/40 bg-cream-card text-[13px] font-semibold text-primary-deep-text"
+                  // MO1.8.4.3 measured: white, 1 px #AEA1DC, #7D67D9 text.
+                  className="tap mt-3 h-9 px-4 rounded-xl border border-th-aea1dc dark:border-primary/40 bg-cream-card text-[13px] font-semibold text-primary-accent"
                 >
                   Change app
                 </button>
               </>
             ) : (
               <>
-                <p className="mt-1 text-[14px] font-semibold text-charcoal-faint">Status: –</p>
-                <p className="mt-0.5 text-[12px] text-charcoal-faint">Added –</p>
-                <span className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 text-[13px] font-semibold text-charcoal-faint">
+                {/* MO1.8.4: status 13.5 / 700 in the main ink (at the card's
+                    40%), the button white like the on state. */}
+                <p className="mt-1 text-[13.5px] font-bold text-charcoal">Status: ––</p>
+                <p className="mt-0.5 text-[12px] text-charcoal-faint">Added ––</p>
+                <span className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 bg-cream-card text-[13px] font-semibold text-charcoal-faint">
                   Change app
                 </span>
               </>
             )}
           </div>
         </div>
-        {!enabled && <p className="mt-3 text-[12px] text-charcoal-soft">Turn on two-factor to use this.</p>}
+        {/* Measured full-strength #8C8378 on the off card (MO1.8.4). */}
+        {!enabled && <p className="mt-3 text-[12px] text-charcoal-faint">Turn on two-factor to use this.</p>}
       </section>
+      </SettingsBody>
 
       <CentredPopup
         open={offOpen}

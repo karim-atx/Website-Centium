@@ -15,13 +15,13 @@ import {
 import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { useIsDark } from "../../hooks/useIsDark";
-import { useApp } from "../../context/AppContext";
-import { ThemedMark } from "../ui/ThemedMark";
 import { categoryColours, orderCategories, type CategoryColours } from "./categoryColour";
 import { WarningNotice } from "./WarningNotice";
 import {
   AuthorInitial,
   AuthorName,
+  DangerLine,
+  EmptyBlock,
   ForumChip,
   ForumPlaceholder,
   HeartIcon,
@@ -29,14 +29,18 @@ import {
   RemovedNote,
   ReplyIcon,
 } from "./parts";
+import { MessagesSquare } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { ThemedMark } from "../ui/ThemedMark";
 
 // Design screen 1: the forum list, restyled to mobile v5.1 MO1.3.
 //
 // LIGHT MODE KEEPS THE FORUM'S OWN COLOURS (the --forum-* palette); the new
 // parts are the category colours (the card's edge and its pill, A20), the
 // round New post button and tappable likes (A21). Everything the design does
-// not draw is kept: the moderator warning, the held section, "Show older
-// posts", photos, recovery-mode hiding and the empty state (A25).
+// not draw is kept: the moderator warning, the held section, older posts
+// (loaded on scroll since decision 23), photos, recovery-mode hiding and the
+// empty state (A25).
 //
 // RECOVERY-SENSITIVE MODE IS APPLIED HERE, ON THE DEVICE. The fetch below is
 // the same whether the mode is on or off (every category, the same columns,
@@ -120,7 +124,11 @@ export function ForumHome({
     const mine = seq.current;
     const key = activeFilter;
     const r = await fetchThreads({ categoryKey: key, before: oldest.createdAt });
-    if (mine !== seq.current) return;
+    // A filter change meanwhile: drop the page, but free the loader for the new list.
+    if (mine !== seq.current) {
+      setLoadingMore(false);
+      return;
+    }
     if (r.ok) {
       await decorate(r.value);
       const seen = new Set(threads.map((t) => t.id));
@@ -128,6 +136,27 @@ export function ForumHome({
     } else setError({ key, message: r.message });
     setLoadingMore(false);
   };
+
+  // Load-on-scroll (decision 23, item 42): when the sentinel under the last
+  // post comes within 400 px of the viewport, the next page loads. The ref
+  // keeps the observer on the latest loadMore without re-creating it.
+  const sentinel = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef(loadMore);
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+  });
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!more || !el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMoreRef.current();
+      },
+      { rootMargin: "0px 0px 400px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [more, threads]);
 
   // A like on the list (A21), optimistic: the count and the heart change at
   // once and go back if the write fails.
@@ -157,11 +186,11 @@ export function ForumHome({
   const feed = shown.filter((t) => t.status !== "held");
 
   // MO1.3 #11: a round 56 pt button with a Plus (was an extended "New post"
-  // pill); the label moves to aria-label.
+  // pill); the accessible name is MO1.3 §10's Plus = "Add".
   const fab = (
     <Link
       to="/app/forum/new"
-      aria-label="New post"
+      aria-label="Add"
       className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline shadow-fab bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:right-8"
       style={{ background: fv("accent"), color: fv("on-accent") }}
     >
@@ -172,7 +201,8 @@ export function ForumHome({
   );
 
   return (
-    <div className="flex flex-col gap-3 pb-28" style={{ color: fv("text") }}>
+    // -mt-0.5: the strip sits 10 under the Forum / Courses tabs (frame check).
+    <div className="flex flex-col gap-3 pb-28 -mt-0.5" style={{ color: fv("text") }}>
       <WarningNotice />
       {recoveryPending ? (
         <div className="flex gap-1.5" aria-hidden="true">
@@ -181,10 +211,11 @@ export function ForumHome({
           ))}
         </div>
       ) : (
-        // MO1.3 #3: the strip runs off the right edge (radius 16 0 0 16).
+        // MO1.3 #3: the strip runs off the right edge. Frame check: radius
+        // 12 0 0 12 (measured) and, new since R1, the FO3 track #F4F3F9.
         <div
           className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
-          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
+          style={{ background: dark ? fv("track") : "rgb(var(--th-f4f3f9))", borderRadius: "12px 0 0 12px" }}
           role="group"
           aria-label="Categories"
         >
@@ -200,7 +231,8 @@ export function ForumHome({
       )}
 
       {!isProfessional && nickname && (
-        <div className="text-xs flex justify-between items-center gap-2" style={{ color: fv("muted") }}>
+        // Frame check: 16 under the strip, two 18 pt lines (36 tall).
+        <div className="mt-1 text-xs leading-[1.5] flex justify-between items-center gap-2" style={{ color: fv("muted") }}>
           <span className="min-w-0">
             Your nickname: <strong style={{ color: fv("text") }}>{nickname}</strong>. You choose nickname or name each
             time you post.
@@ -211,15 +243,18 @@ export function ForumHome({
         </div>
       )}
 
-      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. */}
+      {/* MO1.3 #5: the rules, with the Centium mark and a bold lead. Frame
+          check: the mark is drawn bare in its own colours, 22 wide (measured),
+          no tile — the brand PNG in Centium, the themed C and leaf otherwise;
+          10 under the nickname line. */}
       <div
-        className="flex gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border"
+        className={`flex items-start gap-3 text-xs leading-[1.6] rounded-[20px] px-4 py-3.5 border ${!isProfessional && nickname ? "-mt-0.5" : ""}`}
         style={{ background: fv("rules-bg"), color: fv("rules-ink"), borderColor: "rgb(var(--th-aea1dc) / 0.35)" }}
       >
         {colorTheme === "centium" ? (
-          <img src="/centium-mark.png" alt="" className="w-[22px] h-auto shrink-0 mt-px" />
+          <img src="/centium-mark.png" alt="" aria-hidden="true" className="shrink-0 object-contain" style={{ width: (22 * 687) / 648, height: (22 * 713) / 648 }} />
         ) : (
-          <ThemedMark width={22} height={(22 * 713) / 687} className="shrink-0 mt-px" />
+          <ThemedMark width={(22 * 687) / 648} height={(22 * 713) / 648} className="shrink-0" />
         )}
         <span>
           <strong className="font-extrabold">Community rules:</strong> Be kind, share experience rather than medical
@@ -227,24 +262,25 @@ export function ForumHome({
         </span>
       </div>
 
-      {shownError && (
-        <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {shownError}
-        </p>
-      )}
+      {/* Decision 23 (item 73): a plain danger line, no box. */}
+      {shownError && <DangerLine>{shownError}</DangerLine>}
 
       {recoveryPending || threads === null ? (
         <div className="flex flex-col gap-2.5" aria-busy="true">
-          <ForumPlaceholder height={150} />
-          <ForumPlaceholder height={120} />
-          <ForumPlaceholder height={150} />
+          {/* At the frame's card heights (MO1.3 #6–8: 202, 181, 181). */}
+          <ForumPlaceholder height={202} />
+          <ForumPlaceholder height={181} />
+          <ForumPlaceholder height={181} />
         </div>
       ) : (
         <>
           {held.length > 0 && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-xs font-extrabold tracking-[0.04em]" style={{ color: fv("muted") }}>
-                YOUR POST, WAITING FOR REVIEW
+              {/* Decision 23 (item 71): the handover's section label,
+                  10.5/700 uppercase at 0.12em on a 14 line (label.section),
+                  with the 1.5 pt primary line under it (C-05). */}
+              <span className="text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em] text-primary-dark pb-[7.5px] border-b-[1.5px] border-primary">
+                Your post, waiting for review
               </span>
               {held.map((t) => (
                 <button
@@ -279,21 +315,32 @@ export function ForumHome({
                 />
               )
             )}
+            {/* Decision 23 (item 72): Foundations › Empty state. */}
             {feed.length === 0 && held.length === 0 && !shownError && (
-              <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-                No posts here yet. Start the conversation.
-              </p>
+              <EmptyBlock icon={<MessagesSquare size={26} strokeWidth={1.75} />} title="No posts here yet" line="Start the conversation." />
             )}
+            {/* Decision 23 (item 42): older posts load as the end of the list
+                scrolls into view, with no visible control. The sentinel is
+                also a button that only shows while focused, so a keyboard
+                (or anyone without a scroll wheel) can still ask for them. */}
             {more && (
-              <button
-                type="button"
-                onClick={() => void loadMore()}
-                disabled={loadingMore}
-                className="tap h-11 rounded-full text-[13px] font-bold disabled:opacity-60"
-                style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
-              >
-                {loadingMore ? "Loading…" : "Show older posts"}
-              </button>
+              <>
+                <div ref={sentinel} aria-hidden="true" className="h-px -mt-2.5" />
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="sr-only focus:not-sr-only focus:self-center focus:h-11 focus:px-4 focus:rounded-full text-[13px] font-bold"
+                  style={{ color: fv("link") }}
+                >
+                  Load older posts
+                </button>
+              </>
+            )}
+            {loadingMore && (
+              <p role="status" className="m-0 text-center text-[12px]" style={{ color: fv("muted") }}>
+                Loading older posts…
+              </p>
             )}
           </div>
         </>
@@ -304,11 +351,11 @@ export function ForumHome({
   );
 }
 
-/** "Pinned · 40d" or "38d ago" (MO1.3); other ages ("Yesterday", a date) as they are. */
+/** "Pinned · 40d" or "38d ago" (MO1.3); "Just now" and "Yesterday" as they are. */
 function metaLine(thread: ForumThread): string {
   const age = forumAge(thread.createdAt);
   if (thread.pinned) return `Pinned · ${age}`;
-  return /^d+[mhd]$/.test(age) ? `${age} ago` : age;
+  return /^\d+[mhd]$/.test(age) ? `${age} ago` : age;
 }
 
 function ThreadCard({
@@ -345,27 +392,30 @@ function ThreadCard({
     >
       <div className="flex items-center gap-2.5">
         <AuthorInitial author={author} identity={thread.identity} size={36} />
-        <div className="grow min-w-0 flex flex-col gap-1">
+        {/* Frame check (measured): the name line 20 tall, the pills 18. */}
+        <div className="grow min-w-0 flex flex-col gap-1 leading-[20px]">
           <AuthorName author={author} size={14} />
           <span className="flex items-center gap-1.5 flex-wrap">
             {categoryName && (
               <span
-                className="inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10.5px] font-bold"
+                className="inline-flex items-center gap-1 h-[18px] px-2 rounded-full text-[10.5px] font-bold"
                 style={{ background: colours.pill, color: colours.ink }}
               >
                 <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: colours.ink }} />
                 {categoryName}
               </span>
             )}
-            <span className="inline-flex items-center h-5 px-2 rounded-full text-[10.5px] font-semibold" style={{ background: fv("track"), color: fv("muted") }}>
+            <span className="inline-flex items-center h-[18px] px-2 rounded-full text-[10.5px] font-semibold" style={{ background: fv("track"), color: fv("muted") }}>
               {metaLine(thread)}
             </span>
           </span>
         </div>
       </div>
-      <div className="text-[14.5px] font-bold leading-snug [overflow-wrap:anywhere]">{thread.title}</div>
+      {/* Frame check (measured on cards 1 and 2): title lines 21, the body
+          3 under the title in 20 pt lines, the counts 14 under the body. */}
+      <div className="text-[14.5px] font-bold leading-[21px] [overflow-wrap:anywhere]">{thread.title}</div>
       {thread.body && (
-        <div className="text-[13px] leading-[1.5] line-clamp-2 [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
+        <div className="-mt-[7px] text-[13px] leading-[20px] line-clamp-2 [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
           {thread.body}
         </div>
       )}
@@ -374,7 +424,7 @@ function ThreadCard({
           {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
         </div>
       )}
-      <div className="flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
+      <div className="mt-1 h-[17px] flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
         {/* Likes are tappable here now (A21), as on the post. */}
         <button
           type="button"
@@ -386,10 +436,10 @@ function ThreadCard({
           aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
           className="tap flex gap-[5px] items-center -my-2 py-2 pr-1 font-semibold"
         >
-          <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} /> {thread.reactionCount}
+          <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} size={14} /> {thread.reactionCount}
         </button>
         <span className="flex gap-[5px] items-center font-semibold">
-          <ReplyIcon color={fv("muted")} /> {replies}
+          <ReplyIcon color={fv("muted")} size={14} /> {replies}
         </span>
       </div>
     </div>

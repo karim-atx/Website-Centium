@@ -49,11 +49,18 @@ export function HealthChecksSetting() {
   };
 
   return (
-    <Card className="mb-6 animate-fade-slide-up">
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <span className="flex items-center gap-2.5 text-sm font-bold text-charcoal">
-          <Stethoscope size={16} className="text-primary-dark shrink-0" />
-          {COPY.switchLabel}
+    // MO1.5 / MO1.5.1.1: drawn like the Recovery card above it (radius 18,
+    // padding 16 16 18), the icon in a tile, Stethoscope 16/1.75, title 14/600.
+    <Card padded={false} className="mb-6 animate-fade-slide-up !rounded-[18px] pt-4 px-4 pb-[18px]">
+      {/* MO1.5 anatomy row 9 (2x frame): 36 #F0EDF9 tile (new, decision
+          22), the description under the title's x, 10 below the tile, 12/400
+          on an 18 line. */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-3 min-w-0">
+          <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+            <Stethoscope size={16} strokeWidth={1.75} className="text-primary-dark" />
+          </span>
+          <span className="text-sm font-semibold text-charcoal">{COPY.switchLabel}</span>
         </span>
         <Toggle
           checked={on || confirming}
@@ -67,7 +74,7 @@ export function HealthChecksSetting() {
           label={COPY.switchLabel}
         />
       </div>
-      <p className="text-xs text-charcoal-faint leading-relaxed">{COPY.switchDescription}</p>
+      <p className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">{COPY.switchDescription}</p>
       {confirming && (
         <div className="mt-3 rounded-xl bg-primary-pale px-3.5 py-3">
           <p className="text-xs text-charcoal leading-relaxed">{COPY.turningOn}</p>

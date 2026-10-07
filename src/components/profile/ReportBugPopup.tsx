@@ -71,7 +71,8 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       open={open}
       onClose={onClose}
       title="Report a bug"
-      icon={<Bug size={22} />}
+      // MO1.8.10: Bug 22 / 1.75; the card the Foundations 342 wide (decision 23 flag).
+      icon={<Bug size={22} strokeWidth={1.75} />}
       cta={{
         label: busy ? "Sending…" : "Send report",
         disabled: busy || !description.trim() || tooLong,
@@ -79,13 +80,15 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       }}
     >
       <label className="block">
-        <span className="block text-[12px] font-semibold text-charcoal-soft mb-1.5">What happened?</span>
+        {/* MO1.8.10: the label in the muted grey (text.muted), the field 13 / 400. */}
+        <span className="block text-[12px] font-semibold text-charcoal-muted mb-1.5">What happened?</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="The weight I logged this morning isn't showing on Home…"
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          // 110 tall on the board (159 to 268.5 on the 2x crop).
+          className="h-[110px] w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
         />
       </label>
 

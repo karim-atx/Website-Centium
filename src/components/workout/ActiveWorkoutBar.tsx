@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ChevronUp } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { activeBarShades } from "../../data/folderColors";
-import { useIsDark } from "../../hooks/useIsDark";
 import { activeBarLine, loggedFraction } from "../../services/workout/activeBar";
 import { WorkoutSessionSheet } from "./WorkoutSessionSheet";
 import { linePx, textPx } from "../../theme/textSize";
@@ -55,19 +53,21 @@ function useKeyboardOpen(): boolean {
 // Bar height + the 8px gap above the navbar: what page content and floating
 // buttons move up by while the bar shows (--active-bar, read in Layout, the
 // Food FAB and Toast).
-const BAR_LIFT = 60;
+const BAR_HEIGHT = 48;
+const BAR_LIFT = BAR_HEIGHT + 8;
 
 /**
  * WO17 · Persistent active-workout bar, in the app shell above the navbar on
  * every tab while a session is active and no logger, sheet, popup or
- * keyboard is open. A "now playing" indicator only: folder-coloured, no
- * image, no buttons. Tapping it reopens the logger at the current exercise.
+ * keyboard is open. A "now playing" indicator only: no image, no buttons.
+ * Decision 23 (kept item 134, WO1.2 K2): a pinned-CTA-height bar (48, r14,
+ * C-01) in primary.fill with its ink (on-primary-fill), in place of the
+ * folder-coloured 52 bar. Tapping it reopens the logger at the current exercise.
  * Pause and resume happen only in the logger and on the Routines row; the
  * bar reads session.status.
  */
 export const ActiveWorkoutBar: React.FC = () => {
-  const { activeSession, routines, routineFolders, pausedSessions } = useApp();
-  const dark = useIsDark();
+  const { activeSession, routines, pausedSessions } = useApp();
   const overlayOpen = useOverlayOpen();
   const keyboardOpen = useKeyboardOpen();
   // The logger this bar opened. Held separately from the session so the
@@ -103,7 +103,6 @@ export const ActiveWorkoutBar: React.FC = () => {
 
   const bar = visible && activeSession && routine
     ? {
-        ...activeBarShades(routine, routineFolders, dark),
         progress: loggedFraction(pausedSessions[routine.id]?.logged),
         subline: activeBarLine(activeSession, routine.exercises.length, routine.estimatedDurationMin ?? 0, now),
       }
@@ -115,40 +114,39 @@ export const ActiveWorkoutBar: React.FC = () => {
         <button
           onClick={() => setLoggerFor(routine.id)}
           aria-label={`Open ${routine.name}: ${bar.subline}`}
-          className="tap fixed z-40 left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)] text-left"
+          className="tap fixed z-40 left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)] text-left bg-primary-fill"
           style={{
             bottom: "calc(env(safe-area-inset-bottom) + 84px)",
-            height: 52,
+            height: BAR_HEIGHT,
             borderRadius: 14,
-            background: bar.bg,
             boxShadow: "0 8px 20px rgba(36,31,27,0.2)",
-            // A button centres its content: 10 + 30 (two lines) + 12 = 52 keeps it top-aligned.
-            padding: "10px 12px 12px 16px",
+            // A button centres its content: 8 + 30 (two lines) + 10 = 48 keeps it top-aligned.
+            padding: "8px 12px 10px 16px",
           }}
         >
           <span className="flex items-start" style={{ gap: 10 }}>
             <span className="flex-1 min-w-0 block">
               <span
                 className="block truncate"
-                style={{ fontSize: textPx(13), lineHeight: linePx(16), fontWeight: 600, color: "#FFFFFF" }}
+                style={{ fontSize: textPx(13), lineHeight: linePx(16), fontWeight: 600, color: "rgb(var(--c-on-primary-fill))" }}
               >
                 {routine.name}
               </span>
               <span
                 className="block truncate"
-                style={{ fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: "rgba(255,255,255,0.78)" }}
+                style={{ fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: "rgb(var(--c-on-primary-fill) / 0.78)" }}
               >
                 {bar.subline}
               </span>
             </span>
-            <ChevronUp size={16} strokeWidth={2} color="#FFFFFF" className="flex-none" style={{ marginTop: 8 }} />
+            <ChevronUp size={16} strokeWidth={2} className="flex-none" style={{ marginTop: 8, color: "rgb(var(--c-on-primary-fill))" }} />
           </span>
           <span
             aria-hidden
             className="absolute block overflow-hidden"
-            style={{ left: 12, right: 12, bottom: 5, height: 2, borderRadius: 1, background: "rgba(255,255,255,0.18)" }}
+            style={{ left: 12, right: 12, bottom: 5, height: 2, borderRadius: 1, background: "rgb(var(--c-on-primary-fill) / 0.18)" }}
           >
-            <span className="block h-full" style={{ width: `${Math.round(bar.progress * 1000) / 10}%`, background: bar.line, borderRadius: 1 }} />
+            <span className="block h-full" style={{ width: `${Math.round(bar.progress * 1000) / 10}%`, background: "rgb(var(--c-on-primary-fill))", borderRadius: 1 }} />
           </span>
         </button>
       )}

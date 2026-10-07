@@ -29,7 +29,11 @@ export interface Pose {
   difficulty?: { label: string; className: string };
 }
 
-const RING_R = 52;
+// MO1.1.4.1 / MO1.1.4.2, measured on the 2x frames: the ring is 128 across its
+// outer edge (3 pt stroke, so r 62.5), centred in a 148 box (10 clear each
+// side) that sits 16 before the text column.
+const RING_BOX = 148;
+const RING_R = 62.5;
 const RING_C = 2 * Math.PI * RING_R;
 
 function Figure({ pose, size, animate }: { pose: Pose; size: number; animate: boolean }) {
@@ -100,14 +104,15 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
   return (
     <div>
       {/* The hero: the current pose. */}
-      <div className="rounded-[22px] bg-primary-pale px-4 pt-4 pb-3 mb-6">
+      {/* MO1.1.4.1 #3: padding 18 16 14, r22. */}
+      <div className="rounded-[22px] bg-primary-pale px-4 pt-[18px] pb-3.5 mb-[21px]">
         <div className="flex items-center gap-4">
-          <span className="relative shrink-0 w-[118px] h-[118px] flex items-center justify-center">
-            <svg viewBox="0 0 118 118" className="absolute inset-0 -rotate-90" aria-hidden>
-              <circle cx="59" cy="59" r={RING_R} fill="none" strokeWidth="3" className="stroke-cream-card" />
+          <span className="relative shrink-0 flex items-center justify-center" style={{ width: RING_BOX, height: RING_BOX }}>
+            <svg viewBox={`0 0 ${RING_BOX} ${RING_BOX}`} className="absolute inset-0 -rotate-90" aria-hidden>
+              <circle cx={RING_BOX / 2} cy={RING_BOX / 2} r={RING_R} fill="none" strokeWidth="3" className="stroke-cream-card" />
               <circle
-                cx="59"
-                cy="59"
+                cx={RING_BOX / 2}
+                cy={RING_BOX / 2}
                 r={RING_R}
                 fill="none"
                 strokeWidth="3"
@@ -118,20 +123,23 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
                 style={{ transition: "stroke-dashoffset 0.25s linear" }}
               />
             </svg>
-            <span className="relative w-[96px] h-[96px] rounded-full bg-cream-card flex flex-col items-center justify-center overflow-hidden">
+            {/* The disc fills the ring inside its stroke; MO1.1.4.2's figure
+                fills it (about 90) with the count at its foot (11/800). */}
+            <span className="relative w-[116px] h-[116px] rounded-full bg-cream-card flex flex-col items-center justify-center overflow-hidden">
               {/* The count sits under the figure so a pose GIF never runs into it. */}
-              <Figure pose={pose} size={pose.image ? 60 : 72} animate={!reduced} />
-              <span className={clsx("text-[12px] font-bold leading-none text-primary-dark tabular-nums", pose.image ? "-mt-1" : "absolute bottom-2")}>
+              <Figure pose={pose} size={pose.image ? 90 : 72} animate={!reduced} />
+              <span className={clsx("text-[11px] font-extrabold leading-none text-primary-dark tabular-nums", pose.image ? "-mt-2" : "absolute bottom-3")}>
                 {finished ? "Done" : `${secondsLeft}s`}
               </span>
             </span>
           </span>
+          {/* MO1.1.4.1 #3: 10/700 #7D6BB5, 16/700, 11.5/400 #8C8378. */}
           <div className="min-w-0">
-            <p className="text-[11px] font-bold tracking-[.14em] uppercase text-primary-dark">
+            <p className="text-[10px] font-bold tracking-[.14em] uppercase text-primary-dark">
               Pose {idx + 1} of {poses.length}
             </p>
-            <p className="mt-1 text-[17px] font-bold leading-tight text-charcoal">{pose.name}</p>
-            <p className="mt-1 text-[12px] text-charcoal-muted">{pose.meta}</p>
+            <p className="mt-1 text-[16px] font-bold leading-tight text-charcoal">{pose.name}</p>
+            <p className="mt-1 text-[11.5px] text-charcoal-muted">{pose.meta}</p>
             {pose.difficulty && (
               <span
                 className={clsx("inline-block mt-2 text-[10px] font-bold uppercase rounded-full px-2 py-0.5", pose.difficulty.className)}
@@ -144,17 +152,20 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
         {next && (
           <button
             onClick={() => select(idx + 1)}
-            className="tap w-full mt-3 pt-3 border-t border-charcoal/[0.08] flex items-center gap-3 text-left"
+            // The divider at y 360 on the frame: 16 under the ring's box.
+            className="tap w-full mt-4 pt-3 border-t border-charcoal/[0.08] flex items-center gap-3 text-left"
           >
             <span className="text-[11px] font-bold tracking-[.14em] uppercase text-charcoal-muted">Next</span>
             <span className="flex-1 min-w-0 text-[13.5px] font-semibold text-charcoal truncate">{next.name}</span>
-            <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+            <ChevronRight size={14} className="text-charcoal-faint shrink-0" />
           </button>
         )}
       </div>
 
       {/* The sequence. */}
-      <p className="mb-2.5 px-1 text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+      {/* MO1.1.4.1 #4: x 21, y 426, 350 × 14, 10.5/700 #8C8378 (new since
+          the redesign, decision 22); 21 under the hero, 8 above the first card. */}
+      <p className="mb-2 px-1 text-[10.5px] leading-[14px] font-bold tracking-[.1em] uppercase text-charcoal-muted dark:text-charcoal-faint">
         Sequence
       </p>
       <div className="space-y-2">
@@ -171,13 +182,16 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
               }}
               aria-current={current ? "step" : undefined}
               className={clsx(
-                "tap relative w-full text-left rounded-[20px] px-3 py-3 border-[1.5px]",
+                // MO1.1.4.1 #5-10: r16, padding 12 14.
+                "tap relative w-full text-left rounded-[16px] px-3.5 py-3 border-[1.5px]",
                 current ? "bg-cream-card border-primary" : "bg-cream-soft border-transparent"
               )}
             >
+              {/* The number badge: 16 across, 9/800 (measured on the 2x frame:
+                  32 px, 10 in from the card's left, 8 down). */}
               <span
                 className={clsx(
-                  "absolute left-2 top-2 z-10 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center",
+                  "absolute left-2.5 top-2 z-10 w-4 h-4 rounded-full text-[9px] font-extrabold flex items-center justify-center",
                   current ? "bg-primary-fill text-on-primary-fill" : "bg-cream-card text-primary-dark border border-charcoal/[0.1]"
                 )}
               >
@@ -188,8 +202,8 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
                   <Figure pose={p} size={40} animate={false} />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[15px] font-semibold text-charcoal truncate">{p.name}</span>
-                  {!p.difficulty && <span className="block text-[12px] text-charcoal-muted truncate">{p.meta}</span>}
+                  <span className="block text-[14px] font-semibold text-charcoal truncate">{p.name}</span>
+                  {!p.difficulty && <span className="block text-[11.5px] text-charcoal-muted truncate">{p.meta}</span>}
                 </span>
                 {p.difficulty && (
                   <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5 shrink-0", p.difficulty.className)}>
@@ -203,7 +217,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
                 )}
               </span>
               {current && (
-                <span className="block mt-2.5 ml-14 text-[13px] leading-relaxed text-charcoal-soft">{p.instructions}</span>
+                <span className="block mt-2.5 ml-14 text-[12px] leading-relaxed text-charcoal-soft">{p.instructions}</span>
               )}
             </button>
           );

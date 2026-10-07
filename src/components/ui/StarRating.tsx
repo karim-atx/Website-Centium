@@ -39,7 +39,8 @@ export const StarRating: React.FC<{
           aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
           className="tap disabled:opacity-50"
         >
-          <Star size={size} className={filled ? "fill-gold text-gold" : "text-charcoal/15"} />
+          {/* MO1.8.11: Star 30 / 1.5. */}
+          <Star size={size} strokeWidth={1.5} className={filled ? "fill-gold text-gold" : "text-charcoal/15"} />
         </button>
       );
     })}

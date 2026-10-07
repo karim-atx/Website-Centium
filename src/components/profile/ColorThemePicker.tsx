@@ -13,7 +13,11 @@ export const ColorThemePicker: React.FC = () => {
   const { colorTheme, setColorTheme } = useApp();
 
   return (
-    <div role="radiogroup" aria-label="Color theme" className="flex gap-[23px]">
+    // MO1.8 measured: five equal 46 pt columns (the width of "Centium" in
+    // bold) whose centres are 61 apart, so 15 between them, starting at the
+    // text column. Below 390 the gap narrows to 4 and then the columns shrink
+    // (never under the 38 swatch), so all five fit at 320 (revision round).
+    <div role="radiogroup" aria-label="Color theme" className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
       {COLOR_THEMES.map((t) => {
         const selected = colorTheme === t.value;
         return (
@@ -23,7 +27,7 @@ export const ColorThemePicker: React.FC = () => {
             role="radio"
             aria-checked={selected}
             onClick={() => setColorTheme(t.value)}
-            className="tap flex flex-col items-center gap-[9px]"
+            className="tap flex flex-col items-center gap-[9px] w-[46px] min-w-[38px] shrink"
           >
             <span
               className={clsx(

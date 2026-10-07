@@ -101,7 +101,7 @@ import {
   type Placement,
 } from "../services/routines/order";
 import { cleanRoutineCopy } from "../services/routines/duplicate";
-import { displayedFolderColor, needsSavedColor } from "../data/folderColors";
+import { displayedFolderColor, needsSavedColor, setFolderColorTheme } from "../data/folderColors";
 import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../services/routines/folderDepth";
 import { estimate1RM } from "../services/workout";
 import {
@@ -2863,6 +2863,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // A value saved before R20 (ocean, sunset, berry) is read as its new theme
   // and written back once (D2).
   const colorTheme = normalizeColorTheme(savedColorTheme);
+  // Batch E: script-computed folder colours (the unfiled routine) follow it.
+  setFolderColorTheme(colorTheme);
   useEffect(() => {
     if (savedColorTheme !== colorTheme) setColorThemeState(colorTheme);
   }, [savedColorTheme, colorTheme, setColorThemeState]);

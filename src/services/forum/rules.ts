@@ -183,7 +183,10 @@ export function describeForumError(
 // Display
 // ---------------------------------------------------------------------------
 
-/** "2h", "40m", "Yesterday", "3d", then a date: the design's meta line. */
+/**
+ * "2h", "40m", "Yesterday", "3d": the design's meta line. Older ages stay a
+ * day count ("40d"), as MO1.3 draws "Pinned · 40d" and "38d ago".
+ */
 export function forumAge(iso: string, now = Date.now()): string {
   const ms = now - new Date(iso).getTime();
   const minutes = Math.floor(ms / 60_000);
@@ -193,14 +196,26 @@ export function forumAge(iso: string, now = Date.now()): string {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return `${days}d`;
 }
 
 /** The initial in an author circle. Never an avatar: a nickname post would otherwise show a face. */
 export function initialOf(label: string): string {
   const ch = Array.from(label.trim())[0];
   return ch ? ch.toUpperCase() : "?";
+}
+
+/**
+ * Two initials for a name ("Elie S." → "ES", MO1.3 `MO1.3.es`): the first
+ * letter of the first two words, or one letter for a one-word name.
+ */
+export function initialsOf(label: string): string {
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  const letters = words
+    .slice(0, 2)
+    .map((w) => Array.from(w).find((c) => /\p{L}|\p{N}/u.test(c)) ?? "")
+    .join("");
+  return letters ? letters.toUpperCase() : initialOf(label);
 }
 
 export type ReportReasonKey =

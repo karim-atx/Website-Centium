@@ -1,7 +1,6 @@
 import React from "react";
 import { ExternalLink } from "lucide-react";
 import clsx from "clsx";
-import { VerifiedPill } from "./CvBadges";
 import { proficiencyLabel, type PublicCv } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 
@@ -19,7 +18,8 @@ import { byRecency, formatMonth, formatRange } from "../../services/professional
 // Sections with nothing in them are left out rather than shown empty.
 
 const CARD = "rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4";
-const SUB = "text-[12.5px] text-charcoal-soft";
+// MO1.2.1 / MO1.2.1.4: meta lines 11.5/400 rgb(140,131,120), the existing faint grey.
+const SUB = "text-[11.5px] font-normal text-charcoal-faint";
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter((p) => p && p.trim()).join(" · ");
 
@@ -56,9 +56,11 @@ const Label: React.FC<{ accent?: CvAccent; children: React.ReactNode }> = ({ acc
 /** One timeline row: a dot in the accent, a rule down to the next. */
 const Dot: React.FC<{ accent?: CvAccent; last: boolean; children: React.ReactNode }> = ({ accent, last, children }) => (
   <li className="flex gap-3">
-    <div className="w-2.5 flex flex-col items-center pt-[5px] shrink-0" aria-hidden>
-      <span className={clsx("w-2.5 h-2.5 rounded-full shrink-0", !accent && "bg-primary")} style={accent ? { background: accent.label } : undefined} />
-      {!last && <span className="w-px flex-1 bg-charcoal/10 mt-1" />}
+    {/* MO1.2.1 (measured): an 8 dot centred on the title's first line, a
+        1 px rule from 3 under it; the text 12 to the right of the dot. */}
+    <div className="w-2 flex flex-col items-center pt-[7px] shrink-0" aria-hidden>
+      <span className={clsx("w-2 h-2 rounded-full shrink-0", !accent && "bg-primary")} style={accent ? { background: accent.label } : undefined} />
+      {!last && <span className="w-px flex-1 bg-charcoal/10 mt-[3px]" />}
     </div>
     <div className={clsx("min-w-0 flex-1 flex flex-col gap-[3px]", !last && "pb-3.5")}>{children}</div>
   </li>
@@ -94,11 +96,11 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
           <ol className={CARD}>
             {cv.licences.map((l, i) => (
               <Dot key={l.id} accent={accent} last={i === cv.licences.length - 1}>
-                <div className="flex justify-between gap-2 items-start">
-                  <p className="text-[13.5px] font-semibold text-charcoal break-words">{l.name}</p>
-                  {l.verified && <VerifiedPill />}
-                </div>
-                {join(l.issuingBody, formatMonth(l.issued)) && <p className={SUB}>{join(l.issuingBody, formatMonth(l.issued))}</p>}
+                <p className="text-[13.5px] font-semibold text-charcoal break-words">{l.name}</p>
+                {/* MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill. */}
+                {join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null) && (
+                  <p className={SUB}>{join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null)}</p>
+                )}
                 {l.expired && l.expires && <p className={SUB}>Expired {formatMonth(l.expires)}</p>}
                 {l.credentialUrl && <CvAnchor href={l.credentialUrl}>View credential</CvAnchor>}
               </Dot>
@@ -134,7 +136,8 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
             {skills.map((s) => (
               <li
                 key={s}
-                className={clsx("text-[12px] font-semibold rounded-full px-3 py-1.5 max-w-full break-words", !accent && "bg-primary-pale text-primary-deep-text")}
+                // MO1.2.1: 28 tall (measured), 12 either side.
+                className={clsx("text-[12px] font-semibold rounded-full px-3 py-[5px] max-w-full break-words", !accent && "bg-primary-pale text-primary-deep-text")}
                 style={accent ? { background: accent.pillBg, color: accent.pillInk } : undefined}
               >
                 {s}

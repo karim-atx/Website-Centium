@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Copy } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { PinnedCta } from "../../components/ui/PinnedCta";
+import { SettingsBody } from "../../components/ui/SettingsRows";
 import { CodeBoxes, CODE_LENGTH } from "../../components/ui/CodeBoxes";
 import { useApp } from "../../context/AppContext";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
@@ -137,7 +138,10 @@ export default function TwoFactorSetupPage() {
 
   return (
     <div className="pb-[172px]">
-      <PageHeader title={changing ? "Change authenticator app" : "Set up two-factor"} showBack sub />
+      <PageHeader title={changing ? "Change authenticator app" : "Set up two-factor"} showBack sub tightBack />
+
+      {/* MO1.8.4.1: 24 pt side insets; "Step 1 of 2" 16 under the 36 pt title. */}
+      <SettingsBody className="-mt-1">
 
       {startError ? (
         <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
@@ -147,10 +151,14 @@ export default function TwoFactorSetupPage() {
         <p className="text-sm text-charcoal-faint text-center py-10">Loading…</p>
       ) : (
         <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Step 1 of 2</p>
-          {/* On white in both themes, so any phone camera can read it. */}
-          <div className="mt-3 mx-auto w-[196px] rounded-[18px] border border-primary/40 bg-white p-2">
-            <img src={enrollment.qrCode} alt="QR code for two-factor setup" className="w-[180px] h-[180px]" />
+          {/* MO1.8.4.1 section label: 12 / 700 #7D67D9 (new since the
+              redesign, so the handover's colour), 18 tall, 10 above the QR. */}
+          <p className="text-xs leading-[18px] font-bold text-primary-accent uppercase tracking-wide">Step 1 of 2</p>
+          {/* On white in both themes, so any phone camera can read it. The
+              card is 180 × 180 at radius 18 (MO1.8.4.1), the code inside it,
+              ringed 1.5 px in primary.fill #9A8CD6 (measured). */}
+          <div className="mt-2.5 mx-auto w-[180px] h-[180px] rounded-[18px] border-[1.5px] border-th-9a8cd6 dark:border-primary bg-white p-2">
+            <img src={enrollment.qrCode} alt="QR code for two-factor setup" className="w-full h-full" />
           </div>
           {/* On a phone the QR is on the same screen as the app that would
               scan it: the link hands the secret to the authenticator. */}
@@ -158,22 +166,25 @@ export default function TwoFactorSetupPage() {
             Open in my authenticator app
           </a>
 
-          <p className="mt-4 text-center text-[13px] text-charcoal-soft">Can't scan? Copy the setup key</p>
+          <p className="mt-4 text-center text-[13px] font-semibold text-charcoal-soft">Can't scan? Copy the setup key</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="flex-1 min-w-0 rounded-xl bg-cream-soft px-3.5 py-3 text-[13px] font-mono font-semibold tracking-wide text-charcoal break-all">
+            {/* MO1.8.4.1: the key in the app font, 13 / 700; it wraps between
+                its groups of four. */}
+            <code className="flex-1 min-w-0 rounded-xl bg-cream-soft px-3.5 py-3.5 font-sans text-[13px] font-bold text-charcoal break-words">
               {grouped(enrollment.secret)}
             </code>
             <button
               type="button"
               onClick={() => void copySecret()}
               aria-label="Copy setup key"
-              className="tap w-11 h-11 rounded-xl bg-primary-pale text-primary-dark flex items-center justify-center shrink-0"
+              // MO1.8.4.1: a 48 × 48 primary.tint tile, Copy in #7D67D9 (measured).
+              className="tap w-12 h-12 rounded-xl bg-th-f0edf9 dark:bg-primary-pale text-primary-accent flex items-center justify-center shrink-0"
             >
-              {copied ? <Check size={17} /> : <Copy size={17} />}
+              {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
             </button>
           </div>
 
-          <p className="mt-6 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+          <p className="mt-6 text-xs leading-[18px] font-bold text-primary-accent uppercase tracking-wide">
             Step 2 of 2: enter the 6-digit code from your app
           </p>
           <form
@@ -182,9 +193,12 @@ export default function TwoFactorSetupPage() {
               e.preventDefault();
               void singleFlight(verify);
             }}
-            className="mt-3"
+            className="mt-2.5"
           >
+            {/* MO1.8.4.1 measured: the six boxes fill the 342 column, 52 wide
+                with 6 between (the Foundations 48 / 8 elsewhere). */}
             <CodeBoxes
+              className="!gap-1.5 [&>input]:flex-1"
               value={code}
               onChange={(v) => {
                 setCode(v);
@@ -210,6 +224,7 @@ export default function TwoFactorSetupPage() {
           />
         </>
       )}
+      </SettingsBody>
     </div>
   );
 }

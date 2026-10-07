@@ -9,7 +9,7 @@ import { linePx, textPx } from "../../theme/textSize";
 // Mobile v5.1 R3, dark mode (no light islands): on the card's lavender 10%
 // tint (#2B2C3A dark) the stat label takes text.secondary dark (tertiary
 // #918DA0 measures 4.28:1 there) and the value primary.deeper dark.
-const label = (dark: boolean): React.CSSProperties => ({ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: dark ? "#B8B3C7" : "#9A94B3" });
+const label = (dark: boolean): React.CSSProperties => ({ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: dark ? "#B8B3C7" : "rgb(var(--thi-9a94b3))" });
 const value = (dark: boolean): React.CSSProperties => ({ margin: "2px 0 0", fontSize: textPx(13), fontWeight: 700, color: dark ? "rgb(var(--thi-c8bfe9))" : "rgb(var(--thi-5f5093))", whiteSpace: "nowrap" });
 
 /**

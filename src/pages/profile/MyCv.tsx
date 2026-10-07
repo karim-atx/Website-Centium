@@ -76,7 +76,7 @@ export default function MyCv() {
             </div>
             {listing?.bio && (
               <div>
-                <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1.5">About</p>
+                <p className="section-label text-charcoal-soft mb-1.5">About</p>
                 <p className="text-sm leading-relaxed text-charcoal whitespace-pre-line">{listing.bio}</p>
               </div>
             )}

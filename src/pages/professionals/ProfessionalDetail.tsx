@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
@@ -22,6 +21,8 @@ import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/ReviewForms";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucide-react";
+import { textPx } from "../../theme/textSize";
+import { useBack } from "../../hooks/useBack";
 
 // MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
 // colours, the price and client-since pills, the gold reviews pill (which
@@ -42,6 +43,7 @@ import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucid
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const back = useBack();
   const { authUserId } = useApp();
 
   // ONE SOURCE NOW: public_professional_directory, keyed by account uuid.
@@ -293,9 +295,29 @@ export default function ProfessionalDetail() {
   const gold = goldPill(dark);
 
   if (!professional) {
+    // MO1.2.1 States, Loading: skeleton blocks at the anatomy positions
+    // (surface.soft, each block's radius): the 96 avatar, name, headline,
+    // the pills, then the About and Experience cards.
+    if (listingLoading) {
+      return (
+        <div aria-busy="true">
+          <span className="sr-only">Loading…</span>
+          <div aria-hidden className="flex flex-col items-center gap-1.5 pt-[46px] mb-5">
+            <span className="w-24 h-24 rounded-full bg-cream-soft mb-1.5" />
+            <span className="w-40 h-[22px] rounded-md bg-cream-soft" />
+            <span className="w-56 h-[15px] rounded-md bg-cream-soft" />
+            <span className="w-44 h-[14px] rounded-md bg-cream-soft" />
+            <span className="w-48 h-[26px] rounded-full bg-cream-soft mt-1.5" />
+            <span className="w-32 h-7 rounded-full bg-cream-soft mt-0.5" />
+          </div>
+          <div aria-hidden className="h-[98px] rounded-[20px] bg-cream-soft mb-5" />
+          <div aria-hidden className="h-[141px] rounded-[20px] bg-cream-soft" />
+        </div>
+      );
+    }
     return (
       <div className="text-center py-20 text-charcoal-soft">
-        {listingLoading ? "Loading…" : "Professional not found."}
+        Professional not found.
         <div className="mt-4">
           <Button onClick={() => navigate("/app/professionals")}>Back</Button>
         </div>
@@ -311,7 +333,9 @@ export default function ProfessionalDetail() {
       {text}
     </p>
   );
-  const pill = "inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold";
+  // MO1.2.1: pills 26 tall (measured), 10 either side; the icon in the type's
+  // main colour, the text in its deep colour (both sampled from the frame).
+  const pill = "inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11px] font-semibold";
   // The pinned row waits for the connection check, so a client is never
   // shown "Request to hire" for a professional they already work with.
   const showPinned = isReal && activeClient !== null;
@@ -319,24 +343,28 @@ export default function ProfessionalDetail() {
   return (
     <div className={showPinned ? "pb-[172px]" : ""}>
       <button
-        onClick={() => navigate(-1)}
+        onClick={back}
         aria-label="Back"
-        className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-1"
+        className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-2"
       >
-        <ChevronLeft size={20} />
+        {/* MO1.2.1 / MO1.2.1.4: ChevronLeft 18, in a 36 button at x 17 (the
+            chevron's vertex measured at x 31.5, as on MO1.2) with its centre
+            at y 44; the avatar starts at y 70. */}
+        <ChevronLeft size={18} />
       </button>
 
-      {/* MO1.2.1: the centred hero, in the professional's type colours (B3). */}
-      <div className="flex flex-col items-center text-center gap-1.5 mb-6 animate-fade-slide-up">
+      {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
+          Avatar 96 (measured on the frame). */}
+      <div className="flex flex-col items-center text-center gap-1.5 mb-5 animate-fade-slide-up">
         <span
-          className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
+          className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
           style={{ background: t.pill, color: t.deep }}
         >
           {listing?.avatarUrl ? <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(professional.name)}
         </span>
         <h1 className="flex items-center justify-center gap-1.5 text-[22px] font-bold leading-tight" style={{ color: t.deep }}>
           <span className="min-w-0 break-words">{professional.name}</span>
-          {professional.verified && <VerifiedCheck size={18} />}
+          {professional.verified && <VerifiedCheck size={18} strokeWidth={1.75} />}
         </h1>
         {professional.headline && (
           <p className="text-[15px] font-bold break-words" style={{ color: t.main }}>
@@ -351,14 +379,14 @@ export default function ProfessionalDetail() {
         <div className="flex flex-wrap justify-center gap-1.5 mt-1.5">
           {isConnected && clientSince && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Handshake size={12} strokeWidth={1.75} aria-hidden />
+              <Handshake size={12} strokeWidth={1.75} aria-hidden style={{ color: t.main }} />
               Client since {new Date(clientSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
             </span>
           )}
           {/* New on the profile (MO1.2.1); none when no rate is set (B5). */}
           {listing?.monthlyRate != null && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Wallet size={12} strokeWidth={1.75} aria-hidden />${listing.monthlyRate}/mo
+              <Wallet size={12} strokeWidth={1.75} aria-hidden style={{ color: t.main }} />${listing.monthlyRate}/mo
             </span>
           )}
         </div>
@@ -367,7 +395,8 @@ export default function ProfessionalDetail() {
         <button
           type="button"
           onClick={() => navigate(`/app/professionals/${professional.id}/reviews`)}
-          className="tap mt-1 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-bold"
+          // 28 tall, 8 under the pills (measured on MO1.2.1).
+          className="tap mt-0.5 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-full text-[12px] font-bold"
           style={{ background: gold.bg, border: `1px solid ${gold.border}`, color: gold.ink }}
         >
           <Star size={13} aria-hidden style={{ fill: gold.star, color: gold.star }} />
@@ -408,7 +437,8 @@ export default function ProfessionalDetail() {
         <section className="mb-5 animate-fade-slide-up" aria-label="My review">
           {sectionLabel("My review")}
           <MyReviewCard
-            className="!rounded-[20px]"
+            // MO1.2.1 #7: radius 20, padding 16 (the text sits at x 33).
+            className="!rounded-[20px] !p-4"
             hideLabel
             firstName={first}
             review={myReview}
@@ -423,11 +453,13 @@ export default function ProfessionalDetail() {
           Shown only once the gate has actually answered — `canReview` is null
           while the check is in flight, and telling somebody they can't review
           before asking would be a guess. */}
+      {/* Decision 23 (kept-list 61–62): the lock-line pattern (#8: 11.5/400
+          muted, Lock 12/1.75, gap 6) instead of a card. */}
       {isReal && !signedOut && canReview === false && !myReview && (
-        <Card className="mb-5 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
-          <p className="text-sm text-charcoal-faint">You can only review a professional you've worked with.</p>
-        </Card>
+        <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5 animate-fade-slide-up">
+          <Lock size={12} strokeWidth={1.75} className="shrink-0" aria-hidden /> You can only review a professional you've
+          worked with.
+        </p>
       )}
 
       {reviewError && (
@@ -490,6 +522,8 @@ export default function ProfessionalDetail() {
           frame's own rule). Not connected: Message and "Request to hire" —
           the frame's Hire, which needs offers and payments (decision 4) — in
           its sent and cooldown states when there is one. */}
+      {/* Labels 13.5/700 (MO1.2.1 #9, MO1.2.1.4 #8). MO1.2.1.4's Message
+          carries a 1 px outline in the type's deep colour on the pill fill. */}
       {showPinned &&
         (isConnected ? (
           <PinnedCta
@@ -498,7 +532,7 @@ export default function ProfessionalDetail() {
               icon: <MessageCircle size={15} />,
               loading: threadBusy,
               onClick: () => void openThread(),
-              style: { background: t.main, color: t.onMain },
+              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
             }}
           />
         ) : (
@@ -508,7 +542,7 @@ export default function ProfessionalDetail() {
               icon: <MessageCircle size={15} />,
               loading: threadBusy,
               onClick: () => void openThread(),
-              style: { background: t.pill, color: t.deep },
+              style: { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
             }}
             primary={{
               label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Request to hire",
@@ -516,7 +550,7 @@ export default function ProfessionalDetail() {
               loading: sending,
               disabled: hireState !== "none" || !authUserId,
               onClick: () => void requestHire(),
-              style: { background: t.main, color: t.onMain },
+              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
             }}
           />
         ))}

@@ -17,7 +17,9 @@ import {
   type Lesson,
 } from "../../services/courses";
 import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } from "../../services/courses/rules";
-import { ForumChip, ForumPlaceholder } from "../forum/parts";
+import { GraduationCap, Search } from "lucide-react";
+import { DangerLine, EmptyBlock, ForumPlaceholder } from "../forum/parts";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
 import { coverBackground } from "./courseCover";
@@ -64,8 +66,12 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
 
 /** MO1.3.1's filter order; anything else sorts last. */
 const COURSE_ORDER = ["workouts", "nutrition", "progress", "motivation", "general"];
+const order = (key: string) => {
+  const i = COURSE_ORDER.indexOf(key);
+  return i < 0 ? COURSE_ORDER.length : i;
+};
 
-export function CoursesCatalogue({ userId }: { userId: string }) {
+export function CoursesCatalogue({ userId, isProfessional = false }: { userId: string; isProfessional?: boolean }) {
   const dark = useIsDark();
   const [result, setResult] = useState<{ data: Data } | { error: string } | null>(null);
   const [query, setQuery] = useState("");
@@ -105,13 +111,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
       });
   }, [data, query, filter]);
 
-  if (result && "error" in result) {
-    return (
-      <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-        {result.error}
-      </p>
-    );
-  }
+  // Decision 23 (item 67): a plain danger line, no box.
+  if (result && "error" in result) return <DangerLine>{result.error}</DangerLine>;
 
   const continuing = data
     ? data.enrolments
@@ -136,15 +137,14 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
     : [];
 
   return (
-    <div className="flex flex-col gap-3 pb-6" style={{ color: fv("text") }}>
+    // -mt-0.5: the search sits 10 under the Forum / Courses tabs (frame check).
+    <div className="flex flex-col gap-3 pb-6 -mt-0.5" style={{ color: fv("text") }}>
+      {/* MO1.3.1 #3: 44 tall, padding 0 14, gap 8, Search 16/1.75. */}
       <label
-        className="flex items-center gap-2 h-11 rounded-[14px] px-3"
+        className="flex items-center gap-2 h-11 rounded-[14px] px-[14px]"
         style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={fv("muted")} strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
+        <Search size={16} strokeWidth={1.75} color={fv("muted")} aria-hidden="true" className="shrink-0" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -156,31 +156,35 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
       </label>
 
       {data ? (
-        // MO1.3.1: the filters as one strip running off the right edge, in
-        // the frame's order (All · Workouts · Nutrition · Progress · Motivation).
-        <div
-          className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
-          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
-          role="group"
-          aria-label="Course categories"
-        >
-          <ForumChip inStrip active={filter === null} onClick={() => setFilter(null)}>
-            All
-          </ForumChip>
-          {[...data.categories]
-            .sort((a, b) => COURSE_ORDER.indexOf(a.key) - COURSE_ORDER.indexOf(b.key))
-            .map((c) => (
-              <ForumChip inStrip key={c.key} active={filter === c.key} onClick={() => setFilter(c.key)}>
-                {c.name}
-              </ForumChip>
-            ))}
+        // MO1.3.1 #4: FO3 sub-tabs, a 40 pt track (radius 12, padding 4, gap 4)
+        // of 32 pt tabs at 12px, active 700 and idle 600, in the frame's order
+        // (All · Workouts · Nutrition · Progress · Motivation). Light mode keeps
+        // the forum's track and accent (decision 19).
+        <div role="group" aria-label="Course categories">
+          <SegmentedTabs
+            scroll
+            items={[
+              { key: "", label: "All" },
+              ...[...data.categories]
+                .sort((a, b) => order(a.key) - order(b.key))
+                .map((c) => ({ key: c.key, label: c.name })),
+            ]}
+            activeKey={filter ?? ""}
+            onChange={(k) => setFilter(k || null)}
+            labelSize={12}
+            tabHeight={32}
+            idleWeight={600}
+            scrollTabPadding="0 14px"
+            scrollMinWidth={0}
+            // Frame check: Foundations' FO3 tab radius 9; the track (new since
+            // R1) is the frame's #F4F3F9 in light.
+            tabRadius={9}
+            trackStyle={{ padding: 4, gap: 4, borderRadius: 12, background: dark ? fv("track") : "rgb(var(--th-f4f3f9))" }}
+            light={{ activeFill: fv("accent"), activeInk: fv("on-accent"), idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" }}
+          />
         </div>
       ) : (
-        <div className="flex gap-1.5" aria-hidden="true">
-          {[44, 86, 92, 84].map((w, i) => (
-            <div key={i} className="h-[34px] rounded-full animate-pulse shrink-0" style={{ width: w, background: fv("track") }} />
-          ))}
-        </div>
+        <div className="h-10 rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
       )}
 
       {!data ? (
@@ -193,14 +197,17 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
         <>
           {continuing.length > 0 && !query && !filter && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-[13px] font-extrabold tracking-[0.04em]" style={{ color: fv("muted") }}>
-                CONTINUE LEARNING
+              {/* Frame check: Foundations `label.section` (10.5/700 uppercase,
+                  14 line, 0.12em; decision 20), 4 in from the content edge;
+                  the label's pre-R1 colour stays (decision 22). */}
+              <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+                Continue learning
               </span>
               {continuing.map(({ course, next, week, n, percent }) => (
                 <Link
                   key={course.id}
                   to={`/app/forum/courses/${course.id}/lessons/${next.id}`}
-                  className="rounded-[20px] px-4 py-3.5 flex flex-col gap-2 no-underline"
+                  className="rounded-[20px] px-[14px] py-3.5 flex flex-col gap-2 no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
                   <span className="text-[15px] font-extrabold [overflow-wrap:anywhere]">{course.title}</span>
@@ -210,7 +217,7 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                   <div className="h-1.5 rounded-[3px]" style={{ background: fv("track") }} aria-hidden="true">
                     <div className="h-1.5 rounded-[3px]" style={{ width: `${percent}%`, background: fv("accent") }} />
                   </div>
-                  <span className="text-xs" style={{ color: fv("muted") }}>
+                  <span className="text-xs font-bold" style={{ color: fv("muted") }}>
                     {percent}% complete
                   </span>
                 </Link>
@@ -218,10 +225,26 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
             </div>
           )}
 
-          <span className="text-[13px] font-extrabold tracking-[0.04em] mt-1.5" style={{ color: fv("muted") }}>
-            {query || filter ? "RESULTS" : "POPULAR"}
+          {/* Same label style; 12 under the Continue card, 8 above the first
+              card (frame check). Decision 23 (item 65): a professional's way
+              into the builder is a trailing text action on this row (was a
+              44 pt tinted row above the search), so the drawn layout is the
+              same for everyone; 44 to the finger, 14 in the layout. */}
+          <span className="flex items-center justify-between gap-3 h-[14px]">
+            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+              {query || filter ? "Results" : "Popular"}
+            </span>
+            {isProfessional && (
+              <Link
+                to="/app/forum/courses/mine"
+                className="tap h-11 flex items-center text-[12px] font-bold no-underline"
+                style={{ color: fv("link") }}
+              >
+                Write a course
+              </Link>
+            )}
           </span>
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 -mt-1">
             {shown.map((c) => {
               const weeks = data.modules.filter((m) => m.courseId === c.id).length;
               const s = data.stats.get(c.id);
@@ -232,7 +255,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                   className="rounded-[20px] overflow-hidden flex flex-col no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
-                  <div className="h-[104px] flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
+                  {/* MO1.3.1 #7: a 96 pt cover (measured from the frame, 2x: 191 px of the 188 pt card). */}
+                  <div className="h-24 flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
                     <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
                   </div>
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">
@@ -254,7 +278,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                           </>
                         )}
                       </span>
-                      <strong className="text-[13px] shrink-0" style={{ color: fv("text") }}>
+                      {/* 14 (measured: 10 pt digits), not in the table. */}
+                      <strong className="text-[14px] shrink-0" style={{ color: fv("text") }}>
                         {formatPrice(c.priceCents)}
                       </strong>
                     </span>
@@ -262,11 +287,13 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                 </Link>
               );
             })}
-            {shown.length === 0 && (
-              <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-                {query || filter ? "No courses match that." : "No courses yet. Check back soon."}
-              </p>
-            )}
+            {/* Decision 23 (item 66): Foundations › Empty state. */}
+            {shown.length === 0 &&
+              (query || filter ? (
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses match" line="Try another category or search." />
+              ) : (
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses yet" line="Check back soon." />
+              ))}
           </div>
         </>
       )}

@@ -9,6 +9,9 @@ import { ProfessionalBioCard } from "../../components/profile/ProfessionalBioCar
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { CentredPopup } from "../../components/ui/CentredPopup";
+import { CtaButton } from "../../components/ui/PinnedCta";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
 import { ReviewsAboutMeCard } from "../../components/professionals/ReviewsAboutMeCard";
@@ -30,6 +33,7 @@ import {
 import {
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   LogOut,
   Camera,
   Image,
@@ -40,7 +44,7 @@ import {
   Award,
   Flag,
   Gauge,
-  HeartHandshake,
+  HandHeart,
   KeyRound,
   Plus,
 } from "lucide-react";
@@ -98,7 +102,8 @@ export default function Profile() {
   const [dobDraft, setDobDraft] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
   const [savingDob, setSavingDob] = useState(false);
-  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  // The avatar's options menu, anchored to the avatar (decision 23, item 99).
+  const [avatarAnchor, setAvatarAnchor] = useState<HTMLElement | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
@@ -126,7 +131,6 @@ export default function Profile() {
       return;
     }
     updateProfile({ avatarUrl: result.url });
-    setAvatarSheetOpen(false);
   };
 
   const handleAvatarRemove = async () => {
@@ -140,7 +144,6 @@ export default function Profile() {
       return;
     }
     updateProfile({ avatarUrl: undefined });
-    setAvatarSheetOpen(false);
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
@@ -230,11 +233,7 @@ export default function Profile() {
   };
 
   const handleSignOut = () => {
-    if (!confirmSignOut) {
-      setConfirmSignOut(true);
-      setTimeout(() => setConfirmSignOut(false), 3000);
-      return;
-    }
+    setConfirmSignOut(false);
     signOut();
     navigate("/app/onboarding");
   };
@@ -288,7 +287,12 @@ export default function Profile() {
     top: { value: React.ReactNode; unit: string; onClick: () => void; label: string },
     bottom: { value: React.ReactNode; unit: string; onClick: () => void; label: string }
   ) => (
-    <div className="rounded-2xl bg-cream-card border border-charcoal/[0.08] flex flex-col overflow-hidden min-w-0">
+    // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
+    // 2x frame: border x 32–211, y 216–501), divider inset 22 (x 78–163).
+    // Decision 23 (items 16–18): the frame's colours in light and dark, as
+    // theme tokens: a 1px #6F9993 border and divider (teal-dark), values
+    // #5F5093 (primary-deep-text) and units #AEA1DC (primary).
+    <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
       {[top, bottom].map((part, i) => (
         <button
           key={part.unit}
@@ -297,18 +301,19 @@ export default function Profile() {
           aria-label={part.label}
           className={clsx(
             "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
-            i === 1 && "border-t border-charcoal/[0.08] mx-3"
+            i === 1 && "border-t border-teal-dark mx-[22px]"
           )}
         >
-          <span className="text-[20px] font-bold leading-tight text-charcoal tabular-nums capitalize">{part.value}</span>
-          <span className="text-[11px] text-charcoal-faint">{part.unit}</span>
+          {/* MO1.5 anatomy row 2: values 17px/700. */}
+          <span className="text-[17px] font-bold leading-tight text-primary-deep-text tabular-nums capitalize">{part.value}</span>
+          <span className="text-[11px] text-primary">{part.unit}</span>
         </button>
       ))}
     </div>
   );
 
   const sectionLabel = (text: string, id?: string) => (
-    <p id={id} className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+    <p id={id} className="section-label text-charcoal-faint mb-2.5">
       {text}
     </p>
   );
@@ -322,7 +327,7 @@ export default function Profile() {
           "mb-6 animate-fade-slide-up",
           hidesClientFields
             ? "flex flex-col items-center"
-            : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)_minmax(0,1fr)] gap-2.5 items-stretch"
+            : "grid grid-cols-[minmax(0,90px)_minmax(0,1fr)_minmax(0,90px)] gap-3 items-center"
         )}
       >
         {!hidesClientFields &&
@@ -346,19 +351,25 @@ export default function Profile() {
 
         <div className="flex flex-col items-center text-center min-w-0">
           <button
-            onClick={() => setAvatarSheetOpen(true)}
+            type="button"
+            onClick={(e) => setAvatarAnchor(e.currentTarget)}
             aria-label="Change profile picture"
-            className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[34px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
+            aria-haspopup="menu"
+            aria-expanded={!!avatarAnchor}
+            className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[30px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
           >
             {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
           </button>
-          <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-1.5 max-w-full">
+          {/* Decision 23 (item 98): the Premium crown and Ambassador badge are
+              16 badges after the name, 5 apart, as the Professional card's
+              verified badge (DirectoryCard). */}
+          <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-[5px] max-w-full">
             {/* Wraps rather than truncating: the centre column is narrow. */}
             <span className="min-w-0 line-clamp-2 [overflow-wrap:anywhere]">{user.firstName}</span>
-            {premiumPlan && <Crown size={15} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
             {/* QA 11.0 ambassador badge: a granted status (ambassador_grants,
                 read through is_ambassador()), not "one referral". */}
-            {isAmbassador && <Award size={15} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
+            {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
           </h2>
           <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
             {accountTypeLabel[user.accountType]}
@@ -372,11 +383,27 @@ export default function Profile() {
             <button
               type="button"
               onClick={() => setCredentialsOpen(true)}
-              className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-deep-text"
+              // MO1.5: a 118 × 32 pill, radius 12 (measured on the 2x frame:
+              // x 272–507, y 484–547), #F0EDF9 fill, #7D6BB5 key and label
+              // (new chip, decision 22), KeyRound 14/1.75.
+              className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-dark"
             >
-              <KeyRound size={14} aria-hidden />
+              <KeyRound size={14} strokeWidth={1.75} aria-hidden />
               Credentials
             </button>
+          )}
+          {/* The avatar menu closes when an option is picked, so the upload's
+              two outcomes land here, under the hero: "Saving…" while it runs,
+              and a failure as the Foundations inline danger line
+              (CircleAlert 13 + 12/600 danger). */}
+          {avatarBusy && (
+            <p role="status" className="mt-2 text-xs font-semibold text-charcoal-faint">Saving…</p>
+          )}
+          {avatarError && (
+            <p role="alert" className="mt-2 flex items-start gap-2 text-start text-xs font-semibold text-status-high">
+              <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
+              {avatarError}
+            </p>
           )}
         </div>
 
@@ -404,38 +431,41 @@ export default function Profile() {
       {user.accountType === "professional" && <ProfessionalBioCard />}
       {/* V7 (QA 7.0): the ratings and reviews clients left. */}
       {user.accountType === "professional" && <ReviewsAboutMeCard className="mb-6 animate-fade-slide-up" />}
-      {/* My CV: licences, experience, education and the rest. */}
+      {/* My CV (licences, experience, education and the rest), then
+          certification (V8, QA 8.0). Decision 23 (item 103): both as the
+          MO1.5.1 Join row: r18, a 32 r10 #F0EDF9 tile with a 16/1.75 glyph,
+          15/600, ChevronRight 15, 8 between the rows. */}
       {user.accountType === "professional" && (
-        <Card padded={false} className="mb-3 animate-fade-slide-up">
-          <button onClick={() => navigate("/app/profile/cv")} className="tap w-full flex items-center justify-between px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <FileText size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">My CV</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
-      )}
-      {/* V8 (QA 8.0): certification lives in My Profile. */}
-      {user.accountType === "professional" && (
-        <Card padded={false} className="mb-6 animate-fade-slide-up">
-          <button onClick={() => setCertOpen(true)} className="tap w-full flex items-center justify-between px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <BadgeCheck size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">Certification</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
+        <div className="mb-6 space-y-2 animate-fade-slide-up">
+          {[
+            { icon: FileText, label: "My CV", onClick: () => navigate("/app/profile/cv") },
+            { icon: BadgeCheck, label: "Certification", onClick: () => setCertOpen(true) },
+          ].map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={r.onClick}
+              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+            >
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
+              </span>
+              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Task R: right under the sex tile, because switching to female or
           other is when a tracker somebody never chose to switch off is found
           off. Also on Health, where the Cycle card would be. */}
-      <TrackerQuestion className="mb-6" />
+      {/* Decision 23 (item 100): both as r18 cards with a 36 #F0EDF9 icon
+          tile, like the Recovery card (`tile`; Health and Home keep theirs). */}
+      <TrackerQuestion className="mb-6" tile />
 
       {/* Task T: only for an older account with no date of birth. */}
-      <DobPromptCard className="mb-6" />
+      <DobPromptCard className="mb-6" tile />
 
       {/* Business memberships: invitations to answer, memberships to leave,
           and the code box. Customers only. */}
@@ -448,43 +478,53 @@ export default function Profile() {
         <section className="mb-6 animate-fade-slide-up">
           {sectionLabel(connectedProfessionals.length > 0 ? "Connected professionals" : "Professionals")}
           {connectedProfessionals.length === 0 ? (
-            <Card>
+            // MO1.5 anatomy row 4: the code card is radius 18 with 14 padding
+            // (measured on the 2x frame, as the Memberships card).
+            <Card padded={false} className="!rounded-[18px] p-3.5">
               <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
             </Card>
           ) : (
-            <div className="space-y-2.5">
+            // MO1.5.1: 8 between the rows (2x frame: 1129 → 1146).
+            <div className="space-y-2">
               {connectedProfessionals.map((p) => (
                 <button
                   key={p.professionalId}
                   type="button"
                   onClick={() => setSharingFor(p)}
-                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                  className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3.5 text-start"
                 >
-                  <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[14px] font-bold text-primary-dark">
+                  {/* MO1.5.1 anatomy row 4: initials 12/700, name 14/600,
+                      "Manage data sharing" 11.5/400, ChevronRight 15; avatar
+                      32 measured on the 2x frame (x 62–125); row 61 tall,
+                      radius 18 (2x frame: y 1008–1129). */}
+                  <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[12px] font-bold text-primary-dark">
                     {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[15px] font-semibold text-charcoal truncate">{p.name}</span>
-                    <span className="block text-xs text-charcoal-faint">Manage data sharing</span>
+                    <span className="block text-[14px] font-semibold leading-tight text-charcoal truncate">{p.name}</span>
+                    <span className="block text-[11.5px] leading-tight text-charcoal-faint">Manage data sharing</span>
                   </span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
               {connectOpen ? (
-                <Card>
+                <Card padded={false} className="!rounded-[18px] p-3.5">
                   <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
                 </Card>
               ) : (
                 <button
                   type="button"
                   onClick={() => setConnectOpen(true)}
-                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                  className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
                 >
-                  <span className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                    <Plus size={18} className="text-primary-dark" />
+                  {/* MO1.5.1: Plus 16/1.75 in a 32 r10 tile, row 58 with
+                      12 padding (measured on the 2x frame: tile 1172–1235,
+                      row 1146–1259). */}
+                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                    <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
                   <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               )}
             </div>
@@ -506,13 +546,18 @@ export default function Profile() {
                 key={s.label}
                 type="button"
                 onClick={s.onClick}
-                className="tap flex items-center gap-2 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3 py-3.5 text-start min-w-0"
+                // MO1.5: label 13/600, Flag / Gauge 14/1.75, ChevronRight 14;
+                // tile 56 tall, radius 18, with a 28 r8 icon tile (measured on
+                // the 2x MO1.5.1 frame: tile y 1352–1463, icon tile 58–113).
+                // The icon tile is new (decision 22): #F0EDF9 with a #7D6BB5
+                // glyph, as drawn.
+                className="tap flex items-center gap-2 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3 py-[13px] text-start min-w-0"
               >
-                <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                  <s.icon size={16} className="text-charcoal-soft" />
+                <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                  <s.icon size={14} strokeWidth={1.75} className="text-primary-dark" />
                 </span>
-                <span className="flex-1 min-w-0 text-sm font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
+                <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
               </button>
             ))}
           </div>
@@ -530,24 +575,35 @@ export default function Profile() {
             onClick={() => setSafetyOpen((o) => !o)}
             aria-expanded={safetyOpen}
             aria-controls="safety-content"
-            className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start"
+            // The label's own 10 below only when the card shows: collapsed
+            // (MO1.5.1), Sign Out sits the section's 24 under the label.
+            className={clsx(
+              "tap w-full flex items-center justify-between gap-3 text-start pb-[7.5px] border-b-[1.5px] border-primary",
+              safetyOpen && "mb-2.5"
+            )}
           >
-            <span className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Safety & content</span>
-            <ChevronDown
-              size={16}
-              aria-hidden
-              className={clsx("text-charcoal-faint transition-transform", safetyOpen && "rotate-180")}
-            />
+            <span className="section-label text-charcoal-faint !border-b-0 !pb-0">Safety & content</span>
+            {/* MO1.5.1 draws ChevronRight 14 while collapsed, MO1.5
+                ChevronDown 14 while open. */}
+            {safetyOpen ? (
+              <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0" />
+            ) : (
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+            )}
           </button>
           {safetyOpen && (
             <div id="safety-content" className="animate-fade-slide-up">
-              <Card className="mb-3">
-                <div className="flex items-center justify-between gap-3 mb-2">
+              {/* MO1.5 anatomy row 7: radius 18, padding 16 16 18 (its own
+                  values here; the shared Card stays as it is elsewhere). */}
+              <Card padded={false} className="mb-3 !rounded-[18px] pt-4 px-4 pb-[18px]">
+                <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-3 min-w-0">
-                    <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
-                      <HeartHandshake size={16} className="text-primary-dark" />
+                    {/* MO1.5: HandHeart 17/1.5, title 14/600; the 36 icon
+                        tile is #F0EDF9 (new, decision 22; 2x frame x 66–137). */}
+                    <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                      <HandHeart size={17} strokeWidth={1.5} className="text-primary-dark" />
                     </span>
-                    <span className="text-sm font-bold text-charcoal">Recovery-sensitive experience</span>
+                    <span className="text-sm font-semibold text-charcoal">Recovery-sensitive experience</span>
                   </span>
                   <Toggle
                     checked={recoverySensitive}
@@ -562,33 +618,40 @@ export default function Profile() {
                     label="Recovery-sensitive experience"
                   />
                 </div>
-                {/* QA 13.0: when the toggle is on it shows the text under. */}
-                {recoverySensitive && (
-                  <p className="text-xs text-charcoal-faint leading-relaxed">
-                    Personalize food tracking to reduce number-focused and potentially triggering content. You control
-                    what is shown, and you can change this at any time.
+                {/* MO1.5 anatomy rows 7–8 (measured on the 2x frame): the body
+                    sits under the title (x 162, past the 36 tile and its 12
+                    gap), 10 below the tile row, 12/400 on an 18 line, 8
+                    between paragraphs with no rule; one inset rule, 16 above
+                    and below, before Cycle tracking. */}
+                <div className="ps-12 mt-2.5 pb-4 border-b border-charcoal/[0.06] space-y-2">
+                  {/* QA 13.0: when the toggle is on it shows the text under. */}
+                  {recoverySensitive && (
+                    <p className="text-xs text-charcoal-faint leading-normal">
+                      Personalize food tracking to reduce number-focused and potentially triggering content. You control
+                      what is shown, and you can change this at any time.
+                    </p>
+                  )}
+                  {justToggledRecovery && (
+                    <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 leading-relaxed">
+                      Your experience has been updated: calorie totals, weight-related content, deficit language, and
+                      streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                    </p>
+                  )}
+                  {/* Task X: what is true, said instead of a pause that paused
+                      nothing: where the setting lives, and who sees it. */}
+                  <p className="text-xs text-charcoal-faint leading-normal">
+                    Saved to your account, so it's the same on every device you sign in on. Professionals you work with
+                    are never told whether it's on.
                   </p>
-                )}
-                {justToggledRecovery && (
-                  <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed">
-                    Your experience has been updated: calorie totals, weight-related content, deficit language, and streaks
-                    are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                  <p className="text-xs text-charcoal-faint leading-normal">
+                    This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
+                    <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
+                      professional
+                    </button>
+                    .
                   </p>
-                )}
-                {/* Task X: what is true, said instead of a pause that paused
-                    nothing: where the setting lives, and who sees it. */}
-                <p className="text-[11px] text-charcoal-faint mt-2 leading-relaxed">
-                  Saved to your account, so it's the same on every device you sign in on. Professionals you work with are
-                  never told whether it's on.
-                </p>
-                <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
-                  This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
-                  <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
-                    professional
-                  </button>
-                  .
-                </p>
-                <div className="mt-3.5 pt-3.5 border-t border-charcoal/[0.06]">
+                </div>
+                <div className="mt-4">
                   <CycleTrackingRow />
                 </div>
               </Card>
@@ -609,14 +672,36 @@ export default function Profile() {
         </section>
       )}
 
-      {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. */}
+      {/* Sign Out as a text link (MO1.5). A 48 block (MO1.5 row 10: 358 ×
+          48), 24 under the section above. Decision 23: neutral #5B5349
+          (charcoal-soft) as MO1.5, MO1.5.1 and MO1.5.4 draw it (item 97), and
+          the confirm is a centred popup like End membership (item 102). */}
       <button
-        onClick={handleSignOut}
-        className="tap mx-auto mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold text-teal-dark"
+        type="button"
+        onClick={() => setConfirmSignOut(true)}
+        className="tap mx-auto flex items-center justify-center gap-2 px-4 py-3.5 text-[14px] font-semibold text-charcoal-soft"
       >
-        <LogOut size={16} aria-hidden />
-        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
+        {/* MO1.5: 14/600 with LogOut 15/1.75. */}
+        <LogOut size={15} strokeWidth={1.75} aria-hidden />
+        Sign Out
       </button>
+
+      <CentredPopup
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        title="Sign out?"
+        icon={<LogOut size={22} />}
+        body="You can sign back in at any time."
+      >
+        <CtaButton size="page" label="Sign Out" onClick={handleSignOut} />
+        <button
+          type="button"
+          onClick={() => setConfirmSignOut(false)}
+          className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Cancel
+        </button>
+      </CentredPopup>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
@@ -803,44 +888,33 @@ export default function Profile() {
         {sharingFor && <DataSharingSection professionalId={sharingFor.professionalId} />}
       </BottomSheet>
 
-      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} hideHeader>
-        <div className="space-y-2.5 animate-fade-slide-up">
-          <button
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Camera size={18} className="text-primary" />
-            <span className="text-sm font-semibold text-charcoal">Take a photo</span>
-          </button>
-          <button
-            onClick={() => galleryInputRef.current?.click()}
-            disabled={avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Image size={18} className="text-primary" />
-            <span className="text-sm font-semibold text-charcoal">Choose from library</span>
-          </button>
-          <button
-            onClick={() => void handleAvatarRemove()}
-            disabled={!user.avatarUrl || avatarBusy}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
-          >
-            <Trash2 size={18} className="text-[#C0392B]" />
-            <span className="text-sm font-semibold text-charcoal">Remove photo</span>
-          </button>
-
-          {/* The sheet stays open while this runs, so there is somewhere for
-              both states to land. Uploading a picture is a round trip now
-              rather than a local read, and it can genuinely fail. */}
-          {avatarBusy && (
-            <p className="text-center text-xs font-semibold text-charcoal-faint">Saving…</p>
-          )}
-          {avatarError && (
-            <p className="text-center text-xs font-semibold text-status-high">{avatarError}</p>
-          )}
-        </div>
-      </BottomSheet>
+      {/* Decision 23 (item 99): the avatar's options as the Foundations
+          dropdown menu anchored to the avatar, in place of a bottom sheet.
+          Uploading is a round trip and can fail; its states show under the
+          hero (above). */}
+      <PopupMenu
+        open={!!avatarAnchor}
+        onClose={() => setAvatarAnchor(null)}
+        anchor={avatarAnchor}
+        width={200}
+        align="left"
+        options={[
+          { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          { value: "library", label: "Choose from library", icon: <Image size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          {
+            value: "remove",
+            label: "Remove photo",
+            icon: <Trash2 size={15} strokeWidth={1.75} />,
+            destructive: true,
+            disabled: !user.avatarUrl || avatarBusy,
+          },
+        ]}
+        onSelect={(v) => {
+          if (v === "camera") cameraInputRef.current?.click();
+          else if (v === "library") galleryInputRef.current?.click();
+          else void handleAvatarRemove();
+        }}
+      />
     </div>
   );
 }

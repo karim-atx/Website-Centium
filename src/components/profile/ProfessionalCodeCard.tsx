@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { UserPlus } from "lucide-react";
 import { Button } from "../ui/Button";
+import { CentredPopup } from "../ui/CentredPopup";
+import { CtaButton } from "../ui/PinnedCta";
 import { useApp } from "../../context/AppContext";
 import { previewClientCode, redeemClientCode, type ClientCodePreview } from "../../services/redemption";
 import type { ProfessionalSubtype } from "../../types";
@@ -65,49 +68,52 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
 
   return (
     <div className={className}>
-      {found ? (
-        <div className="rounded-2xl bg-primary-pale px-4 py-3.5">
-          <p className="text-sm font-semibold text-charcoal">Connect with {found.professionalFirstName}?</p>
-          <p className="text-xs text-charcoal-soft mt-0.5">
-            They'll see that you're their client. Nothing else is shared until you turn it on.
-          </p>
-          <div className="flex gap-2 mt-3">
-            <Button size="sm" fullWidth disabled={busy} onClick={() => void connect()}>
-              {busy ? "Connecting…" : "Connect"}
-            </Button>
-            <Button size="sm" fullWidth variant="outline" disabled={busy} onClick={() => setFound(null)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <input
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value.toUpperCase());
-              setNote(null);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && void check()}
-            placeholder="Professional code"
-            aria-label="Professional code"
-            className="flex-1 min-w-0 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          <Button onClick={() => void check()} disabled={!code.trim() || busy}>
-            {busy ? "…" : "Connect"}
-          </Button>
-        </div>
-      )}
+      {/* Decision 23 (items 88, 104): the "Connect with {name}?" preview is a
+          Foundations centred popup, like End membership, over the code box,
+          which stays where it is. Tapping outside cancels. */}
+      <CentredPopup
+        open={!!found}
+        onClose={() => !busy && setFound(null)}
+        title={`Connect with ${found?.professionalFirstName ?? "this professional"}?`}
+        icon={<UserPlus size={22} />}
+        body="They'll see that you're their client. Nothing else is shared until you turn it on."
+      >
+        <CtaButton size="page" label={busy ? "Connecting…" : "Connect"} disabled={busy} onClick={() => void connect()} />
+        <button
+          type="button"
+          onClick={() => setFound(null)}
+          disabled={busy}
+          className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Cancel
+        </button>
+      </CentredPopup>
+      <div className="flex items-center gap-2">
+        <input
+          value={code}
+          onChange={(e) => {
+            setCode(e.target.value.toUpperCase());
+            setNote(null);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && void check()}
+          placeholder="Professional code"
+          aria-label="Professional code"
+          // Foundations Inputs (MO1.5 row 4, as the member code field):
+          // height 44, radius 12, padding 0 14, value 14/600.
+          className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <Button onClick={() => void check()} disabled={!code.trim() || busy}>
+          {busy ? "…" : "Connect"}
+        </Button>
+      </div>
       {note ? (
         <p role="status" className={`mt-2 text-xs font-semibold ${note.ok ? "text-charcoal-soft" : "text-status-high"}`}>
           {note.text}
         </p>
       ) : (
-        !found && (
-          <p className="mt-2 text-xs text-charcoal-faint">
-            Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.
-          </p>
-        )
+        <p className="mt-2.5 text-xs text-charcoal-faint">
+          Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.
+        </p>
       )}
     </div>
   );

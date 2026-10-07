@@ -3,7 +3,9 @@ import { Pencil, Star } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { Toggle } from "../ui/Toggle";
 import { ReviewItem } from "./ReviewItem";
+import { textPx } from "../../theme/textSize";
 import type { ReviewRow } from "../../services/professional-reviews";
 import {
   EDIT_WINDOW_OVER,
@@ -25,9 +27,15 @@ import {
 const fieldClass =
   "w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none";
 
-/** A textarea's character count, red once over the limit. */
-const Counter: React.FC<{ text: string; max: number; id: string }> = ({ text, max, id }) => {
-  const over = bodyLength(text) > max;
+/**
+ * A textarea's character count, red once over the limit. `nearLimitOnly`
+ * (MO1.2.1.2, decision 23 kept-list 196): shown only in the last 10% of the
+ * limit or over it.
+ */
+const Counter: React.FC<{ text: string; max: number; id: string; nearLimitOnly?: boolean }> = ({ text, max, id, nearLimitOnly }) => {
+  const len = bodyLength(text);
+  const over = len > max;
+  if (nearLimitOnly && len < max * 0.9) return null;
   return (
     <p id={id} aria-live="polite" className={`text-[11px] font-semibold text-right mt-1 tabular-nums ${over ? "text-status-high" : "text-charcoal-faint"}`}>
       {counterLabel(text, max)}
@@ -85,7 +93,7 @@ export const MyReviewCard: React.FC<{
   return (
     <Card className={className}>
       <div className={`flex items-center gap-2 ${hideLabel ? (review ? "justify-end mb-1.5" : "hidden") : "justify-between mb-1.5"}`}>
-        {!hideLabel && <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>}
+        {!hideLabel && <p className="section-label text-charcoal-faint">My Review</p>}
         {(!review || editable) && (
           <Button size="sm" variant="outline" onClick={onOpen}>
             <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
@@ -97,7 +105,16 @@ export const MyReviewCard: React.FC<{
           // MO1.2.1: the prompt and the outline button on one row.
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>
-            <Button size="sm" variant="outline" onClick={onOpen} className="shrink-0">
+            {/* MO1.2.1 #7: 12/700 in the deep primary ink with a 1 px primary-dark
+                outline (#7D6BB5, sampled from the frame). */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpen}
+              // 32 tall, radius 10 (measured on the frame; Foundations outline 32–40 / 10–12).
+              className="shrink-0 !h-8 !rounded-[10px]"
+              style={{ fontSize: textPx(12), color: "rgb(var(--c-primary-deep-text))", borderColor: "rgb(var(--c-primary-dark))" }}
+            >
               <Pencil size={13} /> Rate &amp; Review
             </Button>
           </div>
@@ -189,7 +206,10 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
 
   return (
     <div className="space-y-5 animate-fade-slide-up">
-      <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label="Rating">
+      {/* MO1.2.1.2: stars on a 44 pitch (34 + gap 10), the textarea 209 tall
+          and "Your review" 12/600 in the faint grey (all measured on the frame
+          at 2x, the label colour from the table). */}
+      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
         {Array.from({ length: 5 }, (_, i) => (
           <button
             key={i}
@@ -205,7 +225,8 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
         ))}
       </div>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your review</span>
+        {/* Re-measured (revision round): label box ends 10 above the field; the field is 209 outside. */}
+        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">Your review</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -213,24 +234,21 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           rows={5}
           aria-describedby="review-count"
           aria-invalid={over || undefined}
-          className={fieldClass}
+          className={`${fieldClass} h-[209px]`}
         />
-        <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" />
+        <Counter text={text} max={REVIEW_BODY_MAX} id="review-count" nearLimitOnly />
       </label>
       {/* NOT "post anonymously": the professional can resolve an active
-          client's name from the relationship whatever this says. */}
-      <label className="flex items-start gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={showName}
-          onChange={(e) => setShowName(e.target.checked)}
-          className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
-        />
-        <span className="text-xs text-charcoal-soft leading-relaxed">
+          client's name from the relationship whatever this says.
+          Decision 23 (kept-list 197): a Toggle row (Foundations Toggle 44×26)
+          in place of the checkbox; the words are unchanged. */}
+      <div className="flex items-center gap-3">
+        <p className="flex-1 min-w-0 text-xs text-charcoal-soft leading-relaxed">
           Show my first name on this review.{" "}
           <span className="text-charcoal-faint">Your professional can see who left it either way.</span>
-        </span>
-      </label>
+        </p>
+        <Toggle checked={showName} onChange={setShowName} label="Show my first name on this review" />
+      </div>
       {over && (
         <p className="text-xs font-semibold text-status-high">
           A review can be up to {REVIEW_BODY_MAX.toLocaleString("en")} characters.
@@ -307,7 +325,7 @@ export const ReviewReportForm: React.FC<{
         A moderator will review it. Nobody is told who reported it.
       </p>
       <fieldset className="border-none m-0 p-0">
-        <legend className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1">Reason</legend>
+        <legend className="section-label text-charcoal-soft w-full mb-1">Reason</legend>
         {REVIEW_REPORT_REASONS.map((r, i) => (
           <label
             key={r.value}
