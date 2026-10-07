@@ -1,6 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { ChatCard } from "./ChatCard";
+import { cardAllows } from "../../services/messaging/cards";
+import { fetchPlansFor, type Plan as HirePlan } from "../../services/hires";
+import { offerPlansInChat } from "../../services/hires/chat";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
 import { checkCallMedia } from "../../utils/mediaPermissions";
@@ -580,6 +585,55 @@ export const ThreadView: React.FC<{
   // made here take the identical path.
   usePinRealtime(thread.id, () => void refreshPin());
 
+  /**
+   * HIRING IN THE CHAT (Stage A3; MO1.2.1.3.7 / .3.8). Only in a direct chat
+   * between two people: never a group, a gym or studio chat (post_plans_card
+   * refuses those, 22023), Centium Support, or a chat with a deleted account.
+   *
+   * The professional gets "Offer plans" in the header slot where the frame
+   * draws Hire: it posts their plans as a card (post_plans_card). The other
+   * person gets the frame's Hire, shown only when the other side currently
+   * offers plans (professional_plans_for returns rows only for a listed
+   * professional's active plans), which opens MO1.2.1.5 on their profile.
+   */
+  const navigate = useNavigate();
+  const hireThread = thread.kind === "peer" && !thread.venue && !departed && !!thread.participantId;
+  const viewerIsProfessional = user.accountType === "professional";
+  const [otherPlans, setOtherPlans] = useState<HirePlan[] | null>(null);
+  const [postingPlans, setPostingPlans] = useState(false);
+  // Re-read when a "Plan confirmed" card arrives, so the offers above it turn to "Selected".
+  const confirmedCount = messages.filter((m) => m.card?.kind === "hire_confirmed").length;
+  useEffect(() => {
+    if (!hireThread || viewerIsProfessional || !thread.participantId) {
+      setOtherPlans(null);
+      return;
+    }
+    let cancelled = false;
+    // A failed read shows no Hire and holds no plan as "Selected": nothing is
+    // shown or disabled on a guess (the checkout refuses a second hire, ATX99).
+    void fetchPlansFor(thread.participantId).then((r) => {
+      if (!cancelled) setOtherPlans(r.ok ? r.plans : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [thread.id, thread.participantId, hireThread, viewerIsProfessional, confirmedCount]);
+  const hiredPlanIds = new Set((otherPlans ?? []).filter((p) => p.isHired).map((p) => p.id));
+  const offerPlans = async () => {
+    if (postingPlans || !authUserId) return;
+    setPostingPlans(true);
+    setError(null);
+    const result = await offerPlansInChat(thread.id, authUserId);
+    setPostingPlans(false);
+    if (!result.ok) {
+      setError(result.message);
+      // A refusal may be a block that just started.
+      void refreshBlock();
+      return;
+    }
+    await load();
+  };
+
   const idsKey = messages.map((m) => m.id).join(",");
   const refreshReactions = async () => {
     const ids = idsKey ? idsKey.split(",") : [];
@@ -1061,6 +1115,9 @@ export const ThreadView: React.FC<{
         close();
       } }];
     }
+    // A3 CARD MESSAGES (see cardAllows): no Copy, Forward or Edit; Delete for
+    // everyone only for a plans offer, never for "Plan confirmed".
+    const allows = m.card ? cardAllows(m.card) : { copy: true, forward: true, edit: true, unsend: true };
     const list: MessageAction[] = [
       { label: "Reply", onSelect: () => {
         setReplyTo(m);
@@ -1069,7 +1126,7 @@ export const ThreadView: React.FC<{
     ];
     // Anything with content: the server copies a photo, file or voice note
     // into the destination chat (forward-message).
-    if (m.text?.trim() || (m.attachmentPath && !m.attachmentPurgedAt)) list.push({ label: "Forward", onSelect: () => {
+    if (allows.forward && (m.text?.trim() || (m.attachmentPath && !m.attachmentPurgedAt))) list.push({ label: "Forward", onSelect: () => {
       setForwarding(m);
       close();
     } });
@@ -1080,7 +1137,7 @@ export const ThreadView: React.FC<{
         close();
       },
     });
-    if (m.text?.trim()) list.push({ label: "Copy", onSelect: () => void copyMessage(m) });
+    if (allows.copy && m.text?.trim()) list.push({ label: "Copy", onSelect: () => void copyMessage(m) });
     list.push({
       label: pin?.messageId === m.id ? "Unpin" : "Pin",
       onSelect: () => {
@@ -1098,7 +1155,7 @@ export const ThreadView: React.FC<{
     // EDIT, with the time left, only while the window is open and only for
     // text. The note is the client's estimate; the server decides (ATX40).
     const left = mine ? editTimeLeft(m) : 0;
-    if (left > 0 && m.text?.trim()) {
+    if (allows.edit && left > 0 && m.text?.trim()) {
       list.push({
         label: "Edit",
         note: `${Math.max(1, Math.ceil(left / 60_000))} min left`,
@@ -1120,7 +1177,7 @@ export const ThreadView: React.FC<{
         close();
       } });
     }
-    if (left > 0) {
+    if (allows.unsend && left > 0) {
       list.push({ label: "Delete for everyone", danger: true, onSelect: () => {
         setUnsending(m);
         close();
@@ -1332,9 +1389,27 @@ export const ThreadView: React.FC<{
           </span>
         </button>
 
-        {/* MO1.2.1.3 draws a Hire button here (12.5/700 white on #9A8CD6,
-            Handshake 14) that opens MO1.2.1.5's plans. It waits on the
-            offers and payments backend, which doesn't exist yet. */}
+        {/* MO1.2.1.3.7 #13 / .3.8 #14: Hire, 12.5/700 white on #9A8CD6 with
+            Handshake 14, 33 tall and fully rounded (measured), opens MO1.2.1.5
+            (the hire sheet on their profile). The professional gets the same
+            button as "Offer plans", which posts their plans card
+            (post_plans_card); its refusals show in the error line above the
+            composer. Not across a block. */}
+        {hireThread && !block.blocked && (viewerIsProfessional || (otherPlans?.length ?? 0) > 0) && (
+          <button
+            type="button"
+            onClick={() =>
+              viewerIsProfessional
+                ? void offerPlans()
+                : navigate(`/app/professionals/${thread.participantId}?hire`)
+            }
+            disabled={postingPlans}
+            className="tap h-[33px] px-3 rounded-full bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill text-[12.5px] font-bold flex items-center gap-1.5 shrink-0 disabled:opacity-60"
+          >
+            <Handshake size={14} aria-hidden />
+            {viewerIsProfessional ? (postingPlans ? "Sending…" : "Offer plans") : "Hire"}
+          </button>
+        )}
 
         {/* CALLS (restore round 3, user, 2026-10-07): two buttons beside
             Search, as on main: Voice call and Video call, one tap each. Each
@@ -1504,6 +1579,54 @@ export const ThreadView: React.FC<{
                   <span className="flex-1 h-px bg-primary/40" />
                 </div>
               )}
+              {/* AN A3 CARD (MO1.2.1.3.7 / .3.8) IN PLACE OF ITS TEXT BUBBLE: the
+                  frames draw the card alone, and the message's text ("I have
+                  some plans that might suit you.") is the fallback for anything
+                  that cannot draw the card. An unsent or moderated message
+                  shows as the ordinary bubble below, with its notice, never as
+                  a card. */}
+              {m.card && !m.deletedAt && !removal ? (
+                <div
+                  ref={(el) => {
+                    bubbleRefs.current[m.id] = el;
+                  }}
+                  onPointerDown={(e) => onBubbleDown(e, m)}
+                  onPointerMove={onBubbleMove}
+                  onPointerUp={(e) => onBubbleUp(e, m)}
+                  onPointerCancel={clearPress}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setActionsFor(m);
+                  }}
+                  className={`self-stretch select-none rounded-[18px] transition-shadow ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
+                >
+                  {/* No quote or "Forwarded" line: the server posts a card
+                      message itself (post_plans_card, confirm_hire_payment),
+                      never as a reply, and a card is not forwardable. */}
+                  <ChatCard
+                    card={m.card}
+                    mine={mine}
+                    senderName={isGroup ? nameOf(m.senderId) : thread.participantName}
+                    createdAt={m.createdAt}
+                    hiredPlanIds={hiredPlanIds}
+                    onChoose={(planId) => m.senderId && navigate(`/app/professionals/${m.senderId}?hire=${planId}`)}
+                    meta={
+                      <>
+                        {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
+                        {clockTime(m.createdAt)}
+                        {mine && !isGroup &&
+                          (tick === "read" ? (
+                            <CheckCheck size={14} aria-label="Read" className="text-tick-read-received" />
+                          ) : tick === "delivered" ? (
+                            <CheckCheck size={14} aria-label="Delivered" />
+                          ) : (
+                            <Check size={14} aria-label="Sent" />
+                          ))}
+                      </>
+                    }
+                  />
+                </div>
+              ) : (
               <div
                 ref={(el) => {
                   bubbleRefs.current[m.id] = el;
@@ -1634,6 +1757,7 @@ export const ThreadView: React.FC<{
                     ))}
                 </span>
               </div>
+              )}
               {grouped.length > 0 && !m.deletedAt && (
                 <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"}`}>
                   {grouped.map(([emoji, g]) => (
