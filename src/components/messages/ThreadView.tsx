@@ -404,12 +404,10 @@ export const ThreadView: React.FC<{
   // thread_allows_attachments and adds "and the caller is a participant", so
   // these two are asked separately rather than one being derived from the other.
   //
-  // Restore round (user, 2026-10-07): calls are back, from one Phone button in
-  // the header that opens the Foundations dropdown (Voice call / Video call).
+  // Restore round (user, 2026-10-07): calls are back. Restore round 3 (user,
+  // 2026-10-07): as two header buttons, Voice call and Video call, as on main.
   const [canCall, setCanCall] = useState(false);
   const [mediaNotice, setMediaNotice] = useState<string | null>(null);
-  /** The header's call button, while its dropdown is open; null when closed. */
-  const [callAnchor, setCallAnchor] = useState<HTMLElement | null>(null);
   const { placeCall: placeCallRemote, busy: callBusy } = useCall();
   const recorder = useVoiceRecorder();
 
@@ -1338,27 +1336,36 @@ export const ThreadView: React.FC<{
             Handshake 14) that opens MO1.2.1.5's plans. It waits on the
             offers and payments backend, which doesn't exist yet. */}
 
-        {/* CALLS (restore round, user, 2026-10-07): one Phone button beside
-            Search, the same 44 target and 17/1.75 glyph, opening the
-            Foundations dropdown (Voice call / Video call). -mr-2.5 cancels the
-            row's gap so the two 44 targets sit edge to edge.
+        {/* CALLS (restore round 3, user, 2026-10-07): two buttons beside
+            Search, as on main: Voice call and Video call, one tap each. Each
+            takes Search's own 44 target and 17/1.75 glyph in the same ink;
+            -mr-2.5 cancels the row's gap so the 44 targets sit edge to edge.
 
             Gated on canCall — asked once on open, failing closed, and not the
             enforcement: mint-call-token re-checks thread_allows_calls
             server-side. Not in a group, not with someone who left, and not
             across a block (a block stops calls both ways). */}
         {canCall && !isGroup && thread.participantId && !block.blocked && (
-          <button
-            type="button"
-            onClick={(e) => setCallAnchor(e.currentTarget)}
-            disabled={callBusy}
-            aria-label={`Call ${thread.participantName}`}
-            aria-haspopup="menu"
-            aria-expanded={!!callAnchor}
-            className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
-          >
-            <Phone size={17} strokeWidth={1.75} />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => void placeCall("voice")}
+              disabled={callBusy}
+              aria-label={`Voice call ${thread.participantName}`}
+              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+            >
+              <Phone size={17} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void placeCall("video")}
+              disabled={callBusy}
+              aria-label={`Video call ${thread.participantName}`}
+              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+            >
+              <Video size={17} strokeWidth={1.75} />
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -2005,24 +2012,6 @@ export const ThreadView: React.FC<{
         onSelect={(v) => {
           setAttachAnchor(null);
           (v === "photo" ? fileInputRef : docInputRef).current?.click();
-        }}
-      />
-
-      {/* THE CALL DROPDOWN (restore round, user, 2026-10-07): Foundations'
-          dropdown under the header's Phone button, right-aligned to it, with
-          its own sizes and dim. */}
-      <PopupMenu
-        open={!!callAnchor}
-        onClose={() => setCallAnchor(null)}
-        anchor={callAnchor}
-        align="right"
-        options={[
-          { value: "voice", label: "Voice call", icon: <Phone size={15} strokeWidth={1.75} />, disabled: callBusy },
-          { value: "video", label: "Video call", icon: <Video size={15} strokeWidth={1.75} />, disabled: callBusy },
-        ]}
-        onSelect={(v) => {
-          setCallAnchor(null);
-          void placeCall(v as CallKind);
         }}
       />
 

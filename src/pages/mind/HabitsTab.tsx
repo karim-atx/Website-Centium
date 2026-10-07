@@ -43,12 +43,8 @@ function weekOf(today: string): string[] {
 //
 // HANDOVER-COMPLETE PASS: Edit and Delete are the swipe tiles (a mouse can
 // drag them open and the keyboard opens them with ArrowLeft on a focused
-// row). Deleting still asks first: it erases the habit's history (data
-// safety).
-//
-// RESTORE ROUND 2 (user, 7 October 2026): tapping the habit (icon and name)
-// ticks it for today again, as on main; the grid's circles stay, past days
-// included.
+// row), and the habit's name is not a tick target. Deleting still asks first:
+// it erases the habit's history (data safety).
 //
 // RESTORE ROUND (user, 7 October 2026): the ⋮ and the long-press /
 // right-click menu are back (D12), with the same Edit / Delete as before, in
@@ -191,8 +187,7 @@ export default function HabitsTab() {
         onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
-          {/* Tapping the habit still ticks today, as it always has. */}
-          <button onClick={() => toggleHabit(h.id)} className="tap flex items-center gap-2.5 flex-1 min-w-0 self-stretch text-left">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
               <Icon size={14} className="text-primary-dark" />
             </span>
@@ -207,7 +202,7 @@ export default function HabitsTab() {
                 </span>
               )}
             </span>
-          </button>
+          </div>
           {/* D12 (restore round): the keyboard and mouse path to Edit /
               Delete. The 16 pt ⋮ in text.muted (its pre-redesign colour) keeps
               its 20 pt column so the seven day columns keep their pitch; the

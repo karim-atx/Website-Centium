@@ -454,32 +454,6 @@ export default function ClientCalendarTab() {
     );
   };
 
-  // Iteration 6 "Team" §5 Calendar: a "Next up" hero — the real nearest
-  // upcoming event (today or later), not the mockup's fixed example.
-  const nextUp = useMemo(() => {
-    const nowMinutes = today.getHours() * 60 + today.getMinutes();
-    const todayIso = toISO(today.getFullYear(), today.getMonth(), today.getDate());
-    const candidates = events
-      .filter((e) => e.date > todayIso || (e.date === todayIso && !e.allDay && minutesOf(e.endTime) >= nowMinutes))
-      .sort((a, b) => (a.date === b.date ? minutesOf(a.startTime) - minutesOf(b.startTime) : a.date < b.date ? -1 : 1));
-    const e = candidates[0];
-    if (!e) return null;
-    const isToday = e.date === todayIso;
-    const dayLabel = isToday
-      ? "Today"
-      : new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
-    const when = e.allDay ? "All day" : `${dayLabel} ${range24(e.startTime, e.endTime)}`;
-    let rel = "";
-    if (isToday && !e.allDay) {
-      const diffH = Math.max(0, Math.round(((minutesOf(e.startTime) - nowMinutes) / 60) * 10) / 10);
-      rel = diffH < 1 ? "soon" : `in ${Math.round(diffH)}h`;
-    } else if (!isToday) {
-      const diffDays = Math.round((new Date(`${e.date}T00:00:00`).getTime() - new Date(`${todayIso}T00:00:00`).getTime()) / 86400000);
-      rel = `in ${diffDays}d`;
-    }
-    return { event: e, when: e.location ? `${when} · ${e.location}` : when, rel };
-  }, [events, today]);
-
   const selectedEvents = eventsByDate[selectedDate] ?? [];
   const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -826,29 +800,6 @@ export default function ClientCalendarTab() {
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* "Next up": the real nearest event, not the mockup's fixed
-              example — hidden entirely when there is nothing upcoming to
-              show. Not drawn on MO1.6, kept (B30); decision 23 (item 47)
-              moved it under the day's event list, so the month card sits
-              under the tabs as drawn. */}
-          {nextUp && (
-            <div
-              className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mt-[13px]"
-              style={{ background: "var(--gradient-board)" }}
-            >
-              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white/[0.8]">Next up</p>
-              <div className="flex items-end justify-between gap-3 mt-[9px]">
-                <div className="min-w-0">
-                  <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
-                  <p className="mt-[5px] text-[10.5px] text-white/[0.78]">{nextUp.when}</p>
-                </div>
-                {nextUp.rel && (
-                  <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{nextUp.rel}</span>
-                )}
-              </div>
             </div>
           )}
         </>
