@@ -1451,6 +1451,9 @@ export interface Recipe {
 export interface JournalFolder {
   id: string;
   name: string;
+  /** MO1.1.2.1's Lock (backend stage 3): entries hidden until the password
+   *  opens a window. Absent on folders from the old local store. */
+  locked?: boolean;
 }
 
 export interface JournalEntry {

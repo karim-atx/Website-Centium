@@ -145,7 +145,12 @@ import {
   getJournalFolders,
   updateJournalEntryRemote,
   updateJournalFolderRemote,
+  lockJournalFolderRemote,
+  unlockJournalFolderRemote,
+  disableJournalFolderLockRemote,
+  type LockOutcome,
 } from "../services/journal";
+import { isFolderOpen, liveWindows, msUntilNextExpiry, type UnlockWindows } from "../services/journal/lockLogic";
 import {
   getAchievements,
   getPointsSummary,
@@ -178,6 +183,7 @@ import {
 import {
   cancelAccountDeletion as cancelAccountDeletionRemote,
   onPasswordRecovery,
+  onSignedOut,
   requestAccountDeletion,
 } from "../services/auth";
 import {
@@ -191,6 +197,8 @@ import {
 } from "../services/food";
 import { isAdminAccount } from "../services/admin";
 import { isMfaChallengePending } from "../services/mfa";
+
+const MFA_RECOVERY_PASS_KEY = "centium-mfa-recovery-pass";
 import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
 import { ensureProfileRow, fetchProfile, updatePlantSpecies } from "../services/profile";
 import {
@@ -445,6 +453,10 @@ interface AppState {
   // Re-reads the assurance level after a challenge, an enrolment, or a
   // turn-off — none of which change the account this is keyed to.
   refreshMfaState: () => Promise<void>;
+  // MO1.8.4 recovery codes: a redeemed code lets this account past the
+  // challenge for the rest of this tab's session (the server can't raise it
+  // to aal2; see services/recoveryCodes).
+  passMfaWithRecoveryCode: () => void;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -460,7 +472,22 @@ interface AppState {
   notificationPrefs: Record<
     "mealReminders" | "workoutReminders" | "streakAlerts" | "professionalMessages" | "weeklySummary",
     boolean
-  >;
+  > &
+    // MO1.8.3 (handover-complete pass): the frame's other rows and Quiet
+    // hours, kept on this device like the five above. Nothing sends these
+    // yet (no columns, no senders); the server's message push ignores them.
+    Record<
+      | "waterReminders"
+      | "habitReminders"
+      | "journalReminders"
+      | "forumReplies"
+      | "forumMentions"
+      | "calendarEvents"
+      | "membershipUpdates"
+      | "referralRewards"
+      | "quietHours",
+      boolean
+    > & { quietFrom: string; quietTo: string };
   updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
 
   // Future Supabase migration: device_presentation_settings (per-platform,
@@ -649,7 +676,9 @@ interface AppState {
    * nothing until one is tapped.
    */
   habitSuggestions: { label: string; icon: HabitIconKey }[];
-  toggleHabit: (id: string) => void;
+  /** Ticks or unticks a habit for `date` (default today; MO1.1.1 ticks any
+   *  day of the week up to today). A later date is ignored. */
+  toggleHabit: (id: string, date?: string) => void;
   addHabit: (label: string, icon: HabitIconKey) => void;
   removeHabit: (id: string) => void;
   renameHabit: (id: string, label: string) => void;
@@ -913,10 +942,20 @@ interface AppState {
   addJournalFolder: (name: string) => void;
   /** MO1.1.2.1 folder options. */
   renameJournalFolder: (id: string, name: string) => void;
-  /** Moves the folder one place left (-1) or right (+1) in the tab order. */
-  moveJournalFolder: (id: string, step: -1 | 1) => void;
+  /** Moves the folder `step` places along the tab order (-1 one left, +1 one
+   *  right, larger steps straight to that place; the others close up). */
+  moveJournalFolder: (id: string, step: number) => void;
   /** Deletes the folder and, by the schema's cascade, every entry in it. */
   removeJournalFolder: (id: string) => void;
+  /** Stage 3 folder lock: folder id → the end of its open unlock window
+   *  (only windows this tab opened; a lapsed one is dropped). */
+  journalUnlockedUntil: UnlockWindows;
+  /** MO1.1.2.1 Lock: no password. Resolves to null, or the error sentence. */
+  lockJournalFolder: (id: string) => Promise<string | null>;
+  /** MO1.1.2.2 unlock: re-enter the account password, five-minute window. */
+  unlockJournalFolder: (id: string, password: string) => Promise<LockOutcome>;
+  /** Removes the lock for good, behind the same password check. */
+  disableJournalFolderLock: (id: string, password: string) => Promise<LockOutcome>;
 
   bloodMarkers: BloodMarker[];
   /** Panels carrying an uploaded report, newest first. Empty when none do. */
@@ -1832,8 +1871,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void resolveMfa(authUserId);
   }, [authUserId, authReady, resolveMfa]);
 
+  // A recovery code spent at the challenge (stage 1). It cannot make the
+  // session aal2, only GoTrue can, so the pass is remembered for this tab's
+  // session, keyed to the account: a reload doesn't ask for a second code,
+  // a new sign-in (or another account) does.
+  const [recoveryPassFor, setRecoveryPassFor] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(MFA_RECOVERY_PASS_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const clearRecoveryPass = useCallback(() => {
+    setRecoveryPassFor(null);
+    try {
+      sessionStorage.removeItem(MFA_RECOVERY_PASS_KEY);
+    } catch {
+      /* storage blocked */
+    }
+  }, []);
+  // The pass belongs to one sign-in. Any sign-out ends it, even one followed
+  // at once by a new sign-in to the same account (which never shows React a
+  // signed-out render), and so does another account signing in.
+  useEffect(() => onSignedOut(clearRecoveryPass), [clearRecoveryPass]);
+  useEffect(() => {
+    if (authReady && recoveryPassFor && recoveryPassFor !== authUserId) clearRecoveryPass();
+  }, [authReady, authUserId, recoveryPassFor, clearRecoveryPass]);
+  const passMfaWithRecoveryCode = useCallback(() => {
+    if (!authUserId) return;
+    setRecoveryPassFor(authUserId);
+    try {
+      sessionStorage.setItem(MFA_RECOVERY_PASS_KEY, authUserId);
+    } catch {
+      /* storage blocked: the pass still holds until a reload */
+    }
+  }, [authUserId]);
+
   const mfaReady = authReady && mfaFor?.userId === authUserId;
-  const mfaPending = mfaReady ? (mfaFor?.pending ?? false) : false;
+  const mfaPending = mfaReady ? (mfaFor?.pending ?? false) && recoveryPassFor !== authUserId : false;
 
   /**
    * Re-reads the assurance level after something changed it.
@@ -2054,6 +2129,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       streakAlerts: true,
       professionalMessages: true,
       weeklySummary: true,
+      // MO1.8.3's drawn positions (Water and Journal off), except Quiet
+      // hours: off until a sender honours it, so it never claims a silence
+      // the message push would break.
+      waterReminders: false,
+      habitReminders: true,
+      journalReminders: false,
+      forumReplies: true,
+      forumMentions: true,
+      calendarEvents: true,
+      membershipUpdates: true,
+      referralRewards: true,
+      quietHours: false,
+      quietFrom: "22:00",
+      quietTo: "07:00",
     }
   );
   const updateNotificationPrefs: AppState["updateNotificationPrefs"] = (patch) =>
@@ -2395,6 +2484,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [journalLoading, setJournalLoading] = useState(true);
   const [journalError, setJournalError] = useState<string | null>(null);
+  const [journalUnlockedUntil, setJournalUnlockedUntil] = useState<UnlockWindows>({});
 
   // NO LONGER SEEDED FROM THE MOCK PANEL. Those five markers carried invented
   // values, ranges, statuses and three-point histories that the server has
@@ -4705,9 +4795,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // THE DATE IS `today` — the user's own local date, which is what the
   // completion is stored under. Not the server's: that lesson cost the cycle
   // read path a whole migration.
-  const toggleHabit = (id: string) => {
+  const toggleHabit = (id: string, date?: string) => {
+    const day = date ?? today;
+    if (day > today) return;
     const dates = habitSnapshot.completions[id] ?? [];
-    const nowDone = !isDoneOn(dates, today);
+    const nowDone = !isDoneOn(dates, day);
 
     setHabitSnapshot((prev) => {
       const current = prev.completions[id] ?? [];
@@ -4715,12 +4807,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...prev,
         completions: {
           ...prev.completions,
-          [id]: nowDone ? [...current, today] : current.filter((d) => d !== today),
+          [id]: nowDone ? [...current, day] : current.filter((d) => d !== day),
         },
       };
     });
 
-    void setCompletion(id, today, nowDone).then((result) => {
+    void setCompletion(id, day, nowDone).then((result) => {
       // Only a tick can earn one: the habit_days ladder counts distinct days
       // with a completion, and un-ticking removes the row it would count.
       if (result.ok) {
@@ -4734,7 +4826,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...prev,
           completions: {
             ...prev.completions,
-            [id]: nowDone ? current.filter((d) => d !== today) : [...current, today],
+            [id]: nowDone ? current.filter((d) => d !== day) : [...current, day],
           },
         };
       });
@@ -4853,9 +4945,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const journalOk = folderResult.ok && entryResult.ok;
       if (journalOk) {
         setJournalError(null);
-        setJournalFolders(folderResult.value.map((f) => ({ id: f.id, name: f.name })));
+        setJournalFolders(folderResult.value.map((f) => ({ id: f.id, name: f.name, locked: f.locked })));
+        // A LOCKED FOLDER STARTS SHUT. The server returns its entries only
+        // while a window is live (say, one opened before a reload); this tab
+        // doesn't know when that window ends, so it asks for the password
+        // again rather than holding entries it can't time out.
+        const shut = new Set(folderResult.value.filter((f) => f.locked).map((f) => f.id));
         setJournalEntries(
-          entryResult.value.map((e) => ({
+          entryResult.value.filter((e) => !shut.has(e.folderId)).map((e) => ({
             id: e.id,
             folderId: e.folderId,
             title: e.title,
@@ -4925,7 +5022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ]);
         if (cancelled) return;
         if (again.ok) setHabitSnapshot(again.value);
-        if (foldersAgain.ok) setJournalFolders(foldersAgain.value.map((f) => ({ id: f.id, name: f.name })));
+        if (foldersAgain.ok) setJournalFolders(foldersAgain.value.map((f) => ({ id: f.id, name: f.name, locked: f.locked })));
         if (entriesAgain.ok) {
           setJournalEntries(
             entriesAgain.value.map((e) => ({
@@ -5740,12 +5837,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // a position, and swapping only their values would leave the order between
   // them up to the database. Writing 0..n-1 makes the stored order exactly
   // the order on screen. Folders are few, so this is a handful of updates.
-  const moveJournalFolder = (id: string, step: -1 | 1) => {
+  const moveJournalFolder = (id: string, step: number) => {
     const from = journalFolders.findIndex((f) => f.id === id);
     const to = from + step;
-    if (from < 0 || to < 0 || to >= journalFolders.length) return;
+    if (from < 0 || step === 0 || to < 0 || to >= journalFolders.length) return;
     const next = [...journalFolders];
-    [next[from], next[to]] = [next[to], next[from]];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
     setJournalFolders(next);
     void Promise.all(next.map((f, position) => updateJournalFolderRemote(f.id, { position }))).then((results) => {
       const failed = results.find((r) => !r.ok);
@@ -5762,8 +5860,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setJournalError(null);
       setJournalFolders((prev) => prev.filter((f) => f.id !== id));
       setJournalEntries((prev) => prev.filter((e) => e.folderId !== id));
+      setJournalUnlockedUntil((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     });
   };
+
+  // --- the folder lock (backend stage 3) -------------------------------------
+  //
+  // THE SERVER DECIDES WHAT IS READABLE. While a folder is locked its entries
+  // come back from no query until unlock_journal_folder opens a window, so
+  // after every change of lock state the entries are RE-READ rather than
+  // patched by hand: the list on screen is then exactly what RLS allows. A
+  // locked folder's entries that this tab can't time out are left out.
+  const refetchJournalEntries = async (windows: UnlockWindows, folders: JournalFolder[]) => {
+    const result = await getJournalEntries();
+    if (!result.ok) {
+      setJournalError(result.message);
+      return;
+    }
+    const now = Date.now();
+    const shut = new Set(
+      folders.filter((f) => !isFolderOpen(f, windows, now)).map((f) => f.id)
+    );
+    setJournalEntries(
+      result.value
+        .filter((e) => !shut.has(e.folderId))
+        .map((e) => ({ id: e.id, folderId: e.folderId, title: e.title, text: e.body, date: e.entryDate, createdAt: e.createdAt }))
+    );
+  };
+
+  const lockJournalFolder = async (id: string) => {
+    const result = await lockJournalFolderRemote(id);
+    if (!result.ok) return result.message;
+    // The server closed any open window too, so the entries leave with it.
+    setJournalUnlockedUntil((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setJournalFolders((prev) => prev.map((f) => (f.id === id ? { ...f, locked: true } : f)));
+    setJournalEntries((prev) => prev.filter((e) => e.folderId !== id));
+    return null;
+  };
+
+  const unlockJournalFolder = async (id: string, password: string): Promise<LockOutcome> => {
+    const result = await unlockJournalFolderRemote(id, password);
+    if (!result.ok || !result.unlockedUntil) return result;
+    // Re-unlocking replaces the window rather than extending it.
+    const windows = { ...liveWindows(journalUnlockedUntil, Date.now()), [id]: result.unlockedUntil };
+    setJournalUnlockedUntil(windows);
+    await refetchJournalEntries(windows, journalFolders);
+    return result;
+  };
+
+  const disableJournalFolderLock = async (id: string, password: string): Promise<LockOutcome> => {
+    const result = await disableJournalFolderLockRemote(id, password);
+    if (!result.ok) return result;
+    const windows = { ...journalUnlockedUntil };
+    delete windows[id];
+    const folders = journalFolders.map((f) => (f.id === id ? { ...f, locked: false } : f));
+    setJournalUnlockedUntil(windows);
+    setJournalFolders(folders);
+    await refetchJournalEntries(windows, folders);
+    return result;
+  };
+
+  // THE WINDOW ENDS ON THE SERVER; THE SCREEN FOLLOWS IT. Nothing here can
+  // extend a window. When the soonest one lapses it is dropped and the
+  // entries re-read, which takes that folder's entries away (RLS returns
+  // none), so the locked view comes back on its own.
+  const journalLockRef = useRef({ folders: journalFolders, refetch: refetchJournalEntries });
+  useEffect(() => {
+    journalLockRef.current = { folders: journalFolders, refetch: refetchJournalEntries };
+  });
+  useEffect(() => {
+    const ms = msUntilNextExpiry(journalUnlockedUntil, Date.now());
+    if (ms === null) return;
+    const timer = window.setTimeout(() => {
+      const windows = liveWindows(journalUnlockedUntil, Date.now());
+      setJournalUnlockedUntil(windows);
+      void journalLockRef.current.refetch(windows, journalLockRef.current.folders);
+    }, ms + 250);
+    return () => window.clearTimeout(timer);
+  }, [journalUnlockedUntil]);
 
   const recordBiomarkers: AppState["recordBiomarkers"] = async (entries, file) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to save results." };
@@ -6188,6 +6370,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mfaPending,
       mfaReady,
       refreshMfaState,
+      passMfaWithRecoveryCode,
       theme,
       toggleTheme,
       language,
@@ -6337,6 +6520,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       renameJournalFolder,
       moveJournalFolder,
       removeJournalFolder,
+      journalUnlockedUntil,
+      lockJournalFolder,
+      unlockJournalFolder,
+      disableJournalFolderLock,
       bloodMarkers,
       labReports,
       recordBiomarkers,
@@ -6460,6 +6647,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mfaPending,
       mfaReady,
       refreshMfaState,
+      passMfaWithRecoveryCode,
       theme,
       language,
       notificationPrefs,
@@ -6535,6 +6723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       journalLoading,
       journalError,
       journalEntries,
+      journalUnlockedUntil,
       bloodMarkers,
       // Was missing since labReports was added to the context, which made the
       // Lab reports list update only on hydration: both writers set it AFTER

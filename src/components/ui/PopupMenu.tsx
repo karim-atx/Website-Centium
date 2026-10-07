@@ -53,6 +53,12 @@ interface PopupMenuProps<V extends string> {
    */
   backdrop?: boolean;
   /**
+   * The backdrop's opacity over rgb(36,31,27) when a frame draws other than
+   * Foundations' 0.18 (MO1.2.1.3.4's attach popup: 0.4). Unset leaves every
+   * other menu as it is.
+   */
+  dim?: number;
+  /**
    * The option notes' type when a frame draws other than 10.5/500 (MO1.2.1.3.4:
    * 11/400 on a 15 line). Unset leaves every other menu as it is.
    */
@@ -114,6 +120,7 @@ export function PopupMenu<V extends string>({
   heading,
   variant = "tint",
   backdrop = true,
+  dim = 0.18,
   noteType,
   gap = GAP,
   rowLineHeight,
@@ -163,7 +170,7 @@ export function PopupMenu<V extends string>({
       <div
         className="absolute inset-0"
         onClick={onClose}
-        style={backdrop ? { background: "rgba(36,31,27,0.18)", animation: "fade-in .2s ease both" } : { background: "transparent" }}
+        style={backdrop ? { background: `rgba(36,31,27,${dim})`, animation: "fade-in .2s ease both" } : { background: "transparent" }}
       />
       <div
         role="menu"
