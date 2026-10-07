@@ -96,6 +96,19 @@ export interface MessageThread {
   unreadCount: number;
   /** When the caller last read this thread, or null if never. */
   lastReadAt: string | null;
+  /**
+   * A chat about one gym or studio (MO1.4.2.6; Database start_venue_thread,
+   * my_conversations' venue columns). Null for every other thread. The member
+   * sees the venue as the chat (its name, initials or logo); the owner sees
+   * the member's name with the venue as context ("Lina · Flex Gym").
+   */
+  venue: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
+}
+
+/** The letters an avatar shows when there's no photo: the venue's initials on the member side. */
+export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue">): string {
+  if (thread.venue?.memberSide) return thread.venue.initials;
+  return thread.participantName.trim().charAt(0).toUpperCase();
 }
 
 export interface Message {
@@ -389,6 +402,54 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
 }
 
 /**
+ * The caller's chat about one gym or studio (MO1.4.2.6), created on first use:
+ * one per member and venue, separate from any direct chat with the owner
+ * (Database start_venue_thread). The generated types come from production,
+ * where this function isn't yet, hence the narrow cast.
+ */
+export async function startVenueThread(gymId: string): Promise<StartThreadResult> {
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+  const { data, error } = await rpc("start_venue_thread", { p_gym_id: gymId });
+  if (error) {
+    console.error("[messaging] Could not start venue thread:", error.message);
+    if (error.code === "ATX02") {
+      return { ok: false, message: "You've started several new conversations recently. Try again in a little while." };
+    }
+    if (error.code === "ATX79") return { ok: false, message: "This gym isn't taking new messages right now." };
+    if (error.code === "22023") return { ok: false, message: "This is your own gym." };
+    return { ok: false, message: describe(error as Parameters<typeof describe>[0]) };
+  }
+  const id = typeof data === "string" ? data : (data as { id?: string } | null)?.id;
+  if (!id) return { ok: false, message: "Could not open that conversation." };
+  return { ok: true, threadId: id };
+}
+
+/** Which of these venues the caller owns (through business_profiles), for the owner-side title. */
+async function venuesOwnedByMe(venueIds: string[]): Promise<Set<string>> {
+  const mine = new Set<string>();
+  if (venueIds.length === 0) return mine;
+  const { data: auth } = await supabase.auth.getSession();
+  const me = auth.session?.user.id;
+  if (!me) return mine;
+  const from = supabase.from.bind(supabase) as unknown as (t: string) => {
+    select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null }> };
+  };
+  const { data: gyms } = await from("gyms").select("id, business_id").in("id", venueIds);
+  const rows = (gyms ?? []) as { id: string; business_id: string | null }[];
+  const businessIds = [...new Set(rows.map((g) => g.business_id).filter((b): b is string => !!b))];
+  if (businessIds.length === 0) return mine;
+  const { data: owners } = await from("business_profiles").select("id, profile_id").in("id", businessIds);
+  const ownedBusinesses = new Set(
+    ((owners ?? []) as { id: string; profile_id: string | null }[]).filter((b) => b.profile_id === me).map((b) => b.id)
+  );
+  for (const g of rows) if (g.business_id && ownedBusinesses.has(g.business_id)) mine.add(g.id);
+  return mine;
+}
+
+/**
  * Every conversation the caller is in, newest activity first.
  *
  * ONE CALL, my_conversations() (Database 20261001000000). It returns each
@@ -409,7 +470,24 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     return { ok: false, message: describe(error) };
   }
 
-  const threads: MessageThread[] = (data ?? []).map((r) => ({
+  // The venue columns are newer than the generated types (production).
+  type VenueCols = { venue_id?: string | null; venue_name?: string | null; venue_initials?: string | null; venue_logo_url?: string | null };
+  const venueIds = [...new Set((data ?? []).map((r) => (r as VenueCols).venue_id).filter((v): v is string => !!v))];
+  const owned = await venuesOwnedByMe(venueIds);
+
+  const threads: MessageThread[] = (data ?? []).map((r) => {
+    const v = r as VenueCols;
+    const venue =
+      v.venue_id && v.venue_name
+        ? {
+            id: v.venue_id,
+            name: v.venue_name,
+            initials: v.venue_initials?.trim() || v.venue_name.trim().charAt(0).toUpperCase(),
+            logoUrl: v.venue_logo_url ?? null,
+            memberSide: !owned.has(v.venue_id),
+          }
+        : null;
+    const base: MessageThread = {
     id: r.thread_id,
     // A null id means no profiles row exists, which is a deleted account (the
     // function LEFT JOINs profiles). A present id with no first name is a real
@@ -448,7 +526,14 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     lastMessageSenderId: r.last_message_sender_id,
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
-  }));
+    venue,
+    };
+    if (!venue) return base;
+    // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".
+    return venue.memberSide
+      ? { ...base, participantName: venue.name, participantAvatarUrl: venue.logoUrl }
+      : { ...base, participantName: `${base.participantName} · ${venue.name}` };
+  });
   return { ok: true, threads };
 }
 

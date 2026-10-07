@@ -9,7 +9,7 @@ import { FileCard } from "./FileCard";
 import { LoadMoreSentinel } from "./LoadMoreSentinel";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { clockTime, listTime } from "./chatTime";
-import { describeMessage, type MessageThread } from "../../services/messaging";
+import { describeMessage, threadInitials, type MessageThread } from "../../services/messaging";
 import {
   fetchGallery,
   fetchStarredMessages,
@@ -243,7 +243,7 @@ export const ChatInfo: React.FC<{
           {thread.participantAvatarUrl ? (
             <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
           ) : thread.participantName ? (
-            thread.participantName.trim().charAt(0).toUpperCase()
+            threadInitials(thread)
           ) : (
             <PERSON_ICON size={26} />
           )}

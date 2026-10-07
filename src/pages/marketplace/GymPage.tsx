@@ -28,7 +28,7 @@ import { initials } from "../../components/professionals/typeColour";
 import { MembershipPass } from "../../components/marketplace/MembershipPass";
 import { MemberTag } from "../../components/marketplace/MemberTag";
 import { GymReviews } from "../../components/marketplace/GymReviews";
-import { startThread } from "../../services/messaging";
+import { startVenueThread } from "../../services/messaging";
 import {
   fetchBusinessOwner,
   fetchMyGymMemberships,
@@ -65,7 +65,8 @@ import { DetailHero, DetailLabel, MapCard } from "./venueParts";
 // - Cover photo, logo upload, opening hours, amenities: no columns in 4a.
 // - Reviews (4d) are GymReviews.tsx; the rating pill reads
 //   gym_review_summary(). Message (4d) starts the normal thread with the
-//   business owner's profile (start_message_thread) and opens it in
+//   venue's own thread (start_venue_thread: one per member and venue,
+//   titled with the venue, separate from any direct chat with the owner) and opens it in
 //   Messages; MO1.4.2.6's gym-styled empty thread (suggested questions,
 //   "Usually replies within an hour") isn't built: the thread view is shared
 //   and no reply-time data exists.
@@ -350,7 +351,7 @@ export function GymPage({ gymId }: { gymId: string }) {
             ? async () => {
                 setMsgBusy(true);
                 setMsgError(null);
-                const r = await startThread(owner);
+                const r = await startVenueThread(gym.id);
                 if (!r.ok) {
                   setMsgBusy(false);
                   setMsgError(r.message);

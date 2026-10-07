@@ -70,6 +70,7 @@ import {
   setPin,
   setStarred,
   threadAllowsAttachments,
+  threadInitials,
   type Message,
   type MessageThread,
   type Pin as ThreadPin,
@@ -1265,7 +1266,7 @@ export const ThreadView: React.FC<{
             {thread.participantAvatarUrl ? (
               <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              thread.participantName.trim().charAt(0).toUpperCase()
+              threadInitials(thread)
             )}
           </span>
           )}
