@@ -76,6 +76,42 @@ picks the right `<base>` at runtime instead of hardcoding one at build
 time — see [Deployment](#deployment) below for why. The dev server stays
 at `/` so local URLs don't need any prefix.
 
+## Checking UPDATE grants
+
+```bash
+npm run audit:grants
+```
+
+Cross-checks every Supabase `.update()` payload in `src/` against the
+column-level UPDATE grant its table actually holds, and exits non-zero if one
+names a column it has not been granted.
+
+**This is not a style check.** No table in this schema has a table-level
+UPDATE grant — every one is column-scoped — and a column-level grant is
+checked at *plan* time. Naming one ungranted column does not quietly drop
+that field: it fails the whole statement with `42501`, for every user, every
+time. Nothing in the type system can see it, because the generated `Row`
+types describe columns and say nothing about privileges. It is invisible
+until it runs against a real grant, which is how `recipes.updated_at` reached
+production and broke recipe editing outright.
+
+**It needs a database, which is why it is not part of `npm test`.** Grants
+are read live rather than copied from the migrations, since those live in the
+Database repo and a copy here would go stale exactly when it mattered. It
+only reads `information_schema`, so a read-only role is enough.
+
+```bash
+# defaults to the local Supabase stack
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npm run audit:grants
+```
+
+Payloads it cannot resolve — a conditional, a helper imported from another
+file, a table chosen by variable — are listed under **needs a human** and do
+*not* fail the run. They are a gap in the reader, not a proven bug, and
+failing on them would train people to ignore the output. They are counted out
+loud for the same reason. The script is deliberately wrong in one direction
+only: anything uncertain becomes "needs a human", never a violation.
+
 ## Deployment
 
 Centium and the "hub of apps" landing page it's linked from now deploy

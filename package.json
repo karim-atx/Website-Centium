@@ -10,7 +10,8 @@
     "gen:themes": "node scripts/themes/generate.mjs",
     "test": "node --import ./scripts/register-test-hooks.mjs --test \"src/**/*.test.ts\"",
     "preview": "vite preview",
-    "gen:types": "npx --yes supabase@2.117.0 gen types typescript --project-id mwnkhhyrheprugeornjl --schema public > lib/supabase/database.types.ts && node -e \"require('fs').rmSync('supabase/.temp',{recursive:true,force:true})\""
+    "gen:types": "npx --yes supabase@2.117.0 gen types typescript --project-id mwnkhhyrheprugeornjl --schema public > lib/supabase/database.types.ts && node -e \"require('fs').rmSync('supabase/.temp',{recursive:true,force:true})\"",
+    "audit:grants": "node scripts/audit-grants.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
     "@types/piexifjs": "^1.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -37,6 +39,7 @@
     "autoprefixer": "^10.5.4",
     "dotenv": "^18.0.3",
     "oxlint": "^1.75.0",
+    "pg": "^8.23.1",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.19",
     "typescript": "~6.0.2",
