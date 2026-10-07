@@ -3,9 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { formatDisplayDate } from "../../utils/date";
 import { fetchDeletionSchedule } from "../../services/profile";
-
-/** Only the fallback when deletion_due_at cannot be read (see below). */
-const GRACE_PERIOD_DAYS = 30;
+import { deletionRunDate } from "../../services/profile/deletionDate";
 
 /**
  * Shown on every screen while an account is inside its deletion grace period.
@@ -48,9 +46,7 @@ export const PendingDeletionBanner: React.FC = () => {
   // weeks late for an admin's 3-day notice.
   const loaded = !!schedule && schedule.for === deletionRequestedAt;
   const dueAt = loaded ? schedule.dueAt : null;
-  const scheduled = new Date(dueAt ?? deletionRequestedAt);
-  if (!dueAt) scheduled.setUTCDate(scheduled.getUTCDate() + GRACE_PERIOD_DAYS);
-  const scheduledDate = scheduled.toISOString().slice(0, 10);
+  const scheduledDate = deletionRunDate(deletionRequestedAt, dueAt);
 
   const handleCancel = async () => {
     if (busy) return;
