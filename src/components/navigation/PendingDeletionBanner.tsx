@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { formatDisplayDate } from "../../utils/date";
-
-const GRACE_PERIOD_DAYS = 30;
+import { fetchDeletionSchedule } from "../../services/profile";
+import { deletionRunDate } from "../../services/profile/deletionDate";
 
 /**
  * Shown on every screen while an account is inside its deletion grace period.
@@ -15,18 +15,38 @@ const GRACE_PERIOD_DAYS = 30;
  * the screen they requested it from.
  */
 export const PendingDeletionBanner: React.FC = () => {
-  const { deletionRequestedAt, cancelDeletion } = useApp();
+  const { deletionRequestedAt, cancelDeletion, authUserId } = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A7: profiles.deletion_due_at, read for this request (stamped with it, so a
+  // new request never shows the previous one's date).
+  const [schedule, setSchedule] = useState<{ for: string; dueAt: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!deletionRequestedAt || !authUserId) return;
+    let cancelled = false;
+    void fetchDeletionSchedule(authUserId).then((r) => {
+      if (!cancelled) setSchedule({ for: deletionRequestedAt, dueAt: r?.dueAt ?? null });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [deletionRequestedAt, authUserId]);
 
   if (!deletionRequestedAt) return null;
 
-  // The sweep runs daily at 03:00 UTC, so the real deletion lands between 30
-  // and 31 days out. The date shown is the earliest it could happen, which is
-  // the one that matters to someone deciding whether to cancel.
-  const scheduled = new Date(deletionRequestedAt);
-  scheduled.setUTCDate(scheduled.getUTCDate() + GRACE_PERIOD_DAYS);
-  const scheduledDate = scheduled.toISOString().slice(0, 10);
+  // THE DATE IS THE SERVER'S (A7). An admin can schedule a deletion on 3 or
+  // 14 days' notice, so request + 30 would show a date weeks after the
+  // account is gone. deletion_due_at is what the sweep uses; only when it
+  // cannot be read does this fall back to request + 30, which is then also
+  // what the sweep uses (coalesce(deletion_due_at, requested + 30 days)).
+  // The sweep runs daily at 03:00 UTC, so this is the earliest it can happen,
+  // the date that matters to someone deciding whether to cancel.
+  // Until the read answers, no date at all: a fallback shown first could be
+  // weeks late for an admin's 3-day notice.
+  const loaded = !!schedule && schedule.for === deletionRequestedAt;
+  const dueAt = loaded ? schedule.dueAt : null;
+  const scheduledDate = deletionRunDate(deletionRequestedAt, dueAt);
 
   const handleCancel = async () => {
     if (busy) return;
@@ -46,8 +66,9 @@ export const PendingDeletionBanner: React.FC = () => {
             Your account is scheduled for deletion
           </p>
           <p className="text-[11.5px] text-charcoal-soft mt-0.5">
-            It will be deleted on {formatDisplayDate(scheduledDate)}, along with your food
-            logs, workouts and health data. Cancel any time before then to keep it.
+            {loaded
+              ? `It will be deleted on ${formatDisplayDate(scheduledDate)}, along with your food logs, workouts and health data. Cancel any time before then to keep it.`
+              : "It will be deleted along with your food logs, workouts and health data. Cancel to keep it."}
           </p>
           {error && (
             <p className="text-[11.5px] font-semibold text-status-high mt-1.5">{error}</p>

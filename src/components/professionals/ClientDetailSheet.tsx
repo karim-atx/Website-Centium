@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
@@ -50,6 +50,8 @@ import { HealthDataPending } from "./HealthDataPending";
 import { ClientClinicalRecords, type ClinicalFileRequest } from "./ClientClinicalRecords";
 import { FileViewerSheet } from "../health/FileViewerSheet";
 import { nutritionLine } from "../../utils/nutritionDisplay";
+import { fetchClientSocialHandles } from "../../services/profile/socialHandles";
+import { instagramUrl, xUrl, type SocialHandles } from "../../services/profile/socialHandleRules";
 
 const activityTypeLabel: Record<string, string> = {
   cardio: "Cardio",
@@ -93,8 +95,26 @@ export const ClientDetailSheet: React.FC<{
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<ClinicalFileRequest | null>(null);
   const [editingPrefs, setEditingPrefs] = useState(false);
+  // Stage A1: the client's own Instagram and X, through
+  // client_social_handles. Null (shows nothing) for ATX96 (not your client,
+  // including a disconnected one), ATX97 (under 18), any failure, and a
+  // client who set neither: never an empty "not set" field.
+  const [handles, setHandles] = useState<{ for: string; value: SocialHandles } | null>(null);
+  const clientProfileId = client?.clientId;
+  useEffect(() => {
+    if (!open || !clientProfileId) return;
+    let cancelled = false;
+    void fetchClientSocialHandles(clientProfileId).then((h) => {
+      if (!cancelled) setHandles(h ? { for: clientProfileId, value: h } : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, clientProfileId]);
 
   if (!client) return null;
+  // Only the handles fetched for THIS client, never a previous one's.
+  const social = handles && handles.for === client.clientId ? handles.value : null;
 
   // Now calls disconnect_client_relationship(). The two-tap confirm is
   // unchanged; only what the second tap does has changed — it ends a real
@@ -163,6 +183,39 @@ export const ClientDetailSheet: React.FC<{
             <p className="text-xs text-charcoal-faint">Client since {formatDisplayDate(client.joinedAt)}</p>
           </div>
         </div>
+
+        {/* Stage A1: the client's Instagram and X, only when returned. No
+            handover frame draws this sheet, so it takes the sheet's own card
+            and section-label style (flagged in the report). */}
+        {social && (
+          <div className="bg-cream-soft rounded-2xl p-4">
+            <p className="section-label text-charcoal-faint mb-2">Social</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {social.instagram && (
+                <a
+                  href={instagramUrl(social.instagram)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Instagram @${social.instagram} (opens in a new tab)`}
+                  className="text-sm font-semibold text-charcoal underline decoration-primary-dark/60 underline-offset-2"
+                >
+                  Instagram @{social.instagram}
+                </a>
+              )}
+              {social.x && (
+                <a
+                  href={xUrl(social.x)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`X @${social.x} (opens in a new tab)`}
+                  className="text-sm font-semibold text-charcoal underline decoration-primary-dark/60 underline-offset-2"
+                >
+                  X @{social.x}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Task X: NOTHING HERE SAYS WHETHER A CLIENT HAS RECOVERY-SENSITIVE
             MODE ON, and nothing changes because of it. It is the client's

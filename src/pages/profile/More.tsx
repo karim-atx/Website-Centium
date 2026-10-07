@@ -6,6 +6,7 @@ import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
 import { useUnread } from "../../context/UnreadContext";
 import { forumAccess } from "../../services/forum/rules";
+import { useMyVenues } from "../../hooks/useMyVenues";
 import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import {
@@ -19,6 +20,7 @@ import {
   Building2,
   Banknote,
   Globe2,
+  Store,
 } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 
@@ -66,6 +68,10 @@ export default function More() {
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [listingOpen, setListingOpen] = useState(false);
+  // Stage A4: the venue console, for anybody my_venues() lists a venue for:
+  // the owner (a business or a professional account) and employed staff.
+  const { venues } = useMyVenues();
+  const hasVenues = !isClient && venues.length > 0;
 
   const go = (e: Entry) => (e.onClick ? e.onClick() : navigate(e.to!));
 
@@ -104,6 +110,7 @@ export default function More() {
           isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
           isBusiness && { icon: MessageCircle, label: "Messages", desc: "Your conversations", to: "/app/messages" },
           isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
+          hasVenues && { icon: Store, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" },
           isProfessional && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
           { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
           { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },

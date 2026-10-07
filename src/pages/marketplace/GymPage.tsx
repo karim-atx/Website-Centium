@@ -28,13 +28,16 @@ import { initials } from "../../components/professionals/typeColour";
 import { MembershipPass } from "../../components/marketplace/MembershipPass";
 import { MemberTag } from "../../components/marketplace/MemberTag";
 import { GymReviews } from "../../components/marketplace/GymReviews";
+import { VenueImage } from "../../components/marketplace/VenueImage";
 import { startVenueThread } from "../../services/messaging";
 import {
   fetchBusinessOwner,
+  fetchGymHours,
   fetchMyGymMemberships,
   fetchPlansFor,
   fetchReviewSummary,
   fetchVenue,
+  fetchVenueOpenNow,
   type ReviewSummary,
   purchaseGymMembership,
   type GymMembership,
@@ -42,6 +45,7 @@ import {
   type VenuePlan,
 } from "../../services/venues";
 import { addDaysIso, currentMembership, memberTag, PERIOD, planSaving, sortPlans } from "../../services/venues/venueLogic";
+import { hoursLines, isoWeekdayIn, openNowTag, type HoursRow } from "../../services/venues/hours";
 import { bookClass, fetchGymClassesThisWeek, type GymClass } from "../../services/marketplace";
 import { formatPrice } from "../../utils/price";
 import { DetailHero, DetailLabel, MapCard } from "./venueParts";
@@ -61,8 +65,17 @@ import { DetailHero, DetailLabel, MapCard } from "./venueParts";
 // pass_state is the one derived truth (never re-derived here); this week's
 // classes are business_classes.gym_id, booked through book_class().
 //
+// STAGE A4: the hero shows the venue's cover (gyms.cover_url, public
+// gym-covers bucket) and the tile its logo (gyms.logo_url, else
+// business_profiles.logo_url), each falling back to the tint / initials when
+// missing or when the object fails to load. About draws Opening hours
+// (MO1.4.2.1 #8-9) from gym_hours_for(), with "today" on the venue's clock
+// (gyms.timezone), and an Open now / Closed now tag from venue_is_open_at()
+// (not drawn by the frame: the page's own Member-tag style beside the label;
+// null shows no tag, never "Closed now").
+//
 // NOT BUILT, AND WHY (nothing here is faked):
-// - Cover photo, logo upload, opening hours, amenities: no columns in 4a.
+// - Amenities: no column in any stage yet.
 // - Reviews (4d) are GymReviews.tsx; the rating pill reads
 //   gym_review_summary(). Message (4d) starts the normal thread with the
 //   venue's own thread (start_venue_thread: one per member and venue,
@@ -125,6 +138,28 @@ export function GymPage({ gymId }: { gymId: string }) {
   const [owner, setOwner] = useState<string | null>(null);
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgError, setMsgError] = useState<string | null>(null);
+  // A4: undefined while loading; the rows (possibly none = not published).
+  const [hours, setHours] = useState<HoursRow[] | undefined>(undefined);
+  const [hoursError, setHoursError] = useState<string | null>(null);
+  const [openNow, setOpenNow] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!profileReady) return;
+    let live = true;
+    void Promise.all([fetchGymHours(gymId), fetchVenueOpenNow(gymId)]).then(([h, o]) => {
+      if (!live) return;
+      if (h.ok) setHours(h.value);
+      else {
+        setHours([]);
+        setHoursError(h.message);
+      }
+      // A failed check shows no tag rather than guessing.
+      setOpenNow(o.ok ? o.value : null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [profileReady, gymId]);
 
   const loadSummary = useCallback(async () => {
     const r = await fetchReviewSummary(gymId);
@@ -308,13 +343,15 @@ export function GymPage({ gymId }: { gymId: string }) {
 
   return (
     <div>
-      <DetailHero height={240} onBack={back}>
+      <DetailHero height={240} onBack={back} coverUrl={gym.coverUrl}>
         {/* MO1.4.2.1 #2: the logo, a 64 r18 tile with a 3 pt white ring,
-            overlapping the hero's foot (y 212). 4a stores no logo: the gym's
-            initials, 20/800 white on #241F1B as drawn. */}
+            overlapping the hero's foot (y 212). A4: the venue's logo (its own
+            gyms.logo_url, else its business's business_profiles.logo_url);
+            with none, or one that fails to load, the gym's initials, 20/800
+            white on #241F1B as drawn. */}
         <span className="absolute left-4 -bottom-9 w-[70px] h-[70px] rounded-[21px] bg-cream-card p-[3px]">
-          <span className="w-full h-full rounded-[18px] bg-charcoal dark:bg-cream-soft flex items-center justify-center text-[20px] font-extrabold text-white dark:text-charcoal">
-            {initials(gym.name)}
+          <span className="relative w-full h-full rounded-[18px] overflow-hidden bg-charcoal dark:bg-cream-soft flex items-center justify-center text-[20px] font-extrabold text-white dark:text-charcoal">
+            <VenueImage srcs={gym.logoUrls} className="absolute inset-0 w-full h-full" fallback={initials(gym.name)} />
           </span>
         </span>
       </DetailHero>
@@ -393,9 +430,16 @@ export function GymPage({ gymId }: { gymId: string }) {
       {tab === "about" && (
         <div className="mt-4 flex flex-col">
           {gym.bio && <p className="m-0 text-[14px] leading-[1.6] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{gym.bio}</p>}
+          <OpeningHours
+            className={gym.bio ? "mt-[22px]" : ""}
+            rows={hours}
+            error={hoursError}
+            today={isoWeekdayIn(gym.timezone)}
+            openNow={openNow}
+          />
           {(gym.location || hasCoords) && (
             <>
-              <DetailLabel className={gym.bio ? "mt-[22px]" : ""}>Location</DetailLabel>
+              <DetailLabel className="mt-[22px]">Location</DetailLabel>
               <div className="mt-2">
                 <MapCard address={gym.location} />
               </div>
@@ -563,8 +607,8 @@ export function GymPage({ gymId }: { gymId: string }) {
             {/* #14–16: the summary card, a 44 r12 logo tile, the name 14.5/700,
                 the plan 12/400 muted, the price 15/800. */}
             <div className="rounded-2xl border border-charcoal/[0.08] bg-cream-card p-3.5 flex items-center gap-3">
-              <span className="w-11 h-11 rounded-xl bg-charcoal dark:bg-cream-soft flex items-center justify-center shrink-0 text-[14px] font-extrabold text-white dark:text-charcoal" aria-hidden>
-                {initials(gym.name)}
+              <span className="relative w-11 h-11 rounded-xl overflow-hidden bg-charcoal dark:bg-cream-soft flex items-center justify-center shrink-0 text-[14px] font-extrabold text-white dark:text-charcoal" aria-hidden>
+                <VenueImage srcs={gym.logoUrls} className="absolute inset-0 w-full h-full" fallback={initials(gym.name)} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[14.5px] font-bold text-charcoal truncate">{gym.name}</span>
@@ -753,5 +797,74 @@ function Empty({ icon, title, line }: { icon: React.ReactNode; title: string; li
       <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>
       <p className="m-0 text-[12.5px] font-medium text-charcoal-faint leading-[1.55] max-w-[260px]">{line}</p>
     </div>
+  );
+}
+
+/**
+ * MO1.4.2.1 #8-9, backend stage A4. The section label (DetailLabel), then a
+ * 358-wide card 7 under it: 1 px rgba(36,31,27,.08) edge, radius 16, no
+ * fill, rows 14 in (measured: text x 31) on a 40 pitch with a hairline
+ * between (measured rgb(244,244,243) = charcoal at 5%); the day 13/500
+ * text.primary, the hours 13/500 text.secondary on the right; today's row
+ * on #F0EDF9 in 13/700 #7D67D9 (both columns). Rows come from hoursLines().
+ *
+ * Not drawn by the frame, so the page's own styles: the Open now / Closed
+ * now tag (venue_is_open_at; null = no tag) is the Member tag beside the
+ * label; a venue with no published hours gets one muted line in the card;
+ * a failed read is the danger line under the label.
+ */
+function OpeningHours({
+  rows,
+  error,
+  today,
+  openNow,
+  className = "",
+}: {
+  rows: HoursRow[] | undefined;
+  error: string | null;
+  today: number | null;
+  openNow: boolean | null;
+  className?: string;
+}) {
+  if (rows === undefined) {
+    return (
+      <div className={className} aria-busy="true">
+        <div className="h-[14px] w-28 rounded bg-cream-soft animate-pulse" />
+        <div className="mt-[7px] h-[120px] rounded-2xl bg-cream-soft animate-pulse" />
+      </div>
+    );
+  }
+  const lines = hoursLines(rows, today);
+  const tag = openNowTag(openNow);
+  return (
+    <section className={className}>
+      <div className="flex items-center justify-between gap-2">
+        <DetailLabel>Opening hours</DetailLabel>
+        {tag && <MemberTag label={tag.label} tone={tag.tone} />}
+      </div>
+      {error ? (
+        <p role="alert" className="mt-2 mb-0 text-[12px] font-semibold text-status-high">
+          {error}
+        </p>
+      ) : (
+        <div className="mt-[7px] rounded-2xl border border-charcoal/[0.08] overflow-hidden divide-y divide-charcoal/[0.05]">
+          {lines.length === 0 ? (
+            <p className="m-0 px-[14px] py-[10px] text-[13px] leading-[19px] font-medium text-charcoal-faint">This gym hasn't published its opening hours yet.</p>
+          ) : (
+            lines.map((l) => (
+              <div
+                key={l.key}
+                className={`flex items-baseline justify-between gap-3 px-[14px] py-[10px] text-[13px] leading-[19px] ${
+                  l.today ? "bg-primary-pale font-bold text-th-7d67d9 dark:text-primary-dark" : "font-medium"
+                }`}
+              >
+                <span className={`min-w-0 ${l.today ? "" : "text-charcoal"}`}>{l.label}</span>
+                <span className={`shrink-0 text-right tabular-nums ${l.today ? "" : "text-charcoal-soft"}`}>{l.value}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </section>
   );
 }

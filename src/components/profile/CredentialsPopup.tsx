@@ -4,6 +4,8 @@ import { KeyRound, Mail, Phone } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { updatePhone } from "../../services/profile";
+import { fetchMySocialHandles, saveMySocialHandles } from "../../services/profile/socialHandles";
+import { bareHandle, handleProblem, type SocialHandles } from "../../services/profile/socialHandleRules";
 import { fetchMyNickname, fetchReservedNicknames, setNickname } from "../../services/forum";
 import { forumAccess, NICKNAME_PROBLEM_TEXT, nicknameProblem } from "../../services/forum/rules";
 
@@ -13,18 +15,17 @@ import { forumAccess, NICKNAME_PROBLEM_TEXT, nicknameProblem } from "../../servi
 // WHAT IS STORED WHERE, said on the popup itself:
 // - Phone goes to profiles.phone on the server. It used to be typed into a
 //   sheet and kept only in this browser.
-// - Instagram and X stay on this device, as before: profiles has no column
-//   for them yet (backlog, D24). Neutral icons until the brand marks arrive.
+// - Instagram and X go to profiles.instagram / profiles.x (Stage A1), stored
+//   without the "@" and read back from the member's own row each opening.
+//   Private: only the member and their connected adult professionals
+//   (client_social_handles) can read them. A copy the old version kept on
+//   this device is moved up once at sign-in (AppContext hydration).
 // - The forum nickname moved in here from its own row on Profile (adult
 //   customers only, as before); it saves through set_forum_nickname with the
 //   same checks as the nickname page.
 //
 // Handles are stored without "@". A malformed one turns its field and helper
 // line red; Save stays available and refuses only that field (flow 4.3).
-
-const INSTAGRAM = /^[A-Za-z0-9._]{1,30}$/;
-const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
-const bare = (handle: string) => handle.trim().replace(/^@+/, "");
 
 // MO1.5.4: Instagram and X with their brand marks (Foundations 2.4 "Brand
 // icons", fixed in every theme), copied from the handover's
@@ -59,14 +60,34 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
   const showNickname = user.accountType === "customer" && forumAccess(user.dateOfBirth) === "adult" && !!authUserId;
 
   const [phone, setPhone] = useState(user.phone ?? "");
-  const [instagram, setInstagram] = useState(user.instagramHandle ?? "");
-  const [x, setX] = useState(user.xHandle ?? "");
+  const [instagram, setInstagram] = useState("");
+  const [x, setX] = useState("");
+  // The handles as stored: undefined while loading, null if the read failed
+  // (then Save leaves them alone rather than overwriting them with blanks).
+  const [savedHandles, setSavedHandles] = useState<SocialHandles | null | undefined>(undefined);
   const [nickname, setNicknameDraft] = useState("");
   const [savedNickname, setSavedNickname] = useState<string | null>(null);
   const [reserved, setReserved] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+
+  // The handles as stored on the account.
+  useEffect(() => {
+    if (!open || !authUserId) return;
+    let cancelled = false;
+    void fetchMySocialHandles(authUserId).then((h) => {
+      if (cancelled) return;
+      setSavedHandles(h);
+      if (h) {
+        setInstagram(h.instagram ?? "");
+        setX(h.x ?? "");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, authUserId]);
 
   // The nickname as stored, and the reserved list the nickname page checks.
   useEffect(() => {
@@ -88,10 +109,12 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
   const save = async () => {
     if (busy || !authUserId) return;
     const next: Record<string, string> = {};
-    const ig = bare(instagram);
-    const xh = bare(x);
-    if (ig && !INSTAGRAM.test(ig)) next.instagram = "Use up to 30 letters, numbers, dots or underscores.";
-    if (xh && !X_HANDLE.test(xh)) next.x = "Use up to 15 letters, numbers or underscores.";
+    const ig = bareHandle(instagram);
+    const xh = bareHandle(x);
+    const igProblem = handleProblem("instagram", ig);
+    const xProblem = handleProblem("x", xh);
+    if (igProblem) next.instagram = igProblem;
+    if (xProblem) next.x = xProblem;
     const nick = nickname.trim();
     const nickChanged = showNickname && nick !== (savedNickname ?? "");
     if (nickChanged && nick) {
@@ -107,7 +130,15 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       if (r.ok) updateProfile({ phone: phone.trim() || undefined });
       else next.phone = r.message ?? "Couldn't save your phone number.";
     }
-    if (!next.instagram && !next.x) updateProfile({ instagramHandle: ig || undefined, xHandle: xh || undefined });
+    // Only when the stored pair was read (never blanks over a failed read),
+    // both are well formed, and something changed.
+    const handlesChanged =
+      !!savedHandles && (ig !== (savedHandles.instagram ?? "") || xh !== (savedHandles.x ?? ""));
+    if (handlesChanged && !next.instagram && !next.x) {
+      const r = await saveMySocialHandles(authUserId, { instagram: ig, x: xh });
+      if (r.ok) setSavedHandles(r.value);
+      else next[r.field ?? "social"] = r.message;
+    }
     if (nickChanged && nick && !next.nickname) {
       const r = await setNickname(nick);
       if (r.ok) setSavedNickname(nick);
@@ -235,15 +266,34 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       <p className="mt-4 mb-3.5 text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">Social</p>
       <div className="grid grid-cols-2 gap-2.5">
         {/* MO1.5.4: a fixed "@" prefix and lowercase placeholders. */}
+        {/* Read-only until the stored pair has loaded (and if it failed), so
+            nothing typed is overwritten by the load or silently not saved. */}
         {field("instagram", <InstagramMark />, instagram, setInstagram, {
           placeholder: "instagram",
           label: "Instagram handle",
           prefix: true,
+          readOnly: !savedHandles,
         })}
-        {field("x", <XMark />, x, setX, { placeholder: "x", label: "X handle", prefix: true })}
+        {field("x", <XMark />, x, setX, { placeholder: "x", label: "X handle", prefix: true, readOnly: !savedHandles })}
       </div>
+      {savedHandles === null && (
+        <p role="alert" className="mt-2 text-[11px] font-semibold text-status-high">
+          Couldn't load your Instagram and X. Close and open Credentials to try again.
+        </p>
+      )}
+      {errors.social && (
+        <p role="alert" className="mt-2 text-[11px] font-semibold text-status-high">
+          {errors.social}
+        </p>
+      )}
+      {/* The frame's line is "Whichever of these you fill in shows on your
+          profile.", but the handles show on no profile: they are private to
+          the member and their connected adult professionals
+          (profiles_select_own, client_social_handles). Said as it is
+          (privacy, exception 1). */}
       <p className="mt-2 text-[11px] text-charcoal-faint">
-        Your phone number is saved to your account. Instagram and X stay on this device for now.
+        Your phone number, Instagram and X are saved to your account. Only professionals you're connected
+        with can see your Instagram and X.
       </p>
 
       {showNickname && (

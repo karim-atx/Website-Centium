@@ -9,6 +9,7 @@ import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
 import { QrPattern } from "../../components/marketplace/QrPattern";
+import { ClassRosterSheet } from "../../components/marketplace/ClassRosterSheet";
 
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
 const paymentOptions = ["Card", "Cash", "Whish Money"];
@@ -46,6 +47,7 @@ export default function BusinessClassesTab() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(blankDraft(today));
+  const [rosterFor, setRosterFor] = useState<{ id: string; title: string } | null>(null);
 
   const save = async () => {
     if (!draft.title.trim() || saving) return;
@@ -118,13 +120,22 @@ export default function BusinessClassesTab() {
                 )}
                 {c.notes && <p className="text-xs text-charcoal-faint mt-1 italic">{c.notes}</p>}
               </div>
-              <button
-                onClick={() => void remove(c.id)}
-                aria-label={`Delete ${c.title}`}
-                className="tap text-charcoal-faint shrink-0"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex flex-col items-end gap-3 shrink-0">
+                <button
+                  onClick={() => void remove(c.id)}
+                  aria-label={`Delete ${c.title}`}
+                  className="tap text-charcoal-faint"
+                >
+                  <Trash2 size={14} />
+                </button>
+                {/* Stage A4: who is booked and waiting (venue_class_roster). */}
+                <button
+                  onClick={() => setRosterFor({ id: c.id, title: c.title })}
+                  className="tap flex items-center gap-1 text-xs font-semibold text-primary-dark"
+                >
+                  <Users size={12} /> Roster
+                </button>
+              </div>
             </Card>
           );
         })}
@@ -138,6 +149,8 @@ export default function BusinessClassesTab() {
           </Card>
         )}
       </div>
+
+      <ClassRosterSheet classId={rosterFor?.id ?? null} title={rosterFor?.title ?? ""} onClose={() => setRosterFor(null)} />
 
       <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title="New Class">
         <div className="space-y-4 animate-fade-slide-up">

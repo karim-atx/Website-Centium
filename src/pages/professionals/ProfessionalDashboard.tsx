@@ -11,13 +11,17 @@ import {
 } from "../../services/hire-inbox";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
 import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
-import { effectiveTierLabel } from "../../services/subscription-tiers";
+import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
+import { hireGate } from "../../services/hires/proLogic";
+import { HireAvailabilityNotice } from "../../components/hire-pro/HireAvailabilityNotice";
+import { PendingHiresSection } from "../../components/hire-pro/PendingHiresSection";
+import { PlanEditorSheet } from "../../components/hire-pro/PlanEditorSheet";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import { FreePeriodEnded, FreePeriodNotice } from "../../components/professionals/FreePeriodNotice";
 import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X } from "lucide-react";
+import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, Tag } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "../../components/professionals/HealthDataPending";
@@ -85,6 +89,20 @@ export default function ProfessionalDashboard() {
    * flag, like atCap, because it renders its own prompt rather than a line.
    */
   const [freeEnded, setFreeEnded] = useState(false);
+  // A3: the hire plans editor (professional_plans).
+  const [plansOpen, setPlansOpen] = useState(false);
+  /**
+   * A3: whether a client could hire this professional right now — the gate
+   * professional_can_take_client() applies, which nobody may call, derived
+   * from what IS readable: my_professional_plan().may_connect_clients (the
+   * free month) first, then the effective tier's max_clients against the live
+   * roster. Unknown blocks nothing; see hireGate.
+   */
+  const gate = hireGate({
+    mayConnectClients: plan ? plan.mayConnectClients : null,
+    maxClients: myTier?.tier.maxClients,
+    clientCount: professionalClients.length,
+  });
 
   const loadInbox = useCallback(async () => {
     // Returns rather than clearing, so there is no synchronous setState on the
@@ -271,8 +289,39 @@ export default function ProfessionalDashboard() {
 
       {/* Task G: the Free plan's month for connecting new clients, counted
           down, or the friendly stop once it is over. Existing clients below
-          are untouched either way. */}
-      <FreePeriodNotice plan={plan} className="mb-4" />
+          are untouched either way.
+          A3: when clients cannot hire them at all (free month over, or at
+          the client cap) the hire-availability notice says so and which,
+          in place of the free-month line rather than beside it. */}
+      {gate ? (
+        <HireAvailabilityNotice
+          gate={gate}
+          planLabel={myTier ? effectiveTierLabel(myTier) : null}
+          capLine={myTier ? capLabel(myTier.tier, professionalClients.length) : null}
+          className="mb-4"
+        />
+      ) : (
+        <FreePeriodNotice plan={plan} className="mb-4" />
+      )}
+
+      {/* A3: the plans clients choose from on the hire sheet. */}
+      <Card interactive onClick={() => setPlansOpen(true)} className="mb-4 flex items-center gap-3">
+        <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+          <Tag size={17} className="text-primary-dark" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-charcoal">Hire plans</p>
+          <p className="text-xs text-charcoal-faint truncate">What clients can choose when they hire you</p>
+        </div>
+        <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
+      </Card>
+
+      {/* A3: hires waiting for the professional to confirm payment. */}
+      <PendingHiresSection
+        planLabel={myTier ? effectiveTierLabel(myTier) : null}
+        onConfirmed={refreshRoster}
+        className="mb-6"
+      />
 
       {searchOpen && (
         <input
@@ -426,6 +475,7 @@ export default function ProfessionalDashboard() {
       </div>
 
       <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <PlanEditorSheet open={plansOpen} onClose={() => setPlansOpen(false)} />
       <ClientDetailSheet
         open={!!activeClient}
         onClose={() => setActiveClientId(null)}

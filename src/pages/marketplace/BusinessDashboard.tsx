@@ -4,9 +4,13 @@ import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
+import { VenueSwitcher } from "../../components/marketplace/VenueSwitcher";
+import { VenueFigures } from "../../components/marketplace/VenueFigures";
 import { useApp } from "../../context/AppContext";
+import { useMyVenues } from "../../hooks/useMyVenues";
 import { useBusinessDiscounts, useMembershipPlans } from "../../hooks/useBusinessCatalog";
-import { Store, Tag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Store, Tag, ChevronRight } from "lucide-react";
 
 // V10 (QA 10.0): "Revamp the entire Business dashboard into something more
 // relevant given the changes done so far" — folds in the stats that make
@@ -17,16 +21,17 @@ import { Store, Tag } from "lucide-react";
 // Marketplace are already one tap away from the bottom nav.
 export default function BusinessDashboard() {
   const { user, businessListing, updateBusinessListing } = useApp();
-  // Both tiles below counted localStorage. `membershipPlans` shipped seeded
-  // with two plans nobody created, so this card has been reporting "2" to
-  // every gym since onboarding.
+  const navigate = useNavigate();
+  const { venues, selected, select, isOwner } = useMyVenues();
+  // The pre-A4 stat row, kept for a business with no venue (nothing to read
+  // from venue_dashboard): removing it is the user's call, not this stage's.
   const { plans } = useMembershipPlans();
   const { discounts } = useBusinessDiscounts();
+  const isGym = user.businessType === "gym";
+  // The computed "Views (30d)" (membersReached * 6 + 128, not a real figure)
+  // is gone by user decision (7 October 2026); the real stats stay.
   const [editingPerk, setEditingPerk] = useState(false);
   const [perkDraft, setPerkDraft] = useState(businessListing.perk);
-  const isGym = user.businessType === "gym";
-
-  const views = businessListing.membersReached * 6 + 128;
 
   return (
     <div>
@@ -57,29 +62,48 @@ export default function BusinessDashboard() {
         </div>
       </Card>
 
-      {/* three-up stat cards collapse into one hairline row — the icons
-          were purely decorative, so they're gone with them. */}
-      <Card padded={false} className="mb-6 flex divide-x divide-charcoal/[0.06] animate-fade-slide-up">
-        <div className="flex-1 text-center py-3.5">
-          <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{businessListing.membersReached}</p>
-          <p className="text-[10px] text-charcoal-faint mt-1.5">Members reached</p>
-        </div>
-        <div className="flex-1 text-center py-3.5">
-          <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{views.toLocaleString()}</p>
-          <p className="text-[10px] text-charcoal-faint mt-1.5">Views (30d)</p>
-        </div>
-        {isGym ? (
+      {/* STAGE A4: THE VENUE, FROM THE SERVER. This row used to be three
+          stat cards: "Members reached", "Views (30d)" (invented as
+          membersReached * 6 + 128) and a plans / discounts count. They are
+          replaced by the venue console's own figures (venue_dashboard) for
+          the venue chosen here. NOT YET MATCHED TO THE BUSINESS UI BOARD. */}
+      {!selected && (
+        <Card padded={false} className="mb-6 flex divide-x divide-charcoal/[0.06] animate-fade-slide-up">
           <div className="flex-1 text-center py-3.5">
-            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{plans.length}</p>
-            <p className="text-[10px] text-charcoal-faint mt-1.5">Membership plans</p>
+            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{businessListing.membersReached}</p>
+            <p className="text-[10px] text-charcoal-faint mt-1.5">Members reached</p>
           </div>
-        ) : (
-          <div className="flex-1 text-center py-3.5">
-            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{discounts.length}</p>
-            <p className="text-[10px] text-charcoal-faint mt-1.5">Active discounts</p>
-          </div>
-        )}
-      </Card>
+          {isGym ? (
+            <div className="flex-1 text-center py-3.5">
+              <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{plans.length}</p>
+              <p className="text-[10px] text-charcoal-faint mt-1.5">Membership plans</p>
+            </div>
+          ) : (
+            <div className="flex-1 text-center py-3.5">
+              <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{discounts.length}</p>
+              <p className="text-[10px] text-charcoal-faint mt-1.5">Active discounts</p>
+            </div>
+          )}
+        </Card>
+      )}
+      <VenueSwitcher venues={venues} selected={selected} onSelect={select} isOwner={isOwner} />
+      {selected && (
+        <>
+          <VenueFigures gymId={selected.gymId} />
+          <Card interactive onClick={() => navigate("/app/business/venue")} className="mb-6 flex items-center justify-between animate-fade-slide-up">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                <Store size={19} className="text-primary-dark" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-charcoal">Venue console</p>
+                <p className="text-xs text-charcoal-faint">Members, class rosters, opening hours, logo and cover</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-charcoal-faint" />
+          </Card>
+        </>
+      )}
 
       <p className="section-label text-charcoal-faint mb-2.5">
         Your listing

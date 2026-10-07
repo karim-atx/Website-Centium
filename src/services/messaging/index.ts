@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { uploadPrivateFile, validateFileFor } from "../storage";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { parseCard, type MessageCard } from "./cards";
 
 // Two-party messaging, against the real tables.
 //
@@ -27,9 +28,10 @@ import type { PostgrestError } from "@supabase/supabase-js";
  *
  * "peer" is every thread anyone opened by messaging someone: the default, the
  * shape the whole feature was built around, and what every existing thread
- * still is. "official_support" is a thread Centium started with the user
- * through the admin console, where the other side is an official identity
- * rather than a person the user chose to talk to.
+ * still is. "official_support" is the user's one thread with Centium support,
+ * opened either by the admin console or by the user from Contact us (stage A5,
+ * start_support_thread), where the other side is an official identity rather
+ * than a person.
  *
  * WHY THE CLIENT IS TOLD AT ALL. The recipient did not ask for the official
  * thread and did not pick who is in it. Arriving as an unexplained stranger
@@ -226,6 +228,12 @@ export interface Message {
    */
   editedAt: string | null;
   deletedAt: string | null;
+  /**
+   * The A3 chat card on this message (MO1.2.1.3.7 plans offer, MO1.2.1.3.8
+   * plan confirmed), or null. A DECORATION: the message's own text is the
+   * fallback, and stays what search, previews and quotes use. See cards.ts.
+   */
+  card: MessageCard | null;
 }
 
 /** How long after sending a message can be edited or unsent. Enforced server-side. */
@@ -494,10 +502,16 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     // null and thread_name carries its name. Switched on kind first, so a
     // group is never mistaken for a chat with a deleted account.
     participantId: r.kind === "group" ? null : r.other_participant_id,
+    // SUPPORT IS ALWAYS "Centium Support" (stage A5), whatever first name the
+    // support identity's profile row carries (the local seed's is "Fixture
+    // Desk"), so the header, the list and the banner all name the same sender.
+    // The operator who typed a reply (authored_by) is never read here.
     participantName:
       r.kind === "group"
         ? r.thread_name?.trim() || "Group"
-        : r.other_participant_id === null
+        : r.kind === "official_support"
+          ? "Centium Support"
+          : r.other_participant_id === null
           ? "Deleted account"
           : r.other_first_name?.trim() || "Someone",
     participantAvatarUrl: r.kind === "group" ? null : r.other_avatar_url,
@@ -565,7 +579,17 @@ type MessageRow = {
   voice_waveform?: number[] | null;
   edited_at?: string | null;
   deleted_at?: string | null;
+  /** The embedded A3 card (MESSAGE_COLUMNS_WITH_CARD); absent on paths that don't ask for it. */
+  message_cards?: unknown;
 };
+
+/**
+ * A page of messages WITH their A3 card (Database 20261101010000): PostgREST
+ * embeds message_cards through messages_visible, whose id column is
+ * messages.id, so one request still reads the page. message_cards is readable
+ * exactly when its message is (its policy defers to messages' own RLS).
+ */
+const MESSAGE_COLUMNS_WITH_CARD = `${MESSAGE_COLUMNS}, message_cards(kind, payload)`;
 
 // READ THROUGH messages_visible, so a message this viewer hid is simply
 // absent. The other participant is unaffected -- the view filters on
@@ -616,6 +640,7 @@ const toMessage = (m: MessageRow): Message => ({
   voiceWaveform: m.voice_waveform ?? null,
   editedAt: m.edited_at ?? null,
   deletedAt: m.deleted_at ?? null,
+  card: parseCard(m.message_cards),
 });
 
 /** Messages per page. A thread opens on its newest page; scrolling up loads the next. */
@@ -642,24 +667,30 @@ export async function fetchMessagePage(
   before?: { createdAt: string; id: string },
   limit = MESSAGE_PAGE
 ): Promise<MessagePage> {
-  let q = supabase
-    .from("messages_visible")
-    .select(MESSAGE_COLUMNS)
-    .eq("thread_id", threadId)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(limit + 1);
-  if (before) {
-    // Quoted: a timestamp carries ':' and '+', which PostgREST's or() grammar
-    // would otherwise read as syntax.
-    q = q.or(`created_at.lt."${before.createdAt}",and(created_at.eq."${before.createdAt}",id.lt.${before.id})`);
-  }
-  const { data, error } = await q;
+  const page = (columns: string) => {
+    let q = supabase
+      .from("messages_visible")
+      .select(columns)
+      .eq("thread_id", threadId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1);
+    if (before) {
+      // Quoted: a timestamp carries ':' and '+', which PostgREST's or() grammar
+      // would otherwise read as syntax.
+      q = q.or(`created_at.lt."${before.createdAt}",and(created_at.eq."${before.createdAt}",id.lt.${before.id})`);
+    }
+    return q;
+  };
+  let { data, error } = await page(MESSAGE_COLUMNS_WITH_CARD);
+  // PGRST200: this database has no message_cards yet (a build ahead of its
+  // migration). The conversation still loads, as text, rather than not at all.
+  if (error?.code === "PGRST200") ({ data, error } = await page(MESSAGE_COLUMNS));
   if (error) {
     console.error("[messaging] Could not load messages:", error.message);
     return { ok: false, message: describe(error) };
   }
-  const rows = (data ?? []) as MessageRow[];
+  const rows = (data ?? []) as unknown as MessageRow[];
   return {
     ok: true,
     hasOlder: rows.length > limit,

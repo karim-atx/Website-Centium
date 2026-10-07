@@ -184,7 +184,15 @@ export const STORAGE_PREFIX = "centium-state";
  * Preferences of the DEVICE, shared by whoever uses it. Everything else under
  * the prefix is account data and lives in that account's own namespace.
  */
-export const DEVICE_KEYS: ReadonlySet<string> = new Set(["theme", "colorTheme", "language", "accessibility", "notificationPrefs"]);
+// presentationOwner: which account the device's theme / accessibility copy was
+// last chosen by or loaded for (Stage A1), so it is never saved to another's row.
+export const DEVICE_KEYS: ReadonlySet<string> = new Set([
+  "theme",
+  "colorTheme",
+  "language",
+  "accessibility",
+  "presentationOwner",
+]);
 
 export function storageNamespace(userId: string | null): string {
   return userId ? `u:${userId}` : "anon";
@@ -214,8 +222,10 @@ export function legacyMoves(keys: string[], legacyUserJson: string | null): [str
   const moves: [string, string][] = [];
   for (const k of keys) {
     const m = new RegExp(`^${STORAGE_PREFIX}:([^:]+)$`).exec(k);
-    // foodLog is a superseded key AppContext deletes; nothing to carry over.
-    if (!m || DEVICE_KEYS.has(m[1]) || m[1] === "foodLog") continue;
+    // foodLog and notificationPrefs (the device copy of the notification
+    // switches, superseded by app_preferences in Stage A2) are superseded keys
+    // AppContext deletes; nothing to carry over.
+    if (!m || DEVICE_KEYS.has(m[1]) || m[1] === "foodLog" || m[1] === "notificationPrefs") continue;
     moves.push([k, storageKeyFor(m[1], owner)]);
   }
   return moves;

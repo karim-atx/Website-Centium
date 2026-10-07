@@ -66,6 +66,7 @@ export default function Settings() {
   const {
     theme,
     toggleTheme,
+    presentationSaveError,
     language,
     t,
     user,
@@ -199,6 +200,13 @@ export default function Settings() {
         <div className="ps-[50px] pt-1 pb-[14px]">
           <p className="text-[12px] font-semibold text-charcoal-faint mb-2.5">{t("Color theme")}</p>
           <ColorThemePicker />
+          {/* Not drawn: the save-error line in danger under the group (as
+              MO1.8.3's Notifications); the choice stays applied. */}
+          {presentationSaveError && (
+            <p role="alert" className="mt-2 text-[12px] text-status-high">
+              {presentationSaveError}
+            </p>
+          )}
         </div>
       </SettingsSection>
 

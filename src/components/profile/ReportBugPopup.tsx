@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 import { Bug, Check, ChevronRight, Image as ImageIcon, X } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
-import { MAX_DESCRIPTION, submitBugReport } from "../../services/bug-reports";
+import { MAX_DESCRIPTION, prepareBugScreenshot, submitBugReport } from "../../services/bug-reports";
+import { SCREENSHOT_ACCEPT } from "../../services/bug-reports/screenshotRules";
 
 /**
  * MO1.8.10 Report a bug, as a centred popup (no ×; outside tap and Escape
@@ -13,10 +14,11 @@ import { MAX_DESCRIPTION, submitBugReport } from "../../services/bug-reports";
  * 36 pt primary.tint tile with Image 17 / 1.75, 12 to the 14 / 600 title, a
  * ChevronRight 16 / 1.75 at the end); 14 under the row, Send report.
  *
- * ADD SCREENSHOT KEEPS ITS PICK IN THE FORM ONLY (C33). bug_reports has no
- * screenshot column and there is no bucket, so a picked image is shown in
- * the row and the popup says it isn't sent; the lead wires the upload when
- * that backend exists. Nothing is uploaded or stored.
+ * ADD SCREENSHOT (Stage A1). A picked JPEG, PNG or WebP up to 5 MB is
+ * re-drawn without its metadata as soon as it is picked (a refusal says why
+ * under the row), shown in the tile, and on Send uploaded to the private
+ * `bug-screenshots` bucket under `<uid>/<file>` before the report row is
+ * inserted carrying its path (services/bug-reports). The path is never shown.
  *
  * THE COPY IS CHOSEN AS CAREFULLY AS THE CODE. Nothing in this project can
  * send a message, so a filed report notifies nobody and waits until someone
@@ -41,13 +43,17 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [route] = useState<string | null>(() => `${location.pathname}${location.search}`);
-  const [shot, setShot] = useState<{ name: string; url: string } | null>(null);
+  // `file` is the prepared (metadata-free) copy that is uploaded; `name` is
+  // the picked file's own name, shown in the row only.
+  const [shot, setShot] = useState<{ name: string; url: string; file: File } | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [shotError, setShotError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // The preview's object URL is released when it is replaced, removed, or
   // the popup goes.
   const shotUrl = useRef<string | null>(null);
-  const replaceShot = (next: { name: string; url: string } | null) => {
+  const replaceShot = (next: { name: string; url: string; file: File } | null) => {
     if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
     shotUrl.current = next?.url ?? null;
     setShot(next);
@@ -59,9 +65,17 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
     []
   );
 
-  const pick = (file: File | undefined) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    replaceShot({ name: file.name, url: URL.createObjectURL(file) });
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setShotError(null);
+    setPreparing(true);
+    const prepared = await prepareBugScreenshot(file);
+    setPreparing(false);
+    if (!prepared.ok) {
+      setShotError(prepared.message);
+      return;
+    }
+    replaceShot({ name: file.name, url: URL.createObjectURL(prepared.file), file: prepared.file });
   };
 
   const send = async () => {
@@ -76,6 +90,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       description,
       route,
       userAgent: typeof navigator === "undefined" ? null : navigator.userAgent,
+      screenshot: shot?.file ?? null,
     });
     setBusy(false);
     if (!result.ok) {
@@ -114,7 +129,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       cta={{
         label: "Send report",
         loading: busy,
-        disabled: !description.trim() || tooLong,
+        disabled: !description.trim() || tooLong || preparing,
         onClick: () => void send(),
         className: "!mt-3.5",
       }}
@@ -153,12 +168,12 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept={SCREENSHOT_ACCEPT}
         className="hidden"
         tabIndex={-1}
         aria-hidden
         onChange={(e) => {
-          pick(e.target.files?.[0]);
+          void pick(e.target.files?.[0]);
           e.target.value = "";
         }}
       />
@@ -166,7 +181,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || preparing}
           className="tap flex-1 min-w-0 flex items-center gap-3 text-start"
         >
           <span
@@ -180,7 +195,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
             )}
           </span>
           <span className="flex-1 min-w-0 truncate text-[14px] leading-5 font-semibold text-charcoal">
-            {shot ? shot.name : "Add screenshot"}
+            {preparing ? "Preparing…" : shot ? shot.name : "Add screenshot"}
           </span>
           {!shot && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
         </button>
@@ -196,17 +211,19 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           </button>
         )}
       </div>
-      {shot && (
-        <p className="-mt-1.5 text-[11px] text-charcoal-faint">
-          Screenshots can’t be sent yet, so only your description goes with this report.
+      {shotError && (
+        <p role="alert" className="-mt-1.5 text-[12px] font-semibold text-status-high">
+          {shotError}
         </p>
       )}
 
       {/* Stated rather than silently collected: only the page and the
-          browser ride along with the words (privacy, exception 1). */}
+          browser ride along with the words, and the screenshot only when
+          one is added (privacy, exception 1). */}
       <p className="mt-1 text-[11px] text-charcoal-faint">
-        Sent with this report: the page you were on{route ? ` (${route})` : ""} and your browser
-        version. Nothing from your health records is included.
+        Sent with this report: the page you were on{route ? ` (${route})` : ""}, your browser
+        version{shot ? " and your screenshot" : ""}. Nothing from your health records is
+        included{shot ? " unless your screenshot shows it" : ""}.
       </p>
 
       {error && (

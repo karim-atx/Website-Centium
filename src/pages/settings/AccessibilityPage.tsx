@@ -4,7 +4,8 @@ import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/
 import { useApp } from "../../context/AppContext";
 
 // MO1.8.6 Accessibility, as a page (was a sheet), with the board's four
-// switches (R19). Settings are kept on this device, as before. As drawn, the
+// switches (R19). Saved to this website's row of device_presentation_settings
+// (Stage A1; per device, not shared with the phone). As drawn, the
 // rows carry no subtitles (handover-complete pass); what each switch does is
 // read to screen readers instead. Screen reader labels ship by default, not
 // as a switch.
@@ -12,7 +13,7 @@ import { useApp } from "../../context/AppContext";
 // Larger text keeps today's behaviour until the type rework (R21, batch D).
 // Reduce motion also reaches the JavaScript-driven motion (useReducedMotion).
 export default function AccessibilityPage() {
-  const { accessibility, updateAccessibility } = useApp();
+  const { accessibility, updateAccessibility, presentationSaveError } = useApp();
 
   return (
     <div>
@@ -46,6 +47,13 @@ export default function AccessibilityPage() {
           srDescription="Larger touch areas for buttons and rows"
           toggle={{ checked: !!accessibility.biggerTargets, onChange: (v) => updateAccessibility({ biggerTargets: v }) }}
         />
+        {/* Not drawn: the save-error line in danger under the group (as
+            MO1.8.3's Notifications). The switch keeps its new position. */}
+        {presentationSaveError && (
+          <p role="alert" className="mt-2 text-[12px] text-status-high">
+            {presentationSaveError}
+          </p>
+        )}
       </SettingsSection>
       </SettingsBody>
     </div>

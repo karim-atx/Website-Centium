@@ -201,6 +201,7 @@ import { isMfaChallengePending } from "../services/mfa";
 const MFA_RECOVERY_PASS_KEY = "centium-mfa-recovery-pass";
 import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
 import { ensureProfileRow, fetchProfile, updatePlantSpecies } from "../services/profile";
+import { migrateLocalSocialHandles } from "../services/profile/socialHandles";
 import {
   AUTO_STREAK_CATEGORIES,
   AUTO_STREAK_LABEL_BY_CATEGORY,
@@ -213,7 +214,6 @@ import {
   clearRecoveryPending,
   isRecoveryExchangeInFlight,
 } from "../../lib/supabase/recovery";
-import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import {
   fetchClientImaging,
@@ -292,6 +292,9 @@ import {
 } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 import { normalizeColorTheme } from "../theme/colorThemes";
+import { useSystemDark } from "../theme/useSystemDark";
+import { usePresentationSync } from "../theme/usePresentationSync";
+import type { Presentation, ThemeMode } from "../services/presentation/mapping";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
 // auto-streaks (which walk backwards through every dated entry) and
@@ -466,37 +469,14 @@ interface AppState {
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
 
-  // V7 (QA 7.0): granular per-category notification toggles (was one
-  // all-or-nothing switch), and a couple of real accessibility settings.
-  // Future Supabase migration: app_preferences (syncs across all platforms).
-  notificationPrefs: Record<
-    "mealReminders" | "workoutReminders" | "streakAlerts" | "professionalMessages" | "weeklySummary",
-    boolean
-  > &
-    // MO1.8.3 (handover-complete pass): the frame's other rows and Quiet
-    // hours, kept on this device like the five above. Nothing sends these
-    // yet (no columns, no senders); the server's message push ignores them.
-    Record<
-      | "waterReminders"
-      | "habitReminders"
-      | "journalReminders"
-      | "forumReplies"
-      | "forumMentions"
-      | "calendarEvents"
-      | "membershipUpdates"
-      | "referralRewards"
-      | "quietHours",
-      boolean
-    > & { quietFrom: string; quietTo: string };
-  updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
-
-  // Future Supabase migration: device_presentation_settings (per-platform,
-  // stays local, never synced) — larger text / reduce motion are
-  // presentation, not synced app preferences.
-  // R19 (batch C) adds High contrast and Bigger tap targets, also device-local;
-  // optional so a value saved before them reads as off.
+  // device_presentation_settings, this website's 'web' row (Stage A1; per
+  // platform, not shared with the phone), with a device copy that paints
+  // first. R19 (batch C) High contrast and Bigger tap targets are optional so
+  // a device copy saved before them reads as off.
   accessibility: { largerText: boolean; reduceMotion: boolean; highContrast?: boolean; biggerTargets?: boolean };
   updateAccessibility: (patch: Partial<AppState["accessibility"]>) => void;
+  /** Why the last theme / accessibility change didn't reach the server (the choice is kept here). */
+  presentationSaveError: string | null;
 
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
@@ -1015,8 +995,8 @@ interface AppState {
 
   today: string;
 
-  // Future Supabase migration: device_presentation_settings (per-platform,
-  // stays local, never synced) — see the ColorTheme type comment.
+  // device_presentation_settings.color_theme (Stage A1) — see the ColorTheme
+  // type comment.
   colorTheme: ColorTheme;
   setColorTheme: (theme: ColorTheme) => void;
 
@@ -1130,23 +1110,8 @@ interface AppState {
   dismissUnlock: () => void;
   /** Record first use of a feature. Fire-and-forget; no UI of its own. */
   noteFeatureMilestone: (milestone: FeatureMilestone) => void;
-  // QA 11.0: "Put a referral tab... gives you a code when another client,
-  // professional and/or business subscribes to Centium. The code applies
-  // a 10% discount to the subscription model for a one time use per
-  // account. The client who succeeded in referral gets 1500 points in the
-  // tier list as well as 15% off of the next month subscription." One
-  // account in this prototype, so redeeming a code demonstrates both the
-  // redeemer's one-time 10% discount and the referrer's reward on the
-  // same account — there's no second account to actually credit.
-  referralRedeemed: boolean;
-  referralDiscountPct: number;
-  referralNextMonthDiscountPct: number;
-  // Records the outcome of a real redeem_referral() call locally so the
-  // subscription UI can show the discount. Only the referee's side is
-  // applied here — the referrer's points and next-month discount are
-  // credited to THEIR account by the RPC, not this one, which is the part
-  // the old single-account mock had to fake.
-  applyReferralReward: (discountPct: number) => void;
+  // Referral state is not held here: A6's referral_summary() is read by the
+  // Referrals popup itself (components/profile/ReferralPopup.tsx).
 
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
@@ -2039,6 +2004,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     let cancelled = false;
+    // Stage A1: Instagram and X used to be kept only in this cached `user`.
+    // Moved up to profiles.instagram / .x once, then dropped from the cache.
+    // Only when the cache is THIS account's (it is not keyed by account).
+    const cachedUser = loadPersisted<Partial<UserProfile>>("user", {});
+    if (cachedUser.id === authUserId && (cachedUser.instagramHandle || cachedUser.xHandle)) {
+      void migrateLocalSocialHandles(authUserId, cachedUser).then((done) => {
+        if (done && !cancelled) setUser((prev) => ({ ...prev, instagramHandle: undefined, xHandle: undefined }));
+      });
+    }
     void fetchProfile(authUserId).then((result) => {
       if (cancelled) return;
       if (result) {
@@ -2108,7 +2082,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [authUserId, profileReady, user.avatarUrl, setUser]);
 
-  const [theme, setTheme] = usePersistentState<"light" | "dark">("theme", "light");
+  // Stage A1: light / dark / auto, synced with device_presentation_settings
+  // (usePresentationSync below). 'auto' only ever comes from the row and
+  // follows the system; the Dark Mode switch stores light or dark.
+  const [themeMode, setThemeMode] = usePersistentState<ThemeMode>("theme", "light");
+  const systemDark = useSystemDark();
+  const theme: "light" | "dark" = themeMode === "auto" ? (systemDark ? "dark" : "light") : themeMode;
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
@@ -2119,34 +2098,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = language;
   }, [language]);
   const t = (key: string) => translations[language][key] ?? key;
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
-  const [notificationPrefs, setNotificationPrefs] = usePersistentState<AppState["notificationPrefs"]>(
-    "notificationPrefs",
-    {
-      mealReminders: true,
-      workoutReminders: true,
-      streakAlerts: true,
-      professionalMessages: true,
-      weeklySummary: true,
-      // MO1.8.3's drawn positions (Water and Journal off), except Quiet
-      // hours: off until a sender honours it, so it never claims a silence
-      // the message push would break.
-      waterReminders: false,
-      habitReminders: true,
-      journalReminders: false,
-      forumReplies: true,
-      forumMentions: true,
-      calendarEvents: true,
-      membershipUpdates: true,
-      referralRewards: true,
-      quietHours: false,
-      quietFrom: "22:00",
-      quietTo: "07:00",
-    }
-  );
-  const updateNotificationPrefs: AppState["updateNotificationPrefs"] = (patch) =>
-    setNotificationPrefs((prev) => ({ ...prev, ...patch }));
 
   const [accessibility, setAccessibility] = usePersistentState<AppState["accessibility"]>("accessibility", {
     largerText: false,
@@ -2363,10 +2316,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // HO5.1 removed the voice notice card; drop its old dismissal flag from
   // storage once (nothing reads it). The device-only forum went the same way
   // when the shared forum replaced it: its posts were mock data saved per
-  // account, under "forumPosts".
+  // account, under "forumPosts". Stage A2: the device copy of the
+  // notification switches ("notificationPrefs") is superseded by the
+  // account's app_preferences columns; it was shared by every account on the
+  // device, so it cannot be attributed to one and is dropped, not moved up.
   useEffect(() => {
     try {
       localStorage.removeItem("centium-state:voiceDisclosureSeen");
+      localStorage.removeItem("centium-state:notificationPrefs");
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith("centium-state:") && key.endsWith(":forumPosts")) localStorage.removeItem(key);
       }
@@ -2953,6 +2910,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", colorTheme);
   }, [colorTheme]);
+
+  // Stage A1: theme, colour theme and accessibility follow this account's
+  // 'web' row of device_presentation_settings; the values above stay the
+  // device copy that paints first and works offline.
+  const presentation = useMemo<Presentation>(
+    () => ({
+      theme: themeMode,
+      colorTheme,
+      largerText: accessibility.largerText,
+      reduceMotion: accessibility.reduceMotion,
+      highContrast: !!accessibility.highContrast,
+      biggerTargets: !!accessibility.biggerTargets,
+    }),
+    [themeMode, colorTheme, accessibility]
+  );
+  const [presentationPending, setPresentationPending] = usePersistentState<boolean>("presentationPending", false);
+  // Device-level: whose choices the device copy above holds (never saved to another's row).
+  const [presentationOwner, setPresentationOwner] = usePersistentState<string | null>("presentationOwner", null);
+  const { saveError: presentationSaveError } = usePresentationSync({
+    ownerId: authUserId,
+    current: presentation,
+    pending: presentationPending,
+    setPending: setPresentationPending,
+    deviceOwner: presentationOwner,
+    setDeviceOwner: setPresentationOwner,
+    apply: (p) => {
+      setThemeMode(p.theme);
+      setColorThemeState(p.colorTheme);
+      setAccessibility({
+        largerText: p.largerText,
+        reduceMotion: p.reduceMotion,
+        highContrast: p.highContrast,
+        biggerTargets: p.biggerTargets,
+      });
+    },
+  });
 
   const [customFoods, setCustomFoods] = usePersistentState<CustomFood[]>("customFoods", []);
   const [customExercises, setCustomExercises] = usePersistentState<CustomExerciseLibraryItem[]>(
@@ -3552,41 +3545,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     []
   );
-
-  const [referralRedeemed, setReferralRedeemed] = usePersistentState<boolean>("referralRedeemed", false);
-  const [referralDiscountPct, setReferralDiscountPct] = usePersistentState<number>("referralDiscountPct", 0);
-  const [referralNextMonthDiscountPct, setReferralNextMonthDiscountPct] = usePersistentState<number>(
-    "referralNextMonthDiscountPct",
-    0
-  );
-  // The code itself now comes from the `referrals` table via
-  // getOrCreateMyReferralCode(), and every validation the mock did here
-  // (empty, already redeemed, own code) is enforced by redeem_referral()
-  // server-side. All that's left locally is recording the outcome.
-  const applyReferralReward: AppState["applyReferralReward"] = (discountPct) => {
-    setReferralRedeemed(true);
-    setReferralDiscountPct(discountPct);
-    // redeem_referral() credits 1,500 points to the REFERRER, not to this
-    // account -- so this re-read is for the balance the redeemer's own ledger
-    // may already have had, and for anything the redemption itself completed.
-    // The referrer sees their own credit on their next read.
-    refreshAchievements();
-  };
-
-  // The referrer-side reward is earned by someone ELSE redeeming this
-  // user's code, so it can't come from any response this client sees —
-  // it's read back from their own referral rows once a session exists.
-  useEffect(() => {
-    if (!authUserId) return;
-    let cancelled = false;
-    void getMyReferrerReward(authUserId).then((reward) => {
-      if (cancelled) return;
-      setReferralNextMonthDiscountPct(reward.discountPct);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [authUserId]);
 
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
@@ -6376,10 +6334,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language,
       setLanguage,
       t,
-      notificationPrefs,
-      updateNotificationPrefs,
       accessibility,
       updateAccessibility,
+      presentationSaveError,
       foodLog,
       addFoodEntry,
       addFoodEntryRecord,
@@ -6579,10 +6536,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      referralRedeemed,
-      referralDiscountPct,
-      referralNextMonthDiscountPct,
-      applyReferralReward,
       premiumPlan,
       setPremiumPlan,
       generateClientCode,
@@ -6650,8 +6603,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       passMfaWithRecoveryCode,
       theme,
       language,
-      notificationPrefs,
       accessibility,
+      presentationSaveError,
       foodLog,
       workoutLog,
       workoutSessions,
@@ -6716,9 +6669,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoveryModePending,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
-      referralRedeemed,
-      referralDiscountPct,
-      referralNextMonthDiscountPct,
       journalFolders,
       journalLoading,
       journalError,

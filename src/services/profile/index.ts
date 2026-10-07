@@ -415,3 +415,37 @@ export async function isReservedDisplayName(name: string): Promise<boolean | nul
   }
   return data === true;
 }
+
+/**
+ * WHEN A PENDING DELETION ACTUALLY RUNS (A7). profiles.deletion_due_at is the
+ * authoritative date: an admin can schedule a deletion on 3, 14 or 30 days'
+ * notice, and a self-service request now writes now() + 30 days. Both are
+ * readable by the owner and writable by nobody. deletion_notice_days is the
+ * admin's notice (null for a self-service request).
+ *
+ * A SEPARATE READ, not part of fetchProfile, on purpose: if these columns are
+ * missing (a database without A7) only this read fails, and the caller falls
+ * back to deletion_requested_at + 30 days, which is exactly what the sweep
+ * does then (coalesce(deletion_due_at, deletion_requested_at + 30 days)).
+ */
+export async function fetchDeletionSchedule(
+  userId: string
+): Promise<{ dueAt: string | null; noticeDays: number | null } | null> {
+  try {
+    // Columns from A7, not in the production-generated types yet.
+    const { data, error } = await (supabase.from("profiles") as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, v: string) => {
+          maybeSingle: () => Promise<{ data: { deletion_due_at: string | null; deletion_notice_days: number | null } | null; error: unknown }>;
+        };
+      };
+    })
+      .select("deletion_due_at, deletion_notice_days")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return { dueAt: data.deletion_due_at, noticeDays: data.deletion_notice_days };
+  } catch {
+    return null;
+  }
+}

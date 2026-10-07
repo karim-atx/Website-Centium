@@ -1,4 +1,5 @@
 import { ChevronLeft, MapPin } from "lucide-react";
+import { VenueImage } from "../../components/marketplace/VenueImage";
 
 // Pieces the class page (MO1.4.4) and the gym page (MO1.4.2.1) share.
 // Handover-complete pass (2026-10-07). Both pages are new since R1, so they
@@ -8,18 +9,30 @@ import { ChevronLeft, MapPin } from "lucide-react";
 /**
  * The detail page's hero at the top edge: 200 tall on a class page, 240 on a
  * gym page, with a 36 pt white back disc (ChevronLeft 18) 16 in and 16 down
- * (measured on MO1.4.4 / MO1.4.2.1, 2x). Venues and classes have no photos yet
- * (they come from the business / gym dashboard upload, a backend stage), so
- * the hero is the primary tint, as Foundations draws a gym with no photo.
+ * (measured on MO1.4.4 / MO1.4.2.1, 2x). Classes have no photos, so the hero
+ * is the primary tint, as Foundations draws a gym with no photo. Stage A4: a
+ * gym page passes its cover (gyms.cover_url's public URL), drawn over the
+ * whole hero; if it is missing or fails to load, the tint shows.
  * The page's 24 pt top padding and the safe area are cancelled so the hero
  * starts at y 0, as the course page does.
  */
-export function DetailHero({ height, onBack, children }: { height: 200 | 240; onBack: () => void; children?: React.ReactNode }) {
+export function DetailHero({
+  height,
+  onBack,
+  coverUrl = null,
+  children,
+}: {
+  height: 200 | 240;
+  onBack: () => void;
+  coverUrl?: string | null;
+  children?: React.ReactNode;
+}) {
   return (
     <div
       className="relative -mx-4 -mt-[calc(env(safe-area-inset-top)+24px)] bg-primary-pale px-4 pt-[calc(env(safe-area-inset-top)+16px)]"
       style={{ height: `calc(env(safe-area-inset-top) + ${height}px)` }}
     >
+      <VenueImage srcs={[coverUrl]} className="absolute inset-0 w-full h-full" />
       <button
         type="button"
         onClick={onBack}

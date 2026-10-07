@@ -45,6 +45,7 @@ import BusinessMembersTab from "./pages/marketplace/BusinessMembersTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
 import BusinessOperationsTab from "./pages/marketplace/BusinessOperationsTab";
 import BusinessGymTab from "./pages/marketplace/BusinessGymTab";
+import BusinessVenueTab from "./pages/marketplace/BusinessVenueTab";
 import BusinessCalendarTab from "./pages/marketplace/BusinessCalendarTab";
 import Profile from "./pages/profile/Profile";
 import MyCv from "./pages/profile/MyCv";
@@ -425,6 +426,7 @@ function AppRoutes() {
         <Route path="/app/business/classes" element={<BusinessClassesTab />} />
         <Route path="/app/business/operations" element={<BusinessOperationsTab />} />
         <Route path="/app/business/gym" element={<BusinessGymTab />} />
+        <Route path="/app/business/venue" element={<BusinessVenueTab />} />
         <Route path="/app/business/calendar" element={<BusinessCalendarTab />} />
         <Route path="/app/profile" element={<Profile />} />
         <Route path="/app/profile/cv" element={<MyCv />} />

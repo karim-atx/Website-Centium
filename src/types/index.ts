@@ -113,6 +113,8 @@ export interface UserProfile {
   phone?: string;
   // QA 12.0: "credentials which when pressed shows you all relevant info
   // including social media you can link like Instagram and X".
+  // LEGACY, read only by the one-time move to profiles.instagram / .x
+  // (Stage A1, AppContext hydration); nothing writes these any more.
   instagramHandle?: string;
   xHandle?: string;
   // QA 12.0: "a button called payments, whereby the professional can add
@@ -1302,7 +1304,21 @@ export type HabitIconKey =
   | "meditation"
   | "sleep"
   | "book"
-  | "custom";
+  | "custom"
+  // Stage A1: the 12 the MO1.1.1.1 picker adds, named after their Lucide icon
+  // (the database enum public.habit_icon, 20 values).
+  | "glass_water"
+  | "moon"
+  | "sun"
+  | "apple"
+  | "salad"
+  | "coffee"
+  | "bike"
+  | "heart"
+  | "smile"
+  | "music"
+  | "phone_off"
+  | "timer";
 
 export interface HabitItem {
   id: string;
@@ -1470,8 +1486,8 @@ export interface JournalEntry {
 // V3: appearance — accent color theme, alongside light/dark. R20 (batch D):
 // the five Foundations 2.1 theme pairs; saved values from before are mapped by
 // normalizeColorTheme (src/theme/colorThemes.ts).
-// Future Supabase migration: device_presentation_settings (per-platform,
-// stays local, never synced; its color_theme enum needs the new values).
+// Stored in device_presentation_settings.color_theme as centium / sky_slate /
+// rose_blush / gold_amber / coral_terracotta (services/presentation/mapping.ts).
 export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.

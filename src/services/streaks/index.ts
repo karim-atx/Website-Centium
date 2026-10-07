@@ -8,6 +8,12 @@ import { supabase } from "../../../lib/supabase/client";
 // would know to. The nightly sweep (Database 20260916070000) UPDATEs rows it
 // finds; it does not create any. An account with no auto rows therefore has
 // nothing to advance, and its streaks stay empty forever without this.
+//
+// AUTOMATIC ONLY (Stage A1, HANDOVER_API.md "Streaks are automatic only").
+// `check (auto)` on streaks: there is no manual streak any more, so nothing
+// here creates, edits or ticks one. That makes `streaks.goal_days` and
+// `streaks.habit_item_id` dead columns (the manual path's) — never select or
+// write them; they are dropped once the website has stopped reading them.
 
 /**
  * The four labels, spelled exactly as the app has always spelled them.
