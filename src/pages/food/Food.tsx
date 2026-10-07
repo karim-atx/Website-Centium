@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -23,7 +23,7 @@ import { CopyToSheet } from "../../components/food/CopyToSheet";
 import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
 import { todayLocal } from "../../utils/date";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
@@ -70,13 +70,11 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: s
   dinner: { label: "Dinner", fill: "rgb(var(--th-9284c4))", fillDark: "rgb(var(--th-6b6190))", Icon: Sunset },
 };
 
-const SWIPE_THRESHOLD = 60;
-
-// The calorie hero's height, so its placeholder does not shift the page.
-const HERO_PLACEHOLDER_HEIGHT = 116;
+// The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
+const HERO_PLACEHOLDER_HEIGHT = 101;
 
 export default function Food() {
-  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
+  const { user, foodLog, nutritionGoal, selectedDate, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
     useApp();
   const dark = useIsDark();
   // Task X follow-up: every per-meal and per-entry number waits for the
@@ -92,15 +90,8 @@ export default function Food() {
   // QA 11.0: meal sections collapse like Routine folders on Workout >
   // Routines.
   const [collapsedMeals, setCollapsedMeals] = useState<Set<MealType>>(new Set());
-  // QA 11.0: "Add an undo button... which only appears after someone
-  // swipes or double taps to add food... only remain appearing for 15
-  // seconds." Tracks which meal + which entry ids a copy just added.
-  const [undoState, setUndoState] = useState<{ meal: MealType; ids: string[] } | null>(null);
   // Deleting now goes to the database first, so it can fail and has to say so.
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const undoTimerRef = useRef<number | null>(null);
-  const mealTouchStart = useRef<{ x: number; y: number } | null>(null);
-  const lastTapRef = useRef<{ meal: MealType; at: number } | null>(null);
   // FO1.1 selection: one meal of the day being viewed at a time, never kept
   // after leaving the Diary (it is page state, and cleared on a day change).
   const [selecting, setSelecting] = useState<{ meal: MealType; date: string; ids: Set<string> } | null>(null);
@@ -137,16 +128,6 @@ export default function Food() {
       return next;
     });
 
-  const handleCopyYesterdayMeal = async (meal: MealType) => {
-    // Each copy is now a real insert, so this awaits the writes and only
-    // offers Undo for rows that actually landed.
-    const ids = await copyYesterdayMeal(meal);
-    if (ids.length === 0) return;
-    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
-    setUndoState({ meal, ids });
-    undoTimerRef.current = window.setTimeout(() => setUndoState(null), 15000);
-  };
-
   /**
    * Deletes an entry, database first.
    *
@@ -155,8 +136,8 @@ export default function Food() {
    * food_log_entries, and it would come back on the next hydration — worse
    * than a visible error, because the user would never know.
    *
-   * Entries that only exist locally (AI Voice, custom meals, copy-yesterday
-   * still write local-only rows) skip the request entirely; there is nothing
+   * Entries that only exist locally (AI Voice, custom meals still write
+   * local-only rows) skip the request entirely; there is nothing
    * to delete remotely.
    */
   const handleDelete = async (id: string) => {
@@ -249,42 +230,10 @@ export default function Food() {
     setBulkToast(`Copied ${itemsLabel(copied)} to ${COPY_MEAL_LABEL[meal]}, ${copyToastDate(day)}.`);
   };
 
-  const handleUndo = () => {
-    if (!undoState) return;
-    // Copy-yesterday writes local-only entries today, so these are local ids;
-    // handleDelete still routes each one correctly either way.
-    undoState.ids.forEach((id) => void handleDelete(id));
-    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
-    setUndoState(null);
-  };
-
-  // QA 11.0: "Firstly make it 'Swipe right or Double Tap'." — a swipe-right
-  // or a double-tap on a meal's header copies yesterday's food for that
-  // meal only, instead of one global gesture for the whole diary.
-  const onMealTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    mealTouchStart.current = { x: t.clientX, y: t.clientY };
-  };
-  const onMealTouchEnd = (e: React.TouchEvent, meal: MealType) => {
-    if (!mealTouchStart.current) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - mealTouchStart.current.x;
-    const dy = t.clientY - mealTouchStart.current.y;
-    mealTouchStart.current = null;
-    if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) {
-      void handleCopyYesterdayMeal(meal);
-    }
-  };
-  const onMealTap = (meal: MealType) => {
-    const now = Date.now();
-    const last = lastTapRef.current;
-    if (last && last.meal === meal && now - last.at < 350) {
-      lastTapRef.current = null;
-      void handleCopyYesterdayMeal(meal);
-    } else {
-      lastTapRef.current = { meal, at: now };
-    }
-  };
+  // Handover-complete pass (2026-10-07): copy-yesterday is gone — the
+  // swipe-right / double-tap on a meal card, its 15 s Undo pill and the
+  // "Swipe right or double-tap…" hint. FO1 draws none of them. Copying a
+  // day's food stays possible through the ⋮ menu's Select and Copy to.
 
   // Iteration 6 "Team" §2.1: each macro's bar sits on the same row as its
   // label and gram readout now, instead of stacked beneath it.
@@ -446,11 +395,6 @@ export default function Food() {
               const mealFat = entries.reduce((s, e) => s + e.fat, 0);
               const macroTotal = mealProtein + mealCarbs + mealFat || 1;
               const collapsed = collapsedMeals.has(meal);
-              const showUndo = undoState?.meal === meal;
-              // Iteration 6 "Team" §2.4: the copy-yesterday hint used to be
-              // one persistent line above the whole list; it now only shows
-              // while this specific meal's add sheet is open for it.
-              const isAddingHere = addOpen && addMeal === meal;
               // Master handover (CentiumTabFrame food.diary): the card itself
               // is white (the dark card in dark mode) with the lavender hairline
               // and shadow; only its header carries the lavender wash, and only
@@ -461,9 +405,6 @@ export default function Food() {
                   key={meal}
                   className="rounded-[15px] bg-cream-card overflow-hidden"
                   style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.34)", boxShadow: "0 4px 14px rgb(var(--th-5f5093) / 0.08)" }}
-                  onTouchStart={onMealTouchStart}
-                  onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
-                  onClick={() => onMealTap(meal)}
                 >
                   <div
                     role="button"
@@ -534,24 +475,6 @@ export default function Food() {
                     />
                   </div>
 
-                  {showUndo && (
-                    <div className="flex justify-end" style={{ background: headBg, padding: "0 14px 8px" }}>
-                      {/* QA 11.0: "Add an undo button to the far right, in a
-                          light grey shade color, which only appears after
-                          someone swipes or double taps to add food... only
-                          remain appearing for 15 seconds." */}
-                      <button
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          handleUndo();
-                        }}
-                        className="tap flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1"
-                      >
-                        <Undo2 size={11} /> Undo
-                      </button>
-                    </div>
-                  )}
-
                   {!collapsed && (
                     <div style={{ padding: "11px 14px 13px" }}>
                       {entries.length > 0 && (
@@ -587,13 +510,7 @@ export default function Food() {
                                     {checked && <Check size={12} strokeWidth={3} />}
                                   </button>
                                 )}
-                              <div
-                                className="flex-1 min-w-0"
-                                // A swipe on a row is the row's own: it must not
-                                // also reach the card's swipe-right copy-yesterday.
-                                onTouchStart={inSelection ? undefined : (ev) => ev.stopPropagation()}
-                                onTouchEnd={inSelection ? undefined : (ev) => ev.stopPropagation()}
-                              >
+                              <div className="flex-1 min-w-0">
                               {/* Decision 23 (kept item 50): Foundations "Swipe-row
                                   actions", the shared SwipeActions — a Delete tile
                                   (danger.tint, Trash2 16 danger.icon, r14) at the
@@ -628,7 +545,6 @@ export default function Food() {
                                   <span className="min-w-0">
                                     <span className="flex items-center gap-1.5 text-[12px] font-semibold text-charcoal">
                                       {e.name}
-                                      {e.display.isLebanese && <Star size={10} className="text-gold fill-gold shrink-0" />}
                                       {restricted && (
                                         <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5 shrink-0">
                                           Not compatible
@@ -651,15 +567,6 @@ export default function Food() {
                               </div>
                             );
                           })}
-                        </div>
-                      )}
-
-                      {isAddingHere && (
-                        <div className="flex items-center gap-2 rounded-[11px] bg-teal/[0.13] border border-dashed border-team-teal-deep/40 px-[11px] py-[9px] mb-2">
-                          <RefreshCw size={12} className="text-team-teal-deep shrink-0" />
-                          <span className="text-[10.5px] leading-[1.45] text-team-teal-ink">
-                            Swipe right or double-tap to copy yesterday's {mealLabels[meal].toLowerCase()}
-                          </span>
                         </div>
                       )}
 
