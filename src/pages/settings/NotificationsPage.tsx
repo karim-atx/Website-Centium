@@ -68,9 +68,9 @@ import { pushUnavailableReason } from "./platform";
 // choice, for every device) and shows the push message. On a browser that
 // cannot receive push at all, the switch is the column alone.
 //
-// BR-12 dimming, as before: every row dims while the switch is off, except
-// Messages when the browser has blocked notifications (see messagesDimmed).
-// With notification_allow off, Messages dims too: the server sends nothing.
+// BR-12 dimming (user decision, 7 October 2026): every row, Messages
+// included, dims and locks only while notification_allow is off (the server
+// sends nothing then). This browser's push state never locks the rows.
 //
 // A failed save puts the switch back and shows the inline danger line under
 // the group it belongs to (K1).
@@ -355,17 +355,13 @@ export default function NotificationsPage() {
     ? "Blocked in browser settings"
     : "Off";
 
-  // BR-12. The master off on the account dims everything. Otherwise dimmed
-  // only where this device's switch could be turned on: on a browser that
-  // can't receive push at all, dimming would trap the account-wide settings
-  // behind a switch that can never move.
-  const deviceDim = pushAvailable && !deviceOn;
-  const dimmed = allow === false || deviceDim;
-  // Messages dims with the others (MO1.8.3, BR-12 "every row dims"), except
-  // where the browser has blocked notifications: the switch above can't turn
-  // on from the app then, and dimming would lock the account-wide Messages
-  // setting (which applies on every device) out of reach on this one.
-  const messagesDimmed = allow === false || (deviceDim && permission !== "denied");
+  // BR-12 (user decision, 7 October 2026): the rows dim and lock ONLY when the
+  // account's own master (notification_allow) is off, Messages included. Every
+  // row is an account-wide setting that applies on all devices, so this
+  // browser's push state (not registered, blocked, or unable to receive push)
+  // never locks them; the lead card alone says what this device will get.
+  const dimmed = allow === false;
+  const messagesDimmed = dimmed;
 
   const toggleRow = async (group: string, key: NotificationToggleKey, value: boolean) => {
     setNote(group, null);
