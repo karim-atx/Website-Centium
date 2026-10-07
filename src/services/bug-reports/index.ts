@@ -1,5 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { prepareForumPhoto } from "../forum/photo";
+import { SCREENSHOT_BUCKET, SCREENSHOT_TOO_LARGE, screenshotPath, screenshotProblem } from "./screenshotRules";
 
 // Filing a bug report. One direction only.
 //
@@ -14,6 +17,28 @@ import type { PostgrestError } from "@supabase/supabase-js";
 // says reports are read rather than answered, and that wording is load-bearing:
 // it is the only thing stopping this from being a promise the product cannot
 // keep.
+
+/**
+ * Readies a picked screenshot: the bucket's type and size checks, then the
+ * forum photo's re-draw (services/forum/photo), which re-encodes it as a JPEG
+ * with every byte of metadata removed and its long edge capped at 2048 px. A
+ * screenshot rarely carries location, but a photo picked by mistake does, and
+ * a bug report is read by staff. Refused rather than sent when that fails.
+ */
+export async function prepareBugScreenshot(file: File): Promise<{ ok: true; file: File } | { ok: false; message: string }> {
+  const problem = screenshotProblem(file);
+  if (problem) return { ok: false, message: problem };
+  const prepared = await prepareForumPhoto(file);
+  if (!prepared.ok) {
+    return {
+      ok: false,
+      message: /under 5 MB/.test(prepared.message)
+        ? SCREENSHOT_TOO_LARGE
+        : "This screenshot couldn't be prepared safely, so it wasn't added. Try a different image.",
+    };
+  }
+  return { ok: true, file: new File([prepared.file], "screenshot.jpg", { type: "image/jpeg" }) };
+}
 
 export interface BugReportResult {
   ok: boolean;
@@ -58,15 +83,26 @@ function describe(error: PostgrestError): string {
  * call time from the caller rather than here, so a caller in another
  * environment is not forced to fake a `window`.
  *
- * NOTHING ELSE IS COLLECTED. No screenshot, no console log, no page content —
- * in this app all three would carry lab results or medications, turning a bug
- * report into a medical-data disclosure sent to whoever reads this table.
+ * NOTHING ELSE IS COLLECTED AUTOMATICALLY. No console log, no page content —
+ * in this app both would carry lab results or medications, turning a bug
+ * report into a medical-data disclosure sent to whoever reads this table. A
+ * screenshot is sent only when the person picks one themselves (Stage A1),
+ * re-drawn without its metadata by the caller first.
+ *
+ * THE SCREENSHOT GOES FIRST, THEN THE ROW. `screenshot_path` has an INSERT
+ * grant and no UPDATE (a report's screenshot is set once), so the row has to
+ * be inserted already carrying the path. If the row then fails, the uploaded
+ * object is removed so nothing is left in the person's folder with no report
+ * pointing at it. The path is never returned to the caller or shown: only
+ * admins read the bucket, through a signed URL.
  */
 export async function submitBugReport(params: {
   userId: string;
   description: string;
   route: string | null;
   userAgent: string | null;
+  /** Already validated and stripped of metadata (prepareBugScreenshot). */
+  screenshot?: File | null;
 }): Promise<BugReportResult> {
   const description = params.description.trim();
   if (!description) return { ok: false, message: "Add a short description first." };
@@ -74,19 +110,48 @@ export async function submitBugReport(params: {
     return { ok: false, message: "That report is too long. Please shorten it." };
   }
 
+  let path: string | null = null;
+  if (params.screenshot) {
+    const problem = screenshotProblem(params.screenshot);
+    if (problem) return { ok: false, message: problem };
+    path = screenshotPath(params.userId, crypto.randomUUID());
+    const { error: upErr } = await supabase.storage
+      .from(SCREENSHOT_BUCKET)
+      .upload(path, params.screenshot, { contentType: params.screenshot.type, upsert: false });
+    if (upErr) {
+      // The status only: never the path.
+      const e = upErr as { statusCode?: string; status?: number };
+      console.error("[bug-reports] Screenshot upload refused:", e.statusCode ?? e.status ?? upErr.name);
+      return {
+        ok: false,
+        message: isOffline(upErr)
+          ? OFFLINE_MESSAGE
+          : "The screenshot couldn't be uploaded. Try again, or remove it to send the report without it.",
+      };
+    }
+  }
+
   // The advanced-monitoring plan's route is never reported, wherever the
   // sheet was opened from: a bug report is read by staff, and the route alone
   // would tell them the setting is on.
   const route = params.route && /^\/app\/health\/checks(?=$|[/?#])/.test(params.route) ? null : params.route;
-  const { error } = await supabase.from("bug_reports").insert({
+  // ONE NARROW CAST: the generated types come from production, where
+  // bug_reports.screenshot_path (Stage A1) isn't yet.
+  const row = {
     user_id: params.userId,
     description,
     route: clamp(route),
     user_agent: clamp(params.userAgent),
-  });
+    screenshot_path: path,
+  } as unknown as { user_id: string; description: string };
+  const { error } = await supabase.from("bug_reports").insert(row);
 
   if (error) {
     console.error("[bug-reports] Could not file report:", error.message);
+    if (path) {
+      const { error: rmErr } = await supabase.storage.from(SCREENSHOT_BUCKET).remove([path]);
+      if (rmErr) console.warn("[bug-reports] Could not remove the unsent screenshot:", rmErr.name);
+    }
     return { ok: false, message: describe(error) };
   }
   return { ok: true };
