@@ -4,6 +4,7 @@ import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CtaButton } from "../ui/PinnedCta";
+import { PopupMenu } from "../ui/PopupMenu";
 import { SwipeActions } from "../ui/SwipeActions";
 import { useApp } from "../../context/AppContext";
 import { MembershipStatusBadge } from "../marketplace/MembershipStatusBadge";
@@ -18,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
 import { fetchMyGymMemberships, type GymMembership } from "../../services/venues";
 import { memberTag, validRange } from "../../services/venues/venueLogic";
-import { Check, ChevronRight, Dumbbell, LogOut, Plus, Store, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -29,10 +30,11 @@ import { Check, ChevronRight, Dumbbell, LogOut, Plus, Store, Trash2, X } from "l
 // The board does not draw pending invitations; they are kept.
 //
 // ENDING ONE: swipe the row left (the board's swipe-row, "End membership"; a
-// mouse drags it the same way). Handover-complete pass: the ⋮ menu (D12, not
-// drawn) is gone; the keyboard path is the swipe row's own, with nothing
-// drawn (focus the row, ArrowLeft). A confirm comes first (kept: it guards
-// ending a paid membership by a stray swipe).
+// mouse drags it the same way; the keyboard focuses the row and presses
+// ArrowLeft), or the ⋮ menu, which is the same action for a mouse or
+// keyboard (D12). Restore round 2 (user, 2026-10-07): the ⋮ and its menu are
+// back as on main, in Foundations' dropdown. Either way a confirm comes first
+// (it guards ending a paid membership by a stray swipe).
 // Ended memberships stay listed, muted.
 //
 // REDEEMING IS ITS OWN CONSENT. A code redeemed here creates a membership
@@ -59,6 +61,7 @@ export const MembershipsCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ending, setEnding] = useState<Membership | null>(null);
+  const [menuFor, setMenuFor] = useState<{ membership: Membership; anchor: HTMLElement } | null>(null);
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -188,6 +191,21 @@ export const MembershipsCard: React.FC = () => {
       {/* White on the lavender row, as drawn; the shared badge's own fills
           stay for the business's member list. */}
       <MembershipStatusBadge status={m.status} className="!bg-cream-card" />
+      {/* D12 (restore round 2): the visible path to End membership. The 16 pt
+          ⋮ in its pre-redesign text.soft; a 32 wide, 44 tall target that
+          sits inside the row's 16 padding. */}
+      {m.status === "active" && (
+        <button
+          type="button"
+          onClick={(e) => setMenuFor({ membership: m, anchor: e.currentTarget })}
+          aria-label={`Options for ${m.businessName ?? "this membership"}`}
+          aria-haspopup="menu"
+          aria-expanded={menuFor?.membership.id === m.id}
+          className="tap w-8 h-11 -my-1 -me-2 rounded-lg flex items-center justify-center text-charcoal-soft shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
+        >
+          <MoreVertical size={16} aria-hidden />
+        </button>
+      )}
     </div>
   );
 
@@ -316,6 +334,23 @@ export const MembershipsCard: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* D12 (restore round 2): End membership without a swipe, in
+          Foundations' dropdown (the 36 pt rows of the Journal / Habits
+          menus). It opens the same confirm as the swipe tile. */}
+      <PopupMenu
+        open={!!menuFor}
+        onClose={() => setMenuFor(null)}
+        anchor={menuFor?.anchor ?? null}
+        width={200}
+        rowLineHeight={16}
+        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
+        onSelect={() => {
+          const m = menuFor?.membership ?? null;
+          setMenuFor(null);
+          setEnding(m);
+        }}
+      />
 
       <CentredPopup
         open={!!ending}

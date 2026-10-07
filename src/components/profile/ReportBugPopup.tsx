@@ -23,9 +23,10 @@ import { MAX_DESCRIPTION, submitBugReport } from "../../services/bug-reports";
  * queries the table. The confirmed state says it was received and is read,
  * not answered.
  *
- * Handover-complete pass: the character counter is gone (not drawn); going
- * over the limit is the Foundations input error instead (danger border and
- * a line under the field). The "Sent with this report" line stays: it is a
+ * Handover-complete pass: going over the limit is the Foundations input
+ * error (danger border and a line under the field). Restore round 2 (user,
+ * 2026-10-07): the character counter is back as on main (from 75% of the
+ * limit), at the end of that line. The "Sent with this report" line stays: it is a
  * privacy disclosure of what is collected (exception 1). The sent state and
  * errors are the Foundations popup and error line (the board draws neither).
  *
@@ -133,10 +134,20 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           }`}
         />
       </label>
-      {tooLong && (
-        <p role="alert" className="mt-1.5 text-[12px] font-semibold text-status-high">
-          Too long: {description.length.toLocaleString("en-GB")} of {MAX_DESCRIPTION.toLocaleString("en-GB")} characters.
-        </p>
+      {/* Restore round 2 (user, 2026-10-07): the live counter from three
+          quarters of the limit, as on main, at the end of the line; over the
+          limit it turns danger and the Foundations input error sits beside it. */}
+      {description.length > MAX_DESCRIPTION * 0.75 && (
+        <div className="mt-1.5 flex items-start gap-2">
+          {tooLong && (
+            <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
+              Too long: {description.length.toLocaleString("en-GB")} of {MAX_DESCRIPTION.toLocaleString("en-GB")} characters.
+            </p>
+          )}
+          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-right tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
+            {description.length} / {MAX_DESCRIPTION}
+          </p>
+        </div>
       )}
 
       <input

@@ -21,9 +21,10 @@ import { MAX_REVIEW_TEXT, submitReview } from "../../services/app-reviews";
  * is a complete review. Settings keys this popup on `open`, so every opening
  * starts with no stars chosen.
  *
- * Handover-complete pass: the rating word under the stars and the character
- * counter are gone (not drawn; each star still names its value to screen
- * readers). Going over the limit is the Foundations input error instead.
+ * Handover-complete pass: the rating word under the stars is gone (not
+ * drawn; each star still names its value to screen readers). Going over the
+ * limit is the Foundations input error. Restore round 2 (user, 2026-10-07):
+ * the character counter is back as on main (from 75% of the limit).
  * The "Sent with this review" line stays: it is a privacy disclosure of what
  * is collected (exception 1). The sent state and errors are the Foundations
  * popup and error line (the board draws neither).
@@ -108,10 +109,20 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
           tooLong ? "border-status-high" : "border-charcoal/10"
         }`}
       />
-      {tooLong && (
-        <p role="alert" className="mt-1.5 text-[12px] font-semibold text-status-high">
-          Too long: {reviewText.length.toLocaleString("en-GB")} of {MAX_REVIEW_TEXT.toLocaleString("en-GB")} characters.
-        </p>
+      {/* Restore round 2 (user, 2026-10-07): the live counter from three
+          quarters of the limit, as on main, at the end of the line; over the
+          limit it turns danger and the Foundations input error sits beside it. */}
+      {reviewText.length > MAX_REVIEW_TEXT * 0.75 && (
+        <div className="mt-1.5 flex items-start gap-2">
+          {tooLong && (
+            <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
+              Too long: {reviewText.length.toLocaleString("en-GB")} of {MAX_REVIEW_TEXT.toLocaleString("en-GB")} characters.
+            </p>
+          )}
+          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-right tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
+            {reviewText.length} / {MAX_REVIEW_TEXT}
+          </p>
+        </div>
       )}
 
       {/* Stated rather than silently collected (privacy, exception 1). */}
