@@ -250,7 +250,8 @@ export default function Health() {
           title="Steps"
           subtitle={metricValues.steps === null ? NO_READINGS : `${formatMetric("steps", metricValues.steps)} steps`}
           fill={tint(TEAL, 0.2)}
-          tileFill={`rgb(${TEAL})`}
+          // Dark: the same teal, translucent on the card (no light islands).
+          tileFill={dark ? tint(TEAL, 0.45) : `rgb(${TEAL})`}
           glyph={
             stepsMeta.history.length > 0 ? (
               <StepBarsGlyph values={stepsMeta.history.map((h) => h.value)} max={stepsMax} />
@@ -270,7 +271,7 @@ export default function Health() {
           title="Sleep"
           subtitle={metricValues.sleepHours === null ? NO_READINGS : formatMetric("sleep", metricValues.sleepHours)}
           fill={tint(LAV, 0.13)}
-          tileFill={`rgb(${LAV})`}
+          tileFill={dark ? tint(LAV, 0.45) : `rgb(${LAV})`}
           onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
         />
         <HealthRow
@@ -281,7 +282,7 @@ export default function Health() {
               : `${formatMetric("caloriesBurned", metricValues.caloriesBurned)} kcal`
           }
           fill="rgba(217,164,65,0.14)"
-          tileFill="#D9A441"
+          tileFill={dark ? "rgba(217,164,65,0.5)" : "#D9A441"}
           glyph={<Flame size={18} strokeWidth={1.75} className="text-white" />}
           onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}
         />
