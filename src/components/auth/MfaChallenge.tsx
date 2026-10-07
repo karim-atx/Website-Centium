@@ -5,6 +5,7 @@ import { CodeBoxes } from "../ui/CodeBoxes";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useApp } from "../../context/AppContext";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
+import { redeemRecoveryCode } from "../../services/recoveryCodes";
 
 /**
  * The second factor, asked for at the point the app would otherwise let
@@ -26,7 +27,12 @@ import { getMfaStatus, verifyTotp } from "../../services/mfa";
  * user's choice; the server enforces it.
  */
 export const MfaChallenge: React.FC = () => {
-  const { refreshMfaState, signOut } = useApp();
+  const { refreshMfaState, signOut, passMfaWithRecoveryCode } = useApp();
+  // "Use a recovery code" (stage 1): one of the ten codes from MO1.8.4.2,
+  // spent here instead of the authenticator. No frame draws this step; it is
+  // an account-safety path, styled with the screen it lives on.
+  const [useRecovery, setUseRecovery] = useState(false);
+  const [recovery, setRecovery] = useState("");
 
   const [factorId, setFactorId] = useState<string | null>(null);
   const [factorName, setFactorName] = useState<string | null>(null);
@@ -64,6 +70,26 @@ export const MfaChallenge: React.FC = () => {
     };
   }, [refreshMfaState]);
 
+  const submitRecovery = async () => {
+    if (!recovery.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    const result = await redeemRecoveryCode(recovery);
+    if (!result.ok) {
+      setBusy(false);
+      setError(result.message);
+      return;
+    }
+    if (!result.value.success) {
+      // The server's one sentence for every failure, shown as it is.
+      setBusy(false);
+      setError(result.value.message);
+      return;
+    }
+    // In: the guard reads the pass, and this screen unmounts.
+    passMfaWithRecoveryCode();
+  };
+
   const submit = async () => {
     if (!factorId || code.length < 6 || busy) return;
     setBusy(true);
@@ -90,7 +116,10 @@ export const MfaChallenge: React.FC = () => {
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (!busy && code.length === 6) void singleFlight(submit);
+          if (busy) return;
+          if (useRecovery) {
+            if (recovery.trim()) void singleFlight(submitRecovery);
+          } else if (code.length === 6) void singleFlight(submit);
         }}
         className="w-full max-w-sm text-center space-y-4"
       >
@@ -99,13 +128,35 @@ export const MfaChallenge: React.FC = () => {
         </div>
         <h1 className="text-lg font-semibold text-charcoal">Two-factor authentication</h1>
         <p className="text-[13px] text-charcoal-soft leading-relaxed">
-          {factorName
-            ? `Enter the 6-digit code from ${factorName}.`
-            : "Enter the 6-digit code from your authenticator app."}
+          {useRecovery
+            ? "Enter one of the recovery codes you saved when you turned on two-factor."
+            : factorName
+              ? `Enter the 6-digit code from ${factorName}.`
+              : "Enter the 6-digit code from your authenticator app."}
         </p>
 
-        {/* Six boxes (Foundations 2.5). They take focus once the factor has
-            loaded: autoFocus waits for the boxes to be enabled. */}
+        {useRecovery ? (
+          // Foundations › Inputs: 44 tall, radius 12, surface.soft. The
+          // server forgives case, spaces, the hyphen, O/0 and I/1.
+          <input
+            value={recovery}
+            onChange={(e) => {
+              setRecovery(e.target.value);
+              setError(null);
+            }}
+            disabled={busy}
+            autoFocus
+            autoComplete="one-time-code"
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="XXXX-XXXX"
+            aria-label="Recovery code"
+            aria-invalid={!!error}
+            className={`w-full h-11 rounded-xl bg-cream-soft border px-3.5 text-center text-[15px] font-bold tracking-[0.12em] text-charcoal placeholder:text-charcoal-faint placeholder:font-semibold focus:outline-none focus:border-primary-accent ${error ? "border-status-high" : "border-charcoal/10"}`}
+          />
+        ) : (
+        /* Six boxes (Foundations 2.5). They take focus once the factor has
+            loaded: autoFocus waits for the boxes to be enabled. */
         <CodeBoxes
           value={code}
           onChange={(v) => {
@@ -117,21 +168,33 @@ export const MfaChallenge: React.FC = () => {
           autoFocus
           label="Six-digit authentication code"
         />
+        )}
 
         {error && <p className="text-[11.5px] font-semibold text-status-high">{error}</p>}
 
-        <Button type="submit" fullWidth size="lg" disabled={busy || code.length < 6}>
+        <Button type="submit" fullWidth size="lg" disabled={busy || (useRecovery ? !recovery.trim() : code.length < 6)}>
           {busy ? "Checking…" : "Verify"}
         </Button>
 
-        {/* HONEST ABOUT WHAT DOES NOT EXIST YET. Supabase issues no backup
-            codes, and the administrator-side reset is Phase 2 — so this says
-            what actually happens today rather than offering a link that
-            would go nowhere. Saying "contact support" and meaning it beats a
-            "lost your device?" button that dead-ends. */}
+        {/* The way in without the phone: a recovery code (stage 1), and back
+            to the authenticator from there. With no codes left either,
+            support removes the factor once they've confirmed who it is. */}
+        <button
+          type="button"
+          onClick={() => {
+            setUseRecovery((v) => !v);
+            setError(null);
+            setCode("");
+            setRecovery("");
+          }}
+          disabled={busy}
+          className="tap w-full text-center text-sm font-semibold text-primary"
+        >
+          {useRecovery ? "Use my authenticator app" : "Use a recovery code"}
+        </button>
         <p className="text-[11px] text-charcoal-faint leading-relaxed">
-          Lost access to your authenticator? Contact Centium support to have two-factor
-          authentication removed from your account. We'll need to confirm who you are first.
+          No codes either? Contact Centium support to have two-factor removed. We'll need to confirm
+          who you are first.
         </p>
 
         <button
