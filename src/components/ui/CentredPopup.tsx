@@ -32,7 +32,13 @@ export const CentredPopup: React.FC<{
   className?: string;
   /** Title size. 18 (Foundations) unless a frame draws otherwise; Referral
       (MO1.10) draws 19 / 800. */
-  titleSize?: 18 | 19;
+  titleSize?: 18 | 19 | 21;
+  /** Title ink class in place of text-charcoal (MO1.4.4.2 "You're booked":
+      21 / 800 primary.deeper). Unset keeps every other popup as it is. */
+  titleInk?: string;
+  /** Draw the icon bare, with no primary.tint tile (MO1.4.4.2's Centium
+      mark). Unset keeps the tile. */
+  iconBare?: boolean;
   /** Card width cap. 342 (Foundations) unless a frame draws otherwise;
       achievement detail (MO1.1.3.1) is padded 0 28, so 334 at 390. */
   maxWidth?: number;
@@ -55,6 +61,8 @@ export const CentredPopup: React.FC<{
   maxWidth,
   bodyWeight = 500,
   iconWell,
+  titleInk,
+  iconBare,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
@@ -117,8 +125,9 @@ export const CentredPopup: React.FC<{
           {icon && (
             <span
               className={clsx(
-                "bg-primary-pale text-primary-accent flex items-center justify-center mb-3.5 shrink-0",
-                !iconWell && "w-12 h-12 rounded-[14px]"
+                "flex items-center justify-center mb-3.5 shrink-0",
+                !iconBare && "bg-primary-pale text-primary-accent",
+                !iconWell && !iconBare && "w-12 h-12 rounded-[14px]"
               )}
               style={iconWell ? { width: iconWell.size, height: iconWell.size, borderRadius: iconWell.radius } : undefined}
             >
@@ -128,8 +137,9 @@ export const CentredPopup: React.FC<{
           <h2
             id={titleId}
             className={clsx(
-              titleSize === 19 ? "text-[19px]" : "text-[18px]",
-              "font-extrabold leading-tight text-charcoal text-balance"
+              titleSize === 21 ? "text-[21px]" : titleSize === 19 ? "text-[19px]" : "text-[18px]",
+              "font-extrabold leading-tight text-balance",
+              titleInk ?? "text-charcoal"
             )}
           >
             {title}

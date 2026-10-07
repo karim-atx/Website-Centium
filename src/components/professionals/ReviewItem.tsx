@@ -27,7 +27,8 @@ const Body: React.FC<{
   replyLabel: string;
   actions?: React.ReactNode;
   size: number;
-}> = ({ review, redacted, replyLabel, actions, size }) => {
+  hideEdited?: boolean;
+}> = ({ review, redacted, replyLabel, actions, size, hideEdited }) => {
   const reply = review.reply;
   return (
     <>
@@ -42,7 +43,7 @@ const Body: React.FC<{
           <div className="mt-2.5 ml-1 pl-3 border-l-2 border-primary/30">
             <p className="flex items-center gap-2 text-[11px] font-bold text-charcoal-soft">
               {replyLabel}
-              {reply.editedAt && !reply.redactedAt && (
+              {reply.editedAt && !reply.redactedAt && !hideEdited && (
                 <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
               )}
             </p>
@@ -79,7 +80,13 @@ export const ReviewItem: React.FC<{
    * the review.
    */
   menu?: React.ReactNode;
-}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default", menu }) => {
+  /**
+   * Leaves out the "Edited" tags (review and reply). Handover-complete pass:
+   * MO1.2.1.1 and MO1.2.1 draw none, so the row layout never shows them and
+   * the profile's My review passes this.
+   */
+  hideEdited?: boolean;
+}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default", menu, hideEdited }) => {
   const redacted = !!review.redactedAt;
   if (layout === "row") {
     const named = !!review.reviewerName;
@@ -99,14 +106,7 @@ export const ReviewItem: React.FC<{
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[13px] leading-4 font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
-              {(review.editedAt && !redacted) || menu ? (
-                <span className="flex items-center gap-1 shrink-0">
-                  {review.editedAt && !redacted && (
-                    <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
-                  )}
-                  {menu}
-                </span>
-              ) : null}
+              {menu && <span className="flex items-center shrink-0">{menu}</span>}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
@@ -119,7 +119,7 @@ export const ReviewItem: React.FC<{
           </div>
         </div>
         <div className="mt-1.5">
-          <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={13} />
+          <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={13} hideEdited />
         </div>
       </div>
     );
@@ -132,12 +132,12 @@ export const ReviewItem: React.FC<{
         </div>
         {/* edited_at is stamped by a trigger only when the rating or body
             actually changed, so this means a real edit. */}
-        {review.editedAt && !redacted && (
+        {review.editedAt && !redacted && !hideEdited && (
           <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
         )}
       </div>
       {showName && <p className="text-xs font-semibold text-charcoal-soft mb-0.5">{review.reviewerName ?? "A client"}</p>}
-      <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={14} />
+      <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={14} hideEdited={hideEdited} />
     </div>
   );
 };

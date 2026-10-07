@@ -4,7 +4,6 @@ import { FlagChip, FlagNote } from "../../components/ui/FlagNote";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
 import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet";
 import { BiomarkerDetailSheet } from "../../components/health/BiomarkerDetailSheet";
@@ -47,8 +46,10 @@ import {
 import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
-import { ChevronRight, Stethoscope, FileText, Moon } from "lucide-react";
-import clsx from "clsx";
+import { Stethoscope, FileText, Moon, Heart, ClipboardList, ShieldCheck } from "lucide-react";
+import { AddMetricSheet } from "../../components/health/AddMetricSheet";
+import { HealthRow, HealthSectionLabel, ScaleGlyph, StepBarsGlyph, WaterCupGlyph } from "../../components/health/HealthRow";
+import { useIsDark } from "../../hooks/useIsDark";
 import type { BloodMarker, ImagingRecord } from "../../types";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useCheckFlags } from "../../components/health-checks/useCheckFlags";
@@ -112,13 +113,17 @@ export default function Health() {
   // pregnancy content here — filtered at render, nothing is changed.
   const pregnancy = cycleOffered ? recordedPregnancy : null;
   const lastEndedPregnancy = cycleOffered ? recordedEndedPregnancy : null;
-  const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
+  // HE1 copy: "Apple Health sync is coming." Android's platform is Health
+  // Connect (Foundations 2.4 brand list); "Android Health" is not a product.
+  const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Health Connect";
+  const dark = useIsDark();
+  const [addMetricOpen, setAddMetricOpen] = useState(false);
   const [waterOpen, setWaterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
   const [detailMarker, setDetailMarker] = useState<BloodMarker | null>(null);
   const [shareAllOpen, setShareAllOpen] = useState(false);
-  const [detailMetric, setDetailMetric] = useState<{ metric: MetricReadings; current: number } | null>(null);
+  const [detailMetric, setDetailMetric] = useState<{ metric: MetricReadings; current: number | null } | null>(null);
   // QA 13.0: "Have records be a button you can press that leads to the
   // following tabs" — Biomarkers/Imaging/History/Medications now live
   // behind one entry point instead of sitting inline on the page.
@@ -152,12 +157,16 @@ export default function Health() {
   const stepsMax = Math.max(...stepsMeta.history.map((h) => h.value), stepsGoal);
 
   // Biomarkers row subtitle: real markers outside their reference range,
-  // not a fabricated example — falls back to a generic description when
+  // not a fabricated example — falls back to the frame's description when
   // nothing is currently flagged.
   const flaggedMarkers = bloodMarkers.filter((m) => m.status && m.status !== "normal").map((m) => m.name);
   const biomarkersSubtitle =
     flaggedMarkers.length > 0 ? `${flaggedMarkers.slice(0, 2).join(" and ")} suggested` : "Vitamins, minerals, panels";
 
+  // RESTORE ROUND 2 (user, 2026-10-07): BMI and the weight sparkline are back,
+  // inside the HE1 Weight trend row (the band under the subtitle, the line
+  // before the chevron), with main's logic unchanged below.
+  //
   // BMI FROM THE USER'S OWN HEIGHT, and only when both halves exist.
   //
   // This read `const heightM = 1.78` — a literal, for everybody. BMI is a
@@ -168,7 +177,7 @@ export default function Health() {
   //
   // profiles.height_cm has been read into user.heightCm all along and is
   // editable in Profile, so this is a substitution rather than new plumbing.
-  // Missing either height or a weight reading yields null, and the footer
+  // Missing either height or a weight reading yields null, and the row
   // says what to add rather than computing around the gap.
   //
   // AND NOT AT ALL DURING A PREGNANCY OR THE POSTPARTUM WINDOW. BMI is weight
@@ -192,25 +201,22 @@ export default function Health() {
       ? metricValues.weight / (heightM * heightM)
       : null;
   const bmi = bmiValue === null ? null : bmiValue.toFixed(1);
-  // V7 (QA 7.0): standard WHO BMI bands, colored consistently with the
-  // rest of the app's explicit (brand-independent) status colors.
+  // V7 (QA 7.0): standard WHO BMI bands.
   const bmiCategory =
     bmiValue === null
       ? null
       : bmiValue < 18.5
-      ? { label: "Underweight", color: "#4C8FD1" }
+      ? "Underweight"
       : bmiValue < 25
-      ? { label: "Normal weight", color: "#3F9165" }
+      ? "Normal weight"
       : bmiValue < 30
-      ? { label: "Overweight", color: "#D9A441" }
-      : { label: "Obese", color: "#C0392B" };
-  // Design refinement §6.3: "a proportional four-segment WHO band (flex
-  // 1.85/0.65/0.5/1 = under/normal/over/obese, a linear 0–40 scale) with a
-  // downward triangle marker pinned at the reading's position."
+      ? "Overweight"
+      : "Obese";
+  // Design refinement §6.3: the band is a linear 0–40 scale filled to the reading.
   const bmiBandPct = bmiValue === null ? 0 : Math.max(0, Math.min(100, (bmiValue / 40) * 100));
 
-  // Iteration 6 "Team" §5 Health: the weight-trend hero's sparkline, real
-  // 7-day history scaled into the dc.html's own 130×44 viewBox.
+  // Iteration 6 "Team" §5 Health: the weight sparkline, real 7-day history
+  // scaled into the dc.html's own 130×44 viewBox.
   const weightValues = weightMeta.history.map((h) => h.value);
   const weightMin = Math.min(...weightValues);
   const weightMax = Math.max(...weightValues);
@@ -220,7 +226,11 @@ export default function Health() {
     return `${x},${y}`;
   });
 
-  const openDetail = (metric: MetricReadings, current: number) => setDetailMetric({ metric, current });
+  // HE1: every row opens its detail, empty or not (the sheet says "No
+  // readings yet" itself). Weight with nothing logged opens Add Metric
+  // instead, since its subtitle asks the user to log one.
+  const openDetail = (metric: MetricReadings, current: number | null) =>
+    setDetailMetric({ metric, current: current as number });
 
   // V8 (QA 8.0): "the widget directory for weight, steps and sleep should
   // redirect you to the detailed version" — Home links here with the
@@ -247,10 +257,54 @@ export default function Health() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
+  // HE1 colours, measured from the frame. Primary and secondary follow the
+  // theme (HE1 §9: #AEA1DC and #A2C8C2 swap); water, calories (#D9A441),
+  // heart (#9C4F7C) and blood pressure are fixed. Dark mode keeps the tints
+  // (they read on #121317) and lifts the three tile glyphs to 3:1.
+  const tint = (rgb: string, a: number) => `rgb(${rgb} / ${a})`;
+  const LAV = "var(--th-aea1dc)";
+  const TEAL = "var(--th-a2c8c2)";
+
+  // Blood pressure: the latest reading in words. Its alerts stay under the row.
+  const bpLatest = bloodPressure[0] ?? null;
+  const bpInPregnancy = pregnancyFlags.replacesBpBands;
+  const bpPregFlag = bpLatest ? pregnancyFlags.bp(bpLatest) : null;
+  const bpSevere = !!bpLatest && !bpInPregnancy && isSevere(bpLatest.systolic, bpLatest.diastolic);
+  const bpCheckFlag = bpLatest && !bpInPregnancy ? checkFlags.bp(bpLatest) : null;
+  const bpCategory = bpLatest ? classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic) : null;
+  // Restore round 2 (user, 2026-10-07): main's "· N bpm" and "· 7-day avg S/D"
+  // are back in the subtitle, over the readings of the last seven days.
+  const bpWeekAvg = averageReading(
+    bloodPressure.filter((r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000)
+  );
+  const bpSubtitle = bpLatest
+    ? [
+        `${bpLatest.systolic}/${bpLatest.diastolic} mmHg`,
+        relativeWhen(bpLatest.recordedAt),
+        bpLatest.pulse != null ? `${bpLatest.pulse} bpm` : null,
+        // Non-breaking hyphen: the line never wraps as "7-" / "day".
+        bpWeekAvg ? `7‑day avg ${bpWeekAvg.systolic}/${bpWeekAvg.diastolic}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : `${BP_NO_READINGS} · Tap to add one`;
+  // THE CATEGORY IN WORDS, not as a colour: main's tinted chip, beside the
+  // reading. Light keeps main's BP_CATEGORY_COLOR; dark lifts each hue so the
+  // 9.5 label stays readable on the dark card (the same hue, lighter).
+  const BP_CHIP_DARK: Record<NonNullable<typeof bpCategory>, string> = {
+    normal: "#7FC79E",
+    elevated: "#D6CD6A",
+    stage1: "#E3A851",
+    stage2: "#F29466",
+    severe: "#F28B82",
+  };
+  const bpChipColor = bpCategory ? (dark ? BP_CHIP_DARK[bpCategory] : BP_CATEGORY_COLOR[bpCategory]) : null;
+
+  const weightTrend = trendLabel(weightMeta);
+
   return (
     <div>
-      {/* V7 (QA 7.0): the "+" quick water-log moved to the Home water
-          widget — pressing it opens this same AddMetricSheet. */}
+      {/* HE1 #1: title 19/700, subtitle 11/400 #A79E93, 13 above Weight trend. */}
       <div className="mb-[13px]">
         <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Health</p>
         <p className="mt-[3px] text-[11px] text-charcoal-tertiary">
@@ -258,485 +312,318 @@ export default function Health() {
         </p>
       </div>
 
-      {/* Iteration 6 "Team" §5 Health: weight-trend hero (same gradient as
-          the Home streak board), BMI folded into its footer instead of a
-          separate card. Hidden under recovery-sensitive exactly as the
-          weight/BMI cards it replaces were. */}
-      {/* NO HERO WITHOUT A WEIGHT. The card's whole content is a number, a
-          trend and a sparkline; with nothing recorded it used to render
-          106.4 kg, "↓ 0.6 kg this week" and a seven-point line, none of which
-          had ever been measured. An account that has never weighed in gets an
-          invitation instead. */}
-      {/* Task X follow-up: weight and BMI wait for the account's recovery
-          setting on a browser with no local copy of it. */}
-      {recoveryModePending && <NumberPlaceholder height={127} label="Weight trend" className="mb-[13px]" />}
-      {!recoverySensitive && !recoveryModePending && metricValues.weight === null && (
-        <div className="rounded-[22px] px-[17px] py-4 mb-[13px] bg-cream-card border border-charcoal/[0.06]">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Weight trend</p>
-          <p className="mt-[9px] text-[15px] font-bold text-charcoal">{NO_READINGS}</p>
-          <p className="mt-[5px] text-[11px] text-charcoal-tertiary">{emptyHint("weight")}</p>
-        </div>
-      )}
-      {!recoverySensitive && !recoveryModePending && metricValues.weight !== null && (
-        <button
-          onClick={() => openDetail(weightMeta, metricValues.weight as number)}
-          className="tap w-full text-left relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
-          style={{ background: "var(--gradient-board)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">Weight trend</p>
-          <div className="flex items-end justify-between gap-3.5 mt-[9px]">
-            <div>
-              <p className="flex items-baseline gap-[5px]">
-                <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
-                  {metricValues.weight}
-                </span>
-                <span className="text-[12px] font-semibold text-white/[0.74]">kg</span>
-              </p>
-              {/* Only where there are two readings to compare. One weigh-in
-                  has no direction, and "↓ 0 kg" over nothing is the a8499e4
-                  bug in a different card. */}
-              {trendLabel(weightMeta) && (
-                <p className="mt-[5px] text-[10px] text-white/70">{trendLabel(weightMeta)}</p>
-              )}
-            </div>
-            {canDrawSparkline(weightMeta) && (
-              <svg viewBox="0 0 130 44" style={{ width: 148, height: 44, flex: "none", display: "block" }}>
-                <polyline points={weightSparkPoints.join(" ")} fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+      {/* HE1 #2 Weight trend. Hidden under recovery-sensitive (a safety
+          setting), and held as a placeholder while that setting loads. */}
+      {recoveryModePending && <NumberPlaceholder height={71} label="Weight trend" />}
+      {!recoverySensitive && !recoveryModePending && (
+        <HealthRow
+          title="Weight trend"
+          subtitle={
+            metricValues.weight === null
+              ? `${NO_READINGS} · ${emptyHint("weight")}`
+              : `${formatMetric("weight", metricValues.weight)} kg${weightTrend ? ` · ${weightTrend}` : ""}`
+          }
+          fill={tint(LAV, 0.11)}
+          tileFill={tint(LAV, 0.4)}
+          glyph={<ScaleGlyph color={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"} />}
+          // Restore round 2 (user, 2026-10-07): main's 7-point sparkline, only
+          // where there are enough readings to draw a line through, in the
+          // scale glyph's colour.
+          aside={
+            metricValues.weight !== null && canDrawSparkline(weightMeta) ? (
+              <svg viewBox="0 0 130 44" style={{ width: 74, height: 25, display: "block" }} aria-hidden>
+                <polyline
+                  points={weightSparkPoints.join(" ")}
+                  fill="none"
+                  stroke={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"}
+                  strokeWidth={3.2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
                 {weightSparkPoints.map((p) => (
-                  <circle key={p} cx={p.split(",")[0]} cy={p.split(",")[1]} r={2.2} fill="#fff" />
+                  <circle
+                    key={p}
+                    cx={p.split(",")[0]}
+                    cy={p.split(",")[1]}
+                    r={3.2}
+                    fill={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"}
+                  />
                 ))}
               </svg>
-            )}
-          </div>
-          <div className="flex items-center gap-[11px] mt-[13px] pt-[11px] border-t border-white/[0.24]">
-            <span className="shrink-0 text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.62]">BMI</span>
-            {bmi !== null && bmiCategory !== null ? (
-              <>
-                <span className="flex-1 min-w-0 block h-1 rounded-full bg-white/[0.26] overflow-hidden">
-                  <span className="block h-full rounded-full bg-white" style={{ width: `${bmiBandPct}%` }} />
-                </span>
-                <span className="shrink-0 text-[11px] font-bold text-white whitespace-nowrap">
-                  {bmi} · {bmiCategory.label.toLowerCase()}
-                </span>
-              </>
-            ) : (
-              // TWO DIFFERENT SILENCES. Without a height there is nothing to
-              // compute and the fix is in Profile; during a pregnancy there is
-              // something to compute and it would be wrong, so it says why and
-              // points at the figure that is right.
-              <span className="flex-1 text-[11px] font-semibold text-white/[0.78]">
-                {!showBmi ? BMI_NOT_USED : "Add your height in Profile to see your BMI"}
-              </span>
-            )}
-          </div>
-        </button>
-      )}
-
-      {/* "Today" reuses the exact canonical small widgets from the Home
-          widget library (steps/water/sleep) — the manifest's own README
-          calls this set canonical and says every future placement should
-          draw from it. Wired to this page's own detail sheets rather than
-          Home's navigate-to-Health, since we're already here. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Today</p>
-      <div className="flex gap-[7px] mb-[9px]">
-        <button
-          onClick={() => metricValues.steps !== null && openDetail(stepsMeta, metricValues.steps)}
-          disabled={metricValues.steps === null}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
-          style={{ background: "rgba(162,200,194,.2)" }}
+            ) : undefined
+          }
+          onClick={() =>
+            metricValues.weight === null ? setAddMetricOpen(true) : openDetail(weightMeta, metricValues.weight)
+          }
         >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72] dark:text-team-teal-ink">Steps</p>
-          <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">
-            {metricValues.steps === null ? (
-              <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
-            ) : (
-              formatMetric("steps", metricValues.steps)
-            )}
-          </p>
-          <div className="flex items-end gap-[2px] h-[26px] mt-[9px]">
-            {/* One bar per day that HAS a step count. The week used to be
-                seven bars whatever the account had recorded. */}
-            {stepsMeta.history.map((h, i) => {
-              const isToday = i === stepsMeta.history.length - 1;
-              return (
-                <div
-                  key={i}
-                  className="flex-1 rounded-[1px]"
-                  style={{ height: `${Math.max(8, (h.value / stepsMax) * 100)}%`, background: isToday ? "rgb(var(--c-team-teal-deep))" : "rgba(111,153,147,.34)" }}
-                />
-              );
-            })}
-          </div>
-          <div className="flex gap-[2px] mt-1">
-            {stepsMeta.history.map((h, i) => {
-              const isToday = i === stepsMeta.history.length - 1;
-              return (
-                <span key={i} className={clsx("flex-1 text-center text-[7.5px]", isToday ? "font-extrabold text-team-teal-ink" : "font-semibold text-team-teal-ink/50")}>
-                  {dayLetter(h.date)}
-                </span>
-              );
-            })}
-          </div>
-        </button>
-
-        <button
-          onClick={() => setWaterOpen(true)}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
-          style={{ background: "rgba(143,192,232,.17)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-blue-ink/[0.72] dark:text-team-blue-ink">Water</p>
-          <div className="flex-1 flex items-center justify-center gap-2.5 min-h-0">
-            <div className="min-w-0 text-right">
-              <p className="text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">{(water / 1000).toFixed(1)} L</p>
-              <p className="mt-[5px] text-[9px] text-team-blue-ink">of {(waterGoalMl / 1000).toFixed(1)} L</p>
-            </div>
-            <svg viewBox="0 0 34 40" width={38} height={45} style={{ display: "block", flex: "none", overflow: "visible" }}>
-              <defs>
-                <clipPath id="health-cup-clip">
-                  <path d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z" />
-                </clipPath>
-              </defs>
-              <g clipPath="url(#health-cup-clip)">
-                <rect x="0" y={40 - Math.max(0, Math.min(1, water / waterGoalMl)) * 35} width="34" height="40" fill="#8FC0E8" />
-              </g>
-              <path d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z" fill="none" stroke="#5E8BB3" strokeWidth={1.7} strokeLinejoin="round" />
-              <path d="M3.6 5 H30.4" stroke="#5E8BB3" strokeWidth={1.7} strokeLinecap="round" />
-            </svg>
-          </div>
-        </button>
-
-        <button
-          onClick={() => metricValues.sleepHours !== null && openDetail(sleepMeta, metricValues.sleepHours)}
-          disabled={metricValues.sleepHours === null}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
-          style={{ background: "rgba(174,161,220,.13)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.65] dark:text-primary-deep-text">Sleep</p>
-          <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
-            {metricValues.sleepHours === null ? (
-              <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
-            ) : (
-              formatMetric("sleep", metricValues.sleepHours)
-            )}
-          </p>
-          {/* THE HYPNOGRAM IS GONE. It was one fixed `d` attribute — the same
-              five-step zigzag for every account and every night, drawn
-              whether or not anything had been slept through. Real stage data
-              lives in sleep_details and is drawn in the detail sheet; there
-              is nothing to shrink into a 100×26 box until a night exists. */}
-          <div className="flex-1 min-h-0" />
-          {/* The week's average, over nights actually recorded. */}
-          {averageOf(sleepMeta) !== null && (
-            <p className="mt-[6px] text-[9px] text-primary-deep-text">
-              {formatMetric("sleep", averageOf(sleepMeta) as number)} avg this week
-            </p>
-          )}
-        </button>
-      </div>
-
-      {/* Calories burned isn't part of the canonical widget set and isn't
-          shown in this handoff's Health frame at all — kept as its own
-          untouched card rather than deleted, per "absence from the canvas
-          means not in scope, never delete." */}
-      <Card
-        interactive={metricValues.caloriesBurned !== null}
-        className="relative mb-[13px]"
-        onClick={
-          metricValues.caloriesBurned === null
-            ? undefined
-            : () => openDetail(caloriesMeta, metricValues.caloriesBurned as number)
-        }
-      >
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[11px] font-semibold text-charcoal-soft">Calories burned</p>
-          <CalorieFlame size={13} />
-        </div>
-        {metricValues.caloriesBurned === null ? (
-          <p className="text-[13px] font-semibold text-charcoal-tertiary">{NO_READINGS}</p>
-        ) : (
-          <>
-            <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">
-              {formatMetric("caloriesBurned", metricValues.caloriesBurned)}
-            </p>
-            <p className="text-[11px] text-charcoal-faint mt-2">Estimated, incl. workouts</p>
-          </>
-        )}
-      </Card>
-
-      {/* Canonical Heart Rate large widget, reusing the Health page's own
-          EKG component (see the identical note in HomeWidget.tsx — the
-          manifest requires the two to mirror exactly, so they share one
-          instance rather than two hand-built copies). */}
-      <button
-        onClick={() => metricValues.heartRate !== null && openDetail(heartRateMeta, metricValues.heartRate)}
-        disabled={metricValues.heartRate === null}
-        className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px] disabled:cursor-default"
-        style={{ background: "rgba(156,79,124,.1)", height: metricValues.heartRate === null ? undefined : 150 }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-rose-ink/80">Heart rate</p>
-          {metricValues.heartRate !== null && (
-            <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-team-rose-ink bg-berry/[0.16]">Resting</span>
-          )}
-        </div>
-        {metricValues.heartRate === null ? (
-          // NO TRACE OVER NO PULSE. HeartRateEKG animates at the bpm it is
-          // given, so an empty card used to draw a steady 68 for somebody
-          // wearing nothing.
-          <p className="mt-2 text-[13px] font-semibold text-charcoal-tertiary">{NO_READINGS}</p>
-        ) : (
-          <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
-                {formatMetric("heartRate", metricValues.heartRate)}
-              </span>
-              <span className="text-[11px] font-bold text-team-rose-ink/80">bpm resting</span>
-            </div>
-            <HeartRateEKG bpm={metricValues.heartRate} />
-          </div>
-        )}
-      </button>
-
-      {/* Blood pressure, in the same large-card shape as heart rate above —
-          the closest sibling on this page, and the pattern the brief names.
-          Two numbers rather than one, so the category does the work the bpm
-          figure does there. */}
-      {(() => {
-        const latest = bloodPressure[0] ?? null;
-        if (!latest) {
-          return (
-            <button
-              onClick={() => {
-                setBpEditing(null);
-                setBpSheetOpen(true);
-              }}
-              className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px]"
-              style={{ background: "rgba(74,61,160,.08)" }}
-            >
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/[0.48]">
-                Blood pressure
-              </p>
-              <p className="mt-2 text-[13px] font-semibold text-charcoal-tertiary">{BP_NO_READINGS}</p>
-              <p className="mt-1 text-[11px] text-charcoal-faint">Tap to add one</p>
-            </button>
-          );
-        }
-
-        const category = classifyBloodPressure(latest.systolic, latest.diastolic);
-        const week = bloodPressure.filter(
-          (r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000
-        );
-        const weekAvg = averageReading(week);
-        // Task Y: during a pregnancy its own levels replace the general bands
-        // (category chip, severe alert, the monitoring flag).
-        const inPregnancy = pregnancyFlags.replacesBpBands;
-        const pFlag = pregnancyFlags.bp(latest);
-        const severe = !inPregnancy && isSevere(latest.systolic, latest.diastolic);
-        const flag = inPregnancy ? null : checkFlags.bp(latest);
-
-        return (
-          <button
-            onClick={() => setBpDetailOpen(true)}
-            className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px]"
-            style={{ background: "rgba(74,61,160,.08)" }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/[0.48]">
-                Blood pressure
-              </p>
-              {/* THE CATEGORY IN WORDS, not as a colour. The chip is tinted
-                  too, but the label is what carries the meaning. */}
-              {inPregnancy ? (
-                pFlag && <FlagChip tone={pFlag.level} label={pFlag.label} />
+          {/* Restore round 2: main's BMI footer, under the subtitle. Shown with
+              a weight (as main's hero was); TWO DIFFERENT SILENCES otherwise —
+              without a height the fix is in Profile; during a pregnancy or the
+              postpartum window the number would be wrong, so it says why. */}
+          {metricValues.weight !== null && (
+            <span className="flex items-center gap-2 mt-[5px]">
+              <span className="shrink-0 text-[10px] font-semibold leading-[13px] uppercase text-charcoal-faint">BMI</span>
+              {bmi !== null && bmiCategory !== null ? (
+                <>
+                  <span className="flex-1 min-w-0 block h-1 rounded-full overflow-hidden" style={{ background: tint(LAV, 0.3) }}>
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${bmiBandPct}%`,
+                        background: dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))",
+                      }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-[11px] font-semibold leading-[13px] text-charcoal whitespace-nowrap">
+                    {bmi} · {bmiCategory.toLowerCase()}
+                  </span>
+                </>
               ) : (
-                <span
-                  className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
-                  style={{ color: BP_CATEGORY_COLOR[category], background: `${BP_CATEGORY_COLOR[category]}1F` }}
-                >
-                  {BP_CATEGORY_LABEL[category]}
+                <span className="flex-1 text-[11px] leading-[14px] text-charcoal-soft">
+                  {!showBmi ? BMI_NOT_USED : "Add your height in Profile to see your BMI"}
                 </span>
               )}
-            </div>
-            <div className="flex items-baseline gap-2 mt-[9px]">
-              <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
-                {latest.systolic}/{latest.diastolic}
+            </span>
+          )}
+        </HealthRow>
+      )}
+
+      {/* HE1 #3–#9: "Today", 20 below Weight trend, rows 10 below it, 8 apart. */}
+      <HealthSectionLabel className={recoverySensitive && !recoveryModePending ? "mb-2.5" : "mt-5 mb-2.5"}>Today</HealthSectionLabel>
+      <div className="flex flex-col gap-2">
+        {/* Steps: a solid teal tile; the week's bars (the Home graphic) only
+            when there are readings, as the board notes. */}
+        <HealthRow
+          title="Steps"
+          subtitle={metricValues.steps === null ? NO_READINGS : `${formatMetric("steps", metricValues.steps)} steps`}
+          fill={tint(TEAL, 0.2)}
+          // Dark: the same teal, translucent on the card (no light islands).
+          tileFill={dark ? tint(TEAL, 0.45) : `rgb(${TEAL})`}
+          glyph={
+            stepsMeta.history.length > 0 ? (
+              <StepBarsGlyph
+                values={stepsMeta.history.map((h) => h.value)}
+                letters={stepsMeta.history.map((h) => dayLetter(h.date))}
+                max={stepsMax}
+              />
+            ) : undefined
+          }
+          onClick={() => openDetail(stepsMeta, metricValues.steps)}
+        />
+        <HealthRow
+          title="Water"
+          subtitle={`${(water / 1000).toFixed(1)} L of ${(waterGoalMl / 1000).toFixed(1)} L`}
+          fill="rgba(143,192,232,0.17)"
+          tileFill="rgba(143,192,232,0.4)"
+          glyph={<WaterCupGlyph fraction={water / waterGoalMl} stroke={dark ? "rgb(var(--c-team-blue-ink))" : "#5E8BB3"} />}
+          onClick={() => setWaterOpen(true)}
+        />
+        <HealthRow
+          title="Sleep"
+          // Restore round 2 (user, 2026-10-07): main's "X avg this week", over
+          // nights actually recorded, only when there is an average.
+          subtitle={[
+            metricValues.sleepHours === null ? NO_READINGS : formatMetric("sleep", metricValues.sleepHours),
+            averageOf(sleepMeta) !== null ? `${formatMetric("sleep", averageOf(sleepMeta) as number)} avg this week` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          fill={tint(LAV, 0.13)}
+          tileFill={dark ? tint(LAV, 0.45) : `rgb(${LAV})`}
+          onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
+        />
+        <HealthRow
+          title="Calories burned"
+          subtitle={
+            metricValues.caloriesBurned === null
+              ? NO_READINGS
+              : // Restore round 2: main's "Estimated, incl. workouts", with a value.
+                `${formatMetric("caloriesBurned", metricValues.caloriesBurned)} kcal · Estimated, incl. workouts`
+          }
+          fill="rgba(217,164,65,0.14)"
+          tileFill={dark ? "rgba(217,164,65,0.5)" : "#D9A441"}
+          // Restore round 2 (user, 2026-10-07): main's moving flame (1.6s
+          // flicker, 2.4s ember glow), white on the gold tile with a warm
+          // pale glow so both layers show against it.
+          glyph={<CalorieFlame size={18} className="text-white" glow="rgba(255,240,214,0.75)" />}
+          onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}
+        />
+        <HealthRow
+          title="Heart rate"
+          subtitle={
+            metricValues.heartRate === null
+              ? NO_READINGS
+              : // The "Resting" pill beside it says resting; not twice.
+                `${formatMetric("heartRate", metricValues.heartRate)} bpm`
+          }
+          fill="rgba(156,79,124,0.1)"
+          tileFill="rgba(156,79,124,0.25)"
+          glyph={<Heart size={38} strokeWidth={1.25} absoluteStrokeWidth style={{ color: dark ? "rgb(var(--c-team-rose-ink))" : "#9C4F7C" }} />}
+          // Restore round 2 (user, 2026-10-07): main's "Resting" pill and the
+          // EKG trace at the reading's rate. NO TRACE OVER NO PULSE: the
+          // trace animates at the bpm it is given, so nothing is drawn empty.
+          aside={
+            metricValues.heartRate !== null ? (
+              <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-team-rose-ink bg-berry/[0.16]">
+                Resting
               </span>
-              <span className="text-[11px] font-bold text-charcoal-soft">mmHg</span>
-            </div>
-            <p className="mt-[7px] text-[10.5px] text-charcoal-faint">
-              {relativeWhen(latest.recordedAt)}
-              {latest.pulse != null && ` · ${latest.pulse} bpm`}
-              {weekAvg && ` · 7-day avg ${weekAvg.systolic}/${weekAvg.diastolic}`}
-            </p>
-            {severe && (
-              <p
-                role="alert"
-                // Mobile v5.1 R3, dark mode: danger #FF6B5E (5.7:1 on the 8% red tint over the dark card).
-                className="mt-2.5 text-[11px] leading-[1.45] font-semibold rounded-xl px-2.5 py-2 text-[#7E1B15] dark:text-[#FF6B5E]"
-                style={{ background: "rgba(164,35,28,0.08)" }}
-              >
-                {SEVERE_READING_MESSAGE}
-              </p>
-            )}
-            {flag && <CheckFlagNote flag={flag} className="mt-2.5" />}
-            {pFlag && (
-              <FlagNote tone={pFlag.level} label={pFlag.label} className="mt-2.5">
-                <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
-              </FlagNote>
-            )}
-          </button>
-        );
-      })()}
-
-      {/* QA 13.0: "Have records be a button you can press that leads to the
-          following tabs" — still one entry point (both rows open the same
-          Records sheet, just as the single row did before); the manifest's
-          two-row split is a visual regrouping, not a request to give
-          Biomarkers and Imaging separate deep-linked destinations. */}
-      {/* THE TRACKER'S WAY IN. Shown when it is switched on -- which for a
-          female or other profile happens on first open, and for anybody else
-          when they switch it on in its own Settings. Sex decides the default,
-          never the availability. */}
-      {/* THE ROW SAYS WHAT IS BEING TRACKED. During a pregnancy it reads
-          "Pregnancy · week N" rather than a cycle phase, for the same reason
-          the tracker itself swaps its overview: a phase and a pregnancy are
-          two answers to one question. It is shown whenever there is a
-          pregnancy, even if the cycle tracker itself has been switched off. */}
-      {/* Task R: in the Cycle card's place while the one-time question is
-          due; once answered Yes, the card itself shows here. */}
-      <TrackerQuestion className="mb-[13px]" />
-      {cycleOffered && (cycleSettings?.trackerEnabled || pregnancy) && (
-        <button
-          onClick={() => navigate("/app/cycle")}
-          className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 mb-[13px]"
-          style={{
-            background: pregnancy
-              ? `${PREGNANCY_COLOR}14`
-              : cyclePrediction
-                ? `${PHASE_COLOR[cyclePrediction.phase]}14`
-                : "rgba(174,161,220,.13)",
-          }}
+            ) : undefined
+          }
+          onClick={() => openDetail(heartRateMeta, metricValues.heartRate)}
         >
-          <span
-            className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
-            style={{
-              background: pregnancy
-                ? PREGNANCY_COLOR
-                : cyclePrediction
-                  ? PHASE_COLOR[cyclePrediction.phase]
-                  : "#AEA1DC",
-            }}
-          >
-            <Moon size={14} className="text-white" />
-          </span>
-          <span className="flex-1 min-w-0 text-left">
-            <span className="block text-[12.5px] font-bold text-charcoal">
-              {pregnancy ? "Pregnancy" : "Cycle"}
+          {metricValues.heartRate !== null && (
+            <span className="block mt-1.5">
+              <HeartRateEKG bpm={metricValues.heartRate} />
             </span>
-            <span className="block text-[10px] text-charcoal-tertiary truncate">
-              {pregnancy
-                ? (() => {
-                    const g = gestationOn(today, pregnancy);
-                    return g ? `Week ${g.week} · trimester ${g.trimester}` : "Being tracked";
-                  })()
-                : cyclePrediction
-                  ? `${PHASE_LABEL[cyclePrediction.phase]}${
-                      cyclePrediction.cycleDay !== null ? ` · day ${cyclePrediction.cycleDay}` : ""
-                    }`
-                  : "Log a period to start"}
-            </span>
-            {/* Decision 5 (MO11 frame): the next period, only when there is a
-                prediction (this card only renders when the section is shown). */}
-            {!pregnancy && cyclePrediction?.nextPeriodStart && (() => {
-              const n = daysBetween(today, cyclePrediction.nextPeriodStart);
-              if (n < 0) return null;
-              return (
-                <span className="block text-[10px] text-charcoal-tertiary truncate">
-                  {n === 0 ? "Next period expected today" : `Next period in about ${n} ${n === 1 ? "day" : "days"}`}
+          )}
+        </HealthRow>
+        <div>
+          <HealthRow
+            title="Blood pressure"
+            subtitle={bpSubtitle}
+            fill="rgba(74,61,160,0.08)"
+            tileFill="#4A3DA0"
+            // Restore round 2 (user, 2026-10-07): main's chip in the header
+            // place — during a pregnancy its own level (FlagChip), otherwise
+            // the category, tinted, in words.
+            aside={
+              !bpLatest ? undefined : bpInPregnancy ? (
+                bpPregFlag ? <FlagChip tone={bpPregFlag.level} label={bpPregFlag.label} /> : undefined
+              ) : bpCategory && bpChipColor ? (
+                <span
+                  className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
+                  style={{ color: bpChipColor, background: `${bpChipColor}1F` }}
+                >
+                  {BP_CATEGORY_LABEL[bpCategory]}
                 </span>
-              );
-            })()}
-          </span>
-          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-        </button>
-      )}
+              ) : undefined
+            }
+            onClick={() => {
+              if (bpLatest) setBpDetailOpen(true);
+              else {
+                setBpEditing(null);
+                setBpSheetOpen(true);
+              }
+            }}
+          />
+          {/* KEPT FOR SAFETY (no frame): the severe-reading alert and the
+              monitoring / pregnancy flags on the latest reading. */}
+          {bpSevere && (
+            <p
+              role="alert"
+              // Mobile v5.1 R3, dark mode: danger #FF6B5E (5.7:1 on the 8% red tint over the dark card).
+              className="mt-2 text-[11px] leading-[1.45] font-semibold rounded-xl px-2.5 py-2 text-[#7E1B15] dark:text-[#FF6B5E]"
+              style={{ background: "rgba(164,35,28,0.08)" }}
+            >
+              {SEVERE_READING_MESSAGE}
+            </p>
+          )}
+          {bpCheckFlag && <CheckFlagNote flag={bpCheckFlag} className="mt-2" />}
+          {bpPregFlag && (
+            <FlagNote tone={bpPregFlag.level} label={bpPregFlag.label} className="mt-2">
+              <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{bpPregFlag.text}</p>
+            </FlagNote>
+          )}
+        </div>
 
-      {/* The pregnancy guidance for this tab. */}
-      {pregnancy && <PregnancyHealthCard pregnancy={pregnancy} />}
-
-      {/* Task Y: health checks for everyone (or, in a pregnancy, the blood
-          tests usually offered). Shown whenever there is something in it. */}
-      {(pregnancy ||
-        screeningRows({
-          age: user.age,
-          sex: user.sex,
-          bmi: bmiOf(user.heightCm, user.weightKg),
-          recoverySensitive: recoverySensitive || recoveryModePending,
-        }).length > 0) && (
-        <button
-          onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })}
-          className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex items-center justify-between gap-3 text-left mb-[13px]"
-          style={{ background: "rgba(74,61,160,.08)" }}
-        >
-          <span className="min-w-0">
-            <span className="block text-[13px] font-bold text-charcoal">{SCREENING_COPY.cardTitle}</span>
-            <span className="block mt-0.5 text-[11px] text-charcoal-soft">{SCREENING_COPY.cardSubtitle}</span>
-          </span>
-          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-        </button>
-      )}
-
-      {/* Advanced health monitoring: the way into the plan, while the mode
-          is on. Its wording names nothing but the plan. */}
-      {checkFlags.active && (
-        <button
-          onClick={() => navigate("/app/health/checks")}
-          className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex items-center justify-between gap-3 text-left mb-[13px]"
-          style={{ background: "rgba(74,61,160,.08)" }}
-        >
-          <span className="text-[13px] font-bold text-charcoal">{CHECKS_COPY.planTitle}</span>
-          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-        </button>
-      )}
-
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Records</p>
-      <div className="flex flex-col gap-[7px] mb-3">
-        <button
-          onClick={() => setRecordsTab("biomarkers")}
-          className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3"
-          style={{ background: "rgba(174,161,220,.16)" }}
-        >
-          <span className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 bg-team-lavender-deep">
-            <Stethoscope size={14} className="text-white" />
-          </span>
-          <span className="flex-1 min-w-0 text-left">
-            <span className="block text-[12.5px] font-bold text-charcoal">Biomarkers &amp; labs</span>
-            <span className="block text-[10px] text-charcoal-tertiary truncate">{biomarkersSubtitle}</span>
-          </span>
-          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-        </button>
-        <button
-          onClick={() => setRecordsTab("imaging")}
-          className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3"
-          style={{ background: "rgba(162,200,194,.18)" }}
-        >
-          <span className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 bg-team-teal-deep">
-            <FileText size={14} className="text-white" />
-          </span>
-          <span className="flex-1 min-w-0 text-left">
-            <span className="block text-[12.5px] font-bold text-charcoal">Imaging &amp; history</span>
-            <span className="block text-[10px] text-charcoal-tertiary">Medications, surgeries, conditions</span>
-          </span>
-          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-        </button>
+        {/* KEPT (no frame), in the HE1 row style: the cycle tracker's way in
+            (the only one, so its data stays reachable), its one-time
+            question, the pregnancy guidance (safety), health checks and the
+            advanced monitoring plan (safety). */}
+        <TrackerQuestion />
+        {cycleOffered && (cycleSettings?.trackerEnabled || pregnancy) && (() => {
+          const accent = pregnancy ? PREGNANCY_COLOR : cyclePrediction ? PHASE_COLOR[cyclePrediction.phase] : "#AEA1DC";
+          const nextIn =
+            !pregnancy && cyclePrediction?.nextPeriodStart ? daysBetween(today, cyclePrediction.nextPeriodStart) : null;
+          const g = pregnancy ? gestationOn(today, pregnancy) : null;
+          return (
+            <HealthRow
+              title={pregnancy ? "Pregnancy" : "Cycle"}
+              subtitle={
+                pregnancy
+                  ? g
+                    ? `Week ${g.week} · trimester ${g.trimester}`
+                    : "Being tracked"
+                  : cyclePrediction
+                    ? [
+                        `${PHASE_LABEL[cyclePrediction.phase]}${cyclePrediction.cycleDay !== null ? ` · day ${cyclePrediction.cycleDay}` : ""}`,
+                        // Decision 5 (MO11 frame): the next period, only when predicted.
+                        nextIn !== null && nextIn >= 0
+                          ? nextIn === 0
+                            ? "next period expected today"
+                            : `next period in about ${nextIn} ${nextIn === 1 ? "day" : "days"}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : "Log a period to start"
+              }
+              fill={`${accent}14`}
+              tileFill={accent}
+              glyph={<Moon size={18} strokeWidth={1.75} className="text-white" />}
+              onClick={() => navigate("/app/cycle")}
+            />
+          );
+        })()}
+        {pregnancy && <PregnancyHealthCard pregnancy={pregnancy} />}
+        {(pregnancy ||
+          screeningRows({
+            age: user.age,
+            sex: user.sex,
+            bmi: bmiOf(user.heightCm, user.weightKg),
+            recoverySensitive: recoverySensitive || recoveryModePending,
+          }).length > 0) && (
+          <HealthRow
+            title={SCREENING_COPY.cardTitle}
+            subtitle={SCREENING_COPY.cardSubtitle}
+            fill="rgba(74,61,160,0.08)"
+            tileFill="#4A3DA0"
+            glyph={<ShieldCheck size={18} strokeWidth={1.75} className="text-white" />}
+            onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })}
+          />
+        )}
+        {checkFlags.active && (
+          <HealthRow
+            title={CHECKS_COPY.planTitle}
+            subtitle="Your monitoring plan"
+            fill="rgba(74,61,160,0.08)"
+            tileFill="#4A3DA0"
+            glyph={<ClipboardList size={18} strokeWidth={1.75} className="text-white" />}
+            onClick={() => navigate("/app/health/checks")}
+          />
+        )}
       </div>
 
-      {/* Task Y2: the app-wide disclaimer replaces the old one-line notice
-          here, and the sources behind the health content sit under it. */}
-      <HealthDisclaimer className="mb-1.5" />
+      {/* HE1 #10–#11: "Records", 20 below the last row; both rows open the
+          one Records sheet on their own tab. */}
+      <HealthSectionLabel className="mt-5 mb-2.5">Records</HealthSectionLabel>
+      <div className="flex flex-col gap-2">
+        <HealthRow
+          title="Biomarkers & labs"
+          subtitle={biomarkersSubtitle}
+          fill={tint(LAV, 0.16)}
+          tileFill="rgb(var(--th-7d6bb5))"
+          glyph={<Stethoscope size={18} strokeWidth={1.75} className="text-white" />}
+          onClick={() => setRecordsTab("biomarkers")}
+        />
+        <HealthRow
+          title="Imaging & history"
+          subtitle="Medications, surgeries, conditions"
+          fill={tint(TEAL, 0.18)}
+          tileFill="rgb(var(--th-4f7f78))"
+          glyph={<FileText size={18} strokeWidth={1.75} className="text-white" />}
+          onClick={() => setRecordsTab("imaging")}
+        />
+      </div>
+
+      {/* Restore round 2 (user, 2026-10-07): the app-wide HealthDisclaimer
+          (Task Y2) is back in place of the frame's shorter line, 16 below
+          Records as the frame spaces it. */}
+      <HealthDisclaimer className="mt-4 mb-1.5" />
+      {/* KEPT (no frame): where the health guidance comes from (Task Y2). */}
       <button
         onClick={() => navigate("/app/health/sources")}
-        className="tap mx-auto mb-3 flex items-center min-h-[44px] px-3 text-[11px] text-charcoal-soft underline underline-offset-2"
+        className="tap mx-auto mb-3 flex items-center min-h-[44px] px-3 text-[9.5px] text-charcoal-tertiary underline underline-offset-2"
       >
         Sources and guidelines
       </button>
@@ -762,6 +649,7 @@ export default function Health() {
       </BottomSheet>
 
       <WaterDetailSheet open={waterOpen} onClose={() => setWaterOpen(false)} />
+      <AddMetricSheet open={addMetricOpen} onClose={() => setAddMetricOpen(false)} />
       <BiomarkerCaptureFlow open={scanOpen} onClose={() => setScanOpen(false)} />
       <ImagingCaptureFlow open={scanImagingOpen} onClose={() => setScanImagingOpen(false)} />
       <ShareImagingSheet

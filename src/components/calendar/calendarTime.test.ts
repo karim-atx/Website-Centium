@@ -1,12 +1,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { fieldTime, fmt12, fromParts, linkLabel, minuteOptions, normaliseLink, range12, toParts } from "./calendarTime.ts";
+import { fieldTime, fromParts, linkLabel, minuteOptions, normaliseLink, range24, toParts } from "./calendarTime.ts";
 
-test("12-hour display covers midnight, noon and the afternoon", () => {
-  assert.equal(fmt12("00:05"), "12:05 AM");
-  assert.equal(fmt12("12:00"), "12:00 PM");
-  assert.equal(fmt12("18:30"), "6:30 PM");
-  assert.equal(range12("18:00", "19:00"), "6:00 PM – 7:00 PM");
+test("the views show 24-hour padded times, as MO1.6 draws them", () => {
+  assert.equal(range24("12:30", "13:00"), "12:30 – 13:00");
+  assert.equal(range24("07:00", "08:00"), "07:00 – 08:00");
+  assert.equal(range24("00:05", "23:59"), "00:05 – 23:59");
+  assert.equal(range24("7:5", "18:00"), "07:05 – 18:00");
 });
 
 test("the sheet's field pads the hour", () => {

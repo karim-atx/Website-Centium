@@ -8,13 +8,11 @@ import { ReviewItem } from "./ReviewItem";
 import { textPx } from "../../theme/textSize";
 import type { ReviewRow } from "../../services/professional-reviews";
 import {
-  EDIT_WINDOW_OVER,
   REPLY_BODY_MAX,
   REVIEW_BODY_MAX,
   REVIEW_REPORT_REASONS,
   bodyLength,
   counterLabel,
-  editWindowLabel,
   type MyReviewStatus,
   type ReviewReportReason,
 } from "../../services/professional-reviews/rules";
@@ -61,7 +59,9 @@ function useArmed(): [boolean, () => boolean] {
 
 /**
  * "My Review": the empty prompt, or the review with what can still be done
- * with it — edit inside 30 days (with the time left), then only withdraw.
+ * with it — edit inside 30 days, then only withdraw. Handover-complete pass:
+ * the time-left line ("You can edit this for N more days.") is gone (MO1.2.1
+ * draws none); Edit simply stops being offered when the window closes.
  */
 export const MyReviewCard: React.FC<{
   firstName: string;
@@ -73,15 +73,25 @@ export const MyReviewCard: React.FC<{
   /** MO1.2.1 puts "My review" above the card as a section label. */
   hideLabel?: boolean;
 }> = ({ firstName, review, status, onOpen, onWithdraw, className = "", hideLabel }) => {
-  // The time is read once per mount, not on every render.
-  const [now] = useState(() => Date.now());
   const [armed, arm] = useArmed();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const withdrawn = status === "withdrawn";
   const editable = !!review && status === "editable";
-  const left = review && editable ? editWindowLabel(review.createdAt, now) : null;
+  // MO1.2.1 #7's outline button: 32 tall, r10, 12/700 deep primary ink on a
+  // 1 px primary-dark outline (measured; Foundations outline 32–40 / 10–12).
+  const outline = (label: string) => (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={onOpen}
+      className="shrink-0 !h-8 !rounded-[10px]"
+      style={{ fontSize: textPx(12), color: "rgb(var(--c-primary-deep-text))", borderColor: "rgb(var(--c-primary-dark))" }}
+    >
+      <Pencil size={13} /> {label}
+    </Button>
+  );
 
   const withdraw = async () => {
     if (busy || !arm()) return;
@@ -94,29 +104,21 @@ export const MyReviewCard: React.FC<{
     <Card className={className}>
       <div className={`flex items-center gap-2 ${hideLabel ? (review ? "justify-end mb-1.5" : "hidden") : "justify-between mb-1.5"}`}>
         {!hideLabel && <p className="section-label text-charcoal-faint">My Review</p>}
-        {(!review || editable) && (
-          <Button size="sm" variant="outline" onClick={onOpen}>
-            <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
-          </Button>
-        )}
+        {(!review || editable) &&
+          (hideLabel ? (
+            review && outline("Edit")
+          ) : (
+            <Button size="sm" variant="outline" onClick={onOpen}>
+              <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
+            </Button>
+          ))}
       </div>
       {!review ? (
         hideLabel ? (
           // MO1.2.1: the prompt and the outline button on one row.
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>
-            {/* MO1.2.1 #7: 12/700 in the deep primary ink with a 1 px primary-dark
-                outline (#7D6BB5, sampled from the frame). */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onOpen}
-              // 32 tall, radius 10 (measured on the frame; Foundations outline 32–40 / 10–12).
-              className="shrink-0 !h-8 !rounded-[10px]"
-              style={{ fontSize: textPx(12), color: "rgb(var(--c-primary-deep-text))", borderColor: "rgb(var(--c-primary-dark))" }}
-            >
-              <Pencil size={13} /> Rate &amp; Review
-            </Button>
+            {outline("Rate & Review")}
           </div>
         ) : (
           <p className="text-sm text-charcoal-faint">You haven't reviewed {firstName} yet</p>
@@ -130,10 +132,7 @@ export const MyReviewCard: React.FC<{
         </>
       ) : (
         <>
-          <ReviewItem review={review} showName={false} starSize={14} replyLabel={`Reply from ${firstName}`} />
-          {status !== "removed" && (
-            <p className="text-xs text-charcoal-faint mt-2">{left ?? EDIT_WINDOW_OVER}</p>
-          )}
+          <ReviewItem review={review} showName={false} starSize={14} replyLabel={`Reply from ${firstName}`} hideEdited={hideLabel} />
           {/* Withdrawing has no time limit, so once editing has closed it is
               offered here; inside the window it lives in the edit sheet. */}
           {!editable && (
@@ -181,10 +180,8 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [armed, arm] = useArmed();
-  const [now] = useState(() => Date.now());
 
   const over = bodyLength(text) > REVIEW_BODY_MAX;
-  const left = existing ? editWindowLabel(existing.createdAt, now) : null;
 
   const submit = async () => {
     if (busy || over) return;
@@ -255,12 +252,9 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
         </p>
       )}
       {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
-      {!existing && (
-        <p className="text-[11px] text-charcoal-faint leading-relaxed">
-          You can edit your review for 30 days after posting it, and withdraw it at any time.
-        </p>
-      )}
-      {left && <p className="text-[11px] text-charcoal-faint">{left}</p>}
+      {/* Handover-complete pass: the 30-day edit notes are gone (MO1.2.1.2
+          draws none). Edit mode keeps "Save changes" and Withdraw with its
+          note: withdrawing is the reviewer's control over their own words. */}
       <Button fullWidth size="lg" onClick={() => void submit()} disabled={busy || over}>
         {busy ? "Saving…" : existing ? "Save changes" : "Submit review"}
       </Button>

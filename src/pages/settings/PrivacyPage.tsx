@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCheck, ChevronRight, Trash2, Users } from "lucide-react";
+import { CheckCheck, Trash2, Users } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
+import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
+import { PRIVACY_INTRO, PRIVACY_SECTIONS } from "./legalCopy";
 
-// MO1.8.7 Privacy, as a page (was a sheet), LAYOUT ONLY (C35): the board's
-// legal-page shape with today's words, until the final copy arrives (D28).
+// MO1.8.7 Privacy, as a page (was a sheet); handover-complete pass: the
+// frame's text (the "Last updated" line, the intro and the ten headed
+// sections, legalCopy.ts), then the link to the full policy on the website,
+// which is the source of truth.
 //
 // THE CONTROLS GO ABOVE THE TEXT ("repo controls go above the text when
-// ported"): Sharing with professionals (customers), Read receipts, and
-// Delete my account. The text below them is today's privacy summary, then a
-// link to the full policy on the website, which is the source of truth.
+// ported"; kept as privacy and account features, exception 1): Sharing with
+// professionals (customers), Read receipts, and Delete my account.
 //
 // THE "STAYS ON THIS DEVICE" FRAMING STAYS GONE: health data lives on
 // Centium's servers, and what keeps it private is client_access_grants, a
@@ -101,28 +104,15 @@ export default function PrivacyPage() {
       </SettingsSection>
       {receiptsError && <p className="text-[11.5px] text-status-high mt-2">{receiptsError}</p>}
 
-      {/* MO1.8.7 body: 15 / 400 in the main text colour. */}
-      <div className="mt-8 space-y-3 text-[15px] leading-[1.6] text-charcoal">
-        <p>
-          Your health data is stored securely on Centium's servers, and connecting with a professional
-          doesn't give them access to it. You choose what each one can see, category by category, and
-          can change or withdraw it any time, in Profile or the Professionals tab.
-        </p>
+      {/* MO1.8.7: the date line, 8 to the intro, 24 to the first section;
+          32 under the controls (the Settings section gap). */}
+      <div className="mt-8">
+        <LegalUpdated />
+        <LegalIntro className="mt-2">{PRIVACY_INTRO}</LegalIntro>
+        <LegalSections doc="privacy" sections={PRIVACY_SECTIONS} className="mt-6" />
       </div>
 
-      {/* New since the redesign, so the handover's own colours (decision 22):
-          text and chevron #7D67D9, the rule above it rgba(174,161,220,0.30)
-          (measured #E7E3F4 in MO1.8.8, the same link). */}
-      <a
-        href="/legal#privacy"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="tap mt-6 flex items-center justify-between gap-3 border-t border-th-aea1dc/30 dark:border-charcoal/[0.06] pt-4 text-[14px] font-bold text-primary-accent"
-      >
-        Read the full Privacy Policy
-        {/* MO1.8.7: 14 / 700 with ChevronRight 16 / 2. */}
-        <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
-      </a>
+      <LegalFullLink href="/legal#privacy">Read the full Privacy Policy</LegalFullLink>
       </SettingsBody>
 
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />

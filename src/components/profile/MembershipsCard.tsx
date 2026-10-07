@@ -15,7 +15,11 @@ import {
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
-import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MemberTag } from "../marketplace/MemberTag";
+import { fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { memberTag, validRange } from "../../services/venues/venueLogic";
+import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -25,22 +29,34 @@ import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } fro
 // stays listed after you answer, carrying a badge that says what you said.
 // The board does not draw pending invitations; they are kept.
 //
-// ENDING ONE: swipe the row left (the board's swipe-row, "End membership"),
-// or the ⋮ menu, which is the same action for a mouse or keyboard (D12).
-// Either way a confirm comes first; it used to be a tap-twice text button.
+// ENDING ONE: swipe the row left (the board's swipe-row, "End membership"; a
+// mouse drags it the same way; the keyboard focuses the row and presses
+// ArrowLeft), or the ⋮ menu, which is the same action for a mouse or
+// keyboard (D12). Restore round 2 (user, 2026-10-07): the ⋮ and its menu are
+// back as on main, in Foundations' dropdown. Either way a confirm comes first
+// (it guards ending a paid membership by a stray swipe).
 // Ended memberships stay listed, muted.
 //
 // REDEEMING IS ITS OWN CONSENT. A code redeemed here creates a membership
 // already accepted. With no memberships the code box shows straight away (the
 // board's empty card); once there is one, "Join another gym or studio"
 // reveals it.
+//
+// GYM MEMBERSHIPS BOUGHT ON EXPLORE (backend stage 4b, MO1.4.2.2.1 note:
+// "membership appears in Profile") are listed first, from
+// my_gym_memberships(), in the same row with the venue's tag (Member, or the
+// amber "Pay on your first visit" until the gym marks it paid). A row opens
+// the gym page, where the pass is. 4b has no member-side cancel, so these
+// rows don't swipe.
 
 const dateLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export const MembershipsCard: React.FC = () => {
   const { authUserId, profileReady } = useApp();
+  const navigate = useNavigate();
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [gymMemberships, setGymMemberships] = useState<GymMembership[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -67,9 +83,11 @@ export const MembershipsCard: React.FC = () => {
     if (!profileReady || !authUserId) return;
     let cancelled = false;
     void (async () => {
-      const result = await fetchMyMemberships(authUserId);
+      const [result, gyms] = await Promise.all([fetchMyMemberships(authUserId), fetchMyGymMemberships()]);
       if (cancelled) return;
       setLoaded(true);
+      if (gyms.ok) setGymMemberships(gyms.value);
+      else setError(gyms.message);
       if (!result.ok) {
         setError(result.message);
         return;
@@ -173,35 +191,71 @@ export const MembershipsCard: React.FC = () => {
       {/* White on the lavender row, as drawn; the shared badge's own fills
           stay for the business's member list. */}
       <MembershipStatusBadge status={m.status} className="!bg-cream-card" />
+      {/* D12 (restore round 2): the visible path to End membership. The 16 pt
+          ⋮ in its pre-redesign text.soft; a 32 wide, 44 tall target that
+          sits inside the row's 16 padding. */}
       {m.status === "active" && (
         <button
           type="button"
           onClick={(e) => setMenuFor({ membership: m, anchor: e.currentTarget })}
           aria-label={`Options for ${m.businessName ?? "this membership"}`}
-          className="tap w-8 h-8 -me-1.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
+          aria-haspopup="menu"
+          aria-expanded={menuFor?.membership.id === m.id}
+          className="tap w-8 h-11 -my-1 -me-2 rounded-lg flex items-center justify-center text-charcoal-soft shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={16} aria-hidden />
         </button>
       )}
     </div>
   );
 
+  const gymRow = (m: GymMembership) => {
+    const tag = memberTag(m.passState);
+    return (
+      <button
+        key={m.id}
+        type="button"
+        onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(m.gymId)}`)}
+        className={clsx("tap w-full text-start flex items-center gap-3 rounded-[18px] bg-primary-pale p-4", m.status !== "active" && "opacity-60")}
+      >
+        <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
+          <Dumbbell size={18} className="text-primary-dark" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-bold text-charcoal truncate">{m.gymName}</span>
+          <span className="block text-xs text-charcoal-faint truncate">
+            {m.planName} · {validRange(m.startedOn, m.expiresOn)}
+          </span>
+        </span>
+        <MemberTag label={tag.label} tone={tag.tone} />
+      </button>
+    );
+  };
+
   return (
     <section className="mb-6 animate-fade-slide-up" aria-labelledby="memberships-label">
-      <p id="memberships-label" className="section-label text-charcoal-faint mb-2.5">
+      {/* MO1.5 row 3 (2x frame): "Section label" 10.5/700 uppercase, 14
+          line, 0.12em, no rule, inset 4 (glyphs from x 20.5), 8 above the
+          card. Pre-R1 ink kept (light-colour rule). */}
+      <p id="memberships-label" className="px-1 mb-2 text-[10.5px] leading-[14px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">
         Memberships
       </p>
 
       {error && <p className="mb-2 text-xs font-semibold text-status-high">{error}</p>}
 
-      {memberships.length === 0 ? (
+      {!loaded ? (
+        // MO1.5 States, Loading: a skeleton block where the card sits
+        // (surface.soft, the card's radius 18; the empty card is 113 tall on
+        // the 2x frame, y 640–866), in place of the code box flashing in.
+        <div className="h-[113px] rounded-[18px] bg-cream-soft animate-pulse" aria-hidden />
+      ) : memberships.length === 0 && gymMemberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
         // under the field.
         <Card padded={false} className="!rounded-[18px] p-3.5">
           {codeBox}
-          {!redeemNote && loaded && (
+          {!redeemNote && (
             <p className="mt-2.5 text-xs text-charcoal-faint">
               Got a code from a gym or studio? Enter it here to become a member.
             </p>
@@ -210,10 +264,13 @@ export const MembershipsCard: React.FC = () => {
       ) : (
         // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
         <div className="space-y-2">
+          {gymMemberships.map(gymRow)}
           {memberships.map((m) => (
             <div key={m.id}>
               {m.status === "active" ? (
                 <SwipeActions
+                  radius={18}
+                  keyboardLabel={`${m.businessName ?? "Membership"}. Press left arrow for End membership`}
                   actions={[
                     {
                       key: "end",
@@ -278,12 +335,16 @@ export const MembershipsCard: React.FC = () => {
         </div>
       )}
 
+      {/* D12 (restore round 2): End membership without a swipe, in
+          Foundations' dropdown (the 36 pt rows of the Journal / Habits
+          menus). It opens the same confirm as the swipe tile. */}
       <PopupMenu
         open={!!menuFor}
         onClose={() => setMenuFor(null)}
         anchor={menuFor?.anchor ?? null}
         width={200}
-        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} />, destructive: true }]}
+        rowLineHeight={16}
+        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
         onSelect={() => {
           const m = menuFor?.membership ?? null;
           setMenuFor(null);

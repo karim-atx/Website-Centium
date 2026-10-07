@@ -322,12 +322,14 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
 
       {/* MO1.1.4: Start / Stop filled, Reset to its right. */}
       <PinnedCta
+        // MO1.1.4 #8: the row is 44 tall, radius 12 (C-01 no longer applies).
+        size="base"
         primary={{
           label: running ? "Stop" : "Start",
           icon: running ? <Square size={14} /> : <Play size={14} />,
           onClick: toggle,
           // MO1.1.4 #8 (decision 23): filled #A198DF (--c-fill-cta),
-          // 13.5/700 white; 48/r14 per C-01.
+          // 13.5/700 white.
           className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
         }}
         trailing={{

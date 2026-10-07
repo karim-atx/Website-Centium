@@ -12,21 +12,23 @@ const typeLabel = (s: DirectoryListing["subtype"]): string =>
   s ? SUBTYPE_SINGULAR[s].replace(/\b\w/g, (c) => c.toUpperCase()) : "Professional";
 
 /**
- * A professional in the directory, shared by the list and the map so the two
- * open the same card. `distance` is the map's line ("about 3 km away · near
- * Hamra"), computed on the device; the list view passes nothing, and null
- * means not on the map near here (no area shared, or outside what was searched).
+ * A professional in the directory, shared by the list and the map's floating
+ * card so the two open the same card. `distance` is the map's line ("about
+ * 3 km away · near Hamra"), computed on the device; the list passes nothing,
+ * and null means not on the map near here (no area shared, or outside what
+ * was searched).
  *
  * MO1.2: photo or initials in the type's pill colour; name, headline and type
- * in the type colours; location and price as pills; the bio; a tinted
- * full-width "View Profile". Kept though the frame doesn't draw it (B2):
- * the Verified mark by the name. The rating is the gold reviews pill beside
- * the area pill, as Foundations' professional card lists it (decision 23,
- * kept-list 64; "New" under three reviews).
+ * in the type colours; the area and price pills; the bio; a tinted
+ * full-width "View Profile" (#EAE6F7 / #E1EFEC, measured). Restore round 2
+ * (user, 2026-10-07): the rating pill and the map's distance pill are back, as
+ * on main, in the card's own pill row (24 tall, 11/600, the type's pill
+ * colours; the rating as Foundations' gold reviews pill: an average once
+ * three reviews count towards it, "New" before that, from
+ * professional_rating_summary through the directory view). The Verified mark by the name
+ * stays (a safety signal: a credential the Centium team checked); its meaning
+ * is the mark's own tooltip and accessible name.
  * No monthly rate, no price pill (B5).
- *
- * The rating is professional_rating_summary's, through the directory view:
- * an average once three reviews count towards it, "New" before that.
  */
 export const DirectoryCard: React.FC<{
   listing: DirectoryListing;
@@ -75,7 +77,7 @@ export const DirectoryCard: React.FC<{
         </div>
       </div>
 
-      {/* Always shown now: the gold reviews pill is on every card. */}
+      {/* Always shown: the gold reviews pill is on every card. */}
       <div className="flex flex-wrap gap-1.5 mt-3">
           {p.location && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
@@ -123,9 +125,9 @@ export const DirectoryCard: React.FC<{
           e.stopPropagation();
           open();
         }}
-        // MO1.2: 40 tall (measured on the frame; the 224 card fits it).
+        // MO1.2: 40 tall, r12 (measured on the frame; the 224 card fits it).
         className="tap mt-3.5 w-full h-10 rounded-xl flex items-center justify-center gap-1 text-[13.5px] font-bold"
-        style={{ background: t.pill, color: t.deep }}
+        style={{ background: t.button, color: t.deep }}
       >
         View Profile <ChevronRight size={14} aria-hidden />
       </button>

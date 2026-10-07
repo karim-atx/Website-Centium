@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Droplet } from "lucide-react";
+import { HealthScanIcon } from "./HealthScanIcon";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
@@ -33,11 +33,12 @@ export const CycleTrackingRow: React.FC = () => {
       {/* MO1.5 anatomy row 8 (2x frame): the title centred beside a 36
           #F0EDF9 tile with a #7D6BB5 glyph (new tile, decision 22), and the
           12/400 line under the row at the title's x, 10 below the tile, like
-          the Recovery body above it. */}
+          the Recovery body above it. The glyph is the one MO1.5 draws
+          (HealthScanIcon, copied from the handover asset; was Droplet). */}
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-3 min-w-0">
           <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark shrink-0" aria-hidden>
-            <Droplet size={16} />
+            <HealthScanIcon />
           </span>
           <span className="block text-sm font-semibold text-charcoal">Cycle tracking</span>
         </span>

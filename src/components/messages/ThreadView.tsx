@@ -70,6 +70,7 @@ import {
   setPin,
   setStarred,
   threadAllowsAttachments,
+  threadInitials,
   type Message,
   type MessageThread,
   type Pin as ThreadPin,
@@ -253,7 +254,7 @@ export const ThreadView: React.FC<{
   const departed = !isGroup && thread.participantId === null;
 
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
-  // ways; the composer and call buttons give way to a plain statement of it.
+  // ways; the composer and the call button give way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
   const safetyApplies = !departed && thread.kind === "peer";
   // Reporting a message works in a direct chat and in a group alike.
@@ -342,7 +343,11 @@ export const ThreadView: React.FC<{
    * asked about first.
    */
   const [hiding, setHiding] = useState<Message | null>(null);
-  /** Your own message whose text the composer is editing. */
+  /**
+   * Your own message whose text the composer is editing. Restore round (user,
+   * 2026-10-07): Edit is back in the long-press menu, with the composer's edit
+   * mode and banner.
+   */
   const [editing, setEditing] = useState<Message | null>(null);
   /** Your own message awaiting "Delete for everyone" confirmation. */
   const [unsending, setUnsending] = useState<Message | null>(null);
@@ -363,6 +368,10 @@ export const ThreadView: React.FC<{
    * read time as the list reported it. Marking the chat read on load moves the
    * server's value, so it is captured once rather than read back. Null when
    * nothing was unread; "" when they had never read this chat.
+   *
+   * Restore round 2 (user, 2026-10-07): the divider, opening at the first
+   * unread and the jump pill are back (MO1.2.1.3 draws none of them; the
+   * handover-complete pass had removed them).
    */
   const [readBefore] = useState<string | null>(() => (thread.unreadCount > 0 ? thread.lastReadAt ?? "" : null));
   const dividerRef = useRef<HTMLDivElement>(null);
@@ -394,6 +403,9 @@ export const ThreadView: React.FC<{
   // predicate instead. thread_allows_calls delegates the relationship rule to
   // thread_allows_attachments and adds "and the caller is a participant", so
   // these two are asked separately rather than one being derived from the other.
+  //
+  // Restore round (user, 2026-10-07): calls are back. Restore round 3 (user,
+  // 2026-10-07): as two header buttons, Voice call and Video call, as on main.
   const [canCall, setCanCall] = useState(false);
   const [mediaNotice, setMediaNotice] = useState<string | null>(null);
   const { placeCall: placeCallRemote, busy: callBusy } = useCall();
@@ -1077,6 +1089,12 @@ export const ThreadView: React.FC<{
         close();
       },
     });
+    // MO1.2.1.3.3 draws Reply, Forward, Star, Copy, Pin, Info and Delete for
+    // me. Kept beyond it: Report (safety) and, inside the server's window on
+    // your own message, Delete for everyone (your control over what you sent;
+    // the server decides, ATX40). Restore round (user, 2026-10-07): Edit is
+    // back, after Pin and before Info.
+    //
     // EDIT, with the time left, only while the window is open and only for
     // text. The note is the client's estimate; the server decides (ATX40).
     const left = mine ? editTimeLeft(m) : 0;
@@ -1268,7 +1286,7 @@ export const ThreadView: React.FC<{
         </button>
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
-            ellipses instead of pushing the call buttons off the edge. */}
+            ellipses instead of pushing Call and Search off the edge. */}
         <button
           type="button"
           onClick={() => setInfoOpen(true)}
@@ -1284,7 +1302,7 @@ export const ThreadView: React.FC<{
             {thread.participantAvatarUrl ? (
               <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              thread.participantName.trim().charAt(0).toUpperCase()
+              threadInitials(thread)
             )}
           </span>
           )}
@@ -1314,26 +1332,38 @@ export const ThreadView: React.FC<{
           </span>
         </button>
 
-        {/* CALL CONTROLS, gated on canCall — asked once on open, failing
-            closed, and not the enforcement: mint-call-token re-checks
-            thread_allows_calls server-side. */}
+        {/* MO1.2.1.3 draws a Hire button here (12.5/700 white on #9A8CD6,
+            Handshake 14) that opens MO1.2.1.5's plans. It waits on the
+            offers and payments backend, which doesn't exist yet. */}
+
+        {/* CALLS (restore round 3, user, 2026-10-07): two buttons beside
+            Search, as on main: Voice call and Video call, one tap each. Each
+            takes Search's own 44 target and 17/1.75 glyph in the same ink;
+            -mr-2.5 cancels the row's gap so the 44 targets sit edge to edge.
+
+            Gated on canCall — asked once on open, failing closed, and not the
+            enforcement: mint-call-token re-checks thread_allows_calls
+            server-side. Not in a group, not with someone who left, and not
+            across a block (a block stops calls both ways). */}
         {canCall && !isGroup && thread.participantId && !block.blocked && (
           <>
             <button
+              type="button"
               onClick={() => void placeCall("voice")}
               disabled={callBusy}
               aria-label={`Voice call ${thread.participantName}`}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
-              <Phone size={15} />
+              <Phone size={17} strokeWidth={1.75} />
             </button>
             <button
+              type="button"
               onClick={() => void placeCall("video")}
               disabled={callBusy}
               aria-label={`Video call ${thread.participantName}`}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
-              <Video size={15} />
+              <Video size={17} strokeWidth={1.75} />
             </button>
           </>
         )}
@@ -1366,8 +1396,10 @@ export const ThreadView: React.FC<{
         </div>
       )}
 
+      {/* THE CALL'S DEVICE NOTICE (restore round): why a call could not start
+          (microphone blocked) or why it became a voice call (camera blocked). */}
       {mediaNotice && (
-        <p className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
+        <p role="status" className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
           {mediaNotice}
         </p>
       )}
@@ -1402,14 +1434,16 @@ export const ThreadView: React.FC<{
       {/* MO1.2.1.3: 8 between bubbles (measured; spec rows 122/221/320). */}
       <div className="flex-1 flex flex-col gap-2 mb-3">
         {/* The top of the loaded history. Scrolling up to it loads the next
-            older page; the button is the same action for anyone not scrolling. */}
+            older page; the button is the same action for anyone not
+            scrolling, visually hidden until it takes keyboard focus (MO1.2.1.3
+            draws no button). */}
         <div ref={topRef}>
           {hasOlder && (
             <button
               type="button"
               onClick={() => void loadOlder()}
               disabled={loadingOlder}
-              className="tap mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
+              className="tap sr-only focus:not-sr-only mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
             >
               {loadingOlder ? "Loading earlier messages…" : "Load earlier messages"}
             </button>
@@ -1459,6 +1493,8 @@ export const ThreadView: React.FC<{
                   {label}
                 </p>
               ))}
+              {/* "N NEW MESSAGES" (restore round 2, user, 2026-10-07): its
+                  pre-redesign look and light colours (decision 22). */}
               {index === dividerAt && (
                 <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
                   <span className="flex-1 h-px bg-primary/40" />
@@ -1637,7 +1673,8 @@ export const ThreadView: React.FC<{
         {/* The in-flight message, rendered after the real ones and outside the
             list. 90%, not lower: a parent opacity fades text toward the page. */}
         {pending && (
-          <div className="self-end max-w-[78%] rounded-[16px_16px_4px_16px] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
+          // The sent bubble's shape and type (MO1.2.1.3: r 20 20 4 20, max 76%, 13.5).
+          <div className="self-end max-w-[76%] rounded-[20px_20px_4px_20px] px-3 py-[9px] text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
             {pending.kind === "text" ? (
               pending.text
             ) : (
@@ -1662,12 +1699,15 @@ export const ThreadView: React.FC<{
             {label}
           </p>
         ))}
-        {/* THEY ARE TYPING: three dots where their next message will land. */}
+        {/* THEY ARE TYPING: three dots where their next message will land,
+            as well as "typing…" in the header (MO1.2.1.3 #9). Restore round 2
+            (user, 2026-10-07): the bubble is back, in the received bubble's
+            shape (r 20 20 20 4) and colour. */}
         {theyAreTyping && (
           <div
             role="status"
             aria-label={`${typingName ?? thread.participantName} is typing`}
-            className="self-start rounded-2xl bg-cream-soft px-3.5 py-2.5 flex gap-1"
+            className="self-start rounded-[20px_20px_20px_4px] bg-cream-soft px-3.5 py-2.5 flex gap-1"
           >
             {[0, 1, 2].map((i) => (
               <span
@@ -1681,12 +1721,13 @@ export const ThreadView: React.FC<{
         <div ref={endRef} />
       </div>
 
-      {/* JUMP TO UNREAD, while the divider is above the screen. */}
+      {/* JUMP TO UNREAD, while the divider is above the screen (restore round
+          2, user, 2026-10-07). 44 tall, the Foundations tap size. */}
       {dividerAbove && newCount > 0 && (
         <button
           type="button"
           onClick={() => dividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-9 flex items-center gap-1.5 shadow-lg"
+          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-11 flex items-center gap-1.5 shadow-lg"
         >
           <ArrowDown size={14} className="rotate-180" />
           {newCount === 1 ? "1 new message" : `${newCount} new messages`}
@@ -1745,12 +1786,19 @@ export const ThreadView: React.FC<{
       <>
       <div className="flex-1" aria-hidden />
       <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+      {/* EDITING (restore round, user, 2026-10-07): the reply banner's look
+          (cream-soft r12, the primary rail, 11/600 heading over the 11.5
+          text), a Pencil where the reply arrow goes, and a 44 cancel target
+          pulled into the banner's padding so the banner keeps its height. */}
       {editing && (
-        <div className="flex items-center gap-2 rounded-[10px] bg-cream-soft px-2.5 py-1.5 mb-2">
-          <Pencil size={14} className="text-primary-deep-text shrink-0" aria-hidden />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-extrabold text-primary-deep-text">Editing message</p>
-            <p className="text-[12.5px] text-charcoal-soft truncate">{editing.text}</p>
+        <div className="flex items-center gap-2 rounded-xl bg-cream-soft px-3 py-2 mb-2">
+          <Pencil size={14} className="text-primary-dark shrink-0" aria-hidden />
+          <div className="flex items-stretch gap-2 min-w-0 flex-1">
+            <span className="w-0.5 self-stretch rounded-full shrink-0 bg-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-semibold truncate text-primary-dark">Editing message</span>
+              <span className="block text-[11.5px] truncate text-charcoal-soft">{editing.text}</span>
+            </span>
           </div>
           <button
             type="button"
@@ -1759,7 +1807,7 @@ export const ThreadView: React.FC<{
               setDraft("");
             }}
             aria-label="Cancel editing"
-            className="tap w-11 h-11 flex items-center justify-center text-charcoal-soft shrink-0"
+            className="tap w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
           >
             <X size={14} />
           </button>
@@ -1818,9 +1866,12 @@ export const ThreadView: React.FC<{
           </>
         )}
         {recorder.recording ? (
-          // MO1.2.1.3.6: the bar is the pale danger tint throughout; past the
-          // cancel distance it deepens (a ring in the danger colour) so the
-          // slide-to-cancel feedback is kept.
+          // MO1.2.1.3.6: the bar in the pale danger tint (the bar existed
+          // pre-R1, so its light colour stays, decision 22), the dot, the
+          // timer and "Slide away to cancel". Restore round 2 (user,
+          // 2026-10-07): the "· max N min" suffix is back, and past the
+          // cancel distance the bar deepens (a ring in the danger colour) and
+          // says "Release to cancel".
           <div
             // 44 tall beside the 48 mic, 14 in to the dot (measured).
             className={`flex-1 h-11 flex items-center gap-2 rounded-full px-3.5 bg-status-high-bg ${
@@ -1851,9 +1902,10 @@ export const ThreadView: React.FC<{
           />
         )}
 
-        {/* Same gate as the paperclip. Shown only when the draft is empty, so
-            Send stays the one primary action while typing. */}
-        {canAttach && recorder.supported && !draft.trim() && (
+        {/* Same gate as the paperclip. MO1.2.1.3.5 draws the Mic beside Send
+            whatever the field holds (handover-complete pass: it used to hide
+            while typing). */}
+        {canAttach && recorder.supported && (
           <button
             onPointerDown={(e) => void onRecordDown(e)}
             onPointerMove={onRecordMove}
@@ -1945,6 +1997,9 @@ export const ThreadView: React.FC<{
         noteType={{ size: 11, weight: 400, lineHeight: 15 / 11 }}
         // 8.5 above the composer (measured on MO1.2.1.3.4 at 2x; decision 23).
         gap={8.5}
+        // MO1.2.1.3.4 #11: the screen's overlay, rgba(36,31,27,0.4)
+        // (handover-complete pass; was Foundations' 0.18).
+        dim={0.4}
         options={[
           { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },
           {

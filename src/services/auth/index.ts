@@ -368,6 +368,18 @@ export function onPasswordRecovery(callback: (userId: string) => void): () => vo
 }
 
 /**
+ * Another narrow listener, only for SIGNED_OUT: the two-factor recovery-code
+ * pass (AppContext) ends with the sign-in it was given to, even when a new
+ * sign-in follows at once and React never renders the signed-out state.
+ */
+export function onSignedOut(callback: () => void): () => void {
+  const { data } = supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_OUT") callback();
+  });
+  return () => data.subscription.unsubscribe();
+}
+
+/**
  * Sets a new password for the signed-in (or recovery) session.
  *
  * This is the only thing a recovery session is allowed to do, and completing

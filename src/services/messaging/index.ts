@@ -96,6 +96,19 @@ export interface MessageThread {
   unreadCount: number;
   /** When the caller last read this thread, or null if never. */
   lastReadAt: string | null;
+  /**
+   * A chat about one gym or studio (MO1.4.2.6; Database start_venue_thread,
+   * my_conversations' venue columns). Null for every other thread. The member
+   * sees the venue as the chat (its name, initials or logo); the owner sees
+   * the member's name with the venue as context ("Lina · Flex Gym").
+   */
+  venue: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
+}
+
+/** The letters an avatar shows when there's no photo: the venue's initials on the member side. */
+export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue">): string {
+  if (thread.venue?.memberSide) return thread.venue.initials;
+  return thread.participantName.trim().charAt(0).toUpperCase();
 }
 
 export interface Message {
@@ -340,8 +353,9 @@ export function describeRefusal(error: { code?: string; message?: string }): str
       return "You can't message this person.";
     case "ATX36":
       return /under 18/i.test(error.message ?? "")
-        ? "Accounts under 18 can only message professionals they already work with."
-        : "You can't start a conversation with this account. You can message professionals listed in Explore, or the people you already work with.";
+        ? // Covers gyms and studios too: a minor can't cold-message a venue either.
+          "Accounts under 18 can only message professionals, gyms and studios they already work with."
+        : "You can't start a conversation with this account. You can message professionals and gyms listed in Explore, or the people you already work with.";
     case "ATX02":
       return "You're sending messages too quickly. Wait a minute and try again.";
     case "ATX37":
@@ -388,6 +402,51 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
 }
 
 /**
+ * The caller's chat about one gym or studio (MO1.4.2.6), created on first use:
+ * one per member and venue, separate from any direct chat with the owner
+ * (Database start_venue_thread). The generated types come from production,
+ * where this function isn't yet, hence the narrow cast.
+ */
+export async function startVenueThread(gymId: string): Promise<StartThreadResult> {
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+  const { data, error } = await rpc("start_venue_thread", { p_gym_id: gymId });
+  if (error) {
+    console.error("[messaging] Could not start venue thread:", error.message);
+    if (error.code === "ATX02") {
+      return { ok: false, message: "You've started several new conversations recently. Try again in a little while." };
+    }
+    if (error.code === "ATX79") return { ok: false, message: "This gym isn't taking new messages right now." };
+    if (error.code === "22023") return { ok: false, message: "This is your own gym." };
+    return { ok: false, message: describe(error as Parameters<typeof describe>[0]) };
+  }
+  const id = typeof data === "string" ? data : (data as { id?: string } | null)?.id;
+  if (!id) return { ok: false, message: "Could not open that conversation." };
+  return { ok: true, threadId: id };
+}
+
+/**
+ * The venue threads the caller is on the MEMBER side of. Every venue thread is
+ * created by the member (start_venue_thread refuses the venue's own owner), and
+ * both participants can always read the thread row, so created_by tells the
+ * sides apart even when the venue is hidden or the business deactivated, states
+ * in which the gyms / business_profiles rows are no longer readable. A null
+ * created_by (the member deleted their account) reads as the owner's side.
+ */
+async function venueThreadsIStarted(threadIds: string[]): Promise<Set<string>> {
+  const mine = new Set<string>();
+  if (threadIds.length === 0) return mine;
+  const { data: auth } = await supabase.auth.getSession();
+  const me = auth.session?.user.id;
+  if (!me) return mine;
+  const { data } = await supabase.from("message_threads").select("id, created_by").in("id", threadIds);
+  for (const t of (data ?? []) as { id: string; created_by: string | null }[]) if (t.created_by === me) mine.add(t.id);
+  return mine;
+}
+
+/**
  * Every conversation the caller is in, newest activity first.
  *
  * ONE CALL, my_conversations() (Database 20261001000000). It returns each
@@ -408,7 +467,24 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     return { ok: false, message: describe(error) };
   }
 
-  const threads: MessageThread[] = (data ?? []).map((r) => ({
+  // The venue columns are newer than the generated types (production).
+  type VenueCols = { venue_id?: string | null; venue_name?: string | null; venue_initials?: string | null; venue_logo_url?: string | null };
+  const venueThreadIds = (data ?? []).filter((r) => !!(r as VenueCols).venue_id).map((r) => r.thread_id as string);
+  const memberSideThreads = await venueThreadsIStarted(venueThreadIds);
+
+  const threads: MessageThread[] = (data ?? []).map((r) => {
+    const v = r as VenueCols;
+    const venue =
+      v.venue_id && v.venue_name
+        ? {
+            id: v.venue_id,
+            name: v.venue_name,
+            initials: v.venue_initials?.trim() || v.venue_name.trim().charAt(0).toUpperCase(),
+            logoUrl: v.venue_logo_url ?? null,
+            memberSide: memberSideThreads.has(r.thread_id as string),
+          }
+        : null;
+    const base: MessageThread = {
     id: r.thread_id,
     // A null id means no profiles row exists, which is a deleted account (the
     // function LEFT JOINs profiles). A present id with no first name is a real
@@ -447,7 +523,19 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     lastMessageSenderId: r.last_message_sender_id,
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
-  }));
+    venue,
+    };
+    if (!venue) return base;
+    // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".
+    return venue.memberSide
+      ? { ...base, participantName: venue.name, participantAvatarUrl: venue.logoUrl }
+      : {
+          ...base,
+          // The member deleted their account: the thread and its messages stay,
+          // with nobody on the other end (participant columns are SET NULL).
+          participantName: `${base.participantId === null ? "Former member" : base.participantName} · ${venue.name}`,
+        };
+  });
   return { ok: true, threads };
 }
 

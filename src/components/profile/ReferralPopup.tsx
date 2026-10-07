@@ -18,16 +18,18 @@ import {
 // (D25), so they are left out until it exists.
 //
 // KEPT FROM THE SHEET: the "{name} invited you" confirm before anything is
-// redeemed, the "a referral succeeded" banner, and the already-redeemed
-// state. MO1.10.1 and .2 use today's paths: the success row replaces the code
-// box, and a refusal is a red line with the RPC's own words (the board's
-// per-reason wording needs reason codes from the backend). MO1.10.3 (already
-// subscribed) needs store subscription data and is skipped.
+// redeemed (KEEP-SAFETY: nothing is applied to the account unasked).
+// Handover-complete pass (2026-10-07): the "a referral succeeded" banner and
+// the local "already redeemed" note are removed (the frame draws neither; a
+// second code is refused by redeem_referral and shown as MO1.10.2's line).
+// MO1.10.1 and .2 use today's paths: the success row replaces the code box,
+// and a refusal is a red line with the RPC's own words. Still waiting on the
+// backend: the frame's reward wording, the per-reason refusal wording, the
+// "N of 12 rewards" progress line and MO1.10.3's subscribed state.
 //
 // QA 11.0: shared across Client / Professional / Business More pages.
 export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { authUserId, referralRedeemed, referralDiscountPct, referralNextMonthDiscountPct, applyReferralReward } =
-    useApp();
+  const { authUserId, applyReferralReward } = useApp();
   const [codeDraft, setCodeDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -155,18 +157,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             What they are for is a tier and, so far, nothing else. */}
         <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
 
-        {referralNextMonthDiscountPct > 0 && (
-          <p className="mt-3 text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5">
-            A referral succeeded: you have {referralNextMonthDiscountPct}% off your next month's subscription.
-          </p>
-        )}
-
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
             box 48 tall, radius 12, the code 16/800 (cap 11.5) spaced 0.18em;
             the Copy button radius 12. Decision 23 (item 25): the frame's 1px
             #E4E4E3 hairline (charcoal 12% on white) in light, as in dark. */}
         <div className="mt-3.5">{label("Your code")}</div>
         <div className="flex items-center gap-2">
+          {/* Handover-complete pass: Copy and Share take the frame's #9A8CD6 fill
+              (th-9a8cd6, follows the theme) in light; dark keeps primary-fill. */}
           <span className="flex-1 min-w-0 h-12 rounded-xl bg-cream-card border border-charcoal/[0.12] flex items-center justify-center text-[16px] font-extrabold tracking-[0.18em] text-charcoal truncate">
             {myCode ?? (codeError ? "Unavailable" : "…")}
           </span>
@@ -175,7 +173,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
             onClick={() => void copyCode()}
             disabled={!myCode}
             aria-label="Copy referral code"
-            className="tap w-12 h-12 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
+            className="tap w-12 h-12 rounded-xl bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
           >
             {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
           </button>
@@ -186,7 +184,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
           onClick={() => void shareCode()}
           disabled={!myCode}
           // MO1.10: 8 under the code row (2x frame y 943 → 960), radius 14.
-          className="tap mt-2 w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+          className="tap mt-2 w-full h-12 rounded-[14px] bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <Share size={16} strokeWidth={1.75} aria-hidden />
           {copied ? "Code copied" : "Share code"}
@@ -205,11 +203,6 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
               {/* MO1.10.1: CircleCheck 18/2. */}
               <CircleCheck size={18} strokeWidth={2} className="shrink-0" aria-hidden />
               {result.message}
-            </p>
-          ) : referralRedeemed ? (
-            <p className="text-xs text-charcoal-faint bg-cream-soft rounded-xl px-3.5 py-2.5">
-              You've already redeemed a referral code
-              {referralDiscountPct > 0 ? `. ${referralDiscountPct}% off is applied to your subscription.` : "."}
             </p>
           ) : preview ? (
             // The confirmation, before anything is redeemed. Decision 23

@@ -29,7 +29,8 @@ import { resolveCssColor } from "../../theme/cssColor";
  *
  * MO1.2.2 (R12): one professional is an avatar pin (photo or initials) ringed
  * in their type colour, with a small tail; the selected one is drawn larger.
- * Several at one spot keep the count pin, ringed neutrally (B19).
+ * Several at one spot show their count in the same pin shape, in the
+ * primary family (B19; restyled in the handover-complete pass).
  */
 
 const STYLE = {
@@ -171,7 +172,10 @@ export default function NearbyMap({
       keyboard: true,
     });
     m.addControl(new maplibregl.AttributionControl({ compact: false }), "bottom-right");
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), recentreSlot ? "top-left" : "top-right");
+    // MO1.2.2 draws no zoom buttons (handover-complete pass): the directory
+    // map zooms by pinch, wheel and the focused map's +/- keys. The small pin
+    // map a professional uses to choose their area keeps them.
+    if (!recentreSlot) m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     m.getCanvas().setAttribute("aria-label", ariaLabel);
     m.on("moveend", () => {
       const c = m.getCenter();
@@ -262,12 +266,30 @@ export default function NearbyMap({
         el.append(disc, tail);
         return new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(m);
       }
-      el.className =
-        "centium-map-pin flex items-center justify-center rounded-full border-[2.5px] border-charcoal/25 bg-cream-card text-charcoal font-extrabold shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40";
-      el.style.width = el.style.height = p.count > 1 ? "38px" : "26px";
-      el.style.fontSize = "13px";
-      el.textContent = p.count > 1 ? String(p.count) : "";
-      return new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(m);
+      // Several at one spot (a state MO1.2.2 doesn't draw): the avatar pin's
+      // shape (38 disc, 2 white inner ring, 1.5 outer ring, tail) in the
+      // primary family, with the count as its initials (handover-complete
+      // pass; was a neutral grey ring).
+      el.className = "centium-map-pin flex flex-col items-center focus:outline-none focus-visible:[&>span:first-child]:outline focus-visible:[&>span:first-child]:outline-4 focus-visible:[&>span:first-child]:outline-offset-2 focus-visible:[&>span:first-child]:outline-primary/40";
+      const ring = darkRef.current ? "rgb(var(--th-9c8fc7))" : "rgb(var(--th-7d6bb5))";
+      const disc = document.createElement("span");
+      disc.className = "flex items-center justify-center rounded-full font-bold";
+      disc.style.width = disc.style.height = "38px";
+      disc.style.border = "2px solid rgb(var(--c-cream-card))";
+      disc.style.boxShadow = `0 0 0 1.5px ${ring}, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`;
+      disc.style.background = darkRef.current ? "rgb(var(--th-2d2d41))" : "rgb(var(--th-e7e2f6))";
+      disc.style.color = darkRef.current ? "rgb(var(--th-9c8fc7))" : "rgb(var(--th-5f5093))";
+      disc.style.fontSize = "12px";
+      disc.textContent = String(p.count);
+      const tail = document.createElement("span");
+      tail.setAttribute("aria-hidden", "true");
+      tail.style.width = "0";
+      tail.style.height = "0";
+      tail.style.marginTop = "-1px";
+      tail.style.borderLeft = tail.style.borderRight = "6px solid transparent";
+      tail.style.borderTop = `7px solid ${ring}`;
+      el.append(disc, tail);
+      return new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(m);
     });
   }, [pins]);
 
@@ -298,7 +320,8 @@ export default function NearbyMap({
 
   // The credit line keeps its own readable colours in both themes, rather
   // than inheriting the app's text colour onto MapLibre's pale background.
-  // In dark the zoom buttons go dark too, so they are not a light patch.
+  // In dark the zoom buttons (the area-picking map only) go dark too, so they
+  // are not a light patch.
   return (
     <div className={`relative ${className ?? ""}`}>
     {onRecentre && (

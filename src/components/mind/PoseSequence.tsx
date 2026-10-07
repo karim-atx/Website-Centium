@@ -1,17 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, ChevronUp, Pause, PersonStanding, Play, SkipForward } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronDown, ChevronRight, ChevronUp, PersonStanding } from "lucide-react";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import clsx from "clsx";
-import { PinnedCta } from "../ui/PinnedCta";
 
 // Stretching and Yoga, mobile v5.1 MO1.1.4.1 / MO1.1.4.2: the current pose in
 // a hero with a timer ring and a Next preview, then the numbered sequence.
 //
-// THE TIMER (A15, not drawn on the board): each pose runs for its own
-// seconds (yoga poses have none in the content, so 30 s). Start / Pause and
-// Next are a pinned row; at zero it moves on to the next pose by itself and
-// stops after the last. Tapping a pose in the sequence makes it current.
-// Nothing is saved: only breathing writes meditation sessions.
+// ONLY WHAT THE FRAMES DRAW (handover-complete pass, 7 October 2026): the
+// pinned Start / Pause + Next row and its countdown with auto-advance are gone
+// (not drawn; nothing was saved by them, only breathing writes meditation
+// sessions). The ring is full and reads the pose's seconds ("30s", MO1.1.4.1)
+// or "Hold" for a yoga pose (MO1.1.4.2). The Next row and a tap on a pose in
+// the sequence make that pose current.
 //
 // FIGURES (A14): yoga uses the six first-pass GIFs, still thumbnails in the
 // list; stretches have no figures yet, so they show a generic icon.
@@ -57,49 +57,10 @@ function Figure({ pose, size, animate }: { pose: Pose; size: number; animate: bo
 export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
   const reduced = useReducedMotion();
   const [idx, setIdx] = useState(0);
-  const [leftMs, setLeftMs] = useState(poses[0].seconds * 1000);
-  const [running, setRunning] = useState(false);
-  const [finished, setFinished] = useState(false);
-  const tick = useRef<{ at: number } | null>(null);
-
-  const select = (i: number) => {
-    setIdx(i);
-    setLeftMs(poses[i].seconds * 1000);
-    setFinished(false);
-  };
-
-  // Wall-clock countdown, so a throttled background tab doesn't stretch a pose.
-  useEffect(() => {
-    if (!running) return;
-    tick.current = { at: Date.now() };
-    const id = window.setInterval(() => {
-      const now = Date.now();
-      const dt = now - (tick.current?.at ?? now);
-      tick.current = { at: now };
-      setLeftMs((ms) => Math.max(0, ms - dt));
-    }, 250);
-    return () => window.clearInterval(id);
-  }, [running]);
-
-  // At zero: on to the next pose, or stop after the last.
-  useEffect(() => {
-    if (!running || leftMs > 0) return;
-    const t = window.setTimeout(() => {
-      if (idx < poses.length - 1) {
-        setIdx(idx + 1);
-        setLeftMs(poses[idx + 1].seconds * 1000);
-      } else {
-        setRunning(false);
-        setFinished(true);
-      }
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [running, leftMs, idx, poses]);
+  const select = (i: number) => setIdx(i);
 
   const pose = poses[idx];
   const next = poses[idx + 1];
-  const frac = 1 - leftMs / (pose.seconds * 1000);
-  const secondsLeft = Math.ceil(leftMs / 1000);
 
   return (
     <div>
@@ -119,8 +80,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
                 strokeLinecap="round"
                 className="stroke-primary-dark"
                 strokeDasharray={RING_C}
-                strokeDashoffset={RING_C * (1 - (running || frac > 0 ? frac : 1))}
-                style={{ transition: "stroke-dashoffset 0.25s linear" }}
+                strokeDashoffset={0}
               />
             </svg>
             {/* The disc fills the ring inside its stroke; MO1.1.4.2's figure
@@ -129,7 +89,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
               {/* The count sits under the figure so a pose GIF never runs into it. */}
               <Figure pose={pose} size={pose.image ? 90 : 72} animate={!reduced} />
               <span className={clsx("text-[11px] font-extrabold leading-none text-primary-dark tabular-nums", pose.image ? "-mt-2" : "absolute bottom-3")}>
-                {finished ? "Done" : `${secondsLeft}s`}
+                {pose.image ? "Hold" : `${pose.seconds}s`}
               </span>
             </span>
           </span>
@@ -175,10 +135,7 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
             <button
               key={p.id}
               onClick={() => {
-                if (!current) {
-                  setRunning(false);
-                  select(i);
-                }
+                if (!current) select(i);
               }}
               aria-current={current ? "step" : undefined}
               className={clsx(
@@ -224,27 +181,6 @@ export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
         })}
       </div>
 
-      <PinnedCta
-        primary={{
-          label: running ? "Pause" : finished ? "Start again" : "Start",
-          icon: running ? <Pause size={14} /> : <Play size={14} />,
-          onClick: () => {
-            if (running) setRunning(false);
-            else {
-              if (finished) select(0);
-              setRunning(true);
-            }
-          },
-        }}
-        trailing={{
-          icon: <SkipForward size={16} />,
-          label: "Next pose",
-          onClick: () => next && select(idx + 1),
-          width: 44,
-          disabled: !next,
-          className: "!bg-cream-soft !text-charcoal-soft",
-        }}
-      />
     </div>
   );
 };

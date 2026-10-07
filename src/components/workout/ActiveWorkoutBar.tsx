@@ -8,7 +8,7 @@ import { linePx, textPx } from "../../theme/textSize";
 /**
  * True while any sheet, popup or full-screen view is open (the logger among
  * them). Every one in this app is a `fixed inset-0` layer; decorative ones
- * (confetti) are pointer-events-none and do not count.
+ * (the PR confetti burst) are pointer-events-none and do not count.
  */
 function useOverlayOpen(): boolean {
   const [open, setOpen] = useState(false);
@@ -63,8 +63,10 @@ const BAR_LIFT = BAR_HEIGHT + 8;
  * Decision 23 (kept item 134, WO1.2 K2): a pinned-CTA-height bar (48, r14,
  * C-01) in primary.fill with its ink (on-primary-fill), in place of the
  * folder-coloured 52 bar. Tapping it reopens the logger at the current exercise.
- * Pause and resume happen only in the logger and on the Routines row; the
- * bar reads session.status.
+ * Kept in the handover-complete pass: no frame draws it, but it is the way
+ * back to a minimised session's logged sets. Pause and resume happen only in
+ * the logger and on the Routines row (restore round 2, 2026-10-07); the bar
+ * reads session.status.
  */
 export const ActiveWorkoutBar: React.FC = () => {
   const { activeSession, routines, pausedSessions } = useApp();

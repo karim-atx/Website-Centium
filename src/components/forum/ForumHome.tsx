@@ -4,9 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   fetchAuthors,
   fetchMyLikes,
+  signPhotos,
   fetchThreads,
   likeThread,
-  signPhotos,
   THREAD_PAGE,
   UNKNOWN_AUTHOR,
   type Author,
@@ -26,7 +26,6 @@ import {
   ForumPlaceholder,
   HeartIcon,
   HeldNote,
-  RemovedNote,
   ReplyIcon,
 } from "./parts";
 import { MessagesSquare } from "lucide-react";
@@ -37,10 +36,12 @@ import { ThemedMark } from "../ui/ThemedMark";
 //
 // LIGHT MODE KEEPS THE FORUM'S OWN COLOURS (the --forum-* palette); the new
 // parts are the category colours (the card's edge and its pill, A20), the
-// round New post button and tappable likes (A21). Everything the design does
-// not draw is kept: the moderator warning, the held section, older posts
-// (loaded on scroll since decision 23), photos, recovery-mode hiding and the
-// empty state (A25).
+// round New post button and tappable likes (A21). Handover-complete pass
+// (2026-10-07): what the design does not draw is gone unless it is safety or
+// privacy: the removed-post block is removed; the moderator warning, the held
+// section and recovery-mode hiding stay (restyled), and older posts load on
+// scroll with no visible control. Restore round (user, 2026-10-07): a post's
+// photo is back on its card.
 //
 // RECOVERY-SENSITIVE MODE IS APPLIED HERE, ON THE DEVICE. The fetch below is
 // the same whether the mode is on or off (every category, the same columns,
@@ -183,7 +184,10 @@ export function ForumHome({
 
   const shown = (threads ?? []).filter((t) => !(recoveryOn && hiddenInRecovery(byKey.get(t.categoryKey))));
   const held = shown.filter((t) => t.status === "held");
-  const feed = shown.filter((t) => t.status !== "held");
+  // Handover-complete pass: a post a moderator removed is no longer drawn in
+  // the list as a grey "Post removed by a moderator" block (MO1.3 draws none);
+  // its page still says so to anyone who opens its link.
+  const feed = shown.filter((t) => t.status === "published");
 
   // MO1.3 #11: a round 56 pt button with a Plus (was an extended "New post"
   // pill); the accessible name is MO1.3 §10's Plus = "Add".
@@ -205,9 +209,18 @@ export function ForumHome({
     <div className="flex flex-col gap-3 pb-28 -mt-0.5" style={{ color: fv("text") }}>
       <WarningNotice />
       {recoveryPending ? (
-        <div className="flex gap-1.5" aria-hidden="true">
-          {[44, 92, 92, 100].map((w, i) => (
-            <div key={i} className="h-[34px] rounded-full animate-pulse shrink-0" style={{ width: w, background: fv("track") }} />
+        // KEEP-SAFETY (handover-complete pass): while the recovery setting
+        // loads, nothing a recovery reader should not see is drawn. Restyled
+        // to the strip it stands in for: the same 40 pt track (radius 12 0 0
+        // 12, padding 4, gap 4) holding 32 pt radius-9 blocks at the chips'
+        // widths, so the page does not jump when the chips arrive.
+        <div
+          className="flex gap-1 -mr-4 p-1 pr-4 overflow-hidden"
+          style={{ background: dark ? fv("track") : "rgb(var(--th-f4f3f9))", borderRadius: "12px 0 0 12px" }}
+          aria-hidden="true"
+        >
+          {[43, 80, 80, 74, 88].map((w, i) => (
+            <div key={i} className="h-8 rounded-[9px] animate-pulse shrink-0" style={{ width: w, background: fv("card") }} />
           ))}
         </div>
       ) : (
@@ -298,23 +311,19 @@ export function ForumHome({
           )}
 
           <div className="flex flex-col gap-2.5">
-            {feed.map((t) =>
-              t.status === "removed" ? (
-                <RemovedNote key={t.id} kind="post" />
-              ) : (
-                <ThreadCard
-                  key={t.id}
-                  thread={t}
-                  author={authors.get(t.id) ?? UNKNOWN_AUTHOR}
-                  categoryName={byKey.get(t.categoryKey)?.name ?? ""}
-                  photoUrl={t.photoPath ? photos.get(t.photoPath) ?? null : null}
-                  colours={categoryColours(t.categoryKey, dark)}
-                  liked={likes.has(t.id)}
-                  onLike={() => void toggleLike(t)}
-                  onOpen={() => navigate(`/app/forum/post/${t.id}`)}
-                />
-              )
-            )}
+            {feed.map((t) => (
+              <ThreadCard
+                key={t.id}
+                thread={t}
+                author={authors.get(t.id) ?? UNKNOWN_AUTHOR}
+                categoryName={byKey.get(t.categoryKey)?.name ?? ""}
+                photoUrl={t.photoPath ? photos.get(t.photoPath) ?? null : null}
+                colours={categoryColours(t.categoryKey, dark)}
+                liked={likes.has(t.id)}
+                onLike={() => void toggleLike(t)}
+                onOpen={() => navigate(`/app/forum/post/${t.id}`)}
+              />
+            ))}
             {/* Decision 23 (item 72): Foundations › Empty state. */}
             {feed.length === 0 && held.length === 0 && !shownError && (
               <EmptyBlock icon={<MessagesSquare size={26} strokeWidth={1.75} />} title="No posts here yet" line="Start the conversation." />
@@ -419,6 +428,8 @@ function ThreadCard({
           {thread.body}
         </div>
       )}
+      {/* Restore round (user, 2026-10-07): the post's photo is back on its
+          card, 120 tall with the card's r12 corners on the photo backdrop. */}
       {thread.photoPath && (
         <div className="h-[120px] rounded-xl overflow-hidden" style={{ background: fv("photo-bg") }}>
           {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}

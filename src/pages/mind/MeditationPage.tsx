@@ -26,7 +26,7 @@ const difficultyColor: Record<string, string> = {
 
 const IDLE_INK = "rgb(var(--c-charcoal-soft))";
 
-/** Yoga poses have no durations in the content; each holds 30 s (A15). */
+/** Yoga poses have no durations in the content (their ring reads "Hold"). */
 const YOGA_SECONDS = 30;
 
 const stretches: Pose[] = stretchList.map((s) => ({
@@ -88,8 +88,9 @@ export default function MeditationPage() {
       {subTab === "stretching" && <PoseSequence key="stretching" poses={stretches} />}
       {subTab === "yoga" && <PoseSequence key="yoga" poses={poses} />}
 
-      {/* The page's own padding covers 112 of the 172 a pinned row needs. */}
-      <div aria-hidden style={{ height: 60 }} />
+      {/* Breathing's pinned row: the page's own padding covers 112 of the
+          168 a 44 pt pinned row needs. Stretching and Yoga have none. */}
+      {subTab === "breathing" && <div aria-hidden style={{ height: 56 }} />}
     </div>
   );
 }

@@ -26,9 +26,10 @@ import { useBack } from "../../hooks/useBack";
 
 // MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
 // colours, the price and client-since pills, the gold reviews pill (which
-// opens the reviews page, MO1.2.1.1), section labels, and a pinned row:
-// Message for a connected client, Message and "Request to hire" otherwise.
-// The reviews sheet that lived here is now that page.
+// opens the reviews page, MO1.2.1.1), section labels, and a 44 pinned row:
+// Message for a connected client, Message and Hire otherwise (Hire sends the
+// existing hire request until offers exist; see the row below). The reviews
+// sheet that lived here is now that page.
 
 // V8 (QA 8.0): "pressing on the grey review text would open to all the
 // reviews written by the clients."
@@ -254,7 +255,6 @@ export default function ProfessionalDetail() {
     myStatus,
     error: reviewError,
     canReview,
-    signedOut,
     save: saveReview,
     withdraw: withdrawReview,
   } = useProfessionalReviews(realProfessionalId);
@@ -449,21 +449,15 @@ export default function ProfessionalDetail() {
         </section>
       )}
 
-      {/* Why the review card is absent, said once rather than left as silence.
-          Shown only once the gate has actually answered — `canReview` is null
-          while the check is in flight, and telling somebody they can't review
-          before asking would be a guess. */}
-      {/* Decision 23 (kept-list 61–62): the lock-line pattern (#8: 11.5/400
-          muted, Lock 12/1.75, gap 6) instead of a card. */}
-      {isReal && !signedOut && canReview === false && !myReview && (
-        <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5 animate-fade-slide-up">
-          <Lock size={12} strokeWidth={1.75} className="shrink-0" aria-hidden /> You can only review a professional you've
-          worked with.
-        </p>
-      )}
+      {/* Handover-complete pass: the "You can only review a professional
+          you've worked with" line is gone. MO1.2.1.4 (not a client) draws no
+          My review section and no line in its place. */}
 
       {reviewError && (
-        <p className="mb-5 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">{reviewError}</p>
+        // States, Error: an inline line in danger (no tinted box).
+        <p role="alert" className="mb-5 px-1 text-[12.5px] font-medium text-status-high">
+          {reviewError}
+        </p>
       )}
 
       {isConnected && (
@@ -477,66 +471,69 @@ export default function ProfessionalDetail() {
 
       {isReal && activeClient === false && (
         <>
-          {/* THE REQUEST'S OTHER TWO STATES, said in words above the pinned
-              row. Both are facts, read on mount from pending_client_requests,
-              which RLS scopes to this caller. There is no cancel, because the
-              client has no UPDATE or DELETE grant on that table. */}
-          {hireState === "pending" && (
-            <div className="rounded-2xl bg-primary-pale border border-primary/20 px-4 py-3.5 text-center mb-3">
-              <p className="text-sm font-semibold text-primary-dark">Request sent</p>
-              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-                Waiting for {first} to respond. You'll see them in your professionals once they accept.
-              </p>
-            </div>
+          {requestError && (
+            <p role="alert" className="text-[12.5px] font-medium text-status-high mb-3 px-1">
+              {requestError}
+            </p>
           )}
-          {hireState === "cooling_down" && (
-            /* DELIBERATELY VAGUE: the mechanism is a rejection plus a 24-hour
-               cooldown, and saying either would tell someone they were turned
-               down and invite them to count the hours. */
-            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-3">
-              <p className="text-sm font-semibold text-charcoal">Not taking new clients</p>
-              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-                {first} isn't accepting new clients at the moment. You can still message them, or ask for a client code.
-              </p>
-            </div>
-          )}
-          {requestError && <p className="text-[11.5px] text-status-high mb-3 px-1">{requestError}</p>}
-          {/* MO1.2.1.4: the client-code route stays as a secondary card, in
-              the type's pill colour. */}
-          <div className="rounded-[18px] px-4 py-4" style={{ background: t.pill }}>
+          {/* MO1.2.1.4 #7: the client-code card (358, the type pill, r18,
+              p16; title 13.5/700 deep, body 12/400 #5B5349 on a 20 line) with
+              its own "Message {first}" outline button: white, 1 px type deep,
+              13/700 deep, MessageCircle 14 (40 tall, r12, measured). */}
+          <div className="rounded-[18px] p-4" style={{ background: t.pill }}>
             <p className="text-[13.5px] font-bold" style={{ color: t.deep }}>
               Ask {first} for a client code
             </p>
-            <p className="text-[12px] text-charcoal-soft mt-1 leading-relaxed">
+            <p className="text-[12px] leading-5 text-charcoal-soft mt-1">
               {first} can generate a code for you. Redeem it from your profile to connect and start sharing data.
             </p>
+            <button
+              type="button"
+              onClick={() => void openThread()}
+              disabled={threadBusy}
+              className="tap mt-4 w-full h-10 rounded-xl bg-cream-card flex items-center justify-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
+              style={{ color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13) }}
+            >
+              <MessageCircle size={14} aria-hidden /> Message {first}
+            </button>
           </div>
         </>
       )}
 
       {threadError && (
-        <p className="mt-3 text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{threadError}</p>
+        <p role="alert" className="mt-3 px-1 text-[12.5px] font-medium text-status-high">
+          {threadError}
+        </p>
       )}
 
-      {/* MO1.2.1 / MO1.2.1.4's pinned row (B6). Connected: Message only (the
-          frame's own rule). Not connected: Message and "Request to hire" —
-          the frame's Hire, which needs offers and payments (decision 4) — in
-          its sent and cooldown states when there is one. */}
-      {/* Labels 13.5/700 (MO1.2.1 #9, MO1.2.1.4 #8). MO1.2.1.4's Message
-          carries a 1 px outline in the type's deep colour on the pill fill. */}
+      {/* MO1.2.1 #9 / MO1.2.1.4 #8: the pinned row, 358 × 44, r12, gap 8,
+          labels 13.5/700. Message (secondary): the type pill and deep ink,
+          with a 1 px deep outline when not yet a client (MO1.2.1.4). Hire
+          (primary): white on the type's CTA fill (#9A8CD6 / #6F9993), Handshake 15.
+
+          HIRE IS THE EXISTING HIRE REQUEST until the offers and payments
+          backend exists (MO1.2.1.5 is not built): it sends the same
+          pending_client_requests row "Request to hire" sent, and its label
+          carries the request's state ("Request sent" / "Not taking clients",
+          deliberately vague: a rejection plus a 24-hour cooldown, and saying
+          either would tell someone they were turned down). A connected client
+          has nothing to request, so their row is Message alone until offers
+          exist (the frame's Hire there opens a plan to buy). */}
       {showPinned &&
         (isConnected ? (
           <PinnedCta
+            size="base"
             primary={{
-              label: `Message ${first}`,
+              label: "Message",
               icon: <MessageCircle size={15} />,
               loading: threadBusy,
               onClick: () => void openThread(),
-              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
+              style: { background: t.pill, color: t.deep, fontSize: textPx(13.5) },
             }}
           />
         ) : (
           <PinnedCta
+            size="base"
             secondary={{
               label: "Message",
               icon: <MessageCircle size={15} />,
@@ -545,12 +542,12 @@ export default function ProfessionalDetail() {
               style: { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
             }}
             primary={{
-              label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Request to hire",
+              label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Hire",
               icon: <Handshake size={15} />,
               loading: sending,
               disabled: hireState !== "none" || !authUserId,
               onClick: () => void requestHire(),
-              style: { background: t.main, color: t.onMain, fontSize: textPx(13.5) },
+              style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
             }}
           />
         ))}

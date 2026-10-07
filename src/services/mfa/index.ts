@@ -20,10 +20,11 @@ import { describeAuthError } from "../auth";
 // app is a route guard reading getMfaStatus(), not something the server does
 // for us — see AppContext's mfaPending and the guards in App.tsx.
 //
-// NO BACKUP CODES, because auth-js has none — the whole package was searched.
-// Losing the authenticator means an administrator removes the factor, which
-// is Phase 2. Every screen that mentions recovery says so plainly rather than
-// implying a self-service path that does not exist.
+// RECOVERY CODES ARE NOT AUTH-JS'S. GoTrue has none; the database issues
+// them (v5.1 stage 1, services/recoveryCodes). A redeemed code doesn't raise
+// the session to aal2, so it lets a member past the app's own challenge
+// (AppContext.passMfaWithRecoveryCode) and nothing more; an admin still needs
+// the authenticator. With no codes either, support removes the factor.
 
 /** What the enrolment screen needs to show before a code can be entered. */
 export interface TotpEnrollment {

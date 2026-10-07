@@ -1,6 +1,8 @@
 // Calendar time and link helpers (mobile v5.1 R16). Times are stored as
-// "HH:MM" (24-hour, the database's `time`); every Calendar view shows them in
-// 12-hour form (B36). Links are http(s) only (B38).
+// "HH:MM" (24-hour, the database's `time`). Handover-complete pass: every
+// Calendar view shows them as MO1.6–MO1.6.3 draw them, 24-hour and padded
+// ("12:30 – 13:00"); only the event sheet's Starts / Ends fields and wheel stay
+// 12-hour, as MO1.6.4 draws them. Links are http(s) only (B38).
 
 export type Meridiem = "AM" | "PM";
 export interface TimeParts {
@@ -33,22 +35,16 @@ export function fromParts(p: TimeParts): string {
   return fromMinutes(h24 * 60 + p.minute);
 }
 
-/** "6:00 PM": the Calendar's display form. */
-export function fmt12(hhmm?: string): string {
-  if (!hhmm) return "";
-  const p = toParts(hhmm);
-  return `${p.hour}:${String(p.minute).padStart(2, "0")} ${p.meridiem}`;
-}
-
 /** "09:00 AM": the event sheet's Starts / Ends field (MO1.6.4 draws it padded). */
 export function fieldTime(hhmm: string): string {
   const p = toParts(hhmm);
   return `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")} ${p.meridiem}`;
 }
 
-/** "6:00 PM – 7:00 PM". */
-export function range12(start?: string, end?: string): string {
-  return `${fmt12(start)} – ${fmt12(end)}`;
+/** "18:00 – 19:00": the views' time line (MO1.6, MO1.6.2, MO1.6.3). */
+export function range24(start?: string, end?: string): string {
+  const one = (t?: string) => (t ? fromMinutes(minutesOf(t)) : "");
+  return `${one(start)} – ${one(end)}`;
 }
 
 /**

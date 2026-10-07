@@ -338,11 +338,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           </div>
         )}
 
-        {notice && (
-          <p role="status" className="m-0 text-sm font-bold rounded-xl px-3.5 py-3" style={{ background: fv("amber-bg"), color: fv("held-ink") }}>
-            {notice}
-          </p>
-        )}
+        {/* Handover-complete pass: the amber notice box is gone; a refused
+            or not-yet-open enrolment is MO1.3.5 §4's plain inline line in
+            danger (the frame draws no notice). */}
+        {notice && <DangerLine>{notice}</DangerLine>}
 
         {!isAuthor && paidCourse && !hasPaid && (
           // MO1.3.5 #8: a centred text link under the choice; the main CTA is
@@ -384,7 +383,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       </div>
 
       {/* MO1.3.5 #10: the main CTA pinned above the navbar after the
-          disclaimer, at the page size (48 / r14, C-01). It keeps the forum's
+          disclaimer, 44 / r12 as drawn (CTA_COLOURS below). It keeps the forum's
           accent, the colour of the inline button it replaces. */}
       <PinnedCta
         primary={
@@ -404,7 +403,9 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
   );
 }
 
-const CTA_COLOURS = "!bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]";
+// MO1.3.5 #10 (handover-complete pass): 358 × 44, radius 12, 13.5/700 as drawn
+// (was the 48 / r14 page size); the fill stays the forum's accent (decision 22).
+const CTA_COLOURS = "!h-11 !rounded-xl !text-[13.5px] !bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]";
 
 /**
  * The certificate, and the switch that makes it public.

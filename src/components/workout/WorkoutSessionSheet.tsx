@@ -193,6 +193,7 @@ export const WorkoutSessionSheet: React.FC<{
       (!!routineRow.coachNoteUpdatedAt && routineRow.coachNoteReadAt < routineRow.coachNoteUpdatedAt));
   const [tickKey, setTickKey] = useState<string | null>(null);
   const tickNonce = useRef(0);
+  // Restore round 2 (user, 2026-10-07): the WO8 PR burst, restored as on main.
   const [burst, setBurst] = useState<{ key: number; rect: { left: number; top: number; width: number; height: number } } | null>(null);
   // Set-type dropdown, anchored to the set-number slot.
   const [typeMenu, setTypeMenu] = useState<{ exIdx: number; setIdx: number; anchor: HTMLElement } | null>(null);
@@ -508,6 +509,8 @@ export const WorkoutSessionSheet: React.FC<{
     const next: LoggedSet = { ...current, ...fields, completed: logs, ...(values ?? {}) };
     updateSet(exIdx, setIdx, next);
     if (fields.outcome && !started) startClock();
+    // Restore round 2 (user, 2026-10-07): a new PR rises a confetti burst
+    // from its row (WO8), as on main; PrBurst draws nothing under reduced motion.
     if (kind === "pr" && setKind(current) !== "pr") {
       const row = rowRefs.current.get(`${exIdx}-${setIdx}`);
       if (row) {
@@ -776,7 +779,10 @@ export const WorkoutSessionSheet: React.FC<{
                 : "Not started"}
             </p>
             {/* The cycle phase sits under the status line, not in the button row,
-                where it squeezed the routine name to "Regres…" at 393px. */}
+                where it squeezed the routine name to "Regres…" at 393px.
+                Restore round 2 (user, 2026-10-07): main's gating again; the chip
+                itself shows the cycle phase (cycle offered, tracker on) or the
+                pregnancy week (cycle offered, a pregnancy recorded). */}
             <div className="flex justify-center empty:hidden" style={{ marginTop: 3 }}>
               <CyclePhaseChip />
             </div>
@@ -801,14 +807,9 @@ export const WorkoutSessionSheet: React.FC<{
               className={circle}
               style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-faint))" }}
             >
+              {/* Handover-complete pass: no unread dot on the note button (WO1.2
+                  draws a plain 34 grey circle); the label still says "unread". */}
               <MessageSquareText size={15} />
-              {noteUnread && (
-                <span
-                  aria-hidden
-                  className="absolute rounded-full"
-                  style={{ top: 3, right: 3, width: 8, height: 8, background: "rgb(var(--th-8f68f6))", boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))" }}
-                />
-              )}
             </button>
           </div>
         </div>
@@ -1136,12 +1137,22 @@ export const WorkoutSessionSheet: React.FC<{
   );
 };
 
-/** WO8: the plate calculator icon is a weight plate (assets/icons/plate-calculator.svg). */
+/**
+ * WO1.2 handover note: "a gym plate with a bold rim, a thin inner ring, a
+ * centre hole and two curved grip slots (no lines through the centre)".
+ * Handover-complete pass: drawn to the note and measured from the frame
+ * (15 pt across): rim r 10.6 at 2.6, ring r 6.8 at 1.3, an open centre hole
+ * r 2.6, and two short arcs between rim and ring, above and below the hole.
+ * No asset was supplied. Replaces the pre-R1 three-circle glyph (decision 21
+ * no longer applies).
+ */
 const PlateIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="5.2" style={{ strokeWidth: 1.4, opacity: 0.55 }} />
-    <circle cx="12" cy="12" r="1.8" />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden>
+    <circle cx="12" cy="12" r="10.6" strokeWidth={2.6} />
+    <circle cx="12" cy="12" r="6.8" strokeWidth={1.3} />
+    <circle cx="12" cy="12" r="2.6" strokeWidth={1.3} />
+    <path d="M9.6 3.75 A8.7 8.7 0 0 1 14.4 3.75" strokeWidth={1.3} />
+    <path d="M9.6 20.25 A8.7 8.7 0 0 0 14.4 20.25" strokeWidth={1.3} />
   </svg>
 );
 

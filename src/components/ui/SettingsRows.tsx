@@ -30,11 +30,23 @@ export const SettingsSection: React.FC<{
   children: React.ReactNode;
   className?: string;
   id?: string;
-}> = ({ label, children, className, id }) => {
+  /** Extra classes on the label, for a frame whose label box differs (MO1.8.6's 26 pt). */
+  labelClassName?: string;
+}> = ({ label, children, className, id, labelClassName }) => {
   const labelId = useId();
   return (
     <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
-      <h2 id={labelId} className="section-label text-charcoal-faint">
+      {/* MO1.8.5.1: Arabic drops the small caps' letter-spacing. MO1.8.6.1:
+          high contrast (light) draws the labels in the darkened primary
+          #4B3BA0 (primary-accent there); light mode otherwise keeps the
+          pre-R1 grey ink (decision 22). */}
+      <h2
+        id={labelId}
+        className={clsx(
+          "section-label text-charcoal-faint rtl:tracking-normal [html.high-contrast:not(.dark)_&]:text-primary-accent",
+          labelClassName
+        )}
+      >
         {label}
       </h2>
       <div>{children}</div>
@@ -59,6 +71,11 @@ type RowBase = {
   tile?: React.ReactNode;
   title: string;
   subtitle?: React.ReactNode;
+  /**
+   * Screen-reader-only text after the title: what the row does, where the
+   * frame draws no subtitle (handover-complete pass). Not drawn.
+   */
+  srDescription?: string;
   /** Red title and glyph, for rows like "Delete account". */
   destructive?: boolean;
   /** Greys the whole row out (BR-12: rows under a switched-off master). */
@@ -85,7 +102,8 @@ type RowProps = RowBase &
     | { onClick?: never; toggle?: never; value?: React.ReactNode }
   );
 
-const rowClass = clsx(
+/** The row geometry and inset divider, for a page's own row shape (MO1.8.3 From / To). */
+export const settingsRowClass = clsx(
   // 13 px above and below; Bigger tap targets adds --row-extra (8 px) to the row.
   "relative w-full flex items-center gap-3.5 text-start [padding-block:calc(13px_+_var(--row-extra,0px)_/_2)]",
   // The inset divider: from the text column to the end, not under the last row.
@@ -99,6 +117,7 @@ export const SettingsRow: React.FC<RowProps> = ({
   tile,
   title,
   subtitle,
+  srDescription,
   destructive,
   dimmed,
   className,
@@ -136,6 +155,7 @@ export const SettingsRow: React.FC<RowProps> = ({
           {title}
         </span>
         {subtitle && <span className="block mt-px text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
+        {srDescription && <span className="sr-only">{srDescription}</span>}
       </span>
       {value !== undefined && value !== null && (
         <span className="shrink-0 max-w-[45%] truncate text-[12.5px] text-charcoal-faint">{value}</span>
@@ -151,7 +171,7 @@ export const SettingsRow: React.FC<RowProps> = ({
 
   if (toggle) {
     return (
-      <div id={id} inert={inert} aria-disabled={dimmed || undefined} className={clsx(rowClass, dim, className)}>
+      <div id={id} inert={inert} aria-disabled={dimmed || undefined} className={clsx(settingsRowClass, dim, className)}>
         {body}
         <Toggle
           checked={toggle.checked}
@@ -165,7 +185,7 @@ export const SettingsRow: React.FC<RowProps> = ({
 
   if (onClick) {
     return (
-      <button id={id} type="button" onClick={onClick} inert={inert} disabled={dimmed} className={clsx("tap", rowClass, dim, className)}>
+      <button id={id} type="button" onClick={onClick} inert={inert} disabled={dimmed} className={clsx("tap", settingsRowClass, dim, className)}>
         {body}
         <ChevronRight
           size={16}
@@ -178,7 +198,7 @@ export const SettingsRow: React.FC<RowProps> = ({
   }
 
   return (
-    <div id={id} className={clsx(rowClass, dim, className)}>
+    <div id={id} className={clsx(settingsRowClass, dim, className)}>
       {body}
     </div>
   );

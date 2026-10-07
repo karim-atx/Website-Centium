@@ -72,8 +72,8 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: s
 
 const SWIPE_THRESHOLD = 60;
 
-// The calorie hero's height, so its placeholder does not shift the page.
-const HERO_PLACEHOLDER_HEIGHT = 116;
+// The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
+const HERO_PLACEHOLDER_HEIGHT = 101;
 
 export default function Food() {
   const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
@@ -155,8 +155,8 @@ export default function Food() {
    * food_log_entries, and it would come back on the next hydration — worse
    * than a visible error, because the user would never know.
    *
-   * Entries that only exist locally (AI Voice, custom meals, copy-yesterday
-   * still write local-only rows) skip the request entirely; there is nothing
+   * Entries that only exist locally (AI Voice, custom meals still write
+   * local-only rows) skip the request entirely; there is nothing
    * to delete remotely.
    */
   const handleDelete = async (id: string) => {
@@ -545,7 +545,10 @@ export default function Food() {
                           ev.stopPropagation();
                           handleUndo();
                         }}
-                        className="tap flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1"
+                        // Restore round 2: the pill keeps its look; a wider
+                        // invisible hit box (as the ⋮ beside the title) makes
+                        // it an easy target.
+                        className="tap relative flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1 before:absolute before:-inset-[8px] before:content-['']"
                       >
                         <Undo2 size={11} /> Undo
                       </button>

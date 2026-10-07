@@ -28,6 +28,12 @@ interface BottomSheetProps {
   /** FO8: a full-width 1px #F2F2F2 rule above the footer, 8px over its content. */
   footerRule?: boolean;
   /**
+   * The footer's bottom padding above the home indicator, when a frame draws
+   * the Lavender-header sheet's own 30 (Foundations 2.5: footer padding
+   * 12 × 20 × 30; MO1.1.2.3). Unset keeps max(34, safe area + 20).
+   */
+  footerBottom?: number;
+  /**
    * "tall" raises the max height to nearly the full viewport, minus a small
    * top inset (FO8). The default max is 88% of the dynamic viewport. Either
    * way the sheet hugs its content up to that max.
@@ -78,6 +84,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   handle,
   titleIcon,
   footerRule,
+  footerBottom,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
@@ -108,6 +115,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       ? `calc(100dvh - ${statusGap} - var(--kb-inset))`
       : `min(calc(88dvh - var(--kb-inset)), calc(100dvh - ${statusGap} - var(--kb-inset)))`;
   const bottomPad = "max(34px, calc(env(safe-area-inset-bottom) + 20px))";
+  const footerPad = footerBottom === undefined ? bottomPad : `calc(env(safe-area-inset-bottom) + ${footerBottom}px)`;
 
   // Portaled to <body>: several call sites render this inside a container
   // carrying `animate-fade-slide-up` (a transform-based animation). Any
@@ -135,7 +143,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             {children}
           </div>
           {footer && (
-            <div className="shrink-0 bg-cream" style={{ padding: `12px 20px ${bottomPad}` }}>
+            <div className="shrink-0 bg-cream" style={{ padding: `12px 20px ${footerPad}` }}>
               {footer}
             </div>
           )}
@@ -198,7 +206,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               className="shrink-0"
               style={{
                 background: body,
-                padding: `${footerRule ? 8 : 12}px 20px ${bottomPad}`,
+                padding: `${footerRule ? 8 : 12}px 20px ${footerPad}`,
                 borderTop: footerRule ? "1px solid var(--sheet-rule)" : undefined,
               }}
             >

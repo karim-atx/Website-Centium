@@ -6,9 +6,11 @@ import { SUPPORT_EMAIL } from "../../services/support";
 // MO1.8.9 Contact us, as a centred popup (no ×; tapping outside or Escape
 // closes it).
 //
-// EMAIL ONLY, ON PURPOSE (C32). The board also draws Live chat and Call us,
-// but there is no support chat behind the first and the number on the board
-// (+961 1 234 567) is a placeholder, so both stay off until they are real.
+// EMAIL ONLY FOR NOW (C32; handover-complete pass, still true). The board
+// also draws Live chat and Call us, but there is no support chat behind the
+// first (a backend gap) and the number on the board (+961 1 234 567) is a
+// sample value with no real line behind it, so both wait for those to exist
+// rather than being drawn as rows that do nothing.
 // The old sheet showed all three as buttons that did nothing, under a
 // "Prototype only" line; that line goes with them.
 //
@@ -16,9 +18,9 @@ import { SUPPORT_EMAIL } from "../../services/support";
 // in. The address is also shown in full, so anyone without a mail app can
 // copy it.
 export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  // The card is the Foundations 342 wide (decision 23 flag; the board's
-  // overlay padding drew 346).
-  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />}>
+  // MO1.8.9 measured: the card 346 wide (the overlay padded 0 22 on the 390
+  // board, card x 44 to 735 on the 2x board).
+  <CentredPopup open={open} onClose={onClose} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />} maxWidth={346}>
     {/* Rows 60 apart on the board (dividers at 790 and 850 on the 2x board):
         12 above and below a 36 pt tile. The value is 12 / 400 muted, Mail
         17 / 1.75 (MO1.8.9 table and icon list). */}

@@ -1,72 +1,12 @@
 import React, { useMemo } from "react";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
-const COLORS = ["rgb(var(--th-aea1dc))", "rgb(var(--th-a2c8c2))", "#D9A441", "#C0392B", "#4C8FD1", "rgb(var(--th-7d6bb5))"];
-
-// QA 11.0: "If a set was selected as a PR and the checkmark was selected
-// confetti flies through the page as a celebration." A lightweight
-// CSS-only burst — no animation library needed for a one-shot effect.
+// Restore round 2 (user, 2026-10-07): only the WO8 PR burst is restored. The
+// full-page QA 11.0 Confetti export that used to sit here had no caller on main
+// and is not brought back. Reduced motion (the in-app switch or the OS
+// setting, useReducedMotion) is honoured inside the component, not at the call
+// site: nothing is drawn and the caller is still told the burst is over.
 //
-// REDUCED MOTION IS HONOURED HERE (the in-app switch or the OS setting,
-// useReducedMotion), not at each call site. Forty
-// elements falling across the viewport is exactly what that setting is asking
-// not to see, and putting the check inside means every caller — the PR
-// celebration, the achievement unlock, anything later — gets it without having
-// to remember. The caller is still told the burst is over, so a sheet waiting
-// on onDone does not hang waiting for an animation that never ran.
-export const Confetti: React.FC<{ onDone: () => void }> = ({ onDone }) => {
-  const reducedMotion = useReducedMotion();
-
-  React.useEffect(() => {
-    if (reducedMotion) onDone();
-    // Once, on the mount that decided not to animate.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion]);
-
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 40 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        delay: Math.random() * 0.3,
-        duration: 1.4 + Math.random() * 0.8,
-        color: COLORS[i % COLORS.length],
-        rotate: Math.random() * 360,
-        drift: (Math.random() - 0.5) * 120,
-        size: 6 + Math.random() * 6,
-      })),
-    []
-  );
-
-  if (reducedMotion) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[70] pointer-events-none overflow-hidden"
-      onAnimationEnd={onDone}
-    >
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          className="absolute top-[-16px] rounded-sm animate-confetti-fall"
-          style={{
-            left: `${p.left}%`,
-            width: p.size,
-            height: p.size * 0.6,
-            background: p.color,
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-            // Passed as CSS custom properties so the keyframe can read a
-            // per-piece drift/rotation without generating 40 keyframes.
-            ["--confetti-drift" as string]: `${p.drift}px`,
-            ["--confetti-rotate" as string]: `${p.rotate}deg`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
 // WO8 "PR confetti": when a set becomes Personal record, a short burst rises
 // from that row — gold, lavender and teal pieces in mixed shapes and sizes,
 // falling gently and fading out in about 1.2 s. Never blocks taps

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useBack } from "../../hooks/useBack";
-import { ArrowLeft, ChevronDown, EllipsisVertical, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Ban, ChevronDown, EllipsisVertical, Flag, MessageCircle, Pencil, Send, Trash2 } from "lucide-react";
 import {
   createReply,
   editPost,
+  editTimeLeft,
   fetchAuthors,
   fetchMyLikes,
   fetchMyReplyLikes,
@@ -25,7 +26,7 @@ import { ForumSafetySheet } from "./ForumSafetySheet";
 import { OwnPostSheet } from "./OwnPostSheet";
 import { AuthorInitial, AuthorName, DangerLine, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
 import { fv } from "./forumColor";
-import { PopupMenu } from "../ui/PopupMenu";
+import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { useIsDark } from "../../hooks/useIsDark";
 import { categoryColours } from "./categoryColour";
 
@@ -33,9 +34,14 @@ import { categoryColours } from "./categoryColour";
 // mobile v5.1 MO1.3.3: a "Post" top bar, the post's header card in its
 // category colour (A20), an absolute time, a likes and replies row, icon
 // actions, likes on replies (A21) and a "Reply as" chip. Not shown: "Member
-// since" (A19) and "Replying to", which waits for threaded replies (A21).
-// Every moderation and safety piece stays (A25): own-post edit and withdraw,
-// report and block, held, removed and locked notes, "edited", photos.
+// since" (needs the author's join year) and "Replying to" with its connector
+// line and reply counts (need threaded replies): both wait on the backend.
+// Handover-complete pass (2026-10-07): the ⋮ opens the Foundations dropdown
+// menu (Edit / Withdraw on your own post or reply, Report / Block on someone
+// else's); replies draw no ⋮ (a long press opens the same menu; the ⋮ stays
+// for keyboards, visible only while focused). Safety and moderation pieces
+// stay (KEEP-SAFETY): withdraw, report and block, held, removed and locked
+// notes, "edited"; a post's photo stays so no uploaded photo is out of reach.
 //
 // "Reply as" is the member's choice per reply, nickname or first name, like
 // "Post as" in the composer. A professional has no choice to make: they always
@@ -77,9 +83,10 @@ export function ForumPostView({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<{ ref: PostRef; kind: "post" | "reply"; label: string } | null>(null);
-  // The reader's own post or reply: its menu, and the edit in progress.
-  const [own, setOwn] = useState<{ ref: PostRef; kind: "post" | "reply"; createdAt: string } | null>(null);
+  // The ⋮ dropdown (MO1.3.3 #2) and the sheet one of its rows opens.
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const [sheet, setSheet] = useState<{ mode: "withdraw" | "report" | "block"; ref: PostRef; kind: "post" | "reply"; label: string } | null>(null);
+  // The edit in progress on the reader's own post or reply.
   const [editing, setEditing] = useState<{ ref: PostRef; title?: string; body: string } | null>(null);
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -163,15 +170,21 @@ export function ForumPostView({
   // Batch E (E5): pops back to the forum; opened directly, replaces with it.
   const back = useBack("/app/forum");
 
-  const startEdit = () => {
-    if (!own || !thread) return;
-    if ("threadId" in own.ref) setEditing({ ref: own.ref, title: thread.title ?? "", body: thread.body ?? "" });
+  const startEdit = (target: MenuTarget) => {
+    if (!thread) return;
+    if ("threadId" in target.ref) setEditing({ ref: target.ref, title: thread.title ?? "", body: thread.body ?? "" });
     else {
-      const id = own.ref.replyId;
-      setEditing({ ref: own.ref, body: replies.find((x) => x.id === id)?.body ?? "" });
+      const id = target.ref.replyId;
+      setEditing({ ref: target.ref, body: replies.find((x) => x.id === id)?.body ?? "" });
     }
     setEditError(null);
-    setOwn(null);
+  };
+
+  const onMenuPick = (v: MenuOption) => {
+    const target = menu;
+    if (!target) return;
+    if (v === "edit") startEdit(target);
+    else setSheet({ mode: v, ref: target.ref, kind: target.kind, label: target.label });
   };
 
   const saveEdit = async () => {
@@ -262,8 +275,11 @@ export function ForumPostView({
       {thread && !hiddenByMode && !recoveryPending && thread.status !== "removed" && (authors.get(thread.id)?.isMine ?? false) ? (
         <button
           type="button"
-          aria-label="Edit or withdraw"
-          onClick={() => setOwn({ ref: { threadId: thread.id }, kind: "post", createdAt: thread.createdAt })}
+          aria-label="More options"
+          aria-haspopup="menu"
+          onClick={(e) =>
+            setMenu({ anchor: e.currentTarget, ref: { threadId: thread.id }, kind: "post", mine: true, createdAt: thread.createdAt, label: "" })
+          }
           className="tap w-11 h-11 flex items-center justify-center"
         >
           <EllipsisVertical size={18} style={{ color: fv("muted") }} aria-hidden />
@@ -271,9 +287,17 @@ export function ForumPostView({
       ) : thread && !hiddenByMode && !recoveryPending && thread.status === "published" && !(authors.get(thread.id)?.isMine ?? false) ? (
         <button
           type="button"
-          aria-label="Report or block"
-          onClick={() =>
-            setSheet({ ref: { threadId: thread.id }, kind: "post", label: (authors.get(thread.id) ?? UNKNOWN_AUTHOR).label })
+          aria-label="More options"
+          aria-haspopup="menu"
+          onClick={(e) =>
+            setMenu({
+              anchor: e.currentTarget,
+              ref: { threadId: thread.id },
+              kind: "post",
+              mine: false,
+              createdAt: thread.createdAt,
+              label: (authors.get(thread.id) ?? UNKNOWN_AUTHOR).label,
+            })
           }
           className="tap w-11 h-11 flex items-center justify-center"
         >
@@ -437,8 +461,9 @@ export function ForumPostView({
               key={r.id}
               reply={r}
               author={authors.get(r.id) ?? UNKNOWN_AUTHOR}
-              onSafety={(label) => setSheet({ ref: { replyId: r.id }, kind: "reply", label })}
-              onOwn={() => setOwn({ ref: { replyId: r.id }, kind: "reply", createdAt: r.createdAt })}
+              onMenu={(anchor, mine, label) =>
+                setMenu({ anchor, ref: { replyId: r.id }, kind: "reply", mine, createdAt: r.createdAt, label })
+              }
               liked={likedReplies.has(r.id)}
               onLike={() => void toggleReplyLike(r)}
               onReply={canReply ? () => replyInput.current?.focus() : undefined}
@@ -539,23 +564,33 @@ export function ForumPostView({
         />
       )}
 
+      {/* MO1.3.3 #2: the ⋮ dropdown menu (Foundations › Dropdown menu: 15 pt
+          leading icons, the destructive row in danger). Edit names how long
+          is left of edit_forum_post's 30-minute window. */}
+      <PopupMenu<MenuOption>
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        options={menu ? menuOptions(menu) : []}
+        onSelect={onMenuPick}
+      />
+
       <OwnPostSheet
-        open={!!own}
-        onClose={() => setOwn(null)}
-        target={own?.ref ?? null}
-        kind={own?.kind ?? "post"}
-        createdAt={own?.createdAt ?? thread.createdAt}
-        onEdit={startEdit}
+        open={sheet?.mode === "withdraw"}
+        onClose={() => setSheet(null)}
+        target={sheet?.ref ?? null}
+        kind={sheet?.kind ?? "post"}
         onWithdrawn={() => {
-          const kind = own?.kind;
-          setOwn(null);
+          const kind = sheet?.kind;
+          setSheet(null);
           if (kind === "post") back();
           else void load();
         }}
       />
 
       <ForumSafetySheet
-        open={!!sheet}
+        open={sheet?.mode === "report" || sheet?.mode === "block"}
+        mode={sheet?.mode === "block" ? "block" : "report"}
         onClose={() => setSheet(null)}
         target={sheet?.ref ?? null}
         kind={sheet?.kind ?? "post"}
@@ -570,6 +605,39 @@ export function ForumPostView({
       />
     </div>
   );
+}
+
+type MenuOption = "edit" | "withdraw" | "report" | "block";
+
+type MenuTarget = {
+  anchor: HTMLElement;
+  ref: PostRef;
+  kind: "post" | "reply";
+  mine: boolean;
+  createdAt: string;
+  label: string;
+};
+
+/** The ⋮ menu's rows: your own post or reply, or someone else's. */
+function menuOptions(t: MenuTarget): PopupMenuOption<MenuOption>[] {
+  const noun = t.kind === "post" ? "post" : "reply";
+  if (t.mine) {
+    const minutes = Math.ceil(editTimeLeft(t.createdAt) / 60_000);
+    return [
+      {
+        value: "edit",
+        label: "Edit",
+        icon: <Pencil size={15} strokeWidth={1.75} />,
+        disabled: minutes <= 0,
+        note: minutes > 0 ? `${minutes} ${minutes === 1 ? "minute" : "minutes"} left to edit` : "Editable for 30 minutes after posting",
+      },
+      { value: "withdraw", label: `Withdraw ${noun}`, icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+    ];
+  }
+  return [
+    { value: "report", label: `Report ${noun}`, icon: <Flag size={15} strokeWidth={1.75} /> },
+    { value: "block", label: `Block ${t.label}`, icon: <Ban size={15} strokeWidth={1.75} />, destructive: true },
+  ];
 }
 
 type Loaded = {
@@ -615,8 +683,7 @@ async function loadPost(threadId: string): Promise<Loaded> {
 function ReplyRow({
   reply,
   author,
-  onSafety,
-  onOwn,
+  onMenu,
   editor,
   liked,
   onLike,
@@ -624,21 +691,26 @@ function ReplyRow({
 }: {
   reply: ForumReply;
   author: Author;
-  onSafety: (label: string) => void;
-  onOwn: () => void;
+  /** Opens the ⋮ menu for this reply, anchored to the element given. */
+  onMenu: (anchor: HTMLElement, mine: boolean, label: string) => void;
   editor: React.ReactNode;
   liked: boolean;
   onLike: () => void;
   onReply?: () => void;
 }) {
   const hasMenu = author.isMine ? reply.status !== "removed" : reply.status === "published";
-  const openMenu = () => (author.isMine ? onOwn() : onSafety(author.label));
+  const rowRef = useRef<HTMLDivElement>(null);
+  const openMenu = (anchor?: HTMLElement | null) => {
+    const el = anchor ?? rowRef.current;
+    if (el) onMenu(el, author.isMine, author.label);
+  };
 
-  // Decision 23 (kept-list item 40): a long press on the reply opens the same
-  // menu the ⋮ does (edit / withdraw your own, report / block someone else's),
-  // as Messages' bubbles do: 500 ms held, cancelled by 10 px of movement so a
-  // scroll never fires it, and a right-click as the mouse's long press. The ⋮
-  // stays as the keyboard and screen-reader path to the same menu.
+  // A long press on the reply opens the ⋮ menu (edit / withdraw your own,
+  // report / block someone else's), as Messages' bubbles do: 500 ms held,
+  // cancelled by 10 px of movement so a scroll never fires it, and a
+  // right-click as the mouse's long press. MO1.3.3 draws no ⋮ on a reply, so
+  // the ⋮ button is visible only while focused: the keyboard and
+  // screen-reader path to the same menu (handover-complete pass).
   const pressTimer = useRef<number | null>(null);
   const pressOrigin = useRef<{ x: number; y: number } | null>(null);
   const fired = useRef(false);
@@ -686,7 +758,7 @@ function ReplyRow({
     : {};
 
   return (
-    <div className="flex gap-3 [-webkit-touch-callout:none]" {...press}>
+    <div ref={rowRef} className="flex gap-3 [-webkit-touch-callout:none]" {...press}>
       <AuthorInitial author={author} identity={reply.identity} size={40} />
       <div className="flex flex-col gap-1 min-w-0 grow">
         <span className="flex gap-1.5 items-center flex-wrap">
@@ -699,9 +771,10 @@ function ReplyRow({
           {hasMenu && (
             <button
               type="button"
-              aria-label={author.isMine ? "Edit or withdraw" : "Report or block"}
-              onClick={openMenu}
-              className="tap ml-auto w-8 h-8 -my-1.5 flex items-center justify-center shrink-0"
+              aria-label="More options"
+              aria-haspopup="menu"
+              onClick={(e) => openMenu(e.currentTarget)}
+              className="sr-only focus:not-sr-only focus:ml-auto focus:w-8 focus:h-8 focus:-my-1.5 focus:flex focus:items-center focus:justify-center focus:shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">
                 <circle cx="5" cy="12" r="1.8" />

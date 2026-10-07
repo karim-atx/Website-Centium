@@ -36,23 +36,31 @@ import {
 } from "lucide-react";
 import { AppleHealthMark, WhoopMark } from "../../components/settings/DeviceMarks";
 
-// MO1.8 Settings (R17, batch C). The board's layout: labelled sections of
-// flat icon-tile rows instead of cards, sub-screens as routed pages
-// (/app/settings/notifications, two-factor, accessibility, privacy, terms,
-// language) and centred popups (Contact us, Report a bug, Rate this app).
-// Section labels have the line (decision 20). Every row takes the handover's
-// lavender tile (decision 23: one tile style).
+// MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
+// labelled sections of flat icon-tile rows instead of cards, sub-screens as
+// routed pages (/app/settings/notifications, two-factor, accessibility,
+// privacy, terms, language) and centred popups (Contact us, Report a bug,
+// Rate this app). Section labels have the line (decision 20). Every row takes
+// the handover's lavender tile (decision 23: one tile style).
 //
-// EVERY ROW THE BOARD DROPS IS KEPT (C13): Change password, Storage, Time
-// zone and Forum blocks live in a "Data & account" section above General; the
-// professionals' two-factor reminder moved to the two-factor page (R18).
+// ROWS AS DRAWN: no subtitles under the permission or device rows (what each
+// permission is for stays as screen-reader text). The one line a row still
+// shows is the web's stand-in for BR-07 / BR-09, where the native app would
+// open the device settings or HealthKit: "Blocked in browser settings", or a
+// short note after a tap the browser can't carry out.
+//
+// THE ACCOUNT ROWS THE BOARD DOESN'T DRAW STAY (exception 1: safety, privacy
+// and account features): Change password, Storage, Time zone and Forum
+// blocks, in a "Data & account" section above General; the professionals'
+// two-factor reminder lives on the two-factor page (R18).
 
-/** A permission's state, as the row says it. */
-function permissionLine(state: PermissionReading, purpose: string): string {
-  if (state === "granted") return "Allowed. Change this in your browser settings.";
-  if (state === "denied") return "Blocked in browser settings";
-  return purpose;
-}
+/** What each permission is for: read to screen readers, not drawn (MO1.8). */
+const PERMISSION_PURPOSE = {
+  mic: "Needed for AI voice logging",
+  camera: "Needed for scanning biomarkers & photos",
+  location: "Needed to find gyms & businesses near you",
+} as const;
+type PermissionKey = keyof typeof PERMISSION_PURPOSE;
 
 export default function Settings() {
   const {
@@ -131,13 +139,30 @@ export default function Settings() {
       () => setLocation("denied")
     );
   };
-  // Asking only from off; on stays on (the browser owns revoking it).
-  const permissionToggle = (state: PermissionReading, ask: () => void) => ({
+  // Asking only from off; on stays on (the browser owns revoking it), and a
+  // tap that tries to switch it off says where to change it instead.
+  const [permissionNote, setPermissionNote] = useState<PermissionKey | null>(null);
+  const permissionToggle = (key: PermissionKey, state: PermissionReading, ask: () => void) => ({
     checked: state === "granted",
     onChange: (next: boolean) => {
-      if (next) ask();
+      if (next) {
+        setPermissionNote(null);
+        ask();
+      } else setPermissionNote(key);
     },
   });
+  /** The line under a permission row: only the states the web must explain. */
+  const permissionLine = (key: PermissionKey, state: PermissionReading): string | undefined => {
+    if (state === "denied") return t("Blocked in browser settings");
+    if (state === "granted" && permissionNote === key) return t("Change this in your browser settings");
+    return undefined;
+  };
+
+  // BR-07: switching a device on opens HealthKit / Health Connect / Whoop
+  // OAuth, and a cancel returns it to off. The web has none of the three
+  // (Apple Health and Health Connect are native-only; Whoop needs its OAuth
+  // backend), so the switch returns to off at once and says why.
+  const [deviceNote, setDeviceNote] = useState<"platform" | "whoop" | null>(null);
 
   // Resolved once: installing the app or switching browser reloads the page.
   const [pushAvailable] = useState(pushSupported);
@@ -181,20 +206,23 @@ export default function Settings() {
         <SettingsRow
           icon={Mic}
           title={t("Microphone")}
-          subtitle={t(permissionLine(mic, "Needed for AI voice logging"))}
-          toggle={permissionToggle(mic, () => void requestMedia("audio"))}
+          subtitle={permissionLine("mic", mic)}
+          srDescription={t(PERMISSION_PURPOSE.mic)}
+          toggle={permissionToggle("mic", mic, () => void requestMedia("audio"))}
         />
         <SettingsRow
           icon={Camera}
           title={t("Camera")}
-          subtitle={t(permissionLine(camera, "Needed for scanning biomarkers & photos"))}
-          toggle={permissionToggle(camera, () => void requestMedia("video"))}
+          subtitle={permissionLine("camera", camera)}
+          srDescription={t(PERMISSION_PURPOSE.camera)}
+          toggle={permissionToggle("camera", camera, () => void requestMedia("video"))}
         />
         <SettingsRow
           icon={MapPin}
           title={t("Location")}
-          subtitle={t(permissionLine(location, "Needed to find gyms & businesses near you"))}
-          toggle={permissionToggle(location, requestLocation)}
+          subtitle={permissionLine("location", location)}
+          srDescription={t(PERMISSION_PURPOSE.location)}
+          toggle={permissionToggle("location", location, requestLocation)}
         />
         {/* Opens Notifications, where "Allow notifications" is the device's
             permission and registration (C15). The hint stays here when push
@@ -208,8 +236,8 @@ export default function Settings() {
       </SettingsSection>
 
       {/* Customers only, as before (V8: device sync is a personal tracking
-          concept). Nothing syncs yet, so the rows say "Coming soon" and carry
-          no switch (C16); "Health Connect" is the Android name (C-11). */}
+          concept). MO1.8 draws a switch on each row (BR-07); "Health
+          Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
         <SettingsSection label={t("Connected devices")}>
           {/* MO1.8: the Apple Health and Whoop brand tiles (handover assets);
@@ -219,26 +247,40 @@ export default function Settings() {
           <SettingsRow
             {...(isIos ? { tile: <AppleHealthMark /> } : { icon: Smartphone })}
             title={isIos ? "Apple Health" : "Health Connect"}
-            subtitle="Would sync steps, sleep, heart rate and calories burned"
-            value="Coming soon"
+            subtitle={
+              deviceNote === "platform"
+                ? isIos
+                  ? "Connects in the Centium app on iPhone"
+                  : "Connects in the Centium app on Android"
+                : undefined
+            }
+            toggle={{
+              checked: false,
+              onChange: (next) => setDeviceNote(next ? "platform" : null),
+            }}
           />
-          <SettingsRow tile={<WhoopMark />} title="Whoop" value="Coming soon" />
-          {/* dir="auto": the English line keeps its full stop at its own end
-              inside an Arabic page (kept-list 144). */}
-          <p dir="auto" className="mt-2 text-[11px] text-charcoal-faint">
-            Device sync isn't available yet. Until it is, weight and water are the metrics you can log yourself.
-          </p>
+          <SettingsRow
+            tile={<WhoopMark />}
+            title="Whoop"
+            subtitle={deviceNote === "whoop" ? "Whoop sync isn't available yet" : undefined}
+            toggle={{
+              checked: false,
+              onChange: (next) => setDeviceNote(next ? "whoop" : null),
+            }}
+          />
         </SettingsSection>
       )}
 
-      <SettingsSection label="Security">
+      <SettingsSection label={t("Security")}>
+        {/* Opens the two-factor page (MO1.8.4, another area's screen). */}
         <SettingsRow
           icon={ShieldCheck}
-          title="Two-factor authentication"
+          title={t("Two-factor authentication")}
           onClick={() => navigate("/app/settings/two-factor")}
         />
       </SettingsSection>
 
+      {/* Not on the board; kept as account features (exception 1). */}
       <SettingsSection label="Data & account">
         {/* Task J. */}
         <SettingsRow icon={KeyRound} title="Change password" onClick={() => setChangePasswordOpen(true)} />
@@ -255,24 +297,26 @@ export default function Settings() {
           value={<span lang={language}>{languageName}</span>}
           onClick={() => navigate("/app/settings/language")}
         />
-        <SettingsRow icon={Accessibility} title="Accessibility" onClick={() => navigate("/app/settings/accessibility")} />
+        <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
         <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
         {/* V9 (QA 9.0): for every account type; Settings is the one shared page. */}
-        <SettingsRow icon={FileText} title="Terms of Service" onClick={() => navigate("/app/settings/terms")} />
+        <SettingsRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
         <SettingsRow icon={HelpCircle} title={t("Contact us")} onClick={() => setContactOpen(true)} />
-        <SettingsRow icon={Bug} title="Report a bug" onClick={() => setReportBugOpen(true)} />
-        <SettingsRow icon={Star} title="Rate this app" onClick={() => setRateAppOpen(true)} />
+        <SettingsRow icon={Bug} title={t("Report a bug")} onClick={() => setReportBugOpen(true)} />
+        <SettingsRow icon={Star} title={t("Rate this app")} onClick={() => setRateAppOpen(true)} />
       </SettingsSection>
 
-      {/* QA 12.0 asked for this to be "not that obvious or big"; the board
-          draws it red (D21, C18): red text at the foot, still behind the same
-          30-day confirm. */}
+      {/* The board draws it red (D21, C18), centred at the foot, still
+          behind the same 30-day confirm. MO1.8 / MO1.8.5.1 measured: 13 px
+          on a 19 pt line, set in a box only as wide as its longest word, so
+          it breaks after every word ("Delete" / "account"), 37 under the
+          last row. */}
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
-        className="tap block mx-auto mt-8 text-[13px] font-semibold text-status-high"
+        className="tap block mx-auto mt-[37px] w-min text-center text-[13px] leading-[19px] font-semibold text-status-high"
       >
-        Delete account
+        {t("Delete account")}
       </button>
       </SettingsBody>
 

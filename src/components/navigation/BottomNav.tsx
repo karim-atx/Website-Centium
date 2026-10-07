@@ -165,7 +165,8 @@ export const BottomNav: React.FC = () => {
             <NavLink key={item.to} to={item.to} className="tap relative flex items-center justify-center h-full">
               {/* On More, and only More — see the identical note on the
                   professional/business bar above; this dot predates the
-                  Team redesign and isn't part of it. */}
+                  Team redesign and isn't part of it. Restore round (user,
+                  2026-10-07): back on the client bar as main had it. */}
               {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
 
               {isHome ? (

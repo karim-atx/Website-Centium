@@ -99,13 +99,15 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 //   check (they can't be ticked by hand).
 // - The paging Habits widget stays on Home; points and tier stay on the
 //   Achievements page.
-// - The Meditation tile keeps the live minutes when there are any.
+// - The Meditation tile keeps the live minutes when there are any
+//   (Restore round 2, user 2026-10-07, as on main); "Start a session" when
+//   there are none.
 // LIGHT MODE (decision 22): the tiles, the Today card's outline, the streak
 // strip and the checks are new since the redesign, so they take the frame's
 // own colours (lavender Journal, teal Meditation, gold Achievements; teal
 // checks, which supersedes A5). The habit streak mark is the handover's own
-// leaf (StreakLeaf; decision 9 superseded). The Journal tile's flame is the
-// journal streak, not a habit streak, so it stays.
+// leaf (StreakLeaf; decision 9 superseded), and so is the Journal tile's
+// journal-streak mark (outlined, as the frame draws it).
 export default function Mind() {
   const {
     streaks,
@@ -220,8 +222,11 @@ export default function Mind() {
               journalLoading ? (
                 <LineSkeleton />
               ) : (
-                <span className="inline-flex items-center gap-1">
-                  <Flame size={11} className="text-team-gold-ink dark:text-team-gold-ink" />
+                // MO1.1 #2 (2x frame): the handover's leaf, outlined in
+                // #7D6BB5 with a white inside, 6 × 10 pt over its 1 pt
+                // stroke, 6 pt before the count.
+                <span className="inline-flex items-center gap-1.5">
+                  <StreakLeaf variant="outline" height={9} className="text-primary-dark dark:text-primary-deep-text" />
                   {journalDays} {journalDays === 1 ? "day" : "days"}
                 </span>
               )
@@ -234,6 +239,8 @@ export default function Mind() {
             // MO1.1 icons list: Flower2 28/1.5.
             icon={<Flower2 size={28} strokeWidth={1.5} className="text-team-teal-deep dark:text-teal-dark" />}
             title="Meditation"
+            // Restore round 2: the live minutes, as on main; MO1.1's "Start a
+            // session" when there are none.
             line={meditationLine}
           />
           {/* NOTHING IS SHOWN UNTIL SOMETHING HAS BEEN READ. A count of "0 of

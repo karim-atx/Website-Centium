@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { Tables, TablesInsert } from "../../../lib/supabase/database.types";
 import type { CalendarEvent } from "../../types";
 import { signedUrlFor, uploadPrivateFile } from "../storage";
+import { alertNeedsWrite, toEventAlert, type EventAlert } from "../../components/calendar/eventAlert";
 
 // The client's own calendar, and the invitations they have received.
 //
@@ -90,6 +91,12 @@ export interface ClientCalendarEvent extends CalendarEvent {
    * assign_template_to_client rewrites the row on every re-assignment.
    */
   scheduledForClient?: boolean;
+  /**
+   * calendar_events.alert (Stage 2). The OWNER's setting: only owner_id is
+   * ever notified, so on an invitation this is somebody else's choice and is
+   * not shown or offered.
+   */
+  alert: EventAlert;
 }
 
 export type CalendarReadResult =
@@ -97,11 +104,15 @@ export type CalendarReadResult =
   | { ok: false; message: string };
 
 export type CalendarWriteResult =
-  | { ok: true; event: ClientCalendarEvent }
+  /**
+   * `alertMessage`: the event itself saved, but its alert did not (see
+   * writeAlert). `event` is then the stored row, alert as it really stands.
+   */
+  | { ok: true; event: ClientCalendarEvent; alertMessage?: string }
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path";
+  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path, alert";
 
 type EventRow = Pick<
   Tables<"calendar_events">,
@@ -122,6 +133,10 @@ type EventRow = Pick<
   // Not in the generated Row type yet — the column is newer than the last
   // regeneration of database.types.ts, like calendar_event_invitees.
   attachment_path: string | null;
+  // Stage 2 (calendar alerts). The generated types are read from production,
+  // where the column isn't yet; `public.calendar_alert`, never null (column
+  // default 'none').
+  alert: string | null;
 };
 
 /**
@@ -150,6 +165,7 @@ function toEvent(row: EventRow, userId: string, invite?: CalendarInvite): Client
     // assignment-sourced is not a thing this screen can see or act on.
     assignmentSourced: row.owner_id === userId && !row.created_by_client,
     attachmentPath: row.attachment_path ?? undefined,
+    alert: toEventAlert(row.alert),
     invite,
   };
 }
@@ -288,6 +304,75 @@ export interface CalendarEventDraft {
   notes?: string;
   repeat: CalendarEvent["repeat"];
   color?: string;
+  /** Omitted = leave as stored ('none' on a new row, the column default). */
+  alert?: EventAlert;
+}
+
+/**
+ * Stores the alert on an owned event.
+ *
+ * ITS OWN STATEMENT, AFTER THE EVENT'S, and not a key in toRow's payload. The
+ * contract (HANDOVER_API Stage 2) says to set it through the ordinary
+ * insert/update, but calendar_events' grants are column-scoped and, on the
+ * local stack as migrated (20261026000000), `authenticated` holds only SELECT
+ * on `alert` — no INSERT or UPDATE. Putting it in the main payload would make
+ * every save fail with 42501, including saves that never touched the alert.
+ * Kept separate, the event always saves and only the alert can fail, which the
+ * sheet says inline. Once the grant exists this simply succeeds.
+ *
+ * The generated types come from production, where the column isn't yet, so
+ * this one call is cast (same pattern as attachment_path above and Stage 1's
+ * recoveryCodes service).
+ */
+async function writeAlert(
+  userId: string,
+  eventId: string,
+  alert: EventAlert
+): Promise<{ ok: true; row: EventRow } | { ok: false }> {
+  const withAlert = supabase.from("calendar_events") as unknown as {
+    update: (values: { alert: EventAlert }) => {
+      eq: (
+        column: string,
+        value: string
+      ) => {
+        eq: (
+          column: string,
+          value: string
+        ) => {
+          select: (columns: string) => {
+            single: () => PromiseLike<{ data: EventRow | null; error: { code?: string; message: string } | null }>;
+          };
+        };
+      };
+    };
+  };
+
+  const { data, error } = await withAlert
+    .update({ alert })
+    .eq("id", eventId)
+    .eq("owner_id", userId)
+    .select(COLUMNS)
+    .single();
+
+  if (error || !data) {
+    console.error("[calendar] Could not save the alert:", error?.code, error?.message);
+    return { ok: false };
+  }
+  return { ok: true, row: data };
+}
+
+const ALERT_FAILED = "Your event is saved, but its alert couldn't be set. Try again.";
+
+/** The event write's result, then the alert's if one is needed. */
+async function withAlert(
+  userId: string,
+  saved: ClientCalendarEvent,
+  wanted: EventAlert | undefined
+): Promise<CalendarWriteResult> {
+  if (!alertNeedsWrite(saved.alert, wanted)) return { ok: true, event: saved };
+  const result = await writeAlert(userId, saved.id, wanted);
+  if (!result.ok) return { ok: true, event: saved, alertMessage: ALERT_FAILED };
+  return { ok: true, event: toEvent(result.row, userId) };
 }
 
 function toRow(draft: CalendarEventDraft): EditableRow {
@@ -321,7 +406,7 @@ export async function createEvent(
     console.error("[calendar] Could not create event:", error?.message);
     return { ok: false, message: "Couldn't save that event. Try again." };
   }
-  return { ok: true, event: toEvent(data as unknown as EventRow, userId) };
+  return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
 
 /**
@@ -349,7 +434,7 @@ export async function updateEvent(
     console.error("[calendar] Could not update event:", error?.message);
     return { ok: false, message: "Couldn't save your changes. Try again." };
   }
-  return { ok: true, event: toEvent(data as unknown as EventRow, userId) };
+  return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
 
 export async function deleteEvent(

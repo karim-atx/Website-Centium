@@ -10,7 +10,10 @@ import { COLOR_THEMES } from "../../theme/colorThemes";
 // primary (2 pt clear of the swatch), a white check (15 / 3), and its label in
 // primary.accent at 11 / 700; the others 11 / 500 in text.secondary.
 export const ColorThemePicker: React.FC = () => {
-  const { colorTheme, setColorTheme } = useApp();
+  const { colorTheme, setColorTheme, language, t } = useApp();
+  // MO1.8.5.1: in Arabic the swatch mirrors with the row, primary on the
+  // right (the start side), and the names are the frame's Arabic ones.
+  const halves = language === "ar" ? "270deg" : "90deg";
 
   return (
     // MO1.8 measured: five equal 46 pt columns (the width of "Centium" in
@@ -18,15 +21,15 @@ export const ColorThemePicker: React.FC = () => {
     // text column. Below 390 the gap narrows to 4 and then the columns shrink
     // (never under the 38 swatch), so all five fit at 320 (revision round).
     <div role="radiogroup" aria-label="Color theme" className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
-      {COLOR_THEMES.map((t) => {
-        const selected = colorTheme === t.value;
+      {COLOR_THEMES.map((theme) => {
+        const selected = colorTheme === theme.value;
         return (
           <button
-            key={t.value}
+            key={theme.value}
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => setColorTheme(t.value)}
+            onClick={() => setColorTheme(theme.value)}
             className="tap flex flex-col items-center gap-[9px] w-[46px] min-w-[38px] shrink"
           >
             <span
@@ -34,19 +37,19 @@ export const ColorThemePicker: React.FC = () => {
                 "w-[38px] h-[38px] rounded-full flex items-center justify-center",
                 selected && "ring-2 ring-offset-2 ring-offset-cream-card ring-primary"
               )}
-              style={{ background: `linear-gradient(90deg, ${t.primary} 50%, ${t.secondary} 50%)` }}
+              style={{ background: `linear-gradient(${halves}, ${theme.primary} 50%, ${theme.secondary} 50%)` }}
             >
               {/* White on Centium's swatch, as drawn; the other swatches' light
                   halves (Sky's slate, Rose's blush, Gold) cannot carry white at
                   3:1, so their check is the app's near-black ink. */}
               {selected && (
-                <Check size={15} className={t.value === "centium" ? "text-white" : "text-[#0D0B1A]"} strokeWidth={3} aria-hidden />
+                <Check size={15} className={theme.value === "centium" ? "text-white" : "text-[#0D0B1A]"} strokeWidth={3} aria-hidden />
               )}
             </span>
             <span
               className={clsx("text-[11px] leading-none", selected ? "font-bold text-primary-accent" : "font-medium text-charcoal-soft")}
             >
-              {t.label}
+              {t(theme.label)}
             </span>
           </button>
         );

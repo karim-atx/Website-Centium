@@ -17,6 +17,8 @@ import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
 import { initials } from "../../components/professionals/typeColour";
 import { TYPE_CATEGORY, typeLabel } from "./venueTypes";
+import { ClassPage } from "./ClassPage";
+import { GymPage } from "./GymPage";
 
 type FilterMode = "rating" | "proximity" | "discount";
 const filterOptions: { value: FilterMode; label: string }[] = [
@@ -36,6 +38,10 @@ export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
   const [params] = useSearchParams();
   if (category === "business") return <BusinessPage key={params.get("id") ?? ""} businessId={params.get("id") ?? ""} />;
+  // Handover-complete pass: the class page (MO1.4.4) and the gym page
+  // (MO1.4.2.1) on the same route, as the business page.
+  if (category === "class") return <ClassPage key={params.get("id") ?? ""} classId={params.get("id") ?? ""} />;
+  if (category === "gym") return <GymPage key={params.get("id") ?? ""} gymId={params.get("id") ?? ""} />;
   return <CategoryListing key={category} category={category} />;
 }
 

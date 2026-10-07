@@ -7,16 +7,19 @@ import { Loader2 } from "lucide-react";
 //
 // TWO GEOMETRIES, per the decision on conflict C-01: 48 tall / radius 14 for
 // a page CTA pinned above the navbar, 52 / radius 16 for a CTA inside a sheet.
-// The handover's third size (44 / 12) is not offered.
+// The handover's own page size, 44 / radius 12 ("base"), is opt-in through
+// PinnedCta's `size`, for screens brought to their frame exactly; the default
+// stays 48, so every other pinned CTA is unchanged.
 //
 // THE FILL IS primary-fill: the handover's #9A8CD6 in light mode (decision
 // 14; see index.css). Dark mode keeps the lighter primary with near-black
 // ink, the convention the app's Button already follows.
 
-type CtaSize = "page" | "sheet";
+type CtaSize = "base" | "page" | "sheet";
 type CtaVariant = "primary" | "secondary" | "outline";
 
 const sizeClasses: Record<CtaSize, string> = {
+  base: "h-11 rounded-xl",
   page: "h-12 rounded-[14px]",
   sheet: "h-[52px] rounded-2xl",
 };
@@ -88,10 +91,12 @@ type IconCtaProps = {
   /** Colour overrides, e.g. to keep a replaced button's light colours. */
   className?: string;
   disabled?: boolean;
+  /** Set by PinnedCta from its own `size`. */
+  size?: "base" | "page";
 };
 
 /** The pinned row's icon-only secondary button. */
-const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor, width = 89, className, disabled }) => (
+const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor, width = 89, className, disabled, size = "page" }) => (
   <button
     ref={onAnchor}
     type="button"
@@ -103,7 +108,7 @@ const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor, width
     className={clsx(
       "tap flex-none inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none",
       "transition-[filter] duration-150 ease-out active:brightness-[0.92]",
-      sizeClasses.page,
+      sizeClasses[size],
       variantClasses.secondary,
       className
     )}
@@ -133,14 +138,16 @@ export const PinnedCta: React.FC<{
   primary: Omit<CtaButtonProps, "size" | "variant">;
   secondary?: Omit<CtaButtonProps, "size" | "variant">;
   above?: Omit<CtaButtonProps, "size" | "variant">;
-  trailing?: IconCtaProps;
-}> = ({ primary, secondary, above, trailing }) => (
+  trailing?: Omit<IconCtaProps, "size">;
+  /** "base": the handover's 44 / radius 12 page CTA (Foundations 2.5). Default "page" (48 / 14). */
+  size?: "base" | "page";
+}> = ({ primary, secondary, above, trailing, size = "page" }) => (
   <PinnedSlot>
-    {above && <CtaButton {...above} size="page" variant="outline" />}
+    {above && <CtaButton {...above} size={size} variant="outline" />}
     <div className="flex gap-2">
-      {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
-      <CtaButton {...primary} size="page" variant="primary" />
-      {trailing && <IconCta {...trailing} />}
+      {secondary && <CtaButton {...secondary} size={size} variant="secondary" />}
+      <CtaButton {...primary} size={size} variant="primary" />
+      {trailing && <IconCta {...trailing} size={size} />}
     </div>
   </PinnedSlot>
 );

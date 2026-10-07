@@ -9,7 +9,10 @@ export interface MessageAction {
   onSelect: () => void;
   /** Delete and report read as cautions, below a divider. */
   danger?: boolean;
-  /** Right-aligned note, e.g. how long an edit window has left. */
+  /**
+   * Right-aligned note, e.g. how long an edit window has left (restore round,
+   * user, 2026-10-07: back with Edit).
+   */
   note?: string;
 }
 
@@ -72,9 +75,10 @@ export const MessageActions: React.FC<{
   const safe = actions.filter((a) => !a.danger);
   const danger = actions.filter((a) => a.danger);
   // MO1.2.1.3.3: the app's dropdown rows (radius 8, option border, raised
-  // fill, 12.5/500) with an icon, 44 tall for the tap target.
+  // fill, 12.5/500) with an icon, padding 9 × 10: 36 tall as drawn
+  // (handover-complete pass; was 44 for the tap target).
   const row =
-    "tap w-full h-11 px-3 flex items-center gap-2.5 text-left text-[12.5px] font-medium rounded-lg border border-border-option bg-surface-raised";
+    "tap w-full h-9 px-2.5 flex items-center gap-2.5 text-left text-[12.5px] font-medium rounded-lg border border-border-option bg-surface-raised";
   const icon = (label: string) => {
     const I = iconFor(label);
     return I ? <I size={15} strokeWidth={1.75} className="shrink-0" aria-hidden /> : null;
@@ -97,7 +101,9 @@ export const MessageActions: React.FC<{
         {onReact && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-cream-card rounded-[28px] p-1.5 flex flex-wrap gap-0.5 max-w-full animate-fade-slide-up"
+            // MO1.2.1.3.3: a white 262 × 52 pill (r26), padding 6, 40 buttons
+            // on a 42 pitch, as drawn (handover-complete pass; was 44).
+            className="bg-cream-card rounded-[26px] p-1.5 flex flex-wrap gap-0.5 max-w-full animate-fade-slide-up"
           >
             {(more ? [...QUICK_REACTIONS, ...MORE_REACTIONS] : QUICK_REACTIONS).map((emoji) => (
               <button
@@ -107,7 +113,7 @@ export const MessageActions: React.FC<{
                 aria-label={`React ${emoji}`}
                 aria-pressed={emoji === myReaction}
                 // MO1.2.1.3.3: emoji 21.
-                className={`tap w-11 h-11 rounded-full text-[21px] leading-none flex items-center justify-center ${
+                className={`tap w-10 h-10 rounded-full text-[21px] leading-none flex items-center justify-center ${
                   emoji === myReaction ? "bg-primary-pale" : ""
                 }`}
               >
@@ -119,7 +125,7 @@ export const MessageActions: React.FC<{
                 type="button"
                 onClick={() => setMore(true)}
                 aria-label="More reactions"
-                className="tap w-11 h-11 rounded-full bg-cream-soft flex items-center justify-center text-primary-deep-text"
+                className="tap w-10 h-10 rounded-full bg-cream-soft flex items-center justify-center text-primary-deep-text"
               >
                 <Plus size={17} />
               </button>
@@ -161,6 +167,7 @@ export const MessageActions: React.FC<{
             <button key={a.label} type="button" onClick={a.onSelect} className={`${row} text-charcoal`}>
               {icon(a.label)}
               <span className="flex-1 min-w-0">{a.label}</span>
+              {/* Edit's time left (restore round): as before, 11/600 soft. */}
               {a.note && <span className="text-[11px] font-semibold text-charcoal-soft">{a.note}</span>}
             </button>
           ))}

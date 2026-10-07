@@ -209,6 +209,9 @@ export default function More() {
               </span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
+              {/* Restore round (user, 2026-10-07): the Messages unread badge is
+                  back for every account, the client's MO1 rows included
+                  (decision 23 item 307's 18 tall primary pill). */}
               {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
               <ChevronRight size={14} className="text-th-9a94b3" />
             </span>

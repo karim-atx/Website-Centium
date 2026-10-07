@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
-import { Card } from "../../components/ui/Card";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { Button } from "../../components/ui/Button";
 import { PopupMenu } from "../../components/ui/PopupMenu";
@@ -28,6 +27,7 @@ import { useIsDark } from "../../hooks/useIsDark";
  */
 const ROUTINE_COLORS = {
   newFolder: ["rgb(var(--th-6b41ef))", "rgb(var(--th-9a8cd6))"],
+  // Restore round 2 (user, 2026-10-07): the ongoing / paused routine coral, as on main.
   ongoing: ["#E9736A", "#EE8A82"],
   meta: ["#8C8378", "#B8B3C7"],
   checked: ["rgb(var(--th-aea1dc))", "rgb(var(--th-9a8cd6))"],
@@ -64,6 +64,7 @@ import {
   Plus,
   Repeat,
   Pause,
+  Dumbbell,
   Palette,
   ArrowUp,
   ArrowDown,
@@ -138,6 +139,8 @@ export default function RoutinesTab() {
   // WO17: the ONGOING row mirrors the bar. A minimised session can be paused
   // and resumed from here; the clock is timestamps (startedAt, pausedAt,
   // pausedMs), so the logger and the bar read the same state back.
+  // Restore round 2 (user, 2026-10-07): the row's ongoing / paused state and
+  // its pause are back, as on main.
   const pauseActive = () =>
     setActiveSession((a) => (a && a.status === "running" ? { ...a, status: "paused", pausedAt: new Date().toISOString() } : a));
   const resumeActive = () =>
@@ -454,7 +457,9 @@ export default function RoutinesTab() {
       {/* PAGE-LEVEL, which is why it is here and not in the three-dots menu:
           that menu belongs to one folder, and a cycle phase is a property of
           the person and the day. This row is the only slot in the tab with
-          global scope. */}
+          global scope. Restore round 2 (user, 2026-10-07): main's gating
+          again; the strip itself shows the cycle phase (cycle offered,
+          tracker on) or the pregnancy guidance (cycle offered, a pregnancy). */}
       <CyclePhaseStrip />
 
       <div className="flex items-center justify-between mb-2.5">
@@ -557,46 +562,46 @@ export default function RoutinesTab() {
           program. The nine curated programs existed but had no way in.
           D9 (Mobile v5.1 R3): that way in is now the pinned "Browse starter
           programs" below, always shown, so this card no longer repeats it. */}
+      {/* Handover-complete pass: Foundations › Empty state (WO1 §4 "Empty:
+          use Foundations › Empty state"): a 56 primary.tint tile with a 26
+          thin-stroke glyph in primary.accent, title 15/700, one line 12.5/500
+          text.muted, max width 260, centred. The glyph is unspecified; Dumbbell
+          (the workout glyph) at the 1.25 thin stroke. */}
       {routines.length === 0 && (
-        <Card className="text-center py-7 mb-4">
-          <p className="text-sm font-semibold text-charcoal mb-1">No routines yet</p>
-          <p className="text-[12.5px] text-charcoal-soft px-4 leading-relaxed">
-            Start from a ready-made program and change whatever you like, or build your own from
-            scratch.
+        <div className="flex flex-col items-center text-center mx-auto mb-4" style={{ maxWidth: 260 }}>
+          <span className="flex items-center justify-center bg-th-f0edf9 dark:bg-th-aea1dc/[0.14]" style={{ width: 56, height: 56, borderRadius: 14 }}>
+            <Dumbbell size={26} strokeWidth={1.25} absoluteStrokeWidth className="text-th-7d67d9 dark:text-th-9a8cd6" />
+          </span>
+          <p className="mt-3 text-[15px] font-bold leading-5 text-charcoal">No routines yet</p>
+          <p className="mt-1 text-[12.5px] font-medium leading-[18px] text-charcoal-faint">
+            Start from a ready-made program, or build your own.
           </p>
-        </Card>
+        </div>
       )}
 
-      {/* Mobile v5.1 WO1 / WO1.1: "Browse starter programs" first, then a
-          filled "Create routine" pinned above the navbar, both overlaying the
-          list. Page CTAs are 48 / r14 (decision C-01). Browse is
-          now always shown, so the empty-state card no longer has its own
-          (decision D9). The spacer lets the last
-          routine scroll clear of both buttons: 172 for one CTA + 56 for the
-          second, less the 112 the layout already pads. */}
-      <div aria-hidden style={{ height: 116 }} />
+      {/* Mobile v5.1 WO1 / WO1.1: "Browse starter programs" (outline) over a
+          filled "Create routine", pinned above the navbar, both overlaying the
+          list, at the frame's 44 / r12 (handover-complete pass; was 48 / r14
+          under C-01). Browse is the outline in every state (it was filled when
+          there were no routines). The spacer lets the last routine scroll
+          clear of both buttons: 172 for one CTA + 52 for the second (44 + 8),
+          less the 112 the layout already pads. */}
+      <div aria-hidden style={{ height: 112 }} />
       <PinnedCta
+        size="base"
         above={{
           label: "Browse starter programs",
-          // Light mode keeps the colours of the Browse button this pinned one
-          // replaced (decision 15): the outline one when there are routines,
-          // and the empty card's filled primary one when there are none.
-          // Dark mode is the outline in both cases.
-          icon: <Library size={17} className={routines.length === 0 ? "text-white dark:text-charcoal-soft" : "text-charcoal-soft"} />,
+          icon: <Library size={17} className="text-charcoal-soft" />,
           // WO1 / WO1.1 measure a 9 pt icon gap here (the CTA default is 7).
-          className: clsx(
-            "!gap-[9px]",
-            routines.length === 0 &&
-              "!bg-primary-fill !text-on-primary-fill !border-transparent dark:!bg-cream-card dark:!text-charcoal dark:!border-th-8f68f6/[0.28]"
-          ),
+          className: "!gap-[9px]",
           onClick: () => setBrowseOpen(true),
         }}
         primary={{
           label: "Create routine",
           icon: <Plus size={15} />,
-          // WO1 #8 / WO1.1 #9 (decision 23): filled #A198DF (--c-fill-cta,
-          // primary.cta.alt), 13.5/700 white, as drawn and as Add habit;
-          // 48/r14 per C-01. Dark: primary-fill with its near-black ink.
+          // WO1 #8 / WO1.1 #9: filled #A198DF (--c-fill-cta, primary.cta.alt),
+          // 13.5/700 white, 44/r12, as drawn and as Add habit. Dark:
+          // primary-fill with its near-black ink.
           className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
           onClick: () => {
             setCreateFolder(null);
@@ -827,7 +832,7 @@ const RoutineCardFace: React.FC<{
             <span className="truncate min-w-0">{routine.name}</span>
             {isOngoing && (
               // WO17: the same running / paused state the bar shows.
-              <span className="text-[10px] font-bold uppercase text-[#E9736A] dark:text-[#EE8A82] flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase flex items-center gap-1 shrink-0" style={{ color: rc("ongoing", dark) }}>
                 {running ? (
                   <>
                     <Play size={10} fill="currentColor" /> Ongoing

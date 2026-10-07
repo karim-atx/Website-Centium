@@ -138,6 +138,9 @@ export const ThreadList: React.FC<{
                     <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : official ? (
                     <ShieldCheck size={19} className="text-teal-deep-text" />
+                  ) : t.venue?.memberSide ? (
+                    // A gym chat: the venue's initials (no logo yet).
+                    <span className="text-[15px] font-extrabold text-primary-deep-text">{t.venue.initials}</span>
                   ) : (
                     <PERSON_ICON size={19} className="text-primary-dark" />
                   )}

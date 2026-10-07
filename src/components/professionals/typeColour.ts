@@ -19,12 +19,42 @@ export interface TypeColours {
   pill: string;
   /** Text on `main` (the primary action). */
   onMain: string;
+  /**
+   * The directory card's View Profile fill (MO1.2, measured: #EAE6F7 purple,
+   * #E1EFEC teal). New in the redesign, so the handover's own colours
+   * (decision 22). "Other" is not drawn: its pill (unspecified).
+   */
+  button: string;
+  /**
+   * The filled pinned action, white ink (MO1.2.1 / MO1.2.1.1: #9A8CD6;
+   * MO1.2.1.4: #6F9993, sampled): Hire and Write a review. "Other" is not
+   * drawn: its main (unspecified).
+   */
+  cta: string;
 }
 
 const FAMILIES = {
-  purple: { main: "rgb(var(--th-7d6bb5))", deep: "rgb(var(--th-5f5093))", pill: "rgb(var(--th-f0edf9))" },
-  teal: { main: "rgb(var(--th-4f7f78))", deep: "rgb(var(--th-3c6b65))", pill: "#E7F2F0" },
-  other: { main: "rgb(var(--th-5b4a9e))", deep: "rgb(var(--th-463a80))", pill: "rgb(var(--th-e9e5f6))" },
+  purple: {
+    main: "rgb(var(--th-7d6bb5))",
+    deep: "rgb(var(--th-5f5093))",
+    pill: "rgb(var(--th-f0edf9))",
+    button: "rgb(var(--th-eae6f7))",
+    cta: "rgb(var(--th-9a8cd6))",
+  },
+  teal: {
+    main: "rgb(var(--th-4f7f78))",
+    deep: "rgb(var(--th-3c6b65))",
+    pill: "#E7F2F0",
+    button: "rgb(var(--th-e1efec))",
+    cta: "rgb(var(--th-6f9993))",
+  },
+  other: {
+    main: "rgb(var(--th-5b4a9e))",
+    deep: "rgb(var(--th-463a80))",
+    pill: "rgb(var(--th-e9e5f6))",
+    button: "rgb(var(--th-e9e5f6))",
+    cta: "rgb(var(--th-5b4a9e))",
+  },
 } as const;
 
 const DARK_CARD = "#1C1F28";
@@ -52,7 +82,7 @@ export function typeColours(subtype: DirectoryListing["subtype"] | string | null
   const { pill, ink } = DARK[family];
   // In dark the action fill is the lifted hue with near-black ink, as the
   // app's primary-fill does.
-  return { main: ink, deep: ink, pill, onMain: "#0D0B1A" };
+  return { main: ink, deep: ink, pill, onMain: "#0D0B1A", button: pill, cta: ink };
 }
 
 /**

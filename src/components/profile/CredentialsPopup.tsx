@@ -115,6 +115,8 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
     }
     setBusy(false);
     setErrors(next);
+    // Restore round 2 (user, 2026-10-07): a clean save says "Saved" on the
+    // button for 700 ms, then closes, as on main.
     if (Object.keys(next).length === 0) {
       setDone(true);
       setTimeout(onClose, 700);
@@ -193,7 +195,21 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       // rather than the frame's 350.
       className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<KeyRound size={22} strokeWidth={1.75} className="text-primary-dark" />}
-      cta={{ label: done ? "Saved" : busy ? "Saving…" : "Save", disabled: busy || done, onClick: () => void save() }}
+      // MO1.5.4 row 10: Save filled #9A8CD6 with white 14/700 (a new popup,
+      // so the handover's own light fill, decision 22; was primary-fill
+      // #AEA1DC under decisions 7 / 15). Dark keeps primary-fill and its ink,
+      // as ReferralPopup's filled button does.
+      cta={{
+        label: done ? "Saved" : busy ? "Saving…" : "Save",
+        disabled: busy || done,
+        onClick: () => void save(),
+        // Restore round 2: "Saved" stays untappable but at full ink (not the
+        // 40% disabled look), so it reads as a confirmation.
+        className: clsx(
+          "!bg-th-9a8cd6 !text-white dark:!bg-primary-fill dark:!text-on-primary-fill",
+          done && "disabled:!opacity-100"
+        ),
+      }}
     >
       {/* Visible labels (MO1.5.4.email / .phone); about 16 between the
           email field and the Phone label, measured on the 2x frame. */}

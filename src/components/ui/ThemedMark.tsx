@@ -1,4 +1,5 @@
 import React from "react";
+import { useApp } from "../../context/AppContext";
 
 // R20 (batch D, D10): the in-app Centium mark outside the Centium theme. The
 // C is drawn in the theme primary and the leaf in its secondary (Foundations
@@ -98,3 +99,17 @@ export const TintedGlyph: React.FC<{ src: string; colour: string; className?: st
     }}
   />
 );
+
+/**
+ * The Centium mark in whichever theme is on: the brand PNG in the Centium
+ * theme (as Sidebar and the forum rules card do), the tinted mask elsewhere.
+ * For screens that just want "the mark" without choosing.
+ */
+export const BrandMark: React.FC<{ width: number; height: number; className?: string }> = ({ width, height, className }) => {
+  const { colorTheme } = useApp();
+  return colorTheme === "centium" ? (
+    <img src="/centium-mark.png" alt="" aria-hidden="true" className={`object-contain ${className ?? ""}`} style={{ width, height }} />
+  ) : (
+    <ThemedMark width={width} height={height} className={className} />
+  );
+};

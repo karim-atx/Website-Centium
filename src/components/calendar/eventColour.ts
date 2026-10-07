@@ -15,9 +15,12 @@ export function eventColours(colour: string | undefined, dark: boolean): { tint:
 }
 
 /**
- * The swatches MO1.6.4 draws, sampled from the frame (the handover gives no
- * hex list). Events saved with an older colour keep it; it simply isn't
- * offered for new ones.
+ * The twelve swatches MO1.6.4 / MO1.6.4.2 draw, in the board's order (eight in
+ * the first row, four in the second), sampled from the 2x frame at each
+ * circle's centre (the handover gives no hex list; #9C4F7C is also the
+ * Foundations' fixed plum). The nine offered before are all still here, so
+ * every saved event keeps a colour the picker shows; any other saved hex
+ * still renders through eventColours(), it just isn't offered.
  */
 export const EVENT_SWATCHES = [
   "#7D6BB5",
@@ -25,6 +28,9 @@ export const EVENT_SWATCHES = [
   "#4C8FD1",
   "#5B5FC7",
   "#794E9C",
+  "#9C4F7C",
+  "#D9695F",
+  "#B8683F",
   "#D9A441",
   "#5E9A6B",
   "#5A6B7D",

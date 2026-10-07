@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, ImagePlus } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ImagePlus, X } from "lucide-react";
 import { DangerLine } from "./parts";
 import { useNavigate } from "react-router-dom";
 import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
@@ -15,8 +15,11 @@ import { useIsDark } from "../../hooks/useIsDark";
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
 // dropdown (MO1.3.2.1) that starts on General, and "Post to forum" stays
-// disabled until the post is filled in (A22). The photo upload and its
-// privacy line are not drawn but kept. Fields keep the forum's colours.
+// disabled until the post is filled in (A22). Fields keep the forum's colours.
+// Restore round (user, 2026-10-07): the optional photo is back, as a small
+// ImagePlus button at the Post field's bottom-left corner (inside the drawn
+// 198 pt field); a chosen photo shows there as a thumbnail with a remove x,
+// and the privacy line is the field's helper text while a photo is attached.
 //
 // "POST AS" IS FIXED ONCE POSTED. The server freezes a post's identity
 // (ATX61), and the line under the choice says so. A professional has no
@@ -204,7 +207,11 @@ export function ForumCompose({
             {/* MO1.3.2: Category and Title 44 tall, Post 198 (measured from
                 the frame, 2x). */}
             {recoveryPending ? (
-              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
+              // KEEP-SAFETY (handover-complete pass): no category is offered
+              // until the recovery setting is known, so a hidden one is never
+              // shown first. Drawn as the field it stands in for (44, r12,
+              // the field's border), pulsing.
+              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ border: `1px solid ${fv("border")}`, background: fv("track") }} />
             ) : (
               <button
                 ref={setAnchor}
@@ -240,9 +247,9 @@ export function ForumCompose({
           </label>
         </div>
         {error?.field === "title" && <DangerLine className="-mt-2">{error.message}</DangerLine>}
-        {/* Decision 23 (item 68): the photo control is a 44 pt icon row in the
-            Post field's footer, so the field keeps the drawn 198 and the sheet
-            its height. The textarea takes what the footer leaves. */}
+        {/* MO1.3.2: the Post field 198 tall. Restore round: the photo
+            control sits inside it, a 44 pt row along its bottom edge with no
+            rule, so the field keeps the drawn 198 and the sheet its height. */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="forum-compose-body" className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
             Post
@@ -257,11 +264,12 @@ export function ForumCompose({
               onChange={(e) => setBody(e.target.value)}
               maxLength={8000}
               placeholder="Share a win, ask a question, or pass on a tip…"
-              className="flex-1 min-h-0 px-3 py-2.5 text-sm font-normal resize-none outline-none bg-transparent"
+              aria-describedby={FORUM_PHOTOS_ENABLED && photo ? "forum-compose-photo-note" : undefined}
+              className="flex-1 min-h-0 px-3 pt-2.5 pb-1 text-sm font-normal resize-none outline-none bg-transparent"
               style={{ color: fv("text") }}
             />
             {FORUM_PHOTOS_ENABLED && (
-              <div className="h-11 shrink-0 flex items-center gap-2 pr-2" style={{ borderTop: `1px solid ${fv("rule")}` }}>
+              <div className="h-11 shrink-0 flex items-center">
                 <input
                   ref={fileRef}
                   type="file"
@@ -270,41 +278,53 @@ export function ForumCompose({
                   onChange={(e) => void pick(e.target.files?.[0])}
                 />
                 {preview ? (
-                  <>
-                    <img src={preview} alt="The photo you're adding" className="ml-1.5 w-8 h-8 rounded-lg object-cover shrink-0" />
-                    <button type="button" onClick={removePhoto} className="tap h-11 text-[13px] font-bold" style={{ color: fv("link") }}>
-                      Remove photo
-                    </button>
-                  </>
-                ) : (
-                  <>
+                  // The chosen photo: a 32 pt thumbnail (r8) in the corner,
+                  // its remove x a 16 pt badge on a 44 pt target.
+                  <div className="relative ml-2 w-8 h-8 shrink-0">
+                    <img src={preview} alt="The photo you're adding" className="w-8 h-8 rounded-lg object-cover" />
                     <button
                       type="button"
-                      onClick={() => fileRef.current?.click()}
-                      disabled={preparing}
-                      aria-label={preparing ? "Preparing photo…" : "Add a photo (optional)"}
-                      className="tap w-11 h-11 flex items-center justify-center shrink-0 disabled:opacity-60"
-                      style={{ color: fv("link") }}
+                      onClick={removePhoto}
+                      aria-label="Remove photo"
+                      className="tap absolute -top-3.5 -right-3.5 w-11 h-11 flex items-start justify-end p-1.5"
                     >
-                      <ImagePlus size={18} strokeWidth={1.75} aria-hidden />
+                      <span
+                        aria-hidden
+                        className="w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: fv("text"), color: fv("card"), boxShadow: `0 0 0 1.5px ${fv("card")}` }}
+                      >
+                        <X size={10} strokeWidth={3} />
+                      </span>
                     </button>
-                    <span className="text-[12px] font-medium" style={{ color: fv("muted") }} aria-hidden>
-                      {preparing ? "Preparing photo…" : "Add a photo (optional)"}
-                    </span>
-                  </>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={preparing}
+                    aria-label={preparing ? "Preparing photo…" : "Add a photo (optional)"}
+                    className="tap w-11 h-11 flex items-center justify-center shrink-0 disabled:opacity-60"
+                    style={{ color: fv("link") }}
+                  >
+                    <ImagePlus size={18} strokeWidth={1.75} aria-hidden className={preparing ? "animate-pulse" : undefined} />
+                  </button>
                 )}
               </div>
             )}
           </div>
+          {/* A22 privacy line: the field's helper text while a photo is attached (decision 23, item 253). */}
+          {FORUM_PHOTOS_ENABLED && photo && (
+            <span id="forum-compose-photo-note" className="text-[11px] font-normal leading-[1.5]" style={{ color: fv("muted") }}>
+              Location and camera details are removed from photos before they're shared.
+            </span>
+          )}
           {photoError && <DangerLine>{photoError}</DangerLine>}
           {error?.field === "body" && <DangerLine>{error.message}</DangerLine>}
         </div>
 
-        <div className="flex flex-col gap-1.5 text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-          {/* A22 privacy line, kept but only while a photo is attached (decision 23, item 253). */}
-          {FORUM_PHOTOS_ENABLED && photo && <span>Location and camera details are removed from photos before they're shared.</span>}
-          <span>Posts with links are checked by a moderator before they appear.</span>
-        </div>
+        <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
+          Posts with links are checked by a moderator before they appear.
+        </span>
       </div>
 
       {/* MO1.3.2.1: the category dropdown, plain rows on a 178 pt card, over

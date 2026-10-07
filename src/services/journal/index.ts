@@ -1,5 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { hasEmailPassword } from "../auth/passwordChangeLogic";
+import { describeLockError } from "./lockLogic";
 
 // The journal, in public.journal_folders and public.journal_entries.
 //
@@ -28,6 +30,8 @@ export interface JournalFolderRow {
   id: string;
   name: string;
   position: number;
+  /** MO1.1.2.1's Lock (stage 3). Readable, never client-writable. */
+  locked: boolean;
 }
 
 export interface JournalEntryRow {
@@ -84,7 +88,7 @@ export function validateEntry(title: string, body: string): string | null {
 export async function getJournalFolders(userId: string): Promise<Result<JournalFolderRow[]>> {
   const { data, error } = await supabase
     .from("journal_folders")
-    .select("id, name, position")
+    .select("id, name, position, locked")
     .eq("owner_id", userId)
     .order("position", { ascending: true });
 
@@ -92,7 +96,14 @@ export async function getJournalFolders(userId: string): Promise<Result<JournalF
     console.error("[journal] Could not load folders:", error.message);
     return { ok: false, message: describe(error) };
   }
-  return { ok: true, value: (data ?? []).map((r) => ({ id: r.id, name: r.name, position: r.position })) };
+  // ONE NARROW CAST: the generated types come from production, where
+  // journal_folders.locked (stage 3) isn't yet, so the select parser can't
+  // type this row. The shape is the four columns selected above.
+  const rows = (data ?? []) as unknown as { id: string; name: string; position: number; locked: boolean | null }[];
+  return {
+    ok: true,
+    value: rows.map((r) => ({ id: r.id, name: r.name, position: r.position, locked: r.locked === true })),
+  };
 }
 
 /**
@@ -147,7 +158,7 @@ export async function createJournalFolder(
     console.error("[journal] Could not add the folder:", error?.message);
     return { ok: false, message: error ? describe(error) : "Couldn't add that folder." };
   }
-  return { ok: true, value: { id: data.id, name: data.name, position: data.position } };
+  return { ok: true, value: { id: data.id, name: data.name, position: data.position, locked: false } };
 }
 
 /** `entryDate` is the writer's LOCAL date — the column has no default. */
@@ -256,4 +267,80 @@ export async function deleteJournalFolderRemote(id: string): Promise<WriteResult
     return { ok: false, message: describe(error) };
   }
   return { ok: true };
+}
+
+// --- the folder lock (backend stage 3, Database docs/HANDOVER_API.md) --------
+//
+// FOUR FUNCTIONS ARE THE WHOLE INTERFACE. `locked` is not client-writable
+// (the UPDATE grant covers only name and position), and the unlock windows
+// live in a table no client role can read. Locking needs no password;
+// opening a window and removing the lock both re-check the ACCOUNT PASSWORD
+// server-side (the web stand-in for MO1.1.2.2's Face ID), share one rate
+// limit (10 per 15 minutes) and answer a wrong password with
+// `success = false` rather than an error, so the attempt still counts.
+//
+// The generated types are read from production, where this stage isn't yet,
+// so the calls go through one narrow cast rather than a regenerated types
+// file (as services/recoveryCodes).
+
+type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
+const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+
+interface UnlockRow {
+  success: boolean;
+  message: string;
+  unlocked_until: string | null;
+}
+
+/** A lock call's outcome: `ok` with the window's end (null after removing
+ *  the lock), or the sentence to show under the password field. */
+export type LockOutcome = { ok: true; unlockedUntil: string | null } | { ok: false; message: string; code?: string };
+
+/** MO1.1.2.1 Lock: no password. Also closes any open window on the server. */
+export async function lockJournalFolderRemote(folderId: string): Promise<WriteResult> {
+  const { error } = await rpc<null>("lock_journal_folder", { p_folder_id: folderId });
+  if (error) {
+    console.error("[journal] Could not lock the folder:", error.code, error.message);
+    return { ok: false, message: describeLockError(error.code, error.message) };
+  }
+  return { ok: true };
+}
+
+async function passwordCall(
+  fn: "unlock_journal_folder" | "disable_journal_folder_lock",
+  folderId: string,
+  password: string
+): Promise<LockOutcome> {
+  const { data, error } = await rpc<UnlockRow | UnlockRow[]>(fn, { p_folder_id: folderId, p_password: password });
+  if (error) {
+    console.error(`[journal] ${fn} failed:`, error.code);
+    return { ok: false, code: error.code, message: describeLockError(error.code, error.message) };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { ok: false, message: describeLockError(undefined, undefined) };
+  // A wrong password: the server's sentence, safe to show verbatim.
+  if (!row.success) return { ok: false, message: row.message };
+  return { ok: true, unlockedUntil: row.unlocked_until };
+}
+
+/** MO1.1.2.2's unlock: a five-minute window, ending at `unlockedUntil`. */
+export function unlockJournalFolderRemote(folderId: string, password: string): Promise<LockOutcome> {
+  return passwordCall("unlock_journal_folder", folderId, password);
+}
+
+/** Turns the lock off for good (the second tap on MO1.1.2.1's Lock). */
+export function disableJournalFolderLockRemote(folderId: string, password: string): Promise<LockOutcome> {
+  return passwordCall("disable_journal_folder_lock", folderId, password);
+}
+
+/**
+ * WHETHER THIS ACCOUNT CAN OPEN A LOCK AT ALL. A Google-only account has no
+ * password, so it could lock a folder and never open it again (ATX77). Until
+ * design picks a fix, the API doc's mitigation: hide Lock for it. Errs
+ * towards hiding: a Google account that later set a password also reads
+ * false here (see hasEmailPassword).
+ */
+export async function accountCanUseFolderLock(): Promise<boolean> {
+  const { data } = await supabase.auth.getUser();
+  return !!data.user && hasEmailPassword(data.user);
 }

@@ -3,9 +3,9 @@ import { Card } from "../../components/ui/Card";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
-import { useApp } from "../../context/AppContext";
 import { PopupMenu } from "../../components/ui/PopupMenu";
-import { Check, EllipsisVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { Check, EllipsisVertical, ListChecks, Pencil, Plus, Trash2, X } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
@@ -16,6 +16,11 @@ import type { HabitIconKey, HabitItem } from "../../types";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COL = 28; // one day column, centre to centre (MO1.1.1)
+
+// Foundations › Inputs, focused: border 1.5 px primary.accent (a 1 px border
+// plus a 0.5 px ring, so nothing shifts), as on the Journal fields.
+const FOCUS_RING =
+  "focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))]";
 
 /** The Monday-first week holding `today`, as yyyy-mm-dd. */
 function weekOf(today: string): string[] {
@@ -32,9 +37,19 @@ function weekOf(today: string): string[] {
 // the user's own local date, which is why the same boxes look the same on a
 // phone and a laptop.
 //
-// ONLY TODAY IS TICKED HERE, as before: the week's earlier days show what was
-// done and later days are empty. Ticking a past day would be a new ability
-// (and would count toward achievements), so it waits for a decision.
+// ANY DAY OF THE WEEK UP TO TODAY IS TICKED HERE (the frame ticks earlier
+// days; handover-complete pass, 7 October 2026). Later days are faint and
+// can't be ticked. A past tick counts toward achievements like any other.
+//
+// HANDOVER-COMPLETE PASS: Edit and Delete are the swipe tiles (a mouse can
+// drag them open and the keyboard opens them with ArrowLeft on a focused
+// row), and the habit's name is not a tick target. Deleting still asks first:
+// it erases the habit's history (data safety).
+//
+// RESTORE ROUND (user, 7 October 2026): the ⋮ and the long-press /
+// right-click menu are back (D12), with the same Edit / Delete as before, in
+// Foundations' dropdown with the folder options' 36 pt rows. The ⋮ is the
+// mouse and keyboard path; the swipe tiles stay.
 //
 // LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
 // round check, the icon tile and the streak chip are the old row's. Parts new
@@ -67,8 +82,8 @@ export default function HabitsTab() {
   // Deleting a habit erases its history and streak, so it asks first (the
   // same confirm as a Journal folder).
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
-  // D12: Edit and Delete without a swipe, from a long-press on the row or
-  // its ⋮ button, in the shared dropdown menu.
+  // D12: Edit and Delete without a swipe, from a long-press or right-click
+  // on the row or its ⋮ button, in the shared dropdown menu.
   const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
   const startEdit = (h: HabitItem) => {
     setEditingId(h.id);
@@ -96,12 +111,30 @@ export default function HabitsTab() {
   const taken = new Set(habits.map((h) => h.label.trim().toLowerCase()));
   const suggestions = habitSuggestions.filter((s) => !taken.has(s.label.toLowerCase()));
 
+  // MO1.1.1 Loading: skeleton blocks at the anatomy positions, fill
+  // surface.soft, each block's radius: the grid card (r20) with its 59 pt
+  // header band, then rows of a 28 pt icon tile (r8), the name and the seven
+  // 24 pt circles at a 28 pt pitch.
   if (habitsLoading) {
     return (
-      <div className="animate-fade-slide-up">
-        <Card className="text-center py-8">
-          <p className="text-sm text-charcoal-faint">Loading…</p>
-        </Card>
+      <div className="animate-fade-slide-up" aria-busy="true">
+        <span className="sr-only" role="status">Loading your habits…</span>
+        <div aria-hidden className="rounded-[20px] overflow-hidden border border-charcoal/[0.08]">
+          <div className="h-[59px] bg-cream-soft" />
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center h-[60px] pl-3 pr-2.5 border-t border-charcoal/[0.04]">
+              <span className="w-7 h-7 rounded-lg bg-cream-soft shrink-0" />
+              <span className="ml-2.5 h-3 w-20 rounded bg-cream-soft" />
+              <span className="ml-auto flex shrink-0">
+                {DAY_NAMES.map((d) => (
+                  <span key={d} className="flex items-center justify-center" style={{ width: COL }}>
+                    <span className="w-6 h-6 rounded-full bg-cream-soft" />
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -111,6 +144,10 @@ export default function HabitsTab() {
     const done = new Set(h.doneDates ?? []);
     if (editingId === h.id) {
       return (
+        // Not drawn: the rename row (the board's "Swipe a habit left to
+        // rename"), built from Foundations › Inputs (44, r12, surface.soft,
+        // 14/600, focused border 1.5 primary.accent) and a text action
+        // (13/700 primary.accent).
         <div className="flex items-center gap-2.5 h-[59px] pl-3 pr-3 bg-cream-card">
           <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
             <Icon size={14} className="text-primary-dark" />
@@ -124,9 +161,9 @@ export default function HabitsTab() {
               if (e.key === "Escape") setEditingId(null);
             }}
             aria-label={`Rename ${h.label}`}
-            className="flex-1 min-w-0 rounded-lg bg-cream-soft border border-charcoal/10 px-2 py-1 text-sm"
+            className={`flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal ${FOCUS_RING}`}
           />
-          <button onClick={() => saveRename(h.id)} className="tap text-xs font-semibold text-primary">
+          <button onClick={() => saveRename(h.id)} className="tap h-11 px-1 text-[13px] font-bold text-primary-accent">
             Save
           </button>
         </div>
@@ -146,11 +183,11 @@ export default function HabitsTab() {
           },
           { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
         ]}
+        keyboardLabel={`${h.label}. Arrow left for Edit and Delete`}
         onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
-          {/* Tapping the habit still ticks today, as it always has. */}
-          <button onClick={() => toggleHabit(h.id)} className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
               <Icon size={14} className="text-primary-dark" />
             </span>
@@ -165,16 +202,20 @@ export default function HabitsTab() {
                 </span>
               )}
             </span>
-          </button>
-          {/* D12: the keyboard and mouse path to Edit / Delete. */}
+          </div>
+          {/* D12 (restore round): the keyboard and mouse path to Edit /
+              Delete. The 16 pt ⋮ in text.muted (its pre-redesign colour) keeps
+              its 20 pt column so the seven day columns keep their pitch; the
+              target is 44 tall. */}
           <button
+            type="button"
             onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
             aria-label={`${h.label}, more options`}
             aria-haspopup="menu"
             aria-expanded={menu?.habit.id === h.id}
-            className="tap w-5 h-8 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint"
+            className="tap w-5 h-11 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
           >
-            <EllipsisVertical size={16} />
+            <EllipsisVertical size={16} aria-hidden />
           </button>
           <div className="flex shrink-0">
             {week.map((day, i) => {
@@ -189,10 +230,10 @@ export default function HabitsTab() {
                   className={clsx("flex items-center justify-center h-[59px]", isToday && "bg-th-aea1dc/[0.102] dark:bg-primary-pale")}
                   style={{ width: COL }}
                 >
-                  {isToday ? (
+                  {!future ? (
                     <button
-                      onClick={() => toggleHabit(h.id)}
-                      aria-label={`${h.label}, today: ${ticked ? "done" : "not done"}`}
+                      onClick={() => toggleHabit(h.id, day)}
+                      aria-label={`${h.label}, ${isToday ? "today" : DAY_NAMES[i]}: ${ticked ? "done" : "not done"}`}
                       aria-pressed={ticked}
                       className={clsx(
                         "tap w-6 h-6 rounded-full flex items-center justify-center border",
@@ -203,15 +244,10 @@ export default function HabitsTab() {
                     </button>
                   ) : (
                     <span
-                      aria-label={`${DAY_NAMES[i]}: ${ticked ? "done" : future ? "upcoming" : "not done"}`}
+                      aria-label={`${DAY_NAMES[i]}: upcoming`}
                       role="img"
-                      className={clsx(
-                        "w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary-fill border-primary-fill" : future ? "border-charcoal/[0.06]" : "border-charcoal/15 dark:border-[#807C93]"
-                      )}
-                    >
-                      {ticked && <Check size={13} className="text-on-primary-fill" strokeWidth={3} />}
-                    </span>
+                      className="w-6 h-6 rounded-full flex items-center justify-center border border-charcoal/[0.06]"
+                    />
                   )}
                 </span>
               );
@@ -224,22 +260,20 @@ export default function HabitsTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      {/* A FAILED READ OR WRITE SAYS SO, and leaves whatever is on screen
-          alone. "No habits" and "the request failed" look identical once
-          rendered, and only one of them is true. */}
-      {habitsError && (
-        <p className="mb-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {habitsError}
-        </p>
-      )}
-
+      {/* MO1.1.1 Empty: Foundations › Empty state (56 primary.tint tile, 26
+          thin-stroke icon in primary.accent, title 15/700, one line 12.5/500
+          text.muted, max width 260); the pinned Add habit stays below. The
+          board names no icon: ListChecks (UNSPECIFIED). */}
       {habits.length === 0 && !habitsError && (
-        <Card className="text-center py-7 mb-4">
-          <p className="text-sm font-semibold text-charcoal mb-1">No habits yet</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4">
+        <div className="flex flex-col items-center text-center py-8">
+          <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
+            <ListChecks size={26} strokeWidth={1.5} aria-hidden />
+          </span>
+          <p className="text-[15px] font-bold text-charcoal mt-3">No habits yet</p>
+          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 leading-relaxed max-w-[260px]">
             Add one of your own below, or start from a suggestion.
           </p>
-        </Card>
+        </div>
       )}
 
       {/* MO1.1.1 #2: the week grid. A header band with the days (today
@@ -250,6 +284,9 @@ export default function HabitsTab() {
         // wordmark at its left (C-and-leaf mark 21 wide at x 32.5, ENTIUM
         // caps 9 tall, spread to x 152.5) and today's column running through
         // it; today's name #7D67D9, its date on a 26 × 22 #AB9ED7 tile.
+        // The outline keeps the pre-redesign card's 11% hairline in light (the
+        // list card existed at 4fdc109: decision 22's light-colour rule; the
+        // frame draws 1 px #AEA1DC).
         <Card padded={false} className="overflow-hidden !rounded-[20px]">
           <div className="flex items-center h-[59px] pl-3 pr-2.5 border-b border-charcoal/[0.04] bg-primary/60 dark:bg-primary-pale">
             <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-[7px] pl-1" role="img" aria-label="Centium">
@@ -300,10 +337,24 @@ export default function HabitsTab() {
         </Card>
       )}
 
-      <PopupMenu
+      {/* MO1.1.1 Error: an inline line in danger under the affected element
+          (the grid it failed to load or change). A failed read or write says
+          so and leaves whatever is on screen alone: "no habits" and "the
+          request failed" look identical once rendered. */}
+      {habitsError && (
+        <p role="alert" className="mt-2.5 text-[11.5px] leading-4 font-medium text-status-high">
+          {habitsError}
+        </p>
+      )}
+
+      {/* D12 (restore round): a habit's Edit / Delete without a swipe, in
+          Foundations' dropdown with MO1.1.2.1's 36 pt rows. Delete still asks
+          first, as the swipe tile does. */}
+      <PopupMenu<"edit" | "delete">
         open={!!menu}
         onClose={() => setMenu(null)}
         anchor={menu?.anchor ?? null}
+        rowLineHeight={16}
         options={[
           { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
           { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
@@ -315,6 +366,8 @@ export default function HabitsTab() {
         }}
       />
 
+      {/* Not drawn: deleting erases the habit's history and streak, so it
+          asks first (data safety). */}
       <ConfirmCard
         open={!!deleting}
         title="Delete this habit?"
@@ -333,12 +386,14 @@ export default function HabitsTab() {
       />
 
       {/* The page's own padding covers 112 of the room a pinned item needs:
-          the 48 pt button, or the 162 pt add panel. */}
-      <div aria-hidden style={{ height: adding ? 174 : 60 }} />
+          the 44 pt button, or the 162 pt add panel. */}
+      <div aria-hidden style={{ height: adding ? 174 : 56 }} />
 
       {adding ? (
         // MO1.1.1.1: "Tapping Add habit turns the button into the add panel.
-        // ✓ saves, × cancels. The icon row scrolls horizontally."
+        // ✓ saves, × cancels. The icon row scrolls horizontally." The
+        // border keeps the pre-redesign add form's 11% hairline in light
+        // (decision 22's light-colour rule; the frame draws 8%).
         <PinnedSlot aboveKeyboard>
           <Card padded={false} elevated className="rounded-[20px] py-3 pl-3.5">
             {/* SUGGESTIONS, NOT SEEDED ROWS. These five used to be written into
@@ -399,8 +454,9 @@ export default function HabitsTab() {
                 }}
                 placeholder="New habit…"
                 aria-label="New habit"
-                // MO1.1.1.1: 36 tall (level with the 36 pt ✓ and ×), about r14.
-                className="flex-1 min-w-0 h-9 rounded-[14px] bg-cream-soft border border-charcoal/10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                // MO1.1.1.1: 36 tall (level with the 36 pt ✓ and ×), about
+                // r14; focused, Foundations › Inputs' 1.5 primary.accent border.
+                className={`flex-1 min-w-0 h-9 rounded-[14px] bg-cream-soft border border-charcoal/10 px-3 text-sm ${FOCUS_RING}`}
               />
               <button
                 onClick={create}
@@ -421,11 +477,13 @@ export default function HabitsTab() {
         </PinnedSlot>
       ) : (
         <PinnedCta
+          // MO1.1.1 #3: 44 tall, radius 12 (the frame; C-01 no longer applies).
+          size="base"
           primary={{
             label: "Add habit",
             icon: <Plus size={15} />,
             // MO1.1.1 #3: filled #A198DF (--c-fill-cta, primary.cta.alt),
-            // 13.5/700 white (decision 23); 48/r14 per C-01.
+            // 13.5/700 white (decision 23).
             className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
             onClick: () => setAdding(true),
           }}
