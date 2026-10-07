@@ -24,6 +24,7 @@ import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
 import { PlateCalculatorSheet } from "./PlateCalculatorSheet";
 import { SetOptionsSheet } from "./SetOptionsSheet";
+import { PrBurst } from "./Confetti";
 import { CoachNotePopup } from "./CoachNotePopup";
 import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -151,8 +152,6 @@ export const WorkoutSessionSheet: React.FC<{
     markCoachNoteRead,
     activeSession,
     setActiveSession,
-    pregnancy,
-    cycleOffered,
   } = useApp();
 
   const routineRow = routineId ? routines.find((r) => r.id === routineId) ?? null : null;
@@ -194,6 +193,8 @@ export const WorkoutSessionSheet: React.FC<{
       (!!routineRow.coachNoteUpdatedAt && routineRow.coachNoteReadAt < routineRow.coachNoteUpdatedAt));
   const [tickKey, setTickKey] = useState<string | null>(null);
   const tickNonce = useRef(0);
+  // Restore round 2 (user, 2026-10-07): the WO8 PR burst, restored as on main.
+  const [burst, setBurst] = useState<{ key: number; rect: { left: number; top: number; width: number; height: number } } | null>(null);
   // Set-type dropdown, anchored to the set-number slot.
   const [typeMenu, setTypeMenu] = useState<{ exIdx: number; setIdx: number; anchor: HTMLElement } | null>(null);
   // Exercise ⋮ menu and its two follow-ups (rest times, super-set partner).
@@ -508,9 +509,16 @@ export const WorkoutSessionSheet: React.FC<{
     const next: LoggedSet = { ...current, ...fields, completed: logs, ...(values ?? {}) };
     updateSet(exIdx, setIdx, next);
     if (fields.outcome && !started) startClock();
-    // Handover-complete pass: no confetti burst over a new PR row (WO1.2
-    // draws none); the PR is still recorded.
-    if (kind === "pr" && setKind(current) !== "pr") recordPr(exIdx, next);
+    // Restore round 2 (user, 2026-10-07): a new PR rises a confetti burst
+    // from its row (WO8), as on main; PrBurst draws nothing under reduced motion.
+    if (kind === "pr" && setKind(current) !== "pr") {
+      const row = rowRefs.current.get(`${exIdx}-${setIdx}`);
+      if (row) {
+        const r = row.getBoundingClientRect();
+        setBurst({ key: Date.now(), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+      }
+      recordPr(exIdx, next);
+    }
     return true;
   };
 
@@ -770,14 +778,14 @@ export const WorkoutSessionSheet: React.FC<{
                 ? `Paused · ${formatDuration(elapsed)} elapsed`
                 : "Not started"}
             </p>
-            {/* Handover-complete pass: only the pregnancy chip (a safety note,
-                no frame) sits under the status line; the cycle-phase chip,
-                which WO1.2 does not draw, is gone. */}
-            {cycleOffered && pregnancy && (
-              <div className="flex justify-center empty:hidden" style={{ marginTop: 3 }}>
-                <CyclePhaseChip />
-              </div>
-            )}
+            {/* The cycle phase sits under the status line, not in the button row,
+                where it squeezed the routine name to "Regres…" at 393px.
+                Restore round 2 (user, 2026-10-07): main's gating again; the chip
+                itself shows the cycle phase (cycle offered, tracker on) or the
+                pregnancy week (cycle offered, a pregnancy recorded). */}
+            <div className="flex justify-center empty:hidden" style={{ marginTop: 3 }}>
+              <CyclePhaseChip />
+            </div>
           </div>
           <div className="flex items-center justify-end" style={{ gap: 8 }}>
             <button
@@ -937,6 +945,7 @@ export const WorkoutSessionSheet: React.FC<{
 
       <RPECalculator open={rpeOpen} onClose={() => setRpeOpen(false)} />
       <PlateCalculatorSheet open={plateCalcOpen} onClose={() => setPlateCalcOpen(false)} />
+      {burst && <PrBurst key={burst.key} rect={burst.rect} onDone={() => setBurst(null)} />}
 
       {/* Set-type dropdown: tap the set number (approved decision 15). */}
       <PopupMenu
