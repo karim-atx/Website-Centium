@@ -3,8 +3,9 @@ import { Card } from "../../components/ui/Card";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
-import { Check, ListChecks, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, EllipsisVertical, ListChecks, Pencil, Plus, Trash2, X } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
@@ -40,11 +41,15 @@ function weekOf(today: string): string[] {
 // days; handover-complete pass, 7 October 2026). Later days are faint and
 // can't be ticked. A past tick counts toward achievements like any other.
 //
-// HANDOVER-COMPLETE PASS: only what the frames draw. No ⋮ or long-press menu
-// (Edit and Delete are the swipe tiles; a mouse can drag them open and the
-// keyboard opens them with ArrowLeft on a focused row), and the habit's name
-// is not a tick target. Deleting still asks first: it erases the habit's
-// history (data safety).
+// HANDOVER-COMPLETE PASS: Edit and Delete are the swipe tiles (a mouse can
+// drag them open and the keyboard opens them with ArrowLeft on a focused
+// row), and the habit's name is not a tick target. Deleting still asks first:
+// it erases the habit's history (data safety).
+//
+// RESTORE ROUND (user, 7 October 2026): the ⋮ and the long-press /
+// right-click menu are back (D12), with the same Edit / Delete as before, in
+// Foundations' dropdown with the folder options' 36 pt rows. The ⋮ is the
+// mouse and keyboard path; the swipe tiles stay.
 //
 // LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
 // round check, the icon tile and the streak chip are the old row's. Parts new
@@ -77,6 +82,9 @@ export default function HabitsTab() {
   // Deleting a habit erases its history and streak, so it asks first (the
   // same confirm as a Journal folder).
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
+  // D12: Edit and Delete without a swipe, from a long-press or right-click
+  // on the row or its ⋮ button, in the shared dropdown menu.
+  const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
   const startEdit = (h: HabitItem) => {
     setEditingId(h.id);
     setEditDraft(h.label);
@@ -176,6 +184,7 @@ export default function HabitsTab() {
           { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
         ]}
         keyboardLabel={`${h.label}. Arrow left for Edit and Delete`}
+        onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -194,6 +203,20 @@ export default function HabitsTab() {
               )}
             </span>
           </div>
+          {/* D12 (restore round): the keyboard and mouse path to Edit /
+              Delete. The 16 pt ⋮ in text.muted (its pre-redesign colour) keeps
+              its 20 pt column so the seven day columns keep their pitch; the
+              target is 44 tall. */}
+          <button
+            type="button"
+            onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
+            aria-label={`${h.label}, more options`}
+            aria-haspopup="menu"
+            aria-expanded={menu?.habit.id === h.id}
+            className="tap w-5 h-11 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
+          >
+            <EllipsisVertical size={16} aria-hidden />
+          </button>
           <div className="flex shrink-0">
             {week.map((day, i) => {
               const ticked = done.has(day);
@@ -323,6 +346,25 @@ export default function HabitsTab() {
           {habitsError}
         </p>
       )}
+
+      {/* D12 (restore round): a habit's Edit / Delete without a swipe, in
+          Foundations' dropdown with MO1.1.2.1's 36 pt rows. Delete still asks
+          first, as the swipe tile does. */}
+      <PopupMenu<"edit" | "delete">
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        rowLineHeight={16}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!menu) return;
+          if (v === "edit") startEdit(menu.habit);
+          else setDeleting(menu.habit);
+        }}
+      />
 
       {/* Not drawn: deleting erases the habit's history and streak, so it
           asks first (data safety). */}

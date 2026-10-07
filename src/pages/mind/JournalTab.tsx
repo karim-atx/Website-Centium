@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   CalendarDays,
   ChevronDown,
+  EllipsisVertical,
   Folder,
   FolderCog,
   FolderPlus,
@@ -25,6 +26,7 @@ import type { JournalEntry, JournalFolder } from "../../types";
 import { JOURNAL_LIMITS, accountCanUseFolderLock } from "../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLogic";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../components/mind/JournalLock";
+import { entryMenuTarget } from "../../components/mind/entryMenu";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -64,10 +66,13 @@ const dateLabel = (iso: string) => {
 // the lock), so the password guards it here. Accounts with no password
 // (Google-only) aren't offered Lock: they could never open it again.
 //
-// HANDOVER-COMPLETE PASS (7 October 2026): the screen has only what the frames
-// draw. Entries have no ⋮, no long-press menu and no read sheet; Edit and
-// Delete are the swipe tiles (a mouse can drag them open; the keyboard opens
-// them with ArrowLeft on the focused row), and Edit shows the full text. Move
+// HANDOVER-COMPLETE PASS (7 October 2026): entries have no read sheet; Edit
+// and Delete are the swipe tiles (a mouse can drag them open; the keyboard
+// opens them with ArrowLeft on the focused row), and Edit shows the full
+// text. RESTORE ROUND (user, 7 October 2026): the entry ⋮ and the
+// long-press / right-click menu are back (D12) with the same Edit / Delete,
+// in Foundations' dropdown with the folder options' 36 pt rows; only open
+// folders show cards, so the menu never reaches a shut folder's entries. Move
 // reorders the tabs in place: the menu closes, the active tab is held, and a
 // tap on another tab (or the arrow keys) puts the folder there. Save is
 // always enabled; an empty field says so under itself.
@@ -124,6 +129,8 @@ export default function JournalTab() {
   // Menu anchors, held as state (not refs) since the menus read them in render.
   const [cogEl, setCogEl] = useState<HTMLButtonElement | null>(null);
   const [pickerEl, setPickerEl] = useState<HTMLButtonElement | null>(null);
+  // D12: the entry whose Edit / Delete menu is open, and what it anchors to.
+  const [entryMenu, setEntryMenu] = useState<{ entry: JournalEntry; anchor: HTMLElement } | null>(null);
   // Stage 3: whether Lock is offered (an account with a password), the
   // password being asked for and what follows it, and a failed Lock's line.
   const [canLock, setCanLock] = useState(false);
@@ -186,6 +193,14 @@ export default function JournalTab() {
   const entries = journalEntries
     .filter((e) => e.folderId === selected)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+  // D12 + the folder lock: the entry menu stands only while its entry is a
+  // card on screen, in the selected folder with that folder open. A window
+  // lapsing (or the entry going, or another tab being picked) drops it here,
+  // during render, so it can't pop back over a shut folder later.
+  const entryMenuEntry = entryMenuTarget(entryMenu?.entry.id, entries, selectedFolder, journalUnlockedUntil);
+  const entryFolderOpen = !!entryMenuEntry;
+  if (entryMenu && !entryFolderOpen) setEntryMenu(null);
 
   const resetCompose = () => {
     setTitle("");
@@ -497,9 +512,26 @@ export default function JournalTab() {
                 },
               ]}
               keyboardLabel={`${dateLabel(e.date)}, ${e.title}. Arrow left for Edit and Delete`}
+              onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
             >
               <Card className="px-5 py-[19px]">
-                <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+                <div className="flex items-center justify-between gap-2 h-4">
+                  <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+                  {/* D12 (restore round): the keyboard and mouse path to Edit /
+                      Delete. A 16 pt ⋮ in text.muted (its pre-redesign
+                      colour) on the date line, so the card keeps its 94 pt
+                      anatomy; a 44 pt target is centred on it. */}
+                  <button
+                    type="button"
+                    onClick={(ev) => setEntryMenu({ entry: e, anchor: ev.currentTarget })}
+                    aria-label={`${e.title}, more options`}
+                    aria-haspopup="menu"
+                    aria-expanded={entryMenu?.entry.id === e.id}
+                    className="tap relative -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
+                  >
+                    <EllipsisVertical size={16} aria-hidden />
+                  </button>
+                </div>
                 <div
                   aria-hidden
                   className="mt-[9px] h-px"
@@ -583,6 +615,28 @@ export default function JournalTab() {
         ]}
         onSelect={onFolderOption}
       />
+      {/* D12 (restore round): an entry's Edit / Delete without a swipe
+          (long-press, right-click or ⋮), in Foundations' dropdown with
+          MO1.1.2.1's 36 pt rows. The folder lock: cards only render in an
+          open folder, the menu closes the moment its folder shuts (the
+          five-minute window lapsing), and a pick re-checks the folder, so no
+          action reads or writes a shut folder's entries. */}
+      <PopupMenu<"edit" | "delete">
+        open={!!entryMenu && entryFolderOpen}
+        onClose={() => setEntryMenu(null)}
+        anchor={entryMenu?.anchor ?? null}
+        rowLineHeight={MENU_ROW_LINE}
+        options={[
+          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+        ]}
+        onSelect={(v) => {
+          if (!entryMenuEntry) return;
+          if (v === "edit") startEdit(entryMenuEntry);
+          else removeJournalEntry(entryMenuEntry.id);
+        }}
+      />
+
       {/* Delete is not linked on the board; deleting a folder deletes its
           entries, so the shared confirmation asks first (data safety). */}
       <ConfirmCard
