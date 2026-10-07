@@ -5,7 +5,8 @@ import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useApp } from "../../context/AppContext";
 import { PopupMenu } from "../../components/ui/PopupMenu";
-import { Check, EllipsisVertical, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, EllipsisVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
@@ -156,10 +157,11 @@ export default function HabitsTab() {
             <span className="min-w-0">
               <span className="block truncate text-[13px] leading-[18px] font-medium text-charcoal">{h.label}</span>
               {/* MO1.1.1 (2x frame): a 16 pt chip 3 pt under the name, the
-                  count 10.5 pt. The frame's leaf waits on the asset (decision 9). */}
+                  count 10.5 pt, after the handover's leaf outlined in lavender, about
+                  6 × 11 pt with a 1 pt stroke (decision 9 superseded). */}
               {h.streakDays > 0 && (
                 <span className="mt-[3px] h-4 inline-flex items-center gap-0.5 text-[10.5px] leading-none font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-1.5">
-                  <Flame size={11} /> {h.streakDays}
+                  <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
                 </span>
               )}
             </span>

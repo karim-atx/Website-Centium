@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
 
 export interface PopupMenuOption<V extends string = string> {
   value: V;
@@ -63,6 +63,12 @@ interface PopupMenuProps<V extends string> {
    * menu as it is.
    */
   gap?: number;
+  /**
+   * The option label's line height in px when a frame draws other than the
+   * inherited one (MO1.1.2.1: 16, so a bordered row is 36 tall, measured).
+   * Unset leaves every other menu as it is.
+   */
+  rowLineHeight?: number;
 }
 
 /**
@@ -110,6 +116,7 @@ export function PopupMenu<V extends string>({
   backdrop = true,
   noteType,
   gap = GAP,
+  rowLineHeight,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
@@ -223,6 +230,7 @@ export function PopupMenu<V extends string>({
                       color: filled ? "rgb(var(--c-on-primary-fill))" : opt.destructive ? c("destructive") : "rgb(var(--c-charcoal))",
                       fontSize: textPx(12.5),
                       fontWeight: on ? 700 : 500,
+                      ...(rowLineHeight ? { lineHeight: linePx(rowLineHeight) } : {}),
                     }
               }
             >

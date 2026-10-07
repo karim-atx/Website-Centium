@@ -390,10 +390,12 @@ export default {
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
         // Mobile v5.1 MO1.1.3.2: the unlock pill's one light sheen while it
-        // holds. Never runs under prefers-reduced-motion (the pill is static).
+        // holds. Never runs under reduced motion (the pill is static). Moves
+        // a pill-wide layer whose stripe starts 56 px off the left edge, so
+        // 100% + 72 px carries it (and its skew) fully past the right one.
         "unlock-sheen": {
           "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(420%)" },
+          "100%": { transform: "translateX(calc(100% + 72px))" },
         },
         // v2 Centium landing handoff: the reviews conveyor belt (duplicated
         // card list, translated exactly -50% of its own width minus the

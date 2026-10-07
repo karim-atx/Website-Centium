@@ -905,8 +905,10 @@ interface AppState {
   journalLoading: boolean;
   journalError: string | null;
   journalEntries: JournalEntry[];
-  addJournalEntry: (folderId: string, title: string, text: string) => void;
-  updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => void;
+  /** Resolves to null once saved, or the error message (MO1.1.2.3 keeps the
+   *  sheet open, with what was written, until the save lands). */
+  addJournalEntry: (folderId: string, title: string, text: string) => Promise<string | null>;
+  updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => Promise<string | null>;
   removeJournalEntry: (id: string) => void;
   addJournalFolder: (name: string) => void;
   /** MO1.1.2.1 folder options. */
@@ -3365,6 +3367,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
+  // DEV BUILDS ONLY: `__centiumUnlock(n)` in the console queues n unlock
+  // pills (MO1.1.3.2) for frame-by-frame checks, using this account's own
+  // loaded achievements (or one Bronze "Ten down" sample when none are
+  // loaded). Nothing is written anywhere; the guard drops it from production.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __centiumUnlock?: (n?: number) => number };
+    w.__centiumUnlock = (n = 1) => {
+      const pool: Achievement[] = achievements && achievements.length > 0 ? achievements : [
+        {
+          key: "dev-sample", category: "training", title: "Ten down", description: "Finish 10 workouts",
+          icon: "🏋️", points: 50, groupKey: null, level: "bronze", threshold: 10, currentValue: 10,
+          sortOrder: 0, earnedAt: null, newlyEarned: true,
+        },
+      ];
+      const stamp = Date.now();
+      const items = Array.from({ length: Math.max(1, n) }, (_, i) => ({
+        ...pool[i % pool.length],
+        key: `dev-unlock-${stamp}-${i}`,
+        newlyEarned: true,
+      }));
+      setUnlockQueue((prev) => [...prev, ...items]);
+      return items.length;
+    };
+    return () => {
+      delete w.__centiumUnlock;
+    };
+  }, [achievements]);
+
   const noteFeatureMilestone: AppState["noteFeatureMilestone"] = React.useCallback(
     (milestone) => {
       if (!authUserId) return;
@@ -5635,10 +5666,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // more, deliberately: it used to be current_date, which filed a 9am entry in
   // Auckland under yesterday.
   const addJournalEntry = (folderId: string, title: string, text: string) => {
-    void createJournalEntry({ folderId, title, body: text, entryDate: today }).then((result) => {
+    return createJournalEntry({ folderId, title, body: text, entryDate: today }).then((result) => {
       if (!result.ok) {
         setJournalError(result.message);
-        return;
+        return result.message;
       }
       setJournalError(null);
       const e = result.value;
@@ -5647,24 +5678,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...prev,
       ]);
       refreshAchievements();
+      return null;
     });
   };
 
   const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => {
     const existing = journalEntries.find((e) => e.id === id);
-    if (!existing) return;
+    if (!existing) return Promise.resolve(null);
     const title = patch.title ?? existing.title;
     const text = patch.text ?? existing.text;
     const folderId = patch.folderId ?? existing.folderId;
-    void updateJournalEntryRemote(id, { title, body: text, folderId }).then((result) => {
+    return updateJournalEntryRemote(id, { title, body: text, folderId }).then((result) => {
       if (!result.ok) {
         setJournalError(result.message);
-        return;
+        return result.message;
       }
       setJournalError(null);
       setJournalEntries((prev) =>
         prev.map((e) => (e.id === id ? { ...e, title: title.trim(), text: text.trim(), folderId } : e))
       );
+      return null;
     });
   };
 
