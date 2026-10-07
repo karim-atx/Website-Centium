@@ -60,11 +60,12 @@ const MAX_PAGES = 4;
  * floating card over its foot that swipes between the professionals nearest
  * first; tapping a count pin loads its members into the card (B20).
  * Handover-complete pass: nothing is drawn around the map any more. The
- * "Change area" row, the "N of M nearby" counter, the distance pill, the
+ * "Change area" row, the "N of M nearby" counter, the
  * "You are here" dot, the visible nearest-first list, "Not on the map nearby"
  * and the too-many-results note are gone. The nearest-first list stays as the
  * map's screen-reader and keyboard alternative, visually hidden until a link
- * in it takes focus. Another area: the recentre button runs "Use my
+ * in it takes focus. Restore round 2 (user, 2026-10-07): the floating card's
+ * distance pill is back, as on main. Another area: the recentre button runs "Use my
  * location", and where that is refused or unavailable it opens the area
  * picker, as before.
  *
@@ -363,7 +364,7 @@ export const NearbyView: React.FC<{
                 >
                   {cards.map(({ p }) => (
                     <div key={p.profileId} className="w-full shrink-0 snap-center">
-                      <DirectoryCard listing={p} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
+                      <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
                     </div>
                   ))}
                 </div>

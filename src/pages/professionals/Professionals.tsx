@@ -45,6 +45,8 @@ import { useIsDark } from "../../hooks/useIsDark";
 // RESTORE ROUND (user, 2026-10-07): "Your professional" is back, as a slim row
 // above List / Map (the full card is gone). A listed professional opens their
 // profile page; an unlisted one opens the profile and CV sheet as before.
+// Restore round 2 (user, 2026-10-07): the row carries main's headline, role
+// line and View Profile again.
 
 const linkedIcon = (subtype?: string) =>
   subtype && subtype in professionalTypeIcon ? professionalTypeIcon[subtype as ProfessionalType] : UserCheck;
@@ -204,14 +206,21 @@ export default function Professionals() {
       {/* "YOUR PROFESSIONAL" (restore round, user, 2026-10-07): a slim row
           above List / Map, so it is there in both views. Not drawn on MO1.2;
           it takes the page's own row (Your reviews: 56 min, r20, card on the
-          option border, 14/600) with the directory card's type colours on a
-          36 avatar (photo or initials) and a Foundations eyebrow. */}
+          option border) with the directory card's type colours on a 36
+          avatar (photo or initials) and a Foundations eyebrow.
+          Restore round 2 (user, 2026-10-07): the headline, the role line
+          ("Linked to your account" when there is none) and View Profile are
+          back, as on main's card, in the row: the headline 12.5/600 and the
+          role 11.5/500 in the type colours (the directory card's), the name
+          14/700 in the type's deep; View Profile on the right as the
+          directory card's button (type button tint, r12, 12.5/700, Chevron
+          14) at 32 tall in a 44 pt target. As on main, a tap anywhere on the
+          row opens the profile and View Profile is the keyboard and
+          screen-reader path to the same place. */}
       {hasLinkedProfessional && (
-        <button
-          type="button"
+        <div
           onClick={openLinked}
-          aria-label={`Your professional, ${linkedName}. Open profile`}
-          className="tap mb-3 w-full min-h-[56px] flex items-center gap-3 rounded-[20px] bg-cream-card border border-charcoal/[0.08] px-4 py-2.5 text-left animate-fade-slide-up"
+          className="cursor-pointer mb-3 w-full min-h-[56px] flex items-center gap-3 rounded-[20px] bg-cream-card border border-charcoal/[0.08] pl-4 pr-3 py-2.5 animate-fade-slide-up"
         >
           <span
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[13px] font-bold"
@@ -229,21 +238,45 @@ export default function Professionals() {
               })()
             )}
           </span>
-          <span className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
             {/* Foundations `eyebrow`: 9/700 uppercase, 1.2, 0.16em; in the type colour. */}
-            <span
-              className="block text-[9px] font-bold uppercase tracking-[0.16em] leading-[1.2] mb-0.5"
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.16em] leading-[1.2] mb-0.5"
               style={{ color: linkedColours.main }}
             >
               Your professional
-            </span>
-            <span className="flex items-center gap-[5px] min-w-0">
-              <span className="text-[14px] font-semibold text-charcoal truncate">{linkedName}</span>
+            </p>
+            <p className="flex items-center gap-[5px] min-w-0">
+              <span className="text-[14px] font-bold truncate" style={{ color: linkedColours.deep }}>
+                {linkedName}
+              </span>
               {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={14} />}
+            </p>
+            {linkedDetail?.headline && (
+              <p className="text-[12.5px] font-semibold line-clamp-2 break-words" style={{ color: linkedColours.main }}>
+                {linkedDetail.headline}
+              </p>
+            )}
+            <p className="text-[11.5px] font-medium truncate" style={{ color: linkedColours.main }}>
+              {(linkedDetail ? professionalRole(linkedDetail) : null) ?? "Linked to your account"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openLinked();
+            }}
+            className="tap h-11 shrink-0 flex items-center"
+          >
+            <span
+              className="h-8 px-3 rounded-xl flex items-center gap-1 text-[12.5px] font-bold"
+              style={{ background: linkedColours.button, color: linkedColours.deep }}
+            >
+              View Profile <ChevronRight size={14} aria-hidden />
             </span>
-          </span>
-          <ChevronRight size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
-        </button>
+          </button>
+        </div>
       )}
 
       {/* MO1.2: List / Map as full-width segmented tabs under the header; the

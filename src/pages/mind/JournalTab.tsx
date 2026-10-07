@@ -369,16 +369,34 @@ export default function JournalTab() {
           asks for the first one rather than inventing it, as Foundations ›
           Empty state (a 56 primary.tint tile with a 26 thin-stroke icon in
           primary.accent, title 15/700, one line 12.5/500 muted, max width
-          260); the frame's own FolderPlus below makes it. */}
+          260); the frame's own FolderPlus below makes it. Restore round 2
+          (user, 2026-10-07): the quick folder chips are back under it, as on
+          main (Personal, Training, Nutrition, one tap each), as Foundations
+          chips (12/600, 13 × 7 padding, full radius) at a 44 pt target; light
+          keeps the pre-redesign cream-soft / charcoal-soft (decision 22). */}
       {journalFolders.length === 0 && !journalError && (
         <div className="flex flex-col items-center text-center py-8 mb-4">
           <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
             <Folder size={26} strokeWidth={1.5} aria-hidden />
           </span>
           <p className="text-[15px] font-bold text-charcoal mt-3">No folders yet</p>
-          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 leading-relaxed max-w-[260px]">
+          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 mb-2 leading-relaxed max-w-[260px]">
             Entries live in folders. Make the first one to start writing.
           </p>
+          <div className="flex flex-wrap gap-x-2 justify-center">
+            {["Personal", "Training", "Nutrition"].map((name) => (
+              <button
+                key={name}
+                onClick={() => addJournalFolder(name)}
+                className="tap min-h-11 flex items-center"
+              >
+                <span className="flex items-center gap-1.5 rounded-full bg-cream-soft border border-charcoal/[0.11] px-[13px] py-[7px] text-[12px] font-semibold text-charcoal-soft">
+                  {name}
+                  <Plus size={12} className="text-charcoal-faint" aria-hidden />
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

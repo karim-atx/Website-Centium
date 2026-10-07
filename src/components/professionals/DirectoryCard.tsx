@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, MapPin, Wallet } from "lucide-react";
+import { ChevronRight, MapPin, Navigation, Star, Wallet } from "lucide-react";
 import { VerifiedCheck } from "../cv/CvBadges";
 import type { DirectoryListing } from "../../services/directory";
 import { useIsDark } from "../../hooks/useIsDark";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
-import { initials, typeColours } from "./typeColour";
+import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
+import { goldPill, initials, typeColours } from "./typeColour";
 
 /** "Personal Trainer": the frame's type line, from the singular label. */
 const typeLabel = (s: DirectoryListing["subtype"]): string =>
@@ -12,26 +13,35 @@ const typeLabel = (s: DirectoryListing["subtype"]): string =>
 
 /**
  * A professional in the directory, shared by the list and the map's floating
- * card so the two open the same card.
+ * card so the two open the same card. `distance` is the map's line ("about
+ * 3 km away · near Hamra"), computed on the device; the list passes nothing,
+ * and null means not on the map near here (no area shared, or outside what
+ * was searched).
  *
  * MO1.2: photo or initials in the type's pill colour; name, headline and type
  * in the type colours; the area and price pills; the bio; a tinted
- * full-width "View Profile" (#EAE6F7 / #E1EFEC, measured). Handover-complete
- * pass: the rating pill and the map's distance pill are gone (neither card
- * draws them; the rating stays on the profile). The Verified mark by the name
+ * full-width "View Profile" (#EAE6F7 / #E1EFEC, measured). Restore round 2
+ * (user, 2026-10-07): the rating pill and the map's distance pill are back, as
+ * on main, in the card's own pill row (24 tall, 11/600, the type's pill
+ * colours; the rating as Foundations' gold reviews pill: an average once
+ * three reviews count towards it, "New" before that, from
+ * professional_rating_summary through the directory view). The Verified mark by the name
  * stays (a safety signal: a credential the Centium team checked); its meaning
  * is the mark's own tooltip and accessible name.
  * No monthly rate, no price pill (B5).
  */
 export const DirectoryCard: React.FC<{
   listing: DirectoryListing;
+  distance?: string | null;
   className?: string;
   /** MO1.2.2's floating map card leaves the bio out. */
   hideBio?: boolean;
-}> = ({ listing: p, className = "", hideBio }) => {
+}> = ({ listing: p, distance, className = "", hideBio }) => {
   const navigate = useNavigate();
   const dark = useIsDark();
   const t = typeColours(p.subtype, dark);
+  const gold = goldPill(dark);
+  const rating = ratingLabel(p.averageRating, p.reviewCount);
   const pill = "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold max-w-full";
   const open = () => navigate(`/app/professionals/${p.profileId}`);
   // MO1.2 interactions #11–14: a tap anywhere on the card opens the profile.
@@ -67,8 +77,8 @@ export const DirectoryCard: React.FC<{
         </div>
       </div>
 
-      {(p.location || p.monthlyRate != null) && (
-        <div className="flex flex-wrap gap-1.5 mt-3">
+      {/* Always shown: the gold reviews pill is on every card. */}
+      <div className="flex flex-wrap gap-1.5 mt-3">
           {p.location && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
               {/* Pill icons in the type's main colour, the text in its deep (sampled on MO1.2). */}
@@ -76,13 +86,36 @@ export const DirectoryCard: React.FC<{
               <span className="truncate">{p.location}</span>
             </span>
           )}
+          {/* Foundations › gold reviews pill (#FBF3E2 / 1 px #D9A441 / #9A7424,
+              Star in #D9A441), beside the area pill. Its size on the card is
+              not given: the card pills' 24 tall / 11 type with Star 12, at
+              the profile gold pill's 700 weight. */}
+          <span
+            className={`${pill} !font-bold`}
+            style={{ background: gold.bg, border: `1px solid ${gold.border}`, color: gold.ink }}
+            aria-label={
+              rating.kind === "average"
+                ? `Rated ${rating.value}, ${reviewCountLabel(rating.count)}`
+                : p.reviewCount > 0
+                  ? `New, ${reviewCountLabel(p.reviewCount)}`
+                  : "New, no rating yet"
+            }
+          >
+            <Star size={12} className="shrink-0" aria-hidden style={{ fill: gold.star, color: gold.star }} />
+            {rating.kind === "average" ? `${rating.value} · ${reviewCountLabel(rating.count)}` : "New"}
+          </span>
           {p.monthlyRate != null && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
               <Wallet size={12} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />${p.monthlyRate}/mo
             </span>
           )}
-        </div>
-      )}
+          {distance !== undefined && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <Navigation size={11} strokeWidth={1.75} className="shrink-0" aria-hidden style={{ color: t.main }} />
+              <span className="truncate">{distance ?? "Not on the map nearby"}</span>
+            </span>
+          )}
+      </div>
 
       {p.bio && !hideBio && <p className="text-[13px] text-charcoal-soft leading-relaxed mt-3 break-words">{p.bio}</p>}
 

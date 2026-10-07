@@ -7,6 +7,7 @@ import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
 import MeditationPage from "./MeditationPage";
 import { earnedCount } from "../../services/achievements";
+import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
 import { habitIcon } from "../../utils/icons";
 import {
@@ -98,8 +99,9 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 //   check (they can't be ticked by hand).
 // - The paging Habits widget stays on Home; points and tier stay on the
 //   Achievements page.
-// - The Meditation tile reads "Start a session" (static in the handover's
-//   copy table); the minutes stay on the Home Meditation widget.
+// - The Meditation tile keeps the live minutes when there are any
+//   (Restore round 2, user 2026-10-07, as on main); "Start a session" when
+//   there are none.
 // LIGHT MODE (decision 22): the tiles, the Today card's outline, the streak
 // strip and the checks are new since the redesign, so they take the frame's
 // own colours (lavender Journal, teal Meditation, gold Achievements; teal
@@ -113,6 +115,7 @@ export default function Mind() {
     toggleHabit,
     journalEntries,
     achievements,
+    meditationSummary,
     refreshAchievements,
     noteFeatureMilestone,
     today,
@@ -157,6 +160,13 @@ export default function Mind() {
   );
   const leadBest = lead ? Math.max(habitBestStreak(lead.doneDates ?? []), lead.streakDays) : 0;
   const LeadIcon = lead ? habitIcon[lead.icon] : null;
+
+  const meditationLine =
+    meditationSummary && !isEmptySummary(meditationSummary)
+      ? meditationSummary.secondsToday > 0
+        ? `${formatMeditationTime(meditationSummary.secondsToday)} today`
+        : `${formatMeditationTime(meditationSummary.secondsThisWeek)} this week`
+      : "Start a session";
 
   if (section) {
     return (
@@ -229,9 +239,9 @@ export default function Mind() {
             // MO1.1 icons list: Flower2 28/1.5.
             icon={<Flower2 size={28} strokeWidth={1.5} className="text-team-teal-deep dark:text-teal-dark" />}
             title="Meditation"
-            // MO1.1 copy: "Start a session" is static; the minutes are on
-            // the Home Meditation widget.
-            line="Start a session"
+            // Restore round 2: the live minutes, as on main; MO1.1's "Start a
+            // session" when there are none.
+            line={meditationLine}
           />
           {/* NOTHING IS SHOWN UNTIL SOMETHING HAS BEEN READ. A count of "0 of
               0" before the first call would be a number nobody earned. */}
