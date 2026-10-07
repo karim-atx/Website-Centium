@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -8,7 +8,7 @@ import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { usePinRealtime } from "../../hooks/usePinRealtime";
 import { useThreadRealtime } from "../../hooks/useThreadRealtime";
-import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
+import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu } from "../ui/PopupMenu";
 import { FileViewerSheet } from "../health/FileViewerSheet";
@@ -363,8 +363,19 @@ export const ThreadView: React.FC<{
    * loaded set changes and whenever message_reactions changes (realtime).
    */
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
-  // THE "N NEW MESSAGES" DIVIDER AND ITS JUMP PILL ARE GONE (handover-complete
-  // pass: MO1.2.1.3 draws neither). A chat opens at its newest message.
+  /**
+   * WHERE "N NEW MESSAGES" GOES, fixed when the chat opens: the reader's last
+   * read time as the list reported it. Marking the chat read on load moves the
+   * server's value, so it is captured once rather than read back. Null when
+   * nothing was unread; "" when they had never read this chat.
+   *
+   * Restore round 2 (user, 2026-10-07): the divider, opening at the first
+   * unread and the jump pill are back (MO1.2.1.3 draws none of them; the
+   * handover-complete pass had removed them).
+   */
+  const [readBefore] = useState<string | null>(() => (thread.unreadCount > 0 ? thread.lastReadAt ?? "" : null));
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const [dividerAbove, setDividerAbove] = useState(false);
   /**
    * Ids this viewer has starred. A set rather than a field on Message, because
    * stars live in their own table and are fetched separately — folding them
@@ -624,10 +635,29 @@ export const ThreadView: React.FC<{
   const isSending = !!pending;
   const newestId = messages[messages.length - 1]?.id;
   const [atBottomOnce, setAtBottomOnce] = useState(false);
+  const firstScrollDone = useRef(false);
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-    if (newestId) setAtBottomOnce(true);
+    // JUMP TO UNREAD on opening: the first new message sits near the top of
+    // the screen instead of the reader landing past everything they missed.
+    if (!firstScrollDone.current && newestId && dividerRef.current) {
+      dividerRef.current.scrollIntoView({ block: "center" });
+    } else {
+      endRef.current?.scrollIntoView({ block: "end" });
+    }
+    if (newestId) {
+      firstScrollDone.current = true;
+      setAtBottomOnce(true);
+    }
   }, [newestId, isSending]);
+
+  // The pill that jumps back to the divider, shown while it is above the screen.
+  useEffect(() => {
+    const el = dividerRef.current;
+    if (!el || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(([e]) => setDividerAbove(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [newestId, infoOpen]);
 
   // OLDER MESSAGES LOAD AS THE TOP COMES INTO VIEW, and only once the thread
   // has first been shown at its end — otherwise the top is on screen for the
@@ -1014,6 +1044,14 @@ export const ThreadView: React.FC<{
     }
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
   };
+
+  // "N NEW MESSAGES": before the first message from them newer than the
+  // reader's last read when the chat opened.
+  const dividerAt =
+    readBefore === null
+      ? -1
+      : messages.findIndex((m) => m.senderId !== authUserId && (readBefore === "" || m.createdAt > readBefore));
+  const newCount = dividerAt < 0 ? 0 : messages.slice(dividerAt).filter((m) => m.senderId !== authUserId).length;
 
   const actionsForMessage = (m: Message): MessageAction[] => {
     const mine = m.senderId === authUserId;
@@ -1448,6 +1486,17 @@ export const ThreadView: React.FC<{
                   {label}
                 </p>
               ))}
+              {/* "N NEW MESSAGES" (restore round 2, user, 2026-10-07): its
+                  pre-redesign look and light colours (decision 22). */}
+              {index === dividerAt && (
+                <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
+                  <span className="flex-1 h-px bg-primary/40" />
+                  <span className="text-xs font-bold text-primary-deep-text">
+                    {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+                  </span>
+                  <span className="flex-1 h-px bg-primary/40" />
+                </div>
+              )}
               <div
                 ref={(el) => {
                   bubbleRefs.current[m.id] = el;
@@ -1643,16 +1692,40 @@ export const ThreadView: React.FC<{
             {label}
           </p>
         ))}
-        {/* THEY ARE TYPING: said in the header ("typing…", MO1.2.1.3 #9);
-            the three-dot bubble here is gone (not drawn). Announced once
-            for a screen reader. */}
+        {/* THEY ARE TYPING: three dots where their next message will land,
+            as well as "typing…" in the header (MO1.2.1.3 #9). Restore round 2
+            (user, 2026-10-07): the bubble is back, in the received bubble's
+            shape (r 20 20 20 4) and colour. */}
         {theyAreTyping && (
-          <span role="status" className="sr-only">
-            {typingName ?? thread.participantName} is typing
-          </span>
+          <div
+            role="status"
+            aria-label={`${typingName ?? thread.participantName} is typing`}
+            className="self-start rounded-[20px_20px_20px_4px] bg-cream-soft px-3.5 py-2.5 flex gap-1"
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="w-[7px] h-[7px] rounded-full bg-primary/60 animate-pulse"
+                style={{ animationDelay: `${i * 180}ms` }}
+              />
+            ))}
+          </div>
         )}
         <div ref={endRef} />
       </div>
+
+      {/* JUMP TO UNREAD, while the divider is above the screen (restore round
+          2, user, 2026-10-07). 44 tall, the Foundations tap size. */}
+      {dividerAbove && newCount > 0 && (
+        <button
+          type="button"
+          onClick={() => dividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-11 flex items-center gap-1.5 shadow-lg"
+        >
+          <ArrowDown size={14} className="rotate-180" />
+          {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+        </button>
+      )}
 
       {(error || recorder.error) && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-2">
@@ -1788,18 +1861,23 @@ export const ThreadView: React.FC<{
         {recorder.recording ? (
           // MO1.2.1.3.6: the bar in the pale danger tint (the bar existed
           // pre-R1, so its light colour stays, decision 22), the dot, the
-          // timer and "Slide away to cancel". Handover-complete pass: the
-          // "· max N min" suffix and the past-the-distance ring / "Release to
-          // cancel" are gone; a release past the distance still cancels.
+          // timer and "Slide away to cancel". Restore round 2 (user,
+          // 2026-10-07): the "· max N min" suffix is back, and past the
+          // cancel distance the bar deepens (a ring in the danger colour) and
+          // says "Release to cancel".
           <div
             // 44 tall beside the 48 mic, 14 in to the dot (measured).
-            className="flex-1 h-11 flex items-center gap-2 rounded-full px-3.5 bg-status-high-bg"
+            className={`flex-1 h-11 flex items-center gap-2 rounded-full px-3.5 bg-status-high-bg ${
+              willCancel ? "ring-2 ring-status-high/50" : ""
+            }`}
           >
             <span className="w-2 h-2 rounded-full bg-status-high animate-pulse shrink-0" />
             <span className="text-[13px] font-bold tabular-nums text-status-high">
               {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, "0")}
             </span>
-            <span className="text-[11px] text-charcoal-faint truncate">Slide away to cancel</span>
+            <span className="text-[11px] text-charcoal-faint truncate">
+              {willCancel ? "Release to cancel" : `Slide away to cancel · max ${MAX_SECONDS / 60} min`}
+            </span>
           </div>
         ) : (
           <input
