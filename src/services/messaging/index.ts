@@ -427,25 +427,22 @@ export async function startVenueThread(gymId: string): Promise<StartThreadResult
   return { ok: true, threadId: id };
 }
 
-/** Which of these venues the caller owns (through business_profiles), for the owner-side title. */
-async function venuesOwnedByMe(venueIds: string[]): Promise<Set<string>> {
+/**
+ * The venue threads the caller is on the MEMBER side of. Every venue thread is
+ * created by the member (start_venue_thread refuses the venue's own owner), and
+ * both participants can always read the thread row, so created_by tells the
+ * sides apart even when the venue is hidden or the business deactivated, states
+ * in which the gyms / business_profiles rows are no longer readable. A null
+ * created_by (the member deleted their account) reads as the owner's side.
+ */
+async function venueThreadsIStarted(threadIds: string[]): Promise<Set<string>> {
   const mine = new Set<string>();
-  if (venueIds.length === 0) return mine;
+  if (threadIds.length === 0) return mine;
   const { data: auth } = await supabase.auth.getSession();
   const me = auth.session?.user.id;
   if (!me) return mine;
-  const from = supabase.from.bind(supabase) as unknown as (t: string) => {
-    select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null }> };
-  };
-  const { data: gyms } = await from("gyms").select("id, business_id").in("id", venueIds);
-  const rows = (gyms ?? []) as { id: string; business_id: string | null }[];
-  const businessIds = [...new Set(rows.map((g) => g.business_id).filter((b): b is string => !!b))];
-  if (businessIds.length === 0) return mine;
-  const { data: owners } = await from("business_profiles").select("id, profile_id").in("id", businessIds);
-  const ownedBusinesses = new Set(
-    ((owners ?? []) as { id: string; profile_id: string | null }[]).filter((b) => b.profile_id === me).map((b) => b.id)
-  );
-  for (const g of rows) if (g.business_id && ownedBusinesses.has(g.business_id)) mine.add(g.id);
+  const { data } = await supabase.from("message_threads").select("id, created_by").in("id", threadIds);
+  for (const t of (data ?? []) as { id: string; created_by: string | null }[]) if (t.created_by === me) mine.add(t.id);
   return mine;
 }
 
@@ -472,8 +469,8 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 
   // The venue columns are newer than the generated types (production).
   type VenueCols = { venue_id?: string | null; venue_name?: string | null; venue_initials?: string | null; venue_logo_url?: string | null };
-  const venueIds = [...new Set((data ?? []).map((r) => (r as VenueCols).venue_id).filter((v): v is string => !!v))];
-  const owned = await venuesOwnedByMe(venueIds);
+  const venueThreadIds = (data ?? []).filter((r) => !!(r as VenueCols).venue_id).map((r) => r.thread_id as string);
+  const memberSideThreads = await venueThreadsIStarted(venueThreadIds);
 
   const threads: MessageThread[] = (data ?? []).map((r) => {
     const v = r as VenueCols;
@@ -484,7 +481,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
             name: v.venue_name,
             initials: v.venue_initials?.trim() || v.venue_name.trim().charAt(0).toUpperCase(),
             logoUrl: v.venue_logo_url ?? null,
-            memberSide: !owned.has(v.venue_id),
+            memberSide: memberSideThreads.has(r.thread_id as string),
           }
         : null;
     const base: MessageThread = {
