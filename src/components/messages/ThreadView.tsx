@@ -1,14 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { useCall } from "../../context/CallContext";
-import { threadAllowsCalls, type CallKind } from "../../services/calling";
-import { checkCallMedia } from "../../utils/mediaPermissions";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { usePinRealtime } from "../../hooks/usePinRealtime";
 import { useThreadRealtime } from "../../hooks/useThreadRealtime";
-import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
+import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu } from "../ui/PopupMenu";
 import { FileViewerSheet } from "../health/FileViewerSheet";
@@ -63,7 +60,6 @@ import {
   sendFileAttachment,
   sendImageAttachment,
   sendMessage,
-  editMessage,
   deleteForEveryone,
   editTimeLeft,
   sendVoiceNote,
@@ -253,7 +249,7 @@ export const ThreadView: React.FC<{
   const departed = !isGroup && thread.participantId === null;
 
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
-  // ways; the composer and call buttons give way to a plain statement of it.
+  // ways; the composer gives way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
   const safetyApplies = !departed && thread.kind === "peer";
   // Reporting a message works in a direct chat and in a group alike.
@@ -342,8 +338,9 @@ export const ThreadView: React.FC<{
    * asked about first.
    */
   const [hiding, setHiding] = useState<Message | null>(null);
-  /** Your own message whose text the composer is editing. */
-  const [editing, setEditing] = useState<Message | null>(null);
+  // EDITING A SENT MESSAGE IS GONE (handover-complete pass): MO1.2.1.3.3's
+  // menu draws no Edit, so the composer's edit mode and its banner went with
+  // it. Messages already edited keep their " · edited" mark.
   /** Your own message awaiting "Delete for everyone" confirmation. */
   const [unsending, setUnsending] = useState<Message | null>(null);
   const [unsendBusy, setUnsendBusy] = useState(false);
@@ -358,15 +355,8 @@ export const ThreadView: React.FC<{
    * loaded set changes and whenever message_reactions changes (realtime).
    */
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
-  /**
-   * WHERE "N NEW MESSAGES" GOES, fixed when the chat opens: the reader's last
-   * read time as the list reported it. Marking the chat read on load moves the
-   * server's value, so it is captured once rather than read back. Null when
-   * nothing was unread; "" when they had never read this chat.
-   */
-  const [readBefore] = useState<string | null>(() => (thread.unreadCount > 0 ? thread.lastReadAt ?? "" : null));
-  const dividerRef = useRef<HTMLDivElement>(null);
-  const [dividerAbove, setDividerAbove] = useState(false);
+  // THE "N NEW MESSAGES" DIVIDER AND ITS JUMP PILL ARE GONE (handover-complete
+  // pass: MO1.2.1.3 draws neither). A chat opens at its newest message.
   /**
    * Ids this viewer has starred. A set rather than a field on Message, because
    * stars live in their own table and are fetched separately — folding them
@@ -390,39 +380,10 @@ export const ThreadView: React.FC<{
   // Re-checking on every 8s poll would spend a round trip to tidy up a
   // cosmetic edge nobody is standing on.
   const [canAttach, setCanAttach] = useState(false);
-  // Same shape and same reasoning as canAttach above, against the call
-  // predicate instead. thread_allows_calls delegates the relationship rule to
-  // thread_allows_attachments and adds "and the caller is a participant", so
-  // these two are asked separately rather than one being derived from the other.
-  const [canCall, setCanCall] = useState(false);
-  const [mediaNotice, setMediaNotice] = useState<string | null>(null);
-  const { placeCall: placeCallRemote, busy: callBusy } = useCall();
+  // THE VOICE AND VIDEO CALL BUTTONS ARE GONE from the header
+  // (handover-complete pass: MO1.2.1.3 draws Back, the person, Hire and
+  // Search only), and with them placing a call from a thread.
   const recorder = useVoiceRecorder();
-
-  /**
-   * Checks devices, then opens the call.
-   *
-   * PERMISSION BEFORE THE SERVER, deliberately. Minting a token and writing a
-   * ringing row for a caller whose microphone is blocked would ring the other
-   * person for a call that cannot carry audio — and end-call would have to
-   * clean it up. Asking first costs nothing when permission is already granted,
-   * since the browser resolves it without a prompt.
-   *
-   * A REFUSED CAMERA DOWNGRADES RATHER THAN FAILS: checkCallMedia asks audio
-   * and video separately for exactly this, so a blocked camera places a voice
-   * call and says so instead of stopping someone who can still talk.
-   */
-  const placeCall = async (kind: CallKind) => {
-    if (!thread.participantId) return;
-    setMediaNotice(null);
-    const media = await checkCallMedia(kind);
-    if (!media.canCall) {
-      setMediaNotice(media.message);
-      return;
-    }
-    if (media.message) setMediaNotice(media.message);
-    await placeCallRemote(thread.id, thread.participantId, media.degradedToVoice ? "voice" : kind);
-  };
 
   // PAGED. A thread opens on its newest page and older pages load as the
   // reader scrolls up (loadOlder). Every refresh re-reads only the newest page
@@ -505,20 +466,13 @@ export const ThreadView: React.FC<{
   useEffect(() => {
     let cancelled = false;
     setCanAttach(false);
-    setCanCall(false);
-    setMediaNotice(null);
     void threadAllowsAttachments(thread.id).then((allowed) => {
       if (!cancelled) setCanAttach(allowed);
     });
-    if (authUserId) {
-      void threadAllowsCalls(thread.id, authUserId).then((allowed) => {
-        if (!cancelled) setCanCall(allowed);
-      });
-    }
     return () => {
       cancelled = true;
     };
-  }, [thread.id, authUserId]);
+  }, [thread.id]);
 
   // Stars and the pin, read once when the thread opens.
   //
@@ -621,29 +575,10 @@ export const ThreadView: React.FC<{
   const isSending = !!pending;
   const newestId = messages[messages.length - 1]?.id;
   const [atBottomOnce, setAtBottomOnce] = useState(false);
-  const firstScrollDone = useRef(false);
   useEffect(() => {
-    // JUMP TO UNREAD on opening: the first new message sits near the top of
-    // the screen instead of the reader landing past everything they missed.
-    if (!firstScrollDone.current && newestId && dividerRef.current) {
-      dividerRef.current.scrollIntoView({ block: "center" });
-    } else {
-      endRef.current?.scrollIntoView({ block: "end" });
-    }
-    if (newestId) {
-      firstScrollDone.current = true;
-      setAtBottomOnce(true);
-    }
+    endRef.current?.scrollIntoView({ block: "end" });
+    if (newestId) setAtBottomOnce(true);
   }, [newestId, isSending]);
-
-  // The pill that jumps back to the divider, shown while it is above the screen.
-  useEffect(() => {
-    const el = dividerRef.current;
-    if (!el || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(([e]) => setDividerAbove(!e.isIntersecting && e.boundingClientRect.top < 0));
-    io.observe(el);
-    return () => io.disconnect();
-  }, [newestId, infoOpen]);
 
   // OLDER MESSAGES LOAD AS THE TOP COMES INTO VIEW, and only once the thread
   // has first been shown at its end — otherwise the top is on screen for the
@@ -664,22 +599,6 @@ export const ThreadView: React.FC<{
   const send = async () => {
     const body = draft.trim();
     if (!body || !authUserId || sending) return;
-    if (editing) {
-      // EDIT, NOT SEND. The database checks the fifteen minutes and that it is
-      // yours; the composer keeps the text if it refuses.
-      setSending(true);
-      setError(null);
-      const result = await editMessage(editing.id, body);
-      setSending(false);
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
-      setEditing(null);
-      setDraft("");
-      await load();
-      return;
-    }
     setSending(true);
     setError(null);
     // Optimistic, and deliberately NOT a message. `pending` is a rendering
@@ -1031,14 +950,6 @@ export const ThreadView: React.FC<{
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
   };
 
-  // "N NEW MESSAGES": before the first message from them newer than the
-  // reader's last read when the chat opened.
-  const dividerAt =
-    readBefore === null
-      ? -1
-      : messages.findIndex((m) => m.senderId !== authUserId && (readBefore === "" || m.createdAt > readBefore));
-  const newCount = dividerAt < 0 ? 0 : messages.slice(dividerAt).filter((m) => m.senderId !== authUserId).length;
-
   const actionsForMessage = (m: Message): MessageAction[] => {
     const mine = m.senderId === authUserId;
     const close = () => setActionsFor(null);
@@ -1077,21 +988,11 @@ export const ThreadView: React.FC<{
         close();
       },
     });
-    // EDIT, with the time left, only while the window is open and only for
-    // text. The note is the client's estimate; the server decides (ATX40).
+    // MO1.2.1.3.3 draws Reply, Forward, Star, Copy, Pin, Info and Delete for
+    // me. Kept beyond it: Report (safety) and, inside the server's window on
+    // your own message, Delete for everyone (your control over what you sent;
+    // the server decides, ATX40). Edit is gone (handover-complete pass).
     const left = mine ? editTimeLeft(m) : 0;
-    if (left > 0 && m.text?.trim()) {
-      list.push({
-        label: "Edit",
-        note: `${Math.max(1, Math.ceil(left / 60_000))} min left`,
-        onSelect: () => {
-          setReplyTo(null);
-          setEditing(m);
-          setDraft(m.text ?? "");
-          close();
-        },
-      });
-    }
     if (mine) list.push({ label: "Info", onSelect: () => {
       setInfoFor(m);
       close();
@@ -1268,7 +1169,7 @@ export const ThreadView: React.FC<{
         </button>
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
-            ellipses instead of pushing the call buttons off the edge. */}
+            ellipses instead of pushing Search off the edge. */}
         <button
           type="button"
           onClick={() => setInfoOpen(true)}
@@ -1314,29 +1215,9 @@ export const ThreadView: React.FC<{
           </span>
         </button>
 
-        {/* CALL CONTROLS, gated on canCall — asked once on open, failing
-            closed, and not the enforcement: mint-call-token re-checks
-            thread_allows_calls server-side. */}
-        {canCall && !isGroup && thread.participantId && !block.blocked && (
-          <>
-            <button
-              onClick={() => void placeCall("voice")}
-              disabled={callBusy}
-              aria-label={`Voice call ${thread.participantName}`}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
-            >
-              <Phone size={15} />
-            </button>
-            <button
-              onClick={() => void placeCall("video")}
-              disabled={callBusy}
-              aria-label={`Video call ${thread.participantName}`}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
-            >
-              <Video size={15} />
-            </button>
-          </>
-        )}
+        {/* MO1.2.1.3 draws a Hire button here (12.5/700 white on #9A8CD6,
+            Handshake 14) that opens MO1.2.1.5's plans. It waits on the
+            offers and payments backend, which doesn't exist yet. */}
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -1364,12 +1245,6 @@ export const ThreadView: React.FC<{
             or payment details in a message.
           </p>
         </div>
-      )}
-
-      {mediaNotice && (
-        <p className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
-          {mediaNotice}
-        </p>
       )}
 
       {/* THE PINNED BANNER, only when the pinned message is one this viewer
@@ -1402,14 +1277,16 @@ export const ThreadView: React.FC<{
       {/* MO1.2.1.3: 8 between bubbles (measured; spec rows 122/221/320). */}
       <div className="flex-1 flex flex-col gap-2 mb-3">
         {/* The top of the loaded history. Scrolling up to it loads the next
-            older page; the button is the same action for anyone not scrolling. */}
+            older page; the button is the same action for anyone not
+            scrolling, visually hidden until it takes keyboard focus (MO1.2.1.3
+            draws no button). */}
         <div ref={topRef}>
           {hasOlder && (
             <button
               type="button"
               onClick={() => void loadOlder()}
               disabled={loadingOlder}
-              className="tap mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
+              className="tap sr-only focus:not-sr-only mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
             >
               {loadingOlder ? "Loading earlier messages…" : "Load earlier messages"}
             </button>
@@ -1459,15 +1336,6 @@ export const ThreadView: React.FC<{
                   {label}
                 </p>
               ))}
-              {index === dividerAt && (
-                <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
-                  <span className="flex-1 h-px bg-primary/40" />
-                  <span className="text-xs font-bold text-primary-deep-text">
-                    {newCount === 1 ? "1 new message" : `${newCount} new messages`}
-                  </span>
-                  <span className="flex-1 h-px bg-primary/40" />
-                </div>
-              )}
               <div
                 ref={(el) => {
                   bubbleRefs.current[m.id] = el;
@@ -1637,7 +1505,8 @@ export const ThreadView: React.FC<{
         {/* The in-flight message, rendered after the real ones and outside the
             list. 90%, not lower: a parent opacity fades text toward the page. */}
         {pending && (
-          <div className="self-end max-w-[78%] rounded-[16px_16px_4px_16px] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
+          // The sent bubble's shape and type (MO1.2.1.3: r 20 20 4 20, max 76%, 13.5).
+          <div className="self-end max-w-[76%] rounded-[20px_20px_4px_20px] px-3 py-[9px] text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
             {pending.kind === "text" ? (
               pending.text
             ) : (
@@ -1662,36 +1531,16 @@ export const ThreadView: React.FC<{
             {label}
           </p>
         ))}
-        {/* THEY ARE TYPING: three dots where their next message will land. */}
+        {/* THEY ARE TYPING: said in the header ("typing…", MO1.2.1.3 #9);
+            the three-dot bubble here is gone (not drawn). Announced once
+            for a screen reader. */}
         {theyAreTyping && (
-          <div
-            role="status"
-            aria-label={`${typingName ?? thread.participantName} is typing`}
-            className="self-start rounded-2xl bg-cream-soft px-3.5 py-2.5 flex gap-1"
-          >
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-[7px] h-[7px] rounded-full bg-primary/60 animate-pulse"
-                style={{ animationDelay: `${i * 180}ms` }}
-              />
-            ))}
-          </div>
+          <span role="status" className="sr-only">
+            {typingName ?? thread.participantName} is typing
+          </span>
         )}
         <div ref={endRef} />
       </div>
-
-      {/* JUMP TO UNREAD, while the divider is above the screen. */}
-      {dividerAbove && newCount > 0 && (
-        <button
-          type="button"
-          onClick={() => dividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-9 flex items-center gap-1.5 shadow-lg"
-        >
-          <ArrowDown size={14} className="rotate-180" />
-          {newCount === 1 ? "1 new message" : `${newCount} new messages`}
-        </button>
-      )}
 
       {(error || recorder.error) && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-2">
@@ -1745,26 +1594,6 @@ export const ThreadView: React.FC<{
       <>
       <div className="flex-1" aria-hidden />
       <div className={`sticky ${footerBottom} bg-cream pt-2`}>
-      {editing && (
-        <div className="flex items-center gap-2 rounded-[10px] bg-cream-soft px-2.5 py-1.5 mb-2">
-          <Pencil size={14} className="text-primary-deep-text shrink-0" aria-hidden />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-extrabold text-primary-deep-text">Editing message</p>
-            <p className="text-[12.5px] text-charcoal-soft truncate">{editing.text}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setDraft("");
-            }}
-            aria-label="Cancel editing"
-            className="tap w-11 h-11 flex items-center justify-center text-charcoal-soft shrink-0"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
       {replyTo && (
         <QuotedMessage
           message={replyTo}
@@ -1818,30 +1647,27 @@ export const ThreadView: React.FC<{
           </>
         )}
         {recorder.recording ? (
-          // MO1.2.1.3.6: the bar is the pale danger tint throughout; past the
-          // cancel distance it deepens (a ring in the danger colour) so the
-          // slide-to-cancel feedback is kept.
+          // MO1.2.1.3.6: the bar in the pale danger tint (the bar existed
+          // pre-R1, so its light colour stays, decision 22), the dot, the
+          // timer and "Slide away to cancel". Handover-complete pass: the
+          // "· max N min" suffix and the past-the-distance ring / "Release to
+          // cancel" are gone; a release past the distance still cancels.
           <div
             // 44 tall beside the 48 mic, 14 in to the dot (measured).
-            className={`flex-1 h-11 flex items-center gap-2 rounded-full px-3.5 bg-status-high-bg ${
-              willCancel ? "ring-2 ring-status-high/50" : ""
-            }`}
+            className="flex-1 h-11 flex items-center gap-2 rounded-full px-3.5 bg-status-high-bg"
           >
             <span className="w-2 h-2 rounded-full bg-status-high animate-pulse shrink-0" />
             <span className="text-[13px] font-bold tabular-nums text-status-high">
               {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, "0")}
             </span>
-            <span className="text-[11px] text-charcoal-faint truncate">
-              {willCancel ? "Release to cancel" : `Slide away to cancel · max ${MAX_SECONDS / 60} min`}
-            </span>
+            <span className="text-[11px] text-charcoal-faint truncate">Slide away to cancel</span>
           </div>
         ) : (
           <input
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);
-              // Not while editing: an edit is not a new message on its way.
-              if (e.target.value && !editing) live.sendTyping(thread.id);
+              if (e.target.value) live.sendTyping(thread.id);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") void send();
@@ -1851,9 +1677,10 @@ export const ThreadView: React.FC<{
           />
         )}
 
-        {/* Same gate as the paperclip. Shown only when the draft is empty, so
-            Send stays the one primary action while typing. */}
-        {canAttach && recorder.supported && !draft.trim() && (
+        {/* Same gate as the paperclip. MO1.2.1.3.5 draws the Mic beside Send
+            whatever the field holds (handover-complete pass: it used to hide
+            while typing). */}
+        {canAttach && recorder.supported && (
           <button
             onPointerDown={(e) => void onRecordDown(e)}
             onPointerMove={onRecordMove}
@@ -1945,6 +1772,9 @@ export const ThreadView: React.FC<{
         noteType={{ size: 11, weight: 400, lineHeight: 15 / 11 }}
         // 8.5 above the composer (measured on MO1.2.1.3.4 at 2x; decision 23).
         gap={8.5}
+        // MO1.2.1.3.4 #11: the screen's overlay, rgba(36,31,27,0.4)
+        // (handover-complete pass; was Foundations' 0.18).
+        dim={0.4}
         options={[
           { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },
           {
@@ -2024,10 +1854,6 @@ export const ThreadView: React.FC<{
               if (!result.ok) {
                 setError(result.message);
                 return;
-              }
-              if (editing?.id === unsending.id) {
-                setEditing(null);
-                setDraft("");
               }
               await load();
             }}

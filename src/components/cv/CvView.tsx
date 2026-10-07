@@ -1,18 +1,26 @@
 import React from "react";
 import { ExternalLink } from "lucide-react";
 import clsx from "clsx";
-import { proficiencyLabel, type PublicCv } from "../../services/professional-cv";
+import type { PublicCv } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 
-// A professional's CV as a client reads it: the public profile, the client's
-// "Your professional" sheet, and the professional's own "Preview as a client"
-// all render through this one component, so the three cannot drift apart.
+// A professional's CV as a client reads it: the public profile and the
+// professional's own "Preview as a client" both render through this one
+// component, so the two cannot drift apart.
 //
-// MO1.2.1 (B8, here so all three follow): each section's name sits above its
-// card as a small uppercase label in the professional's type colour;
-// Experience and Licences read as a timeline of dots; Skills are pills with
-// no card. Order as the frame draws it: Experience, then certifications, then
-// skills, with the rest after.
+// MO1.2.1 / MO1.2.1.4 (B8): each section's name sits above its card as a
+// small uppercase label in the professional's type colour; Experience and
+// Certifications read as a timeline of dots; Skills are pills with no card.
+//
+// HANDOVER-COMPLETE PASS: only the frame's sections, in its order:
+// Experience ("Head coach, Flex Gym" over "2019 – present · Hamra, Beirut"),
+// Certifications (licences, then education: "BSc Exercise Science" over
+// "American University of Beirut · 2015"), Skills. Languages, Awards,
+// Publications, Links, Volunteering and the experience / education
+// descriptions are no longer shown to clients; the professional still sees
+// and edits them in their CV editor. Kept on a licence (safety: whether a
+// credential is still valid and where to check it): "Expired …" and "View
+// credential".
 //
 // MONTH AND YEAR ONLY. The views publish nothing finer, and this never asks.
 // Sections with nothing in them are left out rather than shown empty.
@@ -20,8 +28,10 @@ import { byRecency, formatMonth, formatRange } from "../../services/professional
 const CARD = "rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4";
 // MO1.2.1 / MO1.2.1.4: meta lines 11.5/400 rgb(140,131,120), the existing faint grey.
 const SUB = "text-[11.5px] font-normal text-charcoal-faint";
+const TITLE = "text-[13.5px] font-semibold text-charcoal break-words";
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter((p) => p && p.trim()).join(" · ");
+const comma = (...parts: (string | null | undefined)[]) => parts.filter((p) => p && p.trim()).join(", ");
 
 /** An https link from the CV, opened outside the app. The tables only accept https://. */
 const CvAnchor: React.FC<{ href: string; children: React.ReactNode }> = ({ href, children }) => (
@@ -57,7 +67,9 @@ const Label: React.FC<{ accent?: CvAccent; children: React.ReactNode }> = ({ acc
 const Dot: React.FC<{ accent?: CvAccent; last: boolean; children: React.ReactNode }> = ({ accent, last, children }) => (
   <li className="flex gap-3">
     {/* MO1.2.1 (measured): an 8 dot centred on the title's first line, a
-        1 px rule from 3 under it; the text 12 to the right of the dot. */}
+        1 px rule from 3 under it; the text 12 to the right of the dot. The
+        rule keeps its pre-redesign colour (decision 22: the timeline existed
+        at 4fdc109). */}
     <div className="w-2 flex flex-col items-center pt-[7px] shrink-0" aria-hidden>
       <span className={clsx("w-2 h-2 rounded-full shrink-0", !accent && "bg-primary")} style={accent ? { background: accent.label } : undefined} />
       {!last && <span className="w-px flex-1 bg-charcoal/10 mt-[3px]" />}
@@ -69,9 +81,10 @@ const Dot: React.FC<{ accent?: CvAccent; last: boolean; children: React.ReactNod
 export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccent }> = ({ cv, skills, accent }) => {
   const experience = byRecency(cv.experience, true);
   const education = byRecency(cv.education, false);
-  const volunteering = byRecency(cv.volunteering, true);
-  const awards = [...cv.awards].sort((a, b) => (b.awarded ?? "").localeCompare(a.awarded ?? ""));
-  const publications = [...cv.publications].sort((a, b) => (b.published ?? "").localeCompare(a.published ?? ""));
+  const certifications = [
+    ...cv.licences.map((l) => ({ kind: "licence" as const, id: `l-${l.id}`, l })),
+    ...education.map((e) => ({ kind: "education" as const, id: `e-${e.id}`, e })),
+  ];
 
   return (
     <div className="space-y-5">
@@ -81,51 +94,46 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
           <ol className={CARD}>
             {experience.map((e, i) => (
               <Dot key={e.id} accent={accent} last={i === experience.length - 1}>
-                <p className="text-[13.5px] font-semibold text-charcoal break-words">{e.title}</p>
-                <p className={SUB}>{join(formatRange(e.start, e.end, true), e.organisation, e.location)}</p>
-                {e.description && <p className="text-[13px] leading-[1.45] text-charcoal whitespace-pre-line break-words">{e.description}</p>}
+                <p className={TITLE}>{comma(e.title, e.organisation)}</p>
+                {join(formatRange(e.start, e.end, true), e.location) && (
+                  <p className={SUB}>{join(formatRange(e.start, e.end, true), e.location)}</p>
+                )}
               </Dot>
             ))}
           </ol>
         </section>
       )}
 
-      {cv.licences.length > 0 && (
-        <section aria-label="Licences and certifications">
-          <Label accent={accent}>Licences &amp; certifications</Label>
+      {certifications.length > 0 && (
+        <section aria-label="Certifications">
+          <Label accent={accent}>Certifications</Label>
           <ol className={CARD}>
-            {cv.licences.map((l, i) => (
-              <Dot key={l.id} accent={accent} last={i === cv.licences.length - 1}>
-                <p className="text-[13.5px] font-semibold text-charcoal break-words">{l.name}</p>
-                {/* MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill. */}
-                {join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null) && (
-                  <p className={SUB}>{join(l.issuingBody, formatMonth(l.issued), l.verified ? "Verified" : null)}</p>
-                )}
-                {l.expired && l.expires && <p className={SUB}>Expired {formatMonth(l.expires)}</p>}
-                {l.credentialUrl && <CvAnchor href={l.credentialUrl}>View credential</CvAnchor>}
-              </Dot>
-            ))}
+            {certifications.map((c, i) => {
+              const last = i === certifications.length - 1;
+              if (c.kind === "licence") {
+                const l = c.l;
+                // MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill.
+                const meta = join(l.issued ? `Issued ${formatMonth(l.issued)}` : null, l.verified ? "Verified" : null);
+                return (
+                  <Dot key={c.id} accent={accent} last={last}>
+                    <p className={TITLE}>{comma(l.name, l.issuingBody)}</p>
+                    {meta && <p className={SUB}>{meta}</p>}
+                    {l.expired && l.expires && <p className={SUB}>Expired {formatMonth(l.expires)}</p>}
+                    {l.credentialUrl && <CvAnchor href={l.credentialUrl}>View credential</CvAnchor>}
+                  </Dot>
+                );
+              }
+              const e = c.e;
+              const title = [e.degree, e.field].filter(Boolean).join(" ");
+              const meta = join(title ? e.institution : null, formatRange(e.start, e.end, false));
+              return (
+                <Dot key={c.id} accent={accent} last={last}>
+                  <p className={TITLE}>{title || e.institution}</p>
+                  {meta && <p className={SUB}>{meta}</p>}
+                </Dot>
+              );
+            })}
           </ol>
-        </section>
-      )}
-
-      {education.length > 0 && (
-        <section aria-label="Education">
-          <Label accent={accent}>Education</Label>
-          <div className={clsx(CARD, "space-y-3")}>
-          {education.map((e) => {
-            const title = [e.degree, e.field].filter(Boolean).join(" ");
-            return (
-              <div key={e.id} className="flex flex-col gap-[3px]">
-                <p className="text-sm font-bold text-charcoal break-words">{title || e.institution}</p>
-                {join(title ? e.institution : null, formatRange(e.start, e.end, false)) && (
-                  <p className={SUB}>{join(title ? e.institution : null, formatRange(e.start, e.end, false))}</p>
-                )}
-                {e.description && <p className="text-[13px] leading-[1.45] text-charcoal whitespace-pre-line break-words">{e.description}</p>}
-              </div>
-            );
-          })}
-          </div>
         </section>
       )}
 
@@ -144,83 +152,6 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
               </li>
             ))}
           </ul>
-        </section>
-      )}
-
-      {cv.languages.length > 0 && (
-        <section aria-label="Languages">
-          <Label accent={accent}>Languages</Label>
-          <div className={CARD}>
-              <dl className="space-y-1.5 text-[13.5px]">
-                {cv.languages.map((l) => (
-                  <div key={l.id} className="flex justify-between gap-3">
-                    <dt className="text-charcoal min-w-0 break-words">{l.language}</dt>
-                    <dd className="text-charcoal-soft shrink-0">{proficiencyLabel(l.proficiency)}</dd>
-                  </div>
-                ))}
-              </dl>
-          </div>
-        </section>
-      )}
-
-      {awards.length > 0 && (
-        <section aria-label="Awards">
-          <Label accent={accent}>Awards</Label>
-          <div className={clsx(CARD, "space-y-3")}>
-          {awards.map((a) => (
-            <div key={a.id} className="flex flex-col gap-[3px]">
-              <p className="text-sm font-bold text-charcoal break-words">{a.title}</p>
-              {join(a.issuer, formatMonth(a.awarded)) && <p className={SUB}>{join(a.issuer, formatMonth(a.awarded))}</p>}
-              {a.description && <p className="text-[13px] leading-[1.45] text-charcoal whitespace-pre-line break-words">{a.description}</p>}
-            </div>
-          ))}
-          </div>
-        </section>
-      )}
-
-      {publications.length > 0 && (
-        <section aria-label="Publications">
-          <Label accent={accent}>Publications</Label>
-          <div className={clsx(CARD, "space-y-3")}>
-          {publications.map((p) => (
-            <div key={p.id} className="flex flex-col gap-[3px]">
-              <p className="text-sm font-bold text-charcoal break-words">{p.title}</p>
-              {join(p.publisher, formatMonth(p.published)) && <p className={SUB}>{join(p.publisher, formatMonth(p.published))}</p>}
-              {p.description && <p className="text-[13px] leading-[1.45] text-charcoal whitespace-pre-line break-words">{p.description}</p>}
-              {p.url && <CvAnchor href={p.url}>Read</CvAnchor>}
-            </div>
-          ))}
-          </div>
-        </section>
-      )}
-
-      {cv.links.length > 0 && (
-        <section aria-label="Links">
-          <Label accent={accent}>Links</Label>
-          <div className={clsx(CARD, "space-y-2")}>
-          <ul className="flex flex-col gap-1">
-            {cv.links.map((l) => (
-              <li key={l.id}>
-                <CvAnchor href={l.url}>{l.label}</CvAnchor>
-              </li>
-            ))}
-          </ul>
-          </div>
-        </section>
-      )}
-
-      {volunteering.length > 0 && (
-        <section aria-label="Volunteering">
-          <Label accent={accent}>Volunteering</Label>
-          <div className={clsx(CARD, "space-y-3")}>
-          {volunteering.map((v) => (
-            <div key={v.id} className="flex flex-col gap-[3px]">
-              <p className="text-sm font-bold text-charcoal break-words">{v.role}</p>
-              <p className={SUB}>{join(v.organisation, formatRange(v.start, v.end, true))}</p>
-              {v.description && <p className="text-[13px] leading-[1.45] text-charcoal whitespace-pre-line break-words">{v.description}</p>}
-            </div>
-          ))}
-          </div>
         </section>
       )}
     </div>

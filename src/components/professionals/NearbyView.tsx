@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LocateFixed, MapPin } from "lucide-react";
-import { Card } from "../ui/Card";
+import { LocateFixed, LogIn, MapPin } from "lucide-react";
 import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { AreaPicker } from "./AreaPicker";
@@ -59,9 +58,15 @@ const MAX_PAGES = 4;
  *
  * MO1.2.2 (R12): a 560-tall map with avatar pins and a recentre button, and a
  * floating card over its foot that swipes between the professionals nearest
- * first; tapping a count pin loads its members into the card (B20). Below the
- * map, kept (B17): "Change area", the nearest-first list (also the map's
- * accessible alternative) and "Not on the map nearby".
+ * first; tapping a count pin loads its members into the card (B20).
+ * Handover-complete pass: nothing is drawn around the map any more. The
+ * "Change area" row, the "N of M nearby" counter, the distance pill, the
+ * "You are here" dot, the visible nearest-first list, "Not on the map nearby"
+ * and the too-many-results note are gone. The nearest-first list stays as the
+ * map's screen-reader and keyboard alternative, visually hidden until a link
+ * in it takes focus. Another area: the recentre button runs "Use my
+ * location", and where that is refused or unavailable it opens the area
+ * picker, as before.
  *
  * SEARCHES are kept well inside the database's 60-an-hour limit: one on
  * opening, then one only when the visible area moves to a different coarse
@@ -71,8 +76,7 @@ export const NearbyView: React.FC<{
   authUserId: string | null;
   dark: boolean;
   subtype: DirectoryListing["subtype"];
-  directory: DirectoryListing[];
-}> = ({ authUserId, dark, subtype, directory }) => {
+}> = ({ authUserId, dark, subtype }) => {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<"checking" | "ask" | "locating" | "ready">("checking");
   const [origin, setOrigin] = useState<Origin | null>(null);
@@ -206,14 +210,6 @@ export const NearbyView: React.FC<{
       .sort((a, b) => a.km - b.km);
   }, [found, origin, subtype]);
 
-  // Listed professionals not on the map near here: either they have not
-  // shared an area, or theirs is outside what has been searched. The database
-  // cannot tell the two apart for us, so the label says both.
-  const notOnMap = useMemo(() => {
-    const shown = new Set(nearby.map((n) => n.p.profileId));
-    return directory.filter((d) => (!subtype || d.subtype === subtype) && !shown.has(d.profileId));
-  }, [directory, nearby, subtype]);
-
   const distanceOf = (p: NearbyProfessional) =>
     origin ? describeDistance(distanceKm(origin.coords, { lat: p.lat, lng: p.lng })) : "";
   const placeOf = (p: NearbyProfessional) => (p.areaLabel ? ` · near ${p.areaLabel}` : "");
@@ -262,99 +258,97 @@ export const NearbyView: React.FC<{
     window.setTimeout(() => showCard(Math.max(0, i)), 0);
   };
 
+  // Foundations › Empty state: a 56 primary.tint tile with a 26 thin-stroke
+  // icon in primary.accent, title 15/700, one line 12.5/500 muted, max 260.
+  const emptyState = (icon: React.ReactNode, title: string, line: string, extra?: React.ReactNode) => (
+    <div className="flex flex-col items-center text-center py-8">
+      <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
+        {icon}
+      </span>
+      <p className="text-[15px] font-bold text-charcoal mt-3">{title}</p>
+      <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">{line}</p>
+      {extra}
+    </div>
+  );
+
   if (!authUserId) {
-    return (
-      <Card className="text-center py-8">
-        <p className="text-sm font-semibold text-charcoal">Sign in to see professionals near you</p>
-        <p className="text-xs text-charcoal-faint mt-1">The list of professionals stays open to everyone.</p>
-        <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
-          Sign in
-        </Button>
-      </Card>
+    // An account state the frame doesn't draw: the Foundations empty state
+    // with the Sign in button under it (handover-complete pass, no card).
+    return emptyState(
+      <LogIn size={26} strokeWidth={1.5} aria-hidden />,
+      "Sign in to see professionals near you",
+      "The list of professionals stays open to everyone.",
+      <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
+        Sign in
+      </Button>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
       {(phase === "checking" || phase === "locating") && (
-        <Card className="text-center py-8">
-          <p className="text-sm text-charcoal-faint" role="status">
+        // MO1.2.2 States, Loading: a skeleton block where the map goes
+        // (surface.soft, the map's 560 / r20).
+        <div aria-busy="true">
+          <span className="sr-only" role="status">
             {phase === "locating" ? "Finding your location…" : "Getting the map ready…"}
-          </p>
-        </Card>
-      )}
-
-      {phase === "ask" && (
-        // Decision 23 (kept-list 240): Foundations › Empty state (56
-        // primary.tint tile with LocateFixed 26 thin-stroke in primary.accent,
-        // title 15/700, line 12.5/500 muted, max 260); the two actions and the
-        // location note are kept under it.
-        <div className="flex flex-col items-center text-center py-8">
-          <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
-            <LocateFixed size={26} strokeWidth={1.5} aria-hidden />
           </span>
-          <p className="text-[15px] font-bold text-charcoal mt-3">See professionals near you</p>
-          <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
-            Use your location, or choose an area. Your location stays on this device: Centium only uses a
-            rough area (about 10 km) to find who's nearby, and never saves it.
-          </p>
-          {locError && (
-            <p className="mt-3 w-full text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{locError}</p>
-          )}
-          <div className="grid grid-cols-2 gap-2 mt-4 w-full">
-            <Button size="sm" onClick={() => void locateMe()}>
-              <LocateFixed size={15} /> Use my location
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
-              <MapPin size={15} /> Choose an area
-            </Button>
-          </div>
+          <div aria-hidden className="h-[560px] rounded-[20px] bg-cream-soft" />
         </div>
       )}
 
+      {phase === "ask" &&
+        // Decision 23 (kept-list 240): Foundations › Empty state; the two
+        // actions and the location note (privacy: what leaves the device) are
+        // kept under it.
+        emptyState(
+          <LocateFixed size={26} strokeWidth={1.5} aria-hidden />,
+          "See professionals near you",
+          "Use your location, or choose an area. Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it.",
+          <>
+            {locError && (
+              <p role="alert" className="mt-3 w-full text-[12.5px] font-medium text-status-high">
+                {locError}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2 mt-4 w-full">
+              <Button size="sm" onClick={() => void locateMe()}>
+                <LocateFixed size={15} /> Use my location
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+                <MapPin size={15} /> Choose an area
+              </Button>
+            </div>
+          </>
+        )}
+
       {phase === "ready" && origin && (
         <>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-charcoal-soft min-w-0 truncate">
-              Near <span className="font-semibold text-charcoal">{origin.label}</span>
-            </p>
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="tap min-h-[44px] text-[13px] font-bold text-primary-deep-text shrink-0"
-            >
-              Change area
-            </button>
-          </div>
           <div className="relative">
-            <Suspense
-              fallback={<div className="h-[560px] rounded-[20px] bg-cream-soft flex items-center justify-center text-sm text-charcoal-faint">Loading map…</div>}
-            >
+            <Suspense fallback={<div aria-hidden className="h-[560px] rounded-[20px] bg-cream-soft" />}>
               <NearbyMap
                 center={origin.coords}
-                zoom={origin.source === "device" ? 12 : 12}
+                zoom={12}
                 dark={dark}
                 pins={pins}
-                me={origin.coords}
                 onSelectPin={onSelectPin}
                 onViewChange={onViewChange}
                 onRecentre={() => void locateMe()}
-                className="h-[560px] rounded-[20px] overflow-hidden border border-charcoal/10"
-                ariaLabel="Map of professionals near you. Use the list below for the same results."
+                // MO1.2.2 #4: 358 × 560, r20, no visible border.
+                className="h-[560px] rounded-[20px] overflow-hidden"
+                ariaLabel={`Map of professionals near ${origin.label}. A list of the same results follows.`}
               />
             </Suspense>
             {/* THE FLOATING CARD (MO1.2.2): swipe for the next nearest; it is a
                 scroll-snap strip, so a keyboard or a mouse wheel moves it too. */}
             {cards.length > 0 && (
-              // Sits above the tile credit line, which must stay visible.
-              // MO1.2.2 #10: the card is 358 wide, flush with the map's edges.
-              <div className="absolute inset-x-0 bottom-[30px] z-[3]">
+              // MO1.2.2 #10: 358 wide, flush with the map's edges, its foot 40
+              // above the map's (the tile credit line stays visible under it).
+              <div className="absolute inset-x-0 bottom-10 z-[3]">
                 {cards.length > 1 && (
-                  <p className="text-center text-[11px] font-semibold text-charcoal-soft mb-1" aria-live="polite">
-                    <span className="inline-block rounded-full bg-cream-card/90 px-2 py-0.5 shadow-sm">
-                      {Math.min(active, cards.length - 1) + 1} of {cards.length}
-                      {cardSet ? " here" : " nearby"}
-                    </span>
+                  <p className="sr-only" aria-live="polite">
+                    {Math.min(active, cards.length - 1) + 1} of {cards.length}
+                    {cardSet ? " here" : " nearby"}
                   </p>
                 )}
                 <div
@@ -369,45 +363,50 @@ export const NearbyView: React.FC<{
                 >
                   {cards.map(({ p }) => (
                     <div key={p.profileId} className="w-full shrink-0 snap-center">
-                      <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
+                      <DirectoryCard listing={p} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
                     </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
-          {searchError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{searchError}</p>}
-          {searching && <p className="text-xs text-charcoal-faint" role="status">Searching this area…</p>}
-          {truncated && (
-            <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2">
-              There are a lot of professionals around here, so not all are shown. Zoom in for the nearest.
+          {/* States, Error: an inline line in danger under the map. */}
+          {searchError && (
+            <p role="alert" className="text-[12.5px] font-medium text-status-high text-center">
+              {searchError}
+            </p>
+          )}
+          {/* States, Empty: nobody nearby is not drawn; one muted line. */}
+          {nearby.length === 0 && !searching && !searchError && (
+            <p className="text-[12.5px] font-medium text-charcoal-faint text-center leading-relaxed">
+              No professionals have shared an area near {origin.label} yet. Try zooming out.
             </p>
           )}
 
-          <h2 className="section-label text-charcoal-soft mt-1">
-            Nearest first{nearby.length > 0 ? ` · ${nearby.length}` : ""}
-          </h2>
-          {nearby.length === 0 && !searching && (
-            <p className="text-sm text-charcoal-faint text-center py-4">
-              No professionals have shared an area near {origin.label} yet. Try zooming out or another area.
+          {/* THE MAP'S ACCESSIBLE ALTERNATIVE: the same results as links,
+              nearest first. Visually hidden (MO1.2.2 draws nothing under the
+              map); a link that takes keyboard focus shows the list. */}
+          <nav aria-label="Professionals near you, nearest first" className="sr-only focus-within:not-sr-only">
+            <p role="status">
+              {searching
+                ? "Searching this area…"
+                : `${nearby.length} near ${origin.label}${truncated ? ". Not all are shown here; zoom in for the nearest." : ""}`}
             </p>
-          )}
-          <div className="space-y-3">
-            {nearby.map(({ p }) => (
-              <DirectoryCard key={p.profileId} listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} />
-            ))}
-            {notOnMap.length > 0 && (
-              <>
-                <h2 className="section-label text-charcoal-soft pt-2">Not on the map nearby</h2>
-                <p className="text-xs text-charcoal-faint -mt-2">
-                  They haven't shared an area, or theirs is outside what you're looking at.
-                </p>
-                {notOnMap.map((d) => (
-                  <DirectoryCard key={d.profileId} listing={d} distance={null} />
-                ))}
-              </>
-            )}
-          </div>
+            <ul className="flex flex-col gap-1 mt-1">
+              {nearby.map(({ p }) => (
+                <li key={p.profileId}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/professionals/${p.profileId}`)}
+                    className="tap min-h-[44px] text-left text-[13px] font-semibold text-primary-deep-text"
+                  >
+                    {p.name}, {p.subtype ? SUBTYPE_SINGULAR[p.subtype] : "professional"}, {distanceOf(p)}
+                    {placeOf(p)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </>
       )}
 

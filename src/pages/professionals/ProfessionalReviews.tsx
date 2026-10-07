@@ -15,16 +15,19 @@ import { reportReview } from "../../services/professional-reviews";
 import { ratingDistribution, ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 
 // MO1.2.1.1 · Profile · Reviews, as a page (B9) where it used to be a sheet on
 // the profile. The summary card's breakdown is counted from the rows this
 // reader already has, so it needs no backend; the average and count are the
 // directory view's (professional_rating_summary), the same numbers the
-// profile shows. Everything the sheet carried stays (B12): the reader's own
-// review first, Report on each other review, the professional's reply, the
-// "Edited" tag and the moderator's note. The pinned action is "Write a
-// review", or "Edit your review" once there is one, and is absent for anyone
-// who cannot review (B11).
+// profile shows. Handover-complete pass: kept, though not drawn, only what
+// is safety or privacy: Report (⋮ menu), the moderator's note on a removed
+// review, the professional's reply (their right of reply to a public review
+// about them) and "A client" for a reviewer who didn't share their name. The
+// reader's own review is no longer pinned first and the "Edited" tags are
+// gone. The pinned action is "Write a review", or "Edit your review" once
+// there is one, and is absent for anyone who cannot review (B11).
 
 const typeName = (s: DirectoryListing["subtype"]) =>
   s ? SUBTYPE_SINGULAR[s].replace(/\b\w/g, (c) => c.toUpperCase()) : "Professional";
@@ -87,6 +90,11 @@ export default function ProfessionalReviews() {
     const found = await fetchListing(listing.profileId);
     if (found) setListing(found);
   };
+
+  // One list, newest first, as drawn: the reader's own review takes its place
+  // by date (handover-complete pass; it used to be pinned first), still
+  // labelled "You" since its name may not be shown to others.
+  const rows = [...others, ...(ownCounts && mine ? [mine] : [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const canWrite = !signedOut && canReview === true && !mine;
   const canEdit = !!mine && myStatus === "editable";
@@ -153,16 +161,17 @@ export default function ProfessionalReviews() {
         </div>
       ) : (
         <div className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4">
-          {mine && myStatus !== "withdrawn" && (
-            <div className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
-              <ReviewItem review={mine} layout="row" showName={false} replyLabel={`Reply from ${firstName}`} />
-            </div>
-          )}
-          {others.map((r) => (
+          {rows.map((r) =>
+            r.id === mine?.id ? (
+              <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
+                <ReviewItem review={r} layout="row" showName={false} replyLabel={`Reply from ${firstName}`} />
+              </div>
+            ) : (
             <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
-              {/* Decision 23 (kept-list 190): Report moves into a ⋮ menu
-                  (Foundations Dropdown menu) on the name line; the button
-                  keeps a 44 tap target (negative margins hold the row). */}
+              {/* Decision 23 (kept-list 190): Report (safety) in a ⋮ menu
+                  (Foundations Dropdown menu) on the name line; 44 tap target
+                  held in the row by negative margins (a hidden accessibility
+                  path: the drawn row is unchanged). */}
               <ReviewItem
                 review={r}
                 layout="row"
@@ -181,9 +190,10 @@ export default function ProfessionalReviews() {
                 }
               />
             </div>
-          ))}
-          {error && <p className="py-4 text-xs font-semibold text-status-high text-center">{error}</p>}
-          {!error && others.length === 0 && !(mine && myStatus !== "withdrawn") && (
+            )
+          )}
+          {error && <p role="alert" className="py-4 text-[12.5px] font-medium text-status-high text-center">{error}</p>}
+          {!error && rows.length === 0 && (
             // Decision 23 (kept-list 59): Foundations › Empty state with the
             // existing words as its title. The handover gives no copy for the
             // one line under it, so there is none (unspecified).
@@ -198,13 +208,16 @@ export default function ProfessionalReviews() {
       )}
 
       {(canWrite || canEdit) && (
+        // MO1.2.1.1 #9: 358 × 44, r12, #9A8CD6 (the type's CTA fill), 13.5/700
+        // white, Pencil 15, gap 7. "Edit your review" is the same action once
+        // the reader has one (a state the frame doesn't draw).
         <PinnedCta
+          size="base"
           primary={{
             label: canEdit ? "Edit your review" : "Write a review",
             icon: <Pencil size={15} />,
             onClick: () => setFormOpen(true),
-            // The professional's type colour, as on the profile's actions.
-            style: { background: t.main, color: t.onMain },
+            style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
           }}
         />
       )}

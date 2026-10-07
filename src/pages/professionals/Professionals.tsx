@@ -4,29 +4,14 @@ import { DataSharingSummary } from "../../components/professionals/DataSharingSu
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
-import { fetchLinkedProfessionals } from "../../services/consent";
-import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
-import { BottomSheet } from "../../components/ui/BottomSheet";
-import { ChevronRight, UserCheck } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
-import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
 import { DirectoryCard } from "../../components/professionals/DirectoryCard";
-import { initials, typeColours } from "../../components/professionals/typeColour";
 import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
 import { YourReviewsSection } from "../../components/professionals/YourReviewsSection";
-import { sortByRating } from "../../services/professional-reviews/rules";
 import { List, Map as MapIcon, Users } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
-import { CvView } from "../../components/cv/CvView";
-import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
-import {
-  fetchConnectedProfessional,
-  professionalRole,
-  type ConnectedProfessional,
-} from "../../services/connected-professional";
-import { professionalTypeIcon } from "../../utils/icons";
 
 // LINKED_PROFESSIONAL_REVIEW_ID USED TO LIVE HERE, and it was the literal
 // string "me": a sentinel key under which a client's review of their linked
@@ -35,9 +20,16 @@ import { professionalTypeIcon } from "../../utils/icons";
 // it. Reviews are professional_reviews rows keyed on the professional's real
 // account uuid now, so the sentinel is gone rather than left as an import
 // nothing can honour.
-
-const linkedIcon = (subtype?: string) =>
-  subtype && subtype in professionalTypeIcon ? professionalTypeIcon[subtype as ProfessionalType] : UserCheck;
+//
+// HANDOVER-COMPLETE PASS (MO1.2 / MO1.2.2): the page is the header, List / Map,
+// the category rail and the cards, as drawn. Removed because the frames don't
+// draw them: the "Your professional" card and its profile / CV sheet (a
+// connected professional is still reached from Data sharing below, Profile ›
+// Connected professionals and, when listed, their card), the Name / Top rated
+// sort and the Verified explainer line under the list. Kept under the list:
+// "Your reviews" (it is the only way to reach a review of an unlisted or past
+// professional, so removing it would strand what the user wrote) and Data
+// sharing (privacy controls).
 
 // Keyed on the DATABASE enum, not the app's four-value ProfessionalType. The
 // two nearly agree, except professional_subtype also has 'other' — a real
@@ -48,21 +40,15 @@ type Subtype = Enums<"professional_subtype">;
 // The chip labels, shared with the card (SUBTYPE_LABELS).
 const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
 
-/** The old toggle's and chips' light colours, kept on the segmented controls (decision 15). */
+/**
+ * The old toggle's and chips' light colours, kept on the segmented controls:
+ * both existed before the redesign (4fdc109), so their light colours stay
+ * pre-R1 (decision 22). Layout and sizes follow the frame.
+ */
 const CONTROL_LIGHT = {
   activeFill: "rgb(var(--c-primary-fill))",
   activeInk: "rgb(var(--c-on-primary-fill))",
   idleFill: "rgb(var(--c-cream-card))",
-  idleInk: "rgb(var(--c-charcoal-soft))",
-};
-
-/** Foundations' FO3 sub-tabs in light: active `primary` / white, idle on the track / #5B5349 (the sort, decision 23). */
-const SUBTAB_LIGHT = {
-  // primary-fill and its ink: #AEA1DC / white in Centium light, and each
-  // theme's own readable pair.
-  activeFill: "rgb(var(--c-primary-fill))",
-  activeInk: "rgb(var(--c-on-primary-fill))",
-  idleFill: "transparent",
   idleInk: "rgb(var(--c-charcoal-soft))",
 };
 
@@ -72,79 +58,10 @@ export default function Professionals() {
   /**
    * LIST OR MAP. The list is the directory, unchanged and open to everyone;
    * the map needs an account (the database's search is signed-in only) and
-   * asks for a location only once it is chosen. The category chips filter both.
+   * asks for a location only once it is chosen. The category rail filters both.
    */
   const [view, setView] = useState<"list" | "map">("list");
   const [type, setType] = useState<Subtype | null>(null);
-  const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
-  /** The list's order: as the directory returns it (by name), or top rated first. */
-  const [sort, setSort] = useState<"name" | "rating">("name");
-
-  // THE CARD NEEDS AN ACCOUNT, NOT A CODE. It is rendered from
-  // `user.linkedProfessionalCode`, local onboarding state — fine for showing a
-  // name, but the profile and CV hang off the real relationship from
-  // professional_clients via fetchLinkedProfessionals.
-  const [linkedProfessionalId, setLinkedProfessionalId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchLinkedProfessionals().then((result) => {
-      if (cancelled || result.status !== "ok") return;
-      // One card, one professional: this surface has only ever shown a single
-      // linked professional, so the first active relationship is the subject.
-      setLinkedProfessionalId(result.professionals[0]?.professionalId ?? null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // The linked professional's profile and CV, read when the sheet opens.
-  const [linkedDetail, setLinkedDetail] = useState<ConnectedProfessional | null>(null);
-  const [linkedCv, setLinkedCv] = useState<PublicCv | null>(null);
-  const [linkedError, setLinkedError] = useState<string | null>(null);
-
-  // The profile is read as soon as the relationship is known — the card shows
-  // the real name — and the CV when the sheet opens.
-  useEffect(() => {
-    if (!linkedProfessionalId) return;
-    let cancelled = false;
-    void fetchConnectedProfessional(linkedProfessionalId).then((detail) => {
-      if (cancelled) return;
-      if (!detail.ok) setLinkedError(detail.message);
-      else setLinkedDetail(detail.professional);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [linkedProfessionalId]);
-
-  useEffect(() => {
-    if (!linkedProfileOpen || !linkedProfessionalId) return;
-    let cancelled = false;
-    void fetchPublicCv(linkedProfessionalId).then((cv) => {
-      if (cancelled) return;
-      if (!cv.ok) {
-        setLinkedError(cv.message);
-        return;
-      }
-      setLinkedError(null);
-      setLinkedCv(cv.cv);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [linkedProfileOpen, linkedProfessionalId]);
-
-  // THE CARD FOLLOWS THE REAL RELATIONSHIP. It used to render only from
-  // `user.linkedProfessionalCode`, which is set when a code is redeemed during
-  // onboarding on this device — so a client connected any other way (an
-  // accepted hire request, another device) never saw it at all.
-  const hasLinkedProfessional = !!linkedProfessionalId || !!user.linkedProfessionalCode;
-  const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? "Your professional";
-  const linkedSubtype = linkedDetail?.subtype ?? user.linkedProfessionalSubtype;
-  /** The linked card's type colours, as the directory card's (B3). */
-  const linkedColours = typeColours(linkedSubtype ?? null, dark);
 
   // The real directory, replacing the static mockProfessionals array this
   // page browsed until now. Those entries were not accounts — their ids
@@ -171,8 +88,7 @@ export default function Professionals() {
     };
   }, []);
 
-  const byType = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
-  const filtered = sort === "rating" ? sortByRating(byType) : byType;
+  const filtered = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
 
   // Professionals get an entirely different dashboard here (client roster,
   // not a directory to browse) — separate UI per QA, not just a banner.
@@ -191,8 +107,7 @@ export default function Professionals() {
       />
 
       {/* MO1.2: List / Map as full-width segmented tabs under the header; the
-          rail sits 10 under it as drawn (decision 23, kept-list 38: the
-          account sections moved below the list). */}
+          rail sits 10 under it as drawn. */}
       <SegmentedTabs
         className="mb-2.5"
         items={[
@@ -232,108 +147,13 @@ export default function Professionals() {
       />
 
       {view === "map" && (
-        <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} directory={listings ?? []} />
+        <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} />
       )}
 
       <div className={`space-y-3 ${view === "map" ? "hidden" : ""}`}>
-        {/* V7 (QA 7.0): a professional who added this client via a client code
-            shows up here automatically — a separate identity from the browse
-            directory, since it's not one of those listings. Decision 23
-            (kept-list 63): a directory-style card (type-pill avatar, "Your
-            professional" eyebrow) pinned above the list, replacing the
-            gradient hero; a tap still opens the profile and CV sheet. */}
-        {hasLinkedProfessional && (
-          <div
-            onClick={() => setLinkedProfileOpen(true)}
-            className="cursor-pointer rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4 animate-fade-slide-up"
-          >
-            <div className="flex items-center gap-3.5">
-              <span
-                className="w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[18px] font-bold"
-                style={{ background: linkedColours.pill, color: linkedColours.deep }}
-              >
-                {linkedDetail?.avatarUrl ? (
-                  <img src={linkedDetail.avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : linkedDetail?.firstName || user.linkedProfessionalName ? (
-                  initials(linkedName)
-                ) : (
-                  (() => {
-                    const Icon = linkedIcon(linkedSubtype);
-                    return <Icon size={22} aria-hidden />;
-                  })()
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                {/* Foundations `eyebrow`: 9/700 uppercase, 1.2, 0.16em; in the type colour. */}
-                <p
-                  className="text-[9px] font-bold uppercase tracking-[0.16em] leading-[1.2] mb-0.5"
-                  style={{ color: linkedColours.main }}
-                >
-                  Your professional
-                </p>
-                <p className="flex items-center gap-[5px] min-w-0">
-                  <span className="text-[15px] font-bold truncate" style={{ color: linkedColours.deep }}>
-                    {linkedName}
-                  </span>
-                  {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={16} />}
-                </p>
-                {linkedDetail?.headline && (
-                  <p className="text-[12.5px] font-semibold line-clamp-2 break-words" style={{ color: linkedColours.main }}>
-                    {linkedDetail.headline}
-                  </p>
-                )}
-                <p className="text-[11.5px] font-medium truncate" style={{ color: linkedColours.main }}>
-                  {(linkedDetail ? professionalRole(linkedDetail) : null) ?? "Linked to your account"}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLinkedProfileOpen(true);
-              }}
-              // The directory card's View Profile (MO1.2: 40 tall, r12, 13.5/700, Chevron 14).
-              className="tap mt-3.5 w-full h-10 rounded-xl flex items-center justify-center gap-1 text-[13.5px] font-bold"
-              style={{ background: linkedColours.pill, color: linkedColours.deep }}
-            >
-              View Profile <ChevronRight size={14} aria-hidden />
-            </button>
-          </div>
-        )}
-        {/* Decision 23 (kept-list 249): the sort as FO3 sub-tabs, #F4F3F9
-            track r12 p4 gap 4, 32 items r9, 12 either side, 12/700 active on
-            primary, 12/600 #5B5349 idle on the track. Dark keeps the
-            SegmentedTabs dark colours. */}
-        {(listings?.length ?? 0) > 1 && (
-          <div role="group" aria-label="Sort" className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-charcoal-soft">Sort</span>
-            <SegmentedTabs
-              scroll
-              items={[
-                { key: "name", label: "Name" },
-                { key: "rating", label: "Top rated" },
-              ]}
-              activeKey={sort}
-              onChange={(k) => setSort(k as "name" | "rating")}
-              labelSize={12}
-              tabHeight={32}
-              idleWeight={600}
-              scrollTabPadding="0 12px"
-              scrollMinWidth={0}
-              tabRadius={9}
-              trackStyle={{ padding: 4, gap: 4, borderRadius: 12, ...(dark ? {} : { background: "rgb(var(--th-f4f3f9))" }) }}
-              light={SUBTAB_LIGHT}
-            />
-          </div>
-        )}
         {filtered.map((p) => (
           <DirectoryCard key={p.profileId} listing={p} />
         ))}
-
-        {/* The check's meaning, said once under the list rather than on
-            every card — and only when a card actually carries one. */}
-        {filtered.some((p) => p.hasVerifiedLicence) && <VerifiedExplainer />}
 
         {/* Three outcomes, deliberately distinct. An empty directory is the
             expected steady state until professionals opt in, and saying so
@@ -375,81 +195,22 @@ export default function Professionals() {
         )}
       </div>
 
-      {/* Account management under the list or map (decision 23, kept-list
-          38–39), so the rail sits 10 under List / Map as drawn.
+      {/* Under the list or map, not drawn but kept (handover-complete pass):
 
           "Your reviews (N)": one row for every professional this client may
           review (current and past, listed or not), which expands in place
           to the same review cards and sheets. A listed professional's review
           is also on their profile page (MO1.2.1 "My review"); an unlisted one
-          has no page, so this row is where that right is reached. */}
+          has no page, so this row is where that review is reached.
+
+          Data sharing: privacy controls. These hang off the client's actual
+          relationships, not the browse directory above — appearing in the
+          directory is a professional advertising themselves, which grants
+          them nothing until a client redeems their code. */}
       <div className="mt-6">
         <YourReviewsSection authUserId={authUserId} />
-
-        {/* Real data-sharing controls. These hang off the client's actual
-            relationships, not the browse directory above — appearing in the
-            directory is a professional advertising themselves, which grants
-            them nothing until a client redeems their code. Summarised rather
-            than inline; see DataSharingSummary. */}
         <DataSharingSummary />
       </div>
-
-      {/* THE CONNECTED PROFESSIONAL'S REAL PROFILE AND CV. This sheet used to
-          read a certification, bio, phone, website and socials from fields on
-          this device that nothing ever wrote, so it always said "No
-          certification uploaded yet." It now reads connected_professional_summary
-          and the public CV views, which a connected client may always read —
-          the same CV and Verified marks the public profile shows. The document
-          itself is never shown to clients; the badge is what a client gets. */}
-      <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={linkedName} size="tall">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-              {linkedDetail?.avatarUrl ? (
-                <img src={linkedDetail.avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                (() => {
-                  const Icon = linkedIcon(linkedSubtype);
-                  return <Icon size={22} className="text-primary-dark" />;
-                })()
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="flex items-center gap-1.5">
-                <span className="font-display font-semibold text-lg text-charcoal truncate">
-                  {linkedName}
-                </span>
-                {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={18} />}
-              </p>
-              {linkedDetail?.headline && (
-                <p className="text-[13px] font-semibold text-primary-deep-text break-words">{linkedDetail.headline}</p>
-              )}
-              <p className="text-xs text-charcoal-soft">
-                {[linkedDetail ? professionalRole(linkedDetail) : null, linkedDetail?.location].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-          </div>
-
-          {linkedError && <p className="text-sm text-status-high">{linkedError}</p>}
-          {!linkedError && !linkedCv && linkedProfessionalId && <p className="text-sm text-charcoal-faint">Loading…</p>}
-
-          {linkedDetail?.bio && (
-            <div>
-              <p className="section-label text-charcoal-soft mb-1.5">About</p>
-              <p className="text-sm text-charcoal leading-relaxed whitespace-pre-line">{linkedDetail.bio}</p>
-            </div>
-          )}
-
-          {linkedCv && (cvIsEmpty(linkedCv, linkedDetail?.skills ?? []) ? (
-            <p className="text-sm text-charcoal-faint">
-              {linkedName.split(" ")[0]} hasn't added a CV yet.
-            </p>
-          ) : (
-            <CvView cv={linkedCv} skills={linkedDetail?.skills ?? []} />
-          ))}
-          {linkedDetail?.hasVerifiedLicence && <VerifiedExplainer />}
-        </div>
-      </BottomSheet>
     </div>
   );
 }

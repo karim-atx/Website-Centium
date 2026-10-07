@@ -6,6 +6,7 @@ import { Toggle } from "../ui/Toggle";
 import { PERSON_ICON } from "../../utils/icons";
 import { InlineImage } from "./InlineImage";
 import { FileCard } from "./FileCard";
+import { LoadMoreSentinel } from "./LoadMoreSentinel";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { clockTime, listTime } from "./chatTime";
 import { describeMessage, type MessageThread } from "../../services/messaging";
@@ -382,15 +383,10 @@ export const ChatInfo: React.FC<{
                   : "No starred messages in this chat."}
           </p>
         )}
+        {/* MO1.2.1.3.1 draws no "Show more": the gallery loads on as it
+            scrolls (handover-complete pass). */}
         {tab !== "starred" && galleryMore && (
-          <button
-            type="button"
-            onClick={() => void moreGallery()}
-            disabled={galleryBusy}
-            className="tap min-h-[44px] text-[13px] font-semibold text-primary-deep-text disabled:opacity-50"
-          >
-            {galleryBusy ? "Loading…" : "Show more"}
-          </button>
+          <LoadMoreSentinel busy={galleryBusy} count={items?.length ?? 0} onMore={() => void moreGallery()} label="Show more" />
         )}
         <p className="text-[11.5px] font-normal text-charcoal-faint">
           {tab === "media" ? "Photos are private to this chat." : tab === "starred" ? "Only you can see your stars." : "Files are private to this chat."}
