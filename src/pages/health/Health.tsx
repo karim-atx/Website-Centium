@@ -1,6 +1,7 @@
 import { SCREENING_COPY, bmiOf, screeningRows } from "../../services/health-checks/screening";
 import { usePregnancyFlags } from "../../components/pregnancy/usePregnancyFlags";
-import { FlagNote } from "../../components/ui/FlagNote";
+import { FlagChip, FlagNote } from "../../components/ui/FlagNote";
+import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
@@ -12,18 +13,29 @@ import { MedicalRecordsSection } from "../../components/health/MedicalRecordsSec
 import { ImagingCaptureFlow } from "../../components/health/ImagingCaptureFlow";
 import { ShareImagingSheet } from "../../components/health/ShareImagingSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { HeartRateEKG } from "../../components/health/HeartRateEKG";
 import { BloodPressureSheet } from "../../components/health/BloodPressureSheet";
 import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
 import { PregnancyHealthCard } from "../../components/pregnancy/PregnancyGuidance";
 import { PREGNANCY_COLOR } from "../../components/pregnancy/PregnancyRing";
 import { gestationOn } from "../../services/pregnancy";
 import { daysBetween } from "../../services/cycle/hormones";
+import { bmiApplies } from "../../services/pregnancy/weight";
+import { BMI_NOT_USED } from "../../services/pregnancy/guidance";
 import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
 import type { BloodPressureReading } from "../../services/blood-pressure";
-import { classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL, BP_NO_READINGS, SEVERE_READING_MESSAGE } from "../../services/blood-pressure/guidance";
+import { averageReading, classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
+import {
+  BP_CATEGORY_COLOR,
+  BP_CATEGORY_LABEL,
+  BP_NO_READINGS,
+  SEVERE_READING_MESSAGE,
+} from "../../services/blood-pressure/guidance";
+import { CalorieFlame } from "../../components/health/CalorieFlame";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
 import {
+  averageOf,
+  canDrawSparkline,
   emptyHint,
   formatMetric,
   NO_READINGS,
@@ -31,11 +43,12 @@ import {
   withinDays,
   type MetricReadings,
 } from "../../services/health-metrics/series";
+import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
-import { Stethoscope, FileText, Moon, Flame, Heart, ClipboardList, ShieldCheck } from "lucide-react";
+import { Stethoscope, FileText, Moon, Heart, ClipboardList, ShieldCheck } from "lucide-react";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
-import { BottleGlyph, HealthRow, HealthSectionLabel, ScaleGlyph, StepBarsGlyph } from "../../components/health/HealthRow";
+import { HealthRow, HealthSectionLabel, ScaleGlyph, StepBarsGlyph, WaterCupGlyph } from "../../components/health/HealthRow";
 import { useIsDark } from "../../hooks/useIsDark";
 import type { BloodMarker, ImagingRecord } from "../../types";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -85,6 +98,7 @@ export default function Health() {
     cycleSettings,
     cyclePrediction,
     pregnancy: recordedPregnancy,
+    lastEndedPregnancy: recordedEndedPregnancy,
     cycleOffered,
     today,
     bloodMarkers,
@@ -98,6 +112,7 @@ export default function Health() {
   // MO11: a profile not offered the cycle section sees no cycle or
   // pregnancy content here — filtered at render, nothing is changed.
   const pregnancy = cycleOffered ? recordedPregnancy : null;
+  const lastEndedPregnancy = cycleOffered ? recordedEndedPregnancy : null;
   // HE1 copy: "Apple Health sync is coming." Android's platform is Health
   // Connect (Foundations 2.4 brand list); "Android Health" is not a product.
   const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Health Connect";
@@ -148,10 +163,68 @@ export default function Health() {
   const biomarkersSubtitle =
     flaggedMarkers.length > 0 ? `${flaggedMarkers.slice(0, 2).join(" and ")} suggested` : "Vitamins, minerals, panels";
 
-  // HANDOVER-COMPLETE PASS (2026-10-07): BMI is no longer shown on Health.
-  // HE1 draws Weight trend as one row (title, one subtitle, chevron), so the
-  // weight hero with its sparkline and BMI band is gone; the weight detail
-  // sheet still opens from the row.
+  // RESTORE ROUND 2 (user, 2026-10-07): BMI and the weight sparkline are back,
+  // inside the HE1 Weight trend row (the band under the subtitle, the line
+  // before the chevron), with main's logic unchanged below.
+  //
+  // BMI FROM THE USER'S OWN HEIGHT, and only when both halves exist.
+  //
+  // This read `const heightM = 1.78` — a literal, for everybody. BMI is a
+  // ratio of two measurements and the app was supplying one of them, so the
+  // figure was wrong for every user who is not 178 cm, and the WHO category
+  // printed beside it — "normal weight", "obese" — was a health
+  // classification derived from a number nobody had measured.
+  //
+  // profiles.height_cm has been read into user.heightCm all along and is
+  // editable in Profile, so this is a substitution rather than new plumbing.
+  // Missing either height or a weight reading yields null, and the row
+  // says what to add rather than computing around the gap.
+  //
+  // AND NOT AT ALL DURING A PREGNANCY OR THE POSTPARTUM WINDOW. BMI is weight
+  // over height squared; a pregnancy adds a baby, a placenta, fluid and half
+  // as much blood again, and the WHO bands were never drawn for that body. The
+  // number rises BECAUSE the pregnancy is going well, so printing it — and
+  // calling it "overweight" — states something false to somebody who has no
+  // reason to doubt it. bmiApplies() holds the rule and is unit-tested; the
+  // figure that does apply to this body is the gain range in the Pregnancy
+  // card, which BMI_NOT_USED points at.
+  const showBmi = bmiApplies(
+    {
+      pregnancyActive: pregnancy !== null,
+      postpartumUntil: lastEndedPregnancy?.postpartumUntil ?? null,
+    },
+    today
+  );
+  const heightM = user.heightCm && user.heightCm > 0 ? user.heightCm / 100 : null;
+  const bmiValue =
+    showBmi && heightM !== null && metricValues.weight !== null
+      ? metricValues.weight / (heightM * heightM)
+      : null;
+  const bmi = bmiValue === null ? null : bmiValue.toFixed(1);
+  // V7 (QA 7.0): standard WHO BMI bands.
+  const bmiCategory =
+    bmiValue === null
+      ? null
+      : bmiValue < 18.5
+      ? "Underweight"
+      : bmiValue < 25
+      ? "Normal weight"
+      : bmiValue < 30
+      ? "Overweight"
+      : "Obese";
+  // Design refinement §6.3: the band is a linear 0–40 scale filled to the reading.
+  const bmiBandPct = bmiValue === null ? 0 : Math.max(0, Math.min(100, (bmiValue / 40) * 100));
+
+  // Iteration 6 "Team" §5 Health: the weight sparkline, real 7-day history
+  // scaled into the dc.html's own 130×44 viewBox.
+  const weightValues = weightMeta.history.map((h) => h.value);
+  const weightMin = Math.min(...weightValues);
+  const weightMax = Math.max(...weightValues);
+  const weightSparkPoints = weightValues.map((v, i) => {
+    const x = 4 + (i * (126 - 4)) / (weightValues.length - 1);
+    const y = weightMax === weightMin ? 22 : 39 - ((v - weightMin) / (weightMax - weightMin)) * (39 - 12);
+    return `${x},${y}`;
+  });
 
   // HE1: every row opens its detail, empty or not (the sheet says "No
   // readings yet" itself). Weight with nothing logged opens Add Metric
@@ -198,16 +271,34 @@ export default function Health() {
   const bpPregFlag = bpLatest ? pregnancyFlags.bp(bpLatest) : null;
   const bpSevere = !!bpLatest && !bpInPregnancy && isSevere(bpLatest.systolic, bpLatest.diastolic);
   const bpCheckFlag = bpLatest && !bpInPregnancy ? checkFlags.bp(bpLatest) : null;
+  const bpCategory = bpLatest ? classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic) : null;
+  // Restore round 2 (user, 2026-10-07): main's "· N bpm" and "· 7-day avg S/D"
+  // are back in the subtitle, over the readings of the last seven days.
+  const bpWeekAvg = averageReading(
+    bloodPressure.filter((r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000)
+  );
   const bpSubtitle = bpLatest
     ? [
         `${bpLatest.systolic}/${bpLatest.diastolic} mmHg`,
-        // THE CATEGORY IN WORDS; during a pregnancy its own levels replace the bands.
-        bpInPregnancy ? bpPregFlag?.label : BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)],
         relativeWhen(bpLatest.recordedAt),
+        bpLatest.pulse != null ? `${bpLatest.pulse} bpm` : null,
+        // Non-breaking hyphen: the line never wraps as "7-" / "day".
+        bpWeekAvg ? `7‑day avg ${bpWeekAvg.systolic}/${bpWeekAvg.diastolic}` : null,
       ]
         .filter(Boolean)
         .join(" · ")
     : `${BP_NO_READINGS} · Tap to add one`;
+  // THE CATEGORY IN WORDS, not as a colour: main's tinted chip, beside the
+  // reading. Light keeps main's BP_CATEGORY_COLOR; dark lifts each hue so the
+  // 9.5 label stays readable on the dark card (the same hue, lighter).
+  const BP_CHIP_DARK: Record<NonNullable<typeof bpCategory>, string> = {
+    normal: "#7FC79E",
+    elevated: "#D6CD6A",
+    stage1: "#E3A851",
+    stage2: "#F29466",
+    severe: "#F28B82",
+  };
+  const bpChipColor = bpCategory ? (dark ? BP_CHIP_DARK[bpCategory] : BP_CATEGORY_COLOR[bpCategory]) : null;
 
   const weightTrend = trendLabel(weightMeta);
 
@@ -235,10 +326,66 @@ export default function Health() {
           fill={tint(LAV, 0.11)}
           tileFill={tint(LAV, 0.4)}
           glyph={<ScaleGlyph color={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"} />}
+          // Restore round 2 (user, 2026-10-07): main's 7-point sparkline, only
+          // where there are enough readings to draw a line through, in the
+          // scale glyph's colour.
+          aside={
+            metricValues.weight !== null && canDrawSparkline(weightMeta) ? (
+              <svg viewBox="0 0 130 44" style={{ width: 74, height: 25, display: "block" }} aria-hidden>
+                <polyline
+                  points={weightSparkPoints.join(" ")}
+                  fill="none"
+                  stroke={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"}
+                  strokeWidth={3.2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {weightSparkPoints.map((p) => (
+                  <circle
+                    key={p}
+                    cx={p.split(",")[0]}
+                    cy={p.split(",")[1]}
+                    r={3.2}
+                    fill={dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))"}
+                  />
+                ))}
+              </svg>
+            ) : undefined
+          }
           onClick={() =>
             metricValues.weight === null ? setAddMetricOpen(true) : openDetail(weightMeta, metricValues.weight)
           }
-        />
+        >
+          {/* Restore round 2: main's BMI footer, under the subtitle. Shown with
+              a weight (as main's hero was); TWO DIFFERENT SILENCES otherwise —
+              without a height the fix is in Profile; during a pregnancy or the
+              postpartum window the number would be wrong, so it says why. */}
+          {metricValues.weight !== null && (
+            <span className="flex items-center gap-2 mt-[5px]">
+              <span className="shrink-0 text-[10px] font-semibold leading-[13px] uppercase text-charcoal-faint">BMI</span>
+              {bmi !== null && bmiCategory !== null ? (
+                <>
+                  <span className="flex-1 min-w-0 block h-1 rounded-full overflow-hidden" style={{ background: tint(LAV, 0.3) }}>
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${bmiBandPct}%`,
+                        background: dark ? "rgb(var(--th-b7abde))" : "rgb(var(--th-7567b7))",
+                      }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-[11px] font-semibold leading-[13px] text-charcoal whitespace-nowrap">
+                    {bmi} · {bmiCategory.toLowerCase()}
+                  </span>
+                </>
+              ) : (
+                <span className="flex-1 text-[11px] leading-[14px] text-charcoal-soft">
+                  {!showBmi ? BMI_NOT_USED : "Add your height in Profile to see your BMI"}
+                </span>
+              )}
+            </span>
+          )}
+        </HealthRow>
       )}
 
       {/* HE1 #3–#9: "Today", 20 below Weight trend, rows 10 below it, 8 apart. */}
@@ -254,7 +401,11 @@ export default function Health() {
           tileFill={dark ? tint(TEAL, 0.45) : `rgb(${TEAL})`}
           glyph={
             stepsMeta.history.length > 0 ? (
-              <StepBarsGlyph values={stepsMeta.history.map((h) => h.value)} max={stepsMax} />
+              <StepBarsGlyph
+                values={stepsMeta.history.map((h) => h.value)}
+                letters={stepsMeta.history.map((h) => dayLetter(h.date))}
+                max={stepsMax}
+              />
             ) : undefined
           }
           onClick={() => openDetail(stepsMeta, metricValues.steps)}
@@ -264,12 +415,19 @@ export default function Health() {
           subtitle={`${(water / 1000).toFixed(1)} L of ${(waterGoalMl / 1000).toFixed(1)} L`}
           fill="rgba(143,192,232,0.17)"
           tileFill="rgba(143,192,232,0.4)"
-          glyph={<BottleGlyph color={dark ? "rgb(var(--c-team-blue-ink))" : "#4A85C4"} capFill={dark ? "rgba(143,192,232,0.4)" : "#A5C6E6"} />}
+          glyph={<WaterCupGlyph fraction={water / waterGoalMl} stroke={dark ? "rgb(var(--c-team-blue-ink))" : "#5E8BB3"} />}
           onClick={() => setWaterOpen(true)}
         />
         <HealthRow
           title="Sleep"
-          subtitle={metricValues.sleepHours === null ? NO_READINGS : formatMetric("sleep", metricValues.sleepHours)}
+          // Restore round 2 (user, 2026-10-07): main's "X avg this week", over
+          // nights actually recorded, only when there is an average.
+          subtitle={[
+            metricValues.sleepHours === null ? NO_READINGS : formatMetric("sleep", metricValues.sleepHours),
+            averageOf(sleepMeta) !== null ? `${formatMetric("sleep", averageOf(sleepMeta) as number)} avg this week` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           fill={tint(LAV, 0.13)}
           tileFill={dark ? tint(LAV, 0.45) : `rgb(${LAV})`}
           onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
@@ -279,11 +437,15 @@ export default function Health() {
           subtitle={
             metricValues.caloriesBurned === null
               ? NO_READINGS
-              : `${formatMetric("caloriesBurned", metricValues.caloriesBurned)} kcal`
+              : // Restore round 2: main's "Estimated, incl. workouts", with a value.
+                `${formatMetric("caloriesBurned", metricValues.caloriesBurned)} kcal · Estimated, incl. workouts`
           }
           fill="rgba(217,164,65,0.14)"
           tileFill={dark ? "rgba(217,164,65,0.5)" : "#D9A441"}
-          glyph={<Flame size={18} strokeWidth={1.75} className="text-white" />}
+          // Restore round 2 (user, 2026-10-07): main's moving flame (1.6s
+          // flicker, 2.4s ember glow), white on the gold tile with a warm
+          // pale glow so both layers show against it.
+          glyph={<CalorieFlame size={18} className="text-white" glow="rgba(255,240,214,0.75)" />}
           onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}
         />
         <HealthRow
@@ -291,19 +453,51 @@ export default function Health() {
           subtitle={
             metricValues.heartRate === null
               ? NO_READINGS
-              : `${formatMetric("heartRate", metricValues.heartRate)} bpm resting`
+              : // The "Resting" pill beside it says resting; not twice.
+                `${formatMetric("heartRate", metricValues.heartRate)} bpm`
           }
           fill="rgba(156,79,124,0.1)"
           tileFill="rgba(156,79,124,0.25)"
           glyph={<Heart size={38} strokeWidth={1.25} absoluteStrokeWidth style={{ color: dark ? "rgb(var(--c-team-rose-ink))" : "#9C4F7C" }} />}
+          // Restore round 2 (user, 2026-10-07): main's "Resting" pill and the
+          // EKG trace at the reading's rate. NO TRACE OVER NO PULSE: the
+          // trace animates at the bpm it is given, so nothing is drawn empty.
+          aside={
+            metricValues.heartRate !== null ? (
+              <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-team-rose-ink bg-berry/[0.16]">
+                Resting
+              </span>
+            ) : undefined
+          }
           onClick={() => openDetail(heartRateMeta, metricValues.heartRate)}
-        />
+        >
+          {metricValues.heartRate !== null && (
+            <span className="block mt-1.5">
+              <HeartRateEKG bpm={metricValues.heartRate} />
+            </span>
+          )}
+        </HealthRow>
         <div>
           <HealthRow
             title="Blood pressure"
             subtitle={bpSubtitle}
             fill="rgba(74,61,160,0.08)"
             tileFill="#4A3DA0"
+            // Restore round 2 (user, 2026-10-07): main's chip in the header
+            // place — during a pregnancy its own level (FlagChip), otherwise
+            // the category, tinted, in words.
+            aside={
+              !bpLatest ? undefined : bpInPregnancy ? (
+                bpPregFlag ? <FlagChip tone={bpPregFlag.level} label={bpPregFlag.label} /> : undefined
+              ) : bpCategory && bpChipColor ? (
+                <span
+                  className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
+                  style={{ color: bpChipColor, background: `${bpChipColor}1F` }}
+                >
+                  {BP_CATEGORY_LABEL[bpCategory]}
+                </span>
+              ) : undefined
+            }
             onClick={() => {
               if (bpLatest) setBpDetailOpen(true);
               else {
@@ -422,12 +616,10 @@ export default function Health() {
         />
       </div>
 
-      {/* HE1 #12–#13: 16 below Records, one centred line, Flame 11 then 4
-          to 9.5/400 #A79E93 (the frame's own disclaimer copy). */}
-      <p className="mt-4 flex items-center justify-center gap-1 text-center text-[9.5px] leading-[14px] text-charcoal-tertiary">
-        <Flame size={11} className="shrink-0" aria-hidden />
-        <span>Health-data tracking, not a diagnosis. Always consult a professional.</span>
-      </p>
+      {/* Restore round 2 (user, 2026-10-07): the app-wide HealthDisclaimer
+          (Task Y2) is back in place of the frame's shorter line, 16 below
+          Records as the frame spaces it. */}
+      <HealthDisclaimer className="mt-4 mb-1.5" />
       {/* KEPT (no frame): where the health guidance comes from (Task Y2). */}
       <button
         onClick={() => navigate("/app/health/sources")}
