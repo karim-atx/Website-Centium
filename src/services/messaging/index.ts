@@ -340,8 +340,9 @@ export function describeRefusal(error: { code?: string; message?: string }): str
       return "You can't message this person.";
     case "ATX36":
       return /under 18/i.test(error.message ?? "")
-        ? "Accounts under 18 can only message professionals they already work with."
-        : "You can't start a conversation with this account. You can message professionals listed in Explore, or the people you already work with.";
+        ? // Covers gyms and studios too: a minor can't cold-message a venue either.
+          "Accounts under 18 can only message professionals, gyms and studios they already work with."
+        : "You can't start a conversation with this account. You can message professionals and gyms listed in Explore, or the people you already work with.";
     case "ATX02":
       return "You're sending messages too quickly. Wait a minute and try again.";
     case "ATX37":

@@ -63,5 +63,18 @@ export const VerifiedCheck: React.FC<{ size?: number; /** MO1.2.1 draws BadgeChe
   </svg>
 );
 
-// VerifiedExplainer (the check's meaning as a line under the directory) is
-// gone: MO1.2 doesn't draw it. The meaning is the check's own <title> above.
+/**
+ * The one-line meaning of the check. Not under the directory (MO1.2 doesn't
+ * draw it there; the meaning is the check's own <title> above). Restore round
+ * (user, 2026-10-07): back in the "Your professional" profile sheet on
+ * Professionals, where it was before the handover-complete pass.
+ */
+export const VerifiedExplainer: React.FC = () => (
+  <p className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 stroke-[#1F6A48] dark:stroke-status-good">
+      <path d="M8.5 12.2l2.3 2.3 4.7-4.8" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+    Verified: at least one credential checked by the Centium team
+  </p>
+);

@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, X } from "lucide-react";
+import { Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useCall } from "../../context/CallContext";
+import { threadAllowsCalls, type CallKind } from "../../services/calling";
+import { checkCallMedia } from "../../utils/mediaPermissions";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { usePinRealtime } from "../../hooks/usePinRealtime";
@@ -60,6 +63,7 @@ import {
   sendFileAttachment,
   sendImageAttachment,
   sendMessage,
+  editMessage,
   deleteForEveryone,
   editTimeLeft,
   sendVoiceNote,
@@ -249,7 +253,7 @@ export const ThreadView: React.FC<{
   const departed = !isGroup && thread.participantId === null;
 
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
-  // ways; the composer gives way to a plain statement of it.
+  // ways; the composer and the call button give way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
   const safetyApplies = !departed && thread.kind === "peer";
   // Reporting a message works in a direct chat and in a group alike.
@@ -338,9 +342,12 @@ export const ThreadView: React.FC<{
    * asked about first.
    */
   const [hiding, setHiding] = useState<Message | null>(null);
-  // EDITING A SENT MESSAGE IS GONE (handover-complete pass): MO1.2.1.3.3's
-  // menu draws no Edit, so the composer's edit mode and its banner went with
-  // it. Messages already edited keep their " · edited" mark.
+  /**
+   * Your own message whose text the composer is editing. Restore round (user,
+   * 2026-10-07): Edit is back in the long-press menu, with the composer's edit
+   * mode and banner.
+   */
+  const [editing, setEditing] = useState<Message | null>(null);
   /** Your own message awaiting "Delete for everyone" confirmation. */
   const [unsending, setUnsending] = useState<Message | null>(null);
   const [unsendBusy, setUnsendBusy] = useState(false);
@@ -380,10 +387,44 @@ export const ThreadView: React.FC<{
   // Re-checking on every 8s poll would spend a round trip to tidy up a
   // cosmetic edge nobody is standing on.
   const [canAttach, setCanAttach] = useState(false);
-  // THE VOICE AND VIDEO CALL BUTTONS ARE GONE from the header
-  // (handover-complete pass: MO1.2.1.3 draws Back, the person, Hire and
-  // Search only), and with them placing a call from a thread.
+  // Same shape and same reasoning as canAttach above, against the call
+  // predicate instead. thread_allows_calls delegates the relationship rule to
+  // thread_allows_attachments and adds "and the caller is a participant", so
+  // these two are asked separately rather than one being derived from the other.
+  //
+  // Restore round (user, 2026-10-07): calls are back, from one Phone button in
+  // the header that opens the Foundations dropdown (Voice call / Video call).
+  const [canCall, setCanCall] = useState(false);
+  const [mediaNotice, setMediaNotice] = useState<string | null>(null);
+  /** The header's call button, while its dropdown is open; null when closed. */
+  const [callAnchor, setCallAnchor] = useState<HTMLElement | null>(null);
+  const { placeCall: placeCallRemote, busy: callBusy } = useCall();
   const recorder = useVoiceRecorder();
+
+  /**
+   * Checks devices, then opens the call.
+   *
+   * PERMISSION BEFORE THE SERVER, deliberately. Minting a token and writing a
+   * ringing row for a caller whose microphone is blocked would ring the other
+   * person for a call that cannot carry audio — and end-call would have to
+   * clean it up. Asking first costs nothing when permission is already granted,
+   * since the browser resolves it without a prompt.
+   *
+   * A REFUSED CAMERA DOWNGRADES RATHER THAN FAILS: checkCallMedia asks audio
+   * and video separately for exactly this, so a blocked camera places a voice
+   * call and says so instead of stopping someone who can still talk.
+   */
+  const placeCall = async (kind: CallKind) => {
+    if (!thread.participantId) return;
+    setMediaNotice(null);
+    const media = await checkCallMedia(kind);
+    if (!media.canCall) {
+      setMediaNotice(media.message);
+      return;
+    }
+    if (media.message) setMediaNotice(media.message);
+    await placeCallRemote(thread.id, thread.participantId, media.degradedToVoice ? "voice" : kind);
+  };
 
   // PAGED. A thread opens on its newest page and older pages load as the
   // reader scrolls up (loadOlder). Every refresh re-reads only the newest page
@@ -466,13 +507,20 @@ export const ThreadView: React.FC<{
   useEffect(() => {
     let cancelled = false;
     setCanAttach(false);
+    setCanCall(false);
+    setMediaNotice(null);
     void threadAllowsAttachments(thread.id).then((allowed) => {
       if (!cancelled) setCanAttach(allowed);
     });
+    if (authUserId) {
+      void threadAllowsCalls(thread.id, authUserId).then((allowed) => {
+        if (!cancelled) setCanCall(allowed);
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [thread.id]);
+  }, [thread.id, authUserId]);
 
   // Stars and the pin, read once when the thread opens.
   //
@@ -599,6 +647,22 @@ export const ThreadView: React.FC<{
   const send = async () => {
     const body = draft.trim();
     if (!body || !authUserId || sending) return;
+    if (editing) {
+      // EDIT, NOT SEND. The database checks the fifteen minutes and that it is
+      // yours; the composer keeps the text if it refuses.
+      setSending(true);
+      setError(null);
+      const result = await editMessage(editing.id, body);
+      setSending(false);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setEditing(null);
+      setDraft("");
+      await load();
+      return;
+    }
     setSending(true);
     setError(null);
     // Optimistic, and deliberately NOT a message. `pending` is a rendering
@@ -991,8 +1055,24 @@ export const ThreadView: React.FC<{
     // MO1.2.1.3.3 draws Reply, Forward, Star, Copy, Pin, Info and Delete for
     // me. Kept beyond it: Report (safety) and, inside the server's window on
     // your own message, Delete for everyone (your control over what you sent;
-    // the server decides, ATX40). Edit is gone (handover-complete pass).
+    // the server decides, ATX40). Restore round (user, 2026-10-07): Edit is
+    // back, after Pin and before Info.
+    //
+    // EDIT, with the time left, only while the window is open and only for
+    // text. The note is the client's estimate; the server decides (ATX40).
     const left = mine ? editTimeLeft(m) : 0;
+    if (left > 0 && m.text?.trim()) {
+      list.push({
+        label: "Edit",
+        note: `${Math.max(1, Math.ceil(left / 60_000))} min left`,
+        onSelect: () => {
+          setReplyTo(null);
+          setEditing(m);
+          setDraft(m.text ?? "");
+          close();
+        },
+      });
+    }
     if (mine) list.push({ label: "Info", onSelect: () => {
       setInfoFor(m);
       close();
@@ -1169,7 +1249,7 @@ export const ThreadView: React.FC<{
         </button>
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
-            ellipses instead of pushing Search off the edge. */}
+            ellipses instead of pushing Call and Search off the edge. */}
         <button
           type="button"
           onClick={() => setInfoOpen(true)}
@@ -1218,6 +1298,29 @@ export const ThreadView: React.FC<{
         {/* MO1.2.1.3 draws a Hire button here (12.5/700 white on #9A8CD6,
             Handshake 14) that opens MO1.2.1.5's plans. It waits on the
             offers and payments backend, which doesn't exist yet. */}
+
+        {/* CALLS (restore round, user, 2026-10-07): one Phone button beside
+            Search, the same 44 target and 17/1.75 glyph, opening the
+            Foundations dropdown (Voice call / Video call). -mr-2.5 cancels the
+            row's gap so the two 44 targets sit edge to edge.
+
+            Gated on canCall — asked once on open, failing closed, and not the
+            enforcement: mint-call-token re-checks thread_allows_calls
+            server-side. Not in a group, not with someone who left, and not
+            across a block (a block stops calls both ways). */}
+        {canCall && !isGroup && thread.participantId && !block.blocked && (
+          <button
+            type="button"
+            onClick={(e) => setCallAnchor(e.currentTarget)}
+            disabled={callBusy}
+            aria-label={`Call ${thread.participantName}`}
+            aria-haspopup="menu"
+            aria-expanded={!!callAnchor}
+            className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+          >
+            <Phone size={17} strokeWidth={1.75} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -1245,6 +1348,14 @@ export const ThreadView: React.FC<{
             or payment details in a message.
           </p>
         </div>
+      )}
+
+      {/* THE CALL'S DEVICE NOTICE (restore round): why a call could not start
+          (microphone blocked) or why it became a voice call (camera blocked). */}
+      {mediaNotice && (
+        <p role="status" className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
+          {mediaNotice}
+        </p>
       )}
 
       {/* THE PINNED BANNER, only when the pinned message is one this viewer
@@ -1594,6 +1705,33 @@ export const ThreadView: React.FC<{
       <>
       <div className="flex-1" aria-hidden />
       <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+      {/* EDITING (restore round, user, 2026-10-07): the reply banner's look
+          (cream-soft r12, the primary rail, 11/600 heading over the 11.5
+          text), a Pencil where the reply arrow goes, and a 44 cancel target
+          pulled into the banner's padding so the banner keeps its height. */}
+      {editing && (
+        <div className="flex items-center gap-2 rounded-xl bg-cream-soft px-3 py-2 mb-2">
+          <Pencil size={14} className="text-primary-dark shrink-0" aria-hidden />
+          <div className="flex items-stretch gap-2 min-w-0 flex-1">
+            <span className="w-0.5 self-stretch rounded-full shrink-0 bg-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-semibold truncate text-primary-dark">Editing message</span>
+              <span className="block text-[11.5px] truncate text-charcoal-soft">{editing.text}</span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(null);
+              setDraft("");
+            }}
+            aria-label="Cancel editing"
+            className="tap w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {replyTo && (
         <QuotedMessage
           message={replyTo}
@@ -1667,7 +1805,8 @@ export const ThreadView: React.FC<{
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);
-              if (e.target.value) live.sendTyping(thread.id);
+              // Not while editing: an edit is not a new message on its way.
+              if (e.target.value && !editing) live.sendTyping(thread.id);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") void send();
@@ -1790,6 +1929,24 @@ export const ThreadView: React.FC<{
         }}
       />
 
+      {/* THE CALL DROPDOWN (restore round, user, 2026-10-07): Foundations'
+          dropdown under the header's Phone button, right-aligned to it, with
+          its own sizes and dim. */}
+      <PopupMenu
+        open={!!callAnchor}
+        onClose={() => setCallAnchor(null)}
+        anchor={callAnchor}
+        align="right"
+        options={[
+          { value: "voice", label: "Voice call", icon: <Phone size={15} strokeWidth={1.75} />, disabled: callBusy },
+          { value: "video", label: "Video call", icon: <Video size={15} strokeWidth={1.75} />, disabled: callBusy },
+        ]}
+        onSelect={(v) => {
+          setCallAnchor(null);
+          void placeCall(v as CallKind);
+        }}
+      />
+
       {/* MESSAGE INFO, for your own messages. Delivered and read are stored
           only where both people allow read receipts, so a dash can mean
           "not yet" or "not shared" — the note says which is possible. */}
@@ -1854,6 +2011,10 @@ export const ThreadView: React.FC<{
               if (!result.ok) {
                 setError(result.message);
                 return;
+              }
+              if (editing?.id === unsending.id) {
+                setEditing(null);
+                setDraft("");
               }
               await load();
             }}

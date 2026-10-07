@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
+import { fetchLinkedProfessionals } from "../../services/consent";
+import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { DirectoryCard } from "../../components/professionals/DirectoryCard";
 import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
 import { YourReviewsSection } from "../../components/professionals/YourReviewsSection";
-import { List, Map as MapIcon, Users } from "lucide-react";
+import { initials, typeColours } from "../../components/professionals/typeColour";
+import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
+import { CvView } from "../../components/cv/CvView";
+import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
+import {
+  fetchConnectedProfessional,
+  professionalRole,
+  type ConnectedProfessional,
+} from "../../services/connected-professional";
+import { professionalTypeIcon } from "../../utils/icons";
+import { ChevronRight, List, Map as MapIcon, UserCheck, Users } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 
 // LINKED_PROFESSIONAL_REVIEW_ID USED TO LIVE HERE, and it was the literal
@@ -23,13 +37,17 @@ import { useIsDark } from "../../hooks/useIsDark";
 //
 // HANDOVER-COMPLETE PASS (MO1.2 / MO1.2.2): the page is the header, List / Map,
 // the category rail and the cards, as drawn. Removed because the frames don't
-// draw them: the "Your professional" card and its profile / CV sheet (a
-// connected professional is still reached from Data sharing below, Profile ›
-// Connected professionals and, when listed, their card), the Name / Top rated
-// sort and the Verified explainer line under the list. Kept under the list:
-// "Your reviews" (it is the only way to reach a review of an unlisted or past
-// professional, so removing it would strand what the user wrote) and Data
-// sharing (privacy controls).
+// draw them: the Name / Top rated sort and the Verified explainer line under
+// the list. Kept under the list: "Your reviews" (it is the only way to reach a
+// review of an unlisted or past professional, so removing it would strand what
+// the user wrote) and Data sharing (privacy controls).
+//
+// RESTORE ROUND (user, 2026-10-07): "Your professional" is back, as a slim row
+// above List / Map (the full card is gone). A listed professional opens their
+// profile page; an unlisted one opens the profile and CV sheet as before.
+
+const linkedIcon = (subtype?: string) =>
+  subtype && subtype in professionalTypeIcon ? professionalTypeIcon[subtype as ProfessionalType] : UserCheck;
 
 // Keyed on the DATABASE enum, not the app's four-value ProfessionalType. The
 // two nearly agree, except professional_subtype also has 'other' — a real
@@ -62,6 +80,74 @@ export default function Professionals() {
    */
   const [view, setView] = useState<"list" | "map">("list");
   const [type, setType] = useState<Subtype | null>(null);
+  const navigate = useNavigate();
+  const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
+
+  // THE ROW NEEDS AN ACCOUNT, NOT A CODE. It is rendered from
+  // `user.linkedProfessionalCode`, local onboarding state — fine for showing a
+  // name, but the profile and CV hang off the real relationship from
+  // professional_clients via fetchLinkedProfessionals.
+  const [linkedProfessionalId, setLinkedProfessionalId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLinkedProfessionals().then((result) => {
+      if (cancelled || result.status !== "ok") return;
+      // One row, one professional: this surface has only ever shown a single
+      // linked professional, so the first active relationship is the subject.
+      setLinkedProfessionalId(result.professionals[0]?.professionalId ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The linked professional's profile and CV, read when the sheet opens.
+  const [linkedDetail, setLinkedDetail] = useState<ConnectedProfessional | null>(null);
+  const [linkedCv, setLinkedCv] = useState<PublicCv | null>(null);
+  const [linkedError, setLinkedError] = useState<string | null>(null);
+
+  // The profile is read as soon as the relationship is known — the row shows
+  // the real name — and the CV when the sheet opens.
+  useEffect(() => {
+    if (!linkedProfessionalId) return;
+    let cancelled = false;
+    void fetchConnectedProfessional(linkedProfessionalId).then((detail) => {
+      if (cancelled) return;
+      if (!detail.ok) setLinkedError(detail.message);
+      else setLinkedDetail(detail.professional);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedProfessionalId]);
+
+  useEffect(() => {
+    if (!linkedProfileOpen || !linkedProfessionalId) return;
+    let cancelled = false;
+    void fetchPublicCv(linkedProfessionalId).then((cv) => {
+      if (cancelled) return;
+      if (!cv.ok) {
+        setLinkedError(cv.message);
+        return;
+      }
+      setLinkedError(null);
+      setLinkedCv(cv.cv);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedProfileOpen, linkedProfessionalId]);
+
+  // THE ROW FOLLOWS THE REAL RELATIONSHIP. It used to render only from
+  // `user.linkedProfessionalCode`, which is set when a code is redeemed during
+  // onboarding on this device — so a client connected any other way (an
+  // accepted hire request, another device) never saw it at all.
+  const hasLinkedProfessional = !!linkedProfessionalId || !!user.linkedProfessionalCode;
+  const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? "Your professional";
+  const linkedSubtype = linkedDetail?.subtype ?? user.linkedProfessionalSubtype;
+  /** The row's type colours, as the directory card's (B3). */
+  const linkedColours = typeColours(linkedSubtype ?? null, dark);
 
   // The real directory, replacing the static mockProfessionals array this
   // page browsed until now. Those entries were not accounts — their ids
@@ -90,6 +176,15 @@ export default function Professionals() {
 
   const filtered = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
 
+  // A LISTED PROFESSIONAL HAS A PAGE (MO1.2.1), so the row opens it; an
+  // unlisted one has none, so the row opens the profile and CV sheet, which
+  // reads the connected view any connected client may read.
+  const linkedListed = !!linkedProfessionalId && (listings ?? []).some((l) => l.profileId === linkedProfessionalId);
+  const openLinked = () => {
+    if (linkedListed) navigate(`/app/professionals/${linkedProfessionalId}`);
+    else setLinkedProfileOpen(true);
+  };
+
   // Professionals get an entirely different dashboard here (client roster,
   // not a directory to browse) — separate UI per QA, not just a banner.
   if (user.accountType === "professional") {
@@ -105,6 +200,51 @@ export default function Professionals() {
         // MO1.2: 16 from the header to List / Map (91 → 107 on the frame).
         bottomGap={16}
       />
+
+      {/* "YOUR PROFESSIONAL" (restore round, user, 2026-10-07): a slim row
+          above List / Map, so it is there in both views. Not drawn on MO1.2;
+          it takes the page's own row (Your reviews: 56 min, r20, card on the
+          option border, 14/600) with the directory card's type colours on a
+          36 avatar (photo or initials) and a Foundations eyebrow. */}
+      {hasLinkedProfessional && (
+        <button
+          type="button"
+          onClick={openLinked}
+          aria-label={`Your professional, ${linkedName}. Open profile`}
+          className="tap mb-3 w-full min-h-[56px] flex items-center gap-3 rounded-[20px] bg-cream-card border border-charcoal/[0.08] px-4 py-2.5 text-left animate-fade-slide-up"
+        >
+          <span
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[13px] font-bold"
+            style={{ background: linkedColours.pill, color: linkedColours.deep }}
+            aria-hidden
+          >
+            {linkedDetail?.avatarUrl ? (
+              <img src={linkedDetail.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : linkedDetail?.firstName || user.linkedProfessionalName ? (
+              initials(linkedName)
+            ) : (
+              (() => {
+                const Icon = linkedIcon(linkedSubtype);
+                return <Icon size={17} strokeWidth={1.75} />;
+              })()
+            )}
+          </span>
+          <span className="flex-1 min-w-0">
+            {/* Foundations `eyebrow`: 9/700 uppercase, 1.2, 0.16em; in the type colour. */}
+            <span
+              className="block text-[9px] font-bold uppercase tracking-[0.16em] leading-[1.2] mb-0.5"
+              style={{ color: linkedColours.main }}
+            >
+              Your professional
+            </span>
+            <span className="flex items-center gap-[5px] min-w-0">
+              <span className="text-[14px] font-semibold text-charcoal truncate">{linkedName}</span>
+              {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={14} />}
+            </span>
+          </span>
+          <ChevronRight size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
+        </button>
+      )}
 
       {/* MO1.2: List / Map as full-width segmented tabs under the header; the
           rail sits 10 under it as drawn. */}
@@ -211,6 +351,71 @@ export default function Professionals() {
         <YourReviewsSection authUserId={authUserId} />
         <DataSharingSummary />
       </div>
+
+      {/* THE CONNECTED PROFESSIONAL'S REAL PROFILE AND CV, for one who is not
+          in the directory (restore round). It reads
+          connected_professional_summary and the public CV views, which a
+          connected client may always read — the same CV and Verified marks
+          the public profile shows. The document itself is never shown to
+          clients; the badge is what a client gets. */}
+      <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={linkedName} size="tall">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span
+              className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden text-[16px] font-bold"
+              style={{ background: linkedColours.pill, color: linkedColours.deep }}
+            >
+              {linkedDetail?.avatarUrl ? (
+                <img src={linkedDetail.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (() => {
+                  const Icon = linkedIcon(linkedSubtype);
+                  return <Icon size={22} aria-hidden />;
+                })()
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5">
+                <span className="text-[15px] font-bold truncate" style={{ color: linkedColours.deep }}>
+                  {linkedName}
+                </span>
+                {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={16} />}
+              </p>
+              {linkedDetail?.headline && (
+                <p className="text-[12.5px] font-semibold break-words" style={{ color: linkedColours.main }}>
+                  {linkedDetail.headline}
+                </p>
+              )}
+              <p className="text-[11.5px] font-medium text-charcoal-soft">
+                {[linkedDetail ? professionalRole(linkedDetail) : null, linkedDetail?.location].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+
+          {linkedError && <p className="text-[12.5px] font-medium text-status-high">{linkedError}</p>}
+          {!linkedError && !linkedCv && linkedProfessionalId && <p className="text-sm text-charcoal-faint">Loading…</p>}
+
+          {linkedDetail?.bio && (
+            <div>
+              <p className="section-label text-charcoal-soft mb-1.5">About</p>
+              <p className="text-sm text-charcoal leading-relaxed whitespace-pre-line">{linkedDetail.bio}</p>
+            </div>
+          )}
+
+          {linkedCv && (cvIsEmpty(linkedCv, linkedDetail?.skills ?? []) ? (
+            <p className="text-sm text-charcoal-faint">
+              {linkedName.split(" ")[0]} hasn't added a CV yet.
+            </p>
+          ) : (
+            <CvView
+              cv={linkedCv}
+              skills={linkedDetail?.skills ?? []}
+              accent={{ label: linkedColours.main, pillBg: linkedColours.pill, pillInk: linkedColours.deep }}
+            />
+          ))}
+          {linkedDetail?.hasVerifiedLicence && <VerifiedExplainer />}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

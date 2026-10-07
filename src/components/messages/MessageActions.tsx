@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, CheckCheck, Copy, Flag, Forward, Info, Pin, PinOff, Plus, Reply, Star, StarOff, Trash2, type LucideIcon } from "lucide-react";
+import { Check, CheckCheck, Copy, Flag, Forward, Info, Pencil, Pin, PinOff, Plus, Reply, Star, StarOff, Trash2, type LucideIcon } from "lucide-react";
 import { MORE_REACTIONS, QUICK_REACTIONS } from "../../services/messaging/chatFeatures";
 import { useBackCloses } from "../../hooks/useBackCloses";
 
@@ -9,6 +9,11 @@ export interface MessageAction {
   onSelect: () => void;
   /** Delete and report read as cautions, below a divider. */
   danger?: boolean;
+  /**
+   * Right-aligned note, e.g. how long an edit window has left (restore round,
+   * user, 2026-10-07: back with Edit).
+   */
+  note?: string;
 }
 
 /** MO1.2.1.3.3 draws an icon on every action; matched on the label's first word. */
@@ -20,6 +25,7 @@ const ACTION_ICONS: Record<string, LucideIcon> = {
   Copy,
   Pin,
   Unpin: PinOff,
+  Edit: Pencil,
   Info,
   Report: Flag,
   Delete: Trash2,
@@ -161,6 +167,8 @@ export const MessageActions: React.FC<{
             <button key={a.label} type="button" onClick={a.onSelect} className={`${row} text-charcoal`}>
               {icon(a.label)}
               <span className="flex-1 min-w-0">{a.label}</span>
+              {/* Edit's time left (restore round): as before, 11/600 soft. */}
+              {a.note && <span className="text-[11px] font-semibold text-charcoal-soft">{a.note}</span>}
             </button>
           ))}
           {danger.length > 0 && <div className="h-px bg-charcoal/[0.08] my-0.5" />}
