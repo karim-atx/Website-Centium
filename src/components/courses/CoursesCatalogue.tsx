@@ -232,7 +232,8 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
               same for everyone; 44 to the finger, 14 in the layout. */}
           <span className="flex items-center justify-between gap-3 h-[14px]">
             <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
-              {query || filter ? "Results" : "Popular"}
+              {/* Handover-complete pass: "Popular" always, as drawn (the "Results" swap while searching is gone). */}
+              Popular
             </span>
             {isProfessional && (
               <Link

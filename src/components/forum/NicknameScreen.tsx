@@ -137,18 +137,21 @@ export function NicknameScreen({
         <ul id="nickname-rules" className="m-0 pl-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
           <li>3 to 20 letters, numbers or underscores</li>
           <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
-          <li>You can change it later in Profile</li>
+          <li>You can change it later in Profile › Credentials</li>
         </ul>
       </div>
       {/* The page's own padding covers 112 of the 172 a pinned button needs. */}
       <div aria-hidden style={{ height: 60 }} />
+      {/* MO1.3.4 #7 (handover-complete pass): 358 × 44, radius 12, 13.5/700,
+          and "Continue" in every case (the frame's one label; the "Save" label
+          when editing is gone). The fill stays the forum's accent: the button
+          existed pre-R1 in it (decision 22). */}
       <PinnedCta
         primary={{
-          label: editing ? "Save" : "Continue",
+          label: "Continue",
           loading: busy,
           onClick: () => void submit(),
-          // The button this replaces was the forum's accent with its ink.
-          className: "!bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]",
+          className: "!h-11 !rounded-xl !text-[13.5px] !bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]",
         }}
       />
     </form>

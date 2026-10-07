@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, ImagePlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { DangerLine } from "./parts";
 import { useNavigate } from "react-router-dom";
-import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
-import { FORUM_PHOTO_ACCEPT, FORUM_PHOTOS_ENABLED, prepareForumPhoto } from "../../services/forum/photo";
+import { createThread, type Identity } from "../../services/forum";
 import { composeChips, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -15,17 +14,15 @@ import { useIsDark } from "../../hooks/useIsDark";
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
 // dropdown (MO1.3.2.1) that starts on General, and "Post to forum" stays
-// disabled until the post is filled in (A22). The photo upload and its
-// privacy line are not drawn but kept. Fields keep the forum's colours.
+// disabled until the post is filled in (A22). Fields keep the forum's colours.
+// Handover-complete pass (2026-10-07): the photo upload, its preview and its
+// privacy line are removed (MO1.3.2 draws none); photos already on posts
+// still show on the post page.
 //
 // "POST AS" IS FIXED ONCE POSTED. The server freezes a post's identity
 // (ATX61), and the line under the choice says so. A professional has no
 // choice: they post under their first name (ATX59), so the fieldset is not
 // shown to them.
-//
-// ONE OPTIONAL PHOTO, re-drawn on the device so nothing of where or with what
-// it was taken survives. If that fails the photo is refused, not sent as it
-// was (services/forum/photo).
 
 export function ForumCompose({
   userId,
@@ -59,46 +56,17 @@ export function ForumCompose({
   const [category, setCategory] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [preparing, setPreparing] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Decision 23 (item 69): each error sits under the field it is about; a
-  // refusal from the server (or the upload) under the Post field.
+  // refusal from the server under the Post field.
   const [error, setError] = useState<{ field: "title" | "body"; message: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // Opens on General (the first); a choice recovery mode hides falls back to it too.
   const chosen = category && chips.some((c) => c.key === category) ? category : chips[0]?.key ?? null;
 
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview);
-  }, [preview]);
-
-  const pick = async (file: File | undefined) => {
-    if (!file) return;
-    setPhotoError(null);
-    setPreparing(true);
-    const r = await prepareForumPhoto(file);
-    setPreparing(false);
-    if (!r.ok) {
-      setPhotoError(r.message);
-      return;
-    }
-    setPhoto(r.file);
-    setPreview(URL.createObjectURL(r.file));
-  };
-
-  const removePhoto = () => {
-    setPhoto(null);
-    setPreview(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
   const t = title.trim();
   const b = body.trim();
-  const ready = !!chosen && !recoveryPending && t.length >= 3 && t.length <= 140 && b.length >= 1 && !busy && !preparing;
+  const ready = !!chosen && !recoveryPending && t.length >= 3 && t.length <= 140 && b.length >= 1 && !busy;
 
   const post = async () => {
     if (!ready || !chosen) {
@@ -108,23 +76,13 @@ export function ForumCompose({
     }
     setBusy(true);
     setError(null);
-    let photoPath: string | null = null;
-    if (photo) {
-      const up = await uploadForumPhoto(photo);
-      if (!up.ok) {
-        setBusy(false);
-        setError({ field: "body", message: up.message });
-        return;
-      }
-      photoPath = up.value;
-    }
     const r = await createThread({
       userId,
       categoryKey: chosen,
       identity: isProfessional ? "real_name" : identity,
       title: t,
       body: b,
-      photoPath,
+      photoPath: null,
     });
     setBusy(false);
     if (!r.ok) {
@@ -204,7 +162,11 @@ export function ForumCompose({
             {/* MO1.3.2: Category and Title 44 tall, Post 198 (measured from
                 the frame, 2x). */}
             {recoveryPending ? (
-              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
+              // KEEP-SAFETY (handover-complete pass): no category is offered
+              // until the recovery setting is known, so a hidden one is never
+              // shown first. Drawn as the field it stands in for (44, r12,
+              // the field's border), pulsing.
+              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ border: `1px solid ${fv("border")}`, background: fv("track") }} />
             ) : (
               <button
                 ref={setAnchor}
@@ -240,71 +202,26 @@ export function ForumCompose({
           </label>
         </div>
         {error?.field === "title" && <DangerLine className="-mt-2">{error.message}</DangerLine>}
-        {/* Decision 23 (item 68): the photo control is a 44 pt icon row in the
-            Post field's footer, so the field keeps the drawn 198 and the sheet
-            its height. The textarea takes what the footer leaves. */}
+        {/* MO1.3.2: the Post field 198 tall. */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="forum-compose-body" className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
             Post
           </label>
-          <div
-            className="h-[198px] rounded-xl flex flex-col overflow-hidden"
-            style={{ border: `1px solid ${fv("border")}`, background: fv("card") }}
-          >
-            <textarea
-              id="forum-compose-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              maxLength={8000}
-              placeholder="Share a win, ask a question, or pass on a tip…"
-              className="flex-1 min-h-0 px-3 py-2.5 text-sm font-normal resize-none outline-none bg-transparent"
-              style={{ color: fv("text") }}
-            />
-            {FORUM_PHOTOS_ENABLED && (
-              <div className="h-11 shrink-0 flex items-center gap-2 pr-2" style={{ borderTop: `1px solid ${fv("rule")}` }}>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept={FORUM_PHOTO_ACCEPT}
-                  className="hidden"
-                  onChange={(e) => void pick(e.target.files?.[0])}
-                />
-                {preview ? (
-                  <>
-                    <img src={preview} alt="The photo you're adding" className="ml-1.5 w-8 h-8 rounded-lg object-cover shrink-0" />
-                    <button type="button" onClick={removePhoto} className="tap h-11 text-[13px] font-bold" style={{ color: fv("link") }}>
-                      Remove photo
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => fileRef.current?.click()}
-                      disabled={preparing}
-                      aria-label={preparing ? "Preparing photo…" : "Add a photo (optional)"}
-                      className="tap w-11 h-11 flex items-center justify-center shrink-0 disabled:opacity-60"
-                      style={{ color: fv("link") }}
-                    >
-                      <ImagePlus size={18} strokeWidth={1.75} aria-hidden />
-                    </button>
-                    <span className="text-[12px] font-medium" style={{ color: fv("muted") }} aria-hidden>
-                      {preparing ? "Preparing photo…" : "Add a photo (optional)"}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          {photoError && <DangerLine>{photoError}</DangerLine>}
+          <textarea
+            id="forum-compose-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            maxLength={8000}
+            placeholder="Share a win, ask a question, or pass on a tip…"
+            className="h-[198px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
+            style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
+          />
           {error?.field === "body" && <DangerLine>{error.message}</DangerLine>}
         </div>
 
-        <div className="flex flex-col gap-1.5 text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-          {/* A22 privacy line, kept but only while a photo is attached (decision 23, item 253). */}
-          {FORUM_PHOTOS_ENABLED && photo && <span>Location and camera details are removed from photos before they're shared.</span>}
-          <span>Posts with links are checked by a moderator before they appear.</span>
-        </div>
+        <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
+          Posts with links are checked by a moderator before they appear.
+        </span>
       </div>
 
       {/* MO1.3.2.1: the category dropdown, plain rows on a 178 pt card, over

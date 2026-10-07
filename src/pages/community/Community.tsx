@@ -12,7 +12,7 @@ import { CourseBuilder } from "../../components/courses/author/CourseBuilder";
 import { CourseDetailView } from "../../components/courses/CourseDetailView";
 import { LessonView } from "../../components/courses/LessonView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
-import { ForumPlaceholder } from "../../components/forum/parts";
+import { DangerLine, ForumPlaceholder } from "../../components/forum/parts";
 import { fv } from "../../components/forum/forumColor";
 import { useBack } from "../../hooks/useBack";
 
@@ -129,9 +129,8 @@ function Gated({ render, section = "forum" }: { render: (ctx: Ctx) => React.Reac
     return (
       <div className="flex flex-col gap-3">
         <Heading />
-        <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {gate.message}
-        </p>
+        {/* Handover-complete pass: MO1.3 §4's plain danger line, no box. */}
+        <DangerLine>{gate.message}</DangerLine>
         <button
           type="button"
           onClick={gate.retry}
