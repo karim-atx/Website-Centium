@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { JumpToToday } from "../../components/ui/JumpToToday";
+import { calendarJump } from "../../components/ui/calendarJump";
+
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
@@ -451,6 +454,32 @@ export default function ClientCalendarTab() {
     );
   };
 
+  // Iteration 6 "Team" §5 Calendar: a "Next up" hero — the real nearest
+  // upcoming event (today or later), not the mockup's fixed example.
+  const nextUp = useMemo(() => {
+    const nowMinutes = today.getHours() * 60 + today.getMinutes();
+    const todayIso = toISO(today.getFullYear(), today.getMonth(), today.getDate());
+    const candidates = events
+      .filter((e) => e.date > todayIso || (e.date === todayIso && !e.allDay && minutesOf(e.endTime) >= nowMinutes))
+      .sort((a, b) => (a.date === b.date ? minutesOf(a.startTime) - minutesOf(b.startTime) : a.date < b.date ? -1 : 1));
+    const e = candidates[0];
+    if (!e) return null;
+    const isToday = e.date === todayIso;
+    const dayLabel = isToday
+      ? "Today"
+      : new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
+    const when = e.allDay ? "All day" : `${dayLabel} ${range24(e.startTime, e.endTime)}`;
+    let rel = "";
+    if (isToday && !e.allDay) {
+      const diffH = Math.max(0, Math.round(((minutesOf(e.startTime) - nowMinutes) / 60) * 10) / 10);
+      rel = diffH < 1 ? "soon" : `in ${Math.round(diffH)}h`;
+    } else if (!isToday) {
+      const diffDays = Math.round((new Date(`${e.date}T00:00:00`).getTime() - new Date(`${todayIso}T00:00:00`).getTime()) / 86400000);
+      rel = `in ${diffDays}d`;
+    }
+    return { event: e, when: e.location ? `${when} · ${e.location}` : when, rel };
+  }, [events, today]);
+
   const selectedEvents = eventsByDate[selectedDate] ?? [];
   const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -624,9 +653,9 @@ export default function ClientCalendarTab() {
     );
   };
 
-  /** MO1.6–MO1.6.3's header card: chevrons and the label. Handover-complete
-      pass: the Jump to today chip (B30, not drawn) is removed; Year's second
-      tap still returns to today's year.
+  const jump = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
+
+  /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30).
       Decision 23 (item 120): the chevrons #5B3FE4, as the date popup
       (MO1.6.4.1), with its dark #B7ABDE. */
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
@@ -635,6 +664,7 @@ export default function ClientCalendarTab() {
         <ChevronLeft size={16} strokeWidth={2.2} />
       </button>
       <p className="flex-1 min-w-0 text-center text-[15px] font-semibold text-charcoal truncate">{label}</p>
+      {jump.show && <JumpToToday onClick={jump.jump} />}
       <button onClick={onNext} aria-label={nextLabel} className="tap w-7 h-7 -mr-1 flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
         <ChevronRight size={16} strokeWidth={2.2} />
       </button>
@@ -729,12 +759,14 @@ export default function ClientCalendarTab() {
                     aria-pressed={isSelected}
                     // Decision 23 (item 122): the selected day is flat #AEA1DC
                     // (primary-fill, with its own ink in every theme), not the
-                    // gradient. Handover-complete pass: no separate tint for
-                    // today (MO1.6 draws only the selected day; the page opens
-                    // with today selected).
+                    // gradient.
                     className={clsx(
                       "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[15px]",
-                      isSelected ? "font-semibold bg-primary-fill text-on-primary-fill" : "font-medium text-charcoal"
+                      isSelected
+                        ? "font-semibold bg-primary-fill text-on-primary-fill"
+                        : isToday
+                        ? "bg-team-lavender/[0.16] text-primary-deep-text font-semibold"
+                        : "font-medium text-charcoal"
                     )}
                   >
                     {day}
@@ -762,7 +794,7 @@ export default function ClientCalendarTab() {
                   <div
                     key={e.id}
                     className="flex items-start gap-[11px] rounded-[15px] px-3.5 py-3"
-                    style={{ background: tint }}
+                    style={{ background: tint, opacity: e.invite?.status === "declined" ? 0.6 : undefined }}
                   >
                     <span className="w-[3px] self-stretch min-h-8 rounded-full shrink-0" style={{ background: bar }} />
                     <span className="flex-1 min-w-0 flex flex-col gap-1">
@@ -773,15 +805,21 @@ export default function ClientCalendarTab() {
                             {e.allDay ? "All day" : range24(e.startTime, e.endTime)}
                             {e.repeat !== "none" && ` · repeats ${e.repeat}`}
                             {e.location && ` · ${e.location}`}
-                            {/* A booked class has no location of its own; the
-                                business fills that slot, as MO1.6 draws "· Flex
-                                Gym, Hamra". Handover-complete pass: the invite
-                                Check, the Booked Ticket, "(no longer on Explore)"
-                                and the declined 60% are gone from this row (not
-                                drawn); Week's full card still carries them. */}
-                            {bookedById.get(e.id) && ` · ${bookedById.get(e.id)!.businessName}`}
+                            {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
+                                card is what Month renders — not eventCard — so the
+                                full card's "Booked" badge never reaches the screen
+                                most people land on. The subtitle already composes
+                                from several optional parts; the business is one
+                                more, and the delisted note rides with it because
+                                there is nowhere else on this card to put it. */}
+                            {bookedById.get(e.id) &&
+                              ` · ${bookedById.get(e.id)!.businessName}${
+                                bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                              }`}
                           </span>
                         </span>
+                        {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
+                        {bookedById.has(e.id) && <Ticket size={12} className="text-gold shrink-0" />}
                       </button>
                       {link}
                     </span>
@@ -791,6 +829,28 @@ export default function ClientCalendarTab() {
             </div>
           )}
 
+          {/* "Next up": the real nearest event, not the mockup's fixed
+              example — hidden entirely when there is nothing upcoming to
+              show. Not drawn on MO1.6, kept (B30); decision 23 (item 47)
+              moved it under the day's event list, so the month card sits
+              under the tabs as drawn. */}
+          {nextUp && (
+            <div
+              className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mt-[13px]"
+              style={{ background: "var(--gradient-board)" }}
+            >
+              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white/[0.8]">Next up</p>
+              <div className="flex items-end justify-between gap-3 mt-[9px]">
+                <div className="min-w-0">
+                  <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
+                  <p className="mt-[5px] text-[10.5px] text-white/[0.78]">{nextUp.when}</p>
+                </div>
+                {nextUp.rel && (
+                  <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{nextUp.rel}</span>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -814,24 +874,24 @@ export default function ClientCalendarTab() {
               {/* V10 (QA 10.0): "have all the dates from sunday to saturday
                   be under each other in boxes with each[event list] to
                   their respective sides not under" — a day box column with
-                  that day's events beside it. Handover-complete pass: tapping
-                  a day box selects it in place (MO1.6.2), the selected box
-                  filled as today's is on the board (the page opens on today). */}
+                  that day's events beside it. Tapping a day box still opens
+                  it in Day view (B32). */}
               <div className="space-y-2.5">
                 {weekDays.map((iso) => {
                   const dayEvents = eventsByDate[iso] ?? [];
                   const isToday = iso === todayIso;
-                  const isSelected = iso === selectedDate;
                   const d = new Date(`${iso}T00:00:00`);
                   return (
                     <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
                       <button
-                        onClick={() => setSelectedDate(iso)}
-                        aria-label={d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setSelectedDate(iso);
+                          setView("day");
+                        }}
+                        aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isSelected ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
@@ -912,6 +972,9 @@ export default function ClientCalendarTab() {
                 const end = Math.max(minutesOf(e.endTime), start + 20);
                 const top = (start / 60) * HOUR_PX;
                 const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
+                // 30 minutes or less: one line, the time beside the title, so
+                // it isn't cut off (the block is too short for two lines).
+                const short = minutesOf(e.endTime) - start <= 30;
                 const mine = isMine(e);
                 const { tint, bar } = eventColours(e.color, dark);
                 const href = normaliseLink(e.url);
@@ -924,24 +987,38 @@ export default function ClientCalendarTab() {
                       height,
                       background: tint,
                       borderLeft: `3px solid ${bar}`,
+                      opacity: e.invite?.status === "declined" ? 0.6 : undefined,
                     }}
                   >
-                    {/* MO1.6.3: title over the time line at every length; a
-                        block of 30 minutes or less clips the time, as the
-                        board does (handover-complete pass: the one-line short
-                        form, the invite / booking icons, the delisted note and
-                        the declined 60% are gone; not drawn). */}
                     <button
                       onClick={() => openEdit(e)}
                       disabled={!mine}
-                      className={clsx("tap w-full h-full px-2.5 py-1.5 text-left", href && "pr-9")}
+                      className={clsx(
+                        "tap w-full h-full px-2.5 text-left",
+                        short ? "flex items-center gap-1.5 py-0" : "py-1.5",
+                        href && "pr-9"
+                      )}
                     >
-                      <p className="text-xs font-semibold text-charcoal truncate">{e.title}</p>
+                      <p className={clsx("text-xs font-semibold text-charcoal truncate flex items-center gap-1", short && "min-w-0")}>
+                        <span className="truncate">{e.title}</span>
+                        {/* The timeline block is too small for the badge and the
+                            buttons; the day list above carries both. This says
+                            only that the event is an invitation, or a booking. */}
+                        {e.invite && <Check size={10} className="shrink-0" />}
+                        {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
+                      </p>
+                      {short ? (
+                        <p className="text-[10px] text-charcoal-faint whitespace-nowrap shrink-0">{range24(e.startTime, e.endTime)}</p>
+                      ) : (
                       <p className="text-[10px] text-charcoal-faint truncate">
                         {range24(e.startTime, e.endTime)}
                         {e.location ? ` · ${e.location}` : ""}
-                        {bookedById.get(e.id) && ` · ${bookedById.get(e.id)!.businessName}`}
+                        {bookedById.get(e.id) &&
+                          ` · ${bookedById.get(e.id)!.businessName}${
+                            bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                          }`}
                       </p>
+                      )}
                     </button>
                     {href && (
                       <a

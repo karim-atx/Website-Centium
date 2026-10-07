@@ -13,7 +13,8 @@ export const JumpToToday: React.FC<{ onClick: () => void; className?: string }> 
   <button
     type="button"
     onClick={onClick}
-    className={`tap text-[10px] font-bold text-team-nav-accent bg-team-nav-accent/[0.14] rounded-full px-2 py-0.5 shrink-0 whitespace-nowrap ${className ?? ""}`}
+    // Dark: the deep-text lift, so the label clears 4.5:1 on its own tint.
+    className={`tap text-[10px] font-bold text-team-nav-accent dark:text-primary-deep-text bg-team-nav-accent/[0.14] rounded-full px-2 py-0.5 shrink-0 whitespace-nowrap ${className ?? ""}`}
   >
     Jump to today
   </button>
