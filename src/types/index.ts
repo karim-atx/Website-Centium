@@ -1486,8 +1486,8 @@ export interface JournalEntry {
 // V3: appearance — accent color theme, alongside light/dark. R20 (batch D):
 // the five Foundations 2.1 theme pairs; saved values from before are mapped by
 // normalizeColorTheme (src/theme/colorThemes.ts).
-// Future Supabase migration: device_presentation_settings (per-platform,
-// stays local, never synced; its color_theme enum needs the new values).
+// Stored in device_presentation_settings.color_theme as centium / sky_slate /
+// rose_blush / gold_amber / coral_terracotta (services/presentation/mapping.ts).
 export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.

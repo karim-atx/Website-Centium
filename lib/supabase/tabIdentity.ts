@@ -184,7 +184,16 @@ export const STORAGE_PREFIX = "centium-state";
  * Preferences of the DEVICE, shared by whoever uses it. Everything else under
  * the prefix is account data and lives in that account's own namespace.
  */
-export const DEVICE_KEYS: ReadonlySet<string> = new Set(["theme", "colorTheme", "language", "accessibility", "notificationPrefs"]);
+// presentationOwner: which account the device's theme / accessibility copy was
+// last chosen by or loaded for (Stage A1), so it is never saved to another's row.
+export const DEVICE_KEYS: ReadonlySet<string> = new Set([
+  "theme",
+  "colorTheme",
+  "language",
+  "accessibility",
+  "notificationPrefs",
+  "presentationOwner",
+]);
 
 export function storageNamespace(userId: string | null): string {
   return userId ? `u:${userId}` : "anon";

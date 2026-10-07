@@ -293,6 +293,9 @@ import {
 } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 import { normalizeColorTheme } from "../theme/colorThemes";
+import { useSystemDark } from "../theme/useSystemDark";
+import { usePresentationSync } from "../theme/usePresentationSync";
+import type { Presentation, ThemeMode } from "../services/presentation/mapping";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
 // auto-streaks (which walk backwards through every dated entry) and
@@ -491,13 +494,14 @@ interface AppState {
     > & { quietFrom: string; quietTo: string };
   updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
 
-  // Future Supabase migration: device_presentation_settings (per-platform,
-  // stays local, never synced) — larger text / reduce motion are
-  // presentation, not synced app preferences.
-  // R19 (batch C) adds High contrast and Bigger tap targets, also device-local;
-  // optional so a value saved before them reads as off.
+  // device_presentation_settings, this website's 'web' row (Stage A1; per
+  // platform, not shared with the phone), with a device copy that paints
+  // first. R19 (batch C) High contrast and Bigger tap targets are optional so
+  // a device copy saved before them reads as off.
   accessibility: { largerText: boolean; reduceMotion: boolean; highContrast?: boolean; biggerTargets?: boolean };
   updateAccessibility: (patch: Partial<AppState["accessibility"]>) => void;
+  /** Why the last theme / accessibility change didn't reach the server (the choice is kept here). */
+  presentationSaveError: string | null;
 
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
@@ -1016,8 +1020,8 @@ interface AppState {
 
   today: string;
 
-  // Future Supabase migration: device_presentation_settings (per-platform,
-  // stays local, never synced) — see the ColorTheme type comment.
+  // device_presentation_settings.color_theme (Stage A1) — see the ColorTheme
+  // type comment.
   colorTheme: ColorTheme;
   setColorTheme: (theme: ColorTheme) => void;
 
@@ -2040,10 +2044,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     let cancelled = false;
-    void fetchProfile(authUserId).then((result) => {
-      if (cancelled) return;
-      if (result) {
-        setUser((prev) => ({ ...prev, ...result.profile }));
     // Stage A1: Instagram and X used to be kept only in this cached `user`.
     // Moved up to profiles.instagram / .x once, then dropped from the cache.
     // Only when the cache is THIS account's (it is not keyed by account).
@@ -2053,6 +2053,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (done && !cancelled) setUser((prev) => ({ ...prev, instagramHandle: undefined, xHandle: undefined }));
       });
     }
+    void fetchProfile(authUserId).then((result) => {
+      if (cancelled) return;
+      if (result) {
+        setUser((prev) => ({ ...prev, ...result.profile }));
         // The stored flower wins. None stored yet: this device's own choice,
         // if it ever made one, goes up once (the column being null is what
         // makes it once: after this it is set).
@@ -2118,7 +2122,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [authUserId, profileReady, user.avatarUrl, setUser]);
 
-  const [theme, setTheme] = usePersistentState<"light" | "dark">("theme", "light");
+  // Stage A1: light / dark / auto, synced with device_presentation_settings
+  // (usePresentationSync below). 'auto' only ever comes from the row and
+  // follows the system; the Dark Mode switch stores light or dark.
+  const [themeMode, setThemeMode] = usePersistentState<ThemeMode>("theme", "light");
+  const systemDark = useSystemDark();
+  const theme: "light" | "dark" = themeMode === "auto" ? (systemDark ? "dark" : "light") : themeMode;
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
@@ -2129,7 +2138,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = language;
   }, [language]);
   const t = (key: string) => translations[language][key] ?? key;
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
   const [notificationPrefs, setNotificationPrefs] = usePersistentState<AppState["notificationPrefs"]>(
     "notificationPrefs",
@@ -2963,6 +2972,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", colorTheme);
   }, [colorTheme]);
+
+  // Stage A1: theme, colour theme and accessibility follow this account's
+  // 'web' row of device_presentation_settings; the values above stay the
+  // device copy that paints first and works offline.
+  const presentation = useMemo<Presentation>(
+    () => ({
+      theme: themeMode,
+      colorTheme,
+      largerText: accessibility.largerText,
+      reduceMotion: accessibility.reduceMotion,
+      highContrast: !!accessibility.highContrast,
+      biggerTargets: !!accessibility.biggerTargets,
+    }),
+    [themeMode, colorTheme, accessibility]
+  );
+  const [presentationPending, setPresentationPending] = usePersistentState<boolean>("presentationPending", false);
+  // Device-level: whose choices the device copy above holds (never saved to another's row).
+  const [presentationOwner, setPresentationOwner] = usePersistentState<string | null>("presentationOwner", null);
+  const { saveError: presentationSaveError } = usePresentationSync({
+    ownerId: authUserId,
+    current: presentation,
+    pending: presentationPending,
+    setPending: setPresentationPending,
+    deviceOwner: presentationOwner,
+    setDeviceOwner: setPresentationOwner,
+    apply: (p) => {
+      setThemeMode(p.theme);
+      setColorThemeState(p.colorTheme);
+      setAccessibility({
+        largerText: p.largerText,
+        reduceMotion: p.reduceMotion,
+        highContrast: p.highContrast,
+        biggerTargets: p.biggerTargets,
+      });
+    },
+  });
 
   const [customFoods, setCustomFoods] = usePersistentState<CustomFood[]>("customFoods", []);
   const [customExercises, setCustomExercises] = usePersistentState<CustomExerciseLibraryItem[]>(
@@ -6390,6 +6435,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateNotificationPrefs,
       accessibility,
       updateAccessibility,
+      presentationSaveError,
       foodLog,
       addFoodEntry,
       addFoodEntryRecord,
@@ -6662,6 +6708,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language,
       notificationPrefs,
       accessibility,
+      presentationSaveError,
       foodLog,
       workoutLog,
       workoutSessions,
