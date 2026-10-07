@@ -7,7 +7,6 @@ import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
 import MeditationPage from "./MeditationPage";
 import { earnedCount } from "../../services/achievements";
-import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
 import { habitIcon } from "../../utils/icons";
 import {
@@ -99,13 +98,14 @@ function DoneRing({ done, total }: { done: number; total: number }) {
 //   check (they can't be ticked by hand).
 // - The paging Habits widget stays on Home; points and tier stay on the
 //   Achievements page.
-// - The Meditation tile keeps the live minutes when there are any.
+// - The Meditation tile reads "Start a session" (static in the handover's
+//   copy table); the minutes stay on the Home Meditation widget.
 // LIGHT MODE (decision 22): the tiles, the Today card's outline, the streak
 // strip and the checks are new since the redesign, so they take the frame's
 // own colours (lavender Journal, teal Meditation, gold Achievements; teal
 // checks, which supersedes A5). The habit streak mark is the handover's own
-// leaf (StreakLeaf; decision 9 superseded). The Journal tile's flame is the
-// journal streak, not a habit streak, so it stays.
+// leaf (StreakLeaf; decision 9 superseded), and so is the Journal tile's
+// journal-streak mark (outlined, as the frame draws it).
 export default function Mind() {
   const {
     streaks,
@@ -113,7 +113,6 @@ export default function Mind() {
     toggleHabit,
     journalEntries,
     achievements,
-    meditationSummary,
     refreshAchievements,
     noteFeatureMilestone,
     today,
@@ -158,13 +157,6 @@ export default function Mind() {
   );
   const leadBest = lead ? Math.max(habitBestStreak(lead.doneDates ?? []), lead.streakDays) : 0;
   const LeadIcon = lead ? habitIcon[lead.icon] : null;
-
-  const meditationLine =
-    meditationSummary && !isEmptySummary(meditationSummary)
-      ? meditationSummary.secondsToday > 0
-        ? `${formatMeditationTime(meditationSummary.secondsToday)} today`
-        : `${formatMeditationTime(meditationSummary.secondsThisWeek)} this week`
-      : "Start a session";
 
   if (section) {
     return (
@@ -220,8 +212,11 @@ export default function Mind() {
               journalLoading ? (
                 <LineSkeleton />
               ) : (
-                <span className="inline-flex items-center gap-1">
-                  <Flame size={11} className="text-team-gold-ink dark:text-team-gold-ink" />
+                // MO1.1 #2 (2x frame): the handover's leaf, outlined in
+                // #7D6BB5 with a white inside, 6 × 10 pt over its 1 pt
+                // stroke, 6 pt before the count.
+                <span className="inline-flex items-center gap-1.5">
+                  <StreakLeaf variant="outline" height={9} className="text-primary-dark dark:text-primary-deep-text" />
                   {journalDays} {journalDays === 1 ? "day" : "days"}
                 </span>
               )
@@ -234,7 +229,9 @@ export default function Mind() {
             // MO1.1 icons list: Flower2 28/1.5.
             icon={<Flower2 size={28} strokeWidth={1.5} className="text-team-teal-deep dark:text-teal-dark" />}
             title="Meditation"
-            line={meditationLine}
+            // MO1.1 copy: "Start a session" is static; the minutes are on
+            // the Home Meditation widget.
+            line="Start a session"
           />
           {/* NOTHING IS SHOWN UNTIL SOMETHING HAS BEEN READ. A count of "0 of
               0" before the first call would be a number nobody earned. */}

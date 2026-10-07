@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
+import { Trophy } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useApp } from "../../context/AppContext";
@@ -33,8 +34,11 @@ import {
 // screen has to be celebrated on the Food screen.
 //
 // THE HERO TAKES THE CURRENT TIER'S COLOUR (A10). Badges keep their emoji
-// until the medallion set exists (A11), inside a round medallion. The badge
-// cards and the recently-unlocked points keep their old light colours.
+// until the medallion set exists (A11), inside a round medallion; the
+// per-badge points colour and medallion tint come with that set's key map.
+// The badge cards are the frame's white cards with a 1 px charcoal 8% border
+// (decision 23, kept list 54; handover-complete pass). The recently-unlocked
+// card keeps its pre-redesign light hairline (decision 22).
 
 // MO1.1.3 #3 "Recently unlocked": the handover's 10.5/700 label (decision 20;
 // tracking measured on the 2x frame at about 0.1em). The label existed before
@@ -69,10 +73,11 @@ function BadgeTile({ badge, onOpen }: { badge: Badge; onOpen: () => void }) {
   const earned = badge.earned !== null;
   const { display } = badge;
   return (
+    // MO1.1.3 #5–15: white, 1 px rgba(36,31,27,0.08), r16, padding
+    // 14 8 12, gap 8, 124 tall (116 on the last row: content height).
     <button
       onClick={onOpen}
-      className="tap flex flex-col items-center gap-2 rounded-2xl px-2 pt-3.5 pb-3 text-center min-h-[124px]"
-      style={{ background: earned ? "rgba(217,164,65,.13)" : "rgba(36,31,27,.04)" }}
+      className="tap flex flex-col items-center gap-2 rounded-2xl px-2 pt-3.5 pb-3 text-center min-h-[116px] bg-cream-card border border-charcoal/[0.08]"
     >
       <Medallion icon={display.icon} earned={earned} size={44} />
       <span
@@ -117,12 +122,25 @@ export default function AchievementsTab() {
   const counts = earnedCount(rows);
   const shown = category === "all" ? badges : badges.filter((b) => b.category === category);
 
+  // MO1.1.3 Loading: skeleton blocks at the anatomy positions, fill
+  // surface.soft, each block's radius: the tier card (254, r22), the
+  // recently-unlocked card (192, r24), the strip (52, r16 0 0 16) and the
+  // badge cards (124, r16).
   if (achievementsLoading && achievements === null) {
     return (
-      <div className="animate-fade-slide-up">
-        <Card className="text-center py-8">
-          <p className="text-sm text-charcoal-faint">Loading…</p>
-        </Card>
+      <div className="animate-fade-slide-up" aria-busy="true">
+        <span className="sr-only" role="status">Loading your achievements…</span>
+        <div aria-hidden>
+          <div className="h-[254px] rounded-[22px] bg-cream-soft mb-[22px]" />
+          <div className="h-3 w-32 rounded bg-cream-soft mb-2 ml-1" />
+          <div className="h-[192px] rounded-3xl bg-cream-soft mb-[22px]" />
+          <div className="h-[52px] -mr-4 rounded-l-2xl bg-cream-soft mb-3" />
+          <div className="grid grid-cols-3 gap-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-[124px] rounded-2xl bg-cream-soft" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -131,14 +149,6 @@ export default function AchievementsTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      {/* A FAILED READ SAYS SO. "No achievements" and "the request failed"
-          render identically, and only one of them is true. */}
-      {achievementsError && (
-        <p className="mb-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {achievementsError}
-        </p>
-      )}
-
       {/* ---- MO1.1.3 #2: the tier card, in the current tier's colour ------- */}
       {pointsSummary && tier && (
         <div
@@ -310,14 +320,33 @@ export default function AchievementsTab() {
         />
       )}
 
+      {/* MO1.1.3 Error: an inline line in danger under the affected element
+          (the badges it failed to load). A failed read says so: "no
+          achievements" and "the request failed" render identically, and only
+          one of them is true. */}
+      {achievementsError && (
+        <p role="alert" className="mb-3 text-[11.5px] leading-4 font-medium text-status-high">
+          {achievementsError}
+        </p>
+      )}
+
       {/* ---- MO1.1.3 #5–15: the badge grid -------------------------------- */}
       {shown.length === 0 ? (
-        <Card className="text-center py-7">
-          <p className="text-sm font-semibold text-charcoal mb-1">Nothing here yet</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4">
-            {achievementsError ? "We couldn't load your achievements." : "Use the app and badges start appearing here."}
-          </p>
-        </Card>
+        // MO1.1.3 Empty: Foundations › Empty state (56 primary.tint tile, 26
+        // thin-stroke icon in primary.accent, title 15/700, one line
+        // 12.5/500 text.muted, max width 260). Icon UNSPECIFIED: Trophy, as
+        // on the Mind tile.
+        !achievementsError && (
+          <div className="flex flex-col items-center text-center py-8">
+            <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
+              <Trophy size={26} strokeWidth={1.5} aria-hidden />
+            </span>
+            <p className="text-[15px] font-bold text-charcoal mt-3">Nothing here yet</p>
+            <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 leading-relaxed max-w-[260px]">
+              Use the app and badges start appearing here.
+            </p>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {shown.map((b) => (

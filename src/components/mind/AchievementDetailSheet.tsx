@@ -151,12 +151,9 @@ export const AchievementDetailSheet: React.FC<{
             );
           })}
         </div>
-
-        {badge.pointsEarned > 0 && (
-          <p className="mt-2.5 text-[11px] font-semibold text-charcoal-soft text-center">
-            {badge.pointsEarned.toLocaleString()} points earned from this badge.
-          </p>
-        )}
+        {/* Handover-complete pass: the "N points earned from this badge." line
+            under the rungs is gone (not drawn); each earned rung shows its
+            own points. */}
       </div>
     </CentredPopup>
   );
