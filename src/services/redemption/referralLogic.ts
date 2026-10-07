@@ -124,3 +124,52 @@ export function redemptionsLine(summary: Pick<ReferralSummary, "redemptions" | "
   const points = summary.pointsEarned > 0 ? ` · ${summary.pointsEarned.toLocaleString("en-US")} points earned` : "";
   return `${friends} with your code${points}`;
 }
+
+/**
+ * preview_referral_code() (A6 follow-up): the "{name} invited you" confirm
+ * before anything is redeemed. Its reasons are its own and are NOT mapped onto
+ * redeem's: not_valid covers an unknown, own, used, expired or blank code
+ * alike (one answer, so the preview cannot be used to probe codes).
+ */
+export type PreviewReason = "found" | "not_valid" | "already_referred";
+
+export interface PreviewReferralRow {
+  ok: boolean | null;
+  reason: string | null;
+  referrer_first_name: string | null;
+  referee_discount_pct: number | string | null;
+  referrer_discount_pct: number | string | null;
+}
+
+export type PreviewReferralOutcome =
+  | { status: "found"; referrerFirstName: string; refereeDiscountPct: number | null; referrerDiscountPct: number | null }
+  | { status: "refused"; reason: Exclude<PreviewReason, "found"> | "unknown"; line: string };
+
+export const PREVIEW_REFUSAL_LINES: Record<Exclude<PreviewReason, "found">, string> = {
+  not_valid: "That code isn't valid. Check it and try again.",
+  already_referred: "This code has already been used on your account.",
+};
+
+export function interpretPreviewReferral(row: PreviewReferralRow | null | undefined): PreviewReferralOutcome {
+  const reason = row?.reason ?? null;
+  if (row?.ok === true && reason === "found" && row.referrer_first_name) {
+    return {
+      status: "found",
+      referrerFirstName: row.referrer_first_name,
+      refereeDiscountPct: toPct(row.referee_discount_pct),
+      referrerDiscountPct: toPct(row.referrer_discount_pct),
+    };
+  }
+  if (reason === "not_valid" || reason === "already_referred") {
+    return { status: "refused", reason, line: PREVIEW_REFUSAL_LINES[reason] };
+  }
+  return { status: "refused", reason: "unknown", line: UNKNOWN_REFUSAL_LINE };
+}
+
+/** The confirm row's second line, from the previewed rates. */
+export function previewOfferLine(p: { referrerFirstName: string; refereeDiscountPct: number | null; referrerDiscountPct: number | null }): string {
+  const mine = p.refereeDiscountPct !== null ? `You'll get ${pctLabel(p.refereeDiscountPct)}% off your subscription` : "You'll get the friend discount on your subscription";
+  return p.referrerDiscountPct !== null && p.referrerDiscountPct > 0
+    ? `${mine}, and ${p.referrerFirstName} gets ${pctLabel(p.referrerDiscountPct)}% off theirs.`
+    : `${mine}.`;
+}

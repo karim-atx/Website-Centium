@@ -4,15 +4,18 @@ import type { Enums, Tables } from "../../../lib/supabase/database.types";
 import { NOT_ACCEPTING_CLIENTS } from "../subscription-tiers/freePeriodCopy";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import {
+  interpretPreviewReferral,
   interpretRedeemReferral,
   toReferralSummary,
+  type PreviewReferralOutcome,
+  type PreviewReferralRow,
   type RedeemReferralOutcome,
   type RedeemReferralRow,
   type ReferralSummary,
   type ReferralSummaryRow,
 } from "./referralLogic";
 
-export type { RedeemReferralOutcome, ReferralSummary } from "./referralLogic";
+export type { PreviewReferralOutcome, RedeemReferralOutcome, ReferralSummary } from "./referralLogic";
 
 // Client-code and referral-code redemption, against the real RPCs.
 //
@@ -228,6 +231,23 @@ export async function redeemReferralCode(
     if (error) return { status: "error", message: describeReferralError(error, fallback) };
     const row = (Array.isArray(data) ? data[0] : data) as RedeemReferralRow | null | undefined;
     return interpretRedeemReferral(row);
+  } catch (e) {
+    return { status: "error", message: isOffline(e) ? OFFLINE_MESSAGE : fallback };
+  }
+}
+
+/** preview_referral_code(): who invited you and the offer, before redeeming.
+ *  Rate limited (it raises past five tries in 15 minutes, which comes back as
+ *  "error" with the retry hint); never retried on not_valid. */
+export async function previewReferralCode(
+  code: string
+): Promise<PreviewReferralOutcome | { status: "error"; message: string }> {
+  const fallback = "Couldn't check that code. Try again.";
+  try {
+    const { data, error } = await referralRpc()("preview_referral_code", { p_code: code.trim() });
+    if (error) return { status: "error", message: describeReferralError(error, fallback) };
+    const row = (Array.isArray(data) ? data[0] : data) as PreviewReferralRow | null | undefined;
+    return interpretPreviewReferral(row);
   } catch (e) {
     return { status: "error", message: isOffline(e) ? OFFLINE_MESSAGE : fallback };
   }

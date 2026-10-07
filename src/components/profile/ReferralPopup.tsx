@@ -6,9 +6,10 @@ import {
   getReferralSummary,
   mintMyReferralCode,
   redeemReferralCode,
+  previewReferralCode,
   type ReferralSummary,
 } from "../../services/redemption";
-import { appliedLine, redemptionsLine } from "../../services/redemption/referralLogic";
+import { appliedLine, previewOfferLine, redemptionsLine } from "../../services/redemption/referralLogic";
 
 // MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30), on
 // the A6 backend ("Stage A6 · Referrals" in ../Database/docs/HANDOVER_API.md):
@@ -25,10 +26,13 @@ import { appliedLine, redemptionsLine } from "../../services/redemption/referral
 //   (i_was_referred) sees MO1.10.1's applied row in the field's place, with
 //   its own discount (my_discount_pct).
 //
-// REMOVED in A6: the create_referral() / per-row code flow, and the
-// "{name} invited you" confirm step — it was built on preview_referral(),
-// which only knows legacy single-use codes and so cannot preview a permanent
-// one; the contract has no preview for those.
+// REMOVED in A6: the create_referral() / per-row code flow.
+//
+// THE "{name} invited you" CONFIRM IS BACK (user decision, 7 October 2026), on
+// preview_referral_code(): Apply previews first (first name and the two
+// rates, nothing else), and only Confirm redeems. Preview's reasons are its
+// own (not_valid covers unknown, own, used and expired codes alike, so it
+// cannot be used to probe codes) and are not mapped onto redeem's.
 //
 // Still waiting on the D25 reward model: the frame's reward wording ("first
 // payment", "a future bill"), the "N of 12 discount rewards" progress bar and
@@ -122,12 +126,35 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
     await copyCode();
   };
 
-  const apply = async () => {
+  // The previewed invitation awaiting Confirm (null = the field shows).
+  const [invite, setInvite] = useState<{
+    code: string;
+    referrerFirstName: string;
+    refereeDiscountPct: number | null;
+    referrerDiscountPct: number | null;
+  } | null>(null);
+
+  const lookUp = async () => {
     if (!codeDraft.trim()) return;
     setResult(null);
     setBusy(true);
-    const outcome = await redeemReferralCode(codeDraft);
+    const p = await previewReferralCode(codeDraft);
     setBusy(false);
+    if (p.status === "found") {
+      setInvite({ code: codeDraft, ...p });
+      return;
+    }
+    setResult({ success: false, message: p.status === "refused" ? p.line : p.message });
+  };
+
+  const apply = async () => {
+    const code = invite?.code ?? codeDraft;
+    if (!code.trim()) return;
+    setResult(null);
+    setBusy(true);
+    const outcome = await redeemReferralCode(code);
+    setBusy(false);
+    setInvite(null);
     if (outcome.status === "redeemed") {
       setCodeDraft("");
       setResult({ success: true, message: outcome.line });
@@ -284,6 +311,33 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
               <CircleCheck size={18} strokeWidth={2} className="shrink-0" aria-hidden />
               {appliedMessage}
             </p>
+          ) : invite ? (
+            // The confirm, as main drew it (item 131): an r12 primary-pale row
+            // in the field's place, then Cancel / Confirm (48, r14, gap 8).
+            <div className="animate-fade-slide-up">
+              <div className="min-h-12 rounded-xl bg-primary-pale px-3.5 py-2.5 flex flex-col justify-center">
+                <p className="text-sm font-semibold text-primary-deep-text">{invite.referrerFirstName} invited you</p>
+                <p className="text-xs text-primary-dark">{previewOfferLine(invite)}</p>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setInvite(null)}
+                  disabled={busy}
+                  className="tap flex-1 h-12 rounded-[14px] bg-primary-pale text-primary-accent text-[14px] font-bold disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void apply()}
+                  disabled={busy}
+                  className={`tap flex-1 h-12 rounded-[14px] text-[14px] font-bold disabled:opacity-60 ${filled}`}
+                >
+                  {busy ? "Applying…" : "Confirm"}
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <input
@@ -292,7 +346,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                   setCodeDraft(e.target.value.toUpperCase());
                   setResult(null);
                 }}
-                onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && !busy && void apply()}
+                onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && !busy && void lookUp()}
                 placeholder="Enter a code"
                 aria-label="A friend's referral code"
                 aria-invalid={(result && !result.success) || undefined}
@@ -312,7 +366,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                   (x 562–707, y 1408–1503). */}
               <button
                 type="button"
-                onClick={() => void apply()}
+                onClick={() => void lookUp()}
                 disabled={!codeDraft.trim() || busy}
                 className="tap h-12 px-5 rounded-xl bg-primary-pale text-primary-accent text-[13px] font-bold shrink-0 disabled:pointer-events-none"
               >

@@ -2,6 +2,9 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   appliedLine,
+  interpretPreviewReferral,
+  PREVIEW_REFUSAL_LINES,
+  previewOfferLine,
   interpretRedeemReferral,
   pctLabel,
   redemptionsLine,
@@ -128,4 +131,24 @@ test("redemptionsLine: nothing until somebody used the code", () => {
   assert.equal(redemptionsLine({ redemptions: 1, pointsEarned: 1500 }), "1 friend joined with your code · 1,500 points earned");
   assert.equal(redemptionsLine({ redemptions: 2, pointsEarned: 3000 }), "2 friends joined with your code · 3,000 points earned");
   assert.equal(redemptionsLine({ redemptions: 2, pointsEarned: 0 }), "2 friends joined with your code");
+});
+
+test("preview: found carries the first name and both rates", () => {
+  const out = interpretPreviewReferral({ ok: true, reason: "found", referrer_first_name: "Jpw", referee_discount_pct: "10.00", referrer_discount_pct: 15 });
+  assert.deepEqual(out, { status: "found", referrerFirstName: "Jpw", refereeDiscountPct: 10, referrerDiscountPct: 15 });
+  assert.equal(previewOfferLine(out as Extract<typeof out, { status: "found" }>), "You'll get 10% off your subscription, and Jpw gets 15% off theirs.");
+});
+
+test("preview: not_valid and already_referred are refusals with their own lines, never redeem's", () => {
+  const bad = interpretPreviewReferral({ ok: false, reason: "not_valid", referrer_first_name: null, referee_discount_pct: null, referrer_discount_pct: null });
+  assert.deepEqual(bad, { status: "refused", reason: "not_valid", line: PREVIEW_REFUSAL_LINES.not_valid });
+  assert.doesNotMatch(PREVIEW_REFUSAL_LINES.not_valid, /own|used|expired/i);
+  const done = interpretPreviewReferral({ ok: false, reason: "already_referred", referrer_first_name: null, referee_discount_pct: null, referrer_discount_pct: null });
+  assert.equal(done.status, "refused");
+});
+
+test("preview: ok without a name, or an unknown reason, is not treated as found", () => {
+  assert.equal(interpretPreviewReferral({ ok: true, reason: "found", referrer_first_name: null, referee_discount_pct: 10, referrer_discount_pct: 15 }).status, "refused");
+  assert.equal(interpretPreviewReferral({ ok: true, reason: "weird", referrer_first_name: "A", referee_discount_pct: 10, referrer_discount_pct: 15 }).status, "refused");
+  assert.equal(interpretPreviewReferral(null).status, "refused");
 });
