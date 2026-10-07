@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   fetchAuthors,
   fetchMyLikes,
+  signPhotos,
   fetchThreads,
   likeThread,
   THREAD_PAGE,
@@ -37,9 +38,10 @@ import { ThemedMark } from "../ui/ThemedMark";
 // parts are the category colours (the card's edge and its pill, A20), the
 // round New post button and tappable likes (A21). Handover-complete pass
 // (2026-10-07): what the design does not draw is gone unless it is safety or
-// privacy: the card's photo and the removed-post block are removed; the
-// moderator warning, the held section and recovery-mode hiding stay
-// (restyled), and older posts load on scroll with no visible control.
+// privacy: the removed-post block is removed; the moderator warning, the held
+// section and recovery-mode hiding stay (restyled), and older posts load on
+// scroll with no visible control. Restore round (user, 2026-10-07): a post's
+// photo is back on its card.
 //
 // RECOVERY-SENSITIVE MODE IS APPLIED HERE, ON THE DEVICE. The fetch below is
 // the same whether the mode is on or off (every category, the same columns,
@@ -69,6 +71,7 @@ export function ForumHome({
   // the old list is not shown: `threads` reads null until `page.key` matches.
   const [page, setPage] = useState<{ key: string | null; threads: ForumThread[]; more: boolean } | null>(null);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
+  const [photos, setPhotos] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<{ key: string | null; message: string } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [likes, setLikes] = useState<Set<string>>(new Set());
@@ -87,8 +90,13 @@ export function ForumHome({
   const shownError = error && error.key === activeFilter ? error.message : null;
 
   const decorate = useCallback(async (list: ForumThread[]) => {
-    const [a, l] = await Promise.all([fetchAuthors(list.map((t) => t.id), []), fetchMyLikes(list.map((t) => t.id))]);
+    const [a, p, l] = await Promise.all([
+      fetchAuthors(list.map((t) => t.id), []),
+      signPhotos(list.map((t) => t.photoPath).filter((x): x is string => !!x)),
+      fetchMyLikes(list.map((t) => t.id)),
+    ]);
     setAuthors((prev) => new Map([...prev, ...a]));
+    setPhotos((prev) => new Map([...prev, ...p]));
     setLikes((prev) => new Set([...prev, ...l]));
   }, []);
 
@@ -309,6 +317,7 @@ export function ForumHome({
                 thread={t}
                 author={authors.get(t.id) ?? UNKNOWN_AUTHOR}
                 categoryName={byKey.get(t.categoryKey)?.name ?? ""}
+                photoUrl={t.photoPath ? photos.get(t.photoPath) ?? null : null}
                 colours={categoryColours(t.categoryKey, dark)}
                 liked={likes.has(t.id)}
                 onLike={() => void toggleLike(t)}
@@ -362,6 +371,7 @@ function ThreadCard({
   thread,
   author,
   categoryName,
+  photoUrl,
   colours,
   liked,
   onLike,
@@ -370,6 +380,7 @@ function ThreadCard({
   thread: ForumThread;
   author: Author;
   categoryName: string;
+  photoUrl: string | null;
   colours: CategoryColours;
   liked: boolean;
   onLike: () => void;
@@ -417,8 +428,13 @@ function ThreadCard({
           {thread.body}
         </div>
       )}
-      {/* Handover-complete pass: no photo on the card (MO1.3 draws none); a
-          post's photo still shows on its page, so none is out of reach. */}
+      {/* Restore round (user, 2026-10-07): the post's photo is back on its
+          card, 120 tall with the card's r12 corners on the photo backdrop. */}
+      {thread.photoPath && (
+        <div className="h-[120px] rounded-xl overflow-hidden" style={{ background: fv("photo-bg") }}>
+          {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
+        </div>
+      )}
       <div className="mt-1 h-[17px] flex gap-4 text-[13px] items-center" style={{ color: fv("muted") }}>
         {/* Likes are tappable here now (A21), as on the post. */}
         <button

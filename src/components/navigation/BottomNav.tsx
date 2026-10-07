@@ -163,10 +163,12 @@ export const BottomNav: React.FC = () => {
 
           return (
             <NavLink key={item.to} to={item.to} className="tap relative flex items-center justify-center h-full">
-              {/* Handover-complete pass (2026-10-07): no unread dot on the
-                  client navbar's More, which no frame draws (FO1 K1, WO1 K4).
-                  The professional and business bar above, which has no
-                  frame, keeps its dot. */}
+              {/* On More, and only More — see the identical note on the
+                  professional/business bar above; this dot predates the
+                  Team redesign and isn't part of it. Restore round (user,
+                  2026-10-07): back on the client bar as main had it. */}
+              {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
+
               {isHome ? (
                 <span
                   className={clsx(

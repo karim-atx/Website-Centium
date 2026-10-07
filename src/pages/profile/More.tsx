@@ -43,9 +43,7 @@ import { linePx, textPx } from "../../theme/textSize";
 //   Premium        60 high, as the frame measures; a 22px leaf crown
 // Every lavender and teal here follows the colour theme (th-* colours), the
 // mint hero and tiles and the #9A94B3 greys included (MO1 §9 "Swaps to theme").
-// The frame is a client account's page; the professional and business lists
-// have no frame and keep their own rows (with the Messages unread badge) so
-// those accounts can still reach their own data. The frame has no dark mode, so dark
+// The frame is a client account's page. The frame has no dark mode, so dark
 // mode takes the app's tint families (teal .12, lavender .10) at the same
 // geometry. Font sizes and weights are fitted to the frame's text widths.
 
@@ -211,10 +209,10 @@ export default function More() {
               </span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
-              {/* Handover-complete pass: the client frame (MO1) draws no unread
-                  badge on Messages, so only the professional and business
-                  lists (no frame) keep it. */}
-              {!isClient && r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
+              {/* Restore round (user, 2026-10-07): the Messages unread badge is
+                  back for every account, the client's MO1 rows included
+                  (decision 23 item 307's 18 tall primary pill). */}
+              {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
               <ChevronRight size={14} className="text-th-9a94b3" />
             </span>
           </button>
