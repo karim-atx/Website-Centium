@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { Users, CalendarDays, ChevronRight, KeyRound } from "lucide-react";
+import { Users, CalendarDays, ChevronRight, KeyRound, Store } from "lucide-react";
 
 // V9 (QA 9.0): "Add a new button between analytics and marketplace called
 // operations that house both the employees and classes buttons found in
@@ -11,6 +11,8 @@ import { Users, CalendarDays, ChevronRight, KeyRound } from "lucide-react";
 export default function BusinessOperationsTab() {
   const navigate = useNavigate();
   const items = [
+    // Stage A4: the venue console (hours, logo and cover, members, rosters).
+    { icon: Store, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" },
     { icon: KeyRound, label: "Gym", desc: "Manage membership plans & pricing", to: "/app/business/gym" },
     { icon: Users, label: "Employees", desc: "Affiliate professionals via your business ID", to: "/app/business/employees" },
     { icon: CalendarDays, label: "Classes", desc: "Schedule classes for affiliated professionals", to: "/app/business/classes" },

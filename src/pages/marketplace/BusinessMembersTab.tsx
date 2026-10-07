@@ -5,6 +5,9 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { MembershipStatusBadge } from "../../components/marketplace/MembershipStatusBadge";
+import { VenueMembersRoster } from "../../components/marketplace/VenueMembersRoster";
+import { Chip } from "../../components/ui/Chip";
+import { useMyVenues } from "../../hooks/useMyVenues";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { useMembershipPlans } from "../../hooks/useBusinessCatalog";
 import {
@@ -38,6 +41,7 @@ const dateLabel = (iso: string) =>
 export default function BusinessMembersTab() {
   const { businessId } = useBusinessTeam();
   const { plans } = useMembershipPlans();
+  const { venues, selected: selectedVenue, select: selectVenue } = useMyVenues();
 
   const [members, setMembers] = useState<Membership[]>([]);
   const [codes, setCodes] = useState<MemberCode[]>([]);
@@ -241,6 +245,25 @@ export default function BusinessMembersTab() {
           </Card>
         )}
       </div>
+
+      {/* STAGE A4: each venue's gym memberships (venue_members), which are a
+          different record from the code-redeemed business memberships above
+          and DO carry a first name and a minor flag. NOT YET MATCHED TO THE
+          BUSINESS UI BOARD. */}
+      {selectedVenue && (
+        <div className="mt-6">
+          {venues.length > 1 && (
+            <div className="flex gap-2 scroll-row no-scrollbar mb-3 -mx-1 px-1">
+              {venues.map((v) => (
+                <Chip key={v.gymId} active={v.gymId === selectedVenue.gymId} onClick={() => selectVenue(v.gymId)}>
+                  {v.name}
+                </Chip>
+              ))}
+            </div>
+          )}
+          <VenueMembersRoster gymId={selectedVenue.gymId} />
+        </div>
+      )}
 
       <BottomSheet open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite a member">
         <div className="space-y-4 animate-fade-slide-up">
