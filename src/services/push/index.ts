@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { encodeKey } from "./encode";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
@@ -74,15 +75,6 @@ function vapidKeyBytes(base64url: string): Uint8Array<ArrayBuffer> {
     throw new Error(`VITE_VAPID_PUBLIC_KEY is not a P-256 public key (${bytes.length} bytes)`);
   }
   return bytes;
-}
-
-/** The browser's keys, base64-encoded the way the sender will need them. */
-function encodeKey(buffer: ArrayBuffer | null): string | null {
-  if (!buffer) return null;
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
 }
 
 /**
