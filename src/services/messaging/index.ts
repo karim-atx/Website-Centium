@@ -529,7 +529,12 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".
     return venue.memberSide
       ? { ...base, participantName: venue.name, participantAvatarUrl: venue.logoUrl }
-      : { ...base, participantName: `${base.participantName} · ${venue.name}` };
+      : {
+          ...base,
+          // The member deleted their account: the thread and its messages stay,
+          // with nobody on the other end (participant columns are SET NULL).
+          participantName: `${base.participantId === null ? "Former member" : base.participantName} · ${venue.name}`,
+        };
   });
   return { ok: true, threads };
 }
