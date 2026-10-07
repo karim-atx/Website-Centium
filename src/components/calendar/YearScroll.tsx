@@ -2,14 +2,18 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 
 // MO1.6.1, Calendar · Year: one continuous vertical scroll of years, as in
 // Apple Calendar. Each year is a 30/800 heading over a rule and three columns
-// of mini months. Tapping a month opens it in Month view. B31: today's year
-// ±5, opening on the year being viewed. Decision 23 (item 105): a day with
+// of mini months. Tapping a month opens it in Month view. Handover-complete
+// pass (was B31's ±5 in a scroller of its own): the years run open-ended in
+// the PAGE's scroll, as the frame draws them, starting with the year being
+// viewed straight under the tabs. Later years are added as the end comes
+// near; an earlier year is added above when someone keeps scrolling up at the
+// top of the page (wheel, touch or keys), with the scroll position kept so
+// nothing jumps. Decision 23 (item 105): a day with
 // events carries the Month view's 3.5 #6F9993 dot under its number, in place
 // of the per-month count line; the count stays in the month's label for
 // screen readers.
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-US", { month: "short" }));
-const RANGE = 5;
 
 const iso = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -75,6 +79,9 @@ function MiniMonth({
   );
 }
 
+/** Years added at a time when the end of the list comes near. */
+const STEP = 2;
+
 export const YearScroll: React.FC<{
   /** The year to open on (the cursor's). */
   year: number;
@@ -86,51 +93,100 @@ export const YearScroll: React.FC<{
   jumpSignal: number;
 }> = ({ year, todayIso, eventDays, onOpenMonth, jumpSignal }) => {
   const todayYear = Number(todayIso.slice(0, 4));
-  const years = useMemo(() => Array.from({ length: RANGE * 2 + 1 }, (_, i) => todayYear - RANGE + i), [todayYear]);
+  // The years on the page: opens on the viewed year and the next STEP.
+  const [span, setSpan] = useState(() => ({ from: year, to: year + STEP }));
+  const years = useMemo(() => Array.from({ length: span.to - span.from + 1 }, (_, i) => span.from + i), [span]);
   const eventDaySet = useMemo(() => new Set(eventDays), [eventDays]);
   const refs = useRef(new Map<number, HTMLElement>());
-  const box = useRef<HTMLDivElement | null>(null);
-  // THE YEARS SCROLL IN THEIR OWN AREA, under the tabs, so opening on this
-  // year (the sixth of eleven) does not scroll the view tabs off the screen.
-  // It runs to just above the floating navbar.
-  const [height, setHeight] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const measure = () => {
-      const top = box.current?.getBoundingClientRect().top ?? 0;
-      setHeight(Math.max(320, window.innerHeight - top - 96));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+  const end = useRef<HTMLDivElement | null>(null);
+
+  // Later years: a few more whenever the end is within a screen of view.
+  useEffect(() => {
+    const el = end.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setSpan((s) => ({ ...s, to: s.to + STEP }));
+      },
+      { rootMargin: "0px 0px 100% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
-  const scrollToYear = (y: number, smooth: boolean) => {
-    const el = refs.current.get(y);
-    // The box is `relative`, so a section's offsetTop is already measured from it.
-    if (el && box.current) box.current.scrollTo({ top: el.offsetTop, behavior: smooth ? "smooth" : "auto" });
+  // Earlier years: one more above when someone keeps scrolling up at the top
+  // of the page. The first year's screen position is noted before it is
+  // added and restored after, so the page stays where it was and the next
+  // scroll up moves into the added year.
+  const anchor = useRef<{ year: number; top: number } | null>(null);
+  const prepend = () => {
+    if (anchor.current) return;
+    const first = refs.current.get(span.from);
+    if (!first) return;
+    anchor.current = { year: span.from, top: first.getBoundingClientRect().top };
+    setSpan((s) => ({ ...s, from: s.from - 1 }));
   };
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    if (!a) return;
+    anchor.current = null;
+    const el = refs.current.get(a.year);
+    if (el) window.scrollBy(0, el.getBoundingClientRect().top - a.top);
+  }, [span.from]);
 
-  // Opens on the year being viewed, without animating there.
+  const prependRef = useRef(prepend);
+  useLayoutEffect(() => {
+    prependRef.current = prepend;
+  });
   useEffect(() => {
-    if (height === null) return;
-    scrollToYear(Math.min(Math.max(year, years[0]), years[years.length - 1]), false);
-    // Only once it has its height; later scrolling is the person's.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height === null]);
+    const atTop = () => window.scrollY <= 0;
+    let touchY: number | null = null;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0 && atTop()) prependRef.current();
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0]?.clientY ?? null;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY;
+      if (touchY !== null && y !== undefined && y - touchY > 12 && atTop()) {
+        touchY = y;
+        prependRef.current();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "ArrowUp" || e.key === "PageUp" || e.key === "Home") && atTop()) prependRef.current();
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
+  // A second tap on Year: today's year, added first if it is not on the page.
+  const pendingJump = useRef(false);
   useEffect(() => {
-    if (jumpSignal) scrollToYear(todayYear, true);
+    if (!jumpSignal) return;
+    pendingJump.current = true;
+    setSpan((s) => ({ from: Math.min(s.from, todayYear), to: Math.max(s.to, todayYear + STEP) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jumpSignal]);
+  useEffect(() => {
+    if (!pendingJump.current) return;
+    pendingJump.current = false;
+    refs.current.get(todayYear)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   return (
-    <div
-      ref={box}
-      // MO1.6.1 (2x frame): 30 between a year's last row and the next
-      // heading (Dec's last row 1467 → "2027" 1578 centre to centre).
-      className="relative flex flex-col gap-[30px] overflow-y-auto no-scrollbar -mx-1 px-1 pb-6"
-      style={{ height: height ?? undefined }}
-    >
+    // MO1.6.1 (2x frame): 30 between a year's last row and the next heading
+    // (Dec's last row 1467 → "2027" 1578 centre to centre).
+    <div className="flex flex-col gap-[30px] pb-6">
       {years.map((y) => (
         <section
           key={y}
@@ -158,6 +214,7 @@ export const YearScroll: React.FC<{
           </div>
         </section>
       ))}
+      <div ref={end} aria-hidden className="h-px" />
     </div>
   );
 };

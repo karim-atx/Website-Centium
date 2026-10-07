@@ -312,8 +312,13 @@ export default function Profile() {
     </div>
   );
 
+  // MO1.5 / MO1.5.1 "Section label" (2x frame): 10.5/700 uppercase on a 14
+  // line, 0.12em, no rule, inset 4 (glyphs from x 20.5), 8 above what it
+  // labels. Handover-complete pass: was decision 20's section-label (11/600
+  // with the 1.5 rule). The ink keeps its pre-R1 light colour (light rule).
+  const LABEL_TYPE = "px-1 text-[10.5px] leading-[14px] font-bold uppercase tracking-[0.12em] text-charcoal-faint";
   const sectionLabel = (text: string, id?: string) => (
-    <p id={id} className="section-label text-charcoal-faint mb-2.5">
+    <p id={id} className={clsx(LABEL_TYPE, "mb-2")}>
       {text}
     </p>
   );
@@ -493,12 +498,14 @@ export default function Profile() {
                   onClick={() => setSharingFor(p)}
                   className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3.5 text-start"
                 >
-                  {/* MO1.5.1 anatomy row 4: initials 12/700, name 14/600,
+                  {/* Handover-complete pass: initials always, as drawn (the
+                      professional's photo, C9 / B4, is no longer shown here).
+                      MO1.5.1 anatomy row 4: initials 12/700, name 14/600,
                       "Manage data sharing" 11.5/400, ChevronRight 15; avatar
                       32 measured on the 2x frame (x 62–125); row 61 tall,
                       radius 18 (2x frame: y 1008–1129). */}
-                  <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[12px] font-bold text-primary-dark">
-                    {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
+                  <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0 text-[12px] font-bold text-primary-dark" aria-hidden>
+                    {initials(p.name)}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[14px] font-semibold leading-tight text-charcoal truncate">{p.name}</span>
@@ -575,20 +582,21 @@ export default function Profile() {
             onClick={() => setSafetyOpen((o) => !o)}
             aria-expanded={safetyOpen}
             aria-controls="safety-content"
-            // The label's own 10 below only when the card shows: collapsed
+            // MO1.5 row 6: a 14 tall button, padding 0 4, the label then the
+            // chevron, 8 above the card (row 7 at y 741). Collapsed
             // (MO1.5.1), Sign Out sits the section's 24 under the label.
             className={clsx(
-              "tap w-full flex items-center justify-between gap-3 text-start pb-[7.5px] border-b-[1.5px] border-primary",
-              safetyOpen && "mb-2.5"
+              "tap w-full flex items-center justify-between gap-2 text-start",
+              safetyOpen && "mb-2"
             )}
           >
-            <span className="section-label text-charcoal-faint !border-b-0 !pb-0">Safety & content</span>
+            <span className={LABEL_TYPE}>Safety & content</span>
             {/* MO1.5.1 draws ChevronRight 14 while collapsed, MO1.5
                 ChevronDown 14 while open. */}
             {safetyOpen ? (
-              <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0" />
+              <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             ) : (
-              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1 rtl:-scale-x-100" />
             )}
           </button>
           {safetyOpen && (

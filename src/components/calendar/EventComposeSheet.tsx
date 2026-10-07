@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Calendar as CalendarIcon, ChevronDown, Clock, Link as LinkIcon, Repeat } from "lucide-react";
+import { Bell, Calendar as CalendarIcon, ChevronDown, Clock, Link as LinkIcon, Repeat } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
@@ -8,14 +8,19 @@ import { WheelPicker } from "../ui/WheelPicker";
 import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import type { CalendarEvent } from "../../types";
 import { EVENT_SWATCHES } from "./eventColour";
+import { ALERT_OPTIONS, alertLabel, type EventAlert } from "./eventAlert";
 import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "./calendarTime";
 import { useBackCloses } from "../../hooks/useBackCloses";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
-// day beside it, Starts / Ends (each opening a wheel under the field), Color,
-// Repeat, Notes, Link, Save event. Not drawn but kept: Edit mode and Delete.
-// No Alert row until calendar alerts have a backend (B35).
+// day beside it, Starts / Ends (each opening a wheel under the field), Color
+// (twelve swatches, 8 + 4), Repeat | Alert half and half (MO1.6.4.2's menu),
+// Notes, Link, Save event. Not drawn but kept: Edit mode and Delete (the only
+// way to change or remove an event a person made).
+//
+// Alert is stored on the event (calendar_events.alert, Stage 2) and delivered
+// by the database's sweep to the owner; see eventAlert.ts.
 
 export interface EventDraft {
   title: string;
@@ -28,6 +33,8 @@ export interface EventDraft {
   notes: string;
   color: string;
   url: string;
+  /** The calendar_alert enum value; "none" = None. */
+  alert: EventAlert;
 }
 
 const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
@@ -142,6 +149,7 @@ export const EventComposeSheet: React.FC<{
   const [wheel, setWheel] = useState<"start" | "end" | null>(null);
   // The open menu's anchor; null when closed.
   const [repeatAnchor, setRepeatAnchor] = useState<HTMLElement | null>(null);
+  const [alertAnchor, setAlertAnchor] = useState<HTMLElement | null>(null);
 
   // A new start keeps the event's length, so Ends never falls behind Starts.
   const setStart = (hhmm: string) =>
@@ -155,6 +163,8 @@ export const EventComposeSheet: React.FC<{
       open={open}
       onClose={() => {
         setWheel(null);
+        setRepeatAnchor(null);
+        setAlertAnchor(null);
         onClose();
       }}
       title={editing ? "Edit Event" : "New Event"}
@@ -230,11 +240,10 @@ export const EventComposeSheet: React.FC<{
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
-          {/* E8: all nine in one row, 32 circles (MO1.6.4, measured 32 on
-              the 2x frame) each in a 36 tap box, spread across the row; no
-              scrolling, no wrapping. Below 375 the boxes (and, under 32,
-              the circles) shrink so the row still fits. */}
-          <div className="flex justify-between">
+          {/* MO1.6.4 / MO1.6.4.2 (2x frame): twelve 32 circles, 8 apart
+              (pitch 40, x 42 → 122), wrapping into a row of eight and a row
+              of four, the rows 8 apart (pitch 40, y 1063 → 1143). */}
+          <div className="flex flex-wrap gap-2">
             {EVENT_SWATCHES.map((c) => (
               <button
                 key={c}
@@ -242,12 +251,12 @@ export const EventComposeSheet: React.FC<{
                 onClick={() => setDraft((d) => ({ ...d, color: c }))}
                 aria-label={`Color ${c}`}
                 aria-pressed={draft.color === c}
-                className="tap flex-[0_1_36px] min-w-0 h-9 flex items-center justify-center"
+                className="tap w-8 h-8 shrink-0 rounded-full flex items-center justify-center"
               >
                 <span
                   aria-hidden
                   // The faint ring in dark keeps the near-black swatch visible on the sheet.
-                  className="block w-8 max-w-full aspect-square rounded-full dark:ring-1 dark:ring-white/20"
+                  className="block w-8 h-8 rounded-full dark:ring-1 dark:ring-white/20"
                   // Selected: MO1.6.4 draws a 1 px gap and a 1 px #241F1B ring
                   // (measured on the 2x frame); the ring is the charcoal ink.
                   style={{
@@ -261,31 +270,69 @@ export const EventComposeSheet: React.FC<{
           </div>
         </div>
 
-        <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
-            <Repeat size={12} /> Repeat
-          </span>
-          <button
-            type="button"
-            onClick={(e) => setRepeatAnchor(e.currentTarget)}
-            aria-haspopup="menu"
-            aria-expanded={!!repeatAnchor}
-            className={`tap ${FIELD} flex items-center justify-between text-left`}
-          >
-            {REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}
-            <ChevronDown size={14} className="text-charcoal-faint shrink-0" />
-          </button>
-          <PopupMenu
-            open={!!repeatAnchor}
-            onClose={() => setRepeatAnchor(null)}
-            anchor={repeatAnchor}
-            options={REPEAT_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
-            selected={draft.repeat}
-            onSelect={(v) => {
-              setDraft((d) => ({ ...d, repeat: v }));
-              setRepeatAnchor(null);
-            }}
-          />
+        {/* MO1.6.4 row 11 / MO1.6.4.2 row 3: Repeat | Alert half and half,
+            gap 12 (2x x 42–377 | 402–739), each a 12 icon + label over a 40
+            field with ChevronDown 14. Both open the app dropdown; Alert's
+            card (MO1.6.4.2, measured) is 168 of content lined up with the
+            field's right edge, 6 under it, over the sheet without dimming,
+            rows 36 and 6 apart with Check 13/3 on the chosen one. */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
+              <Repeat size={12} aria-hidden /> Repeat
+            </span>
+            <button
+              type="button"
+              onClick={(e) => setRepeatAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              aria-expanded={!!repeatAnchor}
+              aria-label={`Repeat, ${REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+            >
+              <span className="truncate">{REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}</span>
+              <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
+            </button>
+            <PopupMenu
+              open={!!repeatAnchor}
+              onClose={() => setRepeatAnchor(null)}
+              anchor={repeatAnchor}
+              options={REPEAT_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+              selected={draft.repeat}
+              onSelect={(v) => {
+                setDraft((d) => ({ ...d, repeat: v }));
+                setRepeatAnchor(null);
+              }}
+            />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
+              <Bell size={12} aria-hidden /> Alert
+            </span>
+            <button
+              type="button"
+              onClick={(e) => setAlertAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              aria-expanded={!!alertAnchor}
+              aria-label={`Alert, ${alertLabel(draft.alert)}`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+            >
+              <span className="truncate">{alertLabel(draft.alert)}</span>
+              <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
+            </button>
+            <PopupMenu
+              open={!!alertAnchor}
+              onClose={() => setAlertAnchor(null)}
+              anchor={alertAnchor}
+              align="right"
+              backdrop={false}
+              options={ALERT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              selected={draft.alert}
+              onSelect={(v) => {
+                setDraft((d) => ({ ...d, alert: v }));
+                setAlertAnchor(null);
+              }}
+            />
+          </div>
         </div>
 
         <label className="block">

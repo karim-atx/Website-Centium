@@ -4,7 +4,6 @@ import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CtaButton } from "../ui/PinnedCta";
-import { PopupMenu } from "../ui/PopupMenu";
 import { SwipeActions } from "../ui/SwipeActions";
 import { useApp } from "../../context/AppContext";
 import { MembershipStatusBadge } from "../marketplace/MembershipStatusBadge";
@@ -15,7 +14,7 @@ import {
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
-import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, LogOut, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -25,9 +24,11 @@ import { Check, ChevronRight, LogOut, MoreVertical, Plus, Store, Trash2, X } fro
 // stays listed after you answer, carrying a badge that says what you said.
 // The board does not draw pending invitations; they are kept.
 //
-// ENDING ONE: swipe the row left (the board's swipe-row, "End membership"),
-// or the ⋮ menu, which is the same action for a mouse or keyboard (D12).
-// Either way a confirm comes first; it used to be a tap-twice text button.
+// ENDING ONE: swipe the row left (the board's swipe-row, "End membership"; a
+// mouse drags it the same way). Handover-complete pass: the ⋮ menu (D12, not
+// drawn) is gone; the keyboard path is the swipe row's own, with nothing
+// drawn (focus the row, ArrowLeft). A confirm comes first (kept: it guards
+// ending a paid membership by a stray swipe).
 // Ended memberships stay listed, muted.
 //
 // REDEEMING IS ITS OWN CONSENT. A code redeemed here creates a membership
@@ -45,7 +46,6 @@ export const MembershipsCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ending, setEnding] = useState<Membership | null>(null);
-  const [menuFor, setMenuFor] = useState<{ membership: Membership; anchor: HTMLElement } | null>(null);
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -173,35 +173,33 @@ export const MembershipsCard: React.FC = () => {
       {/* White on the lavender row, as drawn; the shared badge's own fills
           stay for the business's member list. */}
       <MembershipStatusBadge status={m.status} className="!bg-cream-card" />
-      {m.status === "active" && (
-        <button
-          type="button"
-          onClick={(e) => setMenuFor({ membership: m, anchor: e.currentTarget })}
-          aria-label={`Options for ${m.businessName ?? "this membership"}`}
-          className="tap w-8 h-8 -me-1.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
-        >
-          <MoreVertical size={16} />
-        </button>
-      )}
     </div>
   );
 
   return (
     <section className="mb-6 animate-fade-slide-up" aria-labelledby="memberships-label">
-      <p id="memberships-label" className="section-label text-charcoal-faint mb-2.5">
+      {/* MO1.5 row 3 (2x frame): "Section label" 10.5/700 uppercase, 14
+          line, 0.12em, no rule, inset 4 (glyphs from x 20.5), 8 above the
+          card. Pre-R1 ink kept (light-colour rule). */}
+      <p id="memberships-label" className="px-1 mb-2 text-[10.5px] leading-[14px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">
         Memberships
       </p>
 
       {error && <p className="mb-2 text-xs font-semibold text-status-high">{error}</p>}
 
-      {memberships.length === 0 ? (
+      {!loaded ? (
+        // MO1.5 States, Loading: a skeleton block where the card sits
+        // (surface.soft, the card's radius 18; the empty card is 113 tall on
+        // the 2x frame, y 640–866), in place of the code box flashing in.
+        <div className="h-[113px] rounded-[18px] bg-cream-soft animate-pulse" aria-hidden />
+      ) : memberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
         // under the field.
         <Card padded={false} className="!rounded-[18px] p-3.5">
           {codeBox}
-          {!redeemNote && loaded && (
+          {!redeemNote && (
             <p className="mt-2.5 text-xs text-charcoal-faint">
               Got a code from a gym or studio? Enter it here to become a member.
             </p>
@@ -214,6 +212,8 @@ export const MembershipsCard: React.FC = () => {
             <div key={m.id}>
               {m.status === "active" ? (
                 <SwipeActions
+                  radius={18}
+                  keyboardLabel={`${m.businessName ?? "Membership"}. Press left arrow for End membership`}
                   actions={[
                     {
                       key: "end",
@@ -277,19 +277,6 @@ export const MembershipsCard: React.FC = () => {
           )}
         </div>
       )}
-
-      <PopupMenu
-        open={!!menuFor}
-        onClose={() => setMenuFor(null)}
-        anchor={menuFor?.anchor ?? null}
-        width={200}
-        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} />, destructive: true }]}
-        onSelect={() => {
-          const m = menuFor?.membership ?? null;
-          setMenuFor(null);
-          setEnding(m);
-        }}
-      />
 
       <CentredPopup
         open={!!ending}
