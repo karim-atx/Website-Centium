@@ -46,6 +46,9 @@ test("training frequency: the last 8 weeks, this week last, averaged", () => {
   assert.equal(f.weeks[7], 2);
   assert.equal(f.weeks[0], 1, "the week of Aug 10 is the eighth; Aug 9 is outside");
   assert.equal(f.perWeek, 0.4);
+  // v6 WO1 S11: two sessions on one day are one training day.
+  const g = trainingFrequency([session("a", "2026-09-28", 1), session("b", "2026-09-28", 1)], "2026-09-30");
+  assert.equal(g.weeks[7], 1);
 });
 
 test("hero ticks and the balance chip match the frame", () => {

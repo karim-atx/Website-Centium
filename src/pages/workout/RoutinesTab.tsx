@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
 import { PinnedCta } from "../../components/ui/PinnedCta";
-import { Button } from "../../components/ui/Button";
+import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
@@ -15,18 +15,22 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
-import { folderFamily, mixHex, routineFamily, themedFamily, tintOn, type FolderFamily } from "../../data/folderColors";
+import { folderFamily, mixHex, partBFamily, partBInk, routineFamily, tintOn, type FolderFamily } from "../../data/folderColors";
+import { Toast } from "../../components/ui/Toast";
+import { useOnline } from "../../hooks/useOnline";
+import { textPx, linePx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
 
 /**
- * Mobile v5.1 R3, dark mode (no light islands): routine rows and folder
- * headers take themedFamily's dark shades; the colours below are the rest, as
- * [light, dark]. The new-folder glyph and ongoing coral are lifted to read on
- * the dark page and rows (3:1 and 4.5:1); the select box's checked fill is the
- * dark primary with a near-black tick, as dark filled controls are.
+ * Dark mode: routine rows and folder headers take the v6 Part B folder shades
+ * (partBFamily, WO1 #9-#46 / D7); the colours below are the rest, as
+ * [light, dark]. The new-folder glyph is #6B41EF / dark #C3B3FB* (WO1 #8);
+ * the ongoing coral is lifted to read on the dark rows (4.5:1); the select
+ * box's checked fill is the dark primary with a near-black tick, as dark
+ * filled controls are.
  */
 const ROUTINE_COLORS = {
-  newFolder: ["rgb(var(--th-6b41ef))", "rgb(var(--th-9a8cd6))"],
+  newFolder: ["rgb(var(--th-6b41ef))", "#C3B3FB"],
   // Restore round 2 (user, 2026-10-07): the ongoing / paused routine coral, as on main.
   ongoing: ["#E9736A", "#EE8A82"],
   meta: ["#8C8378", "#B8B3C7"],
@@ -71,6 +75,7 @@ import {
   Library,
   Check,
   Group,
+  AlertCircle,
 } from "lucide-react";
 
 
@@ -130,12 +135,39 @@ export default function RoutinesTab() {
     updateRoutine,
     deleteRoutine,
     routinesError,
+    retryRoutines,
+    routinesHydrated,
+    accessibility,
     pausedSessions,
     clearPausedSession,
     activeSession,
     setActiveSession,
   } = useApp();
   const dark = useIsDark();
+  const hc = !!accessibility.highContrast;
+  const online = useOnline();
+  // v6 WO1 O3 / O4: a write that failed, or one tried offline, says
+  // "Couldn't save. Try again." in the shared toast.
+  const [saveToast, setSaveToast] = useState(false);
+  // The family in the current mode's shades (light: itself; dark: the Part B
+  // literal values; High contrast: the lavender header #5B48B8).
+  const shade = (f: FolderFamily) => partBFamily(f, dark, hc);
+  // WO1 #6 / K1: the caps labels, #9A94B3 / dark #8A8698; High contrast ink.
+  const capsInk = hc ? "rgb(var(--c-charcoal))" : dark ? "#8A8698" : "rgb(var(--thi-9a94b3))";
+  // WO1 S2 / K6: the folder name is 1 to 40 characters, a routine's 1 to 60
+  // (front end now; the database check is PB-O-36).
+  const FOLDER_NAME_MAX = 40;
+  const ROUTINE_NAME_MAX = 60;
+  // WO1 K6: the new-folder field, FO style (42 tall, r14, #F5F5F6 / #242730,
+  // 0.5px #241F1B@6%), and its Add as the Create routine button (#53).
+  const fieldClass =
+    "flex-1 min-w-0 bg-cream-soft border-[0.5px] border-charcoal/[0.06] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const fieldStyle: React.CSSProperties = { height: 42, borderRadius: 14, padding: "0 12px", fontSize: textPx(13.5), lineHeight: linePx(20.3) };
+  // The filled button #A198DF (--c-fill-cta); High contrast #5B48B8 with
+  // white (WO1 O7, the primary fill).
+  const ctaClass = hc ? "bg-primary-fill" : "bg-[rgb(var(--c-fill-cta))]";
+  const popupButton: React.CSSProperties = { height: 48, borderRadius: 14, fontSize: textPx(14), fontWeight: 700 };
+  const addStyle: React.CSSProperties = { height: 42, borderRadius: 12, padding: "0 16px", fontSize: textPx(13.5), fontWeight: 700 };
   // WO17: the ONGOING row mirrors the bar. A minimised session can be paused
   // and resumed from here; the clock is timestamps (startedAt, pausedAt,
   // pausedMs), so the logger and the bar read the same state back.
@@ -166,8 +198,24 @@ export default function RoutinesTab() {
    */
   const [actionError, setActionError] = useState<string | null>(null);
   // Every write goes through here, so no call site can forget to report one.
+  // The folder-depth refusals explain why, so they stay as the inline line;
+  // any other failure is the shared toast (WO1 O3). Offline, nothing is
+  // tried (O4).
   const run = (action: Promise<string | undefined>) => {
-    void action.then((message) => setActionError(message ?? null));
+    void action.then((message) => {
+      if (message && /filed inside itself|different account|levels deep at most|permission/i.test(message)) setActionError(message);
+      else {
+        setActionError(null);
+        if (message) setSaveToast(true);
+      }
+    });
+  };
+  const guard = (fn: () => void) => () => {
+    if (!online) {
+      setSaveToast(true);
+      return;
+    }
+    fn();
   };
   const [createOpen, setCreateOpen] = useState(false);
   const [browseOpen, setBrowseOpen] = useState(false);
@@ -202,6 +250,9 @@ export default function RoutinesTab() {
       return next;
     });
 
+  // Something is saved on this device (or already read), so a failed read
+  // keeps it on screen with the inline line (K9) instead of the Retry (O2).
+  const hasCache = routines.length > 0 || routineFolders.length > 0;
   const siblingsOf = (parentId: string | null) => routineFolders.filter((f) => (f.parentId ?? null) === parentId);
   const unfiled = routinesIn(routines, null);
 
@@ -272,9 +323,39 @@ export default function RoutinesTab() {
   };
 
   const commitRename = (kind: "folder" | "routine", id: string) => {
-    const name = renameDraft.trim();
+    const name = renameDraft.trim().slice(0, kind === "folder" ? FOLDER_NAME_MAX : ROUTINE_NAME_MAX);
     if (name) run(kind === "folder" ? renameRoutineFolder(id, name) : updateRoutine(id, { name }));
     setRenamingId(null);
+  };
+
+  // WO1.3 S5: the library stays open after "+ Add", so several edits can
+  // follow each other before the first save answers. updateRoutine rewrites
+  // the routine's whole exercise list (clear, then insert), so two saves in
+  // flight would race, and each would start from a stale list. Every
+  // exercise-list write of one routine from its open card (add, delete,
+  // replace, arrange) is therefore queued: each builds on the list the previous one
+  // wrote, and runs after it.
+  const writeChain = useRef(new Map<string, { list: Exercise[]; done: Promise<unknown> }>());
+  const queueExercises = (
+    r: Routine,
+    next: (cur: Exercise[]) => { exercises: Exercise[]; blocks?: WorkoutBlock[] }
+  ) => {
+    if (!online) {
+      setSaveToast(true);
+      return;
+    }
+    const pending = writeChain.current.get(r.id);
+    const out = next(pending?.list ?? r.exercises);
+    // Blocks only when the edit is an arrangement (as before: the other edits
+    // never sent them).
+    const blocks = out.blocks;
+    const done = (pending?.done ?? Promise.resolve())
+      .then(() => updateRoutine(r.id, blocks ? { exercises: out.exercises, blocks } : { exercises: out.exercises }))
+      .then((message) => {
+        if (message) setSaveToast(true);
+        if (writeChain.current.get(r.id)?.done === done) writeChain.current.delete(r.id);
+      });
+    writeChain.current.set(r.id, { list: out.exercises, done });
   };
 
   const renderRoutine = (r: Routine, index: number, family: FolderFamily, hidden: boolean) => (
@@ -298,22 +379,18 @@ export default function RoutinesTab() {
       press={pressProps({ kind: "routine", id: r.id, folderId: r.folderId, index }, renamingId !== r.id)}
       grip={gripProps({ kind: "routine", id: r.id, folderId: r.folderId, index })}
       onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
-      onDeleteExercise={(exId) =>
-        run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
-      }
+      onDeleteExercise={(exId) => queueExercises(r, (cur) => ({ exercises: cur.filter((e) => e.id !== exId) }))}
       onReplaceExercise={(exId, pick) =>
-        run(updateRoutine(r.id, {
-          exercises: r.exercises.map((e) =>
+        queueExercises(r, (cur) => ({
+          exercises: cur.map((e) =>
             e.id === exId
               ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
               : e
           ),
         }))
       }
-      onAddExercise={(pick) =>
-        run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
-      }
-      onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
+      onAddExercise={(pick) => queueExercises(r, (cur) => ({ exercises: [...cur, blankExerciseFromPick(pick)] }))}
+      onArrange={(exercises, blocks) => queueExercises(r, () => ({ exercises, blocks }))}
       family={family}
     />
   );
@@ -359,7 +436,7 @@ export default function RoutinesTab() {
     const folderRoutines = routinesIn(routines, folder.id);
     const collapsed = collapsedFolders.has(folder.id);
     // Folder order: the folder's position in the account's folder list.
-    const family = themedFamily(folderFamily(folder, routineFolders.indexOf(folder)), dark);
+    const family = shade(folderFamily(folder, routineFolders.indexOf(folder)));
     const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
 
     return (
@@ -375,6 +452,7 @@ export default function RoutinesTab() {
           family={family}
           // WO1 #4b / WO1.1 #4 (decision 23): white ink as drawn.
           drawnInk
+          themed
           count={folderRoutines.length}
           collapsed={collapsed}
           highlighted={(drag?.target.kind === "header" || drag?.target.kind === "into") && drag.target.folderId === folder.id}
@@ -409,6 +487,8 @@ export default function RoutinesTab() {
                   <input
                     autoFocus
                     value={subfolderName}
+                    maxLength={FOLDER_NAME_MAX}
+                    aria-label="Subfolder name"
                     onChange={(e) => setSubfolderName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && subfolderName.trim()) {
@@ -417,14 +497,16 @@ export default function RoutinesTab() {
                       }
                     }}
                     placeholder="Subfolder name…"
-                    className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className={fieldClass}
+                    style={fieldStyle}
                   />
                   <button
                     onClick={() => {
                       if (subfolderName.trim()) run(addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor));
                       setAddingSubfolderTo(null);
                     }}
-                    className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
+                    className={`tap shrink-0 ${ctaClass} text-on-primary-fill`}
+                    style={addStyle}
                   >
                     Add
                   </button>
@@ -463,7 +545,7 @@ export default function RoutinesTab() {
       <CyclePhaseStrip />
 
       <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "rgb(var(--thi-9a94b3))" }}>Folders</p>
+        <p className="text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Folders</p>
         <button
           // Tapping it again closes the new-folder form, discarding the draft.
           onClick={() => {
@@ -473,7 +555,8 @@ export default function RoutinesTab() {
           title="New folder"
           aria-label="New folder"
           aria-expanded={newFolderOpen}
-          className="tap w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
+          // 30 × 30 r9 on a 44 hit area (WO1 #7).
+          className="tap relative w-[30px] h-[30px] rounded-[9px] flex items-center justify-center before:absolute before:-inset-[7px] before:content-['']"
           style={{ color: rc("newFolder", dark), margin: "-4px -6px -4px 0" }}
         >
           <FolderPlus size={18} />
@@ -489,12 +572,40 @@ export default function RoutinesTab() {
         {actionError && (
           <p className="text-[11.5px] font-semibold text-status-high mb-3">{actionError}</p>
         )}
-        {routinesError && !actionError && (
+        {routinesError && !actionError && hasCache && (
           <p className="text-[11.5px] font-semibold text-status-high mb-3">
             Couldn't refresh your routines. Showing what was saved on this device.
           </p>
         )}
       </div>
+
+      {/* WO1 O2: nothing saved on this device and the read failed. */}
+      {routinesError && !hasCache && (
+        <div role="alert" className="flex flex-col items-center text-center mb-4" style={{ gap: 6, padding: "20px 0" }}>
+          <p className="m-0 text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700 }}>
+            Couldn't load your routines.
+          </p>
+          <button
+            type="button"
+            onClick={retryRoutines}
+            className="tap relative before:absolute before:-inset-[12px] before:content-['']"
+            style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#C3B3FB" : hc ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--thi-7d6bb5))" }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* WO1 O1: loading rows while the first read is out and nothing is
+          cached: 358 × 64, r14, #F5F5F6 / #242730, pulse 1.2 s (static under
+          Reduce motion). */}
+      {!routinesHydrated && !routinesError && !hasCache && (
+        <div aria-hidden className="flex flex-col mb-4" style={{ gap: 6 }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="animate-skeleton-pulse bg-cream-soft" style={{ height: 64, borderRadius: 14 }} />
+          ))}
+        </div>
+      )}
 
       {newFolderOpen && (
         <div className="mb-4">
@@ -502,24 +613,28 @@ export default function RoutinesTab() {
             <input
               autoFocus
               value={newFolderName}
+              maxLength={FOLDER_NAME_MAX}
+              aria-label="Folder name"
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newFolderName.trim()) {
-                  run(addRoutineFolder(newFolderName.trim(), null, newFolderColor));
+                  guard(() => run(addRoutineFolder(newFolderName.trim(), null, newFolderColor)))();
                   setNewFolderName("");
                   setNewFolderOpen(false);
                 }
               }}
               placeholder="Folder name…"
-              className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className={fieldClass}
+              style={fieldStyle}
             />
             <button
               onClick={() => {
-                if (newFolderName.trim()) run(addRoutineFolder(newFolderName.trim(), null, newFolderColor));
+                if (newFolderName.trim()) guard(() => run(addRoutineFolder(newFolderName.trim(), null, newFolderColor)))();
                 setNewFolderName("");
                 setNewFolderOpen(false);
               }}
-              className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
+              className={`tap shrink-0 ${ctaClass} text-on-primary-fill`}
+              style={addStyle}
             >
               Add
             </button>
@@ -538,7 +653,7 @@ export default function RoutinesTab() {
         {(unfiled.length > 0 || draggingRoutine) && (
           <div data-flip="unfiled">
             {/* Decision 23 (kept item 135): styled as the "Folders" label (9.5/700 #9A94B3 .2em). */}
-            <p className="mb-[9px] text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "rgb(var(--thi-9a94b3))" }}>Unfiled</p>
+            <p className="mb-[9px] text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Unfiled</p>
             <div
               data-dnd-group=""
               className="flex flex-col gap-1.5"
@@ -550,7 +665,7 @@ export default function RoutinesTab() {
                   : undefined
               }
             >
-              {renderGroup(null, (r) => themedFamily(routineFamily(r, routineFolders), dark))}
+              {renderGroup(null, (r) => shade(routineFamily(r, routineFolders)))}
             </div>
           </div>
         )}
@@ -593,16 +708,18 @@ export default function RoutinesTab() {
           label: "Browse starter programs",
           icon: <Library size={17} className="text-charcoal-soft" />,
           // WO1 / WO1.1 measure a 9 pt icon gap here (the CTA default is 7).
-          className: "!gap-[9px]",
+          // WO1 #51: the outline is 0.5px (X-09).
+          className: "!gap-[9px] !border-[0.5px]",
           onClick: () => setBrowseOpen(true),
         }}
         primary={{
           label: "Create routine",
+          // WO1 #54: drawn #FFFFFF in dark; V6-02 keeps the label's #0D0B1A.
           icon: <Plus size={15} />,
           // WO1 #8 / WO1.1 #9: filled #A198DF (--c-fill-cta, primary.cta.alt),
           // 13.5/700 white, 44/r12, as drawn and as Add habit. Dark:
           // primary-fill with its near-black ink.
-          className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
+          className: `!text-[13.5px] ${hc ? "" : "!bg-[rgb(var(--c-fill-cta))]"}`,
           onClick: () => {
             setCreateFolder(null);
             setCreateOpen(true);
@@ -650,22 +767,22 @@ export default function RoutinesTab() {
             {dragRoutine ? (
               <RoutineCardFace
                 routine={dragRoutine}
-                family={themedFamily(
+                family={shade(
                   dragRoutine.folderId
                     ? folderFamily(
                         routineFolders.find((f) => f.id === dragRoutine.folderId)!,
                         routineFolders.findIndex((f) => f.id === dragRoutine.folderId)
                       )
-                    : routineFamily(dragRoutine, routineFolders),
-                  dark
+                    : routineFamily(dragRoutine, routineFolders)
                 )}
                 isOngoing={!!pausedSessions[dragRoutine.id]}
               />
             ) : (
               <FolderHeader
                 folder={dragFolder!}
-                family={themedFamily(folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!)), dark)}
+                family={shade(folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!)))}
                 drawnInk
+                themed
                 count={routinesIn(routines, dragFolder!.id).length}
                 collapsed={collapsedFolders.has(dragFolder!.id)}
               />
@@ -715,72 +832,61 @@ export default function RoutinesTab() {
         />
       )}
 
-      {/* QA 13.0: "When deleting a routine the dark blur behind the prompt
-          is cut for some reason, please fix." This component's root carries
-          `animate-fade-slide-up`, a transform-based animation — any
-          non-none `transform` on an ancestor becomes the containing block
-          for descendant `position: fixed` elements, clipping the backdrop
-          to this component's box instead of the viewport. Portaling to
-          `document.body` sidesteps the ancestor chain, same fix already
-          applied to BottomSheet.tsx for the identical bug. */}
-      {pendingRoutine &&
-        createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-            <div
-              className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in"
-              onClick={() => setPendingRoutine(null)}
-            />
-            <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-              <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
-              <p className="text-sm text-charcoal-soft mb-5">
-                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely. Its progress won't be saved.
-              </p>
-              <div className="flex gap-2.5">
-                <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
-                  Keep going
-                </Button>
-                <Button fullWidth variant="teal" onClick={confirmSwitchRoutine}>
-                  Start anyway
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      <Toast
+        open={saveToast}
+        message="Couldn't save. Try again."
+        icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
+        onExpire={() => setSaveToast(false)}
+      />
 
-      {pendingDeleteRoutine &&
-        createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-            <div
-              className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in"
-              onClick={() => setPendingDeleteRoutine(null)}
-            />
-            <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-              <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Delete routine?</p>
-              <p className="text-sm text-charcoal-soft mb-5">
-                "{pendingDeleteRoutine.name}" and its exercises will be permanently removed. This can't be
-                undone.
-              </p>
-              <div className="flex gap-2.5">
-                <Button variant="outline" fullWidth onClick={() => setPendingDeleteRoutine(null)}>
-                  Keep it
-                </Button>
-                <Button
-                  fullWidth
-                  variant="teal"
-                  onClick={() => {
-                    run(deleteRoutine(pendingDeleteRoutine.id));
-                    setPendingDeleteRoutine(null);
-                  }}
-                >
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* WO1 K8 (and the routine delete confirm beside it): the shared
+          centred popup, our geometry (342, r22, pad 20, buttons 48 r14), over
+          the warm scrim. Copy unchanged. */}
+      <CentredPopup
+        open={!!pendingRoutine}
+        onClose={() => setPendingRoutine(null)}
+        geometry="ours"
+        className="!p-5"
+        alert
+        title="Cancel ongoing routine?"
+        body={pendingRoutine ? `Starting "${pendingRoutine.name}" will cancel your other ongoing routine entirely. Its progress won't be saved.` : undefined}
+      >
+        <div className="flex w-full mt-5" style={{ gap: 10 }}>
+          <button type="button" onClick={() => setPendingRoutine(null)} className="tap flex-1 bg-cream-soft text-charcoal" style={popupButton}>
+            Keep going
+          </button>
+          <button type="button" onClick={confirmSwitchRoutine} className={`tap flex-1 ${ctaClass} text-on-primary-fill`} style={popupButton}>
+            Start anyway
+          </button>
+        </div>
+      </CentredPopup>
 
+      <CentredPopup
+        open={!!pendingDeleteRoutine}
+        onClose={() => setPendingDeleteRoutine(null)}
+        geometry="ours"
+        className="!p-5"
+        alert
+        title="Delete routine?"
+        body={pendingDeleteRoutine ? `"${pendingDeleteRoutine.name}" and its exercises will be permanently removed. This can't be undone.` : undefined}
+      >
+        <div className="flex w-full mt-5" style={{ gap: 10 }}>
+          <button type="button" onClick={() => setPendingDeleteRoutine(null)} className="tap flex-1 bg-cream-soft text-charcoal" style={popupButton}>
+            Keep it
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (pendingDeleteRoutine) guard(() => run(deleteRoutine(pendingDeleteRoutine.id)))();
+              setPendingDeleteRoutine(null);
+            }}
+            className="tap flex-1"
+            style={{ ...popupButton, background: dark ? "#3C2A30" : "#FCEDEC", color: dark ? "#F09A8E" : "#B4372C" }}
+          >
+            Delete
+          </button>
+        </div>
+      </CentredPopup>
     </div>
   );
 }
@@ -811,6 +917,8 @@ const RoutineCardFace: React.FC<{
   grip?: GripProps;
 }> = ({ routine, family, isOngoing, running, onPause, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
   const dark = useIsDark();
+  // The play glyph: white, or the dark ink on a light dark-mode fill (V6-02).
+  const playInk = isOngoing ? "#FFFFFF" : partBInk(family.play, dark);
   const gripProps = grip;
   return (
     <div
@@ -858,9 +966,9 @@ const RoutineCardFace: React.FC<{
         style={{ background: isOngoing ? rc("ongoing", dark) : family.play }}
       >
         {isOngoing && running ? (
-          <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
+          <Pause size={13} fill={playInk} style={{ color: playInk }} />
         ) : (
-          <Play size={13} fill="#FFFFFF" style={{ color: "#FFFFFF", marginLeft: 1 }} />
+          <Play size={13} fill={playInk} style={{ color: playInk, marginLeft: 1 }} />
         )}
       </button>
       <button
@@ -949,6 +1057,9 @@ const RoutineRow: React.FC<{
   const [expanded, setExpanded] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  // Names added from the open library whose save may still be on its way,
+  // so their rows already read "Added ✓" (WO1.3 S7).
+  const [queuedNames, setQueuedNames] = useState<string[]>([]);
 
   // --- grouping -------------------------------------------------------------
   //
@@ -1248,16 +1359,21 @@ const RoutineRow: React.FC<{
           setReplaceTarget(null);
         }}
         alreadyAdded={[]}
+        mode="replace"
       />
 
       <ExerciseLibrarySheet
         open={addExerciseOpen}
-        onClose={() => setAddExerciseOpen(false)}
-        onPick={(pick) => {
-          onAddExercise(pick);
+        onClose={() => {
           setAddExerciseOpen(false);
+          setQueuedNames([]);
         }}
-        alreadyAdded={routine.exercises.map((e) => e.name)}
+        // WO1.3 S5: the sheet stays open for more; the row turns "Added ✓".
+        onPick={(pick) => {
+          setQueuedNames((q) => [...q, pick.name]);
+          onAddExercise(pick);
+        }}
+        alreadyAdded={[...routine.exercises.map((e) => e.name), ...queuedNames]}
       />
     </div>
   );

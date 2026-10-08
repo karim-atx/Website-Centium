@@ -86,7 +86,11 @@ export function pointStats(sessions: WorkoutSession[]): PointStats {
 }
 
 export interface TrainingFrequency {
-  /** Sessions in each of the last 8 Monday–Sunday weeks, oldest first; the last is this week. */
+  /**
+   * Training days in each of the last 8 Monday–Sunday weeks, oldest first;
+   * the last is this week. v6 WO1 S11: distinct days, not sessions (two
+   * sessions on one day count once); the current week counts logged days only.
+   */
   weeks: number[];
   /** Their average, to one decimal. */
   perWeek: number;
@@ -99,11 +103,12 @@ export function trainingFrequency(sessions: WorkoutSession[], today: string): Tr
     d.setUTCDate(d.getUTCDate() - 7 * (7 - i));
     return d.toISOString().slice(0, 10);
   });
-  const weeks = mondays.map(() => 0);
+  const days = mondays.map(() => new Set<string>());
   for (const s of sessions) {
     const i = mondays.indexOf(mondayOf(s.date));
-    if (i >= 0) weeks[i]++;
+    if (i >= 0) days[i].add(s.date);
   }
+  const weeks = days.map((d) => d.size);
   return { weeks, perWeek: Math.round((weeks.reduce((a, b) => a + b, 0) / 8) * 10) / 10 };
 }
 

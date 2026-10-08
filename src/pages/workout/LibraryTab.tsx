@@ -4,7 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
-import { List, User, Search, RefreshCw, ChevronDown } from "lucide-react";
+import { List, User, Search, RefreshCw, ChevronDown, AlertCircle } from "lucide-react";
 import { CreateExerciseButton } from "../../components/workout/CreateExerciseButton";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BuiltInExerciseSheet } from "../../components/workout/BuiltInExerciseSheet";
@@ -13,7 +13,10 @@ import { ExerciseHistorySheet } from "../../components/workout/ExerciseHistorySh
 import type { FigureKey, ZoneKey } from "../../data/bodyZones";
 import { BodyFigure } from "../../components/workout/BodyFigure";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
+import { LoadErrorCard, SkeletonRows, YoursTag, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
+import { Toast } from "../../components/ui/Toast";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -101,34 +104,47 @@ const FRONT_ZONE_KEYS: ZoneKey[] = ["shoulders", "chest", "biceps", "forearms", 
 const BACK_ZONE_KEYS: ZoneKey[] = ["shoulders", "back", "triceps", "forearms", "glutes", "hamstrings", "calves"];
 
 /**
- * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the "Yours"
- * badge takes gold.text / gold.tint dark, the flip chip's lavender ink
- * primary.deeper dark, the Discipline chevron text.tertiary dark.
+ * Dark mode, as [light, dark]: the Body view's flip chip ink (primary.deeper
+ * dark). The Discipline chevron is #ADA9A4 in both modes (WO2 #19, derived *).
  */
 const COLORS = {
-  yoursInk: ["#8A6318", "#CAB082"],
-  yoursBg: ["rgba(200,145,43,0.16)", "#3A342C"],
   flipInk: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
-  chevron: ["#ADA9A4", "#918DA0"],
+  chevron: ["#ADA9A4", "#ADA9A4"],
 } as const;
 
-/** WO2.1 control: a 30px smooth rounded rectangle; selected = #AEA1DC fill, white text. */
+const SAVE_FAILED = "Couldn't save. Try again.";
+
+/**
+ * WO2 #16-#18: a 30px smooth rounded rectangle, pad 0 11, 11.5/17.3 600, a
+ * 0.5px border. Selected: #AEA1DC fill and border with white (dark #A991FE
+ * with #0D0B1A); idle #5B5349 on white with #241F1B@11% (dark #B8B3C7 on
+ * #1C1F28 with #F5F3FA@11%; 30% of ink under High contrast, --hair-11).
+ */
 const controlStyle = (on: boolean): React.CSSProperties => ({
   height: 30,
   borderRadius: 10,
   padding: "0 11px",
   fontSize: textPx(11.5),
+  lineHeight: linePx(17.3),
   fontWeight: 600,
   whiteSpace: "nowrap",
-  border: `1px solid ${on ? "rgb(var(--th-aea1dc))" : "rgb(var(--c-charcoal) / 0.11)"}`,
+  border: `0.5px solid ${on ? "rgb(var(--c-primary-fill))" : "var(--lib-hair-11)"}`,
   background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
   color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
 });
 
-export default function ExerciseDatabaseTab() {
+/**
+ * Workout › Library (v6 WO2), which replaces the old Exercise Database tab:
+ * List view (search, sort, Discipline, the count with "· N yours", one card of
+ * rows with the "Yours" tag after the user's own) and the Body view, kept as
+ * ORIGINAL WO2. Loading rows, a Retry card and an empty search with "Create"
+ * are ours (WO2 O2-O5).
+ */
+export default function LibraryTab() {
   const {
     exerciseCatalog,
     exerciseCatalogError,
+    retryExerciseCatalog,
     customExercises,
     addCustomExercise,
     updateCustomExercise,
@@ -138,6 +154,7 @@ export default function ExerciseDatabaseTab() {
     workoutTemplates,
     personalRecords,
     noteFeatureMilestone,
+    accessibility,
   } = useApp();
 
   // Explorer milestone: "Browsing the shelves". One row per account for ever — the repeat is
@@ -150,6 +167,9 @@ export default function ExerciseDatabaseTab() {
 
   const dark = useIsDark();
   const tabColor = (key: keyof typeof COLORS) => COLORS[key][dark ? 1 : 0];
+  const ink = useLibraryInk();
+  const online = useOnline();
+  const [toast, setToast] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
@@ -170,7 +190,16 @@ export default function ExerciseDatabaseTab() {
     return () => window.removeEventListener("resize", measureFilterRow);
   }, [discipline]);
   const [disciplineAnchor, setDisciplineAnchor] = useState<HTMLElement | null>(null);
-  const [creating, setCreating] = useState(false);
+  // Create: null closed, else the name it opens with ("Create 'xyz'" prefills it).
+  const [creating, setCreating] = useState<string | null>(null);
+  const startCreate = (name: string) => {
+    // Offline: nothing can be saved (WO2 O5).
+    if (!online) {
+      setToast(SAVE_FAILED);
+      return;
+    }
+    setCreating(name);
+  };
   const [bodySide, setBodySide] = useState<BodySide>("front");
   const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
   const selectedZoneKey = sideZoneKeys.find((k) => ZONE_KEY_TO_GROUP[k] === selectedGroup);
@@ -221,7 +250,8 @@ export default function ExerciseDatabaseTab() {
   }, [exerciseCatalog, customExercises]);
 
   const searched = useMemo(
-    () => all.filter((e) => e.name.toLowerCase().includes(query.toLowerCase())),
+    // Case- and accent-insensitive (WO2 S6); aliases wait for PB-O-33.
+    () => all.filter((e) => searchKey(e.name).includes(searchKey(query))),
     [all, query]
   );
 
@@ -238,9 +268,14 @@ export default function ExerciseDatabaseTab() {
     [filteredByGroup, discipline]
   );
 
+  const yoursCount = filtered.filter((e) => e.isCustom).length;
+  // The catalogue's first read has not answered yet (WO2 O4).
+  const loading = exerciseCatalog.length === 0 && !exerciseCatalogError;
+
   const groups = useMemo(() => {
     if (sort === "alphabetical") {
-      return [{ label: null, items: [...filtered].sort((a, b) => a.name.localeCompare(b.name)) }];
+      // WO2 #22-#26: the user's own first ("Yours"), then the catalogue, each A–Z.
+      return [{ label: null, items: [...filtered].sort((a, b) => Number(b.isCustom) - Number(a.isCustom) || a.name.localeCompare(b.name)) }];
     }
     if (sort === "classification") {
       const byClass = new Map<ExerciseClassification, DbExercise[]>();
@@ -309,7 +344,12 @@ export default function ExerciseDatabaseTab() {
   };
 
   return (
-    <div className="animate-fade-slide-up">
+    // WO2 #17 / #21: the 0.5px border #241F1B@11% / dark #F5F3FA@11% (literal; the shared
+    // --hair-11 is 10% in dark), 30% of ink under High contrast.
+    <div
+      className="animate-fade-slide-up"
+      style={{ "--lib-hair-11": accessibility.highContrast ? "var(--hair-11)" : dark ? "rgba(245, 243, 250, 0.11)" : "rgba(36, 31, 27, 0.11)" } as React.CSSProperties}
+    >
       {/* WO2.1: the List/Body toggle and "+ Create exercise" share one row
           (both views). CREATING A MOVEMENT IS A TOP-LEVEL ACTION, not
           something you reach by opening a stock exercise and saving it under
@@ -339,13 +379,14 @@ export default function ExerciseDatabaseTab() {
                   color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-muted))",
                 }}
               >
+                {/* WO2 #9: drawn #FFFFFF in dark; V6-02 keeps the label ink #0D0B1A. */}
                 {v === "list" ? <List size={13} /> : <User size={13} />}
                 {v === "list" ? "List" : "Body"}
               </button>
             );
           })}
         </div>
-        <CreateExerciseButton onClick={() => setCreating(true)} />
+        <CreateExerciseButton onClick={() => startCreate("")} />
       </div>
 
       <div className="relative" style={{ marginBottom: 10 }}>
@@ -356,7 +397,7 @@ export default function ExerciseDatabaseTab() {
           placeholder="Search exercises…"
           aria-label="Search exercises"
           className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: textPx(14) }}
+          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: textPx(14), lineHeight: linePx(21) }}
         />
       </div>
 
@@ -398,17 +439,27 @@ export default function ExerciseDatabaseTab() {
           )}
           </div>
 
-          <p style={{ margin: "0 0 8px 2px", fontSize: textPx(11), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
+          {/* WO2 #20: "{n} exercises · {k} yours", the suffix only while the
+              filtered list holds some of the user's own (O1). */}
+          <p style={{ margin: "0 0 8px 2px", fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
             {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
+            {yoursCount > 0 ? ` · ${yoursCount} yours` : ""}
           </p>
 
           <div className="space-y-5">
-            {groups.map((g, i) => (
+            {loading && (
+              <div className="overflow-hidden bg-cream-card" style={{ border: "0.5px solid var(--lib-hair-11)", borderRadius: 18, padding: "0 12px" }}>
+                <SkeletonRows count={8} height={44} divided />
+              </div>
+            )}
+            {groups.map((g, i) =>
+              g.items.length === 0 ? null : (
               <div key={g.label ?? i}>
                 {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
+                {/* WO2 #21 / #25: a 0.5px #241F1B@11% card, 0.5px @7% dividers. */}
                 <div
-                  className="overflow-hidden bg-cream-card divide-y divide-charcoal/[0.07]"
-                  style={{ border: "1px solid rgb(var(--c-charcoal) / 0.11)", borderRadius: 18 }}
+                  className="overflow-hidden bg-cream-card divide-y-[0.5px] divide-charcoal/[0.07]"
+                  style={{ border: "0.5px solid var(--lib-hair-11)", borderRadius: 18 }}
                 >
                   {g.items.map((e) => (
                     <button
@@ -419,30 +470,13 @@ export default function ExerciseDatabaseTab() {
                     >
                       <span className="min-w-0">
                         <span className="flex items-center" style={{ gap: 6 }}>
-                          {/* YOUR OWN MOVEMENT, MARKED BY A BADGE rather than
-                              by a word in the corner. The list mixes 60-odd
-                              catalog rows with a handful of the user's own,
-                              and the one thing they can edit and delete
-                              should be the one thing that looks different. */}
-                          {e.isCustom && (
-                            <span
-                              style={{
-                                fontSize: textPx(9),
-                                fontWeight: 800,
-                                letterSpacing: "0.06em",
-                                textTransform: "uppercase",
-                                color: tabColor("yoursInk"),
-                                background: tabColor("yoursBg"),
-                                borderRadius: 5,
-                                padding: "2px 5px",
-                              }}
-                            >
-                              Yours
-                            </span>
-                          )}
                           <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                             {e.name}
                           </span>
+                          {/* YOUR OWN MOVEMENT, MARKED: the "Yours" tag after
+                              the name (WO2 #24), the one kind of row the user
+                              can edit and delete. */}
+                          {e.isCustom && <YoursTag />}
                         </span>
                         {e.tags.length > 0 && (
                           <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(14), color: "rgb(var(--c-charcoal-muted))" }}>
@@ -454,16 +488,29 @@ export default function ExerciseDatabaseTab() {
                   ))}
                 </div>
               </div>
-            ))}
+              )
+            )}
             {/* SAID WHENEVER IT HAPPENED, not only when nothing is left to
                 show. A user with three of their own movements and an
                 unreachable catalog would otherwise be looking at a
                 three-exercise library with no hint that 52 are missing. */}
-            {exerciseCatalogError && (
-              <p className="text-center text-sm text-status-high py-4">{exerciseCatalogError}</p>
-            )}
-            {!exerciseCatalogError && groups.every((g) => g.items.length === 0) && (
-              <p className="text-center text-sm text-charcoal-faint py-8">No exercises match.</p>
+            {exerciseCatalogError && <LoadErrorCard card message="Couldn't load exercises." onRetry={retryExerciseCatalog} />}
+            {!loading && !exerciseCatalogError && groups.every((g) => g.items.length === 0) && (
+              <div className="flex flex-col items-center text-center" style={{ padding: "28px 0", gap: 8 }}>
+                <p className="text-charcoal-faint" style={{ margin: 0, fontSize: textPx(13.5), lineHeight: linePx(20.3) }}>
+                  {query.trim() ? `No exercises match '${query.trim()}'.` : "No exercises match."}
+                </p>
+                {query.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => startCreate(query.trim())}
+                    className="tap relative before:absolute before:-inset-[12px] before:content-['']"
+                    style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: ink }}
+                  >
+                    {`Create '${query.trim()}'`}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </>
@@ -630,11 +677,12 @@ export default function ExerciseDatabaseTab() {
           the same sheet, kept apart so the create form never inherits the
           fields of whatever was opened last. */}
       <CreateCustomExerciseSheet
-        open={creating}
+        open={creating !== null}
+        initial={creating ? { name: creating } : undefined}
         onInfo={(name) => setInfo({ name, source: null })}
         onHistory={() => setHistory({ name: "New Custom Exercise", match: {} })}
-        onClose={() => setCreating(false)}
-        onSave={(data: CustomExerciseData) => void addCustomExercise(data)}
+        onClose={() => setCreating(null)}
+        onSave={(data: CustomExerciseData) => void addCustomExercise(data).then((error) => error && setToast(SAVE_FAILED))}
       />
 
       <BuiltInExerciseSheet
@@ -663,12 +711,20 @@ export default function ExerciseDatabaseTab() {
         }
         impact={editingExercise?.isCustom ? deleteImpact(editingExercise.id) : undefined}
         onSave={(data: CustomExerciseData) => {
-          if (editingExercise?.isCustom) void updateCustomExercise(editingExercise.id, data);
+          if (editingExercise?.isCustom)
+            void updateCustomExercise(editingExercise.id, data).then((error) => error && setToast(SAVE_FAILED));
         }}
       />
 
       <ExerciseHistorySheet open={!!history} onClose={() => setHistory(null)} name={history?.name ?? ""} match={history?.match ?? null} />
       <ExerciseInfoSheet open={!!info} onClose={() => setInfo(null)} name={info?.name ?? ""} source={info?.source ?? null} />
+
+      <Toast
+        open={!!toast}
+        message={toast ?? ""}
+        icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
+        onExpire={() => setToast(null)}
+      />
 
     </div>
   );

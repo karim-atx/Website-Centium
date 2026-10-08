@@ -303,3 +303,35 @@ export function headInk(family: Pick<FolderFamily, "head">): string {
 export function headInkSoft(family: Pick<FolderFamily, "head">): string {
   return headInk(family) === "#FFFFFF" ? "rgba(255,255,255,0.86)" : "rgba(28,25,23,0.86)";
 }
+
+/**
+ * v6 Part B (WO1 #9-#46, D7): the Routines tab's folder and routine shades.
+ * Light mode is the family itself. Dark mode takes the handover's literal
+ * dark values for its two families: lavender head #A991FE, tile / bar / play
+ * #C3B3FB, row #303141; teal head #8ABFB5, tile / bar / play #93C1B9, row
+ * #293339. The other ten swatches are derived the same way (recorded in
+ * WO1.md D7): the header keeps its light shade, tile / bar / play are that
+ * shade lifted 20% toward white, and the row is the header at 14% on the dark
+ * card (which reproduces #303141 and #293339 within a step).
+ * High contrast: the lavender header takes the filled #5B48B8 (WO1 O7).
+ */
+export function partBFamily(family: FolderFamily, dark: boolean, hc = false): FolderFamily {
+  const lavender = family.head === PURPLE.head;
+  if (!dark) return hc && lavender ? { ...family, head: "#5B48B8" } : family;
+  if (lavender) return { head: "#A991FE", tile: "#C3B3FB", row: "#303141", bar: "#C3B3FB", play: "#C3B3FB" };
+  if (family.head === TEAL.head) return { head: "#8ABFB5", tile: "#93C1B9", row: "#293339", bar: "#93C1B9", play: "#93C1B9" };
+  const lifted = mixHex(family.head, "#FFFFFF", 0.2);
+  return { head: family.head, tile: lifted, row: tintOn(family.head, 0.14), bar: lifted, play: lifted };
+}
+
+/**
+ * Ink on a Part B fill (folder header, tile, play): white as drawn, except
+ * where white falls short on the light dark-mode fills, which take the dark
+ * ink #0D0B1A (V6-02: "#0D0B1A ink on #A991FE", applied to every light fill
+ * of partBFamily in dark). Picked by contrast, so the darker derived families
+ * (Black, Slate, Indigo…) keep white.
+ */
+export function partBInk(fill: string, dark: boolean): string {
+  if (!dark) return "#FFFFFF";
+  return contrastRatio("#FFFFFF", fill) >= contrastRatio("#0D0B1A", fill) ? "#FFFFFF" : "#0D0B1A";
+}

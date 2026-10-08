@@ -10,6 +10,27 @@ import { classificationOptions } from "../../utils/exerciseClassification";
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useApp } from "../../context/AppContext";
+
+/**
+ * v6 PB-O-32 (front end now; the database checks wait for the stage): a
+ * custom exercise's name is 2 to 60 characters and unique among the user's
+ * own (case-insensitive), and it needs at least one main muscle group.
+ */
+export const CUSTOM_EXERCISE_NAME_MAX = 60;
+export function customExerciseProblem(
+  name: string,
+  muscleGroups: MuscleGroup[],
+  others: string[]
+): { name?: string; muscle?: string } {
+  const n = name.trim();
+  const out: { name?: string; muscle?: string } = {};
+  if (n.length > 0 && n.length < 2) out.name = "Use at least 2 characters.";
+  else if (n.length > CUSTOM_EXERCISE_NAME_MAX) out.name = "Use up to 60 characters.";
+  else if (n && others.some((o) => o.trim().toLowerCase() === n.toLowerCase())) out.name = "You already have an exercise with this name.";
+  if (muscleGroups.length === 0) out.muscle = "Pick at least one main muscle group.";
+  return out;
+}
 
 // Derived from SELECTABLE_MUSCLE_GROUPS rather than listed again here. The
 // two copies had already drifted apart once, and this one carried `olympic`
@@ -110,7 +131,18 @@ export const CreateCustomExerciseSheet: React.FC<{
   const [classAnchor, setClassAnchor] = useState<HTMLElement | null>(null);
   const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The muscle-group line shows once a save was tried (it is not an error
+  // before the user has had a chance to pick one).
+  const [triedSave, setTriedSave] = useState(false);
   const dark = useIsDark();
+  const { customExercises } = useApp();
+  // The other names this one must not repeat: every own exercise except the
+  // one being edited.
+  const otherNames = customExercises
+    .map((e) => e.name)
+    .filter((n) => !initial?.name || n.trim().toLowerCase() !== initial.name.trim().toLowerCase());
+  const problem = customExerciseProblem(name, muscleGroups, otherNames);
+  const canSave = name.trim().length >= 2 && !problem.name && !problem.muscle;
 
   useEffect(() => {
     if (open) {
@@ -124,6 +156,7 @@ export const CreateCustomExerciseSheet: React.FC<{
       // Armed state never survives the sheet closing, so reopening on a
       // different exercise cannot inherit a tap meant for the previous one.
       setConfirmDelete(false);
+      setTriedSave(false);
     }
   }, [open, initial]);
 
@@ -144,7 +177,8 @@ export const CreateCustomExerciseSheet: React.FC<{
   };
 
   const save = () => {
-    if (!name.trim()) return;
+    setTriedSave(true);
+    if (!canSave) return;
     onSave({ name: name.trim(), muscleGroups, secondaryMuscleGroups, classification, tags });
     onClose();
   };
@@ -166,6 +200,9 @@ export const CreateCustomExerciseSheet: React.FC<{
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={CUSTOM_EXERCISE_NAME_MAX}
+              aria-invalid={!!problem.name}
+              aria-describedby={problem.name ? "custom-exercise-name-error" : undefined}
               placeholder="e.g. Abdallah's Bungees"
               className="flex-1 min-w-0 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               style={{ height: 46, borderRadius: 16, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "0 16px", fontSize: textPx(14) }}
@@ -180,6 +217,11 @@ export const CreateCustomExerciseSheet: React.FC<{
               <Eye size={18} />
             </button>
           </div>
+          {problem.name && (
+            <p id="custom-exercise-name-error" className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 6 }}>
+              {problem.name}
+            </p>
+          )}
         </div>
 
         <div>
@@ -187,6 +229,11 @@ export const CreateCustomExerciseSheet: React.FC<{
           <p className="text-[11px] text-charcoal-faint mb-2">
             Click once for main, twice for secondary, three times to clear.
           </p>
+          {triedSave && problem.muscle && (
+            <p role="alert" className="text-[11.5px] font-semibold text-status-high mb-2">
+              {problem.muscle}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {muscleGroupOptions.map((mg) => {
               const isPrimary = muscleGroups.includes(mg.value);
@@ -269,7 +316,7 @@ export const CreateCustomExerciseSheet: React.FC<{
         <div className="flex" style={{ gap: 9 }}>
           <button
             onClick={save}
-            disabled={!name.trim()}
+            disabled={!name.trim() || !!problem.name}
             className="tap flex-1 flex items-center justify-center disabled:opacity-60"
             style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
           >

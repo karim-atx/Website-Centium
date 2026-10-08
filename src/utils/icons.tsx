@@ -19,7 +19,6 @@ import {
   Dumbbell,
   Footprints,
   CircleDot,
-  HeartPulse,
   Activity,
   Flame,
   Droplet,
@@ -49,7 +48,6 @@ import {
 import type {
   HabitIconKey,
   MarketplaceCategoryId,
-  MuscleGroup,
   ProfessionalType,
 } from "../types";
 
@@ -66,30 +64,6 @@ export const foodCategoryIcon: Record<string, LucideIcon> = {
   homemade: Home,
   ingredients: Wheat,
   meal_prep: Container,
-};
-
-// Muscle group -> icon, for the exercise library's filter chips.
-//
-// KEYED BY MUSCLE GROUP, NOT BY THE OLD BROWSE CATEGORY. public.exercises
-// types its category as muscle_group, and the prototype's chest/back/arms/
-// legs/full_body grouping has no column to come from any more — `arms`,
-// `legs` and `full_body` are not muscle_group members at all. The 14 below
-// are the enum, so every catalog row's category has an icon.
-export const muscleGroupIcon: Record<MuscleGroup, LucideIcon> = {
-  back: Dumbbell,
-  bicep: Dumbbell,
-  calves: Footprints,
-  cardio: HeartPulse,
-  chest: Dumbbell,
-  core: CircleDot,
-  forearms: Dumbbell,
-  glutes: Footprints,
-  hamstrings: Footprints,
-  olympic: Activity,
-  other: Activity,
-  quads: Footprints,
-  shoulders: Dumbbell,
-  tricep: Dumbbell,
 };
 
 export const professionalTypeIcon: Record<ProfessionalType, LucideIcon> = {

@@ -1,6 +1,7 @@
 import type { MuscleGroup } from "../types";
 
-// How each muscle group is written, in one place.
+// How each muscle group is written, in one place. Plural Biceps / Triceps
+// everywhere (v6 WO1.3 D12, the Body view and the frames).
 //
 // Both exercise surfaces need this — the picker sheet's filter chips and the
 // Exercise Database tab's grouped list — and they used to disagree about what
@@ -10,7 +11,7 @@ import type { MuscleGroup } from "../types";
 // public.muscle_group and nothing stores the old grouping any more.
 export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   back: "Back",
-  bicep: "Bicep",
+  bicep: "Biceps",
   calves: "Calves",
   cardio: "Cardio",
   chest: "Chest",
@@ -22,7 +23,7 @@ export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   other: "Other",
   quads: "Quads",
   shoulders: "Shoulders",
-  tricep: "Tricep",
+  tricep: "Triceps",
 };
 
 /**
