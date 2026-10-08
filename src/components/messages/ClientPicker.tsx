@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
-import { PERSON_ICON } from "../../utils/icons";
+import { AvatarPlaceholder } from "../icons/PartBIcons";
 
 export interface PickableClient {
   userId: string;
@@ -71,7 +71,12 @@ export const ClientPicker: React.FC<{
               {c.avatarUrl ? (
                 <img src={c.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <PERSON_ICON size={16} className="text-primary-dark" />
+                // v6 (V6-170, asset map): initials when a name exists, else the placeholder figure.
+                c.name.trim() ? (
+                  <span className="text-[14px] font-bold text-primary-deep-text">{c.name.trim().charAt(0).toUpperCase()}</span>
+                ) : (
+                  <AvatarPlaceholder size={36} />
+                )
               )}
             </span>
             <span className="flex-1 min-w-0">

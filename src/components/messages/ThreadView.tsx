@@ -179,7 +179,9 @@ export const ThreadView: React.FC<{
   onBack: () => void;
   /** A message to show on opening, e.g. a search result; older pages load until it is there. */
   focusMessageId?: string | null;
-}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId }) => {
+  /** MO1.7 O14: Chat info's "Delete conversation"; absent until PB-O-40. */
+  onDeleteConversation?: () => void;
+}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation }) => {
   const { authUserId, user } = useApp();
   const unread = useUnread();
   // Typing and online for this chat; the database decides who sees them.
@@ -1230,6 +1232,7 @@ export const ThreadView: React.FC<{
       {infoOpen && authUserId ? (
         <ChatInfo
           online={theyAreOnline}
+          onDelete={onDeleteConversation}
           thread={thread}
           authUserId={authUserId}
           settings={settings}

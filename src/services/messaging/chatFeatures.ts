@@ -86,6 +86,30 @@ export async function saveThreadSettings(
   return inserted.error ? fail(inserted.error) : { ok: true };
 }
 
+// ---------------------------------------------------------------------------
+// Delete a conversation for me (v6 MO1.7 S3, V6-75; backend PB-O-40 / ME-02,
+// stage B3: thread_user_settings.cleared_at + delete_conversation_for_me()).
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether delete-for-me exists on the backend. FALSE UNTIL PB-O-40 SHIPS:
+ * neither HANDOVER_API.md nor the local stack has cleared_at or
+ * delete_conversation_for_me() yet, so the Delete tile, menu item and Chat
+ * info row stay hidden (no fake delete). Flip this, and wire the call below,
+ * once both have it.
+ */
+export const CONVERSATION_DELETE_READY = false;
+
+/**
+ * Hides one conversation for the caller only (pin and archive cleared, mute
+ * kept, V6-75). Until PB-O-40 ships there is nothing to call: it writes
+ * nothing and reports the failure the confirm shows.
+ */
+export async function deleteConversationForMe(threadId: string): Promise<{ ok: true } | Fail> {
+  void threadId;
+  return { ok: false, message: "Couldn't delete. Try again." };
+}
+
 export type MuteChoice = "1h" | "8h" | "1w" | "always" | "off";
 
 export const MUTE_CHOICES: { value: MuteChoice; label: string }[] = [

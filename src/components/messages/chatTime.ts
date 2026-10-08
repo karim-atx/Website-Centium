@@ -1,5 +1,6 @@
 // How times read in Messages: the list shows the time for today, "Yesterday",
-// a weekday within the week, then a date; bubbles show the time.
+// a weekday within the week, then a date ("Sep 27"; "Sep 27, 2025" in another
+// year); bubbles show the time.
 
 import { clock12 } from "../../utils/time12";
 
@@ -17,8 +18,14 @@ export function listTime(iso: string, now = new Date()): string {
   y.setDate(now.getDate() - 1);
   if (sameDay(d, y)) return "Yesterday";
   const days = (now.getTime() - d.getTime()) / 86_400_000;
-  if (days < 7) return d.toLocaleDateString(undefined, { weekday: "short" });
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  // v6 MO1.7 D2: "Tue" within the week, then month first as drawn ("Sep 27"),
+  // with the year once it is another year ("Sep 27, 2025").
+  if (days < 7 && days > -7) return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : null),
+  });
 }
 
 /** MO1.2.1.3.2's search result time: the day, then the clock ("Today · 8:14 AM"). */
