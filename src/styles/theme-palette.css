@@ -12,6 +12,10 @@
   --c-team-nav-accent-text-ink: var(--c-team-nav-accent-text);
   --c-team-lavender-ink: var(--c-team-lavender);
   --c-team-lavender-deep-ink: var(--c-team-lavender-deep);
+  --c-seg-track-ink: var(--c-seg-track);
+  --c-row-tile-ink: var(--c-row-tile);
+  --c-menu-row-on-border-ink: var(--c-menu-row-on-border);
+  --c-menu-check-ink: var(--c-menu-check);
   --c-teal-ink: var(--c-teal);
   --c-teal-light-ink: var(--c-teal-light);
   --c-teal-pale-ink: var(--c-teal-pale);
@@ -20,6 +24,7 @@
   --c-trend-high-text-ink: var(--c-trend-high-text);
   --c-team-teal-ink-ink: var(--c-team-teal-ink);
   --c-team-teal-deep-ink: var(--c-team-teal-deep);
+  --c-teal-text-ink: var(--c-teal-text);
   --th-1a00e0: 26 0 224;
   --thi-1a00e0: var(--th-1a00e0);
   --th-1d167d: 29 22 125;
@@ -32,6 +37,8 @@
   --thi-27273d: var(--th-27273d);
   --th-283838: 40 56 56;
   --thi-283838: var(--th-283838);
+  --th-293339: 41 51 57;
+  --thi-293339: var(--th-293339);
   --th-2b2735: 43 39 53;
   --thi-2b2735: var(--th-2b2735);
   --th-2b2c3a: 43 44 58;
@@ -42,6 +49,8 @@
   --thi-2e2560: var(--th-2e2560);
   --th-2e3b3c: 46 59 60;
   --thi-2e3b3c: var(--th-2e3b3c);
+  --th-2f2e47: 47 46 71;
+  --thi-2f2e47: var(--th-2f2e47);
   --th-2f5f58: 47 95 88;
   --thi-2f5f58: var(--th-2f5f58);
   --th-303141: 48 49 65;
@@ -58,6 +67,8 @@
   --thi-3b7570: var(--th-3b7570);
   --th-3c6b65: 60 107 101;
   --thi-3c6b65: var(--th-3c6b65);
+  --th-3e716d: 62 113 109;
+  --thi-3e716d: var(--th-3e716d);
   --th-445e5a: 68 94 90;
   --thi-445e5a: var(--th-445e5a);
   --th-463a80: 70 58 128;
@@ -92,6 +103,8 @@
   --thi-5f8681: var(--th-5f8681);
   --th-617b77: 97 123 119;
   --thi-617b77: var(--th-617b77);
+  --th-63968b: 99 150 139;
+  --thi-63968b: var(--th-63968b);
   --th-647b77: 100 123 119;
   --thi-647b77: var(--th-647b77);
   --th-6a54c4: 106 84 196;
@@ -114,6 +127,8 @@
   --thi-726a90: var(--th-726a90);
   --th-7567b7: 117 103 183;
   --thi-7567b7: var(--th-7567b7);
+  --th-78738c: 120 115 140;
+  --thi-78738c: var(--th-78738c);
   --th-796eac: 121 110 172;
   --thi-796eac: var(--th-796eac);
   --th-797292: 121 114 146;
@@ -179,6 +194,8 @@
   --thi-9284c4: var(--th-9284c4);
   --th-9388bf: 147 136 191;
   --thi-9388bf: var(--th-9388bf);
+  --th-93c1b9: 147 193 185;
+  --thi-93c1b9: var(--th-93c1b9);
   --th-9486c2: 148 134 194;
   --thi-9486c2: var(--th-9486c2);
   --th-9591dc: 149 145 220;
@@ -218,6 +235,8 @@
   --thi-a797e3: var(--th-a797e3);
   --th-a79ad5: 167 154 213;
   --thi-a79ad5: var(--th-a79ad5);
+  --th-a9a1be: 169 161 190;
+  --thi-a9a1be: var(--th-a9a1be);
   --th-a9cfc9: 169 207 201;
   --thi-a9cfc9: var(--th-a9cfc9);
   --th-ab9ed7: 171 158 215;
@@ -232,6 +251,8 @@
   --thi-b2a9f4: var(--th-b2a9f4);
   --th-b7abde: 183 171 222;
   --thi-b7abde: var(--th-b7abde);
+  --th-b9aeea: 185 174 234;
+  --thi-b9aeea: var(--th-b9aeea);
   --th-beb4e6: 190 180 230;
   --thi-beb4e6: var(--th-beb4e6);
   --th-c0b4e8: 192 180 232;
@@ -258,6 +279,8 @@
   --thi-e1eeeb: var(--th-e1eeeb);
   --th-e1efec: 225 239 236;
   --thi-e1efec: var(--th-e1efec);
+  --th-e3f0ec: 227 240 236;
+  --thi-e3f0ec: var(--th-e3f0ec);
   --th-e4ddfd: 228 221 253;
   --thi-e4ddfd: var(--th-e4ddfd);
   --th-e4def5: 228 222 245;
@@ -338,6 +361,10 @@
   --c-team-nav-accent-text: 48 99 225;
   --c-team-lavender: 133 167 252;
   --c-team-lavender-deep: 57 105 255;
+  --c-seg-track: 236 245 254;
+  --c-row-tile: 79 134 248;
+  --c-menu-row-on-border: 133 167 252;
+  --c-menu-check: 57 105 255;
   --c-teal: 179 194 212;
   --c-teal-light: 203 215 227;
   --c-teal-pale: 239 242 248;
@@ -346,6 +373,7 @@
   --c-trend-high-text: 96 108 124;
   --c-team-teal-ink: 85 100 121;
   --c-team-teal-deep: 102 120 142;
+  --c-teal-text: 87 100 121;
   --c-brand-c: 79 125 255;
   --c-brand-leaf: 148 163 184;
   --c-primary-fill: 65 109 237;
@@ -355,6 +383,8 @@
   --c-fill-sheet: 65 109 237;
   --c-fill-day: 65 109 237;
   --c-fill-foods: 65 109 237;
+  --c-fill-pinned: 65 109 237;
+  --c-seg-active: 65 109 237;
   --c-teal-fill: 105 119 135;
   --c-fill-prep: 105 119 142;
   --c-hero-from: 57 82 150;
@@ -370,6 +400,10 @@
   --c-team-nav-accent-text-ink: 25 71 196;
   --c-team-lavender-ink: 133 167 252;
   --c-team-lavender-deep-ink: 27 62 211;
+  --c-seg-track-ink: 236 245 254;
+  --c-row-tile-ink: 25 74 183;
+  --c-menu-row-on-border-ink: 133 167 252;
+  --c-menu-check-ink: 27 62 211;
   --c-teal-ink: 179 194 212;
   --c-teal-light-ink: 203 215 227;
   --c-teal-pale-ink: 239 242 248;
@@ -378,6 +412,7 @@
   --c-trend-high-text-ink: 82 94 109;
   --c-team-teal-ink-ink: 79 94 115;
   --c-team-teal-deep-ink: 77 94 115;
+  --c-teal-text-ink: 81 94 115;
   --border-row: rgba(133, 167, 252, 0.15);
   --shadow-fab: 0 16px 40px rgba(57, 105, 255, 0.4);
   --gradient-board: linear-gradient(122deg, #85a7fc 0%, #349afb 46%, #9caac5 78%, #b3c2d4 100%);
@@ -405,6 +440,18 @@
   --forum-handle: #dcd7e8;
   --forum-done-ink: #364457;
   --forum-muted: #5e5750;
+  --list-bg: #f3f8fe;
+  --list-rule: #e1ecfe;
+  --menu-border: rgba(133, 167, 252, 0.5);
+  --nav-border: rgba(69, 123, 251, 0.28);
+  --sheet-border-business: #0a68da;
+  --wheel-band-business: #ecf5fe;
+  --gradient-approval-glow: radial-gradient(circle, rgba(69, 123, 251, 0.3) 0%, rgba(69, 123, 251, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(11, 70, 232, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(69, 123, 251, 0.1), 0 14px 30px rgba(11, 70, 232, 0.16);
+  --shadow-focus-ring: 0 0 0 4px rgba(69, 123, 251, 0.12);
+  --shadow-primary-button: 0 2px 10px rgba(57, 105, 255, 0.26);
+  --shadow-navbar: 0 10px 28px rgba(11, 70, 232, 0.16);
   --th-1a00e0: 11 71 105;
   --thi-1a00e0: 11 71 105;
   --th-1d167d: 1 44 75;
@@ -417,6 +464,8 @@
   --thi-27273d: 0 40 88;
   --th-283838: 50 53 61;
   --thi-283838: 50 53 61;
+  --th-293339: 52 48 57;
+  --thi-293339: 52 48 57;
   --th-2b2735: 31 39 73;
   --thi-2b2735: 31 39 73;
   --th-2b2c3a: 21 46 75;
@@ -427,6 +476,8 @@
   --thi-2e2560: 4 44 100;
   --th-2e3b3c: 56 56 64;
   --thi-2e3b3c: 56 56 64;
+  --th-2f2e47: 6 47 101;
+  --thi-2f2e47: 6 47 101;
   --th-2f5f58: 73 88 109;
   --thi-2f5f58: 73 88 109;
   --th-303141: 23 51 85;
@@ -443,6 +494,8 @@
   --thi-3b7570: 79 94 121;
   --th-3c6b65: 85 100 121;
   --thi-3c6b65: 79 94 115;
+  --th-3e716d: 91 105 130;
+  --thi-3e716d: 80 94 118;
   --th-445e5a: 80 90 102;
   --thi-445e5a: 80 90 102;
   --th-463a80: 8 64 149;
@@ -477,6 +530,8 @@
   --thi-5f8681: 79 93 111;
   --th-617b77: 108 119 132;
   --thi-617b77: 83 93 106;
+  --th-63968b: 120 143 165;
+  --thi-63968b: 73 95 115;
   --th-647b77: 111 119 131;
   --thi-647b77: 86 93 105;
   --th-6a54c4: 9 95 220;
@@ -499,6 +554,8 @@
   --thi-726a90: 49 77 161;
   --th-7567b7: 26 104 248;
   --thi-7567b7: 6 73 193;
+  --th-78738c: 94 117 174;
+  --thi-78738c: 60 81 135;
   --th-796eac: 43 108 251;
   --thi-796eac: 3 67 209;
   --th-797292: 89 116 186;
@@ -564,6 +621,8 @@
   --thi-9284c4: 34 73 182;
   --th-9388bf: 91 138 254;
   --thi-9388bf: 36 73 184;
+  --th-93c1b9: 167 186 207;
+  --thi-93c1b9: 167 186 207;
   --th-9486c2: 92 137 253;
   --thi-9486c2: 37 73 183;
   --th-9591dc: 82 153 255;
@@ -603,6 +662,8 @@
   --thi-a797e3: 44 76 163;
   --th-a79ad5: 121 160 250;
   --thi-a79ad5: 46 78 160;
+  --th-a9a1be: 141 163 231;
+  --thi-a9a1be: 141 163 231;
   --th-a9cfc9: 186 201 219;
   --thi-a9cfc9: 186 201 219;
   --th-ab9ed7: 127 164 251;
@@ -617,6 +678,8 @@
   --thi-b2a9f4: 133 179 254;
   --th-b7abde: 144 177 254;
   --thi-b7abde: 144 177 254;
+  --th-b9aeea: 148 181 254;
+  --thi-b9aeea: 148 181 254;
   --th-beb4e6: 157 186 252;
   --thi-beb4e6: 157 186 252;
   --th-c0b4e8: 161 186 251;
@@ -643,6 +706,8 @@
   --thi-e1eeeb: 230 236 241;
   --th-e1efec: 232 236 245;
   --thi-e1efec: 232 236 245;
+  --th-e3f0ec: 231 238 245;
+  --thi-e3f0ec: 231 238 245;
   --th-e4ddfd: 214 225 254;
   --thi-e4ddfd: 214 225 254;
   --th-e4def5: 214 225 254;
@@ -723,6 +788,10 @@
   --c-team-nav-accent-text: 98 137 254;
   --c-team-lavender: 135 166 255;
   --c-team-lavender-deep: 74 111 224;
+  --c-seg-track: 26 41 51;
+  --c-row-tile: 84 132 253;
+  --c-menu-row-on-border: 104 146 251;
+  --c-menu-check: 149 176 252;
   --c-teal: 177 194 216;
   --c-teal-light: 196 211 229;
   --c-teal-pale: 40 45 56;
@@ -731,6 +800,7 @@
   --c-trend-high-text: 126 145 180;
   --c-team-teal-ink: 165 186 212;
   --c-team-teal-deep: 99 120 147;
+  --c-teal-text: 193 206 228;
   --c-brand-c: 46 91 255;
   --c-brand-leaf: 100 116 139;
   --c-primary-fill: 46 91 255;
@@ -740,6 +810,8 @@
   --c-fill-sheet: 46 91 255;
   --c-fill-day: 46 91 255;
   --c-fill-foods: 46 91 255;
+  --c-fill-pinned: 46 91 255;
+  --c-seg-active: 46 91 255;
   --c-teal-fill: 105 120 140;
   --c-fill-prep: 99 120 147;
   --c-hero-from: 57 82 150;
@@ -755,6 +827,10 @@
   --c-team-nav-accent-text-ink: 138 169 251;
   --c-team-lavender-ink: 139 168 251;
   --c-team-lavender-deep-ink: 137 169 251;
+  --c-seg-track-ink: 26 41 51;
+  --c-row-tile-ink: 131 169 254;
+  --c-menu-row-on-border-ink: 133 169 254;
+  --c-menu-check-ink: 149 176 252;
   --c-teal-ink: 177 194 216;
   --c-teal-light-ink: 196 211 229;
   --c-teal-pale-ink: 40 45 56;
@@ -763,6 +839,7 @@
   --c-trend-high-text-ink: 164 184 220;
   --c-team-teal-ink-ink: 165 186 212;
   --c-team-teal-deep-ink: 162 184 213;
+  --c-teal-text-ink: 193 206 228;
   --border-row: rgba(238, 239, 242, 0.08);
   --shadow-fab: 0 16px 40px rgba(123, 159, 249, 0.35);
   --gradient-board: linear-gradient(122deg, #284cb3 0%, #04569a 46%, #4c5e7a 78%, #5b7697 100%);
@@ -790,6 +867,18 @@
   --forum-handle: #31467a;
   --forum-done-ink: #b3ceec;
   --forum-muted: #acb9df;
+  --list-bg: rgba(135, 166, 255, 0.1);
+  --list-rule: rgba(135, 166, 255, 0.16);
+  --menu-border: rgba(135, 166, 255, 0.5);
+  --nav-border: rgba(238, 239, 242, 0.08);
+  --sheet-border-business: #5f86fb;
+  --wheel-band-business: #1e2e42;
+  --gradient-approval-glow: radial-gradient(circle, rgba(78, 122, 249, 0.3) 0%, rgba(78, 122, 249, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(49, 82, 187, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(123, 159, 249, 0.14), 0 14px 30px rgba(0, 0, 0, 0.35);
+  --shadow-focus-ring: 0 0 0 4px rgba(123, 159, 249, 0.16);
+  --shadow-primary-button: 0 2px 10px rgba(74, 111, 224, 0.26);
+  --shadow-navbar: 0 12px 30px rgba(0, 0, 0, 0.55);
   --th-1a00e0: 8 71 106;
   --thi-1a00e0: 8 71 106;
   --th-1d167d: 1 44 75;
@@ -802,6 +891,8 @@
   --thi-27273d: 20 41 73;
   --th-283838: 49 53 64;
   --thi-283838: 49 53 64;
+  --th-293339: 52 48 57;
+  --thi-293339: 52 48 57;
   --th-2b2735: 35 40 62;
   --thi-2b2735: 35 40 62;
   --th-2b2c3a: 30 46 66;
@@ -812,6 +903,8 @@
   --thi-2e2560: 1 43 105;
   --th-2e3b3c: 55 56 66;
   --thi-2e3b3c: 55 56 66;
+  --th-2f2e47: 27 48 85;
+  --thi-2f2e47: 27 48 85;
   --th-2f5f58: 70 88 114;
   --thi-2f5f58: 70 88 114;
   --th-303141: 35 51 73;
@@ -828,6 +921,8 @@
   --thi-3b7570: 165 184 218;
   --th-3c6b65: 82 100 126;
   --thi-3c6b65: 163 183 212;
+  --th-3e716d: 90 105 132;
+  --thi-3e716d: 167 184 214;
   --th-445e5a: 79 90 104;
   --thi-445e5a: 79 90 104;
   --th-463a80: 1 59 166;
@@ -862,6 +957,8 @@
   --thi-5f8681: 166 183 206;
   --th-617b77: 107 119 134;
   --thi-617b77: 170 183 199;
+  --th-63968b: 117 143 170;
+  --thi-63968b: 158 185 213;
   --th-647b77: 110 119 133;
   --thi-647b77: 173 183 198;
   --th-6a54c4: 13 90 235;
@@ -884,6 +981,8 @@
   --thi-726a90: 147 170 233;
   --th-7567b7: 54 107 228;
   --thi-7567b7: 130 170 250;
+  --th-78738c: 102 118 155;
+  --thi-78738c: 154 171 211;
   --th-796eac: 77 114 209;
   --thi-796eac: 132 169 255;
   --th-797292: 99 117 167;
@@ -949,6 +1048,8 @@
   --thi-9284c4: 135 168 254;
   --th-9388bf: 108 141 223;
   --thi-9388bf: 135 169 254;
+  --th-93c1b9: 165 186 212;
+  --thi-93c1b9: 165 186 212;
   --th-9486c2: 107 139 229;
   --thi-9486c2: 136 168 254;
   --th-9591dc: 91 152 253;
@@ -988,6 +1089,8 @@
   --thi-a797e3: 134 169 255;
   --th-a79ad5: 126 159 250;
   --thi-a79ad5: 136 168 253;
+  --th-a9a1be: 150 164 209;
+  --thi-a9a1be: 156 170 216;
   --th-a9cfc9: 184 201 223;
   --thi-a9cfc9: 184 201 223;
   --th-ab9ed7: 133 163 249;
@@ -1002,6 +1105,8 @@
   --thi-b2a9f4: 139 178 252;
   --th-b7abde: 149 176 252;
   --thi-b7abde: 149 176 252;
+  --th-b9aeea: 149 181 253;
+  --thi-b9aeea: 149 181 253;
   --th-beb4e6: 161 185 252;
   --thi-beb4e6: 161 185 252;
   --th-c0b4e8: 160 186 253;
@@ -1028,6 +1133,8 @@
   --thi-e1eeeb: 229 236 244;
   --th-e1efec: 229 237 245;
   --thi-e1efec: 229 237 245;
+  --th-e3f0ec: 231 238 245;
+  --thi-e3f0ec: 231 238 245;
   --th-e4ddfd: 214 225 254;
   --thi-e4ddfd: 214 225 254;
   --th-e4def5: 214 225 254;
@@ -1108,6 +1215,10 @@
   --c-team-nav-accent-text: 208 22 109;
   --c-team-lavender: 252 131 165;
   --c-team-lavender-deep: 227 25 113;
+  --c-seg-track: 255 240 246;
+  --c-row-tile: 250 60 141;
+  --c-menu-row-on-border: 252 131 165;
+  --c-menu-check: 227 25 113;
   --c-teal: 238 176 189;
   --c-teal-light: 247 202 214;
   --c-teal-pale: 254 238 242;
@@ -1116,6 +1227,7 @@
   --c-trend-high-text: 146 94 106;
   --c-team-teal-ink: 149 76 97;
   --c-team-teal-deep: 170 96 117;
+  --c-teal-text: 148 78 92;
   --c-brand-c: 226 77 127;
   --c-brand-leaf: 240 167 184;
   --c-primary-fill: 210 61 114;
@@ -1125,6 +1237,8 @@
   --c-fill-sheet: 210 61 114;
   --c-fill-day: 210 61 114;
   --c-fill-foods: 210 61 114;
+  --c-fill-pinned: 210 61 114;
+  --c-seg-active: 210 61 114;
   --c-teal-fill: 159 103 116;
   --c-fill-prep: 169 97 118;
   --c-hero-from: 136 60 83;
@@ -1140,6 +1254,10 @@
   --c-team-nav-accent-text-ink: 158 19 82;
   --c-team-lavender-ink: 252 131 165;
   --c-team-lavender-deep-ink: 163 1 78;
+  --c-seg-track-ink: 255 240 246;
+  --c-row-tile-ink: 161 1 83;
+  --c-menu-row-on-border-ink: 252 131 165;
+  --c-menu-check-ink: 163 1 78;
   --c-teal-ink: 238 176 189;
   --c-teal-light-ink: 247 202 214;
   --c-teal-pale-ink: 254 238 242;
@@ -1148,6 +1266,7 @@
   --c-trend-high-text-ink: 129 78 90;
   --c-team-teal-ink-ink: 143 70 91;
   --c-team-teal-deep-ink: 141 70 91;
+  --c-teal-text-ink: 140 71 85;
   --border-row: rgba(252, 131, 165, 0.15);
   --shadow-fab: 0 16px 40px rgba(227, 25, 113, 0.4);
   --gradient-board: linear-gradient(122deg, #fc83a5 0%, #e86bb0 46%, #e791a1 78%, #eeb0bd 100%);
@@ -1175,6 +1294,18 @@
   --forum-handle: #dcd7e8;
   --forum-done-ink: #6d2e43;
   --forum-muted: #5e5750;
+  --list-bg: #fff5f8;
+  --list-rule: #fee5ec;
+  --menu-border: rgba(252, 131, 165, 0.5);
+  --nav-border: rgba(249, 23, 131, 0.28);
+  --sheet-border-business: #d0087a;
+  --wheel-band-business: #fff0f6;
+  --gradient-approval-glow: radial-gradient(circle, rgba(249, 23, 131, 0.3) 0%, rgba(249, 23, 131, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(174, 21, 90, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(249, 23, 131, 0.1), 0 14px 30px rgba(174, 21, 90, 0.16);
+  --shadow-focus-ring: 0 0 0 4px rgba(249, 23, 131, 0.12);
+  --shadow-primary-button: 0 2px 10px rgba(227, 25, 113, 0.26);
+  --shadow-navbar: 0 10px 28px rgba(174, 21, 90, 0.16);
   --th-1a00e0: 123 16 105;
   --thi-1a00e0: 123 16 105;
   --th-1d167d: 85 1 63;
@@ -1187,6 +1318,8 @@
   --thi-27273d: 75 20 49;
   --th-283838: 74 45 49;
   --thi-283838: 74 45 49;
+  --th-293339: 63 46 35;
+  --thi-293339: 63 46 35;
   --th-2b2735: 66 30 37;
   --thi-2b2735: 66 30 37;
   --th-2b2c3a: 68 34 52;
@@ -1197,6 +1330,8 @@
   --thi-2e2560: 93 7 54;
   --th-2e3b3c: 74 51 49;
   --thi-2e3b3c: 74 51 49;
+  --th-2f2e47: 88 24 56;
+  --thi-2f2e47: 88 24 56;
   --th-2f5f58: 135 64 86;
   --thi-2f5f58: 135 64 86;
   --th-303141: 76 38 56;
@@ -1213,6 +1348,8 @@
   --thi-3b7570: 152 64 85;
   --th-3c6b65: 149 76 97;
   --thi-3c6b65: 143 70 91;
+  --th-3e716d: 160 79 98;
+  --thi-3e716d: 147 67 87;
   --th-445e5a: 120 77 86;
   --thi-445e5a: 120 77 86;
   --th-463a80: 136 6 76;
@@ -1247,6 +1384,8 @@
   --thi-5f8681: 136 75 91;
   --th-617b77: 150 106 115;
   --thi-617b77: 122 81 89;
+  --th-63968b: 197 116 143;
+  --thi-63968b: 143 68 95;
   --th-647b77: 147 108 117;
   --thi-647b77: 120 82 91;
   --th-6a54c4: 195 23 112;
@@ -1269,6 +1408,8 @@
   --thi-726a90: 142 46 80;
   --th-7567b7: 220 14 121;
   --thi-7567b7: 156 20 86;
+  --th-78738c: 163 100 115;
+  --thi-78738c: 122 63 78;
   --th-796eac: 217 48 119;
   --thi-796eac: 160 9 82;
   --th-797292: 175 93 115;
@@ -1334,6 +1475,8 @@
   --thi-9284c4: 161 7 79;
   --th-9388bf: 236 93 141;
   --thi-9388bf: 160 8 79;
+  --th-93c1b9: 240 162 184;
+  --thi-93c1b9: 240 162 184;
   --th-9486c2: 243 84 138;
   --thi-9486c2: 162 1 77;
   --th-9591dc: 254 93 170;
@@ -1373,6 +1516,8 @@
   --thi-a797e3: 156 23 78;
   --th-a79ad5: 251 119 157;
   --thi-a79ad5: 155 28 77;
+  --th-a9a1be: 220 144 158;
+  --thi-a9a1be: 220 144 158;
   --th-a9cfc9: 247 182 197;
   --thi-a9cfc9: 247 182 197;
   --th-ab9ed7: 251 126 161;
@@ -1387,6 +1532,8 @@
   --thi-b2a9f4: 250 146 184;
   --th-b7abde: 253 146 173;
   --thi-b7abde: 253 146 173;
+  --th-b9aeea: 254 151 181;
+  --thi-b9aeea: 254 151 181;
   --th-beb4e6: 254 159 183;
   --thi-beb4e6: 254 159 183;
   --th-c0b4e8: 254 160 184;
@@ -1413,6 +1560,8 @@
   --thi-e1eeeb: 254 229 236;
   --th-e1efec: 254 230 237;
   --thi-e1efec: 254 230 237;
+  --th-e3f0ec: 255 231 240;
+  --thi-e3f0ec: 255 231 240;
   --th-e4ddfd: 253 216 223;
   --thi-e4ddfd: 253 216 223;
   --th-e4def5: 254 216 221;
@@ -1493,6 +1642,10 @@
   --c-team-nav-accent-text: 252 80 130;
   --c-team-lavender: 234 143 159;
   --c-team-lavender-deep: 195 79 106;
+  --c-seg-track: 47 36 43;
+  --c-row-tile: 219 98 132;
+  --c-menu-row-on-border: 228 114 142;
+  --c-menu-check: 234 157 169;
   --c-teal: 255 168 188;
   --c-teal-light: 255 193 208;
   --c-teal-pale: 49 37 49;
@@ -1501,6 +1654,7 @@
   --c-trend-high-text: 234 99 128;
   --c-team-teal-ink: 252 156 182;
   --c-team-teal-deep: 186 85 115;
+  --c-teal-text: 253 188 201;
   --c-brand-c: 200 30 93;
   --c-brand-leaf: 159 71 95;
   --c-primary-fill: 200 30 93;
@@ -1510,6 +1664,8 @@
   --c-fill-sheet: 200 30 93;
   --c-fill-day: 200 30 93;
   --c-fill-foods: 200 30 93;
+  --c-fill-pinned: 200 30 93;
+  --c-seg-active: 200 30 93;
   --c-teal-fill: 172 93 113;
   --c-fill-prep: 186 85 115;
   --c-hero-from: 136 60 83;
@@ -1525,6 +1681,10 @@
   --c-team-nav-accent-text-ink: 252 134 160;
   --c-team-lavender-ink: 234 143 159;
   --c-team-lavender-deep-ink: 254 132 157;
+  --c-seg-track-ink: 47 36 43;
+  --c-row-tile-ink: 254 129 162;
+  --c-menu-row-on-border-ink: 249 133 160;
+  --c-menu-check-ink: 234 157 169;
   --c-teal-ink: 255 168 188;
   --c-teal-light-ink: 255 193 208;
   --c-teal-pale-ink: 49 37 49;
@@ -1533,6 +1693,7 @@
   --c-trend-high-text-ink: 254 150 167;
   --c-team-teal-ink-ink: 252 156 182;
   --c-team-teal-deep-ink: 252 151 178;
+  --c-teal-text-ink: 253 188 201;
   --border-row: rgba(238, 239, 242, 0.08);
   --shadow-fab: 0 16px 40px rgba(252, 118, 150, 0.35);
   --gradient-board: linear-gradient(122deg, #942f4d 0%, #853c5e 46%, #a53256 78%, #cb3f70 100%);
@@ -1560,6 +1721,18 @@
   --forum-handle: #6c3844;
   --forum-done-ink: #feb8cd;
   --forum-muted: #d7b0b4;
+  --list-bg: rgba(234, 143, 159, 0.1);
+  --list-rule: rgba(234, 143, 159, 0.16);
+  --menu-border: rgba(234, 143, 159, 0.5);
+  --nav-border: rgba(238, 239, 242, 0.08);
+  --sheet-border-business: #fe427d;
+  --wheel-band-business: #3c272f;
+  --gradient-approval-glow: radial-gradient(circle, rgba(250, 28, 115, 0.3) 0%, rgba(250, 28, 115, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(156, 53, 84, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(252, 118, 150, 0.14), 0 14px 30px rgba(0, 0, 0, 0.35);
+  --shadow-focus-ring: 0 0 0 4px rgba(252, 118, 150, 0.16);
+  --shadow-primary-button: 0 2px 10px rgba(195, 79, 106, 0.26);
+  --shadow-navbar: 0 12px 30px rgba(0, 0, 0, 0.55);
   --th-1a00e0: 126 12 99;
   --thi-1a00e0: 126 12 99;
   --th-1d167d: 85 5 55;
@@ -1572,6 +1745,8 @@
   --thi-27273d: 65 30 42;
   --th-283838: 80 42 46;
   --thi-283838: 80 42 46;
+  --th-293339: 69 44 27;
+  --thi-293339: 69 44 27;
   --th-2b2735: 57 35 39;
   --thi-2b2735: 57 35 39;
   --th-2b2c3a: 60 39 47;
@@ -1582,6 +1757,8 @@
   --thi-2e2560: 95 5 47;
   --th-2e3b3c: 78 49 49;
   --thi-2e3b3c: 78 49 49;
+  --th-2f2e47: 74 37 50;
+  --thi-2f2e47: 74 37 50;
   --th-2f5f58: 150 51 84;
   --thi-2f5f58: 150 51 84;
   --th-303141: 66 44 52;
@@ -1598,6 +1775,8 @@
   --thi-3b7570: 252 153 171;
   --th-3c6b65: 165 64 92;
   --thi-3c6b65: 253 150 173;
+  --th-3e716d: 174 68 93;
+  --thi-3e716d: 251 152 170;
   --th-445e5a: 129 72 86;
   --thi-445e5a: 129 72 86;
   --th-463a80: 132 22 67;
@@ -1632,6 +1811,8 @@
   --thi-5f8681: 248 155 176;
   --th-617b77: 160 101 116;
   --thi-617b77: 227 163 178;
+  --th-63968b: 215 104 143;
+  --thi-63968b: 252 151 184;
   --th-647b77: 156 104 116;
   --thi-647b77: 222 166 178;
   --th-6a54c4: 196 26 100;
@@ -1654,6 +1835,8 @@
   --thi-726a90: 214 152 163;
   --th-7567b7: 192 72 108;
   --thi-7567b7: 255 129 162;
+  --th-78738c: 147 108 114;
+  --thi-78738c: 201 159 165;
   --th-796eac: 183 88 111;
   --thi-796eac: 241 140 162;
   --th-797292: 154 105 113;
@@ -1719,6 +1902,8 @@
   --thi-9284c4: 240 139 159;
   --th-9388bf: 204 118 136;
   --thi-9388bf: 233 144 162;
+  --th-93c1b9: 252 156 182;
+  --thi-93c1b9: 252 156 182;
   --th-9486c2: 207 115 134;
   --thi-9486c2: 236 141 160;
   --th-9591dc: 228 118 155;
@@ -1758,6 +1943,8 @@
   --thi-a797e3: 250 134 160;
   --th-a79ad5: 225 137 151;
   --thi-a79ad5: 234 145 159;
+  --th-a9a1be: 198 154 159;
+  --thi-a9a1be: 203 159 164;
   --th-a9cfc9: 254 179 196;
   --thi-a9cfc9: 254 179 196;
   --th-ab9ed7: 230 140 157;
@@ -1772,6 +1959,8 @@
   --thi-b2a9f4: 255 144 175;
   --th-b7abde: 234 157 169;
   --thi-b7abde: 234 157 169;
+  --th-b9aeea: 248 155 175;
+  --thi-b9aeea: 248 155 175;
   --th-beb4e6: 243 165 180;
   --thi-beb4e6: 243 165 180;
   --th-c0b4e8: 246 165 177;
@@ -1798,6 +1987,8 @@
   --thi-e1eeeb: 254 229 236;
   --th-e1efec: 254 230 237;
   --thi-e1efec: 254 230 237;
+  --th-e3f0ec: 255 231 240;
+  --thi-e3f0ec: 255 231 240;
   --th-e4ddfd: 254 216 219;
   --thi-e4ddfd: 254 216 219;
   --th-e4def5: 254 216 220;
@@ -1878,6 +2069,10 @@
   --c-team-nav-accent-text: 137 103 18;
   --c-team-lavender: 211 162 7;
   --c-team-lavender-deep: 149 113 19;
+  --c-seg-track: 252 243 226;
+  --c-row-tile: 176 131 17;
+  --c-menu-row-on-border: 211 162 7;
+  --c-menu-check: 149 113 19;
   --c-teal: 232 183 140;
   --c-teal-light: 243 207 178;
   --c-teal-pale: 255 239 228;
@@ -1886,6 +2081,7 @@
   --c-trend-high-text: 139 101 64;
   --c-team-teal-ink: 141 86 30;
   --c-team-teal-deep: 164 105 49;
+  --c-teal-text: 138 88 33;
   --c-brand-c: 246 196 69;
   --c-brand-leaf: 139 90 43;
   --c-primary-fill: 246 196 69;
@@ -1895,6 +2091,8 @@
   --c-fill-sheet: 246 196 69;
   --c-fill-day: 246 196 69;
   --c-fill-foods: 246 196 69;
+  --c-fill-pinned: 246 196 69;
+  --c-seg-active: 246 196 69;
   --c-teal-fill: 232 183 140;
   --c-fill-prep: 205 147 93;
   --c-hero-from: 106 82 13;
@@ -1910,6 +2108,10 @@
   --c-team-nav-accent-text-ink: 105 77 1;
   --c-team-lavender-ink: 211 162 7;
   --c-team-lavender-deep-ink: 105 78 2;
+  --c-seg-track-ink: 252 243 226;
+  --c-row-tile-ink: 106 78 6;
+  --c-menu-row-on-border-ink: 211 162 7;
+  --c-menu-check-ink: 105 78 2;
   --c-teal-ink: 232 183 140;
   --c-teal-light-ink: 243 207 178;
   --c-teal-pale-ink: 255 239 228;
@@ -1918,6 +2120,7 @@
   --c-trend-high-text-ink: 122 85 49;
   --c-team-teal-ink-ink: 135 80 23;
   --c-team-teal-deep-ink: 136 79 17;
+  --c-teal-text-ink: 130 81 24;
   --border-row: rgba(211, 162, 7, 0.15);
   --shadow-fab: 0 16px 40px rgba(149, 113, 19, 0.4);
   --gradient-board: linear-gradient(122deg, #d3a207 0%, #cc891c 46%, #d89e5e 78%, #e8b78c 100%);
@@ -1945,6 +2148,18 @@
   --forum-handle: #dcd7e8;
   --forum-done-ink: #653805;
   --forum-muted: #5e5750;
+  --list-bg: #fbf7f0;
+  --list-rule: #f5ead7;
+  --menu-border: rgba(211, 162, 7, 0.5);
+  --nav-border: rgba(164, 124, 19, 0.28);
+  --sheet-border-business: #8f640b;
+  --wheel-band-business: #fcf3e2;
+  --gradient-approval-glow: radial-gradient(circle, rgba(164, 124, 19, 0.3) 0%, rgba(164, 124, 19, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(114, 86, 17, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(164, 124, 19, 0.1), 0 14px 30px rgba(114, 86, 17, 0.16);
+  --shadow-focus-ring: 0 0 0 4px rgba(164, 124, 19, 0.12);
+  --shadow-primary-button: 0 2px 10px rgba(149, 113, 19, 0.26);
+  --shadow-navbar: 0 10px 28px rgba(114, 86, 17, 0.16);
   --th-1a00e0: 103 55 0;
   --thi-1a00e0: 103 55 0;
   --th-1d167d: 63 36 1;
@@ -1957,6 +2172,8 @@
   --thi-27273d: 58 37 2;
   --th-283838: 67 50 29;
   --thi-283838: 67 50 29;
+  --th-293339: 50 51 30;
+  --thi-293339: 50 51 30;
   --th-2b2735: 50 40 12;
   --thi-2b2735: 50 40 12;
   --th-2b2c3a: 59 42 17;
@@ -1967,6 +2184,8 @@
   --thi-2e2560: 64 42 3;
   --th-2e3b3c: 66 55 38;
   --thi-2e3b3c: 66 55 38;
+  --th-2f2e47: 67 44 4;
+  --thi-2f2e47: 67 44 4;
   --th-2f5f58: 131 72 11;
   --thi-2f5f58: 131 72 11;
   --th-303141: 65 47 20;
@@ -1983,6 +2202,8 @@
   --thi-3b7570: 132 80 14;
   --th-3c6b65: 141 86 30;
   --thi-3c6b65: 135 80 23;
+  --th-3e716d: 149 91 24;
+  --thi-3e716d: 136 79 3;
   --th-445e5a: 115 82 55;
   --thi-445e5a: 115 82 55;
   --th-463a80: 91 64 4;
@@ -2017,6 +2238,8 @@
   --thi-5f8681: 127 82 36;
   --th-617b77: 145 111 84;
   --thi-617b77: 118 85 59;
+  --th-63968b: 192 125 71;
+  --thi-63968b: 139 76 15;
   --th-647b77: 144 112 87;
   --thi-647b77: 117 86 62;
   --th-6a54c4: 136 95 0;
@@ -2039,6 +2262,8 @@
   --thi-726a90: 104 79 3;
   --th-7567b7: 146 108 13;
   --thi-7567b7: 106 77 4;
+  --th-78738c: 136 116 69;
+  --thi-78738c: 99 80 33;
   --th-796eac: 151 112 7;
   --thi-796eac: 105 77 9;
   --th-797292: 141 115 52;
@@ -2104,6 +2329,8 @@
   --thi-9284c4: 104 78 7;
   --th-9388bf: 182 136 4;
   --thi-9388bf: 104 77 8;
+  --th-93c1b9: 233 171 122;
+  --thi-93c1b9: 233 171 122;
   --th-9486c2: 176 137 27;
   --thi-9486c2: 103 79 6;
   --th-9591dc: 203 141 2;
@@ -2143,6 +2370,8 @@
   --thi-a797e3: 104 78 7;
   --th-a79ad5: 200 156 26;
   --thi-a79ad5: 102 79 12;
+  --th-a9a1be: 182 164 111;
+  --thi-a9a1be: 182 164 111;
   --th-a9cfc9: 239 190 147;
   --thi-a9cfc9: 239 190 147;
   --th-ab9ed7: 206 159 21;
@@ -2157,6 +2386,8 @@
   --thi-b2a9f4: 227 168 33;
   --th-b7abde: 213 173 69;
   --thi-b7abde: 213 173 69;
+  --th-b9aeea: 226 174 38;
+  --thi-b9aeea: 226 174 38;
   --th-beb4e6: 223 181 83;
   --thi-beb4e6: 223 181 83;
   --th-c0b4e8: 223 182 77;
@@ -2183,6 +2414,8 @@
   --thi-e1eeeb: 250 232 219;
   --th-e1efec: 254 232 217;
   --thi-e1efec: 254 232 217;
+  --th-e3f0ec: 255 233 220;
+  --thi-e3f0ec: 255 233 220;
   --th-e4ddfd: 247 223 166;
   --thi-e4ddfd: 247 223 166;
   --th-e4def5: 240 224 185;
@@ -2263,6 +2496,10 @@
   --c-team-nav-accent-text: 199 142 34;
   --c-team-lavender: 198 164 109;
   --c-team-lavender-deep: 153 111 26;
+  --c-seg-track: 47 37 33;
+  --c-row-tile: 179 129 46;
+  --c-menu-row-on-border: 188 142 70;
+  --c-menu-check: 203 174 126;
   --c-teal: 221 186 155;
   --c-teal-light: 235 204 176;
   --c-teal-pale: 38 35 37;
@@ -2271,6 +2508,7 @@
   --c-trend-high-text: 191 143 86;
   --c-team-teal-ink: 218 176 139;
   --c-team-teal-deep: 151 110 71;
+  --c-teal-text: 230 200 171;
   --c-brand-c: 217 151 6;
   --c-brand-leaf: 90 58 23;
   --c-primary-fill: 217 151 6;
@@ -2280,6 +2518,8 @@
   --c-fill-sheet: 217 151 6;
   --c-fill-day: 217 151 6;
   --c-fill-foods: 217 151 6;
+  --c-fill-pinned: 217 151 6;
+  --c-seg-active: 217 151 6;
   --c-teal-fill: 221 186 155;
   --c-fill-prep: 156 114 75;
   --c-hero-from: 106 82 13;
@@ -2295,6 +2535,10 @@
   --c-team-nav-accent-text-ink: 217 159 57;
   --c-team-lavender-ink: 200 166 111;
   --c-team-lavender-deep-ink: 207 163 85;
+  --c-seg-track-ink: 47 37 33;
+  --c-row-tile-ink: 213 161 82;
+  --c-menu-row-on-border-ink: 209 162 91;
+  --c-menu-check-ink: 203 174 126;
   --c-teal-ink: 221 186 155;
   --c-teal-light-ink: 235 204 176;
   --c-teal-pale-ink: 38 35 37;
@@ -2303,6 +2547,7 @@
   --c-trend-high-text-ink: 222 173 115;
   --c-team-teal-ink-ink: 218 176 139;
   --c-team-teal-deep-ink: 218 174 133;
+  --c-teal-text-ink: 230 200 171;
   --border-row: rgba(238, 239, 242, 0.08);
   --shadow-fab: 0 16px 40px rgba(211, 150, 37, 0.35);
   --gradient-board: linear-gradient(122deg, #6f4e0f 0%, #764b24 46%, #7f5423 78%, #a06730 100%);
@@ -2330,6 +2575,18 @@
   --forum-handle: #5a4423;
   --forum-done-ink: #f5c196;
   --forum-muted: #c5b8a2;
+  --list-bg: rgba(198, 164, 109, 0.1);
+  --list-rule: rgba(198, 164, 109, 0.16);
+  --menu-border: rgba(198, 164, 109, 0.5);
+  --nav-border: rgba(238, 239, 242, 0.08);
+  --sheet-border-business: #ba8206;
+  --wheel-band-business: #362b21;
+  --gradient-approval-glow: radial-gradient(circle, rgba(174, 120, 3, 0.3) 0%, rgba(174, 120, 3, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(121, 83, 11, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(211, 150, 37, 0.14), 0 14px 30px rgba(0, 0, 0, 0.35);
+  --shadow-focus-ring: 0 0 0 4px rgba(211, 150, 37, 0.16);
+  --shadow-primary-button: 0 2px 10px rgba(153, 111, 26, 0.26);
+  --shadow-navbar: 0 12px 30px rgba(0, 0, 0, 0.55);
   --th-1a00e0: 107 52 5;
   --thi-1a00e0: 107 52 5;
   --th-1d167d: 66 34 4;
@@ -2342,6 +2599,8 @@
   --thi-27273d: 54 38 20;
   --th-283838: 61 52 35;
   --thi-283838: 61 52 35;
+  --th-293339: 48 51 37;
+  --thi-293339: 48 51 37;
   --th-2b2735: 48 40 26;
   --thi-2b2735: 48 40 26;
   --th-2b2c3a: 54 43 33;
@@ -2352,6 +2611,8 @@
   --thi-2e2560: 66 41 2;
   --th-2e3b3c: 62 56 43;
   --thi-2e3b3c: 62 56 43;
+  --th-2f2e47: 63 45 25;
+  --thi-2f2e47: 63 45 25;
   --th-2f5f58: 119 78 38;
   --thi-2f5f58: 119 78 38;
   --th-303141: 60 48 37;
@@ -2368,6 +2629,8 @@
   --thi-3b7570: 219 173 121;
   --th-3c6b65: 129 91 52;
   --thi-3c6b65: 216 174 133;
+  --th-3e716d: 135 97 51;
+  --thi-3e716d: 216 174 127;
   --th-445e5a: 107 85 62;
   --thi-445e5a: 107 85 62;
   --th-463a80: 95 62 4;
@@ -2402,6 +2665,8 @@
   --thi-5f8681: 212 175 139;
   --th-617b77: 136 114 92;
   --thi-617b77: 202 178 154;
+  --th-63968b: 179 130 91;
+  --thi-63968b: 223 172 131;
   --th-647b77: 137 114 96;
   --thi-647b77: 203 178 158;
   --th-6a54c4: 139 93 16;
@@ -2424,6 +2689,8 @@
   --thi-726a90: 189 167 131;
   --th-7567b7: 155 104 4;
   --thi-7567b7: 215 160 80;
+  --th-78738c: 131 116 95;
+  --thi-78738c: 183 167 145;
   --th-796eac: 151 111 52;
   --thi-796eac: 205 163 104;
   --th-797292: 133 116 88;
@@ -2489,6 +2756,8 @@
   --thi-9284c4: 202 164 103;
   --th-9388bf: 171 138 89;
   --thi-9388bf: 198 164 114;
+  --th-93c1b9: 218 176 139;
+  --thi-93c1b9: 218 176 139;
   --th-9486c2: 172 137 80;
   --thi-9486c2: 201 165 107;
   --th-9591dc: 195 143 77;
@@ -2528,6 +2797,8 @@
   --thi-a797e3: 207 162 90;
   --th-a79ad5: 191 157 101;
   --thi-a79ad5: 199 165 109;
+  --th-a9a1be: 179 163 138;
+  --thi-a9a1be: 184 168 143;
   --th-a9cfc9: 228 193 162;
   --thi-a9cfc9: 228 193 162;
   --th-ab9ed7: 194 161 107;
@@ -2542,6 +2813,8 @@
   --thi-b2a9f4: 219 169 101;
   --th-b7abde: 203 174 126;
   --thi-b7abde: 203 174 126;
+  --th-b9aeea: 212 176 123;
+  --thi-b9aeea: 212 176 123;
   --th-beb4e6: 212 182 138;
   --thi-beb4e6: 212 182 138;
   --th-c0b4e8: 212 183 137;
@@ -2568,6 +2841,8 @@
   --thi-e1eeeb: 246 233 222;
   --th-e1efec: 247 234 221;
   --thi-e1efec: 247 234 221;
+  --th-e3f0ec: 250 234 226;
+  --thi-e3f0ec: 250 234 226;
   --th-e4ddfd: 240 223 196;
   --thi-e4ddfd: 240 223 196;
   --th-e4def5: 235 224 204;
@@ -2648,6 +2923,10 @@
   --c-team-nav-accent-text: 193 65 0;
   --c-team-lavender: 252 138 93;
   --c-team-lavender-deep: 205 76 18;
+  --c-seg-track: 255 241 236;
+  --c-row-tile: 247 80 2;
+  --c-menu-row-on-border: 252 138 93;
+  --c-menu-check: 205 76 18;
   --c-teal: 252 173 153;
   --c-teal-light: 254 202 188;
   --c-teal-pale: 255 238 236;
@@ -2656,6 +2935,7 @@
   --c-trend-high-text: 171 83 58;
   --c-team-teal-ink: 181 53 19;
   --c-team-teal-deep: 204 76 45;
+  --c-teal-text: 177 59 13;
   --c-brand-c: 255 122 69;
   --c-brand-leaf: 185 74 46;
   --c-primary-fill: 205 77 10;
@@ -2665,6 +2945,8 @@
   --c-fill-sheet: 205 77 10;
   --c-fill-day: 205 77 10;
   --c-fill-foods: 205 77 10;
+  --c-fill-pinned: 205 77 10;
+  --c-seg-active: 205 77 10;
   --c-teal-fill: 170 98 80;
   --c-fill-prep: 203 77 46;
   --c-hero-from: 134 66 38;
@@ -2680,6 +2962,10 @@
   --c-team-nav-accent-text-ink: 146 49 4;
   --c-team-lavender-ink: 252 138 93;
   --c-team-lavender-deep-ink: 146 48 0;
+  --c-seg-track-ink: 255 241 236;
+  --c-row-tile-ink: 146 49 13;
+  --c-menu-row-on-border-ink: 252 138 93;
+  --c-menu-check-ink: 146 48 0;
   --c-teal-ink: 252 173 153;
   --c-teal-light-ink: 254 202 188;
   --c-teal-pale-ink: 255 238 236;
@@ -2688,6 +2974,7 @@
   --c-trend-high-text-ink: 153 67 42;
   --c-team-teal-ink-ink: 172 44 6;
   --c-team-teal-deep-ink: 173 46 9;
+  --c-teal-text-ink: 164 56 16;
   --border-row: rgba(252, 138, 93, 0.15);
   --shadow-fab: 0 16px 40px rgba(205, 76, 18, 0.4);
   --gradient-board: linear-gradient(122deg, #fc8a5d 0%, #f16e65 46%, #fe8961 78%, #fcad99 100%);
@@ -2715,6 +3002,18 @@
   --forum-handle: #dcd7e8;
   --forum-done-ink: #811e08;
   --forum-muted: #5e5750;
+  --list-bg: #fef6f2;
+  --list-rule: #ffe6df;
+  --menu-border: rgba(252, 138, 93, 0.5);
+  --nav-border: rgba(225, 84, 24, 0.28);
+  --sheet-border-business: #cc300d;
+  --wheel-band-business: #fff1ec;
+  --gradient-approval-glow: radial-gradient(circle, rgba(225, 84, 24, 0.3) 0%, rgba(225, 84, 24, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(162, 53, 6, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(225, 84, 24, 0.1), 0 14px 30px rgba(162, 53, 6, 0.16);
+  --shadow-focus-ring: 0 0 0 4px rgba(225, 84, 24, 0.12);
+  --shadow-primary-button: 0 2px 10px rgba(205, 76, 18, 0.26);
+  --shadow-navbar: 0 10px 28px rgba(162, 53, 6, 0.16);
   --th-1a00e0: 136 8 46;
   --thi-1a00e0: 136 8 46;
   --th-1d167d: 89 7 18;
@@ -2727,6 +3026,8 @@
   --thi-27273d: 76 24 15;
   --th-283838: 83 42 23;
   --thi-283838: 83 42 23;
+  --th-293339: 64 47 10;
+  --thi-293339: 64 47 10;
   --th-2b2735: 64 33 18;
   --thi-2b2735: 64 33 18;
   --th-2b2c3a: 69 36 30;
@@ -2737,6 +3038,8 @@
   --thi-2e2560: 95 14 1;
   --th-2e3b3c: 81 49 29;
   --thi-2e3b3c: 81 49 29;
+  --th-2f2e47: 90 27 19;
+  --thi-2f2e47: 90 27 19;
   --th-2f5f58: 167 36 2;
   --thi-2f5f58: 167 36 2;
   --th-303141: 77 40 33;
@@ -2753,6 +3056,8 @@
   --thi-3b7570: 168 52 4;
   --th-3c6b65: 181 53 19;
   --thi-3c6b65: 172 44 6;
+  --th-3e716d: 185 63 12;
+  --thi-3e716d: 165 54 5;
   --th-445e5a: 139 69 50;
   --thi-445e5a: 139 69 50;
   --th-463a80: 132 31 1;
@@ -2787,6 +3092,8 @@
   --thi-5f8681: 160 59 32;
   --th-617b77: 170 99 79;
   --thi-617b77: 141 73 54;
+  --th-63968b: 239 91 74;
+  --thi-63968b: 180 30 20;
   --th-647b77: 167 101 87;
   --thi-647b77: 138 75 62;
   --th-6a54c4: 189 53 11;
@@ -2809,6 +3116,8 @@
   --thi-726a90: 140 55 20;
   --th-7567b7: 208 62 12;
   --thi-7567b7: 153 41 3;
+  --th-78738c: 161 104 84;
+  --thi-78738c: 120 67 48;
   --th-796eac: 208 73 19;
   --thi-796eac: 148 46 1;
   --th-797292: 172 99 73;
@@ -2874,6 +3183,8 @@
   --thi-9284c4: 144 50 4;
   --th-9388bf: 232 105 59;
   --thi-9388bf: 144 50 8;
+  --th-93c1b9: 255 159 136;
+  --thi-93c1b9: 255 159 136;
   --th-9486c2: 238 99 38;
   --thi-9486c2: 146 50 0;
   --th-9591dc: 252 107 81;
@@ -2913,6 +3224,8 @@
   --thi-a797e3: 144 49 7;
   --th-a79ad5: 252 126 77;
   --thi-a79ad5: 143 51 6;
+  --th-a9a1be: 215 150 121;
+  --thi-a9a1be: 215 150 121;
   --th-a9cfc9: 252 183 165;
   --thi-a9cfc9: 252 183 165;
   --th-ab9ed7: 253 132 84;
@@ -2927,6 +3240,8 @@
   --thi-b2a9f4: 254 150 123;
   --th-b7abde: 251 153 112;
   --thi-b7abde: 251 153 112;
+  --th-b9aeea: 253 157 126;
+  --thi-b9aeea: 253 157 126;
   --th-beb4e6: 254 164 131;
   --thi-beb4e6: 254 164 131;
   --th-c0b4e8: 254 165 132;
@@ -2953,6 +3268,8 @@
   --thi-e1eeeb: 254 230 226;
   --th-e1efec: 255 231 224;
   --thi-e1efec: 255 231 224;
+  --th-e3f0ec: 255 232 230;
+  --thi-e3f0ec: 255 232 230;
   --th-e4ddfd: 255 217 205;
   --thi-e4ddfd: 255 217 205;
   --th-e4def5: 253 218 203;
@@ -3033,6 +3350,10 @@
   --c-team-nav-accent-text: 251 96 34;
   --c-team-lavender: 226 151 122;
   --c-team-lavender-deep: 186 91 56;
+  --c-seg-track: 49 36 36;
+  --c-row-tile: 212 109 78;
+  --c-menu-row-on-border: 220 124 96;
+  --c-menu-check: 228 163 137;
   --c-teal: 251 173 157;
   --c-teal-light: 254 196 183;
   --c-teal-pale: 43 34 39;
@@ -3041,6 +3362,7 @@
   --c-trend-high-text: 231 113 77;
   --c-team-teal-ink: 254 159 142;
   --c-team-teal-deep: 186 90 72;
+  --c-teal-text: 255 190 172;
   --c-brand-c: 232 93 46;
   --c-brand-leaf: 122 47 31;
   --c-primary-fill: 232 93 46;
@@ -3050,6 +3372,8 @@
   --c-fill-sheet: 232 93 46;
   --c-fill-day: 232 93 46;
   --c-fill-foods: 232 93 46;
+  --c-fill-pinned: 232 93 46;
+  --c-seg-active: 232 93 46;
   --c-teal-fill: 251 173 157;
   --c-fill-prep: 191 95 76;
   --c-hero-from: 134 66 38;
@@ -3065,6 +3389,10 @@
   --c-team-nav-accent-text-ink: 252 137 97;
   --c-team-lavender-ink: 226 151 122;
   --c-team-lavender-deep-ink: 242 142 106;
+  --c-seg-track-ink: 49 36 36;
+  --c-row-tile-ink: 247 140 108;
+  --c-menu-row-on-border-ink: 241 143 114;
+  --c-menu-check-ink: 228 163 137;
   --c-teal-ink: 251 173 157;
   --c-teal-light-ink: 254 196 183;
   --c-teal-pale-ink: 43 34 39;
@@ -3073,6 +3401,7 @@
   --c-trend-high-text-ink: 254 156 126;
   --c-team-teal-ink-ink: 254 159 142;
   --c-team-teal-deep-ink: 252 156 137;
+  --c-teal-text-ink: 255 190 172;
   --border-row: rgba(238, 239, 242, 0.08);
   --shadow-fab: 0 16px 40px rgba(254, 123, 82, 0.35);
   --gradient-board: linear-gradient(122deg, #8f391f 0%, #84413d 46%, #a03d26 78%, #c84a33 100%);
@@ -3100,6 +3429,18 @@
   --forum-handle: #693c2e;
   --forum-done-ink: #fcbcb0;
   --forum-muted: #d3b3a4;
+  --list-bg: rgba(226, 151, 122, 0.1);
+  --list-rule: rgba(226, 151, 122, 0.16);
+  --menu-border: rgba(226, 151, 122, 0.5);
+  --nav-border: rgba(238, 239, 242, 0.08);
+  --sheet-border-business: #f45918;
+  --wheel-band-business: #3c2826;
+  --gradient-approval-glow: radial-gradient(circle, rgba(227, 82, 25, 0.3) 0%, rgba(227, 82, 25, 0) 70%);
+  --shadow-menu: 0 12px 32px rgba(150, 64, 36, 0.18);
+  --shadow-card-selected: 0 0 0 4px rgba(254, 123, 82, 0.14), 0 14px 30px rgba(0, 0, 0, 0.35);
+  --shadow-focus-ring: 0 0 0 4px rgba(254, 123, 82, 0.16);
+  --shadow-primary-button: 0 2px 10px rgba(186, 91, 56, 0.26);
+  --shadow-navbar: 0 12px 30px rgba(0, 0, 0, 0.55);
   --th-1a00e0: 137 4 46;
   --thi-1a00e0: 137 4 46;
   --th-1d167d: 90 4 21;
@@ -3112,6 +3453,8 @@
   --thi-27273d: 61 34 28;
   --th-283838: 75 46 34;
   --thi-283838: 75 46 34;
+  --th-293339: 60 48 24;
+  --thi-293339: 60 48 24;
   --th-2b2735: 55 37 29;
   --thi-2b2735: 55 37 29;
   --th-2b2c3a: 60 40 38;
@@ -3122,6 +3465,8 @@
   --thi-2e2560: 96 12 0;
   --th-2e3b3c: 76 51 37;
   --thi-2e3b3c: 76 51 37;
+  --th-2f2e47: 74 39 32;
+  --thi-2f2e47: 74 39 32;
   --th-2f5f58: 147 59 41;
   --thi-2f5f58: 147 59 41;
   --th-303141: 66 45 42;
@@ -3138,6 +3483,8 @@
   --thi-3b7570: 252 156 128;
   --th-3c6b65: 162 71 52;
   --thi-3c6b65: 255 155 133;
+  --th-3e716d: 170 76 49;
+  --thi-3e716d: 253 157 130;
   --th-445e5a: 128 75 63;
   --thi-445e5a: 128 75 63;
   --th-463a80: 129 35 11;
@@ -3172,6 +3519,8 @@
   --thi-5f8681: 244 161 140;
   --th-617b77: 157 105 92;
   --thi-617b77: 225 169 154;
+  --th-63968b: 214 110 98;
+  --thi-63968b: 252 158 145;
   --th-647b77: 156 106 96;
   --thi-647b77: 224 170 158;
   --th-6a54c4: 191 50 14;
@@ -3194,6 +3543,8 @@
   --thi-726a90: 210 156 136;
   --th-7567b7: 187 82 55;
   --thi-7567b7: 249 138 109;
+  --th-78738c: 143 111 100;
+  --thi-78738c: 195 161 149;
   --th-796eac: 177 96 73;
   --thi-796eac: 234 148 123;
   --th-797292: 150 109 92;
@@ -3259,6 +3610,8 @@
   --thi-9284c4: 231 148 118;
   --th-9388bf: 196 126 101;
   --thi-9388bf: 223 151 125;
+  --th-93c1b9: 254 159 142;
+  --thi-93c1b9: 254 159 142;
   --th-9486c2: 200 123 94;
   --thi-9486c2: 229 149 119;
   --th-9591dc: 224 126 106;
@@ -3298,6 +3651,8 @@
   --thi-a797e3: 242 144 110;
   --th-a79ad5: 220 143 116;
   --thi-a79ad5: 227 149 122;
+  --th-a9a1be: 195 157 141;
+  --thi-a9a1be: 198 160 144;
   --th-a9cfc9: 254 182 166;
   --thi-a9cfc9: 254 182 166;
   --th-ab9ed7: 222 148 120;
@@ -3312,6 +3667,8 @@
   --thi-b2a9f4: 249 153 125;
   --th-b7abde: 228 163 137;
   --thi-b7abde: 228 163 137;
+  --th-b9aeea: 240 163 137;
+  --thi-b9aeea: 240 163 137;
   --th-beb4e6: 235 172 148;
   --thi-beb4e6: 235 172 148;
   --th-c0b4e8: 240 171 146;
@@ -3338,6 +3695,8 @@
   --thi-e1eeeb: 254 230 226;
   --th-e1efec: 254 231 227;
   --thi-e1efec: 254 231 227;
+  --th-e3f0ec: 255 232 230;
+  --thi-e3f0ec: 255 232 230;
   --th-e4ddfd: 255 217 205;
   --thi-e4ddfd: 255 217 205;
   --th-e4def5: 249 219 207;
@@ -3413,21 +3772,26 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   --c-team-nav-accent-ink: 97 49 189;
   --c-team-nav-accent-text-ink: 97 49 189;
   --c-team-lavender-deep-ink: 90 71 141;
+  --c-row-tile-ink: 88 71 147;
+  --c-menu-check-ink: 90 71 141;
   --c-teal-dark-ink: 59 100 94;
   --c-teal-deep-text-ink: 68 99 95;
   --c-trend-high-text-ink: 67 99 95;
   --c-team-teal-ink-ink: 54 101 95;
   --c-team-teal-deep-ink: 53 101 94;
+  --c-teal-text-ink: 56 101 97;
   --thi-1a00e0: 26 0 224;
   --thi-1d167d: 29 22 125;
   --thi-1e1834: 30 24 52;
   --thi-27273d: 39 39 61;
   --thi-283838: 40 56 56;
+  --thi-293339: 41 51 57;
   --thi-2b2735: 43 39 53;
   --thi-2b2c3a: 43 44 58;
   --thi-2d2d41: 45 45 65;
   --thi-2e2560: 46 37 96;
   --thi-2e3b3c: 46 59 60;
+  --thi-2f2e47: 47 46 71;
   --thi-2f5f58: 47 95 88;
   --thi-303141: 48 49 65;
   --thi-32544d: 50 84 77;
@@ -3436,6 +3800,7 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   --thi-3a3547: 58 53 71;
   --thi-3b7570: 44 102 98;
   --thi-3c6b65: 54 101 95;
+  --thi-3e716d: 50 101 98;
   --thi-445e5a: 68 94 90;
   --thi-463a80: 70 58 128;
   --thi-4a22ce: 74 34 206;
@@ -3453,6 +3818,7 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   --thi-5f5093: 88 73 139;
   --thi-5f8681: 62 100 96;
   --thi-617b77: 73 98 95;
+  --thi-63968b: 51 101 91;
   --thi-647b77: 75 97 93;
   --thi-6a54c4: 87 62 173;
   --thi-6b41ef: 91 38 216;
@@ -3464,6 +3830,7 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   --thi-7155ca: 91 60 175;
   --thi-726a90: 86 78 114;
   --thi-7567b7: 86 71 148;
+  --thi-78738c: 85 80 103;
   --thi-796eac: 86 74 133;
   --thi-797292: 86 79 109;
   --thi-799e98: 63 99 93;
@@ -3518,6 +3885,9 @@ html.high-contrast.dark[data-accent="centium"] {
   --c-team-nav-accent-text-ink: 179 157 255;
   --c-team-lavender-ink: 176 163 222;
   --c-team-lavender-deep-ink: 178 160 239;
+  --c-row-tile-ink: 175 161 245;
+  --c-menu-row-on-border-ink: 176 162 237;
+  --c-menu-check-ink: 183 171 222;
   --c-teal-ink: 162 200 194;
   --c-teal-light-ink: 184 216 210;
   --c-teal-dark-ink: 128 193 187;
@@ -3525,14 +3895,18 @@ html.high-contrast.dark[data-accent="centium"] {
   --c-trend-high-text-ink: 128 193 187;
   --c-team-teal-ink-ink: 147 193 185;
   --c-team-teal-deep-ink: 142 192 184;
+  --c-teal-text-ink: 178 212 207;
   --c-primary: 177 158 253;
   --c-primary-ink: 177 158 253;
   --c-primary-accent: 176 162 237;
   --c-primary-dark: 195 179 251;
   --c-primary-deep-text: 195 179 251;
   --c-primary-fill: 169 145 254;
+  --c-fill-pinned: 169 145 254;
+  --c-seg-active: 169 145 254;
   --thi-3b7570: 133 192 186;
   --thi-3c6b65: 142 191 184;
+  --thi-3e716d: 138 191 186;
   --thi-4f7f78: 142 192 184;
   --thi-4f8f8a: 128 193 187;
   --thi-5a9691: 131 192 187;
@@ -3540,6 +3914,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-5e9e95: 128 193 183;
   --thi-5f8681: 149 190 184;
   --thi-617b77: 160 187 183;
+  --thi-63968b: 140 192 181;
   --thi-647b77: 163 187 183;
   --thi-6a54c4: 171 160 255;
   --thi-6b41ef: 167 161 250;
@@ -3551,6 +3926,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-7155ca: 175 160 252;
   --thi-726a90: 174 166 207;
   --thi-7567b7: 174 161 246;
+  --thi-78738c: 173 168 195;
   --thi-796eac: 174 163 229;
   --thi-797292: 174 167 201;
   --thi-799e98: 151 189 183;
@@ -3583,6 +3959,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-9283c1: 177 162 226;
   --thi-9284c4: 177 163 229;
   --thi-9388bf: 175 164 220;
+  --thi-93c1b9: 147 193 185;
   --thi-9486c2: 176 162 224;
   --thi-9591dc: 167 164 240;
   --thi-95c0bb: 149 192 187;
@@ -3602,6 +3979,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-a5bdb9: 165 189 185;
   --thi-a797e3: 176 160 237;
   --thi-a79ad5: 176 163 223;
+  --thi-a9a1be: 175 167 196;
   --thi-a9cfc9: 169 207 201;
   --thi-ab9ed7: 176 163 220;
   --thi-aea1dc: 176 163 222;
@@ -3609,6 +3987,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-b1a5e0: 177 165 224;
   --thi-b2a9f4: 178 169 244;
   --thi-b7abde: 183 171 222;
+  --thi-b9aeea: 185 174 234;
   --thi-beb4e6: 190 180 230;
   --thi-c0b4e8: 192 180 232;
   --thi-c1d5d2: 193 213 210;
@@ -3622,6 +4001,7 @@ html.high-contrast.dark[data-accent="centium"] {
   --thi-e0d5fc: 224 213 252;
   --thi-e1eeeb: 225 238 235;
   --thi-e1efec: 225 239 236;
+  --thi-e3f0ec: 227 240 236;
   --thi-e4ddfd: 228 221 253;
   --thi-e4def5: 228 222 245;
   --thi-e4e0f4: 228 224 244;
@@ -3661,11 +4041,14 @@ html.high-contrast[data-accent="sky"]:not(.dark) {
   --c-team-nav-accent-ink: 25 71 196;
   --c-team-nav-accent-text-ink: 25 71 196;
   --c-team-lavender-deep-ink: 27 62 211;
+  --c-row-tile-ink: 25 74 183;
+  --c-menu-check-ink: 27 62 211;
   --c-teal-dark-ink: 80 93 113;
   --c-teal-deep-text-ink: 82 93 107;
   --c-trend-high-text-ink: 82 94 109;
   --c-team-teal-ink-ink: 79 94 115;
   --c-team-teal-deep-ink: 77 94 115;
+  --c-teal-text-ink: 81 94 115;
   --c-primary: 12 87 183;
   --c-primary-ink: 11 79 167;
   --c-primary-accent: 4 60 124;
@@ -3675,16 +4058,20 @@ html.high-contrast[data-accent="sky"]:not(.dark) {
   --c-primary-deep-text: 4 60 124;
   --c-primary-deep-text-ink: 4 60 124;
   --c-primary-fill: 12 87 183;
+  --c-fill-pinned: 12 87 183;
+  --c-seg-active: 12 87 183;
   --thi-1a00e0: 11 71 105;
   --thi-1d167d: 1 44 75;
   --thi-1e1834: 1 19 88;
   --thi-27273d: 0 40 88;
   --thi-283838: 50 53 61;
+  --thi-293339: 52 48 57;
   --thi-2b2735: 31 39 73;
   --thi-2b2c3a: 21 46 75;
   --thi-2d2d41: 12 47 88;
   --thi-2e2560: 4 44 100;
   --thi-2e3b3c: 56 56 64;
+  --thi-2f2e47: 6 47 101;
   --thi-2f5f58: 73 88 109;
   --thi-303141: 23 51 85;
   --thi-32544d: 66 79 94;
@@ -3693,6 +4080,7 @@ html.high-contrast[data-accent="sky"]:not(.dark) {
   --thi-3a3547: 40 54 94;
   --thi-3b7570: 79 94 121;
   --thi-3c6b65: 79 94 115;
+  --thi-3e716d: 80 94 118;
   --thi-445e5a: 80 90 102;
   --thi-463a80: 8 64 149;
   --thi-4a22ce: 8 76 138;
@@ -3710,6 +4098,7 @@ html.high-contrast[data-accent="sky"]:not(.dark) {
   --thi-5f5093: 4 60 223;
   --thi-5f8681: 79 93 111;
   --thi-617b77: 83 93 106;
+  --thi-63968b: 73 95 115;
   --thi-647b77: 86 93 105;
   --thi-6a54c4: 6 77 181;
   --thi-6b41ef: 9 79 167;
@@ -3721,6 +4110,7 @@ html.high-contrast[data-accent="sky"]:not(.dark) {
   --thi-7155ca: 10 73 192;
   --thi-726a90: 49 77 161;
   --thi-7567b7: 6 73 193;
+  --thi-78738c: 60 81 135;
   --thi-796eac: 3 67 209;
   --thi-797292: 55 79 146;
   --thi-799e98: 80 93 111;
@@ -3775,6 +4165,9 @@ html.high-contrast.dark[data-accent="sky"] {
   --c-team-nav-accent-text-ink: 138 169 251;
   --c-team-lavender-ink: 139 168 251;
   --c-team-lavender-deep-ink: 137 169 251;
+  --c-row-tile-ink: 131 169 254;
+  --c-menu-row-on-border-ink: 133 169 254;
+  --c-menu-check-ink: 149 176 252;
   --c-teal-ink: 177 194 216;
   --c-teal-light-ink: 196 211 229;
   --c-teal-dark-ink: 164 184 220;
@@ -3782,14 +4175,18 @@ html.high-contrast.dark[data-accent="sky"] {
   --c-trend-high-text-ink: 164 184 220;
   --c-team-teal-ink-ink: 165 186 212;
   --c-team-teal-deep-ink: 162 184 213;
+  --c-teal-text-ink: 193 206 228;
   --c-primary: 135 169 253;
   --c-primary-ink: 135 169 253;
   --c-primary-accent: 133 169 253;
   --c-primary-dark: 162 188 254;
   --c-primary-deep-text: 162 188 254;
   --c-primary-fill: 46 91 255;
+  --c-fill-pinned: 46 91 255;
+  --c-seg-active: 46 91 255;
   --thi-3b7570: 165 184 218;
   --thi-3c6b65: 163 183 212;
+  --thi-3e716d: 167 184 214;
   --thi-4f7f78: 162 184 213;
   --thi-4f8f8a: 164 184 220;
   --thi-5a9691: 161 183 216;
@@ -3797,6 +4194,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-5e9e95: 160 184 221;
   --thi-5f8681: 166 183 206;
   --thi-617b77: 170 183 199;
+  --thi-63968b: 158 185 213;
   --thi-647b77: 173 183 198;
   --thi-6a54c4: 127 172 253;
   --thi-6b41ef: 122 172 252;
@@ -3808,6 +4206,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-7155ca: 132 170 250;
   --thi-726a90: 147 170 233;
   --thi-7567b7: 130 170 250;
+  --thi-78738c: 154 171 211;
   --thi-796eac: 132 169 255;
   --thi-797292: 151 170 224;
   --thi-799e98: 168 183 205;
@@ -3840,6 +4239,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-9283c1: 140 168 254;
   --thi-9284c4: 135 168 254;
   --thi-9388bf: 135 169 254;
+  --thi-93c1b9: 165 186 212;
   --thi-9486c2: 136 168 254;
   --thi-9591dc: 121 171 253;
   --thi-95c0bb: 168 185 210;
@@ -3859,6 +4259,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-a5bdb9: 175 185 198;
   --thi-a797e3: 134 169 255;
   --thi-a79ad5: 136 168 253;
+  --thi-a9a1be: 156 170 216;
   --thi-a9cfc9: 184 201 223;
   --thi-ab9ed7: 137 168 254;
   --thi-aea1dc: 139 168 251;
@@ -3866,6 +4267,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-b1a5e0: 139 171 252;
   --thi-b2a9f4: 139 178 252;
   --thi-b7abde: 149 176 252;
+  --thi-b9aeea: 149 181 253;
   --thi-beb4e6: 161 185 252;
   --thi-c0b4e8: 160 186 253;
   --thi-c1d5d2: 200 210 221;
@@ -3879,6 +4281,7 @@ html.high-contrast.dark[data-accent="sky"] {
   --thi-e0d5fc: 206 218 255;
   --thi-e1eeeb: 229 236 244;
   --thi-e1efec: 229 237 245;
+  --thi-e3f0ec: 231 238 245;
   --thi-e4ddfd: 214 225 254;
   --thi-e4def5: 214 225 254;
   --thi-e4e0f4: 217 226 255;
@@ -3918,11 +4321,14 @@ html.high-contrast[data-accent="rose"]:not(.dark) {
   --c-team-nav-accent-ink: 158 19 82;
   --c-team-nav-accent-text-ink: 158 19 82;
   --c-team-lavender-deep-ink: 163 1 78;
+  --c-row-tile-ink: 161 1 83;
+  --c-menu-check-ink: 163 1 78;
   --c-teal-dark-ink: 137 73 91;
   --c-teal-deep-text-ink: 129 78 91;
   --c-trend-high-text-ink: 129 78 90;
   --c-team-teal-ink-ink: 143 70 91;
   --c-team-teal-deep-ink: 141 70 91;
+  --c-teal-text-ink: 140 71 85;
   --c-primary: 174 15 103;
   --c-primary-ink: 158 12 93;
   --c-primary-accent: 110 1 65;
@@ -3932,16 +4338,20 @@ html.high-contrast[data-accent="rose"]:not(.dark) {
   --c-primary-deep-text: 110 1 65;
   --c-primary-deep-text-ink: 110 1 65;
   --c-primary-fill: 174 15 103;
+  --c-fill-pinned: 174 15 103;
+  --c-seg-active: 174 15 103;
   --thi-1a00e0: 123 16 105;
   --thi-1d167d: 85 1 63;
   --thi-1e1834: 62 3 29;
   --thi-27273d: 75 20 49;
   --thi-283838: 74 45 49;
+  --thi-293339: 63 46 35;
   --thi-2b2735: 66 30 37;
   --thi-2b2c3a: 68 34 52;
   --thi-2d2d41: 80 29 51;
   --thi-2e2560: 93 7 54;
   --thi-2e3b3c: 74 51 49;
+  --thi-2f2e47: 88 24 56;
   --thi-2f5f58: 135 64 86;
   --thi-303141: 76 38 56;
   --thi-32544d: 115 61 80;
@@ -3950,6 +4360,7 @@ html.high-contrast[data-accent="rose"]:not(.dark) {
   --thi-3a3547: 88 41 51;
   --thi-3b7570: 152 64 85;
   --thi-3c6b65: 143 70 91;
+  --thi-3e716d: 147 67 87;
   --thi-445e5a: 120 77 86;
   --thi-463a80: 136 6 76;
   --thi-4a22ce: 145 11 93;
@@ -3967,6 +4378,7 @@ html.high-contrast[data-accent="rose"]:not(.dark) {
   --thi-5f5093: 158 18 81;
   --thi-5f8681: 136 75 91;
   --thi-617b77: 122 81 89;
+  --thi-63968b: 143 68 95;
   --thi-647b77: 120 82 91;
   --thi-6a54c4: 158 12 89;
   --thi-6b41ef: 158 14 93;
@@ -3978,6 +4390,7 @@ html.high-contrast[data-accent="rose"]:not(.dark) {
   --thi-7155ca: 162 0 86;
   --thi-726a90: 142 46 80;
   --thi-7567b7: 156 20 86;
+  --thi-78738c: 122 63 78;
   --thi-796eac: 160 9 82;
   --thi-797292: 133 55 78;
   --thi-799e98: 133 75 90;
@@ -4032,6 +4445,9 @@ html.high-contrast.dark[data-accent="rose"] {
   --c-team-nav-accent-text-ink: 252 134 160;
   --c-team-lavender-ink: 234 143 159;
   --c-team-lavender-deep-ink: 254 132 157;
+  --c-row-tile-ink: 254 129 162;
+  --c-menu-row-on-border-ink: 249 133 160;
+  --c-menu-check-ink: 234 157 169;
   --c-teal-ink: 255 168 188;
   --c-teal-light-ink: 255 193 208;
   --c-teal-dark-ink: 254 150 167;
@@ -4039,14 +4455,18 @@ html.high-contrast.dark[data-accent="rose"] {
   --c-trend-high-text-ink: 254 150 167;
   --c-team-teal-ink-ink: 252 156 182;
   --c-team-teal-deep-ink: 252 151 178;
+  --c-teal-text-ink: 253 188 201;
   --c-primary: 251 135 160;
   --c-primary-ink: 251 135 160;
   --c-primary-accent: 254 131 160;
   --c-primary-dark: 253 164 181;
   --c-primary-deep-text: 253 164 181;
   --c-primary-fill: 200 30 93;
+  --c-fill-pinned: 200 30 93;
+  --c-seg-active: 200 30 93;
   --thi-3b7570: 252 153 171;
   --thi-3c6b65: 253 150 173;
+  --thi-3e716d: 251 152 170;
   --thi-4f7f78: 252 151 178;
   --thi-4f8f8a: 254 150 167;
   --thi-5a9691: 252 153 170;
@@ -4054,6 +4474,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-5e9e95: 255 150 176;
   --thi-5f8681: 248 155 176;
   --thi-617b77: 227 163 178;
+  --thi-63968b: 252 151 184;
   --thi-647b77: 222 166 178;
   --thi-6a54c4: 252 130 167;
   --thi-6b41ef: 252 130 172;
@@ -4065,6 +4486,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-7155ca: 252 133 163;
   --thi-726a90: 214 152 163;
   --thi-7567b7: 255 129 162;
+  --thi-78738c: 201 159 165;
   --thi-796eac: 241 140 162;
   --thi-797292: 209 156 164;
   --thi-799e98: 244 157 180;
@@ -4097,6 +4519,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-9283c1: 240 140 157;
   --thi-9284c4: 240 139 159;
   --thi-9388bf: 233 144 162;
+  --thi-93c1b9: 252 156 182;
   --thi-9486c2: 236 141 160;
   --thi-9591dc: 245 134 170;
   --thi-95c0bb: 254 155 176;
@@ -4116,6 +4539,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-a5bdb9: 226 169 181;
   --thi-a797e3: 250 134 160;
   --thi-a79ad5: 234 145 159;
+  --thi-a9a1be: 203 159 164;
   --thi-a9cfc9: 254 179 196;
   --thi-ab9ed7: 233 143 160;
   --thi-aea1dc: 234 143 159;
@@ -4123,6 +4547,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-b1a5e0: 239 146 165;
   --thi-b2a9f4: 255 144 175;
   --thi-b7abde: 234 157 169;
+  --thi-b9aeea: 248 155 175;
   --thi-beb4e6: 243 165 180;
   --thi-c0b4e8: 246 165 177;
   --thi-c1d5d2: 244 197 205;
@@ -4136,6 +4561,7 @@ html.high-contrast.dark[data-accent="rose"] {
   --thi-e0d5fc: 254 207 212;
   --thi-e1eeeb: 254 229 236;
   --thi-e1efec: 254 230 237;
+  --thi-e3f0ec: 255 231 240;
   --thi-e4ddfd: 254 216 219;
   --thi-e4def5: 254 216 220;
   --thi-e4e0f4: 250 219 223;
@@ -4175,11 +4601,14 @@ html.high-contrast[data-accent="gold"]:not(.dark) {
   --c-team-nav-accent-ink: 105 77 1;
   --c-team-nav-accent-text-ink: 105 77 1;
   --c-team-lavender-deep-ink: 105 78 2;
+  --c-row-tile-ink: 106 78 6;
+  --c-menu-check-ink: 105 78 2;
   --c-teal-dark-ink: 130 81 33;
   --c-teal-deep-text-ink: 121 84 49;
   --c-trend-high-text-ink: 122 85 49;
   --c-team-teal-ink-ink: 135 80 23;
   --c-team-teal-deep-ink: 136 79 17;
+  --c-teal-text-ink: 130 81 24;
   --c-primary: 119 84 14;
   --c-primary-ink: 108 76 13;
   --c-primary-accent: 87 58 7;
@@ -4189,16 +4618,20 @@ html.high-contrast[data-accent="gold"]:not(.dark) {
   --c-primary-deep-text: 87 58 7;
   --c-primary-deep-text-ink: 87 58 7;
   --c-primary-fill: 246 196 69;
+  --c-fill-pinned: 246 196 69;
+  --c-seg-active: 246 196 69;
   --thi-1a00e0: 103 55 0;
   --thi-1d167d: 63 36 1;
   --thi-1e1834: 39 26 2;
   --thi-27273d: 58 37 2;
   --thi-283838: 67 50 29;
+  --thi-293339: 50 51 30;
   --thi-2b2735: 50 40 12;
   --thi-2b2c3a: 59 42 17;
   --thi-2d2d41: 66 42 1;
   --thi-2e2560: 64 42 3;
   --thi-2e3b3c: 66 55 38;
+  --thi-2f2e47: 67 44 4;
   --thi-2f5f58: 131 72 11;
   --thi-303141: 65 47 20;
   --thi-32544d: 112 67 30;
@@ -4207,6 +4640,7 @@ html.high-contrast[data-accent="gold"]:not(.dark) {
   --thi-3a3547: 68 54 17;
   --thi-3b7570: 132 80 14;
   --thi-3c6b65: 135 80 23;
+  --thi-3e716d: 136 79 3;
   --thi-445e5a: 115 82 55;
   --thi-463a80: 91 64 4;
   --thi-4a22ce: 103 68 10;
@@ -4224,6 +4658,7 @@ html.high-contrast[data-accent="gold"]:not(.dark) {
   --thi-5f5093: 105 78 2;
   --thi-5f8681: 127 82 36;
   --thi-617b77: 118 85 59;
+  --thi-63968b: 139 76 15;
   --thi-647b77: 117 86 62;
   --thi-6a54c4: 108 76 12;
   --thi-6b41ef: 111 75 0;
@@ -4235,6 +4670,7 @@ html.high-contrast[data-accent="gold"]:not(.dark) {
   --thi-7155ca: 106 77 2;
   --thi-726a90: 104 79 3;
   --thi-7567b7: 106 77 4;
+  --thi-78738c: 99 80 33;
   --thi-796eac: 105 77 9;
   --thi-797292: 104 79 6;
   --thi-799e98: 126 82 42;
@@ -4289,6 +4725,9 @@ html.high-contrast.dark[data-accent="gold"] {
   --c-team-nav-accent-text-ink: 217 159 57;
   --c-team-lavender-ink: 200 166 111;
   --c-team-lavender-deep-ink: 207 163 85;
+  --c-row-tile-ink: 213 161 82;
+  --c-menu-row-on-border-ink: 209 162 91;
+  --c-menu-check-ink: 203 174 126;
   --c-teal-ink: 221 186 155;
   --c-teal-light-ink: 235 204 176;
   --c-teal-dark-ink: 222 172 115;
@@ -4296,14 +4735,18 @@ html.high-contrast.dark[data-accent="gold"] {
   --c-trend-high-text-ink: 222 173 115;
   --c-team-teal-ink-ink: 218 176 139;
   --c-team-teal-deep-ink: 218 174 133;
+  --c-teal-text-ink: 230 200 171;
   --c-primary: 221 159 51;
   --c-primary-ink: 221 159 51;
   --c-primary-accent: 224 157 25;
   --c-primary-dark: 223 183 116;
   --c-primary-deep-text: 223 183 116;
   --c-primary-fill: 217 151 6;
+  --c-fill-pinned: 217 151 6;
+  --c-seg-active: 217 151 6;
   --thi-3b7570: 219 173 121;
   --thi-3c6b65: 216 174 133;
+  --thi-3e716d: 216 174 127;
   --thi-4f7f78: 218 174 133;
   --thi-4f8f8a: 222 172 115;
   --thi-5a9691: 220 173 119;
@@ -4311,6 +4754,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-5e9e95: 227 172 116;
   --thi-5f8681: 212 175 139;
   --thi-617b77: 202 178 154;
+  --thi-63968b: 223 172 131;
   --thi-647b77: 203 178 158;
   --thi-6a54c4: 211 161 93;
   --thi-6b41ef: 216 159 94;
@@ -4322,6 +4766,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-7155ca: 213 161 88;
   --thi-726a90: 189 167 131;
   --thi-7567b7: 215 160 80;
+  --thi-78738c: 183 167 145;
   --thi-796eac: 205 163 104;
   --thi-797292: 185 167 138;
   --thi-799e98: 209 176 143;
@@ -4354,6 +4799,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-9283c1: 200 166 105;
   --thi-9284c4: 202 164 103;
   --thi-9388bf: 198 164 114;
+  --thi-93c1b9: 218 176 139;
   --thi-9486c2: 201 165 107;
   --thi-9591dc: 213 160 94;
   --thi-95c0bb: 214 177 141;
@@ -4373,6 +4819,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-a5bdb9: 203 180 161;
   --thi-a797e3: 207 162 90;
   --thi-a79ad5: 199 165 109;
+  --thi-a9a1be: 184 168 143;
   --thi-a9cfc9: 228 193 162;
   --thi-ab9ed7: 199 166 112;
   --thi-aea1dc: 200 166 111;
@@ -4380,6 +4827,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-b1a5e0: 201 168 114;
   --thi-b2a9f4: 219 169 101;
   --thi-b7abde: 203 174 126;
+  --thi-b9aeea: 212 176 123;
   --thi-beb4e6: 212 182 138;
   --thi-c0b4e8: 212 183 137;
   --thi-c1d5d2: 224 206 187;
@@ -4393,6 +4841,7 @@ html.high-contrast.dark[data-accent="gold"] {
   --thi-e0d5fc: 237 216 181;
   --thi-e1eeeb: 246 233 222;
   --thi-e1efec: 247 234 221;
+  --thi-e3f0ec: 250 234 226;
   --thi-e4ddfd: 240 223 196;
   --thi-e4def5: 235 224 204;
   --thi-e4e0f4: 237 225 207;
@@ -4432,11 +4881,14 @@ html.high-contrast[data-accent="coral"]:not(.dark) {
   --c-team-nav-accent-ink: 145 47 1;
   --c-team-nav-accent-text-ink: 146 49 4;
   --c-team-lavender-deep-ink: 146 48 0;
+  --c-row-tile-ink: 146 49 13;
+  --c-menu-check-ink: 146 48 0;
   --c-teal-dark-ink: 165 55 24;
   --c-teal-deep-text-ink: 152 66 46;
   --c-trend-high-text-ink: 153 67 42;
   --c-team-teal-ink-ink: 172 44 6;
   --c-team-teal-deep-ink: 173 46 9;
+  --c-teal-text-ink: 164 56 16;
   --c-primary: 172 40 14;
   --c-primary-ink: 156 35 11;
   --c-primary-accent: 118 20 4;
@@ -4446,16 +4898,20 @@ html.high-contrast[data-accent="coral"]:not(.dark) {
   --c-primary-deep-text: 118 20 4;
   --c-primary-deep-text-ink: 118 20 4;
   --c-primary-fill: 172 40 14;
+  --c-fill-pinned: 172 40 14;
+  --c-seg-active: 172 40 14;
   --thi-1a00e0: 136 8 46;
   --thi-1d167d: 89 7 18;
   --thi-1e1834: 57 14 0;
   --thi-27273d: 76 24 15;
   --thi-283838: 83 42 23;
+  --thi-293339: 64 47 10;
   --thi-2b2735: 64 33 18;
   --thi-2b2c3a: 69 36 30;
   --thi-2d2d41: 79 33 24;
   --thi-2e2560: 95 14 1;
   --thi-2e3b3c: 81 49 29;
+  --thi-2f2e47: 90 27 19;
   --thi-2f5f58: 167 36 2;
   --thi-303141: 77 40 33;
   --thi-32544d: 140 45 32;
@@ -4464,6 +4920,7 @@ html.high-contrast[data-accent="coral"]:not(.dark) {
   --thi-3a3547: 85 45 29;
   --thi-3b7570: 168 52 4;
   --thi-3c6b65: 172 44 6;
+  --thi-3e716d: 165 54 5;
   --thi-445e5a: 139 69 50;
   --thi-463a80: 132 31 1;
   --thi-4a22ce: 155 3 9;
@@ -4481,6 +4938,7 @@ html.high-contrast[data-accent="coral"]:not(.dark) {
   --thi-5f5093: 146 47 4;
   --thi-5f8681: 160 59 32;
   --thi-617b77: 141 73 54;
+  --thi-63968b: 180 30 20;
   --thi-647b77: 138 75 62;
   --thi-6a54c4: 153 39 3;
   --thi-6b41ef: 159 30 2;
@@ -4492,6 +4950,7 @@ html.high-contrast[data-accent="coral"]:not(.dark) {
   --thi-7155ca: 150 44 0;
   --thi-726a90: 140 55 20;
   --thi-7567b7: 153 41 3;
+  --thi-78738c: 120 67 48;
   --thi-796eac: 148 46 1;
   --thi-797292: 130 62 36;
   --thi-799e98: 157 61 38;
@@ -4546,6 +5005,9 @@ html.high-contrast.dark[data-accent="coral"] {
   --c-team-nav-accent-text-ink: 252 137 97;
   --c-team-lavender-ink: 226 151 122;
   --c-team-lavender-deep-ink: 242 142 106;
+  --c-row-tile-ink: 247 140 108;
+  --c-menu-row-on-border-ink: 241 143 114;
+  --c-menu-check-ink: 228 163 137;
   --c-teal-ink: 251 173 157;
   --c-teal-light-ink: 254 196 183;
   --c-teal-dark-ink: 254 156 126;
@@ -4553,14 +5015,18 @@ html.high-contrast.dark[data-accent="coral"] {
   --c-trend-high-text-ink: 254 156 126;
   --c-team-teal-ink-ink: 254 159 142;
   --c-team-teal-deep-ink: 252 156 137;
+  --c-teal-text-ink: 255 190 172;
   --c-primary: 251 137 102;
   --c-primary-ink: 251 137 102;
   --c-primary-accent: 252 138 103;
   --c-primary-dark: 254 168 136;
   --c-primary-deep-text: 254 168 136;
   --c-primary-fill: 232 93 46;
+  --c-fill-pinned: 232 93 46;
+  --c-seg-active: 232 93 46;
   --thi-3b7570: 252 156 128;
   --thi-3c6b65: 255 155 133;
+  --thi-3e716d: 253 157 130;
   --thi-4f7f78: 252 156 137;
   --thi-4f8f8a: 254 156 126;
   --thi-5a9691: 252 158 130;
@@ -4568,6 +5034,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-5e9e95: 252 158 138;
   --thi-5f8681: 244 161 140;
   --thi-617b77: 225 169 154;
+  --thi-63968b: 252 158 145;
   --thi-647b77: 224 170 158;
   --thi-6a54c4: 253 137 110;
   --thi-6b41ef: 254 136 113;
@@ -4579,6 +5046,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-7155ca: 251 139 109;
   --thi-726a90: 210 156 136;
   --thi-7567b7: 249 138 109;
+  --thi-78738c: 195 161 149;
   --thi-796eac: 234 148 123;
   --thi-797292: 202 159 140;
   --thi-799e98: 241 162 147;
@@ -4611,6 +5079,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-9283c1: 230 149 119;
   --thi-9284c4: 231 148 118;
   --thi-9388bf: 223 151 125;
+  --thi-93c1b9: 254 159 142;
   --thi-9486c2: 229 149 119;
   --thi-9591dc: 241 142 121;
   --thi-95c0bb: 248 162 140;
@@ -4630,6 +5099,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-a5bdb9: 224 172 160;
   --thi-a797e3: 242 144 110;
   --thi-a79ad5: 227 149 122;
+  --thi-a9a1be: 198 160 144;
   --thi-a9cfc9: 254 182 166;
   --thi-ab9ed7: 225 151 123;
   --thi-aea1dc: 226 151 122;
@@ -4637,6 +5107,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-b1a5e0: 231 154 127;
   --thi-b2a9f4: 249 153 125;
   --thi-b7abde: 228 163 137;
+  --thi-b9aeea: 240 163 137;
   --thi-beb4e6: 235 172 148;
   --thi-c0b4e8: 240 171 146;
   --thi-c1d5d2: 243 199 189;
@@ -4650,6 +5121,7 @@ html.high-contrast.dark[data-accent="coral"] {
   --thi-e0d5fc: 255 209 188;
   --thi-e1eeeb: 254 230 226;
   --thi-e1efec: 254 231 227;
+  --thi-e3f0ec: 255 232 230;
   --thi-e4ddfd: 255 217 205;
   --thi-e4def5: 249 219 207;
   --thi-e4e0f4: 248 221 211;
