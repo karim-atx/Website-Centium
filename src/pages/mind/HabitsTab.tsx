@@ -1,26 +1,30 @@
-import { useState } from "react";
-import { Card } from "../../components/ui/Card";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { PopupMenu } from "../../components/ui/PopupMenu";
+import { Toast } from "../../components/ui/Toast";
+import { MindHeader } from "../../components/mind/MindHeader";
+import { CentiumMark, EntiumWordmark } from "../../components/icons/CentiumMark";
 import { useApp } from "../../context/AppContext";
-import { Check, EllipsisVertical, ListChecks, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
-import { WhiteMark } from "../../components/forum/parts";
-import { textPx } from "../../theme/textSize";
+import {
+  DUPLICATE_HABIT,
+  HABIT_LIMITS,
+  TOO_MANY_HABITS,
+  isDuplicateLabel,
+} from "../../services/habits";
 import type { HabitIconKey, HabitItem } from "../../types";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const COL = 28; // one day column, centre to centre (MO1.1.1)
+const COL = 28; // one day column, centre to centre (MO1.1.1 #18: x 172.2 → 200.2)
 
-// Foundations › Inputs, focused: border 1.5 px primary.accent (a 1 px border
-// plus a 0.5 px ring, so nothing shifts), as on the Journal fields.
-const FOCUS_RING =
-  "focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))]";
+/** MO1.1.1 O4: the handover's write-failure toast copy. */
+const SAVE_FAILED = "Couldn't save. Try again.";
 
 /** The Monday-first week holding `today`, as yyyy-mm-dd. */
 function weekOf(today: string): string[] {
@@ -29,39 +33,33 @@ function weekOf(today: string): string[] {
   return DAY_NAMES.map((_, i) => shiftDate(monday, i));
 }
 
-// The Habits tab, mobile v5.1 MO1.1.1 (week grid) and MO1.1.1.1 (add panel).
+// The Habits page, v6 Part B MO1.1.1 (week grid) and MO1.1.1.1 (add panel).
+// The checklists in design-handover/v5-partB/frame-check/MO1.1.1*.md hold the
+// literal values; the row numbers below are theirs.
 //
-// HABITS ARE SERVER ROWS NOW (habit_items + habit_completions), so this screen
-// has the three states every other server-backed screen has: loading, empty,
-// and an error that never reads as "you have none". A tick is a row dated with
-// the user's own local date, which is why the same boxes look the same on a
-// phone and a laptop.
+// HABITS ARE SERVER ROWS (habit_items + habit_completions): loading, empty and
+// a read error that never reads as "you have none" (O1–O3). A failed WRITE
+// puts things back and shows the handover's toast (O4); it never turns into
+// the read's banner.
 //
-// ANY DAY OF THE WEEK UP TO TODAY IS TICKED HERE (the frame ticks earlier
-// days; handover-complete pass, 7 October 2026). Later days are faint and
-// can't be ticked. A past tick counts toward achievements like any other.
+// ANY DAY OF THE WEEK UP TO TODAY IS TICKED (S2); later days are faint and
+// inert. Habits has no fixed area (the handover scopes that rule to Journal,
+// Achievements and Meditation), so its header scrolls.
 //
-// HANDOVER-COMPLETE PASS: Edit and Delete are the swipe tiles (a mouse can
-// drag them open and the keyboard opens them with ArrowLeft on a focused
-// row), and the habit's name is not a tick target. Deleting still asks first:
-// it erases the habit's history (data safety).
+// KEPT (K rows): the ⋮ and long-press menu, the keyboard path, per-circle
+// accessible names, the achievement refresh after a tick, the tick revert, the
+// unknown-icon fallback, Monday weeks. Edit opens the add panel prefilled (S5);
+// Delete asks first with the handover's copy (S6, K3 data safety).
 //
-// RESTORE ROUND (user, 7 October 2026): the ⋮ and the long-press /
-// right-click menu are back (D12), with the same Edit / Delete as before, in
-// Foundations' dropdown with the folder options' 36 pt rows. The ⋮ is the
-// mouse and keyboard path; the swipe tiles stay.
+// BACKEND (stage B3, not on the local stack yet): the habit colour cycle
+// (PB-O-01: tiles stay lavender and are not a control until habit_items has a
+// colour), the server's 40-character / 30-habit / unique-name rules (PB-O-02:
+// the screen enforces them meanwhile).
 //
-// LIGHT MODE KEEPS THE COLOURS OF WHAT EACH PART REPLACED (decision 15): the
-// round check, the icon tile and the streak chip are the old row's. Parts new
-// since the redesign take the frame's own colours (decision 22): the header
-// band and wordmark, today's column and date tile, and the filled pinned Add
-// habit. Edit and Delete sit behind a
-// swipe, as in Journal and Workout › History. Dark mode is the v5.1 set; a
-// tick there is the dark filled-control ink on the purple (white measured
-// about 2.6:1 on #A991FE). An empty ring for today or an earlier day is
-// #807C93 in dark: 4.1:1 on the card and 3.2:1 on the today column in every
-// accent (a control's outline needs 3:1). Later days stay faint: they can't
-// be ticked. Light mode is unchanged (A26).
+// DARK (V6-02, V6-92): a tick, the ✓ and the Plus on the primary fill keep the
+// #0D0B1A ink (white is about 2.6:1 on #A991FE), and an empty ring for today or
+// an earlier day keeps #807C93 (the drawn #F5F3FA@15% is about 1.6:1; a
+// control outline needs 3:1).
 export default function HabitsTab() {
   const {
     today,
@@ -71,68 +69,136 @@ export default function HabitsTab() {
     habitSuggestions,
     toggleHabit,
     addHabit,
+    updateHabit,
     removeHabit,
-    renameHabit,
+    reloadHabits,
   } = useApp();
-  const [adding, setAdding] = useState(false);
+  // The panel (MO1.1.1.1): closed, adding, or editing one habit (S5).
+  const [panel, setPanel] = useState<{ mode: "add" } | { mode: "edit"; habit: HabitItem } | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState("");
-  // Deleting a habit erases its history and streak, so it asks first (the
-  // same confirm as a Journal folder).
+  const [saving, setSaving] = useState(false);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  // Deleting a habit erases its history and streak, so it asks first.
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
-  // D12: Edit and Delete without a swipe, from a long-press or right-click
-  // on the row or its ⋮ button, in the shared dropdown menu.
+  // D12: Edit and Delete without a swipe, from a long-press or right-click on
+  // the row or its ⋮ button.
   const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
-  const startEdit = (h: HabitItem) => {
-    setEditingId(h.id);
-    setEditDraft(h.label);
-  };
+  // O4: a failed write (tick, rename, delete) says so in the shared toast.
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelHeight, setPanelHeight] = useState(0);
 
   const week = weekOf(today);
   const todayIndex = week.indexOf(today);
 
-  const create = () => {
-    if (!newLabel.trim()) return;
-    addHabit(newLabel.trim(), newIcon);
+  const failed = (message: string | null) => {
+    if (message) setToast({ id: Date.now(), message: SAVE_FAILED });
+  };
+
+  const openAdd = () => {
     setNewLabel("");
     setNewIcon(habitIconOptions[0].key);
-    setAdding(false);
+    setPanelError(null);
+    setPanel({ mode: "add" });
+  };
+  const openEdit = (h: HabitItem) => {
+    setNewLabel(h.label);
+    setNewIcon(h.icon);
+    setPanelError(null);
+    setPanel({ mode: "edit", habit: h });
+  };
+  const closePanel = () => {
+    if (saving) return;
+    setPanel(null);
+    setPanelError(null);
   };
 
-  const saveRename = (id: string) => {
-    if (editDraft.trim()) renameHabit(id, editDraft.trim());
-    setEditingId(null);
+  const editingId = panel?.mode === "edit" ? panel.habit.id : undefined;
+  const trimmed = newLabel.trim();
+  // O3: the handover's duplicate check, ignoring case and outer spaces (the
+  // database's unique index comes with stage B3, PB-O-02).
+  const duplicate = trimmed !== "" && isDuplicateLabel(trimmed, habits, editingId);
+
+  const save = async () => {
+    if (saving || !panel || !trimmed) return;
+    if (duplicate) {
+      setPanelError(DUPLICATE_HABIT);
+      return;
+    }
+    // O4 (OURS): up to 30 habits; the server's own limit is stage B3.
+    if (panel.mode === "add" && habits.length >= HABIT_LIMITS.maxHabits) {
+      setPanelError(TOO_MANY_HABITS);
+      return;
+    }
+    setSaving(true);
+    setPanelError(null);
+    const error =
+      panel.mode === "edit"
+        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon })
+        : await addHabit(trimmed, newIcon);
+    setSaving(false);
+    // S5 / O5: the panel closes only once the write landed; a failure keeps
+    // it open with what was typed, the reason under the field.
+    if (error) setPanelError(error === DUPLICATE_HABIT ? DUPLICATE_HABIT : SAVE_FAILED);
+    else setPanel(null);
   };
 
-  // WHAT IS STILL ON OFFER. A suggestion the account already has a habit for
-  // is not offered again, matched on the label the suggestion would create.
+  // S6: a tap outside the panel discards it (the panel's own controls, menus
+  // and the on-screen keyboard are inside it or not pointer targets).
+  useEffect(() => {
+    if (!panel) return;
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if ((target as Element).closest?.("[role='menu'], [role='dialog']")) return;
+      closePanel();
+    };
+    // Registered on the next tick so the tap that opened the panel doesn't close it.
+    const id = window.setTimeout(() => document.addEventListener("pointerdown", onDown), 0);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("pointerdown", onDown);
+    };
+    // closePanel reads `saving`; re-bind when it changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel, saving]);
+
+  // The page's spacer follows the panel's real height (MO1.1.1.1 #40: one icon
+  // row now, and Larger text grows it).
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    if (!panel || !el) return;
+    const write = () => setPanelHeight(el.offsetHeight);
+    write();
+    const ro = new ResizeObserver(write);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [panel]);
+
+  // WHAT IS STILL ON OFFER (K2). A suggestion the account already has a habit
+  // for is not offered again, matched on the label it would create.
   const taken = new Set(habits.map((h) => h.label.trim().toLowerCase()));
   const suggestions = habitSuggestions.filter((s) => !taken.has(s.label.toLowerCase()));
 
-  // MO1.1.1 Loading: skeleton blocks at the anatomy positions, fill
-  // surface.soft, each block's radius: the grid card (r20) with its 59 pt
-  // header band, then rows of a 28 pt icon tile (r8), the name and the seven
-  // 24 pt circles at a 28 pt pitch.
+  const retry = async () => {
+    setRetrying(true);
+    await reloadHabits();
+    setRetrying(false);
+  };
+
+  // MO1.1.1 O1 Loading: the header renders at once; three skeleton blocks
+  // (full width × 96, r22, surface.soft #F5F5F6 / #242730, 10 apart) pulse
+  // over 1.2 s, static under Reduce motion.
   if (habitsLoading) {
     return (
       <div className="animate-fade-slide-up" aria-busy="true">
+        <MindHeader section="habits" fixed={false} />
         <span className="sr-only" role="status">Loading your habits…</span>
-        <div aria-hidden className="rounded-[20px] overflow-hidden border border-charcoal/[0.08]">
-          <div className="h-[59px] bg-cream-soft" />
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center h-[60px] pl-3 pr-2.5 border-t border-charcoal/[0.04]">
-              <span className="w-7 h-7 rounded-lg bg-cream-soft shrink-0" />
-              <span className="ml-2.5 h-3 w-20 rounded bg-cream-soft" />
-              <span className="ml-auto flex shrink-0">
-                {DAY_NAMES.map((d) => (
-                  <span key={d} className="flex items-center justify-center" style={{ width: COL }}>
-                    <span className="w-6 h-6 rounded-full bg-cream-soft" />
-                  </span>
-                ))}
-              </span>
-            </div>
+        <div aria-hidden className="space-y-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
           ))}
         </div>
       </div>
@@ -142,71 +208,47 @@ export default function HabitsTab() {
   const row = (h: HabitItem) => {
     const Icon = habitIcon[h.icon];
     const done = new Set(h.doneDates ?? []);
-    if (editingId === h.id) {
-      return (
-        // Not drawn: the rename row (the board's "Swipe a habit left to
-        // rename"), built from Foundations › Inputs (44, r12, surface.soft,
-        // 14/600, focused border 1.5 primary.accent) and a text action
-        // (13/700 primary.accent).
-        <div className="flex items-center gap-2.5 h-[59px] pl-3 pr-3 bg-cream-card">
-          <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
-            <Icon size={14} className="text-primary-dark" />
-          </span>
-          <input
-            autoFocus
-            value={editDraft}
-            onChange={(e) => setEditDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && editDraft.trim()) saveRename(h.id);
-              if (e.key === "Escape") setEditingId(null);
-            }}
-            aria-label={`Rename ${h.label}`}
-            className={`flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal ${FOCUS_RING}`}
-          />
-          <button onClick={() => saveRename(h.id)} className="tap h-11 px-1 text-[13px] font-bold text-primary-accent">
-            Save
-          </button>
-        </div>
-      );
-    }
     return (
       <SwipeActions
         radius={0}
+        // #22–#25: 45 pt tiles, 10 in from the card, r12, 8 apart.
         tileMax={45}
         edgeInset={10}
+        tileRadius={12}
         actions={[
-          {
-            key: "edit",
-            label: "Edit",
-            icon: <Pencil size={16} />,
-            onClick: () => startEdit(h),
-          },
+          { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => openEdit(h) },
           { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
         ]}
         keyboardLabel={`${h.label}. Arrow left for Edit and Delete`}
         onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
-        <div className="flex items-center h-[59px] pl-3 pr-2.5 bg-cream-card">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        {/* #12: rows 59 + the 1 px divider (pitch 60); min-height so Larger
+            text can wrap the name to two lines (O8). */}
+        <div className="flex items-center min-h-[59px] pl-3 pr-[7px] bg-cream-card">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 py-1.5">
+            {/* #13: 28 r8 tile, lavender #F0EDF9 / #303141. The colour cycle
+                (S3) waits for backend B3 (PB-O-01), so the tile is not a control. */}
             <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
               <Icon size={14} className="text-primary-dark" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] leading-[18px] font-medium text-charcoal">{h.label}</span>
-              {/* MO1.1.1 (2x frame): a 16 pt chip 3 pt under the name, the
-                  count 10.5 pt, after the handover's leaf outlined in lavender, about
-                  6 × 11 pt with a 1 pt stroke (decision 9 superseded). */}
+              {/* #15: 13/18 600; one line (two under Larger text), then an ellipsis. */}
+              <span className="line-clamp-1 [.larger-text_&]:line-clamp-2 break-words text-[13px] leading-[18px] font-semibold text-charcoal">
+                {h.label}
+              </span>
+              {/* #16 / #17: a 16 pt chip 3 under the name, pad 1 6, 10/14
+                  700, #5B5349 / #B8B3C7 on #EAF4F2 / #293339, after the
+                  outlined lavender leaf 11 tall (decision 24). */}
               {h.streakDays > 0 && (
-                <span className="mt-[3px] h-4 inline-flex items-center gap-0.5 text-[10.5px] leading-none font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-1.5">
+                <span className="mt-[3px] min-h-4 w-fit flex items-center gap-0.5 text-[10px] leading-[14px] font-bold text-charcoal-soft bg-teal-pale rounded-full px-1.5 py-px">
                   <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
                 </span>
               )}
             </span>
           </div>
-          {/* D12 (restore round): the keyboard and mouse path to Edit /
-              Delete. The 16 pt ⋮ in text.muted (its pre-redesign colour) keeps
-              its 20 pt column so the seven day columns keep their pitch; the
-              target is 44 tall. */}
+          {/* K1 (D12 restore round): the keyboard and mouse path to Edit /
+              Delete, a 16 pt ⋮ in text.muted in a 20 pt column (the day
+              columns keep their pitch), 44 tall. */}
           <button
             type="button"
             onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
@@ -217,7 +259,7 @@ export default function HabitsTab() {
           >
             <EllipsisVertical size={16} aria-hidden />
           </button>
-          <div className="flex shrink-0">
+          <div className="flex shrink-0 self-stretch -my-px">
             {week.map((day, i) => {
               const ticked = done.has(day);
               const isToday = i === todayIndex;
@@ -225,17 +267,17 @@ export default function HabitsTab() {
               return (
                 <span
                   key={day}
-                  // Today's column: #F7F5FB on the frame, #AEA1DC at about 10%
-                  // (new since the redesign, decision 22).
-                  className={clsx("flex items-center justify-center h-[59px]", isToday && "bg-th-aea1dc/[0.102] dark:bg-primary-pale")}
+                  // #6: today's column #AEA1DC@10% / #A991FE@10%, through the rows and the band.
+                  className={clsx("flex items-center justify-center", isToday && "bg-primary/10")}
                   style={{ width: COL }}
                 >
                   {!future ? (
                     <button
-                      onClick={() => toggleHabit(h.id, day)}
+                      onClick={() => void toggleHabit(h.id, day).then(failed)}
                       aria-label={`${h.label}, ${isToday ? "today" : DAY_NAMES[i]}: ${ticked ? "done" : "not done"}`}
                       aria-pressed={ticked}
                       className={clsx(
+                        // #18 / #29: 24 rings, 1 pt; done #AEA1DC / #A991FE.
                         "tap w-6 h-6 rounded-full flex items-center justify-center border",
                         ticked ? "bg-primary-fill border-primary-fill" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
@@ -243,6 +285,7 @@ export default function HabitsTab() {
                       {ticked && <Check size={13} className="text-on-primary-fill" strokeWidth={3} />}
                     </button>
                   ) : (
+                    // #20: later days, a faint ring, not a control.
                     <span
                       aria-label={`${DAY_NAMES[i]}: upcoming`}
                       role="img"
@@ -258,68 +301,67 @@ export default function HabitsTab() {
     );
   };
 
+  const deletingSubtitle = "Its streak and history are removed.";
+
   return (
     <div className="animate-fade-slide-up">
-      {/* MO1.1.1 Empty: Foundations › Empty state (56 primary.tint tile, 26
-          thin-stroke icon in primary.accent, title 15/700, one line 12.5/500
-          text.muted, max width 260); the pinned Add habit stays below. The
-          board names no icon: ListChecks (UNSPECIFIED). */}
-      {habits.length === 0 && !habitsError && (
-        <div className="flex flex-col items-center text-center py-8">
-          <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
-            <ListChecks size={26} strokeWidth={1.5} aria-hidden />
-          </span>
-          <p className="text-[15px] font-bold text-charcoal mt-3">No habits yet</p>
-          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 leading-relaxed max-w-[260px]">
-            Add one of your own below, or start from a suggestion.
+      <MindHeader section="habits" fixed={false} />
+
+      {/* O3 / O5: the read failed (or the device is offline). A banner under
+          the header with Retry; whatever was loaded stays on screen. */}
+      {habitsError && (
+        <div role="alert" className="mb-2.5 flex items-center gap-3 rounded-xl bg-status-high-bg p-3">
+          <p className="flex-1 min-w-0 text-[12px] leading-4 font-semibold text-status-high">
+            Couldn't load. Check your connection.
           </p>
+          <button
+            type="button"
+            onClick={() => void retry()}
+            disabled={retrying}
+            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
+          >
+            {retrying ? <Loader2 size={14} className="animate-spin" aria-label="Retrying" /> : "Retry"}
+          </button>
         </div>
       )}
 
-      {/* MO1.1.1 #2: the week grid. A header band with the days (today
-          marked), then one 60 pt row per habit (59 plus its divider). */}
-      {habits.length > 0 && (
-        // MO1.1.1 (2x frame): card r20; the header band #AEA1DC at 60%
-        // (#CEC7EA), 58 tall over a 1 pt hairline, with the white CENTIUM
-        // wordmark at its left (C-and-leaf mark 21 wide at x 32.5, ENTIUM
-        // caps 9 tall, spread to x 152.5) and today's column running through
-        // it; today's name #7D67D9, its date on a 26 × 22 #AB9ED7 tile.
-        // The outline keeps the pre-redesign card's 11% hairline in light (the
-        // list card existed at 4fdc109: decision 22's light-colour rule; the
-        // frame draws 1 px #AEA1DC).
-        <Card padded={false} className="overflow-hidden !rounded-[20px]">
-          <div className="flex items-center h-[59px] pl-3 pr-2.5 border-b border-charcoal/[0.04] bg-primary/60 dark:bg-primary-pale">
-            <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-[7px] pl-1" role="img" aria-label="Centium">
-              <WhiteMark width={21} />
-              <span
-                aria-hidden
-                className="text-white font-semibold uppercase leading-none whitespace-nowrap"
-                style={{ fontSize: textPx(12.5), letterSpacing: "0.73em" }}
-              >
-                entium
+      {/* #5: the week grid, 358 wide, r24, 1 pt #AEA1DC / #A991FE outline.
+          The header band and its week stay on the empty state too (O2). */}
+      {(habits.length > 0 || !habitsError) && (
+        <div className="rounded-[24px] border border-primary bg-cream-card overflow-hidden mb-4">
+          {/* #7: the band, 58 + a 1 pt hairline, #AEA1DC@60% / #A991FE@60%. */}
+          <div className="flex items-center h-[59px] pl-3.5 pr-[7px] border-b border-charcoal/[0.04] bg-primary/60">
+            {/* #8 / #9: the white mark 24 × 24, then the white "ENTIUM"
+                wordmark 91.6 × 10, 6 apart; white in every theme. */}
+            <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-1.5" role="img" aria-label="Centium">
+              <span aria-hidden className="w-6 h-6 flex items-center justify-center shrink-0">
+                <CentiumMark height={24} variant="white" />
               </span>
+              <EntiumWordmark height={10} className="text-white" style={{ overflow: "visible" }} />
             </span>
-            <div className="flex shrink-0 self-stretch">
+            <div className="flex shrink-0 self-stretch -mb-px">
               {week.map((day, i) => {
                 const isToday = i === todayIndex;
                 return (
                   <span
                     key={day}
-                    className={clsx("flex flex-col items-center justify-center", isToday && "bg-th-aea1dc/[0.102] dark:bg-transparent")}
+                    className={clsx("flex flex-col items-center justify-center", isToday && "bg-primary/10")}
                     style={{ width: COL }}
                   >
+                    {/* #10: 10/12 600 #8C8378 / #B8B3C7; today #7D67D9 (K8). */}
                     <span
                       className={clsx(
-                        "text-[10px] leading-[13px] font-semibold",
+                        "text-[10px] leading-[12px] font-semibold",
                         isToday ? "text-primary-accent" : "text-charcoal-faint"
                       )}
                     >
                       {DAY_NAMES[i]}
                     </span>
+                    {/* #11: 26 × 26 r9, 13/19.5 700; today on the #AB9ED7 tile. */}
                     <span
                       className={clsx(
-                        "mt-[3px] h-[22px] min-w-[26px] rounded-lg flex items-center justify-center text-[13px] tabular-nums",
-                        isToday ? "bg-[rgb(var(--c-fill-day))] text-on-primary-fill font-semibold" : "font-bold text-charcoal"
+                        "mt-[3px] h-[26px] min-w-[26px] rounded-[9px] flex items-center justify-center text-[13px] leading-[19.5px] font-bold tabular-nums",
+                        isToday ? "bg-[rgb(var(--c-fill-day))] text-on-primary-fill" : "text-charcoal"
                       )}
                     >
                       {Number(day.slice(8))}
@@ -329,27 +371,23 @@ export default function HabitsTab() {
               })}
             </div>
           </div>
-          <div className="divide-y divide-charcoal/[0.04]">
-            {habits.map((h) => (
-              <div key={h.id}>{row(h)}</div>
-            ))}
-          </div>
-        </Card>
+          {habits.length > 0 ? (
+            <div className="divide-y divide-charcoal/[0.04]">
+              {habits.map((h) => (
+                <div key={h.id}>{row(h)}</div>
+              ))}
+            </div>
+          ) : (
+            // O2: the grid header stays; two centred lines in its body.
+            <div className="flex flex-col items-center text-center px-6 py-8">
+              <p className="text-[15px] font-bold text-charcoal">No habits yet</p>
+              <p className="mt-1 text-[12px] font-medium text-charcoal-faint">Add one to start a streak</p>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* MO1.1.1 Error: an inline line in danger under the affected element
-          (the grid it failed to load or change). A failed read or write says
-          so and leaves whatever is on screen alone: "no habits" and "the
-          request failed" look identical once rendered. */}
-      {habitsError && (
-        <p role="alert" className="mt-2.5 text-[11.5px] leading-4 font-medium text-status-high">
-          {habitsError}
-        </p>
-      )}
-
-      {/* D12 (restore round): a habit's Edit / Delete without a swipe, in
-          Foundations' dropdown with MO1.1.2.1's 36 pt rows. Delete still asks
-          first, as the swipe tile does. */}
+      {/* K2 (D12 restore round): Edit / Delete without a swipe. */}
       <PopupMenu<"edit" | "delete">
         open={!!menu}
         onClose={() => setMenu(null)}
@@ -361,58 +399,94 @@ export default function HabitsTab() {
         ]}
         onSelect={(v) => {
           if (!menu) return;
-          if (v === "edit") startEdit(menu.habit);
+          if (v === "edit") openEdit(menu.habit);
           else setDeleting(menu.habit);
         }}
       />
 
-      {/* Not drawn: deleting erases the habit's history and streak, so it
-          asks first (data safety). */}
+      {/* S6 / K3: the handover's delete confirm (data safety). */}
       <ConfirmCard
         open={!!deleting}
-        title="Delete this habit?"
-        subtitle={
-          deleting
-            ? deleting.streakDays > 0
-              ? `${deleting.label}, its history and its ${deleting.streakDays}-day streak`
-              : `${deleting.label} and its history`
-            : undefined
-        }
+        title="Delete habit?"
+        subtitle={deleting ? deletingSubtitle : undefined}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
-          if (deleting) removeHabit(deleting.id);
+          if (deleting) void removeHabit(deleting.id).then(failed);
           setDeleting(null);
         }}
       />
 
-      {/* The page's own padding covers 112 of the room a pinned item needs:
-          the 44 pt button, or the 162 pt add panel. */}
-      <div aria-hidden style={{ height: adding ? 174 : 56 }} />
+      {/* O4: a failed tick, edit or delete. */}
+      <Toast
+        open={!!toast}
+        message={toast?.message ?? ""}
+        tone="error"
+        onExpire={() => setToast(null)}
+      />
 
-      {adding ? (
-        // MO1.1.1.1: "Tapping Add habit turns the button into the add panel.
-        // ✓ saves, × cancels. The icon row scrolls horizontally." The
-        // border keeps the pre-redesign add form's 11% hairline in light
-        // (decision 22's light-colour rule; the frame draws 8%).
+      {/* The page's own padding covers 112 of the room a pinned item needs:
+          the 44 pt button (56 more), or the panel (its height + 12). */}
+      <div aria-hidden style={{ height: panel ? panelHeight + 12 : 56 }} />
+
+      {panel ? (
+        // MO1.1.1.1 #40: the panel, 358 wide, r20, pad 12 0 12 14, 1 px
+        // #241F1B@8% / #F5F3FA@8%, the soft shadow in light only.
         <PinnedSlot aboveKeyboard>
-          <Card padded={false} elevated className="rounded-[20px] py-3 pl-3.5">
-            {/* SUGGESTIONS, NOT SEEDED ROWS. These five used to be written into
-                every new account as habits it appeared to have made. Tapping
-                one creates it — at which point it is the user's, and stops
-                being offered. */}
-            {suggestions.length > 0 && (
+          <div
+            ref={panelRef}
+            role="group"
+            aria-label={panel.mode === "edit" ? "Edit habit" : "Add habit"}
+            className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] shadow-soft dark:shadow-none pt-3 pb-3 pl-3.5"
+          >
+            {/* #41: "Icon", 9/13.5 700, 1.8 tracking, uppercase, 42% ink. */}
+            <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">Icon</p>
+            {/* #42–#57: the app's 20 icons (D-1) in one scrolling row, 38 r11
+                tiles 46 apart, 18 icons in #5B5349 / #B8B3C7; the first on
+                the panel padding (its ring has 2 px of room). */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -ml-0.5 pl-0.5 pr-3.5 py-[3px] [-webkit-overflow-scrolling:touch]">
+              {habitIconOptions.map((opt) => {
+                const Icon = habitIcon[opt.key];
+                const selected = newIcon === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setNewIcon(opt.key)}
+                    aria-label={opt.label}
+                    aria-pressed={selected}
+                    className={clsx(
+                      "tap shrink-0 w-[38px] h-[38px] rounded-[11px] flex items-center justify-center",
+                      // S1 (OURS fill): selected #F0EDF9 / #303141 with a 2 px primary ring.
+                      selected ? "bg-primary-pale ring-2 ring-primary" : "bg-cream-soft"
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={1.75} className={selected ? "text-primary-dark" : "text-charcoal-soft"} />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* #58–#64: offers, not seeded rows (K3); one the account already
+                has is not offered (K2). Hidden while editing. Tapping one
+                fills the name and the icon (S4); ✓ creates it. */}
+            {panel.mode === "add" && suggestions.length > 0 && (
               <>
-                <p className="mb-1.5 text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+                <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">
                   Suggestions
                 </p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5 mb-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5">
                   {suggestions.map((s) => {
                     const Icon = habitIcon[s.icon];
                     return (
                       <button
                         key={s.label}
-                        onClick={() => addHabit(s.label, s.icon)}
-                        className="tap shrink-0 flex items-center gap-1.5 h-[26px] rounded-full bg-cream-soft px-3 text-[12px] font-semibold text-charcoal-soft"
+                        type="button"
+                        onClick={() => {
+                          setNewLabel(s.label);
+                          setNewIcon(s.icon);
+                          setPanelError(null);
+                        }}
+                        className="tap shrink-0 flex items-center gap-1.5 h-[26px] rounded-full bg-cream-soft px-3 text-[12px] leading-[18px] font-semibold text-charcoal-soft"
                       >
                         <Icon size={13} className="text-primary-dark" />
                         {s.label}
@@ -423,69 +497,74 @@ export default function HabitsTab() {
                 </div>
               </>
             )}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5 py-0.5 pl-0.5">
-              {habitIconOptions.map((opt) => {
-                const Icon = habitIcon[opt.key];
-                return (
-                  <button
-                    key={opt.key}
-                    onClick={() => setNewIcon(opt.key)}
-                    aria-label={opt.label}
-                    aria-pressed={newIcon === opt.key}
-                    className={clsx(
-                      // MO1.1.1.1 (2x frame): 36 pt tiles, 44 apart.
-                      "tap shrink-0 w-9 h-9 rounded-xl flex items-center justify-center",
-                      newIcon === opt.key ? "bg-primary-pale ring-2 ring-primary" : "bg-cream-soft"
-                    )}
-                  >
-                    <Icon size={16} strokeWidth={1.75} className="text-primary-dark" />
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-2 mt-2 pr-3.5">
+
+            <div className="flex items-center gap-2 mt-2.5 pr-3.5">
+              {/* #82: 36 tall, r12, surface.soft, 1 px 10% border; up to 40
+                  characters (V6-143). */}
               <input
                 autoFocus
                 value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
+                maxLength={HABIT_LIMITS.labelMax}
+                onChange={(e) => {
+                  setNewLabel(e.target.value);
+                  setPanelError(null);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") create();
-                  if (e.key === "Escape") setAdding(false);
+                  if (e.key === "Enter") void save();
+                  if (e.key === "Escape") closePanel();
                 }}
                 placeholder="New habit…"
-                aria-label="New habit"
-                // MO1.1.1.1: 36 tall (level with the 36 pt ✓ and ×), about
-                // r14; focused, Foundations › Inputs' 1.5 primary.accent border.
-                className={`flex-1 min-w-0 h-9 rounded-[14px] bg-cream-soft border border-charcoal/10 px-3 text-sm ${FOCUS_RING}`}
+                aria-label={panel.mode === "edit" ? "Habit name" : "New habit"}
+                aria-invalid={!!panelError || undefined}
+                aria-describedby={panelError ? "habit-panel-error" : undefined}
+                className={clsx(
+                  "flex-1 min-w-0 min-h-9 rounded-xl bg-cream-soft border px-3 text-sm text-charcoal placeholder:text-charcoal-faint",
+                  "focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))]",
+                  panelError === DUPLICATE_HABIT ? "!border-status-high" : "border-charcoal/10"
+                )}
               />
+              {/* #83 / #84: ✓ 36 r12 on the primary fill; disabled at 40%
+                  while the name is empty (O1); a spinner while saving (O2). */}
               <button
-                onClick={create}
-                aria-label="Save habit"
-                className="tap w-9 h-9 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0"
+                type="button"
+                onClick={() => void save()}
+                aria-label={panel.mode === "edit" ? "Save changes" : "Save habit"}
+                aria-disabled={!trimmed || undefined}
+                aria-busy={saving || undefined}
+                className={clsx(
+                  "tap w-9 h-9 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0",
+                  !trimmed && "opacity-40 cursor-default"
+                )}
               >
-                <Check size={15} />
+                {saving ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Check size={15} />}
               </button>
+              {/* #85 / #86 */}
               <button
-                onClick={() => setAdding(false)}
+                type="button"
+                onClick={closePanel}
                 aria-label="Close"
                 className="tap w-9 h-9 rounded-xl bg-cream-soft text-charcoal-faint flex items-center justify-center shrink-0"
               >
                 <X size={15} />
               </button>
             </div>
-          </Card>
+            {/* O3 / O4 / O5: 11/600 in danger under the field row. */}
+            {panelError && (
+              <p id="habit-panel-error" role="alert" className="mt-1.5 pr-3.5 text-[11px] leading-4 font-semibold text-status-high">
+                {panelError}
+              </p>
+            )}
+          </div>
         </PinnedSlot>
       ) : (
         <PinnedCta
-          // MO1.1.1 #3: 44 tall, radius 12 (the frame; C-01 no longer applies).
+          // #40 / #41: 44 tall, r12, #A198DF / #A991FE, 13.5/20.3 700, Plus 15.
           size="base"
           primary={{
             label: "Add habit",
             icon: <Plus size={15} />,
-            // MO1.1.1 #3: filled #A198DF (--c-fill-cta, primary.cta.alt),
-            // 13.5/700 white (decision 23).
-            className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
-            onClick: () => setAdding(true),
+            className: "!text-[13.5px] !leading-[20.3px] !bg-[rgb(var(--c-fill-cta))]",
+            onClick: openAdd,
           }}
         />
       )}

@@ -40,7 +40,21 @@ export interface HabitsSnapshot {
   completions: Record<string, string[]>;
 }
 
-export const HABIT_LIMITS = { labelMax: 80 } as const;
+// v6 MO1.1.1.1 / V6-143: a habit name is 1 to 40 characters and an account
+// keeps up to 30 habits. The database still allows 80 characters and has no
+// count or uniqueness rule (stage B3, PB-O-02), so the screen enforces these.
+export const HABIT_LIMITS = { labelMax: 40, maxHabits: 30 } as const;
+
+/** MO1.1.1.1 O3: the handover's duplicate-name line. */
+export const DUPLICATE_HABIT = "You already have a habit with this name.";
+/** MO1.1.1.1 O4 (OURS): at the 30-habit limit. */
+export const TOO_MANY_HABITS = "You can keep up to 30 habits.";
+
+/** True when the label matches another habit's name, ignoring case and outer spaces. */
+export function isDuplicateLabel(label: string, others: { id: string; label: string }[], exceptId?: string): boolean {
+  const key = label.trim().toLowerCase();
+  return others.some((h) => h.id !== exceptId && h.label.trim().toLowerCase() === key);
+}
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 export type WriteResult = { ok: true } | { ok: false; message: string };
@@ -50,6 +64,8 @@ function describe(error: PostgrestError): string {
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
     return "Your session expired. Sign in again to save this.";
   }
+  // A unique index on the name arrives with stage B3 (PB-O-02).
+  if (code === "23505") return DUPLICATE_HABIT;
   if (code === "23514") return `Give the habit a name, up to ${HABIT_LIMITS.labelMax} characters.`;
   // 22P02: not a habit_icon value. validateHabitIcon catches it first; this
   // covers a build whose list ran ahead of the database.
@@ -155,18 +171,20 @@ export async function createHabit(
   };
 }
 
-/** Renames a habit. UPDATE, never upsert — see the note at the top. */
-export async function renameHabitRemote(id: string, label: string): Promise<WriteResult> {
-  const invalid = validateLabel(label);
+/** Saves a habit's name and icon (MO1.1.1 S5 Edit). UPDATE, never upsert:
+ *  label and icon are both in the UPDATE grant; the colour waits for B3. */
+export async function updateHabitRemote(id: string, patch: { label: string; icon: HabitIconKey }): Promise<WriteResult> {
+  const invalid = validateLabel(patch.label) ?? validateHabitIcon(patch.icon);
   if (invalid) return { ok: false, message: invalid };
 
   const { error } = await supabase
     .from("habit_items")
-    .update({ label: label.trim() })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ label: patch.label.trim(), icon: patch.icon } as any)
     .eq("id", id);
 
   if (error) {
-    console.error("[habits] Could not rename the habit:", error.message);
+    console.error("[habits] Could not update the habit:", error.message);
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

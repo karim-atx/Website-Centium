@@ -1,6 +1,8 @@
 // V6 (QA 6.0): content backing the Meditation sheet's Breathing/Stretching/
 // Yoga tabs.
 
+import type { MeditationPoseV2 } from "../utils/assetUrls";
+
 export interface BreathingPattern {
   id: string;
   name: string;
@@ -48,11 +50,14 @@ export interface StretchItem {
   target: string;
   seconds: number;
   instructions: string;
+  /** The v2 pose art (public/meditation/v2/<art>.gif, .png and -thumb.png). */
+  art: MeditationPoseV2;
 }
 
 export const stretchList: StretchItem[] = [
   {
     id: "st1",
+    art: "hamstring",
     name: "Standing Hamstring Stretch",
     type: "static",
     target: "Hamstrings",
@@ -61,6 +66,7 @@ export const stretchList: StretchItem[] = [
   },
   {
     id: "st2",
+    art: "doorway",
     name: "Doorway Chest Stretch",
     type: "static",
     target: "Chest & shoulders",
@@ -69,6 +75,7 @@ export const stretchList: StretchItem[] = [
   },
   {
     id: "st3",
+    art: "twist",
     name: "Seated Spinal Twist",
     type: "static",
     target: "Lower back",
@@ -77,6 +84,7 @@ export const stretchList: StretchItem[] = [
   },
   {
     id: "st4",
+    art: "legswing",
     name: "Leg Swings",
     type: "dynamic",
     target: "Hips & hamstrings",
@@ -85,6 +93,7 @@ export const stretchList: StretchItem[] = [
   },
   {
     id: "st5",
+    art: "armcircle",
     name: "Arm Circles",
     type: "dynamic",
     target: "Shoulders",
@@ -93,6 +102,7 @@ export const stretchList: StretchItem[] = [
   },
   {
     id: "st6",
+    art: "lunge",
     name: "Walking Lunges with Twist",
     type: "dynamic",
     target: "Hips & core",
@@ -107,9 +117,9 @@ export interface YogaPose {
   /** MO1.1.4.2's line under the name. "Rest & reset" is the board's; the
    *  other five are drafts for review (A16). */
   subtitle: string;
-  /** The first-pass animation under public/meditation/yoga/ (<image>.gif)
-   *  and its static thumbnail (<image>.png), A14. */
-  image: string;
+  /** The v2 pose art (motion-specs "Meditation poses v2"):
+   *  public/meditation/v2/<art>.gif, .png (first frame) and -thumb.png. */
+  art: MeditationPoseV2;
   difficulty: "beginner" | "intermediate" | "advanced";
   instructions: string;
 }
@@ -119,7 +129,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y1",
     name: "Child's Pose",
     subtitle: "Rest & reset",
-    image: "yoga-childs-pose",
+    art: "childs",
     difficulty: "beginner",
     instructions: "Kneel and sit back on your heels, then fold forward with arms extended, resting your forehead down.",
   },
@@ -127,7 +137,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y2",
     name: "Cat-Cow",
     subtitle: "Warm up the spine",
-    image: "yoga-cat-cow",
+    art: "catcow",
     difficulty: "beginner",
     instructions: "On hands and knees, alternate arching your spine up (cat) and dipping it down (cow).",
   },
@@ -135,7 +145,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y3",
     name: "Downward Dog",
     subtitle: "Lengthen & energise",
-    image: "yoga-downward-dog",
+    art: "downdog",
     difficulty: "intermediate",
     instructions: "From hands and knees, lift your hips up and back, forming an inverted V with your body.",
   },
@@ -143,7 +153,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y4",
     name: "Warrior II",
     subtitle: "Strength & focus",
-    image: "yoga-warrior-ii",
+    art: "warrior",
     difficulty: "intermediate",
     instructions: "Step into a wide stance, bend the front knee, and extend your arms parallel to the floor.",
   },
@@ -151,7 +161,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y5",
     name: "Crow Pose",
     subtitle: "Balance & core",
-    image: "yoga-crow-pose",
+    art: "crow",
     difficulty: "advanced",
     instructions: "Balance your knees on your upper arms, lean forward, and lift your feet off the ground.",
   },
@@ -159,7 +169,7 @@ export const yogaPoses: YogaPose[] = [
     id: "y6",
     name: "Wheel Pose",
     subtitle: "Open the chest",
-    image: "yoga-wheel-pose",
+    art: "wheel",
     difficulty: "advanced",
     instructions: "Lying down, place hands by your ears and feet near your hips, then press up into a full backbend.",
   },

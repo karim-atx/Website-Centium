@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { PageHeader } from "../../components/ui/PageHeader";
+import type { MindSection } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
@@ -30,22 +30,8 @@ import { journalStreak as journalStreakFrom } from "../../services/journal/strea
 import { useBack } from "../../hooks/useBack";
 import { useIsDark } from "../../hooks/useIsDark";
 
-type Section = "habits" | "journal" | "achievements" | "meditation";
+type Section = MindSection;
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
-
-// The sub-page header, for each section.
-const SECTION_TITLE: Record<Section, string> = {
-  habits: "Habits",
-  journal: "Journal",
-  achievements: "Achievements",
-  meditation: "Meditation",
-};
-const SECTION_SUBTITLE: Record<Section, string> = {
-  habits: "Track your daily habits",
-  journal: "Your thoughts, logged",
-  achievements: "What you've earned so far",
-  meditation: "Breathing, stretching & yoga",
-};
 
 const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
   logging: ClipboardList,
@@ -169,14 +155,11 @@ export default function Mind() {
       : "Start a session";
 
   if (section) {
+    // Each section renders its own header (components/mind/MindHeader.tsx):
+    // Journal, Achievements and Meditation hold it in the fixed area with
+    // their tab rows (PB4 §8 1b); Habits scrolls.
     return (
       <div>
-        <PageHeader
-          title={SECTION_TITLE[section]}
-          subtitle={SECTION_SUBTITLE[section]}
-          showBack
-          onBack={back}
-        />
         {section === "habits" && <HabitsTab />}
         {section === "journal" && <JournalTab />}
         {section === "achievements" && <AchievementsTab />}

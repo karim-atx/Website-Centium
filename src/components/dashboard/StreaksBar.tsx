@@ -5,6 +5,7 @@ import type { PlantSpecies } from "../../context/AppContext";
 import { mondayFirstWeek } from "../../utils/week";
 import { localDayOf } from "../../utils/date";
 import { currentDayStreak, subGoalsMet } from "../../services/streaks/dayStreak";
+import { StreakLeaf } from "../icons/StreakLeaf";
 
 const WEEKDAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -161,11 +162,19 @@ export const StreaksBar: React.FC = () => {
                   {WEEKDAY_CAPS[i]}
                 </span>
                 <span className="h-[22px] flex items-center justify-center">
-                  <img
-                    src={d.isFuture || d.met === 0 ? "/leaf-faint.png" : d.earned ? "/leaf-full.png" : "/leaf-bright.png"}
-                    alt=""
-                    className="w-[21px] h-[21px] object-contain block"
-                  />
+                  {/* v6 asset map: the handover's StreakLeaf in place of the
+                      leaf-full / -bright / -faint PNGs, at the PNGs' own
+                      measure (the leaf 780 of 811 px in the 21 box = 20.2
+                      tall; their 29 px outline = 0.75): earned a white leaf
+                      outlined #7B6BA8; some goals met a white outline at 82%;
+                      none met (or a later day) at 34%. */}
+                  {d.isFuture || d.met === 0 ? (
+                    <StreakLeaf variant="outline" height={20.2} strokeWidth={0.75} fill="none" className="text-white/[0.34]" />
+                  ) : d.earned ? (
+                    <StreakLeaf variant="outline" height={20.2} strokeWidth={0.75} fill="#FFFFFF" className="text-[#7B6BA8]" />
+                  ) : (
+                    <StreakLeaf variant="outline" height={20.2} strokeWidth={0.75} fill="none" className="text-white/[0.82]" />
+                  )}
                 </span>
                 <span className="flex gap-[2px]">
                   {Array.from({ length: 4 }, (_, dot) => (

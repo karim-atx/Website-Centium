@@ -12,12 +12,16 @@ export const MAX_SESSION_SECONDS = 14400;
  * THE KEYS ARE THE APP'S, NOT THE CATALOGUE'S. `kind` is checked only for
  * shape (^[a-z][a-z0-9_]{1,38}[a-z0-9]$), not against a list, so these are
  * the set in use. Changing one splits a user's history in two; add, never
- * rename. Keyed by the breathing pattern ids in data/mockMindContent.
+ * rename. Keyed by the breathing pattern ids in data/mockMindContent, plus
+ * the two pose sequences (PB-O-20, MO1.1.4.1 S7 / MO1.1.4.2 S2): a finished
+ * Stretching or Yoga sequence is one session of its own kind.
  */
 export const MEDITATION_KINDS: Record<string, string> = {
   box: "box_breathing",
   "478": "breathing_4_7_8",
   deep: "deep_breathing",
+  stretching: "stretching_sequence",
+  yoga: "yoga_sequence",
 };
 
 /** The `kind` for a pattern. An unknown pattern still gets a valid key. */
@@ -34,6 +38,18 @@ export function sessionSeconds(startedAtMs: number, endedAtMs: number): number |
   const s = Math.floor((endedAtMs - startedAtMs) / 1000);
   if (!Number.isFinite(s) || s < MIN_SESSION_SECONDS) return null;
   return Math.min(s, MAX_SESSION_SECONDS);
+}
+
+/**
+ * Whether a breathing run is saved when it ends (MO1.1.4 S2-S5, V6-144):
+ * only after one full cycle AND at least the table's 10 s floor; under that
+ * nothing is written. Reset never saves (the caller does not ask). "short"
+ * is the one case a full cycle is under 10 s (Simple Deep's 8 s cycle).
+ */
+export function breathingSaveRule(cycles: number, seconds: number | null): "save" | "cycle" | "short" {
+  if (cycles < 1) return "cycle";
+  if (seconds === null) return "short";
+  return "save";
 }
 
 /**

@@ -13,9 +13,11 @@ export interface MeditationSessionInput {
   startedAt: Date;
   durationSeconds: number;
   kind: string;
-  /** Ran until the user stopped it (true), or was interrupted (false).
-   *  ALWAYS SENT: the column has no default, on purpose. Only completed
-   *  sessions count towards the meditation badges; both count as minutes. */
+  /** ALWAYS SENT: the column has no default, on purpose. Only completed
+   *  sessions count towards the meditation badges; both count as minutes.
+   *  Since v6 (MO1.1.4 S2-S5, V6-144) the app writes only completed runs: a
+   *  breathing run with at least one full cycle, or a finished pose sequence;
+   *  anything shorter or unfinished is not written at all. */
   completed: boolean;
 }
 
@@ -33,9 +35,9 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
     // ATX02: 20 sessions an hour. Real use does not reach it.
     if (error.code === "ATX02") return { ok: false, message: "That's a lot of sessions in an hour. Try again a little later." };
     console.error("[meditation] Could not save a session:", error.code, error.message);
-    return { ok: false, message: "Couldn't save this session." };
+    return { ok: false, message: "Couldn't save. Try again." };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save this session." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save. Try again." };
   }
 }
 
