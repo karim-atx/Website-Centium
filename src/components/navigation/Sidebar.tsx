@@ -9,10 +9,10 @@ import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
 import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
 import { forumAccess } from "../../services/forum/rules";
-import { ThemedMark } from "../ui/ThemedMark";
+import { CentiumMark } from "../icons/CentiumMark";
 
 export const Sidebar: React.FC = () => {
-  const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries, colorTheme } = useApp();
+  const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries } = useApp();
   const unread = useUnread();
   const isBusiness = user.accountType === "business";
   // The SAME walk the Home board runs, not a second opinion about it — see
@@ -38,14 +38,12 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
-      {/* Design refinement §3c "Placements": the redrawn-SVG mark is
-          replaced with the real brand asset wherever it appears. */}
+      {/* v6 (TK 4.1, X-24): the one vector mark in the theme's brand pair,
+          framed as the PNG it replaces (30 tall, centium-mark.png's canvas). */}
       <div className="flex items-center gap-2.5 px-2 mb-8">
-        {colorTheme === "centium" ? (
-          <img src="/centium-mark.png" alt="" className="w-[30px] h-[30px] object-contain" />
-        ) : (
-          <ThemedMark width={30} height={30} />
-        )}
+        <span className="w-[30px] h-[30px] flex items-center justify-center shrink-0">
+          <CentiumMark height={30} framing="png" />
+        </span>
         <span className="font-display text-xl font-bold text-charcoal tracking-tight">
           Centium
         </span>

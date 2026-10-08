@@ -4,7 +4,11 @@ import { calendarJump } from "../../components/ui/calendarJump";
 
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { FixedHeader } from "../../components/ui/FixedHeader";
+import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
+import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
+import { useOnline } from "../../hooks/useOnline";
 import { YearScroll } from "../../components/calendar/YearScroll";
 import {
   DEFAULT_EVENT_COLOUR,
@@ -28,7 +32,7 @@ import {
   type ClientCalendarEvent,
 } from "../../services/calendar";
 import { isUuid } from "../../services/food";
-import { fetchMyBookedClasses, type BookedClass } from "../../services/business-classes";
+import { fetchMyBookedClasses, type BookedClass, type LinkedBooking } from "../../services/business-classes";
 import {
   ChevronLeft,
   ChevronRight,
@@ -41,6 +45,7 @@ import {
   Ticket,
   Paperclip,
   Link as LinkIcon,
+  AlertCircle,
 } from "lucide-react";
 import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
@@ -55,14 +60,17 @@ async function openAttachment(path: string) {
 type View = "year" | "month" | "week" | "day";
 const VIEWS: View[] = ["year", "month", "week", "day"];
 
-/** The view pills' light colours. The active pill keeps its own (decision 15);
-    decision 23 (item 119): an idle tab is transparent with #5B5349
-    (charcoal-soft) as MO1.6 draws it. Dark mode is SegmentedTabs' own. */
-const TAB_LIGHT = {
-  activeFill: "rgb(var(--c-primary-fill))",
-  activeInk: "rgb(var(--c-on-primary-fill))",
-  idleFill: "transparent",
-  idleInk: "rgb(var(--c-charcoal-soft))",
+/** v6 MO1.6 #5: the New event button's gradient. Light is the shared
+    lavender accent (#AEA1DC to #6F5FA6). Dark starts on the dark primary
+    (#A991FE) and ends on the light gradient's own end stop (#6F5FA6, derived
+    in the handover): on this button only, since the shared token paints other
+    screens. Each theme's end stop is its light gradient's. */
+const NEW_EVENT_DARK_END: Record<string, string> = {
+  centium: "#6F5FA6",
+  sky: "#235AF6",
+  rose: "#CA1A69",
+  gold: "#886400",
+  coral: "#BB4103",
 };
 
 const monthNames = Array.from({ length: 12 }, (_, i) =>
@@ -150,10 +158,19 @@ export default function ClientCalendarTab() {
   const dark = useIsDark();
 
   const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // OURS O-LD: false until the first read settles (success or failure), so
+  // the event list shows skeleton rows on first load only.
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  // OURS (MO1.6 K10): a failed invitation answer is a toast, not a page error.
+  const [respondFailed, setRespondFailed] = useState(false);
+  // OURS-Calendar-event-detail: the read-only sheet's event (id, so it shows
+  // the latest status after an answer).
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const online = useOnline();
 
   // Populate on launch, and keep whatever is on screen if the read fails —
   // the rule every hydration in this app follows. A failed read is not an
@@ -161,11 +178,12 @@ export default function ClientCalendarTab() {
   const load = useCallback(async () => {
     if (!authUserId) return;
     const result = await getCalendar(authUserId);
+    setLoaded(true);
     if (!result.ok) {
-      setLoadError(result.message);
+      setLoadError(true);
       return;
     }
-    setLoadError(null);
+    setLoadError(false);
     setEvents(result.events);
   }, [authUserId]);
 
@@ -173,6 +191,13 @@ export default function ClientCalendarTab() {
     if (!profileReady || !authUserId) return;
     void load();
   }, [profileReady, authUserId, load]);
+
+  // OURS O-OF: coming back online after a failed read retries once.
+  const wasOnline = useRef(online);
+  useEffect(() => {
+    if (online && !wasOnline.current && loadError) void load();
+    wasOnline.current = online;
+  }, [online, loadError, load]);
 
   // ONE-TIME UPLOAD OF LOCAL EVENTS, and there is real data to rescue even
   // though nothing is seeded: `calendarEvents` defaults to [], so every local
@@ -245,7 +270,12 @@ export default function ClientCalendarTab() {
   // coach moves the day, so a rename survives until then and a deletion comes
   // back. Offering the action would be offering a change that quietly undoes
   // itself.
-  const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced;
+  //
+  // A ROW A BOOKING MADE is owned too, and is not editable here either (v6
+  // MO1.6 B3, PB-O-62): book_class() writes it and the booking is what is
+  // changed or cancelled. The server guard is Database stage B3; until then
+  // the front end alone keeps it read-only. (isMine is defined below, once
+  // the booking links are known.)
 
   /**
    * Classes this account has booked, overlaid on the calendar.
@@ -262,6 +292,7 @@ export default function ClientCalendarTab() {
    * day, and a dropped connection is not entitled to make it.
    */
   const [bookedClasses, setBookedClasses] = useState<BookedClass[]>([]);
+  const [linkedBookings, setLinkedBookings] = useState<LinkedBooking[]>([]);
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
@@ -270,6 +301,7 @@ export default function ClientCalendarTab() {
       const result = await fetchMyBookedClasses();
       if (cancelled || !result.ok) return;
       setBookedClasses(result.classes);
+      setLinkedBookings(result.linked);
     })();
     return () => {
       cancelled = true;
@@ -307,6 +339,13 @@ export default function ClientCalendarTab() {
 
   /** Overlay rows by id, so the card can tell them from calendar_events. */
   const bookedById = useMemo(() => new Map(bookedClasses.map((c) => [c.id, c])), [bookedClasses]);
+  /** Calendar rows a booking made (book_class), by calendar_events id. */
+  const linkedById = useMemo(() => new Map(linkedBookings.map((b) => [b.calendarEventId, b])), [linkedBookings]);
+  /** Who a booked class is with, for an overlay row or a booking-made row. */
+  const bookingOf = (e: ClientCalendarEvent) => bookedById.get(e.id) ?? linkedById.get(e.id) ?? null;
+  const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced && !linkedById.has(e.id);
+  /** A tap on any event: own events edit (MO1.6.4), the rest open the detail sheet. */
+  const openEvent = (e: ClientCalendarEvent) => (isMine(e) ? openEdit(e) : setDetailId(e.id));
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, ClientCalendarEvent[]> = {};
@@ -440,10 +479,11 @@ export default function ClientCalendarTab() {
     const result = await respondToInvite(e.invite.id, accepted);
     setRespondingTo(null);
     if (!result.ok) {
-      setLoadError(result.message ?? "Couldn't save your response.");
+      // The status was never changed on screen, so nothing to revert: the
+      // shared toast says it didn't save (MO1.6 K10).
+      setRespondFailed(true);
       return;
     }
-    setLoadError(null);
     // Declining keeps the event on the calendar, marked — the invitee keeps
     // their SELECT on both rows, and an event vanishing with no explanation
     // would be worse than one that says it was declined.
@@ -474,7 +514,8 @@ export default function ClientCalendarTab() {
   };
 
   /** A tappable link on an event, in every view (MO1.6.4 note; B38). */
-  const eventLink = (e: ClientCalendarEvent, size = 11) => {
+  // Month rows draw it 10 / 600 (MO1.6 K6), Week cards 12 / 600 (MO1.6.2 K5).
+  const eventLink = (e: ClientCalendarEvent, size = 11, textClass = "text-xs") => {
     const href = normaliseLink(e.url);
     if (!href) return null;
     return (
@@ -483,7 +524,10 @@ export default function ClientCalendarTab() {
         target="_blank"
         rel="noopener noreferrer"
         onClick={(ev) => ev.stopPropagation()}
-        className="tap inline-flex items-center gap-1 max-w-full text-xs font-semibold text-primary-deep-text underline underline-offset-2 decoration-primary-deep-text/40"
+        className={clsx(
+          "tap inline-flex items-center gap-1 max-w-full font-semibold text-primary-deep-text underline underline-offset-2 decoration-primary-deep-text/40 self-start",
+          textClass
+        )}
       >
         <LinkIcon size={size} className="shrink-0" aria-hidden />
         <span className="truncate">{linkLabel(href)}</span>
@@ -496,28 +540,30 @@ export default function ClientCalendarTab() {
   // attachment, the invitation / Scheduled / Booked badge, the delisted note
   // and Accept / Decline.
   const eventCard = (e: ClientCalendarEvent) => {
-    const mine = isMine(e);
     const status = e.invite?.status;
-    // Present only for an overlay row, and the one thing that distinguishes
-    // it from a calendar_events row the client happens not to own.
-    const booked = bookedById.get(e.id);
+    // Present for an overlay row or a booking-made row: what distinguishes a
+    // booked class from a calendar_events row the client happens not to own.
+    const booked = bookingOf(e);
     const { tint, bar } = eventColours(e.color, dark);
     return (
       <div
         key={e.id}
-        // MO1.6.2 (2x frame, Yoga class card y 652–843): radius 22, 20 of
-        // padding past the 3 bar on every side, so a three-line card is 96.
-        className="rounded-[22px] p-5 space-y-2"
+        // v6 MO1.6.2 #21 / #25: r24, padding 20, the side border 3.8 in the
+        // event's own colour (V6-112: the PNG's colour over the table's
+        // #241F1B; dark shade in dark), so a three-line card is 96.
+        className="rounded-[24px] p-5 space-y-2"
         style={{
           background: tint,
-          borderLeft: `3px solid ${bar}`,
+          borderLeft: `3.8px solid ${bar}`,
           // A declined event stays on the calendar, and looking different is
           // how it says so at a glance rather than only in its badge.
           opacity: status === "declined" ? 0.6 : undefined,
         }}
       >
         <div className="flex items-start justify-between gap-3">
-          <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
+          {/* Own events open the edit sheet; the rest the read-only detail
+              (OURS-Calendar-event-detail). */}
+          <button className="min-w-0 text-left flex-1" onClick={() => openEvent(e)}>
             <p className="text-sm font-semibold text-charcoal">{e.title}</p>
             <p className="text-xs text-charcoal-faint">
               {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
@@ -632,90 +678,153 @@ export default function ClientCalendarTab() {
   const jump = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
 
   /** MO1.6–MO1.6.3's header card: chevrons, the label, and Jump to today (B30).
-      Decision 23 (item 120): the chevrons #5B3FE4, as the date popup
-      (MO1.6.4.1), with its dark #B7ABDE. */
+      v6 MO1.6 #11-#14 / MO1.6.2 #10-#13: 40 tall, r16, padding 0 12, #F6F4FE
+      (dark #2B2C3A, V6-92: the drawn #F6F4FE* would put light text on a near
+      white fill); chevron boxes 26 (44 hit area through .tap), icons 16
+      #5B3FE4 (dark #B7ABDE, V6-92: #5B3FE4* is 2.6:1 on the dark card); the
+      label 15 / 22.5 600 on one line, truncating before Jump to today wraps. */
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
     <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f6f4fe))" }}>
-      <button onClick={onPrev} aria-label={prevLabel} className="tap w-7 h-7 -ml-1 flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
+      <button onClick={onPrev} aria-label={prevLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
         <ChevronLeft size={16} strokeWidth={2.2} />
       </button>
-      <p className="flex-1 min-w-0 text-center text-[15px] font-semibold text-charcoal truncate">{label}</p>
+      <p className="flex-1 min-w-0 text-center text-[15px] leading-[22.5px] font-semibold text-charcoal truncate">{label}</p>
       {jump.show && <JumpToToday onClick={jump.jump} />}
-      <button onClick={onNext} aria-label={nextLabel} className="tap w-7 h-7 -mr-1 flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
+      <button onClick={onNext} aria-label={nextLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
         <ChevronRight size={16} strokeWidth={2.2} />
       </button>
     </div>
   );
 
+  /** OURS O-LD: a skeleton block (#F5F5F6 / #242730, 1.2 s pulse, static
+      under Reduce motion). */
+  const skeleton = (className: string) => (
+    <div aria-hidden className={clsx("bg-cream-soft animate-skeleton-pulse", className)} />
+  );
+
   const [yearJump, setYearJump] = useState(0);
   const todayIso = toISO(today.getFullYear(), today.getMonth(), today.getDate());
 
+  // The Week navigator's range, Monday to Sunday (MO1.6.2 #13), worked out
+  // here because the navigator sits in the fixed header.
+  const weekStart = startOfWeekISO(selectedDate);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i));
+  const weekLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} – ${new Date(`${weekDays[6]}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+
+  // The load state card (OURS O-ER / O-OF): under the fixed area, with
+  // whatever was on screen kept under it.
+  const statusCard =
+    loadError || !online ? (
+      <div
+        role={loadError ? "alert" : "status"}
+        className="flex items-center gap-3 rounded-[15px] bg-white dark:bg-[#1C1F28] border-[0.5px] border-team-nav-accent/[0.16] px-3.5 py-3 mb-[13px]"
+      >
+        <p className="flex-1 min-w-0 text-[12.5px] leading-[18.8px] font-semibold text-charcoal">
+          {!online ? "You're offline. Showing what was loaded." : "Couldn't load your calendar."}
+        </p>
+        {online && (
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="tap h-11 -my-3 shrink-0 text-[12.5px] font-bold text-th-5b3fe4 dark:text-th-b7abde"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    ) : null;
+
   return (
     <div>
-      {/* Iteration 6 "Team": compact 19px title in place of PageHeader's
-          27px default — see the identical note in Food.tsx. The circular
-          "+" keeps its exact meaning (openCompose), just a gradient chip
-          instead of a flat primary fill. */}
-      {/* Handover 2026-09-29 MO4.1: a back arrow beside the title, the
-          same button Mind's header uses. */}
-      <div className="flex items-start justify-between gap-3 mb-[13px]">
-        <div className="flex items-start gap-2.5">
+      {/* v6 MO1.6 #1 / MO1.6.2 #1: the header, the view tabs and (Week, Day)
+          the navigator are one fixed area (the shared FixedHeader: page fill
+          and hairline only once content passes under it, 120 ms, none under
+          Reduce motion). Bottom padding 13 under the tabs, 16 under a
+          navigator. Day's navigator is fixed like Week's (MO1.6 O7). */}
+      <FixedHeader paddingBottom={view === "week" || view === "day" ? 16 : 13}>
+        {/* Handover 2026-09-29 MO4.1: a back arrow beside the title. MO1.6
+            #2-#6: back 36 (m 2 0 0 -6), the title 19 / 28.5 700 ls -0.6, the
+            34 New event button (44 hit area through .tap). */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <button
+              onClick={back}
+              aria-label="Back"
+              className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <h1 className="text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal mt-[5px]">Calendar</h1>
+          </div>
           <button
-            onClick={back}
-            aria-label="Back"
-            className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+            onClick={openCompose}
+            aria-label="New event"
+            className="tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0"
+            style={{
+              background: dark
+                ? `linear-gradient(150deg, rgb(var(--c-primary)), ${NEW_EVENT_DARK_END[colorTheme] ?? NEW_EVENT_DARK_END.centium})`
+                : "var(--gradient-lavender-accent)",
+            }}
           >
-            <ChevronLeft size={18} />
+            <Plus size={16} className="text-white" />
           </button>
-          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal mt-[5px]">Calendar</p>
         </div>
-        <button
-          onClick={openCompose}
-          aria-label="New event"
-          className="tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0"
-          style={{ background: "var(--gradient-lavender-accent)" }}
-        >
-          <Plus size={16} className="text-white" />
-        </button>
-      </div>
 
-      {/* A failed read leaves whatever was already on screen and says so,
-          rather than blanking a calendar — which would be indistinguishable
-          from having lost everything on it. */}
-      {loadError && (
-        <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
-          {loadError}
-        </p>
-      )}
+        {/* MO1.6 #7-#9: the views as full-width segmented tabs (44 in a 56
+            track): idle #F5F4FE with #5B5349, active #A79AD5 with white
+            (#5B48B8 under High contrast); dark track and idle #303141 with
+            #B8B3C7 (darkTone partB), active #A991FE with #0D0B1A. A second
+            tap on Year while in Year scrolls back to today's year (MO1.6.1). */}
+        <SegmentedTabs
+          className="mt-[13px]"
+          items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
+          activeKey={view}
+          onChange={(k) => {
+            if (k === "year" && view === "year") {
+              setCursor((c) => ({ ...c, year: today.getFullYear() }));
+              setYearJump((n) => n + 1);
+              return;
+            }
+            setView(k as View);
+          }}
+          idleInk="rgb(var(--c-charcoal-soft))"
+          darkTone="partB"
+        />
 
-      {/* MO1.6: the views as full-width segmented tabs (44 in a 56 track).
-          Light keeps the pills' colours (decision 15). A second tap on Year
-          while in Year scrolls back to today's year (MO1.6.1). */}
-      <SegmentedTabs
-        className="mb-[13px]"
-        items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
-        activeKey={view}
-        onChange={(k) => {
-          if (k === "year" && view === "year") {
-            setCursor((c) => ({ ...c, year: today.getFullYear() }));
-            setYearJump((n) => n + 1);
-            return;
-          }
-          setView(k as View);
-        }}
-        light={TAB_LIGHT}
-      />
+        {view === "week" && (
+          <div className="mt-[13px]">
+            {headerCard(weekLabel, () => setSelectedDate(addDaysISO(selectedDate, -7)), () => setSelectedDate(addDaysISO(selectedDate, 7)), "Previous week", "Next week")}
+          </div>
+        )}
+        {view === "day" && (
+          <div className="mt-[13px]">
+            {headerCard(selectedDateLabel, () => setSelectedDate(addDaysISO(selectedDate, -1)), () => setSelectedDate(addDaysISO(selectedDate, 1)), "Previous day", "Next day")}
+          </div>
+        )}
+      </FixedHeader>
+
+      {statusCard}
 
       {view === "month" && (
         <>
-          <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
+          {/* MO1.6 #10: 358 wide, r15, padding 13 14, white with a 0.5
+              #8F68F6@16% border (dark #1C1F28, the same border). */}
+          <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border-[0.5px] border-team-nav-accent/[0.16] px-3.5 py-[13px] mb-[13px]">
             {headerCard(`${monthNames[cursor.month]} ${cursor.year}`, () => goMonth(-1), () => goMonth(1), "Previous month", "Next month")}
 
-            {/* Decision 23 (item 121): weekday letters #5B3FE4, as the date
-                popup (dark #B7ABDE). */}
-            <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-1">
+            {/* MO1.6 #15: weekday letters Monday first, 13 / 19.5 600 with 6
+                above and below (31.5), #5B3FE4 (dark #B7ABDE, V6-92), 2 above
+                the first row of days. */}
+            <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-[2px]">
               {DAY_LETTERS.map((d, i) => (
-                <div key={i} className="h-[31px] flex items-center justify-center text-[13px] font-semibold text-th-5b3fe4 dark:text-th-b7abde">
+                <div key={i} className="py-1.5 leading-[19.5px] flex items-center justify-center text-[13px] font-semibold text-th-5b3fe4 dark:text-th-b7abde">
                   {d}
                 </div>
               ))}
@@ -733,20 +842,30 @@ export default function ClientCalendarTab() {
                     onClick={() => setSelectedDate(iso)}
                     aria-label={new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                     aria-pressed={isSelected}
-                    // Decision 23 (item 122): the selected day is flat #AEA1DC
-                    // (primary-fill, with its own ink in every theme), not the
-                    // gradient.
+                    // v6 MO1.6 #16-#20: cells r12, 15 / 22.5. The selected day
+                    // #AB9ED7 with white 600 (the theme's own in other themes;
+                    // #5B48B8 under High contrast; dark the primary fill
+                    // #A991FE with #0D0B1A, V6-92: white on #AB9ED7* is
+                    // 2.4:1). Other days #000000 500 (dark #F5F3FA, V6-92).
                     className={clsx(
-                      "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[15px]",
+                      "tap aspect-square rounded-[12px] flex flex-col items-center justify-center gap-0.5 text-[15px] leading-[22.5px]",
                       isSelected
-                        ? "font-semibold bg-primary-fill text-on-primary-fill"
+                        ? "font-semibold bg-th-ab9ed7 text-white dark:bg-primary-fill dark:text-on-primary-fill [.high-contrast_&]:bg-primary-fill [.high-contrast_&]:text-on-primary-fill"
                         : isToday
                         ? "bg-team-lavender/[0.16] text-primary-deep-text font-semibold"
-                        : "font-medium text-charcoal"
+                        : "font-medium text-black dark:text-charcoal"
                     )}
                   >
                     {day}
-                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--th-6f9993))") : "transparent" }} />
+                    {/* #17 / #20: the 3.5 dot, white on the selected day (dark
+                        #1C1F28), else #6F9993 (dark #4F8F8A; the theme's
+                        secondary pair). */}
+                    <span
+                      className={clsx(
+                        "w-[3.5px] h-[3.5px] rounded-full",
+                        !hasEvents ? "bg-transparent" : isSelected ? "bg-white dark:bg-[#1C1F28]" : "bg-th-6f9993 dark:bg-th-4f8f8a"
+                      )}
+                    />
                   </button>
                 );
               })}
@@ -757,16 +876,27 @@ export default function ClientCalendarTab() {
               selected day's real events, tinted rows keyed to each
               event's own colour. Selecting a date updates this list in
               place; the view tabs reach the full hour timeline. */}
-          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{selectedDateLabel}</p>
-          {selectedEvents.length === 0 ? (
+          {/* MO1.6 #21: 9 / 13.5 700 ls 1.8 caps at 42% (dark 42% too,
+              V6-113; High contrast lifts it to the full ink). */}
+          <p className="mb-[9px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">{selectedDateLabel}</p>
+          {!loaded ? (
+            // OURS O-LD: two 57.7 r15 skeleton rows on first load only.
+            <div className="flex flex-col gap-[7px]">
+              {skeleton("h-[57.7px] rounded-[15px]")}
+              {skeleton("h-[57.7px] rounded-[15px]")}
+            </div>
+          ) : selectedEvents.length === 0 ? (
             <p className="text-[11.5px] text-charcoal-faint">No events</p>
           ) : (
             <div className="flex flex-col gap-[7px]">
               {selectedEvents.map((e) => {
-                const mine = isMine(e);
+                const booked = bookingOf(e);
                 const { tint, bar } = eventColours(e.color, dark);
-                const link = eventLink(e, 10);
+                const link = eventLink(e, 10, "text-[10px]");
                 return (
+                  // MO1.6 #22-#29: r15, padding 12 14, the event colour at
+                  // 16% (dark shade in dark), a 3 pill gap 11, the title
+                  // 12.5 / 18.8 700, the time line 10 / 15 #A79E93 / #9F9CAC.
                   <div
                     key={e.id}
                     className="flex items-start gap-[11px] rounded-[15px] px-3.5 py-3"
@@ -774,10 +904,10 @@ export default function ClientCalendarTab() {
                   >
                     <span className="w-[3px] self-stretch min-h-8 rounded-full shrink-0" style={{ background: bar }} />
                     <span className="flex-1 min-w-0 flex flex-col gap-1">
-                      <button onClick={() => openEdit(e)} disabled={!mine} className="tap flex items-center gap-2 text-left min-w-0">
+                      <button onClick={() => openEvent(e)} className="tap flex items-center gap-2 text-left min-w-0">
                         <span className="flex-1 min-w-0">
-                          <span className="block text-[12.5px] font-bold text-charcoal truncate">{e.title}</span>
-                          <span className="block text-[10px] text-charcoal-tertiary truncate">
+                          <span className="block text-[12.5px] leading-[18.8px] font-bold text-charcoal truncate">{e.title}</span>
+                          <span className="block text-[10px] leading-[15px] text-charcoal-tertiary truncate">
                             {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
                             {e.repeat !== "none" && ` · repeats ${e.repeat}`}
                             {e.location && ` · ${e.location}`}
@@ -788,14 +918,14 @@ export default function ClientCalendarTab() {
                                 from several optional parts; the business is one
                                 more, and the delisted note rides with it because
                                 there is nowhere else on this card to put it. */}
-                            {bookedById.get(e.id) &&
-                              ` · ${bookedById.get(e.id)!.businessName}${
-                                bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
-                              }`}
+                            {booked && ` · ${booked.businessName}${booked.businessActive ? "" : " (no longer on Explore)"}`}
                           </span>
                         </span>
-                        {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
-                        {bookedById.has(e.id) && <Ticket size={12} className="text-gold shrink-0" />}
+                        {/* K3 / K4: the invitation check in the time line's
+                            #A79E93, the booked Ticket in Foundations gold.text
+                            #9A7424 / #CAB082. */}
+                        {e.invite && <Check size={12} aria-label="Invitation" className="text-charcoal-tertiary shrink-0" />}
+                        {booked && <Ticket size={12} aria-label="Booked" className="text-[#9A7424] dark:text-[#CAB082] shrink-0" />}
                       </button>
                       {link}
                     </span>
@@ -807,65 +937,55 @@ export default function ClientCalendarTab() {
         </>
       )}
 
-      {view === "week" &&
-        (() => {
-          const weekStart = startOfWeekISO(selectedDate);
-          const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i));
-          const rangeLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })} – ${new Date(`${weekDays[6]}T00:00:00`).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}`;
-          return (
-            <>
-              <div className="mb-4">
-                {headerCard(rangeLabel, () => setSelectedDate(addDaysISO(selectedDate, -7)), () => setSelectedDate(addDaysISO(selectedDate, 7)), "Previous week", "Next week")}
+      {view === "week" && (
+        // V10 (QA 10.0): the days under each other in boxes with each day's
+        // events beside it; Monday to Sunday (MO1.6.2 D1). Tapping a day box
+        // opens it in Day view (B32). Rows 10 apart (59 pitch).
+        <div className="space-y-2.5">
+          {weekDays.map((iso) => {
+            const dayEvents = eventsByDate[iso] ?? [];
+            const isToday = iso === todayIso;
+            const d = new Date(`${iso}T00:00:00`);
+            return (
+              <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
+                {/* MO1.6.2 #14-#20: 56 wide, padding 8 0, r16 #F5F5F6 with
+                    #5B5349 (dark #242730 / #B8B3C7); today r12 #AB9ED7 with
+                    white (dark primary fill with #0D0B1A, V6-92; #5B48B8
+                    under High contrast); weekday 10 / 15 700 ls 0.3 caps,
+                    date 16 / 16 700. */}
+                <button
+                  onClick={() => {
+                    setSelectedDate(iso);
+                    setView("day");
+                  }}
+                  aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
+                  className={clsx(
+                    "tap shrink-0 w-14 flex flex-col items-center justify-center py-2 gap-0.5",
+                    isToday
+                      ? "rounded-[12px] bg-th-ab9ed7 text-white dark:bg-primary-fill dark:text-on-primary-fill [.high-contrast_&]:bg-primary-fill [.high-contrast_&]:text-on-primary-fill"
+                      : "rounded-2xl bg-cream-soft text-charcoal-soft"
+                  )}
+                >
+                  <span className="text-[10px] leading-[15px] font-bold uppercase tracking-[0.3px]">
+                    {d.toLocaleDateString("en-US", { weekday: "short" })}
+                  </span>
+                  <span className="text-base font-bold leading-none">{d.getDate()}</span>
+                </button>
+                <div className="flex-1 min-w-0 pt-2">
+                  {!loaded ? (
+                    // OURS O-LD: a 290 x 16 r8 bar beside each real day box.
+                    skeleton("h-4 rounded-lg")
+                  ) : dayEvents.length === 0 ? (
+                    <p className="text-xs text-charcoal-faint">No events</p>
+                  ) : (
+                    <div className="space-y-2">{dayEvents.map(eventCard)}</div>
+                  )}
+                </div>
               </div>
-              {/* V10 (QA 10.0): "have all the dates from sunday to saturday
-                  be under each other in boxes with each[event list] to
-                  their respective sides not under" — a day box column with
-                  that day's events beside it. Tapping a day box still opens
-                  it in Day view (B32). */}
-              <div className="space-y-2.5">
-                {weekDays.map((iso) => {
-                  const dayEvents = eventsByDate[iso] ?? [];
-                  const isToday = iso === todayIso;
-                  const d = new Date(`${iso}T00:00:00`);
-                  return (
-                    <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
-                      <button
-                        onClick={() => {
-                          setSelectedDate(iso);
-                          setView("day");
-                        }}
-                        aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
-                        className={clsx(
-                          "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
-                        )}
-                      >
-                        <span className="text-[10px] font-bold uppercase tracking-wide">
-                          {d.toLocaleDateString("en-US", { weekday: "short" })}
-                        </span>
-                        <span className="text-base font-bold leading-none">{d.getDate()}</span>
-                      </button>
-                      <div className="flex-1 min-w-0 pt-2">
-                        {dayEvents.length === 0 ? (
-                          <p className="text-xs text-charcoal-faint">No events</p>
-                        ) : (
-                          <div className="space-y-2">{dayEvents.map(eventCard)}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          );
-        })()}
+            );
+          })}
+        </div>
+      )}
 
       {view === "year" && (
         <YearScroll
@@ -882,10 +1002,6 @@ export default function ClientCalendarTab() {
 
       {view === "day" && (
         <>
-          <div className="mb-4">
-            {headerCard(selectedDateLabel, () => setSelectedDate(addDaysISO(selectedDate, -1)), () => setSelectedDate(addDaysISO(selectedDate, 1)), "Previous day", "Next day")}
-          </div>
-
           {/* INVITATIONS GET A LIST OF THEIR OWN IN DAY VIEW, above the
               timeline, because the timeline cannot carry them. A timed event
               renders there as a positioned block a few pixels tall — no room
@@ -897,7 +1013,7 @@ export default function ClientCalendarTab() {
               label (9/700, charcoal 42%, tracked, uppercase). */}
           {invitedEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
+              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">
                 Invitations
               </p>
               {invitedEvents.map(eventCard)}
@@ -906,7 +1022,7 @@ export default function ClientCalendarTab() {
 
           {allDayEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">All day</p>
+              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">All day</p>
               {allDayEvents.map(eventCard)}
             </div>
           )}
@@ -928,7 +1044,7 @@ export default function ClientCalendarTab() {
                 // 30 minutes or less: one line, the time beside the title, so
                 // it isn't cut off (the block is too short for two lines).
                 const short = minutesOf(e.endTime) - start <= 30;
-                const mine = isMine(e);
+                const booked = bookingOf(e);
                 const { tint, bar } = eventColours(e.color, dark);
                 const href = normaliseLink(e.url);
                 return (
@@ -944,8 +1060,7 @@ export default function ClientCalendarTab() {
                     }}
                   >
                     <button
-                      onClick={() => openEdit(e)}
-                      disabled={!mine}
+                      onClick={() => openEvent(e)}
                       className={clsx(
                         "tap w-full h-full px-2.5 text-left",
                         short ? "flex items-center gap-1.5 py-0" : "py-1.5",
@@ -958,7 +1073,7 @@ export default function ClientCalendarTab() {
                             buttons; the day list above carries both. This says
                             only that the event is an invitation, or a booking. */}
                         {e.invite && <Check size={10} className="shrink-0" />}
-                        {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
+                        {booked && <Ticket size={10} className="shrink-0 text-[#9A7424] dark:text-[#CAB082]" />}
                       </p>
                       {short ? (
                         <p className="text-[10px] text-charcoal-faint whitespace-nowrap shrink-0">{range12(e.startTime, e.endTime)}</p>
@@ -966,10 +1081,7 @@ export default function ClientCalendarTab() {
                       <p className="text-[10px] text-charcoal-faint truncate">
                         {range12(e.startTime, e.endTime)}
                         {e.location ? ` · ${e.location}` : ""}
-                        {bookedById.get(e.id) &&
-                          ` · ${bookedById.get(e.id)!.businessName}${
-                            bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
-                          }`}
+                        {booked && ` · ${booked.businessName}${booked.businessActive ? "" : " (no longer on Explore)"}`}
                       </p>
                       )}
                     </button>
@@ -1012,6 +1124,34 @@ export default function ClientCalendarTab() {
           void removeEvent();
         }}
         confirmDelete={confirmDelete}
+      />
+
+      {(() => {
+        const detail = detailId ? [...events, ...bookedClassEvents].find((x) => x.id === detailId) ?? null : null;
+        // An overlay row's notes start "Booked with …" for the cards; the
+        // sheet says that in its status line, so it shows the class's own.
+        const overlay = detail ? bookedById.get(detail.id) : undefined;
+        return (
+          <EventDetailSheet
+            event={detail && overlay ? { ...detail, notes: overlay.notes || undefined } : detail}
+            onClose={() => setDetailId(null)}
+            dark={dark}
+            booked={detail ? bookingOf(detail) : null}
+            responding={!!detail?.invite && respondingTo === detail.invite.id}
+            online={online}
+            onRespond={(accepted) => detail && void respond(detail, accepted)}
+            onOpenAttachment={(path) => void openAttachment(path)}
+          />
+        );
+      })()}
+
+      {/* MO1.6 K10: a failed invitation answer, the shared toast with the
+          danger icon (#C0392B / #F09A8E). */}
+      <Toast
+        open={respondFailed}
+        message="Couldn't save your response. Try again."
+        icon={<AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />}
+        onExpire={() => setRespondFailed(false)}
       />
     </div>
   );

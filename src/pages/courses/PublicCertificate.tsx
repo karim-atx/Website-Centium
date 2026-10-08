@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchPublicCertificate, type PublicCertificate as Cert } from "../../services/courses";
+import { CentiumLockup } from "../../components/icons/CentiumMark";
 
 // The public certificate page: /certificate/:serial
 //
@@ -40,10 +41,12 @@ function Frame({ children }: { children: React.ReactNode }) {
   );
 }
 
+// v6 (TK 4.8): the vector lockup in place of public/centium-lockup.png, same
+// canvas, 36 tall as the image was (width 36 x 687 / 842).
 function Wordmark() {
   return (
     <div className="flex justify-center">
-      <img src="/centium-lockup.png" alt="Centium" className="h-9 w-auto object-contain" />
+      <CentiumLockup width={(36 * 687) / 842} label="Centium" />
     </div>
   );
 }

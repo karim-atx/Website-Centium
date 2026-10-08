@@ -3,6 +3,12 @@ import { useApp } from "../../context/AppContext";
 import { Check } from "lucide-react";
 import clsx from "clsx";
 import { COLOR_THEMES } from "../../theme/colorThemes";
+import { useIsDark } from "../../hooks/useIsDark";
+
+// v6 MO1.8 #14-#15: the Centium swatch draws #9A8CD6 | #6F9993 in light and
+// #A991FE | #4F8F8A in dark (the other four as before; colorThemes.ts keeps
+// the theme primaries the generator reads, so only the swatch changes).
+const CENTIUM_SWATCH = { light: ["#9A8CD6", "#6F9993"], dark: ["#A991FE", "#4F8F8A"] } as const;
 
 // MO1.8 / MO1.8.6.1 Color theme (R20, D11): the five theme pairs as 38 pt
 // circles split down the middle, primary on the left and secondary on the
@@ -14,6 +20,7 @@ export const ColorThemePicker: React.FC = () => {
   // MO1.8.5.1: in Arabic the swatch mirrors with the row, primary on the
   // right (the start side), and the names are the frame's Arabic ones.
   const halves = language === "ar" ? "270deg" : "90deg";
+  const dark = useIsDark();
 
   return (
     // MO1.8 measured: five equal 46 pt columns (the width of "Centium" in
@@ -23,6 +30,7 @@ export const ColorThemePicker: React.FC = () => {
     <div role="radiogroup" aria-label="Color theme" className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
       {COLOR_THEMES.map((theme) => {
         const selected = colorTheme === theme.value;
+        const [left, right] = theme.value === "centium" ? CENTIUM_SWATCH[dark ? "dark" : "light"] : [theme.primary, theme.secondary];
         return (
           <button
             key={theme.value}
@@ -37,7 +45,7 @@ export const ColorThemePicker: React.FC = () => {
                 "w-[38px] h-[38px] rounded-full flex items-center justify-center",
                 selected && "ring-2 ring-offset-2 ring-offset-cream-card ring-primary"
               )}
-              style={{ background: `linear-gradient(${halves}, ${theme.primary} 50%, ${theme.secondary} 50%)` }}
+              style={{ background: `linear-gradient(${halves}, ${left} 50%, ${right} 50%)` }}
             >
               {/* White on Centium's swatch, as drawn; the other swatches' light
                   halves (Sky's slate, Rose's blush, Gold) cannot carry white at

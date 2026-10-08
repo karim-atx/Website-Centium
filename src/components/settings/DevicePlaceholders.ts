@@ -8,8 +8,8 @@ import { HeartPulse, Smartphone, Watch } from "lucide-react";
 // tile, which SettingsRow already draws for its `icon` prop (36 x 36, radius
 // 11, the lavender pale ground, 17 px at 1.75 in primary-accent; MO1.8 #6, #7).
 // So the placeholder is just the glyph: `<SettingsRow icon={DEVICE_PLACEHOLDER_ICON.whoop} … />`.
-// OURS. Replaces src/components/settings/DeviceMarks.tsx (AppleHealthMark,
-// WhoopMark), which can be deleted once Settings uses this.
+// OURS. Replaced the brand marks (DeviceMarks.tsx, deleted in v6 batch 1).
+// OURS-Sources draws the same glyphs on a neutral tile (#F5F5F6 / #242730).
 
 export type DeviceKind = "apple-health" | "whoop" | "health-connect";
 

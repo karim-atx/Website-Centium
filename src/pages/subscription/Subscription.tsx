@@ -16,6 +16,7 @@ import {
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { BillingToggle, PlanRow, PlanSkeleton } from "./PlanRows";
 import { useBack } from "../../hooks/useBack";
+import { CentiumLockup } from "../../components/icons/CentiumMark";
 import {
   ChevronLeft,
   Mic,
@@ -71,8 +72,9 @@ const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 const Masthead: React.FC<{ title: string; blurb: string }> = ({ title, blurb }) => (
   <div className="text-center mb-6 animate-fade-slide-up">
     {/* Design refinement §3c "Placements": full lockup — splash, subscription,
-        share cards — replaces the icon-tile + separate wordmark line. */}
-    <img src="/centium-lockup.png" alt="Centium" className="w-[104px] h-auto object-contain mx-auto mb-5" />
+        share cards — replaces the icon-tile + separate wordmark line.
+        v6 (TK 4.8): the vector lockup, same canvas, 104 wide. */}
+    <CentiumLockup width={104} className="mx-auto mb-5" />
     <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">{title}</h1>
     <p className="text-charcoal-soft text-sm max-w-xs mx-auto">{blurb}</p>
   </div>

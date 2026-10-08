@@ -1,4 +1,12 @@
 import React, { useState } from "react";
+import { CentiumMark, MARK_C_PATH, MARK_LEAF_PATH } from "../../components/icons/CentiumMark";
+
+// v6 (TK 4.1, X-24): the vector mark replaces public/centium-mark.png, framed
+// as that PNG ("png", 687 x 713) so it sits exactly where the 108 px image
+// did. The launch sweep is masked to the same artwork through an inline SVG.
+const MARK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="279.1 180.1 687 713"><path d="${MARK_C_PATH}"/><path d="${MARK_LEAF_PATH}"/></svg>`
+)}")`;
 
 // Design refinement §3a/3b (Welcome, handoff canvas): the real mark asset
 // at 108px replaces the old white-tile + redrawn-SVG treatment, with an
@@ -37,14 +45,16 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
             <span className="absolute inset-0 m-auto w-[108px] h-[108px] rounded-full bg-primary animate-cent-ring-a" />
             <span className="absolute inset-0 m-auto w-[108px] h-[108px] rounded-full bg-teal animate-cent-ring-b" />
             <span className="absolute inset-0 animate-cent-bloom">
-              <img src="/centium-mark.png" alt="Centium" className="w-full h-full object-contain block" />
+              <span className="w-full h-full flex items-center justify-center">
+                <CentiumMark height={108} framing="png" label="Centium" />
+              </span>
               <span
                 className="absolute -inset-[6%] animate-cent-sweep"
                 style={{
                   background:
                     "conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,0) 250deg, rgba(255,255,255,.92) 320deg, rgba(255,255,255,0) 360deg)",
-                  WebkitMaskImage: "url(/centium-mark.png)",
-                  maskImage: "url(/centium-mark.png)",
+                  WebkitMaskImage: MARK_MASK,
+                  maskImage: MARK_MASK,
                   WebkitMaskSize: "contain",
                   maskSize: "contain",
                   WebkitMaskRepeat: "no-repeat",
@@ -56,11 +66,9 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
             </span>
           </>
         ) : (
-          <img
-            src="/centium-mark.png"
-            alt="Centium"
-            className="absolute inset-0 m-auto w-[108px] h-[108px] object-contain block animate-cent-breathe"
-          />
+          <span className="absolute inset-0 m-auto w-[108px] h-[108px] flex items-center justify-center animate-cent-breathe">
+            <CentiumMark height={108} framing="png" label="Centium" />
+          </span>
         )}
       </div>
 

@@ -2,16 +2,40 @@ import { liftTo } from "../../data/folderColors";
 
 // An event's colours (MO1.6.2: "card tint is derived from the event's chosen
 // colour, so every event swatch works"). The tint is the colour at 16% over
-// whatever is behind it, as the Month rows have always drawn it. In dark the
-// side bar is lifted until it reaches 3:1 on the page, so the near-black
-// swatch still shows.
+// whatever is behind it, as the Month rows have always drawn it; the side bar
+// (Month pill, Week card border, Day block border) is the colour itself.
+//
+// DARK (v6 MO1.6 #22-#23, MO1.6.2 #21 / #25): each swatch has its own dark
+// shade, and both the 16% tint and the bar use it. The handover gives two
+// (#6F9993 → #4F8F8A, #7D6BB5 → #C3B3FB); the other ten are UNSPECIFIED and
+// derived here (MO1.6 O-DK): the swatch lifted toward white until it reaches
+// 5.0:1 on the dark page #121317 (the given #4F8F8A's own contrast), and left
+// as it is when it already does. A saved hex outside the twelve gets the same
+// rule at run time.
 
 export const DEFAULT_EVENT_COLOUR = "#7D6BB5";
 const DARK_PAGE = "#121317";
 
+/** Each swatch's dark shade (two literal, ten derived at 5.0:1 on #121317). */
+export const EVENT_DARK: Record<string, string> = {
+  "#7D6BB5": "#C3B3FB", // literal (MO1.6 #26)
+  "#6F9993": "#4F8F8A", // literal (MO1.6 #22)
+  "#4C8FD1": "#4C8FD1", // derived: already 5.44:1
+  "#5B5FC7": "#7A7DD2", // derived
+  "#794E9C": "#9978B4", // derived
+  "#9C4F7C": "#B07296", // derived
+  "#D9695F": "#D9695F", // derived: already 5.42:1
+  "#B8683F": "#BD734C", // derived
+  "#D9A441": "#D9A441", // derived: already 8.25:1
+  "#5E9A6B": "#5E9A6B", // derived: already 5.58:1
+  "#5A6B7D": "#798796", // derived
+  "#241F1B": "#898684", // derived
+};
+
 export function eventColours(colour: string | undefined, dark: boolean): { tint: string; bar: string } {
-  const c = /^#[0-9a-f]{6}$/i.test(colour ?? "") ? colour! : DEFAULT_EVENT_COLOUR;
-  return { tint: `${c}29`, bar: dark ? liftTo(c, DARK_PAGE, 3) : c };
+  const c = (/^#[0-9a-f]{6}$/i.test(colour ?? "") ? colour! : DEFAULT_EVENT_COLOUR).toUpperCase();
+  const shade = dark ? EVENT_DARK[c] ?? liftTo(c, DARK_PAGE, 5) : c;
+  return { tint: `${shade}29`, bar: shade };
 }
 
 /**

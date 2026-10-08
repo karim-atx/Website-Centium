@@ -5,7 +5,8 @@ import { primaryNavItems, professionalPrimaryNavItems, businessPrimaryNavItems }
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadDot } from "../messages/UnreadBadge";
-import { ThemedNavMark, TintedGlyph } from "../ui/ThemedMark";
+import { CentiumMark } from "../icons/CentiumMark";
+import { FoodNavGlyph, WorkoutNavGlyph } from "../icons/ClientNavGlyphs";
 
 const gridColsForCount: Record<number, string> = {
   2: "grid-cols-2",
@@ -13,13 +14,15 @@ const gridColsForCount: Record<number, string> = {
   5: "grid-cols-5",
 };
 
-// Iteration 6 "Team": Food and Workout use custom glyphs (bowl-with-leaf,
-// plate barbell) instead of lucide-react icons — the design handoff's own
-// note that Food's leaf must match the Centium mark's leaf silhouette
-// (lavender, not green) isn't something an existing lucide icon can do.
-const TEAM_GLYPHS: Record<string, { active: string; idle: string; idleDark: string }> = {
-  "/app/food": { active: "/icon-foodFilled-lav.png", idle: "/icon-foodOutline-muted.png", idleDark: "/icon-foodOutline-dark.png" },
-  "/app/workout": { active: "/icon-workFilled-lav.png", idle: "/icon-workOutline-muted.png", idleDark: "/icon-workOutline-dark.png" },
+// Iteration 6 "Team": Food and Workout use custom glyphs (fork and knife with
+// the mark's leaf, a figure lifting a barbell) instead of lucide-react icons.
+// v6 (TK 4.4, V6-98): vectors (FoodNavGlyph / WorkoutNavGlyph), filled when
+// active and outlined when idle, drawn in the navbar's own inks so every
+// theme and High contrast follow (they replace the six icon-* PNGs and
+// ThemedMark's TintedGlyph).
+const CLIENT_GLYPHS: Record<string, typeof FoodNavGlyph> = {
+  "/app/food": FoodNavGlyph,
+  "/app/workout": WorkoutNavGlyph,
 };
 
 // Design handoff "Health tab active state" (S3 · R2): lucide's HeartPulse
@@ -64,10 +67,7 @@ const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
-  const { user, t, theme, colorTheme } = useApp();
-  const dark = theme === "dark";
-  // Centium keeps its own PNGs; the other themes tint the same artwork (D10).
-  const branded = colorTheme === "centium";
+  const { user, t } = useApp();
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
@@ -158,7 +158,7 @@ export const BottomNav: React.FC = () => {
         {items.map((item) => {
           const isHome = item.to === "/app";
           const active = item.to === "/app/more" ? isMoreActive : location.pathname === item.to;
-          const glyph = TEAM_GLYPHS[item.to];
+          const Glyph = CLIENT_GLYPHS[item.to];
           const Icon = item.icon;
 
           return (
@@ -179,26 +179,17 @@ export const BottomNav: React.FC = () => {
                       : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
                   )}
                 >
-                  {branded ? (
-                    <img
-                      src={dark ? "/centium-mark-dark.png" : "/centium-mark-trimmed.png"}
-                      alt={t(item.label)}
-                      className={clsx("w-[54px] h-[54px] object-cover rounded-full", active ? "opacity-100" : "opacity-90")}
-                    />
-                  ) : (
-                    <ThemedNavMark label={t(item.label)} className={active ? "opacity-100" : "opacity-90"} />
-                  )}
+                  {/* v6 (TK 4.1, X-24): the one vector mark, 54 tall, in the
+                      theme's brand pair (#8F68F6 / #8AC4BA in Centium) in
+                      light and dark alike. */}
+                  <CentiumMark height={54} label={t(item.label)} className={active ? "opacity-100" : "opacity-90"} />
                 </span>
               ) : (
                 <span className="flex flex-col items-center justify-center gap-[3px]">
-                  {glyph && active && !branded ? (
-                    <TintedGlyph src={glyph.active} colour="rgb(var(--c-team-nav-accent))" className="w-6 h-6" />
-                  ) : glyph ? (
-                    <img
-                      src={active ? glyph.active : dark ? glyph.idleDark : glyph.idle}
-                      alt=""
-                      className="w-6 h-6 object-contain"
-                    />
+                  {Glyph ? (
+                    // The label's inks: accent when active, --c-nav-idle (the
+                    // High contrast AA idle there) otherwise.
+                    <Glyph active={active} size={24} color={active ? "rgb(var(--c-team-nav-accent))" : "rgb(var(--c-nav-idle))"} />
                   ) : item.to === "/app/health" ? (
                     <HealthTabGlyph active={active} />
                   ) : (
