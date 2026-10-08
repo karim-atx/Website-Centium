@@ -5,8 +5,10 @@ import { JumpToToday } from "../ui/JumpToToday";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { DAY_LETTERS, monthLeadingBlanks } from "../../utils/week";
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+// Monday first (v6 X-13), from utils/week.
+const WEEKDAYS = DAY_LETTERS;
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands): the lavender chrome as
@@ -92,8 +94,7 @@ export const CalendarPickerSheet: React.FC<{
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
-  const startWeekday = firstOfMonth.getDay();
+  const startWeekday = monthLeadingBlanks(year, month);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells: (Date | null)[] = [

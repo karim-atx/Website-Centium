@@ -39,7 +39,7 @@ const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
     width={24}
     height={24}
     viewBox="0 0 24 24"
-    className={active ? "text-team-nav-accent" : "text-team-nav-idle"}
+    className={active ? "text-team-nav-accent" : "text-nav-idle"}
   >
     <path
       d={HEALTH_HEART_PATH}
@@ -112,12 +112,12 @@ export const BottomNav: React.FC = () => {
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.4 : 2}
-                  className={clsx(active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-team-nav-idle")}
+                  className={clsx(active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-nav-idle")}
                 />
                 <span
                   className={clsx(
                     "text-[11px] font-semibold",
-                    active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-team-nav-idle"
+                    active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-nav-idle"
                   )}
                 >
                   {t(item.label)}
@@ -206,13 +206,13 @@ export const BottomNav: React.FC = () => {
                       size={24}
                       strokeWidth={1.6}
                       fill={active ? "currentColor" : "none"}
-                      className={active ? "text-team-nav-accent" : "text-team-nav-idle"}
+                      className={active ? "text-team-nav-accent" : "text-nav-idle"}
                     />
                   )}
                   <span
                     className={clsx(
                       "text-[10.5px] leading-none",
-                      active ? "font-extrabold text-team-nav-accent-text" : "font-semibold text-team-nav-idle"
+                      active ? "font-extrabold text-nav-label-active" : "font-semibold text-nav-idle"
                     )}
                   >
                     {t(item.label)}

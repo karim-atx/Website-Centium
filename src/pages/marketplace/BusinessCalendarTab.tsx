@@ -14,6 +14,8 @@ import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { respondToInvite } from "../../services/calendar";
 import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
+import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
+import { range12 } from "../../utils/time12";
 
 type View = "year" | "month" | "week" | "day";
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
@@ -28,7 +30,7 @@ const addDaysISO = (iso: string, days: number) => {
 };
 const startOfWeekISO = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - d.getDay());
+  d.setDate(d.getDate() - mondayIndex(d.getDay())); // Monday first (X-13)
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
@@ -115,7 +117,7 @@ export default function BusinessCalendarTab() {
   }, [businessClasses]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
+  const firstWeekday = monthLeadingBlanks(cursor.year, cursor.month);
   const cells = [...Array.from({ length: firstWeekday }, () => null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   const goMonth = (delta: number) => {
@@ -170,7 +172,7 @@ export default function BusinessCalendarTab() {
           <p className="text-sm font-semibold text-charcoal">{c.title}</p>
           <p className="text-xs text-primary-dark font-medium">{c.classType}</p>
           <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-            <Clock size={11} /> {c.startTime}–{c.endTime}
+            <Clock size={11} /> {range12(c.startTime, c.endTime)}
             {professional ? ` · ${professional.name}` : ""}
           </p>
           <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
@@ -234,7 +236,7 @@ export default function BusinessCalendarTab() {
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {"SMTWTFS".split("").map((d, i) => (
+            {DAY_LETTERS.map((d, i) => (
               <div key={i} className="text-center text-[10px] font-semibold text-charcoal-faint py-1">
                 {d}
               </div>
@@ -380,7 +382,7 @@ export default function BusinessCalendarTab() {
                       {e.title}
                     </p>
                     <p className="text-xs text-charcoal-faint">
-                      {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+                      {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
                       {e.location ? ` · ${e.location}` : ""}
                     </p>
                     {e.notes && <p className="text-xs text-charcoal-faint mt-1">{e.notes}</p>}

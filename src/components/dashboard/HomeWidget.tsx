@@ -479,8 +479,8 @@ export const HomeWidget: React.FC<{
         <>
           <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
           <div className="flex-1 flex flex-col justify-center gap-2" aria-busy="true">
-            <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-pulse" />
-            <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-pulse" />
+            <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-skeleton-pulse" />
+            <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-skeleton-pulse" />
           </div>
         </>
       )

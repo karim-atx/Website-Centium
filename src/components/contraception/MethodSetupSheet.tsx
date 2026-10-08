@@ -15,6 +15,7 @@ import {
   type PlanShape,
 } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
+import { MONDAY_FIRST_JS_WEEKDAYS } from "../../utils/week";
 
 // Setting up, or changing, the method.
 //
@@ -43,6 +44,7 @@ const METHODS: readonly Method[] = [
   "none",
 ];
 
+// Stored as a JS weekday (0 = Sunday); listed Monday first (X-13, reorder only).
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const todayISO = () => {
@@ -251,9 +253,9 @@ export const MethodSetupSheet: React.FC<{
               value={draft.changeWeekday ?? 0}
               onChange={(e) => set("changeWeekday", Number(e.target.value))}
             >
-              {WEEKDAYS.map((d, i) => (
-                <option key={d} value={i}>
-                  {d}
+              {MONDAY_FIRST_JS_WEEKDAYS.map((i) => (
+                <option key={i} value={i}>
+                  {WEEKDAYS[i]}
                 </option>
               ))}
             </select>

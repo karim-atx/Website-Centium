@@ -75,7 +75,7 @@ export default function PublicCertificate() {
     return (
       <Frame>
         <Wordmark />
-        <div className="rounded-[22px] h-[320px] animate-pulse" style={{ background: "#ECE9F4" }} aria-busy="true" />
+        <div className="rounded-[22px] h-[320px] animate-skeleton-pulse" style={{ background: "#ECE9F4" }} aria-busy="true" />
       </Frame>
     );
   }

@@ -17,6 +17,7 @@ import { currentMembership, memberTag, membershipFromLine } from "../../services
 import { MemberTag } from "../../components/marketplace/MemberTag";
 import { VenueImage } from "../../components/marketplace/VenueImage";
 import { CalendarDays, Search, Store, Dumbbell, Check, ChevronRight } from "lucide-react";
+import { time12Split } from "../../utils/time12";
 
 // Marketplace discovery: real classes, real venues, real bookings.
 //
@@ -265,15 +266,17 @@ export default function Discover() {
                   <div className="flex gap-3">
                     {/* MO1.4's date block, 56 × 50 (measured from the frame,
                         2x: 112 × 100), centred on the card. Decision 23 (item
-                        76): the frame's 24-hour time on one line ("08:00",
-                        14/800); item 45: the top line reads the date ("OCT
+                        76): the time ("8:00 AM" since v6 X-14 / V6-148, the
+                        meridiem on its own line); item 45: the top line reads the date ("OCT
                         18") for a class a week or more away. */}
                     <span className="w-14 h-[50px] shrink-0 self-center rounded-[14px] bg-primary-pale flex flex-col items-center justify-center">
                       {/* The weekday (new since R1) is the frame's #7D67D9. */}
                       <span className="text-[10.5px] font-extrabold uppercase text-th-7d67d9 dark:text-primary-dark whitespace-nowrap">
                         {blockDay(c.date)}
                       </span>
-                      <span className="text-[14px] font-extrabold text-charcoal tabular-nums leading-tight">{c.startTime}</span>
+                      {/* V6-148: 12-hour, "8:00" with "AM" below. */}
+                      <span className="text-[14px] font-extrabold text-charcoal tabular-nums leading-tight">{time12Split(c.startTime)?.time ?? c.startTime}</span>
+                      <span className="text-[9px] font-extrabold leading-none text-charcoal-soft">{time12Split(c.startTime)?.meridiem}</span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[14px] font-bold text-charcoal truncate">{c.title}</p>
@@ -459,7 +462,7 @@ export default function Discover() {
             <div
               key={i}
               aria-hidden="true"
-              className="animate-pulse rounded-[18px] bg-cream-soft"
+              className="animate-skeleton-pulse rounded-[18px] bg-cream-soft"
               style={{ height: tab === "gyms" ? 172 : tab === "businesses" ? 81 : 117 }}
             />
           ))}

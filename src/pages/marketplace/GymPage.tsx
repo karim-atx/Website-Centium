@@ -49,6 +49,7 @@ import { hoursLines, isoWeekdayIn, openNowTag, type HoursRow } from "../../servi
 import { bookClass, fetchGymClassesThisWeek, type GymClass } from "../../services/marketplace";
 import { formatPrice } from "../../utils/price";
 import { DetailHero, DetailLabel, MapCard } from "./venueParts";
+import { time12Split } from "../../utils/time12";
 
 // MO1.4.2.1 Gym page, with its tabs (About, Classes, Memberships MO1.4.2.2,
 // Reviews MO1.4.2.3), Directions (MO1.4.2.4), Call (MO1.4.2.5), membership
@@ -228,9 +229,9 @@ export function GymPage({ gymId }: { gymId: string }) {
       <div aria-busy="true">
         <DetailHero height={240} onBack={back} />
         <div className="flex flex-col gap-3 pt-14">
-          <div className="h-[30px] w-1/2 rounded-xl bg-cream-soft animate-pulse" />
-          <div className="h-[42px] rounded-xl bg-cream-soft animate-pulse" />
-          <div className="h-[50px] rounded-2xl bg-cream-soft animate-pulse" />
+          <div className="h-[30px] w-1/2 rounded-xl bg-cream-soft animate-skeleton-pulse" />
+          <div className="h-[42px] rounded-xl bg-cream-soft animate-skeleton-pulse" />
+          <div className="h-[50px] rounded-2xl bg-cream-soft animate-skeleton-pulse" />
         </div>
       </div>
     );
@@ -708,7 +709,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         <div className="text-start">
           <DetailLabel>This week</DetailLabel>
           {week === null ? (
-            <div className="mt-2.5 h-[66px] rounded-2xl bg-cream-soft animate-pulse" aria-busy="true" />
+            <div className="mt-2.5 h-[66px] rounded-2xl bg-cream-soft animate-skeleton-pulse" aria-busy="true" />
           ) : week.length === 0 ? (
             <p className={`mt-2.5 mb-0 text-[12.5px] ${weekError ? "font-semibold text-status-high" : "text-charcoal-faint"}`} role={weekError ? "alert" : undefined}>
               {weekError ?? "No classes here this week."}
@@ -734,7 +735,9 @@ export function GymPage({ gymId }: { gymId: string }) {
                       <span className="text-[10px] font-extrabold uppercase leading-none text-th-7d67d9 dark:text-primary-dark">
                         {new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
                       </span>
-                      <span className="mt-0.5 text-[13px] font-extrabold leading-none text-charcoal tabular-nums">{c.startTime}</span>
+                      {/* V6-148: 12-hour, "8:00" with "AM" below. */}
+                      <span className="mt-0.5 text-[13px] font-extrabold leading-none text-charcoal tabular-nums">{time12Split(c.startTime)?.time ?? c.startTime}</span>
+                      <span className="mt-px text-[8.5px] font-extrabold leading-none text-charcoal-soft">{time12Split(c.startTime)?.meridiem}</span>
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[14.5px] font-bold text-charcoal truncate">{c.title}</span>
@@ -829,8 +832,8 @@ function OpeningHours({
   if (rows === undefined) {
     return (
       <div className={className} aria-busy="true">
-        <div className="h-[14px] w-28 rounded bg-cream-soft animate-pulse" />
-        <div className="mt-[7px] h-[120px] rounded-2xl bg-cream-soft animate-pulse" />
+        <div className="h-[14px] w-28 rounded bg-cream-soft animate-skeleton-pulse" />
+        <div className="mt-[7px] h-[120px] rounded-2xl bg-cream-soft animate-skeleton-pulse" />
       </div>
     );
   }

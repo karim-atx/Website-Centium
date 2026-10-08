@@ -207,7 +207,7 @@ export function ForumPlaceholder({ height }: { height: number }) {
   return (
     <div
       aria-hidden="true"
-      className="animate-pulse"
+      className="animate-skeleton-pulse"
       style={{ height, borderRadius: 18, background: fv("track"), border: `1px solid ${fv("border")}` }}
     />
   );

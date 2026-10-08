@@ -11,6 +11,7 @@ import { ClassRosterSheet } from "../../components/marketplace/ClassRosterSheet"
 import { useMyVenues } from "../../hooks/useMyVenues";
 import { fetchVenueClasses, type VenueClassLite } from "../../services/venues/console";
 import { dayMonthYear } from "../../services/venues/venueLogic";
+import { range12 } from "../../utils/time12";
 
 // The venue console (backend stage A4): my_venues() → venue_dashboard(id) →
 // venue_members(id), venue_class_roster(class_id) per class, opening hours,
@@ -81,7 +82,7 @@ export default function BusinessVenueTab() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-charcoal truncate">{c.title}</p>
                   <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                    <Clock size={11} /> {dayMonthYear(c.date)} · {c.startTime}–{c.endTime}
+                    <Clock size={11} /> {dayMonthYear(c.date)} · {range12(c.startTime, c.endTime)}
                   </p>
                 </div>
                 <span className="flex items-center gap-1 text-xs font-semibold text-primary-dark shrink-0">

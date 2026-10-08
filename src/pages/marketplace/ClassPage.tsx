@@ -19,6 +19,7 @@ import {
 } from "../../services/marketplace";
 import { cancellationLine, isLateCancellation } from "../../services/venues/venueLogic";
 import { DetailHero, DetailLabel, MapCard } from "./venueParts";
+import { range12, time12 } from "../../utils/time12";
 
 // MO1.4.4 Class page, with its states MO1.4.4.1 (booking popup), .2 (booking
 // confirmed), .3 (booked) and .4 (full). Handover-complete pass (2026-10-07),
@@ -162,9 +163,9 @@ export function ClassPage({ classId }: { classId: string }) {
       <div aria-busy="true">
         <DetailHero height={200} onBack={back} />
         <div className="flex flex-col gap-3 pt-4">
-          <div className="h-[33px] w-2/3 rounded-xl bg-cream-soft animate-pulse" />
-          <div className="h-[74px] rounded-2xl bg-cream-soft animate-pulse" />
-          <div className="h-[120px] rounded-2xl bg-cream-soft animate-pulse" />
+          <div className="h-[33px] w-2/3 rounded-xl bg-cream-soft animate-skeleton-pulse" />
+          <div className="h-[74px] rounded-2xl bg-cream-soft animate-skeleton-pulse" />
+          <div className="h-[120px] rounded-2xl bg-cream-soft animate-skeleton-pulse" />
         </div>
       </div>
     );
@@ -193,7 +194,7 @@ export function ClassPage({ classId }: { classId: string }) {
   const windowHours = live?.windowHours ?? 12;
   const late = live?.startsAt ? isLateCancellation(live.startsAt, windowHours) : false;
   const taken = c.maxCapacity - seatsLeft;
-  const when = `${dayMonth(c.date)} · ${c.startTime} to ${c.endTime}`;
+  const when = `${dayMonth(c.date)} · ${range12(c.startTime, c.endTime)}`;
 
   return (
     <div>
@@ -219,7 +220,7 @@ export function ClassPage({ classId }: { classId: string }) {
       <div className="mt-[14px] grid grid-cols-2 gap-2">
         {[
           { icon: CalendarDays, value: dayMonth(c.date), label: "Date" },
-          { icon: Clock, value: `${c.startTime} to ${c.endTime}`, label: "Time" },
+          { icon: Clock, value: range12(c.startTime, c.endTime), label: "Time" },
         ].map((t) => (
           <div key={t.label} className="h-[74px] rounded-2xl bg-cream-soft flex flex-col items-center justify-center gap-1">
             <t.icon size={16} strokeWidth={1.75} className="text-th-7d67d9 dark:text-primary-dark" aria-hidden />
@@ -498,7 +499,7 @@ function OtherTimes({ others, onOpen }: { others: MarketplaceClass[]; onOpen: (i
             className="tap flex-1 min-w-0 rounded-xl border border-charcoal/[0.08] bg-cream-card py-2 flex flex-col items-center"
           >
             <span className="text-[12px] font-bold text-charcoal tabular-nums">
-              {dayMonth(o.date).split(" ")[0]} {o.startTime}
+              {dayMonth(o.date).split(" ")[0]} {time12(o.startTime)}
             </span>
             <span className="text-[10.5px] font-semibold text-th-4f7f78 dark:text-teal-deep-text">
               {o.isFull ? "Full" : `${o.spotsRemaining} ${o.spotsRemaining === 1 ? "spot" : "spots"}`}

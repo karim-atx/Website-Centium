@@ -126,7 +126,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">Live chat</span>
           {loading ? (
             // States › Loading: a skeleton block where the value sits (surface.soft).
-            <span aria-hidden className="shrink-0 h-3 w-20 rounded-md bg-cream-soft animate-pulse" />
+            <span aria-hidden className="shrink-0 h-3 w-20 rounded-md bg-cream-soft animate-skeleton-pulse" />
           ) : (
             <span className="shrink-0 max-w-[60%] truncate text-[12px] text-charcoal-faint">
               {busy ? "Opening…" : value}

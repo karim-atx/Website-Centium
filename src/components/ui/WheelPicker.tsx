@@ -29,14 +29,25 @@ const VISIBLE = 5; // selected row plus two neighbours either side
  * and Hours / Minutes / AM-PM (WO4.1 Measured on). Colours come from the
  * --wheel-* variables in index.css, which have a dark-mode set.
  */
-export function WheelPicker({ columns }: { columns: WheelColumn<string | number>[] }) {
+export function WheelPicker({
+  columns,
+  band = "default",
+}: {
+  columns: WheelColumn<string | number>[];
+  /**
+   * The selection band (v6 X-18): "default" --wheel-band (#F3F3FD, dark
+   * #242730: Part B and client wheels); "business" --wheel-band-business
+   * (#F3F3FD, dark #2B2C3A, measured on the BU dark frames).
+   */
+  band?: "default" | "business";
+}) {
   return (
     <div className="relative w-full" style={{ height: ROW * VISIBLE }}>
       {/* The selection band sits behind every column. */}
       <div
         aria-hidden
         className="absolute inset-x-0 pointer-events-none"
-        style={{ top: ROW * 2, height: ROW, background: "var(--wheel-band)", borderRadius: 10 }}
+        style={{ top: ROW * 2, height: ROW, background: band === "business" ? "var(--wheel-band-business)" : "var(--wheel-band)", borderRadius: 10 }}
       />
       <div className="relative flex h-full">
         {columns.map((col) => (

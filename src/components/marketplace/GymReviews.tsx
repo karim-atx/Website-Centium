@@ -177,7 +177,7 @@ export function GymReviews({
 
       <div className="mt-3 flex flex-col gap-2.5">
         {reviews === null ? (
-          [0, 1].map((i) => <div key={i} aria-hidden className="h-[147px] rounded-[18px] bg-cream-soft animate-pulse" />)
+          [0, 1].map((i) => <div key={i} aria-hidden className="h-[147px] rounded-[18px] bg-cream-soft animate-skeleton-pulse" />)
         ) : reviews.length === 0 ? (
           <p className="mt-6 mb-0 text-center text-[12.5px] text-charcoal-faint">No reviews yet. Be the first to write one.</p>
         ) : (

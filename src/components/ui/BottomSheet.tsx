@@ -1,8 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
+
+type ToneColours = { band: string; border: string; title: string; body: string };
 
 interface BottomSheetProps {
   open: boolean;
@@ -23,6 +26,8 @@ interface BottomSheetProps {
    * Handover 2026-09-29, 02 "Bottom sheet": the primary action row, pinned
    * to the bottom of the sheet (sticky footer) while the body scrolls. It
    * stays above the home indicator and rides above the on-screen keyboard.
+   * This is the pinned footer HANDOVER §2.2 asks for on business sheets too
+   * (OP1-041 D2).
    */
   footer?: React.ReactNode;
   /** FO8: a full-width 1px #F2F2F2 rule above the footer, 8px over its content. */
@@ -35,15 +40,17 @@ interface BottomSheetProps {
   footerBottom?: number;
   /**
    * "tall" raises the max height to nearly the full viewport, minus a small
-   * top inset (FO8). The default max is 88% of the dynamic viewport. Either
-   * way the sheet hugs its content up to that max.
+   * top inset (FO8). The default max is `maxHeightPct` of the dynamic
+   * viewport. Either way the sheet hugs its content up to that max.
    */
   size?: "default" | "tall";
   /**
-   * Recolours the chrome (WO21: a starter program takes its level's colours):
-   * header band, border, title and close ring, and the body/footer fill.
+   * Recolours the chrome. An object (WO21: a starter program takes its
+   * level's colours) sets header band, border, title and close ring, and the
+   * body/footer fill. "business" (v6 X-05) keeps the app chrome but outlines
+   * the sheet in --sheet-border-business (#7248F8 light, #9976F7 dark).
    */
-  tone?: { band: string; border: string; title: string; body: string };
+  tone?: ToneColours | "business";
   /**
    * WO18: a 36×4 #CABCFB grab handle 8px from the top, with the title row
    * below it (the header is 58px instead of 53).
@@ -51,7 +58,41 @@ interface BottomSheetProps {
   handle?: boolean;
   /** WO18: an icon left of the title, the pair centred. */
   titleIcon?: React.ReactNode;
+  /**
+   * v6 X-02: the header row's height, literal per drawing component: 53
+   * (default: app, BizTypeKit, Part B), 58 (MA1 / BizMarketV7), 62
+   * (OpsTabsV4). Ignored with `handle` (46 under the handle, as WO18).
+   */
+  headerHeight?: 53 | 58 | 62;
+  /**
+   * v6 X-03 / X-06: per-component chrome.
+   * - "app" (default): body padding 20 (34 at the bottom), close ring 1.6, X 12,
+   *   1px outline.
+   * - "partB": Part B sheet tables (PB2 D-HB-03): 0.5px outline, ring 1.1.
+   * - "market": MA1 / BizMoreV8: body padding 16 16 28, ring 1.5, X 14, and a
+   *   black rgba(0,0,0,0.4) scrim.
+   */
+  chrome?: "app" | "partB" | "market";
+  /**
+   * v6 X-06 / X-07: the scrim colour. "warm" rgba(36,31,27,0.4) (default, in
+   * both modes) or "black" rgba(0,0,0,0.4) (MA1, BizMoreV8; the default for
+   * chrome="market").
+   */
+  scrim?: "warm" | "black";
+  /** The scrim's 2px blur (default on, as handover 2026-09-29 draws it). */
+  scrimBlur?: boolean;
+  /** v6 X-04: max height as % of the dynamic viewport. 88 (default) or 90 (AN3 class sheets). */
+  maxHeightPct?: 88 | 90;
+  /**
+   * Slide the sheet down (350 ms, easeBase) and fade the scrim when `open`
+   * turns false, instead of disappearing at once (BU class-save-flow: "sheet
+   * down 350 ms"). While it leaves, the last open content is shown and taps
+   * pass through. Instant under Reduce motion. Off by default.
+   */
+  animateExit?: boolean;
 }
+
+const EXIT_MS = 350;
 
 /**
  * The app's one bottom sheet, per handover 2026-09-29, 02 "Bottom sheet":
@@ -69,9 +110,48 @@ interface BottomSheetProps {
  * Dark mode swaps the chrome to the --sheet-* dark set (v5.1: sheet.header and
  * the body are the dark card #1C1F28). Mobile v5.1 R3: every sheet follows the
  * theme; there are no light islands, so a `tone` passes its dark shades too.
+ *
+ * v6 props (RECONCILIATION-v6 §7 X-02…X-06): headerHeight, chrome, tone
+ * "business", scrim, scrimBlur, maxHeightPct, animateExit. Defaults are the
+ * values above, so a caller that passes none of them is unchanged.
  */
-export const BottomSheet: React.FC<BottomSheetProps> = ({
-  open,
+export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
+  const { open, onClose, animateExit } = props;
+  // Batch E (E5): the phone's back closes this first.
+  useBackCloses(open, onClose);
+  const reduced = useReducedMotion();
+
+  // Exit: keep rendering the last open content while it slides away.
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [closing, setClosing] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    setClosing(!open && !!animateExit && !reduced);
+  }
+  useEffect(() => {
+    if (!closing) return;
+    const id = window.setTimeout(() => setClosing(false), EXIT_MS);
+    return () => window.clearTimeout(id);
+  }, [closing]);
+  const last = useRef(props);
+  if (open) last.current = props;
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  if (!open && !closing) return null;
+  return <SheetFrame {...(open ? props : last.current)} leaving={!open} />;
+};
+
+const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   onClose,
   title,
   children,
@@ -85,27 +165,26 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   titleIcon,
   footerRule,
   footerBottom,
+  headerHeight = 53,
+  chrome = "app",
+  scrim,
+  scrimBlur = true,
+  maxHeightPct = 88,
+  leaving,
 }) => {
-  // Batch E (E5): the phone's back closes this first.
-  useBackCloses(open, onClose);
   // The handover's light chrome, and its dark-mode counterpart, come from the
   // --sheet-* variables in index.css.
-  const band = tone?.band ?? "var(--sheet-band)";
-  const border = tone?.border ?? "var(--sheet-border)";
-  const titleColor = tone?.title ?? "var(--sheet-title)";
-  const body = tone?.body ?? "var(--sheet-body)";
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  if (!open) return null;
+  const colours = typeof tone === "object" ? tone : undefined;
+  const band = colours?.band ?? "var(--sheet-band)";
+  const border = colours?.border ?? (tone === "business" ? "var(--sheet-border-business)" : "var(--sheet-border)");
+  const titleColor = colours?.title ?? "var(--sheet-title)";
+  const body = colours?.body ?? "var(--sheet-body)";
+  const market = chrome === "market";
+  const partB = chrome === "partB";
+  const borderWidth = partB ? 0.5 : 1;
+  const ring = partB ? 1.1 : market ? 1.5 : 1.6;
+  const xSize = market ? 14 : 12;
+  const scrimColour = (scrim ?? (market ? "black" : "warm")) === "black" ? "rgba(0,0,0,0.4)" : "rgba(36,31,27,0.4)";
 
   // The whole sheet never reaches the status area (notch / Dynamic Island),
   // and shrinks by whatever the keyboard currently covers.
@@ -113,9 +192,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const maxHeight =
     size === "tall"
       ? `calc(100dvh - ${statusGap} - var(--kb-inset))`
-      : `min(calc(88dvh - var(--kb-inset)), calc(100dvh - ${statusGap} - var(--kb-inset)))`;
+      : `min(calc(${maxHeightPct}dvh - var(--kb-inset)), calc(100dvh - ${statusGap} - var(--kb-inset)))`;
   const bottomPad = "max(34px, calc(env(safe-area-inset-bottom) + 20px))";
   const footerPad = footerBottom === undefined ? bottomPad : `calc(env(safe-area-inset-bottom) + ${footerBottom}px)`;
+  // Body padding: 20 (34 at the bottom) for the app and Part B; MA1 /
+  // BizMoreV8 16 16 28.
+  const bodyPadding: React.CSSProperties = market
+    ? { padding: "16px 16px", paddingBottom: footer ? 16 : "max(28px, calc(env(safe-area-inset-bottom) + 20px))" }
+    : { padding: 20, paddingBottom: footer ? 20 : bottomPad };
+
+  const sheetAnim = leaving ? "bottom-sheet-out .35s cubic-bezier(0.22,1,0.36,1) both" : undefined;
+  const scrimAnim = leaving ? "bottom-sheet-scrim-out .35s ease both" : undefined;
 
   // Portaled to <body>: several call sites render this inside a container
   // carrying `animate-fade-slide-up` (a transform-based animation). Any
@@ -125,21 +212,25 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // "cut in half, blur misaligned" bug. Portaling sidesteps the ancestor
   // chain entirely.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ paddingBottom: "var(--kb-inset)" }}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ paddingBottom: "var(--kb-inset)", pointerEvents: leaving ? "none" : undefined }}
+      aria-hidden={leaving || undefined}
+    >
+      {leaving && (
+        <style>{`@keyframes bottom-sheet-out { from { transform: translateY(0); } to { transform: translateY(100%); } } @keyframes bottom-sheet-scrim-out { from { opacity: 1; } to { opacity: 0; } }`}</style>
+      )}
       <div
-        className="absolute inset-0 backdrop-blur-[2px] animate-fade-in"
-        style={{ background: "rgba(36,31,27,0.4)" }}
+        className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
+        style={{ background: scrimColour, animation: scrimAnim }}
         onClick={onClose}
       />
       {hideHeader ? (
         <div
-          className="relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
-          style={{ maxHeight }}
+          className={`relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden ${leaving ? "" : "animate-sheet-up"}`}
+          style={{ maxHeight, animation: sheetAnim }}
         >
-          <div
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-            style={{ padding: 20, paddingBottom: footer ? 20 : bottomPad }}
-          >
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={bodyPadding}>
             {children}
           </div>
           {footer && (
@@ -150,15 +241,15 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         </div>
       ) : (
         <div
-          className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
-          style={{ maxHeight, background: band, border: `1px solid ${border}`, borderBottom: "none" }}
+          className={`relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden ${leaving ? "" : "animate-sheet-up"}`}
+          style={{ maxHeight, background: band, border: `${borderWidth}px solid ${border}`, borderBottom: "none", animation: sheetAnim }}
         >
           {handle && (
             <div aria-hidden className="shrink-0 flex justify-center" style={{ paddingTop: 8 }}>
               <span style={{ width: 36, height: 4, borderRadius: 2, background: "var(--sheet-handle)" }} />
             </div>
           )}
-          <div className="shrink-0 flex items-center justify-between" style={{ height: handle ? 46 : 53, padding: "0 18px" }}>
+          <div className="shrink-0 flex items-center justify-between" style={{ height: handle ? 46 : headerHeight, padding: "0 18px" }}>
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (
                 // 26px visual on a 44px hit area (01 GLOBAL touch targets).
@@ -188,16 +279,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               <button
                 onClick={onClose}
                 className="tap relative w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
-                style={{ border: `1.6px solid ${border}`, color: border }}
+                style={{ border: `${ring}px solid ${border}`, color: border }}
                 aria-label="Close"
               >
-                <X size={12} strokeWidth={2.6} />
+                <X size={xSize} strokeWidth={2.6} />
               </button>
             </div>
           </div>
           <div
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-            style={{ background: body, borderRadius: "22px 22px 0 0", padding: 20, paddingBottom: footer ? 20 : bottomPad }}
+            style={{ background: body, borderRadius: "22px 22px 0 0", ...bodyPadding }}
           >
             {children}
           </div>
@@ -206,7 +297,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               className="shrink-0"
               style={{
                 background: body,
-                padding: `${footerRule ? 8 : 12}px 20px ${footerPad}`,
+                padding: `${footerRule ? 8 : 12}px ${market ? 16 : 20}px ${footerPad}`,
                 borderTop: footerRule ? "1px solid var(--sheet-rule)" : undefined,
               }}
             >

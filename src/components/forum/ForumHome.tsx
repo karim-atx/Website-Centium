@@ -220,7 +220,7 @@ export function ForumHome({
           aria-hidden="true"
         >
           {[43, 80, 80, 74, 88].map((w, i) => (
-            <div key={i} className="h-8 rounded-[9px] animate-pulse shrink-0" style={{ width: w, background: fv("card") }} />
+            <div key={i} className="h-8 rounded-[9px] animate-skeleton-pulse shrink-0" style={{ width: w, background: fv("card") }} />
           ))}
         </div>
       ) : (

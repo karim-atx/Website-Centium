@@ -15,6 +15,8 @@
 // exactly as the frame draws it (its Thursday sits inside "Mon to Fri" and is
 // drawn again under it). "Today" is the venue's own day (gyms.timezone).
 
+import { range12 } from "../../utils/time12";
+
 export interface HoursRow {
   /** 1 = Monday … 7 = Sunday (extract(isodow)). */
   weekday: number;
@@ -40,11 +42,6 @@ const SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 /** The value a day with no row shows: not published, never "Closed". */
 export const NOT_PUBLISHED = "Not published";
 
-/** "06:00:00" → "06:00" (24-hour, as the rest of the app). */
-export function hhmm(t: string): string {
-  return t.slice(0, 5);
-}
-
 /** One day's hours as the right-hand column reads them. */
 export function dayValue(row: HoursRow | undefined): string {
   if (!row) return NOT_PUBLISHED;
@@ -52,7 +49,8 @@ export function dayValue(row: HoursRow | undefined): string {
   if (row.open24h) return "Open 24 hours";
   // A range with a missing end can't be drawn honestly; say nothing about it.
   if (!row.opensAt || !row.closesAt) return NOT_PUBLISHED;
-  const range = `${hhmm(row.opensAt)} to ${hhmm(row.closesAt)}`;
+  // 12-hour (X-14): "6:00 AM to 11:00 PM".
+  const range = range12(row.opensAt, row.closesAt);
   return row.wrapsMidnight ? `${range} (next day)` : range;
 }
 

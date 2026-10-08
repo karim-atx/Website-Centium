@@ -25,6 +25,8 @@ import {
   Paperclip,
 } from "lucide-react";
 import clsx from "clsx";
+import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
+import { hourLabel12, range12 } from "../../utils/time12";
 
 /**
  * Opens an attachment in a new tab.
@@ -64,7 +66,7 @@ const addDaysISO = (iso: string, days: number) => {
 };
 const startOfWeekISO = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - d.getDay());
+  d.setDate(d.getDate() - mondayIndex(d.getDay())); // Monday first (X-13)
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
 const addMonthsISO = (iso: string, months: number) => {
@@ -200,7 +202,7 @@ export default function CalendarTab() {
   };
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
+  const firstWeekday = monthLeadingBlanks(cursor.year, cursor.month);
   const cells = [
     ...Array.from({ length: firstWeekday }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -312,7 +314,7 @@ export default function CalendarTab() {
         <button className="min-w-0 text-left flex-1" onClick={() => !readOnly && openEdit(e)} disabled={readOnly}>
           <p className="text-sm font-semibold text-charcoal">{e.title}</p>
           <p className="text-xs text-charcoal-faint">
-            {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+            {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
             {e.repeat !== "none" && ` · repeats ${e.repeat}`}
           </p>
           {e.location && (
@@ -447,7 +449,7 @@ export default function CalendarTab() {
           </div>
 
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {"SMTWTFS".split("").map((d, i) => (
+            {DAY_LETTERS.map((d, i) => (
               <div key={i} className="text-center text-[10px] font-semibold text-charcoal-faint py-1">
                 {d}
               </div>
@@ -618,7 +620,7 @@ export default function CalendarTab() {
                 style={{ top: h * HOUR_PX }}
               >
                 <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
-                  {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+                  {hourLabel12(h)}
                 </span>
               </div>
             ))}
@@ -642,7 +644,7 @@ export default function CalendarTab() {
                       {readOnly && <Store size={10} className="shrink-0" />}
                     </p>
                     <p className="text-[10px] text-charcoal-faint truncate">
-                      {e.startTime} – {e.endTime}
+                      {range12(e.startTime, e.endTime)}
                       {e.location ? ` · ${e.location}` : ""}
                     </p>
                   </button>

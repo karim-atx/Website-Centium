@@ -29,6 +29,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import clsx from "clsx";
+import { time12 } from "../../utils/time12";
 
 const statusColor: Record<string, string> = {
   low: "text-status-low bg-status-low-bg",
@@ -521,7 +522,7 @@ export const MedicalRecordsSection: React.FC<{
               <div className="flex items-center gap-1.5 flex-wrap mb-2">
                 {m.times.map((t) => (
                   <span key={t} className="flex items-center gap-1 text-[11px] font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
-                    <Clock size={10} /> {t}
+                    <Clock size={10} /> {time12(t)}
                   </span>
                 ))}
               </div>

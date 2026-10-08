@@ -8,6 +8,7 @@
 // is not a value the screen shows.
 
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { time12 } from "../../utils/time12";
 
 export type NotificationPrefs = {
   /** "Allow notifications", the master (BR-12). Off: the server sends nothing. */
@@ -146,8 +147,8 @@ export function inQuietWindow(local: string, from: string, to: string): boolean 
 /** What the window means, in words (the Quiet hours row's description). */
 export function describeQuietWindow(from: string, to: string): string {
   const span = wrapsMidnight(from, to)
-    ? `from ${from} until ${to} the next morning`
-    : `from ${from} until ${to}`;
+    ? `from ${time12(from)} until ${time12(to)} the next morning`
+    : `from ${time12(from)} until ${time12(to)}`;
   return `Notifications that would arrive ${span}, your time, are not sent, and are not saved for later.`;
 }
 

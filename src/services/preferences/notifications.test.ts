@@ -96,7 +96,7 @@ test("quiet hours: same time refused, the window wraps midnight", () => {
   assert.equal(inQuietWindow("12:00", "09:00", "17:00"), true);
   assert.equal(inQuietWindow("20:00", "09:00", "17:00"), false);
 
-  assert.match(describeQuietWindow("22:00", "07:00"), /from 22:00 until 07:00 the next morning/);
+  assert.match(describeQuietWindow("22:00", "07:00"), /from 10:00 PM until 7:00 AM the next morning/);
   assert.doesNotMatch(describeQuietWindow("09:00", "17:00"), /next morning/);
 });
 

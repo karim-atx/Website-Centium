@@ -251,7 +251,7 @@ function BusinessPage({ businessId }: { businessId: string }) {
         <PageHeader title="Explore" showBack />
         <div className="space-y-2.5" aria-busy="true" aria-label="Loading">
           {[96, 72, 72].map((h, i) => (
-            <div key={i} aria-hidden="true" className="animate-pulse rounded-[18px] bg-cream-soft" style={{ height: h }} />
+            <div key={i} aria-hidden="true" className="animate-skeleton-pulse rounded-[18px] bg-cream-soft" style={{ height: h }} />
           ))}
         </div>
       </div>
@@ -313,7 +313,7 @@ function BusinessPage({ businessId }: { businessId: string }) {
       <p className="section-label text-charcoal-faint pt-2 mb-2.5">Listings</p>
       <div className="space-y-2.5 mb-4">
         {offerings === null ? (
-          <div aria-hidden="true" className="animate-pulse rounded-[18px] bg-cream-soft h-[72px]" />
+          <div aria-hidden="true" className="animate-skeleton-pulse rounded-[18px] bg-cream-soft h-[72px]" />
         ) : offerings.length === 0 ? (
           <p className="text-[12px] text-charcoal-faint">No listings yet.</p>
         ) : (

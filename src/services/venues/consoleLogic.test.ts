@@ -208,7 +208,7 @@ test("wraps midnight: closes at or before opens, labelled by the venue page's he
   const d = draftsFromRows(studio);
   assert.equal(draftWrapsMidnight(d[0]), true);
   assert.equal(draftWrapsMidnight(d[5]), false);
-  assert.equal(dayValue(draftAsHoursRow(d[0])), "16:00 to 02:00 (next day)");
+  assert.equal(dayValue(draftAsHoursRow(d[0])), "4:00 PM to 2:00 AM (next day)");
   assert.equal(dayValue(draftAsHoursRow(d[4])), "Open 24 hours");
   assert.equal(dayValue(draftAsHoursRow(d[6])), "Closed");
   assert.equal(dayValue(draftAsHoursRow({ weekday: 1, shape: null, opensAt: "", closesAt: "" })), "Not published");

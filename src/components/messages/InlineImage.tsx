@@ -105,7 +105,7 @@ export const InlineImage: React.FC<{
       className={`tap relative block overflow-hidden rounded-xl bg-black/10 max-w-full ${className ?? ""}`}
       style={{ width, aspectRatio: String(ratio) }}
     >
-      {state === "loading" && <span aria-hidden className="absolute inset-0 animate-pulse bg-black/10" />}
+      {state === "loading" && <span aria-hidden className="absolute inset-0 animate-skeleton-pulse bg-black/10" />}
       {url && state !== "failed" && (
         <img
           src={url}

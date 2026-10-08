@@ -1,8 +1,10 @@
 // Calendar time and link helpers (mobile v5.1 R16). Times are stored as
-// "HH:MM" (24-hour, the database's `time`). Handover-complete pass: every
-// Calendar view shows them as MO1.6–MO1.6.3 draw them, 24-hour and padded
-// ("12:30 – 13:00"); only the event sheet's Starts / Ends fields and wheel stay
-// 12-hour, as MO1.6.4 draws them. Links are http(s) only (B38).
+// "HH:MM" (24-hour, the database's `time`). v6 X-14 / V6-146: every Calendar
+// view shows them 12-hour through the shared formatter (utils/time12:
+// "6:00 to 7:00 PM"); the event sheet's Starts / Ends fields too ("9:00 AM",
+// unpadded). Links are http(s) only (B38).
+
+import { time12 } from "../../utils/time12";
 
 export type Meridiem = "AM" | "PM";
 export interface TimeParts {
@@ -35,16 +37,12 @@ export function fromParts(p: TimeParts): string {
   return fromMinutes(h24 * 60 + p.minute);
 }
 
-/** "09:00 AM": the event sheet's Starts / Ends field (MO1.6.4 draws it padded). */
+/**
+ * "9:00 AM": the event sheet's Starts / Ends field. MO1.6.4 drew it padded
+ * ("09:00 AM"); X-14's one formatter leaves the hour unpadded.
+ */
 export function fieldTime(hhmm: string): string {
-  const p = toParts(hhmm);
-  return `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")} ${p.meridiem}`;
-}
-
-/** "18:00 – 19:00": the views' time line (MO1.6, MO1.6.2, MO1.6.3). */
-export function range24(start?: string, end?: string): string {
-  const one = (t?: string) => (t ? fromMinutes(minutesOf(t)) : "");
-  return `${one(start)} – ${one(end)}`;
+  return time12(hhmm);
 }
 
 /**

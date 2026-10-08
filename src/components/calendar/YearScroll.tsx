@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { monthLeadingBlanks } from "../../utils/week";
 
 // MO1.6.1, Calendar · Year: one continuous vertical scroll of years, as in
 // Apple Calendar. Each year is a 30/800 heading over a rule and three columns
@@ -30,7 +31,7 @@ function MiniMonth({
   eventDays: Set<string>;
   onOpen: () => void;
 }) {
-  const first = new Date(year, month, 1).getDay();
+  const first = monthLeadingBlanks(year, month); // Monday first (X-13)
   const days = new Date(year, month + 1, 0).getDate();
   const isCurrent = todayIso.startsWith(iso(year, month, 1).slice(0, 7));
   const cells = [...Array.from({ length: first }, () => 0), ...Array.from({ length: days }, (_, i) => i + 1)];

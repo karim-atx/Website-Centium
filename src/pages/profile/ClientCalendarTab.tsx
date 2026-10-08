@@ -13,7 +13,8 @@ import {
   nearestEventSwatch,
 } from "../../components/calendar/eventColour";
 import { COLOR_THEMES } from "../../theme/colorThemes";
-import { linkLabel, minutesOf, normaliseLink, range24 } from "../../components/calendar/calendarTime";
+import { linkLabel, minutesOf, normaliseLink } from "../../components/calendar/calendarTime";
+import { hourLabel12, range12 } from "../../utils/time12";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
@@ -42,6 +43,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import clsx from "clsx";
+import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
 import { useBack } from "../../hooks/useBack";
 
 /** Opens an attachment in a new tab. Signed at the click — the TTL is minutes. */
@@ -76,7 +78,7 @@ const addDaysISO = (iso: string, days: number) => {
 };
 const startOfWeekISO = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - d.getDay());
+  d.setDate(d.getDate() - mondayIndex(d.getDay())); // Monday first (X-13)
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
 // `color` is the swatch nearest the active theme's primary (E11; see
@@ -315,7 +317,7 @@ export default function ClientCalendarTab() {
   }, [events, bookedClassEvents]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
+  const firstWeekday = monthLeadingBlanks(cursor.year, cursor.month);
   const cells = [
     ...Array.from({ length: firstWeekday }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -518,7 +520,7 @@ export default function ClientCalendarTab() {
           <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
             <p className="text-sm font-semibold text-charcoal">{e.title}</p>
             <p className="text-xs text-charcoal-faint">
-              {e.allDay ? "All day" : range24(e.startTime, e.endTime)}
+              {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
               {e.repeat !== "none" && ` · repeats ${e.repeat}`}
             </p>
             {e.location && (
@@ -712,7 +714,7 @@ export default function ClientCalendarTab() {
             {/* Decision 23 (item 121): weekday letters #5B3FE4, as the date
                 popup (dark #B7ABDE). */}
             <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-1">
-              {"SMTWTFS".split("").map((d, i) => (
+              {DAY_LETTERS.map((d, i) => (
                 <div key={i} className="h-[31px] flex items-center justify-center text-[13px] font-semibold text-th-5b3fe4 dark:text-th-b7abde">
                   {d}
                 </div>
@@ -776,7 +778,7 @@ export default function ClientCalendarTab() {
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12.5px] font-bold text-charcoal truncate">{e.title}</span>
                           <span className="block text-[10px] text-charcoal-tertiary truncate">
-                            {e.allDay ? "All day" : range24(e.startTime, e.endTime)}
+                            {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
                             {e.repeat !== "none" && ` · repeats ${e.repeat}`}
                             {e.location && ` · ${e.location}`}
                             {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
@@ -913,7 +915,7 @@ export default function ClientCalendarTab() {
             {Array.from({ length: 24 }, (_, h) => (
               <div key={h} data-hour={h} className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
                 <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
-                  {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+                  {hourLabel12(h)}
                 </span>
               </div>
             ))}
@@ -959,10 +961,10 @@ export default function ClientCalendarTab() {
                         {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
                       </p>
                       {short ? (
-                        <p className="text-[10px] text-charcoal-faint whitespace-nowrap shrink-0">{range24(e.startTime, e.endTime)}</p>
+                        <p className="text-[10px] text-charcoal-faint whitespace-nowrap shrink-0">{range12(e.startTime, e.endTime)}</p>
                       ) : (
                       <p className="text-[10px] text-charcoal-faint truncate">
-                        {range24(e.startTime, e.endTime)}
+                        {range12(e.startTime, e.endTime)}
                         {e.location ? ` · ${e.location}` : ""}
                         {bookedById.get(e.id) &&
                           ` · ${bookedById.get(e.id)!.businessName}${

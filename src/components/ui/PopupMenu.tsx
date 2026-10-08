@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check } from "lucide-react";
+import { Check, Minus, Plus, SquareCheck } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 
@@ -16,6 +16,12 @@ export interface PopupMenuOption<V extends string = string> {
   note?: string;
   /** Optional right-hand detail, e.g. the current rest time (WO8 exercise menu). */
   trailing?: React.ReactNode;
+  /**
+   * Field menus (BU OP1-164, OP1-173): a group heading drawn above the first
+   * option of each run with the same `group` (margin 10 4 2, 11/700 0.1em
+   * uppercase, faint).
+   */
+  group?: string;
 }
 
 interface PopupMenuProps<V extends string> {
@@ -45,10 +51,15 @@ interface PopupMenuProps<V extends string> {
    * "plain" is MO1.3.2.1's category menu: borderless 40 pt rows at 14px,
    * radius 10, padding 0 10, gap 10, on a card with padding 6; the selected
    * row is primary.tint with deep bold text and a Check 15/2.4.
+   * "field" is the v6 Business UI field dropdown (X-20, BU2 W4, OP1-158):
+   * the "tint" card and rows with row gap 10, min-height 44, label 13/700 on
+   * every row, notes 11/400, check 16/2.6 (#7D6BB5 / #C3B3FB; SquareCheck
+   * when multi-select), selected border primary (#AEA1DC / #A991FE), and no
+   * dim by default.
    */
-  variant?: "tint" | "filled" | "plain";
+  variant?: "tint" | "filled" | "plain" | "field";
   /**
-   * Dim the page behind the card (default true). MO1.3.2.1 opens over an
+   * Dim the page behind the card (default true; false for "field"). MO1.3.2.1 opens over an
    * already-dimmed sheet and leaves it undimmed; tap outside still closes.
    */
   backdrop?: boolean;
@@ -75,6 +86,23 @@ interface PopupMenuProps<V extends string> {
    * Unset leaves every other menu as it is.
    */
   rowLineHeight?: number;
+  /**
+   * v6 field menus (BU OP1-158, -161): the card takes this element's left edge
+   * and width (the sheet's full field row, even for a half-width trigger)
+   * instead of `width` / `align`.
+   */
+  matchWidth?: HTMLElement | null;
+  /**
+   * Keep the card inside this element (a sheet body) instead of the viewport:
+   * it flips and clamps against the element's edges, 8 in (OP1-161 row 1).
+   */
+  clampTo?: HTMLElement | null;
+  /**
+   * A Done button under the options (OP1-161 row 5: margin-top 8, 40 tall,
+   * r10, primary fill, 13/800). Done runs this, then closes.
+   */
+  onDone?: () => void;
+  doneLabel?: string;
 }
 
 /**
@@ -119,17 +147,23 @@ export function PopupMenu<V extends string>({
   align = "right",
   heading,
   variant = "tint",
-  backdrop = true,
+  backdrop,
   dim = 0.18,
   noteType,
   gap = GAP,
   rowLineHeight,
+  matchWidth,
+  clampTo,
+  onDone,
+  doneLabel = "Done",
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
   const plain = variant === "plain";
+  const field = variant === "field";
+  const dimmed = backdrop ?? !field;
   const pad = plain ? 6 : 8;
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number; up: boolean } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number; up: boolean } | null>(null);
 
   useLayoutEffect(() => {
     if (!open || !anchor) return;
@@ -137,18 +171,27 @@ export function PopupMenu<V extends string>({
       const r = anchor.getBoundingClientRect();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
-      const cardW = width + 2 * pad + 2; // content + padding + border
-      let left = align === "right" ? r.right - cardW : r.left;
-      left = Math.min(Math.max(EDGE, left), vw - cardW - EDGE);
-      const below = vh - r.bottom - gap - EDGE;
-      const above = r.top - gap - EDGE;
+      // The bounds: the viewport, or the element the card is kept inside.
+      const box = clampTo?.getBoundingClientRect();
+      const minX = (box ? Math.max(0, box.left) : 0) + EDGE;
+      const maxX = (box ? Math.min(vw, box.right) : vw) - EDGE;
+      const minY = (box ? Math.max(0, box.top) : 0) + EDGE;
+      const maxY = (box ? Math.min(vh, box.bottom) : vh) - EDGE;
+      const row = matchWidth?.getBoundingClientRect();
+      // Content width: the matched row's outer width minus padding and border.
+      const contentW = row ? Math.max(0, row.width - 2 * pad - 2) : width;
+      const cardW = contentW + 2 * pad + 2; // content + padding + border
+      let left = row ? row.left : align === "right" ? r.right - cardW : r.left;
+      left = Math.min(Math.max(minX, left), maxX - cardW);
+      const below = maxY - r.bottom - gap;
+      const above = r.top - gap - minY;
       // Opens downward unless the space below is short and there is more
       // above (FO6 opens upward from the Plan card near the bottom).
       const up = below < 220 && above > below;
       setPos(
         up
-          ? { bottom: vh - r.top + gap, left, maxHeight: above, up }
-          : { top: r.bottom + gap, left, maxHeight: below, up }
+          ? { bottom: vh - r.top + gap, left, width: contentW, maxHeight: above, up }
+          : { top: r.bottom + gap, left, width: contentW, maxHeight: below, up }
       );
     };
     place();
@@ -158,19 +201,29 @@ export function PopupMenu<V extends string>({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, anchor, width, align, pad, gap]);
+  }, [open, anchor, width, align, pad, gap, matchWidth, clampTo]);
 
   if (!open || !pos) return null;
 
   const isOn = (v: V) => (Array.isArray(selected) ? selected.includes(v) : selected === v);
+  const capsStyle: React.CSSProperties = {
+    fontSize: textPx(11),
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "rgb(var(--c-charcoal-muted))",
+  };
+  const CheckGlyph = multiSelect ? SquareCheck : Check;
 
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
-      <style>{`@keyframes popup-menu-in { 0% { opacity: 0; transform: translateY(var(--pm-dy)) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
+      {/* Business UI tokens.motion.menuIn: 220 ms easeBase, translateY 6 px
+          (from the trigger's side), no scale. */}
+      <style>{`@keyframes popup-menu-in { 0% { opacity: 0; transform: translateY(var(--pm-dy)); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
       <div
         className="absolute inset-0"
         onClick={onClose}
-        style={backdrop ? { background: `rgba(36,31,27,${dim})`, animation: "fade-in .2s ease both" } : { background: "transparent" }}
+        style={dimmed ? { background: `rgba(36,31,27,${dim})`, animation: "fade-in .2s ease both" } : { background: "transparent" }}
       />
       <div
         role="menu"
@@ -180,7 +233,7 @@ export function PopupMenu<V extends string>({
             top: pos.top,
             bottom: pos.bottom,
             left: pos.left,
-            width,
+            width: pos.width,
             maxHeight: pos.maxHeight,
             boxSizing: "content-box",
             background: "rgb(var(--c-cream-card))",
@@ -189,20 +242,16 @@ export function PopupMenu<V extends string>({
             boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)",
             padding: pad,
             animation: "popup-menu-in .22s cubic-bezier(.22,1,.36,1) both",
-            transformOrigin: `${pos.up ? "bottom" : "top"} ${align}`,
             ["--pm-dy" as string]: pos.up ? "6px" : "-6px",
           } as React.CSSProperties
         }
       >
-        {heading && (
-          <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--c-charcoal-muted))" }}>
-            {heading}
-          </p>
-        )}
+        {heading && <p style={{ margin: "2px 4px 8px", ...capsStyle }}>{heading}</p>}
         {options.map((opt, i) => {
           const on = isOn(opt.value);
           const filled = on && variant === "filled";
-          return (
+          const groupStart = !!opt.group && opt.group !== options[i - 1]?.group;
+          const row = (
             <button
               key={opt.value}
               role={multiSelect ? "menuitemcheckbox" : selected !== undefined ? "menuitemradio" : "menuitem"}
@@ -227,16 +276,20 @@ export function PopupMenu<V extends string>({
                       fontWeight: on ? 700 : 500,
                     }
                   : {
-                      gap: 9,
+                      gap: field ? 10 : 9,
                       borderRadius: 8,
                       padding: "9px 10px",
-                      marginTop: i > 0 ? 6 : 0,
+                      marginTop: i > 0 && !groupStart ? 6 : 0,
+                      ...(field ? { minHeight: 44 } : null),
                       // The filled selection: the board's #A092E0 in light, primary-fill in dark.
-                      border: `1px solid ${filled ? "rgb(var(--c-fill-chip))" : on ? c("onBorder") : "rgb(var(--c-border-option))"}`,
+                      // Field: the selected border is primary (#AEA1DC / #A991FE, OP1-158 #8).
+                      border: `1px solid ${
+                        filled ? "rgb(var(--c-fill-chip))" : on ? (field ? "rgb(var(--c-primary))" : c("onBorder")) : "rgb(var(--c-border-option))"
+                      }`,
                       background: filled ? "rgb(var(--c-fill-chip))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
                       color: filled ? "rgb(var(--c-on-primary-fill))" : opt.destructive ? c("destructive") : "rgb(var(--c-charcoal))",
-                      fontSize: textPx(12.5),
-                      fontWeight: on ? 700 : 500,
+                      fontSize: textPx(field ? 13 : 12.5),
+                      fontWeight: field || on ? 700 : 500,
                       ...(rowLineHeight ? { lineHeight: linePx(rowLineHeight) } : {}),
                     }
               }
@@ -248,8 +301,8 @@ export function PopupMenu<V extends string>({
                   <span
                     className="block"
                     style={{
-                      fontSize: textPx(noteType?.size ?? 10.5),
-                      fontWeight: noteType?.weight ?? 500,
+                      fontSize: textPx(noteType?.size ?? (field ? 11 : 10.5)),
+                      fontWeight: noteType?.weight ?? (field ? 400 : 500),
                       ...(noteType?.lineHeight ? { lineHeight: noteType.lineHeight } : {}),
                       marginTop: 1,
                       color: "rgb(var(--c-charcoal-muted))",
@@ -263,14 +316,120 @@ export function PopupMenu<V extends string>({
               {on &&
                 (plain ? (
                   <Check size={15} strokeWidth={2.4} className="flex-none" style={{ display: "block", color: c("plainOn") }} />
+                ) : field ? (
+                  <CheckGlyph
+                    size={16}
+                    strokeWidth={2.6}
+                    className="flex-none"
+                    style={{ display: "block", color: dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))" }}
+                  />
                 ) : (
                   <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: filled ? "rgb(var(--c-on-primary-fill))" : c("check") }} />
                 ))}
             </button>
           );
+          return groupStart ? (
+            <React.Fragment key={opt.value}>
+              <p role="presentation" style={{ margin: i > 0 ? "16px 4px 2px" : "10px 4px 2px", ...capsStyle }}>
+                {opt.group}
+              </p>
+              <div style={{ marginTop: 6 }}>{row}</div>
+            </React.Fragment>
+          ) : (
+            row
+          );
         })}
+        {onDone && (
+          <button
+            type="button"
+            onClick={() => {
+              onDone();
+              onClose();
+            }}
+            className="tap w-full flex items-center justify-center"
+            style={{
+              marginTop: 8,
+              height: 40,
+              borderRadius: 10,
+              background: "rgb(var(--c-primary-fill))",
+              color: "rgb(var(--c-on-primary-fill))",
+              fontSize: textPx(13),
+              fontWeight: 800,
+            }}
+          >
+            {doneLabel}
+          </button>
+        )}
       </div>
     </div>,
     document.body
   );
 }
+
+/**
+ * The stepper a field-menu row carries on its right (OP1-164 row 5, "Up to
+ * 12 classes"): minus and plus buttons 32 x 32, r10, 1px border (#E7E6E6 /
+ * #2D3039) on the card fill, glyph 15 / 2.4 primary.deep (#7D6BB5 / #C3B3FB);
+ * between them a value box min-width 30, 32 tall, r10, 1.5px primary border,
+ * 14/800 tabular; gap 6. Each button's hit area grows 6 up and down and
+ * shares the 6 gaps (OURS: the 38 pitch cannot hold 44-wide targets). Taps
+ * never reach the row underneath. Pass it as an option's `trailing`.
+ *
+ * The trigger of an open field menu carries a 2px primary ring outside its
+ * hairline (OP1-158 row 1): `boxShadow: "0 0 0 2px rgb(var(--c-primary))"`.
+ */
+export const MenuStepper: React.FC<{
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  /** Accessible names (source: "Fewer" / "More"). */
+  decreaseLabel?: string;
+  increaseLabel?: string;
+  /** Accessible name of the value. */
+  label?: string;
+}> = ({ value, onChange, min = 1, max = 99, decreaseLabel = "Fewer", increaseLabel = "More", label }) => {
+  const dark = useIsDark();
+  const glyph = dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))";
+  const btn: React.CSSProperties = {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    border: `1px solid ${dark ? "#2D3039" : "#E7E6E6"}`,
+    background: "rgb(var(--c-cream-card))",
+    color: glyph,
+  };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  const hit = "relative flex items-center justify-center disabled:opacity-40 before:absolute before:content-[''] before:-inset-y-[6px] before:-inset-x-[3px]";
+  return (
+    <span className="flex items-center" style={{ gap: 6 }} onClick={stop} onPointerDown={stop}>
+      <button type="button" aria-label={decreaseLabel} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={hit} style={btn}>
+        <Minus size={15} strokeWidth={2.4} aria-hidden />
+      </button>
+      <span
+        role="spinbutton"
+        aria-label={label}
+        aria-valuenow={value}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        className="flex items-center justify-center tabular-nums"
+        style={{
+          minWidth: 30,
+          height: 32,
+          borderRadius: 10,
+          border: "1.5px solid rgb(var(--c-primary))",
+          padding: "0 4px",
+          fontSize: textPx(14),
+          fontWeight: 800,
+          color: "rgb(var(--c-charcoal))",
+        }}
+      >
+        {value}
+      </span>
+      <button type="button" aria-label={increaseLabel} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={hit} style={btn}>
+        <Plus size={15} strokeWidth={2.4} aria-hidden />
+      </button>
+    </span>
+  );
+};
+

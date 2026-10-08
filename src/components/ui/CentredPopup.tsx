@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { CtaButton, type CtaButtonProps } from "./PinnedCta";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Mobile v5.1 handover, Foundations 2.5 "Centred popup": a white card, radius
 // 20, shadow.sheet, padding 24 x 20, at most 342 wide with 16 pt side margins,
@@ -17,6 +18,20 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 //
 // Used later for Referral, Contact us, Report a bug, Rate this app, booking
 // confirmation, the membership pass and achievement detail.
+//
+// v6 GEOMETRY (X-01): each drawn popup takes its frame's measured geometry.
+// - "foundations" (default, unchanged): the v5.1 card above, 342 / r20 /
+//   padding 24 × 20 / CTA 48, scrim with a 2 px blur.
+// - "partB": the Part B tables (MO1.8.12, MO1.8.13, achievement detail,
+//   Health B popups): 350 wide, r24, padding 20 on every side, shadow.sheet
+//   in light and none in dark, no blur on the scrim, title 17 / 25.5 800
+//   ls -0.3, CTA 46 tall on fill.pinned #9A8CD6 (dark #A991FE with #0D0B1A).
+// - "ours": popups we design ourselves (OURS), the shared rule 342 / r22 /
+//   CTA 48 (fill as foundations).
+// `align="start"` left-aligns the header (MO1.8.12's list popup, no icon).
+// The scrim is backdrop.dim rgba(36,31,27,0.4) in both modes (X-07).
+
+export type CentredPopupGeometry = "foundations" | "partB" | "ours";
 
 export const CentredPopup: React.FC<{
   open: boolean;
@@ -48,6 +63,12 @@ export const CentredPopup: React.FC<{
   /** The icon tile's size and radius. 48 / 14 (Foundations) unless a frame
       draws otherwise; MO1.1.3.1's medallion tile is 76 / 20. */
   iconWell?: { size: number; radius: number };
+  /** v6 geometry (X-01): see the note above. Default "foundations". */
+  geometry?: CentredPopupGeometry;
+  /** Header alignment. "center" (default) or "start" (MO1.8.12). */
+  align?: "center" | "start";
+  /** Override the scrim blur: on for foundations / ours, off for partB. */
+  scrimBlur?: boolean;
 }> = ({
   open,
   onClose,
@@ -63,9 +84,13 @@ export const CentredPopup: React.FC<{
   iconWell,
   titleInk,
   iconBare,
+  geometry = "foundations",
+  align = "center",
+  scrimBlur,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
+  const dark = useIsDark();
   const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -94,6 +119,14 @@ export const CentredPopup: React.FC<{
 
   if (!open) return null;
 
+  const partB = geometry === "partB";
+  const blur = scrimBlur ?? !partB;
+  const start = align === "start";
+  const cardWidth = maxWidth ?? (partB ? 350 : 342);
+  const cardRadius = partB ? 24 : geometry === "ours" ? 22 : 20;
+  // Part B: shadow.sheet in light, off in dark (the tables' "shadow off").
+  const shadow = partB && dark ? "none" : "var(--shadow-sheet)";
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -103,7 +136,7 @@ export const CentredPopup: React.FC<{
       }}
     >
       <div
-        className="absolute inset-0 backdrop-blur-[2px] animate-fade-in"
+        className={clsx("absolute inset-0 animate-fade-in", blur && "backdrop-blur-[2px]")}
         style={{ background: "var(--backdrop-dim)" }}
         onClick={onClose}
         aria-hidden
@@ -115,13 +148,14 @@ export const CentredPopup: React.FC<{
         aria-labelledby={titleId}
         tabIndex={-1}
         className={clsx(
-          "relative w-full max-w-[342px] max-h-full overflow-y-auto overscroll-contain",
-          "bg-cream-card rounded-[20px] px-5 py-6 outline-none animate-popup-in",
+          "relative w-full max-h-full overflow-y-auto overscroll-contain",
+          "bg-cream-card outline-none animate-popup-in",
+          partB ? "p-5" : "px-5 py-6",
           className
         )}
-        style={{ boxShadow: "var(--shadow-sheet)", ...(maxWidth ? { maxWidth } : null) }}
+        style={{ boxShadow: shadow, maxWidth: cardWidth, borderRadius: cardRadius }}
       >
-        <div className="flex flex-col items-center text-center">
+        <div className={clsx("flex flex-col", start ? "items-start text-start" : "items-center text-center")}>
           {icon && (
             <span
               className={clsx(
@@ -137,8 +171,10 @@ export const CentredPopup: React.FC<{
           <h2
             id={titleId}
             className={clsx(
-              titleSize === 21 ? "text-[21px]" : titleSize === 19 ? "text-[19px]" : "text-[18px]",
-              "font-extrabold leading-tight text-balance",
+              partB
+                ? "text-[17px] leading-[25.5px] tracking-[-0.3px]"
+                : clsx(titleSize === 21 ? "text-[21px]" : titleSize === 19 ? "text-[19px]" : "text-[18px]", "leading-tight"),
+              "font-extrabold text-balance",
               titleInk ?? "text-charcoal"
             )}
           >
@@ -156,7 +192,16 @@ export const CentredPopup: React.FC<{
           )}
         </div>
         {children && <div className="mt-4">{children}</div>}
-        {cta && <CtaButton {...cta} size="page" className={clsx("mt-5", cta.className)} />}
+        {cta && (
+          <CtaButton
+            {...cta}
+            size="page"
+            className={clsx(partB ? "mt-3" : "mt-5", cta.className)}
+            // Part B: 46 tall on fill.pinned (#9A8CD6 / #A991FE; #5B48B8 under
+            // High contrast), ink on-primary-fill.
+            style={partB ? { height: 46, background: "rgb(var(--c-fill-pinned))", ...cta.style } : cta.style}
+          />
+        )}
       </div>
     </div>,
     document.body

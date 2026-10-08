@@ -29,10 +29,9 @@ const OPEN_EVENT = "swipe-actions:open";
  * tapping elsewhere or scrolling closes it; one open item at a time; a swipe
  * short of halfway snaps back. Used by WO3.1 and WO16 (`shrink`).
  *
- * Mobile v5.1 R3, dark mode (no light islands): delete is danger.tint
- * #3C2A30 with danger #FF6B5E (4.8:1); the other tiles keep their
- * translucent lavender tint and take primary.deep #B7ABDE for the icon
- * (#7D67D9 measured 2.7:1 on the tint over the dark card, #B7ABDE 5.6:1).
+ * Dark mode, v6 Part B (MO1.1.1 #22-#25, MO1.1.2 #14-#17): delete is
+ * danger.tint #3C2A30 with #F09A8E (status-high dark); the other tiles are
+ * #A991FE@18% (the dark primary) with a primary.accent #9A8CD6 icon.
  */
 export const SwipeActions: React.FC<{
   actions: SwipeAction[];
@@ -66,8 +65,12 @@ export const SwipeActions: React.FC<{
    * the row. Off when not given, so every other swipe row is unchanged.
    */
   onLongPress?: (row: HTMLElement) => void;
+  /** Tile corner radius (default 14; MO1.1.1 Habits draws 12). */
+  tileRadius?: number;
+  /** Gap between tiles (default 8; MO1.7 Messages draws 6). */
+  tileGap?: number;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, keyboardLabel, onLongPress, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, keyboardLabel, onLongPress, tileRadius = 14, tileGap = TILE_GAP, children }) => {
   const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -79,7 +82,7 @@ export const SwipeActions: React.FC<{
   // Delete last, whatever order the caller passed.
   const ordered = [...actions.filter((a) => !a.destructive), ...actions.filter((a) => a.destructive)];
   const tile = Math.min(tileMax, rowH);
-  const openWidth = ordered.length * (tile + TILE_GAP) + edgeInset;
+  const openWidth = ordered.length * (tile + tileGap) + edgeInset;
 
   useEffect(() => {
     const el = rowRef.current;
@@ -192,7 +195,7 @@ export const SwipeActions: React.FC<{
         // is near the tile's inset otherwise shows as a sliver at the curve.
         // Hiding waits for the row's .22s slide back.
         style={{
-          gap: TILE_GAP,
+          gap: tileGap,
           width: openWidth,
           paddingRight: edgeInset,
           visibility: offset === 0 && !dragging ? "hidden" : "visible",
@@ -213,9 +216,9 @@ export const SwipeActions: React.FC<{
             style={{
               width: tile,
               height: tile,
-              borderRadius: 14,
-              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgb(var(--th-aea1dc) / 0.18)",
-              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "rgb(var(--thi-b7abde))" : "rgb(var(--thi-7d67d9))",
+              borderRadius: tileRadius,
+              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : dark ? "rgb(var(--c-primary) / 0.18)" : "rgb(var(--th-aea1dc) / 0.18)",
+              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "rgb(var(--c-status-high))" : "#B4372C") : dark ? "rgb(var(--c-primary-accent))" : "rgb(var(--thi-7d67d9))",
             }}
           >
             {a.icon}
