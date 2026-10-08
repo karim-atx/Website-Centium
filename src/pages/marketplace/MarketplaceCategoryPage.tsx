@@ -231,7 +231,8 @@ function BusinessPage({ businessId }: { businessId: string }) {
       const [v, o] = await Promise.all([fetchMarketplaceVenues(), fetchOfferingsByBusiness(businessId)]);
       if (cancelled) return;
       if (!v.ok) {
-        setError(v.message);
+        // v6 Explore O-ERR: our own line, not the raw service message.
+        setError(typeof navigator !== "undefined" && navigator.onLine === false ? "You're offline. Try again when you're connected." : "Couldn't load this business.");
         setVenue(null);
       } else {
         // Businesses only: a gym has no listings and its page waits on MO1.4.2.1.
@@ -285,7 +286,7 @@ function BusinessPage({ businessId }: { businessId: string }) {
           the bio, the upcoming-class count and the perk. */}
       <Card className="mb-4 animate-fade-slide-up">
         <div className="flex items-center gap-3">
-          <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-th-7d67d9 dark:text-primary-dark">
+          <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-th-7d67d9 dark:text-primary-accent">
             {initials(venue.name)}
           </span>
           <div className="min-w-0 flex-1">
@@ -333,7 +334,7 @@ function BusinessPage({ businessId }: { businessId: string }) {
                 <Link
                   key={c}
                   to={`/app/marketplace/${c}`}
-                  className="tap flex items-center gap-3 rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 no-underline"
+                  className="tap flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 no-underline"
                 >
                   <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
                     <Icon size={17} className="text-primary-dark" />

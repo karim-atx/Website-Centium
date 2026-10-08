@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Banknote, Check, Handshake, Lock, MessageCircle, Wallet } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { CtaButton } from "../ui/PinnedCta";
-import { MemberTag } from "../marketplace/MemberTag";
-import { initials, type TypeColours } from "../professionals/typeColour";
-import { HireConfirmedMark } from "./HireConfirmedMark";
+import { goldPill, initials, type TypeColours } from "../professionals/typeColour";
+import { ConfirmedMark } from "../ui/ConfirmedMark";
+import { linePx } from "../../theme/textSize";
+import { useIsDark } from "../../hooks/useIsDark";
 import { useApp } from "../../context/AppContext";
 import { forumAccess } from "../../services/forum/rules";
 import { textPx } from "../../theme/textSize";
@@ -35,12 +36,15 @@ import {
 //              (Whish Money drawn but not choosable, exactly as stage 5's gym
 //              checkout; Cash chosen), Order total, "Pay $400" (Lock) →
 //              hire_professional(plan, 'cash').
-//   confirmed  my_hires() row: v7 mark, "You've hired {first}", "{plan} ·
+//   confirmed  my_hires() row: the v6 confirmation (ConfirmedMark, 124 crop
+//              on a 132 panel-colour tile), "You've hired {first}", "{plan} ·
 //              {price}", Pending payment while payment_status = pending.
+//              v6 MO1.2.1.5.2: the "Hired" sheet title is drawn again (the
+//              new handover supersedes C-08 / D26).
 //
 // REMOVED FROM THE FRAMES BY DECISION: the App Store / Google Play payment row
-// (decision 8 / C-10 / decision 23), the "Hired" sheet title (C-08 / D26), the
-// v8 snake-crawl animation (do not build).
+// (decision 8 / C-10 / decision 23), the v7-v10 confirmation animations (v6
+// ships), the v8 snake-crawl animation (do not build).
 //
 // NOT BUILT, AND WHY: the "Popular" tag and "save 8%" (professional_plans has
 // no popular flag and no comparison price); the copy line "By paying you
@@ -122,6 +126,7 @@ export function HireSheet({
   };
 }) {
   const { user } = useApp();
+  const dark = useIsDark();
   const minor = forumAccess(user.dateOfBirth) === "minor";
 
   const [step, setStep] = useState<Step>("plans");
@@ -516,23 +521,47 @@ export function HireSheet({
   const confirmedBody = () => {
     if (!hired) return null;
     const pending = hired.paymentStatus !== "paid";
+    const gold = goldPill(dark);
     return (
-      <div className="flex flex-col items-center text-center pt-6 pb-4">
-        {/* #11: 132 × 132, the v7 mark. */}
-        <HireConfirmedMark size={132} onSettled={() => setSettled(true)} />
+      // #30-#32: the mark's 132 tile sits 88 under the body panel's top
+      // (20 body padding + 68), centred.
+      <div className="flex flex-col items-center text-center pt-[68px] pb-4 min-h-[528px]">
+        {/* #31 / #32: a 132 tile in the panel colour (#FFFFFF / #1C1F28)
+            behind the 124 crop of the v6 confirmation (GIF in Centium light;
+            the V6-99 SVG rebuild in dark and the other themes). */}
+        <span data-mark-backdrop="" className="w-[132px] h-[132px] flex items-center justify-center bg-cream-card">
+          <ConfirmedMark size={124} onSettled={() => setSettled(true)} />
+        </span>
+        {/* S3 / #33: the text shows when the motion ends (1.8 s; at once
+            under Reduce motion). */}
         <div className={`flex flex-col items-center transition-opacity duration-100 ${settled ? "opacity-100" : "opacity-0"}`}>
-          {/* #12: 22/800 #5F5093, 18 under the mark. */}
-          <h3 className="m-0 mt-[18px] font-extrabold leading-7" style={{ color: t.deep, fontSize: textPx(22) }}>
+          {/* #33: 22/28 800 ls -0.4, #5F5093 / #C3B3FB, 18 under the tile. */}
+          <h3
+            className="m-0 mt-[18px] font-extrabold tracking-[-0.4px]"
+            style={{ color: t.deep, fontSize: textPx(22), lineHeight: linePx(28) }}
+          >
             You've hired {pro.first}
           </h3>
-          {/* #13: 14/700 #241F1B. */}
-          <p className="m-0 mt-1.5 font-bold text-charcoal tabular-nums" style={{ fontSize: textPx(14) }}>
+          {/* #34: 14/21 700 #241F1B / #F5F3FA, 6 under. */}
+          <p className="m-0 mt-1.5 font-bold text-charcoal tabular-nums" style={{ fontSize: textPx(14), lineHeight: linePx(21) }}>
             {hired.planName} · {priceShort(hired.priceAgreed)}
           </p>
-          {/* The handover's "Pending payment" state, from my_hires(). */}
-          <MemberTag className="mt-2" label={hireStatusLabel(hired)} tone={pending ? "pending" : "member"} />
-          {/* #14: 13/400 #5B5349, 270 wide. */}
-          <p className="m-0 mt-3 max-w-[270px] text-charcoal-soft leading-[21px]" style={{ fontSize: textPx(13) }}>
+          {/* K1: the "Pending payment" state from my_hires(), as #9's pill
+              (26 tall, 0 10, 11/16.5 600) in the gold pair while pending;
+              the type pill once paid. */}
+          <span
+            data-hire-status=""
+            className="mt-2 inline-flex items-center h-[26px] px-2.5 rounded-full text-[11px] leading-[16.5px] font-semibold"
+            style={
+              pending
+                ? { background: gold.bg, color: gold.ink, border: `1px solid ${gold.border}` }
+                : { background: t.pill, color: t.deep }
+            }
+          >
+            {hireStatusLabel(hired)}
+          </span>
+          {/* #35: 13/20.8 400 #5B5349 / #B8B3C7, 270 wide, 12 under. */}
+          <p className="m-0 mt-3 max-w-[270px] text-charcoal-soft" style={{ fontSize: textPx(13), lineHeight: linePx(20.8) }}>
             {pro.first} will reach out to schedule your first session.
             {pending && hired.paymentMethod === "cash" ? " Pay them in person; your hire becomes active once they confirm they've been paid." : ""}
           </p>
@@ -552,8 +581,9 @@ export function HireSheet({
         style={{ background: t.cta, color: t.onMain }}
       />
     ) : step === "confirmed" ? (
-      // #15: Message {first} (the type pill, deep ink, MessageCircle) + Done.
-      <div className="flex gap-2.5">
+      // #36-#38: Message {first} (the type pill, deep ink, MessageCircle 15)
+      // and Done (the type CTA), 8 apart.
+      <div className="flex gap-2">
         <CtaButton
           size="sheet"
           variant="secondary"
@@ -571,8 +601,14 @@ export function HireSheet({
     <BottomSheet
       open={open}
       onClose={close}
-      // C-08 / D26: the confirmed step has no title; the content carries it.
-      title={step === "plans" ? `Hire ${pro.first}` : step === "checkout" ? "Checkout" : undefined}
+      // v6 MO1.2.1.5.2 #27: "Hired" on the confirmed step (supersedes C-08 / D26).
+      title={step === "plans" ? `Hire ${pro.first}` : step === "checkout" ? "Checkout" : "Hired"}
+      // #25 / #26 / #28 (X-03, X-07): the Part B sheet chrome (0.5px outline,
+      // close ring 1.1), the warm scrim in both modes with no blur; S2 swipe
+      // down on the band closes.
+      chrome="partB"
+      scrimBlur={false}
+      swipeToClose
       onBack={step === "checkout" && !busy ? () => setStep("plans") : undefined}
       footer={footer}
     >

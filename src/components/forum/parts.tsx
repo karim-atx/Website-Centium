@@ -4,7 +4,10 @@ import { Heart, MessageCircle } from "lucide-react";
 import type { Author, Identity } from "../../services/forum";
 import { initialOf, initialsOf } from "../../services/forum/rules";
 import { fv } from "./forumColor";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
+import { CentiumMark } from "../icons/CentiumMark";
+import { AvatarPlaceholder } from "../icons/PartBIcons";
+import { useApp } from "../../context/AppContext";
 
 // Small pieces shared by the forum screens (design PgYuBboDr8DEL2bk7EJKtU).
 // Sizes, weights and colours are the design's; colours go through the
@@ -21,11 +24,30 @@ export function AuthorInitial({
   author,
   identity,
   size,
+  glyphForNames,
 }: {
   author: Author;
   identity: Identity;
   size: 32 | 36 | 40 | 46;
+  /**
+   * v6 MO1.3 #20 / #21 (the forum list): a real-name post (no photo; PB-O-44
+   * would add one) draws the person glyph on #E7E2F6 (dark #303141, the drawn
+   * #E7E2F6* is a light leak); a nickname post keeps its initial (A18).
+   */
+  glyphForNames?: boolean;
 }) {
+  if (glyphForNames && identity !== "nickname") {
+    return (
+      <div
+        aria-hidden="true"
+        data-avatar-glyph=""
+        className="flex items-center justify-center shrink-0 overflow-hidden bg-th-e7e2f6 dark:bg-th-303141"
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      >
+        <AvatarPlaceholder size={size} />
+      </div>
+    );
+  }
   const tone = author.professionalId
     ? { bg: fv("teal-bg"), ink: fv("teal-ink") }
     : identity === "nickname"
@@ -53,29 +75,14 @@ export function AuthorInitial({
   );
 }
 
-const WHITE_MARK_LAYER: React.CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  background: "#FFFFFF",
-  maskSize: "100% 100%",
-  WebkitMaskSize: "100% 100%",
-  maskRepeat: "no-repeat",
-  WebkitMaskRepeat: "no-repeat",
-};
-
 /**
- * The Centium C and leaf in white, in every theme (MO1.3 rules card). Drawn
- * the way ThemedMark draws its tinted mark: the brand's own C and leaf masks
- * (public/centium-logo-c.png and -leaf.png, one 648 x 701 canvas) filled
- * with a solid colour, at the canvas's own 648:701 proportions.
+ * The Centium C and leaf in white, in every theme (the Mind Habits header).
+ * v6 (asset map): the one vector CentiumMark, variant "white", replaces the
+ * PNG masks (centium-logo-c.png / -leaf.png); framing "ink" is that canvas
+ * (648 x 701), so `width` keeps the box it had.
  */
 export function WhiteMark({ width }: { width: number }) {
-  return (
-    <span aria-hidden="true" className="relative inline-block shrink-0" style={{ width, height: (width * 701) / 648 }}>
-      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-c.png)", WebkitMaskImage: "url(/centium-logo-c.png)" }} />
-      <span style={{ ...WHITE_MARK_LAYER, maskImage: "url(/centium-logo-leaf.png)", WebkitMaskImage: "url(/centium-logo-leaf.png)" }} />
-    </span>
-  );
+  return <CentiumMark framing="ink" variant="white" height={(width * 701) / 648} className="shrink-0" />;
 }
 
 export function ShieldCheckIcon({ size = 11, color }: { size?: number; color: string }) {
@@ -104,9 +111,9 @@ export function ProfessionalBadge() {
  * The author's name. A verified professional's name links to their directory
  * page and carries the badge; nobody else's name links anywhere.
  */
-export function AuthorName({ author, size }: { author: Author; size: 13 | 14 | 15 }) {
+export function AuthorName({ author, size, color, lineHeight }: { author: Author; size: 13 | 14 | 15; color?: string; lineHeight?: number }) {
   const cls = "font-bold min-w-0 [overflow-wrap:anywhere]";
-  const style = { fontSize: textPx(size), color: fv("text") };
+  const style = { fontSize: textPx(size), color: color ?? fv("text"), ...(lineHeight ? { lineHeight: linePx(lineHeight) } : null) };
   if (author.professionalId) {
     return (
       <span className="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -185,6 +192,35 @@ export function ForumChip({
   children: React.ReactNode;
   inStrip?: boolean;
 }) {
+  const { accessibility, theme } = useApp();
+  const dark = theme === "dark";
+  if (inStrip) {
+    // v6 MO1.3 #10 / #11: 32 tall, r9, padding 0 14, 12/18. Active #A198DF
+    // with white (High contrast #5B48B8; dark #A991FE with #0D0B1A); idle
+    // transparent on the rail, no border, 600 in #5B5349 / #B8B3C7.
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={clsx(
+          "tap shrink-0 h-8 rounded-[9px] px-[14px] text-[12px] leading-[18px] whitespace-nowrap",
+          active ? "font-bold" : "font-semibold bg-transparent text-charcoal-soft"
+        )}
+        style={
+          active
+            ? {
+                background: accessibility.highContrast ? "rgb(var(--c-seg-active))" : dark ? "rgb(var(--c-primary-fill))" : "rgb(var(--th-a198df))",
+                color: dark ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF",
+              }
+            : undefined
+        }
+        data-active={active ? "true" : undefined}
+      >
+        {children}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -207,8 +243,10 @@ export function ForumPlaceholder({ height }: { height: number }) {
   return (
     <div
       aria-hidden="true"
-      className="animate-skeleton-pulse"
-      style={{ height, borderRadius: 18, background: fv("track"), border: `1px solid ${fv("border")}` }}
+      // v6 skeleton (MO1.3 O1, X-32): #F5F5F6 / #242730, pulse 1.2 s, static
+      // under Reduce motion.
+      className="animate-skeleton-pulse bg-cream-soft"
+      style={{ height, borderRadius: 18 }}
     />
   );
 }
@@ -221,10 +259,17 @@ export function ForumPlaceholder({ height }: { height: number }) {
  * padding are not given in Foundations: 10 between the parts (MO1.4.3's
  * block) and 32 above and below (unspecified).
  */
-export function EmptyBlock({ icon, title, line }: { icon: React.ReactNode; title: string; line: string }) {
+export function EmptyBlock({ icon, title, line, partB }: { icon: React.ReactNode; title: string; line: string; partB?: boolean }) {
   return (
     <div className="flex flex-col items-center text-center gap-2.5 py-8 mx-auto max-w-[260px]">
-      <span className="w-14 h-14 rounded-[18px] bg-primary-pale text-primary-accent flex items-center justify-center" aria-hidden="true">
+      {/* partB (v6 MO1.3 O3, as MO1.7.e #13 / #14): r16, the icon #7D6BB5 / #C3B3FB. */}
+      <span
+        className={clsx(
+          "w-14 h-14 bg-primary-pale flex items-center justify-center",
+          partB ? "rounded-2xl text-th-7d6bb5 dark:text-th-c3b3fb" : "rounded-[18px] text-primary-accent"
+        )}
+        aria-hidden="true"
+      >
         {icon}
       </span>
       <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>

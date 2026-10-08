@@ -59,14 +59,17 @@ const FAMILIES = {
 
 const DARK_CARD = "#1C1F28";
 
-// R20 (batch D): the dark pill and ink were computed from the hex above at
-// runtime (tintOn, liftTo), which a theme variable cannot feed. They are the
-// theme colours of their Centium results instead, so Centium is unchanged and
-// the other themes map them like every other shade.
+// v6 (MO1.2 #17-#39, MO1.2.1.5.2 #3, #9, #36): the handover's own dark
+// column for the two drawn families. Purple: name, headline, type line and
+// pill ink #C3B3FB on the pill #303141. Teal: name and pill ink #93C1B9 on
+// #293339, the headline / type line / pill icons #4F7F78 as drawn (2.9:1 on
+// the card: kept literal, QA flag only, V6-94). The filled action keeps the
+// app's dark primary fill with #0D0B1A ink (MO1.2.1.5.2 #22: #A991FE).
+// "Other" is not drawn: it keeps the earlier derived pair (R20, batch D).
 const DARK = {
-  purple: { pill: "rgb(var(--th-2d2d41))", ink: "rgb(var(--th-9c8fc7))" },
-  teal: { pill: "rgb(var(--th-253036))", ink: "rgb(var(--th-799e98))" },
-  other: { pill: "rgb(var(--th-27273d))", ink: "rgb(var(--th-9388bf))" },
+  purple: { pill: "rgb(var(--th-303141))", ink: "rgb(var(--th-c3b3fb))", main: "rgb(var(--th-c3b3fb))", cta: "rgb(var(--c-primary-fill))" },
+  teal: { pill: "rgb(var(--th-293339))", ink: "rgb(var(--th-93c1b9))", main: "rgb(var(--th-4f7f78))", cta: "rgb(var(--th-93c1b9))" },
+  other: { pill: "rgb(var(--th-27273d))", ink: "rgb(var(--th-9388bf))", main: "rgb(var(--th-9388bf))", cta: "rgb(var(--th-9388bf))" },
 } as const;
 
 export function typeFamily(subtype: DirectoryListing["subtype"] | string | null | undefined): keyof typeof FAMILIES {
@@ -79,10 +82,11 @@ export function typeColours(subtype: DirectoryListing["subtype"] | string | null
   const family = typeFamily(subtype);
   const f = FAMILIES[family];
   if (!dark) return { ...f, onMain: "#FFFFFF" };
-  const { pill, ink } = DARK[family];
+  const { pill, ink, main, cta } = DARK[family];
   // In dark the action fill is the lifted hue with near-black ink, as the
-  // app's primary-fill does.
-  return { main: ink, deep: ink, pill, onMain: "#0D0B1A", button: pill, cta: ink };
+  // app's primary-fill does; View Profile is the pill (MO1.2 #25 / #38: the
+  // drawn #EAE6F7* / #E1EFEC* are light leaks, V6-92).
+  return { main, deep: ink, pill, onMain: "#0D0B1A", button: pill, cta };
 }
 
 /**
@@ -104,7 +108,10 @@ export function pinGround(subtype: DirectoryListing["subtype"] | string | null |
 export function goldPill(dark: boolean): { bg: string; border: string; ink: string; star: string } {
   if (!dark) return { bg: "#FBF3E2", border: "#D9A441", ink: "#9A7424", star: "#D9A441" };
   const bg = tintOn("#D9A441", 0.16, DARK_CARD);
-  return { bg, border: "rgba(217,164,65,0.55)", ink: liftTo("#D9A441", bg, 4.5), star: "#D9A441" };
+  // v6 MO1.2.1.5.2 #13 / #14: the drawn dark border and star #E0B360; the
+  // fill and ink keep the app's dark gold (the drawn #FBF3E2* / #9A7424* are
+  // light leaks, V6-92).
+  return { bg, border: "#E0B360", ink: liftTo("#D9A441", bg, 4.5), star: "#E0B360" };
 }
 
 /** Initials for an avatar with no photo (B4): "Rami Khoury" → "RK", "Noor" → "N". */
