@@ -7,13 +7,16 @@ import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./Metric
 // gauge is not in the layout table; measured from HE1.4-full.png (pt):
 // half ring centre (163, 132.4) in the 326-wide content, r 104, stroke 16
 // round caps; track #F1DDC2 (main at 37%; dark main at 25%*); filled arc
-// main #D9A15B (the "From workouts" share in #B07A35 waits for workout kcal,
-// HA-07 / PB-H-08, Database stage B1); goal tick 2 wide #B07A35 at the
-// right end; "0" / "2,600" 10.5/15.8 600 metric ink under the ends; flame
-// 20 (calories-flame.svg geometry) at y 52; value 36/36 800 ls-1.4 (m-top
-// 6); "of 2,600 kcal" 12/18 600 metric ink (m-top 6); pills pad 3 9 gap 6
-// at y 174. The workouts / rest-of-day legend is hidden with the workouts
-// share (B1).
+// main #D9A15B; the workouts share (B1 workout_sessions.kcal, HA-07) runs
+// from the left end in #B07A35 (both modes; HE1.4 / HE1.4.d only, the month
+// and year frames draw none); goal tick 2 wide #B07A35 at the right end;
+// "0" / "2,600" 10.5/15.8 600 metric ink under the ends; flame 20
+// (calories-flame.svg geometry) at y 52; value 36/36 800 ls-1.4 (m-top 6);
+// "of 2,600 kcal" 12/18 600 metric ink (m-top 6); pills pad 3 9 gap 6 at
+// y 174. Legend under the pills (measured, HE1.4-full.png): m-top 6,
+// centred, gap 14 between items; swatch 10 x 6 r3 (#B07A35 workouts, #D9A15B
+// rest), gap 6; text 11/16.5 600 metric ink (#8A5A1F) "Workouts 570" /
+// "Rest of day 1,370". The card grows to the table height 250.4.
 //
 // MOTION (motion-specs HE1.4, 4.8 s loop): the flame grows to 1.12 high and
 // 1.05 wide from three rhythms (1.2 / 1.6 / 0.8 s), the inner flame on its
@@ -46,10 +49,13 @@ export const CaloriesHero: React.FC<{
   pills: string[];
   loading?: boolean;
   ariaLabel: string;
-}> = ({ pct, value, sub, goalLabel, pills, loading, ariaLabel }) => {
+  /** HE1.4 / HE1.4.d: the day's workout kcal share (0-1 of the goal) and the legend texts; null = no share drawn. */
+  workouts?: { pct: number; workoutsLabel: string; restLabel: string } | null;
+}> = ({ pct, value, sub, goalLabel, pills, loading, ariaLabel, workouts }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const p = Math.max(0, Math.min(1, pct));
+  const wp = workouts ? Math.max(0, Math.min(p, workouts.pct)) : 0;
   const ink = metricTextInk("calories", dark);
   const play = running ? "running" : "paused";
   return (
@@ -59,6 +65,7 @@ export const CaloriesHero: React.FC<{
           <svg viewBox="0 0 326 166" width="100%" height={166} aria-hidden style={{ display: "block", position: "absolute", inset: 0, overflow: "visible" }}>
             <path d={arcPath(0, 1)} fill="none" stroke={dark ? mc("calories", "main", 0.25) : "#F1DDC2"} strokeWidth={16} strokeLinecap="round" />
             {p > 0 && <path d={arcPath(0, p)} fill="none" stroke={mc("calories", "main")} strokeWidth={16} strokeLinecap="round" />}
+            {p > 0 && wp > 0 && <path d={arcPath(0, wp)} fill="none" stroke="#B07A35" strokeWidth={16} strokeLinecap="round" data-workouts-share />}
             {p > 0 && running && (
               <path
                 className="he14-shimmer"
@@ -113,6 +120,19 @@ export const CaloriesHero: React.FC<{
             </HeroPill>
           ))}
         </div>
+        {workouts && (
+          <div className="flex justify-center flex-wrap" style={{ marginTop: 6, columnGap: 14, rowGap: 4 }} data-workouts-legend>
+            {[
+              { c: "#B07A35", t: workouts.workoutsLabel },
+              { c: "#D9A15B", t: workouts.restLabel },
+            ].map((x) => (
+              <span key={x.t} className="inline-flex items-center" style={{ gap: 6, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: ink }}>
+                <span aria-hidden style={{ width: 10, height: 6, borderRadius: 3, background: x.c, display: "inline-block" }} />
+                {x.t}
+              </span>
+            ))}
+          </div>
+        )}
       </MetricHero>
     </div>
   );

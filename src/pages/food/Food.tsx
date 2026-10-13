@@ -85,8 +85,9 @@ export default function Food() {
   const hc = !!accessibility.highContrast;
   const online = useOnline();
   // v6 FO1 O4 / O5: a write that failed, or one tried offline, says
-  // "Couldn't save. Try again." in the shared toast.
-  const [saveToast, setSaveToast] = useState(false);
+  // "Couldn't save. Try again." in the shared toast. A failed single delete
+  // shows the server's message there instead, as main did (release review O6).
+  const [saveToast, setSaveToast] = useState<string | null>(null);
   // FO1 K9: the Custom tab's sub-tab, pinned in the fixed header.
   const [prepSub, setPrepSub] = useState<SubTab>("meals");
   // FO1 #30-#31 / #45 / #49: the lavender washes and hairline, light
@@ -171,7 +172,7 @@ export default function Food() {
 
   const handleCopyYesterdayMeal = async (meal: MealType) => {
     if (!online) {
-      setSaveToast(true);
+      setSaveToast(SAVE_FAILED);
       return;
     }
     // Each copy is now a real insert, so this awaits the writes and only
@@ -204,12 +205,12 @@ export default function Food() {
     // FO1 O4 / O5: one entry's delete that fails (or is tried offline) is
     // the shared toast; the row stays, as the database still has it.
     if (!online) {
-      setSaveToast(true);
+      setSaveToast(SAVE_FAILED);
       return;
     }
     const result = await deleteDiaryEntry(id);
     if (!result.ok) {
-      setSaveToast(true);
+      setSaveToast(result.message ?? SAVE_FAILED);
       return;
     }
     removeFoodEntry(id);
@@ -903,10 +904,10 @@ export default function Food() {
 
       <Toast open={!!bulkToast} message={bulkToast ?? ""} onExpire={() => setBulkToast(null)} />
       <Toast
-        open={saveToast}
-        message={SAVE_FAILED}
+        open={!!saveToast}
+        message={saveToast ?? ""}
         icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
-        onExpire={() => setSaveToast(false)}
+        onExpire={() => setSaveToast(null)}
       />
     </div>
   );

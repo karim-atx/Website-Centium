@@ -52,7 +52,8 @@ export const StarredMessages: React.FC<{
           No starred messages
         </p>
         <p className="max-w-[260px] text-[12.5px] leading-[18.8px] font-normal" style={{ color: c.inkSoft }}>
-          Long-press a message and tap Star to keep it here.
+          {/* The privacy line is main's, kept verbatim (release review O10). */}
+          Long-press a message and tap Star to keep it here. Only you can see your stars.
         </p>
       </div>
     );

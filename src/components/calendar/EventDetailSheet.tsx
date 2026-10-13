@@ -86,7 +86,7 @@ export const EventDetailSheet: React.FC<{
           <p
             className={clsx(
               "text-[11px] font-semibold",
-              status === "accepted" ? "text-primary-dark" : status === "declined" ? "text-charcoal-faint" : "text-[#9A7424] dark:text-[#CAB082]"
+              status === "accepted" ? "text-primary-dark" : status === "declined" ? "text-charcoal-faint" : "text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]"
             )}
           >
             {status === "accepted" ? "Going" : status === "declined" ? "Declined" : "Invitation"}
@@ -96,11 +96,11 @@ export const EventDetailSheet: React.FC<{
             <Dumbbell size={11} aria-hidden /> Scheduled by your coach
           </p>
         ) : booked ? (
-          <p className="flex items-center gap-1 text-[11px] font-semibold text-[#9A7424] dark:text-[#CAB082]">
+          <p className="flex items-center gap-1 text-[11px] font-semibold text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]">
             <Ticket size={11} aria-hidden /> Booked with {booked.businessName}
           </p>
         ) : bookingMade ? (
-          <p className="flex items-center gap-1 text-[11px] font-semibold text-[#9A7424] dark:text-[#CAB082]">
+          <p className="flex items-center gap-1 text-[11px] font-semibold text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]">
             <Ticket size={11} aria-hidden /> Added by a booking
           </p>
         ) : null}

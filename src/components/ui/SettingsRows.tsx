@@ -154,7 +154,7 @@ export const SettingsRow: React.FC<RowProps> = ({
                   : "bg-primary-pale text-primary-accent"
           )}
         >
-          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe â€¦ all 17 / 1.75. */}
+          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}
           {tile ?? (Icon && <Icon size={17} strokeWidth={1.75} />)}
         </span>
       )}

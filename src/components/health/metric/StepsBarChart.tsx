@@ -44,12 +44,16 @@ export const GoalBarChart: React.FC<{
   onBarTap?: (key: string) => void;
   /** Accessible label per tappable bar. */
   barLabel?: (bar: GoalBar) => string;
-}> = ({ metric, mode, bars, goal, goalLabel, ghostValue, onBarTap, barLabel }) => {
+  /** Added (release gate, Sleep year): the reference (goal or ghost) and the tallest bar sit no higher than this y, leaving room above for `overlay`. */
+  plotTop?: number;
+  /** Added (release gate, Sleep year): extra marks drawn in the same 326-wide svg (the average-bedtime line). */
+  overlay?: React.ReactNode;
+}> = ({ metric, mode, bars, goal, goalLabel, ghostValue, onBarTap, barLabel, plotTop, overlay }) => {
   const { dark, hc } = useHealthMode();
   const ref = goal ?? ghostValue ?? 1;
   const maxVal = Math.max(0, ...bars.map((b) => b.value ?? 0));
   // Goal (or the ghost reference) sits at GOAL_Y unless a bar passes it.
-  const pxPer = maxVal > ref ? (BASE - TOP) / maxVal : (BASE - GOAL_Y) / ref;
+  const pxPer = maxVal > ref ? (BASE - (plotTop ?? TOP)) / maxVal : (BASE - (plotTop ?? GOAL_Y)) / ref;
   const yOf = (v: number) => BASE - v * pxPer;
   const pitch = PLOT_W / bars.length;
   const width = mode === "week" ? 20 : mode === "year" ? 14.5 : 4.5;
@@ -120,6 +124,7 @@ export const GoalBarChart: React.FC<{
           )}
         </>
       )}
+      {overlay}
     </svg>
   );
 };
@@ -138,9 +143,9 @@ export const LegendGhost: React.FC = () => {
     />
   );
 };
-export const LegendDash: React.FC<{ color: string }> = ({ color }) => (
+export const LegendDash: React.FC<{ color: string; strokeWidth?: number; dash?: string }> = ({ color, strokeWidth = 1.5, dash = "3 2" }) => (
   <svg aria-hidden width={14} height={10} viewBox="0 0 14 10">
-    <line x1={0} x2={14} y1={5} y2={5} stroke={color} strokeWidth={1.5} strokeDasharray="3 2" />
+    <line x1={0} x2={14} y1={5} y2={5} stroke={color} strokeWidth={strokeWidth} strokeDasharray={dash} />
   </svg>
 );
 

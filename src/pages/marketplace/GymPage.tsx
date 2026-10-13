@@ -23,6 +23,7 @@ import { PinnedCta } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { CentredPopup } from "../../components/ui/CentredPopup";
+import { Toast } from "../../components/ui/Toast";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { CentiumMark } from "../../components/icons/CentiumMark";
 import { initials } from "../../components/professionals/typeColour";
@@ -118,6 +119,9 @@ const nowHHMM = () => {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 };
 
+/** A refusal the server explained (an ATX code): its own message stays inline. */
+const isRefusal = (code?: string) => !!code && code.startsWith("ATX");
+
 export function GymPage({ gymId }: { gymId: string }) {
   const { profileReady, user } = useApp();
   const navigate = useNavigate();
@@ -152,6 +156,9 @@ export function GymPage({ gymId }: { gymId: string }) {
   const [owner, setOwner] = useState<string | null>(null);
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgError, setMsgError] = useState<string | null>(null);
+  // MO1.4.2.1 O-TOAST: a known refusal (an ATX code) keeps its specific line
+  // where it happened; any other write failure is the shared toast.
+  const [saveFailed, setSaveFailed] = useState(false);
   // A4: undefined while loading; the rows (possibly none = not published).
   const [hours, setHours] = useState<HoursRow[] | undefined>(undefined);
   const [hoursError, setHoursError] = useState<string | null>(null);
@@ -771,7 +778,8 @@ export function GymPage({ gymId }: { gymId: string }) {
                 const r = await purchaseGymMembership(gym.id, plan.id);
                 if (!r.ok) {
                   setBusy(false);
-                  setCheckoutError(r.message);
+                  if (isRefusal(r.code)) setCheckoutError(r.message);
+                  else setSaveFailed(true);
                   // ATX83: they already hold one; show it.
                   if (r.code === "ATX83") await loadMemberships();
                   return;
@@ -954,7 +962,8 @@ export function GymPage({ gymId }: { gymId: string }) {
               const r = await bookClass(classId);
               setBusy(false);
               if (!r.ok) {
-                setBookError(r.message);
+                if (isRefusal(r.code)) setBookError(r.message);
+                else setSaveFailed(true);
                 return;
               }
               setBookOpen(false);
@@ -976,6 +985,10 @@ export function GymPage({ gymId }: { gymId: string }) {
           See all classes
         </button>
       </CentredPopup>
+
+      {/* O-TOAST: a write that failed for no stated reason (a dropped
+          connection, a server error); nothing changed on screen. */}
+      <Toast open={saveFailed} message="Couldn't save. Try again." tone="error" onExpire={() => setSaveFailed(false)} />
     </div>
   );
 }

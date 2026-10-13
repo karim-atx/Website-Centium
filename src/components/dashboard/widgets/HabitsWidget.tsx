@@ -53,7 +53,7 @@ const Segments: React.FC<{ done: boolean[]; colours: (HabitColourKey | undefined
 };
 
 /**
- * OURS §B #8-#9: the kept habit grid (repo HabitPages, restyled): 200 x 88 at
+ * OURS §B #8-#9: the kept habit grid (main's HabitPages, deleted on the branch; restyled): 200 x 88 at
  * 142, 47, two columns, six to a page, gap 6 x 5, swipe between pages, page
  * dots 4 x 4 gap 3 under the grid.
  */
@@ -115,10 +115,17 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
         ))}
       </span>
       {pages.length > 1 && (
-        <span className="absolute flex" style={{ gap: 3, left: "50%", transform: "translateX(-50%)", top: 91 }} aria-hidden>
-          {pages.map((_, i) => (
-            <span key={i} className="block rounded-full" style={{ width: 4, height: 4, background: deep, opacity: i === page ? 1 : 0.3 }} />
-          ))}
+        // Main's hint, verbatim, back beside the dots as main laid them out
+        // (hint left, dots right; release review O1). Dots keep top 91.
+        <span className="absolute flex items-center justify-between" style={{ left: 0, right: 0, top: 87.5, height: 11, gap: 10 }}>
+          <span className="whitespace-nowrap" style={{ fontSize: textPx(8.5), lineHeight: linePx(11), fontWeight: 600, color: deep, opacity: dark ? 1 : 0.68 }}>
+            For more habits, swipe.
+          </span>
+          <span className="flex shrink-0" style={{ gap: 3 }} aria-hidden>
+            {pages.map((_, i) => (
+              <span key={i} className="block rounded-full" style={{ width: 4, height: 4, background: deep, opacity: i === page ? 1 : 0.3 }} />
+            ))}
+          </span>
         </span>
       )}
     </span>

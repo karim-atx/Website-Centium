@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight } from "lucide-react";
 import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
 import { FlagNote } from "../ui/FlagNote";
+import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
@@ -196,6 +197,8 @@ export const BiomarkerDetailSheet: React.FC<{
             View full history <ChevronRight size={15} aria-hidden />
           </button>
         )}
+        {/* KEEP-SAFETY (release review): the app-wide disclaimer stays on the marker popup, as on main. */}
+        <HealthDisclaimer className="mt-3" />
       </div>
     </CentredPopup>
   );

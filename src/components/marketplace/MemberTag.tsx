@@ -23,7 +23,7 @@ export function MemberTag({
         ? "bg-th-e7f2f0 text-th-3c6b65 dark:bg-teal-pale dark:text-teal-deep-text"
         : "bg-th-e4f0ee text-th-2f5f58 dark:bg-teal-pale dark:text-teal-deep-text"
       : tone === "pending"
-      ? "bg-[#FBF3E2] text-[#9A7424] dark:bg-gold-pale dark:text-[#CAB082]"
+      ? "bg-[#FBF3E2] text-[color:var(--gold-pill-ink)] dark:bg-gold-pale dark:text-[#CAB082]"
       : "bg-cream-soft text-charcoal-soft";
   return (
     <span

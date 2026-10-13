@@ -48,10 +48,10 @@ import {
 // UPLOAD FIRST, RECORD ON SAVE (HE1.9.2.1 K1). The file is uploaded before the
 // results are typed; Save writes the panel pointing at it and the ticked
 // results. Cancel, back, Discard or closing removes the uploaded object, so a
-// report whose results were never saved does not stay in the bucket. Byte
-// progress and abort need an upload path with progress (BACKEND B2,
-// PB-HB-20): until then the bar runs without a percentage and Cancel removes
-// the object once the request returns.
+// report whose results were never saved does not stay in the bucket. The
+// upload reports byte progress (services/storage uploadPrivateFile with
+// progress, PB-HB-20 / HB-07: the bar width and the "62%" label follow it)
+// and Cancel aborts the request, so an unfinished upload stores nothing.
 //
 // No navbar for the whole flow (V6-130): a full-screen layer over the shell.
 
@@ -86,6 +86,9 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
   const [path, setPath] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // HE1.9.2.1 #9 / #11: bytes sent, 0 to 1.
+  const [progress, setProgress] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
   const [hasFile, setHasFile] = useState(!!file);
   const [markers, setMarkers] = useState<MarkerDraft[]>([emptyMarker()]);
   const [date, setDate] = useState(today);
@@ -131,7 +134,10 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
     if (!file || stage !== "uploading" || !authUserId) return;
     let live = true;
     setUploadError(null);
-    void uploadPrivateFile({ bucket: "lab-reports", userId: authUserId, file }).then(async (r) => {
+    setProgress(0);
+    const ac = new AbortController();
+    abortRef.current = ac;
+    void uploadPrivateFile({ bucket: "lab-reports", userId: authUserId, file }, { onProgress: (f) => live && setProgress(f), signal: ac.signal }).then(async (r) => {
       if (!live || cancelled.current) {
         if (r.ok && r.path) await deletePrivateFile("lab-reports", r.path);
         return;
@@ -146,6 +152,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
     });
     return () => {
       live = false;
+      ac.abort();
     };
   }, [file, stage, authUserId, attempt]);
 
@@ -169,7 +176,10 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
   );
 
   const typed = markers.some((m) => m.name.trim() || m.value.trim());
-  const leave = () => onClose();
+  const leave = () => {
+    abortRef.current?.abort();
+    onClose();
+  };
   const back = () => {
     if (stage === "entry" && (typed || hasFile)) setDiscardOpen(true);
     else leave();
@@ -275,8 +285,8 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
   const bar = (full?: boolean) => (
     <div className="relative overflow-hidden" style={{ width: 286, height: 6, borderRadius: 9999, background: dark ? "#303141" : "#EEECF4" }}>
       <span
-        className={full || reduced ? "" : "records-upload-indeterminate"}
-        style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: full ? "100%" : reduced ? "62%" : "40%", borderRadius: 9999, background: "rgb(var(--c-fill-pinned))" }}
+        style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: full ? "100%" : `${Math.round(progress * 100)}%`, borderRadius: 9999, background: "rgb(var(--c-fill-pinned))", transition: reduced ? undefined : "width 200ms linear" }}
+        data-upload-fill
       />
     </div>
   );
@@ -291,6 +301,12 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
             {bar()}
             <div className="flex justify-between items-baseline" style={{ marginTop: 10 }}>
               <p style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{uploadError ? uploadError : "Uploading your report"}</p>
+              {!uploadError && (
+                // #11: "62%" 12/18 600 #8C8378 (dark #B8B3C7), right-aligned.
+                <span data-upload-pct style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_FAINT, fontVariantNumeric: "tabular-nums" }}>
+                  {Math.round(progress * 100)}%
+                </span>
+              )}
             </div>
             {!uploadError && (
               <p style={{ marginTop: 4, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>Keep the app open. This takes a few seconds.</p>
@@ -416,7 +432,6 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
 
   return createPortal(
     <div className="fixed inset-0 z-[45] flex justify-center bg-cream" role="dialog" aria-modal="true" aria-label="Scan a report">
-      <style>{`@keyframes records-upload-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } } .records-upload-indeterminate { animation: records-upload-slide 1.2s ease-in-out infinite; }`}</style>
       <div className="w-full max-w-[430px] h-full overflow-y-auto overscroll-contain">{content}</div>
       <CalendarPickerSheet variant="partB"
         open={calendarOpen}

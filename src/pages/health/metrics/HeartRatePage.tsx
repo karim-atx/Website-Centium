@@ -34,7 +34,9 @@ import {
   relativeDayTitle,
   stepAnchor,
   valuesIn,
+  type Period,
 } from "../../../components/health/metric/periods";
+import { shiftDate } from "../../../utils/date";
 import { HeartRateChart, HeartRateHero, hrLegend, hrStats, hrUnits, type HrHeroData } from "../../../components/health/metric/HeartRateParts";
 import { MeasuredOnPopup } from "../../../components/health/log/LogSheetParts";
 import { REVIEWED } from "../../../services/health-metrics/clinicalCopy";
@@ -49,8 +51,10 @@ import { Toast } from "../../../components/ui/Toast";
 // HE1.2.e layout with web copy. With rows (one value a day, latest wins:
 // services/health-metrics getHealthMetrics) the page draws them honestly:
 // - Resting (HA-08, Database B1): activity_daily.resting_bpm, else a sample
-//   marked context = rest; without either the hero says "latest" (V6-21) and
-//   the averages say "average"; V6-07: no rhythm words.
+//   marked context = rest. The period's average resting drives "Avg resting"
+//   (tile, dashed line, month / year hero, legend "Resting" dots); without
+//   any the hero says "latest" (V6-21) and the averages say "average";
+//   V6-07: no rhythm words.
 // - The day's samples (health_metrics keeps every sample) give the day's
 //   range and the strip's low / high.
 // - HE1.5.a (alert card) and Alert settings are V6-03 clinical copy: hidden
@@ -74,16 +78,34 @@ export default function HeartRatePage() {
   const [toast, setToast] = useState<string | null>(null);
   // Database B1: every sample of the period (health_metrics keeps them; the
   // context column marks rest), and activity_daily.resting_bpm (HA-08).
+  // From the previous period (and at least two weeks back) so the change line
+  // compares with last week's / last period's average resting (health-backend.md:155).
   const p0 = periodOf(range, anchor);
-  const samples = useMetricRows("heart_rate", p0.start, p0.end).data;
+  const prev0 = previousPeriod(p0);
+  const from0 = prev0.start < shiftDate(p0.start, -14) ? prev0.start : shiftDate(p0.start, -14);
+  const samples = useMetricRows("heart_rate", from0, p0.end).data;
   const restingByDay = useMemo(() => {
     const out: Record<string, number> = {};
     for (const x of samples) if (x.context === "rest") out[x.day] = x.value;
     return out;
   }, [samples]);
-  const activity = activityByDay(useActivityDaily(p0.start, p0.end).data);
+  const samplesByDay = useMemo(() => {
+    const out: Record<string, number[]> = {};
+    for (const x of samples) (out[x.day] ??= []).push(x.value);
+    return out;
+  }, [samples]);
+  const activity = activityByDay(useActivityDaily(from0, p0.end).data);
   const restingOn = (d: string): number | null => activity[d]?.restingBpm ?? restingByDay[d] ?? null;
-  const samplesOn = (d: string) => samples.filter((x) => x.day === d).map((x) => x.value);
+  const samplesOn = (d: string) => samplesByDay[d] ?? [];
+  /** Resting values of a period's days (B1 HA-08), keyed by day. */
+  const restingIn = (per: Period) => {
+    const out: Record<string, number> = {};
+    for (const d of daysOf(per)) {
+      const r = restingOn(d);
+      if (r !== null) out[d] = r;
+    }
+    return out;
+  };
 
   const byDay = useMemo(() => {
     const out: Record<string, number> = {};
@@ -103,10 +125,21 @@ export default function HeartRatePage() {
   const rows = valuesIn(byDay, period);
   const vals = rows.map((r) => r.value);
   const pAvg = avg(vals);
-  const pLow = vals.length ? Math.min(...vals) : null;
-  const pHigh = vals.length ? Math.max(...vals) : null;
+  // Low / high over every sample of the period (B1 keeps them), else the daily values.
+  const lows = rows.map((r) => (samplesOn(r.date).length ? Math.min(...samplesOn(r.date)) : r.value));
+  const highs = rows.map((r) => (samplesOn(r.date).length ? Math.max(...samplesOn(r.date)) : r.value));
+  const pLow = lows.length ? Math.min(...lows) : null;
+  const pHigh = highs.length ? Math.max(...highs) : null;
   const prevVals = valuesIn(byDay, previousPeriod(period)).map((r) => r.value);
   const prevAvg = avg(prevVals);
+  // B1 resting (HA-08): the period's average resting drives "Avg resting"
+  // (tile, line, month / year hero); without any resting value the labels stay
+  // "Average" (V6-21).
+  const restMap = restingIn(period);
+  const restAvg = avg(Object.values(restMap));
+  const prevRestAvg = avg(Object.values(restingIn(previousPeriod(period))));
+  const resting = restAvg !== null;
+  const lineAvg = resting ? restAvg : pAvg;
   const current = isCurrentPeriod(period, today);
   const pTitle = periodTitle(period, today);
   const pLabel = periodLabel(period);
@@ -136,7 +169,11 @@ export default function HeartRatePage() {
             : day === today
               ? "1 reading today"
               : `1 reading · ${who === "Yesterday's" ? "yesterday" : who}`,
-        change: prev === null || round(v) === round(prev) ? null : `${arrow(v - prev)} ${Math.abs(round(v - prev))} bpm`,
+        // Resting: against last week's average resting (health-backend.md:155); otherwise the previous reading.
+        change: (() => {
+          const ref = resting !== null ? avg(Object.values(restingIn(previousPeriod(periodOf("week", day))))) : prev;
+          return ref === null || round(v) === round(ref) ? null : `${arrow(v - ref)} ${Math.abs(round(v - ref))} bpm`;
+        })(),
         low: round(lo),
         high: round(hi),
         marker: round(v),
@@ -146,23 +183,31 @@ export default function HeartRatePage() {
     if (pAvg === null || pLow === null || pHigh === null) return null;
     const name = range === "month" ? periodLabel(period).split(" ")[0] : period.start.slice(0, 4);
     const prevName = range === "month" ? monthShort(Number(previousPeriod(period).start.slice(5, 7))) : String(Number(period.start.slice(0, 4)) - 1);
+    // HE1.5.m / .y #13, #20: "bpm avg resting", "Avg resting 61" with B1 resting values.
+    const v = resting ? (restAvg as number) : pAvg;
+    const ref = resting ? prevRestAvg : prevAvg;
     return {
-      value: round(pAvg),
-      unit: "bpm average",
+      value: round(v),
+      unit: resting ? "bpm avg resting" : "bpm average",
       rangeText: `${name} range ${round(pLow)} to ${round(pHigh)} bpm`,
-      change: prevAvg === null || round(pAvg) === round(prevAvg) ? null : `${arrow(pAvg - prevAvg)} ${Math.abs(round(pAvg - prevAvg))} bpm vs ${prevName}`,
+      change: ref === null || round(v) === round(ref) ? null : `${arrow(v - ref)} ${Math.abs(round(v - ref))} bpm vs ${prevName}`,
       low: round(pLow),
       high: round(pHigh),
-      marker: round(pAvg),
-      markerLabel: `Average ${round(pAvg)}`,
+      marker: round(v),
+      markerLabel: `${resting ? "Avg resting" : "Average"} ${round(v)}`,
     };
   })();
 
   // --- chart ----------------------------------------------------------------
-  const units = hrUnits(range, period, byDay, today);
+  const units = hrUnits(range, period, byDay, today, samplesByDay, restMap);
   const logged = rows.length;
   const nDays = daysOf(period).length;
-  const avgLabel = pAvg === null ? "" : `${range === "week" ? "Week average" : range === "month" ? "Average" : "Year average"} ${round(pAvg)}`;
+  const avgLabel =
+    lineAvg === null
+      ? ""
+      : resting
+        ? `${range === "week" ? "Week avg resting" : "Avg resting"} ${round(lineAvg)}`
+        : `${range === "week" ? "Week average" : range === "month" ? "Average" : "Year average"} ${round(lineAvg)}`;
   const elapsed = (() => {
     if (anchor !== today) return 1;
     const n = new Date();
@@ -196,9 +241,12 @@ export default function HeartRatePage() {
     if (logged === 0) return `Heart rate ${pTitle.toLowerCase()}. No readings.`;
     const lo = round(pLow as number);
     const hi = round(pHigh as number);
-    if (range === "week") return `Heart rate ${current ? "this week" : pLabel}. ${logged} day${logged === 1 ? "" : "s"}, ${lo} to ${hi} bpm, average ${round(pAvg as number)}.`;
-    if (range === "month") return `Heart rate in ${pLabel.split(" ")[0]}. Average ${round(pAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
-    return `Heart rate in ${pLabel}. Average ${round(pAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
+    const avgWord = resting ? "average resting" : "average";
+    if (range === "week") return `Heart rate ${current ? "this week" : pLabel}. ${logged} day${logged === 1 ? "" : "s"}, ${lo} to ${hi} bpm, ${avgWord} ${round(lineAvg as number)}.`;
+    // HE1.5.m / .y screen reader: "Heart rate in September. Average resting 61 bpm. Range 50 to 168 bpm."
+    const Avg = resting ? "Average resting" : "Average";
+    if (range === "month") return `Heart rate in ${pLabel.split(" ")[0]}. ${Avg} ${round(lineAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
+    return `Heart rate in ${pLabel}. ${Avg} ${round(lineAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
   })();
 
   // --- history: one row per logged day, newest first (synced rows; Delete is
@@ -303,17 +351,17 @@ export default function HeartRatePage() {
           onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
           onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
           nextDisabled={current}
-          legend={hrLegend(range, dark)}
+          legend={hrLegend(range, dark, range === "day" ? restingOn(anchor) !== null : resting)}
           foot={chartFoot}
           loading={loading}
           summary={summary}
         >
-          <HeartRateChart range={range} units={units} average={range === "day" ? null : pAvg} averageLabel={avgLabel} day={range === "day" ? { value: byDay[anchor] ?? null, elapsed } : undefined} />
+          <HeartRateChart range={range} units={units} average={range === "day" ? null : lineAvg} averageLabel={avgLabel} day={range === "day" ? { value: restingOn(anchor) ?? byDay[anchor] ?? null, elapsed } : undefined} />
         </ChartCard>
       )}
       {logged > 0 && (
         <>
-          <StatCard metric="heart-rate" stats={hrStats(pAvg, pLow, pHigh)} style={{ marginTop: 10, minHeight: 56 }} />
+          <StatCard metric="heart-rate" stats={hrStats(lineAvg, pLow, pHigh, resting)} style={{ marginTop: 10, minHeight: 56 }} />
           {statFoot && <p style={{ marginTop: 6, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: ink }}>{statFoot}</p>}
         </>
       )}

@@ -9,7 +9,7 @@ import { forumAccess } from "../../services/forum/rules";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { linePx, textPx } from "../../theme/textSize";
 
-// Settings â€º Data & account â€º "Blocked members" (MO1.8 BM, MO1.8.12,
+// Settings › Data & account › "Blocked members" (MO1.8 BM, MO1.8.12,
 // MO1.8.12.1, MO1.8.12.e): a Part B centred popup (X-01: 350 / r24 / pad 20 /
 // Done 46) listing the people blocked from a forum post, each shown by the
 // label that was on the post when they were blocked (a nickname or a first

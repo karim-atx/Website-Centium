@@ -1,4 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
+import { getSupabaseConfig } from "../../../lib/supabase/config";
+import { TAB_IDENTITY_REFUSAL, TAB_USER_ID, currentTabLock, shouldRefuse } from "../../../lib/supabase/tabIdentity";
 import { stripPrivateExif } from "./exif";
 
 // Uploads and reads for the private Storage buckets.
@@ -535,6 +537,78 @@ export type UploadParams =
   | { bucket: EventScopedBucket; userId: string; file: File; eventId: string };
 
 /**
+ * Byte progress and abort for one upload (HE1.9.2.1 #9 / #11, PB-HB-20: the
+ * handover's bar width = progress and "62%"; BACKEND_REQUIREMENTS HB-07 puts
+ * the progress path on the frontend). storage-js uploads through fetch, which
+ * reports no upload progress, so this path sends the same request through
+ * XMLHttpRequest instead.
+ */
+export interface UploadProgressOptions {
+  /** 0 to 1, as bytes go out. */
+  onProgress: (fraction: number) => void;
+  /** Aborting stops the request; nothing is stored if it had not finished. */
+  signal?: AbortSignal;
+}
+
+/**
+ * The storage-js upload request (POST /storage/v1/object/<bucket>/<path>,
+ * multipart with cacheControl 3600, x-upsert false), sent with XHR for its
+ * upload progress events. THE TAB-IDENTITY GUARD STILL APPLIES: the client's
+ * fetch wrapper refuses a data request whose token is not this tab's user
+ * (lib/supabase/tabIdentity.ts); XHR does not pass through that wrapper, so
+ * the same shouldRefuse check runs here before anything is sent. Errors come
+ * back in the shape isCapViolation / isPolicyRefusal read.
+ */
+async function uploadWithProgress(
+  bucket: PrivateBucket,
+  path: string,
+  body: Blob,
+  contentType: string,
+  { onProgress, signal }: UploadProgressOptions
+): Promise<{ error: null | { status?: number; statusCode?: string; code?: string; message: string; aborted?: boolean } }> {
+  const { url, anonKey } = getSupabaseConfig();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? null;
+  const authorization = token ? `Bearer ${token}` : null;
+  const endpoint = `${url}/storage/v1/object/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
+  if (shouldRefuse(TAB_USER_ID, endpoint, authorization, currentTabLock() !== null)) {
+    return { error: { status: 409, code: TAB_IDENTITY_REFUSAL.code, message: TAB_IDENTITY_REFUSAL.message } };
+  }
+  if (signal?.aborted) return { error: { message: "aborted", aborted: true } };
+  const form = new FormData();
+  form.append("cacheControl", "3600");
+  form.append("", body.type ? body : new Blob([body], { type: contentType }));
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", endpoint);
+    xhr.setRequestHeader("apikey", anonKey);
+    if (authorization) xhr.setRequestHeader("Authorization", authorization);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) onProgress(Math.min(1, e.loaded / e.total));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(1);
+        resolve({ error: null });
+        return;
+      }
+      let j: { statusCode?: string; error?: string; message?: string } = {};
+      try {
+        j = JSON.parse(xhr.responseText);
+      } catch {
+        /* not JSON: the status decides */
+      }
+      resolve({ error: { status: xhr.status, statusCode: j.statusCode, code: j.error, message: j.message ?? j.error ?? `HTTP ${xhr.status}` } });
+    };
+    xhr.onerror = () => resolve({ error: { message: "network error" } });
+    xhr.onabort = () => resolve({ error: { message: "aborted", aborted: true } });
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(form);
+  });
+}
+
+/**
  * Uploads one file and returns the path to store on the row that references
  * it. The caller owns that row, and owns deleting this object if the row
  * write then fails — nothing cascades.
@@ -547,7 +621,7 @@ export type UploadParams =
  * and unreachable by anyone who does not already share the thread. See
  * deletePrivateFile, which will not accept that bucket at all.
  */
-export async function uploadPrivateFile(params: UploadParams): Promise<UploadResult> {
+export async function uploadPrivateFile(params: UploadParams, progress?: UploadProgressOptions): Promise<UploadResult> {
   const { bucket, file } = params;
 
   // Kept even though the capture flows now check at pick time. That check is a
@@ -572,13 +646,16 @@ export async function uploadPrivateFile(params: UploadParams): Promise<UploadRes
   const toUpload = await stripPrivateExif(file);
 
   const path = objectPath(params, file.type);
-  const { error } = await supabase.storage.from(bucket).upload(path, toUpload, {
-    contentType: file.type,
-    // Never overwrite. The path carries a fresh uuid, so a collision would
-    // mean something is very wrong, and silently replacing a medical file is
-    // the last behaviour this should have.
-    upsert: false,
-  });
+  const { error } = progress
+    ? await uploadWithProgress(bucket, path, toUpload, file.type, progress)
+    : await supabase.storage.from(bucket).upload(path, toUpload, {
+        contentType: file.type,
+        // Never overwrite. The path carries a fresh uuid, so a collision would
+        // mean something is very wrong, and silently replacing a medical file is
+        // the last behaviour this should have.
+        upsert: false,
+      });
+  if (error && (error as { aborted?: boolean }).aborted) return { ok: false, reason: "unknown", message: "Upload cancelled." };
 
   if (error) {
     console.error("[storage] Upload failed:", error.message);

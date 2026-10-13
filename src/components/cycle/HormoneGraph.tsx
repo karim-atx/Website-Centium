@@ -8,8 +8,8 @@ import { linePx, textPx } from "../../theme/textSize";
 //
 // THE DISCLAIMER IS IN THE HEADING, not a footnote and not a tooltip:
 // "Typical hormone pattern · Illustrative, not measured" is one line, always
-// rendered together. HORMONE_EXPLAINER is not drawn on the v6 card; it stays
-// with the graph for screen readers.
+// rendered together. HORMONE_EXPLAINER stays visible under it (KEEP-SAFETY,
+// release review: main showed it; it says the curve is not from a blood test).
 //
 // NO Y-AXIS NUMBERS, deliberately. Each curve is normalised to its own peak,
 // so the axis has no unit.
@@ -57,7 +57,9 @@ export const HormoneGraph: React.FC<{
           · {HORMONE_DISCLAIMER}
         </span>
       </p>
-      <p className="sr-only">{HORMONE_EXPLAINER}</p>
+      <p className="text-charcoal-faint" style={{ marginTop: 2, marginBottom: 8, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400 }}>
+        {HORMONE_EXPLAINER}
+      </p>
 
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}

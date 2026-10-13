@@ -35,9 +35,9 @@ import { CheckFormPopup, CheckReminderSheet, HideOrDeletePopup, HiddenChecksShee
 // Until Database stage B2 lands, the check circle, swipe Edit / Delete,
 // "+ Add a check" and the Hidden checks menu are not shown; the row's status
 // and Last come from the user's own records (blood pressure readings, lab
-// results), as before. Per-check reminders (B4): until they land the
-// reminder row keeps opening the generic personal reminder (V6-80), and no
-// bell shows.
+// results), as before. The "Set a personal reminder" row always opens the
+// generic personal reminder (V6-80, as on main); per-check reminders (B2/B4,
+// HE1.8.2) open from a row's menu ("remind"), its bell and the edit form.
 
 const STATUS_INK: Record<CheckState["tone"], [string, string]> = {
   good: ["#357A4D", "#7FC79C"],
@@ -109,7 +109,6 @@ export function GeneralPlan() {
   const [menuEl, menuBtn] = useState<HTMLButtonElement | null>(null);
 
   const today = todayLocal();
-  const pregnancyPlan = !!pregnancy;
   const latestBpDay = bloodPressure[0] ? localDayOf(bloodPressure[0].recordedAt) : null;
   const gestation = pregnancy ? gestationOn(today, pregnancy) : null;
   // Not known yet counts as on: nothing body-size related may show by mistake (K3).
@@ -121,7 +120,10 @@ export function GeneralPlan() {
   const reminderRow = (
     <button
       type="button"
-      onClick={() => (pregnancyPlan || !ready ? setReminderOpen(true) : openReminder())}
+      // V6-80 / release review LOST #1: always the generic personal reminder (one per
+      // account, topic-free), as on main, so a saved one can be changed or turned off;
+      // per-check reminders (HE1.8.2) open from a row's menu, its bell and the edit form.
+      onClick={() => setReminderOpen(true)}
       className="tap relative w-full flex items-center bg-cream-card text-left"
       style={{ ...card, marginTop: 10, minHeight: 58, padding: "10px 40px 10px 12px", gap: 12 }}
     >
@@ -372,6 +374,10 @@ export function GeneralPlan() {
         }
       />
 
+      {/* KEEP-SAFETY (release review): main's framing line under the title, verbatim. */}
+      <p className="text-charcoal-soft" data-checks-subtitle style={{ margin: "0 0 8px", fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600 }}>
+        {SCREENING_COPY.cardSubtitle}
+      </p>
       <InfoBox style={{ marginTop: 2 }}>
         <p className="text-charcoal-soft" style={{ margin: 0, fontSize: textPx(12), lineHeight: "18px" }}>
           {SCREENING_COPY.intro}
@@ -422,8 +428,7 @@ export function GeneralPlan() {
         />
       )}
 
-      {/* V6-80: the generic personal reminder stays behind the row until
-          per-check reminders land (B4); with them the row opens HE1.8.2. */}
+      {/* V6-80: the generic personal reminder stays behind the row for everyone. */}
       <PersonalReminderSheet open={reminderOpen} onClose={() => setReminderOpen(false)} />
 
       <MarkDonePopup

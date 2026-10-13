@@ -457,18 +457,6 @@ export default {
           "100%": { backgroundColor: "var(--settle-to, #EFECF8)" },
         },
         // §7.3: idle water-fill crests — alive without asking for attention.
-        // Iteration 6.2 widget library: the small Heart Rate widget's
-        // beating-heart glyph — a lub-dub double pulse, not a plain scale.
-        // Duration is set per-instance via style.animationDuration (60/bpm),
-        // so the beat always matches the real reading rather than a fixed
-        // rate.
-        "cent-heartbeat": {
-          "0%, 100%": { transform: "scale(1)" },
-          "14%": { transform: "scale(1.13)" },
-          "28%": { transform: "scale(1)" },
-          "42%": { transform: "scale(1.05)" },
-          "56%": { transform: "scale(1)" },
-        },
         "water-crest": {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
@@ -498,10 +486,6 @@ export default {
         "calorie-glow": {
           "0%": { transform: "scale(0.85)", opacity: 0.5 },
           "100%": { transform: "scale(1.35)", opacity: 0 },
-        },
-        "ekg-scroll": {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-300px)" },
         },
         // QA 11.0: PR-set celebration confetti — each piece falls and
         // drifts sideways by its own per-piece CSS variable.
@@ -584,9 +568,6 @@ export default {
         "set-tick-ring": "set-tick-ring 0.55s cubic-bezier(0.22,1,0.36,1) both",
         "set-tick-check": "set-tick-check 0.34s cubic-bezier(0.22,1,0.36,1) 60ms both",
         "set-row-settle": "set-row-settle 0.55s ease-out both",
-        // Default duration matches the design's 62bpm example (60/62s); the
-        // Heart Rate widget overrides style.animationDuration to 60/bpm.
-        "cent-heartbeat": "cent-heartbeat 0.97s ease-in-out infinite",
         "water-crest": "water-crest 7s linear infinite",
         "water-crest-reverse": "water-crest-reverse 5s linear infinite",
         "water-crest-fast": "water-crest 2.1s linear infinite",
@@ -596,7 +577,6 @@ export default {
         "water-drip": "water-drip 1.4s ease-in infinite",
         "calorie-flame": "calorie-flame 1.6s ease-in-out infinite",
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
-        "ekg-scroll": "ekg-scroll 3s linear infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
         "mkt-belt": "mkt-belt 46s linear infinite",
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",

@@ -21,7 +21,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 //
 // v6 GEOMETRY (X-01): each drawn popup takes its frame's measured geometry.
 // - "foundations" (default, unchanged): the v5.1 card above, 342 / r20 /
-//   padding 24 Ã— 20 / CTA 48, scrim with a 2 px blur.
+//   padding 24 × 20 / CTA 48, scrim with a 2 px blur.
 // - "partB": the Part B tables (MO1.8.12, MO1.8.13, achievement detail,
 //   Health B popups): 350 wide, r24, padding 20 on every side, shadow.sheet
 //   in light and none in dark, no blur on the scrim, title 17 / 25.5 800

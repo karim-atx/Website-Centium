@@ -3,17 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { Dumbbell, Play } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { nextRoutine } from "../../../services/workout/nextRoutine";
-import { mondayFirstWeek } from "../../../utils/week";
+import { DAY_SHORT, mondayFirstWeek, mondayIndex } from "../../../utils/week";
 import { MUSCLE_GROUP_LABEL } from "../../../utils/muscleGroups";
 import { WorkoutSessionSheet } from "../../workout/WorkoutSessionSheet";
-import { useWorkoutWeek } from "./data";
+import { useAssignedDays, useWorkoutWeek } from "./data";
 import { DoneStatus, HomeCard, HomeKeyframes, Hit44, homeColors, Line, linePx, stop, textPx, useHomeMode } from "./kit";
 
 // HO1.W6 Workout (small, large) and HO1.W6·e. Colours: HO1.W6 table, fixed in
 // every theme (V6-60); dark #262932* / #B8C0CE*. V6-121: Play / Pick ink in
 // dark is #262932 (white on #B8C0CE is about 1.8:1).
-// V6-141 (D17): no routine schedule or weekly target exists (PB-HO-06), so the
-// "Rest day / Next: ..." line and the "/4" of the empty ring stay hidden.
+// V6-141 (D17): no weekly target is stored (PB-HO-06), so the "/4" of the
+// empty ring shows only with coach-assigned days (B3 my_workout_week()
+// "scheduled"). Those assigned days (workout_template_assignments.assigned_day)
+// are also the schedule behind the small widget's "Rest day / Next: Leg Day ·
+// Fri" variant (#7a): this week has assigned days, none today, nothing done
+// today, and a later assigned day names its routine. Without a coach nothing
+// changes.
 
 /** HO1.W6-L #6: ring 62 x 62, stroke 5 (measured: outer 57, band 10 px at 2x), track white. */
 const Ring: React.FC<{ done: number; total: number; label: string; dark: boolean; empty?: boolean }> = ({ done, total, label, dark, empty }) => {
@@ -105,6 +110,12 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   const ww = useWorkoutWeek(workoutSessions.length);
   const sessionsThisWeek = ww?.done ?? weekDays.filter(Boolean).length;
   const ringLabel = ww && ww.scheduled > 0 ? `${sessionsThisWeek}/${ww.scheduled}` : String(sessionsThisWeek);
+  const assigned = useAssignedDays(today, workoutSessions.length);
+  const nextAssigned =
+    !done && selectedDate === today && ww && ww.scheduled > 0 && assigned && !assigned.some((a) => a.day === today)
+      ? assigned.map((a) => ({ ...a, routine: routines.find((r) => r.id === a.routineId) })).find((a) => a.day > today && a.routine)
+      : undefined;
+  const restNext = nextAssigned ? `Next: ${nextAssigned.routine!.name} · ${DAY_SHORT[mondayIndex(new Date(`${nextAssigned.day}T12:00:00`).getDay())]}` : null;
   const routes = () => navigate("/app/workout");
 
   // HO1.W6·e: nothing planned and nothing done.
@@ -196,6 +207,28 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
     if (!routine || otherOngoing) return routes(); // RoutinesTab owns the "cancel the other session?" question.
     setLogger(true);
   };
+
+  if (!isLarge && restNext) {
+    // #7a: the title and text rows of #6 / #7 with "Rest day" and the next assigned routine.
+    return (
+      <HomeCard
+        size={size}
+        editMode={editMode}
+        colors={colors}
+        icon={Dumbbell}
+        label="Workout"
+        onOpen={routes}
+        ariaLabel={`Workout, rest day. ${restNext}`}
+        bodyGap={20.2}
+        context={
+          <span className="block" style={{ width: "100%" }} data-rest-day>
+            <Line style={{ fontSize: textPx(17), lineHeight: linePx(18.7), fontWeight: 700, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>Rest day</Line>
+            <Line style={{ marginTop: 5.9, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>{restNext}</Line>
+          </span>
+        }
+      />
+    );
+  }
 
   if (!isLarge) {
     return (

@@ -48,7 +48,7 @@ export function useListColors() {
     tealInk: pick("#3C6B65", "#93C1B9"),
     /** Broadcast gold pair (MO1.2.1.5.2 #13: #FBF3E2 / #3A3222*, ink #9A7424 / dark the app's gold). */
     goldFill: pick("#FBF3E2", "#3A3222"),
-    goldInk: pick("#9A7424", "#E0B360"),
+    goldInk: pick("var(--gold-pill-ink)", "#E0B360"),
     /** Danger pair: the Delete tile (#FCEDEC / #3C2A30, ink #B42318 / #F09A8E). */
     dangerFill: pick("#FCEDEC", "#3C2A30"),
     dangerInk: pick("#B42318", "#F09A8E"),

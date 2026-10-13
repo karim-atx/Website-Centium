@@ -56,7 +56,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import clsx from "clsx";
-import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
+import { DAY_LETTERS, monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
 import { useBack } from "../../hooks/useBack";
 
 /** Opens an attachment in a new tab. Signed at the click — the TTL is minutes. */
@@ -90,11 +90,6 @@ const toISO = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}
 const addDaysISO = (iso: string, days: number) => {
   const d = new Date(`${iso}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return toISO(d.getFullYear(), d.getMonth(), d.getDate());
-};
-const startOfWeekISO = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - mondayIndex(d.getDay())); // Monday first (X-13)
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
 // `color` is the swatch nearest the active theme's primary (E11; see

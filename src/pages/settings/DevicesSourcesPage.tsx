@@ -9,6 +9,7 @@ import { WeightScaleIcon } from "../../components/icons/PartBIcons";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
+import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
 import { clock12 } from "../../utils/time12";
 import { readSources, savePriorities, type ConnectedSource, type ManualKey, type ManualSummary } from "./sourcesData";
@@ -169,6 +170,8 @@ export default function DevicesSourcesPage() {
   /** PB-O-81: a reorder that didn't save (the order reverts). */
   const [orderFailed, setOrderFailed] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
+  // ST3: offline, the rows keep their last values and the order can't change.
+  const online = useOnline();
 
   const fetchInto = useCallback(() => {
     if (!authUserId) return;
@@ -192,7 +195,7 @@ export default function DevicesSourcesPage() {
 
   /** #10a / S7: move one source up or down; saved at once, put back if it fails. */
   const move = async (from: number, to: number) => {
-    if (load.state !== "ready" || savingOrder || to < 0 || to >= load.sources.length) return;
+    if (load.state !== "ready" || savingOrder || !online || to < 0 || to >= load.sources.length) return;
     const before = load.sources;
     const next = [...before];
     const [moved] = next.splice(from, 1);
@@ -336,7 +339,7 @@ export default function DevicesSourcesPage() {
                     <button
                       type="button"
                       onClick={() => void move(i, i - 1)}
-                      disabled={i === 0 || savingOrder}
+                      disabled={i === 0 || savingOrder || !online}
                       aria-label={`Move ${PROVIDER_NAME[s.provider]} up`}
                       className="tap w-8 h-8 flex items-center justify-center disabled:opacity-30"
                     >
@@ -345,7 +348,7 @@ export default function DevicesSourcesPage() {
                     <button
                       type="button"
                       onClick={() => void move(i, i + 1)}
-                      disabled={i === sources.length - 1 || savingOrder}
+                      disabled={i === sources.length - 1 || savingOrder || !online}
                       aria-label={`Move ${PROVIDER_NAME[s.provider]} down`}
                       className="tap w-8 h-8 flex items-center justify-center disabled:opacity-30"
                     >

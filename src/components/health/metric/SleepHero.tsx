@@ -50,9 +50,12 @@ export const SleepHero: React.FC<{
   /** B1 sleep_details bed_start / wake_end (HE1.3 #15-#16): "11:18 PM" and "6:42 AM"; the labels row shows only with both. */
   bed?: string | null;
   wake?: string | null;
+  /** Month / year (HE1.3.m #16 / #18, HE1.3.y): "Avg bedtime" / "Avg wake"; default "Bedtime" / "Wake". */
+  bedLabel?: string;
+  wakeLabel?: string;
   /** B1 sleep_segments as fractions of the night (0-1, bed to wake): the band takes the stage colours (Deep #4F8F8A, Light #A2C8C2, REM #A2C8C2@45%, Awake #E4E1EE). */
   segments?: { stage: "awake" | "light" | "deep" | "rem"; from: number; to: number }[];
-}> = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments }) => {
+}> = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments, bedLabel = "Bedtime", wakeLabel = "Wake" }) => {
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const play = running ? "running" : "paused";
   const arc = "M43 137 A120 120 0 0 1 283 137";
@@ -106,8 +109,8 @@ export const SleepHero: React.FC<{
           // HE1.3 #15-#16: time 15/22.5 800 #F5F3FA over its label 10.5/15.8 600 #C9DEDA, under each arc end.
           <div className="flex justify-between" style={{ marginTop: 8 }}>
             {[
-              { t: bed, l: "Bedtime", align: "left" as const },
-              { t: wake, l: "Wake", align: "right" as const },
+              { t: bed, l: bedLabel, align: "left" as const },
+              { t: wake, l: wakeLabel, align: "right" as const },
             ].map((x) => (
               <span key={x.l} className="flex flex-col" style={{ textAlign: x.align }}>
                 <span style={{ fontSize: textPx(15), lineHeight: linePx(22.5), fontWeight: 800, color: "#F5F3FA" }}>{x.t}</span>

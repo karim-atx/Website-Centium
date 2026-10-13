@@ -106,7 +106,7 @@ export function pinGround(subtype: DirectoryListing["subtype"] | string | null |
 
 /** The reviews pill (MO1.2.1: "#D9A441 / #FBF3E2 / #9A7424"); dark keeps the gold on a dark tint (B7). */
 export function goldPill(dark: boolean): { bg: string; border: string; ink: string; star: string } {
-  if (!dark) return { bg: "#FBF3E2", border: "#D9A441", ink: "#9A7424", star: "#D9A441" };
+  if (!dark) return { bg: "#FBF3E2", border: "#D9A441", ink: "var(--gold-pill-ink)", star: "#D9A441" };
   const bg = tintOn("#D9A441", 0.16, DARK_CARD);
   // v6 MO1.2.1.5.2 #13 / #14: the drawn dark border and star #E0B360; the
   // fill and ink keep the app's dark gold (the drawn #FBF3E2* / #9A7424* are

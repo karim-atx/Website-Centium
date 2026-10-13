@@ -4,7 +4,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import type { ZoneOption } from "./timezoneOptions";
 
-// MO1.8.13 #35â€“#40: the compact one-column wheel inside the time zone panel.
+// MO1.8.13 #35–#40: the compact one-column wheel inside the time zone panel.
 // Rows 30 tall, 5 visible (150), text centred on one line with an ellipsis;
 // the selected row 15 / 22.5 800 ink, its neighbours 13.5 / 20.3 600 at 45%,
 // the outer pair 12.5 / 18.8 600 at 22%. The band is 40 tall, r10, #F0EEFD
@@ -13,7 +13,7 @@ import type { ZoneOption } from "./timezoneOptions";
 // still visible. High contrast: the ink token turns #111111 / #F5F3FA and
 // the faded rows keep their opacities (O8).
 //
-// A listbox (S5): â†‘ / â†“ move the band, Home / End, Enter saves and closes,
+// A listbox (S5): ↑ / ↓ move the band, Home / End, Enter saves and closes,
 // a typed character goes to the search box. Reduce motion: no smooth scroll.
 //
 // It reports a zone only when the USER moved the band (scroll settle, tap,

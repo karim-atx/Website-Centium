@@ -53,9 +53,10 @@ import { CaloriesHero, ESTIMATED_INCL_WORKOUTS } from "../../../components/healt
 // DATA: healthSeries.caloriesBurned (synced only, V6-20; the web shows the
 // no-device state with nothing on record). Goal = the 2,600 kcal app
 // constant (backend Q4). Kcal per workout (HA-07 / PB-H-08) and per hour
-// (HA-05 / PB-H-13) wait for Database stage B1: the "From workouts" card,
-// the hero's workouts / rest-of-day legend, the month's workouts line and
-// the Day "Today by hour" chart card are hidden (the handover fallbacks).
+// (HA-05 / PB-H-13) come from Database stage B1 (workout_sessions.kcal,
+// activity_hourly): the "From workouts" card, the hero's workouts share and
+// workouts / rest-of-day legend (Day / Week), the month's workouts line and
+// the Day "Today by hour" chart card; each hides with no data.
 // Source tag, freshness line and Delete on synced rows are native.
 
 const KCAL_GOAL = 2600;
@@ -78,10 +79,6 @@ export default function CaloriesPage() {
   const b1To = p0.end > today ? p0.end : today;
   const activity = activityByDay(useActivityDaily(b1From, b1To).data);
   const hourly = useActivityHourly(anchor).data;
-  // HA-07: the day the hero describes (Day: the day shown; Week: today or the period's last day).
-  const workoutDay = range === "day" ? anchor : p0.start <= today && today <= p0.end ? today : p0.end;
-  const workouts = useWorkoutSessionsKcal(workoutDay).data;
-
   const byDay = useMemo(() => {
     const out: Record<string, number> = {};
     for (const pt of healthSeries.caloriesBurned.history) if (pt.value > 0) out[pt.date] = pt.value;
@@ -89,6 +86,12 @@ export default function CaloriesPage() {
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [healthSeries.caloriesBurned.history, JSON.stringify(activity)]);
+  // HA-07: the day the hero describes (Day: the day shown; Week: today, else the week's last logged day).
+  const weekDays = Object.keys(byDay).filter((d) => d >= p0.start && d <= p0.end).sort();
+  const workoutDay = range === "day" ? anchor : p0.start <= today && today <= p0.end ? today : weekDays.length ? weekDays[weekDays.length - 1] : p0.end;
+  const workouts = useWorkoutSessionsKcal(workoutDay).data;
+  // HE1.4.m #22: the month's workouts ("workouts 22 sessions, 9,240 kcal").
+  const monthWorkouts = useWorkoutSessionsKcal(range === "month" ? p0.start : workoutDay, range === "month" ? p0.end : workoutDay).data;
   const hasAny = Object.keys(byDay).length > 0;
   // Still hydrating: the device copy of the latest reading says rows exist.
   const { loading, retry: retryMetrics } = useMetricsLoad();
@@ -155,7 +158,18 @@ export default function CaloriesPage() {
   })();
   const reached = heroValue >= goal;
   const sub = range === "month" ? `avg a day in ${MONTH_LONG[Number(p.start.slice(5, 7)) - 1]}` : range === "year" ? `avg a day in ${p.start.slice(0, 4)}` : `of ${n(goal)} kcal`;
-  const pills = [reached ? "Goal reached" : `${Math.round((heroValue / goal) * 100)}% of goal`, ESTIMATED_INCL_WORKOUTS];
+  // HE1.4.m hero pill: the month counts days at goal ("4 days at goal"); the other ranges show the share of the goal.
+  const daysAtGoal = rows.filter((r) => r.value >= goal).length;
+  const pills = [
+    range === "month" ? `${daysAtGoal} ${daysAtGoal === 1 ? "day" : "days"} at goal` : reached ? "Goal reached" : `${Math.round((heroValue / goal) * 100)}% of goal`,
+    ESTIMATED_INCL_WORKOUTS,
+  ];
+  // HE1.4 / HE1.4.d hero: the workouts share of the day and its legend (B1 workout_sessions.kcal).
+  const workoutKcal = workouts.reduce((a, w) => a + w.kcal, 0);
+  const heroWorkouts =
+    (range === "day" || range === "week") && workoutKcal > 0 && heroValue > 0
+      ? { pct: workoutKcal / goal, workoutsLabel: `Workouts ${n(workoutKcal)}`, restLabel: `Rest of day ${n(Math.max(0, heroValue - workoutKcal))}` }
+      : null;
 
   // ---- tiles ----------------------------------------------------------------
   const stats: Stat[] = (() => {
@@ -210,7 +224,10 @@ export default function CaloriesPage() {
     const span = current ? Number(today.slice(8)) : daysInMonth(y, m);
     const k = rows.filter((r) => r.value >= goal).length;
     const b = best(rows);
-    foot = empty ? "No calories synced this month" : `${rows.length} of ${span} days logged`;
+    const mw = monthWorkouts.reduce((a, w) => a + w.kcal, 0);
+    foot = empty
+      ? "No calories synced this month"
+      : `${rows.length} of ${span} days logged${monthWorkouts.length ? ` · workouts ${monthWorkouts.length} ${monthWorkouts.length === 1 ? "session" : "sessions"}, ${n(mw)} kcal` : ""}`;
     summary = empty
       ? `Calories burned in ${MONTH_LONG[m - 1]}. Nothing synced.`
       : `Calories burned in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${Number(b!.date.slice(8))} ${MONTH_LONG[m - 1]}, ${n(b!.value)}.`;
@@ -261,8 +278,9 @@ export default function CaloriesPage() {
         sub={sub}
         goalLabel={n(goal)}
         pills={pills}
+        workouts={heroWorkouts}
         loading={loading}
-        ariaLabel={`${n(heroValue)} kcal ${range === "month" || range === "year" ? sub : `of ${n(goal)}`}. ${pills.join(". ")}`}
+        ariaLabel={`${n(heroValue)} kcal ${range === "month" || range === "year" ? sub : `of ${n(goal)}`}. ${pills.join(". ")}${heroWorkouts ? `. ${heroWorkouts.workoutsLabel}. ${heroWorkouts.restLabel}` : ""}`}
       />
       {!online && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
       {metricSource.freshness}

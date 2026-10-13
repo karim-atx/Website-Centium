@@ -38,11 +38,21 @@ import {
   stepAnchor,
   valuesIn,
 } from "../../../components/health/metric/periods";
-import { GoalBarChart, LegendDot, LegendGhost, buildGoalBars } from "../../../components/health/metric/StepsBarChart";
+import { GoalBarChart, LegendDash, LegendDot, LegendGhost, buildGoalBars, WEEK_LETTERS } from "../../../components/health/metric/StepsBarChart";
+import {
+  LegendBedBar,
+  LegendBedGhost,
+  SleepBedChart,
+  YearBedtimeLine,
+  bedtimeScale,
+  clockFromNoon,
+  minutesAfterNoon,
+  type BedNight,
+} from "../../../components/health/metric/SleepBedChart";
 import { SyncedNoDevice } from "../../../components/health/metric/StepsNoDevice";
 import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove";
 import { useSleepSessions } from "../../../services/health-metrics/b1";
-import { clock12, rangeClock12 } from "../../../utils/time12";
+import { clock12, hourLabel12, rangeClock12 } from "../../../utils/time12";
 import { Toast } from "../../../components/ui/Toast";
 import { SleepHero, SleepStagesCard, hm, type StageMinutes } from "../../../components/health/metric/SleepHero";
 
@@ -52,10 +62,13 @@ import { SleepHero, SleepStagesCard, hm, type StageMinutes } from "../../../comp
 // and sleepNights (score, stage totals, summary). Sleep is synced only
 // (V6-20); with nothing on record the web shows the no-device state.
 // Bed / wake times and the stage timeline (HA-06 / PB-H-07, Database stage
-// B1) are not stored: the hero arc has no clock labels, the week / month
-// charts are duration bars from a baseline (the handover fallback), the Day
-// timeline card is hidden, the usual-bedtime line and the year's bedtime
-// line are hidden, and History rows show no times. Kept from the old sheet:
+// B1 sleep_details bed_start / wake_end + sleep_segments): the hero arc takes
+// the stage colours and the Bedtime / Wake row (month / year: the averages,
+// "Avg bedtime" / "Avg wake"); the week and month charts are floating
+// bedtime-to-wake bars with the usual-bedtime line (SleepBedChart) when every
+// logged night of the range has its times, else the duration bars from a
+// baseline (the handover fallback); the year chart adds the average-bedtime
+// line on its own top scale and the "Avg bedtime" tile. Kept from the old sheet:
 // the sleep score (third tile), the night summary, a History row opening
 // that night's Day view.
 
@@ -82,13 +95,33 @@ export default function SleepPage() {
   // Database B1 sleep_details times and sleep_segments (HA-06): the main
   // sleep of each night (naps left out), for the range and the week before.
   const p0 = periodOf(range, anchor);
-  const sessFrom = shiftDate(p0.start < today ? p0.start : today, -7);
+  // 21 days before the range as well, so the usual bedtime has its last 14 nights.
+  const sessFrom = shiftDate(p0.start < today ? p0.start : today, -21);
   const sessions = useSleepSessions(sessFrom, p0.end > today ? p0.end : today).data;
   const sessionByDay = useMemo(() => Object.fromEntries(sessions.filter((x) => !x.isNap).map((x) => [x.day, x])), [sessions]);
   const timesOf = (d: string) => {
     const x = sessionByDay[d];
     return x?.bedStart && x?.wakeEnd ? { bed: clock12(x.bedStart), wake: clock12(x.wakeEnd), range: rangeClock12(x.bedStart, x.wakeEnd) } : null;
   };
+  // Bed / wake as minutes after noon (bedtimes around midnight stay contiguous).
+  const clockOf = (d: string): { bed: number; wake: number } | null => {
+    const x = sessionByDay[d];
+    return x?.bedStart && x?.wakeEnd ? { bed: minutesAfterNoon(x.bedStart), wake: minutesAfterNoon(x.wakeEnd) } : null;
+  };
+  // Usual bedtime / wake = the median of the last 14 nights with times (health-backend.md:109, naps left out).
+  const usualClock = useMemo(() => {
+    const recent = sessions
+      .filter((x) => !x.isNap && x.bedStart && x.wakeEnd && x.day <= today)
+      .sort((a, b) => (a.day < b.day ? 1 : -1))
+      .slice(0, 14);
+    if (!recent.length) return null;
+    const med = (v: number[]) => {
+      const s = [...v].sort((a, b) => a - b);
+      const m = s.length >> 1;
+      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    };
+    return { bed: med(recent.map((x) => minutesAfterNoon(x.bedStart as string))), wake: med(recent.map((x) => minutesAfterNoon(x.wakeEnd as string))) };
+  }, [sessions, today]);
 
   // Hours asleep per wake day; a night with stages but no duration row
   // counts its asleep stages.
@@ -164,6 +197,19 @@ export default function SleepPage() {
   const lastNight = range === "day" || range === "week" ? (range === "week" && rows.length ? (byDay[nightDay] !== undefined ? nightDay : rows[rows.length - 1].date) : nightDay) : null;
   const isLast = lastNight === today;
 
+  // ---- bed / wake times in the range (B1 sleep_details) -------------------
+  // Floating bars only when every logged night of the range has its times;
+  // otherwise the duration bars (the handover fallback) stay.
+  const timedRows = rows.filter((r) => clockOf(r.date) !== null);
+  const floating = timedRows.length > 0 && timedRows.length === rows.length;
+  const meanOf = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
+  const avgBed = meanOf(timedRows.map((r) => (clockOf(r.date) as { bed: number }).bed));
+  const avgWake = meanOf(timedRows.map((r) => (clockOf(r.date) as { wake: number }).wake));
+  const monthBeds =
+    range === "year"
+      ? Array.from({ length: 12 }, (_, i) => meanOf(timedRows.filter((r) => Number(r.date.slice(5, 7)) === i + 1).map((r) => (clockOf(r.date) as { bed: number }).bed)))
+      : [];
+
   // ---- hero ---------------------------------------------------------------
   const hero = (() => {
     if (lastNight !== null) {
@@ -222,42 +268,56 @@ export default function SleepPage() {
     });
     return [
       { icon: Award, value: bi < 0 ? <StatEmpty /> : hm((monthAvgs[bi] as number) * 60), label: bi < 0 ? "Best month" : `Best month · ${MONTH_LONG[bi]}` },
-      { icon: Moon, value: String(rows.length), label: `Nights logged in ${p.start.slice(0, 4)}` },
+      // HE1.3.y #49-#51: "Avg bedtime" with B1 times; without them the nights count stays.
+      avgBed !== null
+        ? { icon: Activity, value: clockFromNoon(avgBed), label: "Avg bedtime" }
+        : { icon: Moon, value: String(rows.length), label: `Nights logged in ${p.start.slice(0, 4)}` },
     ];
   })();
 
-  // ---- chart (duration fallback) ------------------------------------------
+  // ---- chart: floating bedtime-to-wake bars (B1 times), else duration bars --
   const usual = avg(valuesIn(byDay, { range: "month", start: shiftDate(today, -29), end: today }).map((r) => r.value)) ?? 8;
   const chartTitle = current ? periodTitle(p, today) : range === "month" ? MONTH_LONG[Number(p.start.slice(5, 7)) - 1] : periodLabel(p);
   let foot: string | undefined;
   let summary = "";
   let legend: { label: string; swatch: React.ReactNode }[] = [];
+  // HE1.3 #36-#38 / HE1.3.m #38-#39: bar pill, ghost, dashed usual line (1 wide, 3 2.5, #4F8F8A measured).
+  const usualDash = { label: "Usual bedtime", swatch: <LegendDash color={mc("sleep", "accent")} strokeWidth={1} dash="3 2.5" /> };
   if (range === "week") {
-    legend = [
-      { label: "Asleep", swatch: <LegendDot color={mc("sleep", "main")} radius={3} /> },
-      { label: "Nights ahead", swatch: <LegendGhost /> },
-    ];
+    legend = floating
+      ? [{ label: "Bedtime to wake", swatch: <LegendBedBar /> }, { label: "Nights ahead", swatch: <LegendBedGhost /> }, ...(usualClock ? [usualDash] : [])]
+      : [
+          { label: "Asleep", swatch: <LegendDot color={mc("sleep", "main")} radius={3} /> },
+          { label: "Nights ahead", swatch: <LegendGhost /> },
+        ];
     foot = empty ? "No sleep logged this week" : undefined;
-    summary = `Sleep ${current ? "this week" : `in ${periodLabel(p)}`}. ${empty ? "Nothing recorded." : rows.map((r) => `${dayLabel(r.date).split(" ")[0]}, ${hm(r.value * 60).replace("h", " hours").replace("m", " minutes")} asleep`).join(". ") + "."}`;
+    summary = `Sleep ${current ? "this week" : `in ${periodLabel(p)}`}. ${empty ? "Nothing recorded." : rows.map((r) => `${dayLabel(r.date).split(" ")[0]}, ${hm(r.value * 60).replace("h", " hours").replace("m", " minutes")} asleep${timesOf(r.date) ? `, ${timesOf(r.date)?.range}` : ""}`).join(". ") + "."}`;
   } else if (range === "month") {
     const y = Number(p.start.slice(0, 4));
     const m = Number(p.start.slice(5, 7));
     const span = current ? Number(today.slice(8)) : daysInMonth(y, m);
-    legend = [{ label: "Asleep", swatch: <LegendDot color={mc("sleep", "main", 0.75)} radius={3} /> }];
+    legend = floating
+      ? [{ label: "Bedtime to wake", swatch: <LegendBedBar /> }, ...(usualClock ? [usualDash] : [])]
+      : [{ label: "Asleep", swatch: <LegendDot color={mc("sleep", "main", 0.75)} radius={3} /> }];
     foot = empty ? "No sleep logged this month" : `${rows.length} of ${span} nights logged`;
     summary = `Sleep in ${MONTH_LONG[m - 1]}. ${empty ? "Nothing recorded." : `Average ${hm((mean ?? 0) * 60)} asleep.`}`;
   } else if (range === "year") {
     const y = Number(p.start.slice(0, 4));
     const months = [...new Set(rows.map((r) => Number(r.date.slice(5, 7))))].sort((a, b) => a - b);
     const curM = Number(today.slice(5, 7));
+    // HE1.3.y #38-#40: the bedtime line is on its own one-hour scale, said in the legend.
+    const sc = bedtimeScale(monthBeds);
     legend = [
       { label: "Average asleep", swatch: <LegendDot color={mc("sleep", "main")} radius={3} /> },
+      ...(avgBed !== null
+        ? [{ label: `Average bedtime (top scale ${hourLabel12(((sc.from + 720) % 1440) / 60)} to ${hourLabel12(((sc.to + 720) % 1440) / 60)})`, swatch: <LegendDash color={mc("sleep", "accent")} strokeWidth={1} dash="3 2.5" /> }]
+        : []),
       { label: "Months ahead", swatch: <LegendGhost /> },
     ];
     foot = empty
       ? "No sleep logged this year"
       : `${months.length === 1 ? monthShort(months[0]) : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])}`}${current && months.includes(curM) ? ` · ${MONTH_LONG[curM - 1]} so far` : ""}`;
-    summary = `Sleep in ${y}. ${empty ? "Nothing recorded." : `Average ${hm((mean ?? 0) * 60)} a night.`}`;
+    summary = `Sleep in ${y}. ${empty ? "Nothing recorded." : `Average ${hm((mean ?? 0) * 60)} a night.${avgBed !== null ? ` Average bedtime ${clockFromNoon(avgBed)}.` : ""}`}`;
   }
 
   // ---- history ------------------------------------------------------------
@@ -287,8 +347,10 @@ export default function SleepPage() {
         emptyTitle={hero.empty}
         loading={loading}
         ariaLabel={hero.value ? `${hero.value} ${hero.sub}` : hero.empty ?? ""}
-        bed={lastNight ? timesOf(lastNight)?.bed : null}
-        wake={lastNight ? timesOf(lastNight)?.wake : null}
+        bed={lastNight ? timesOf(lastNight)?.bed : avgBed !== null && hero.value ? clockFromNoon(avgBed) : null}
+        wake={lastNight ? timesOf(lastNight)?.wake : avgWake !== null && hero.value ? clockFromNoon(avgWake) : null}
+        bedLabel={lastNight ? undefined : "Avg bedtime"}
+        wakeLabel={lastNight ? undefined : "Avg wake"}
         segments={(() => {
           const x = lastNight ? sessionByDay[lastNight] : undefined;
           if (!x?.bedStart || !x?.wakeEnd || x.segments.length === 0) return undefined;
@@ -323,15 +385,31 @@ export default function SleepPage() {
             loading={loading}
             summary={summary}
           >
-            <GoalBarChart
-              metric="sleep"
-              mode={range}
-              bars={buildGoalBars(p, byDay, today)}
-              goal={null}
-              ghostValue={usual}
-              onBarTap={range === "month" ? openDay : undefined}
-              barLabel={(b) => (b.value === null ? `${b.key}, nothing recorded` : `${b.key}, ${hm(b.value * 60)} asleep`)}
-            />
+            {floating && range !== "year" ? (
+              <SleepBedChart
+                mode={range}
+                nights={buildGoalBars(p, byDay, today).map((b, i): BedNight => {
+                  const c = clockOf(b.key);
+                  return { key: b.key, label: range === "week" ? WEEK_LETTERS[i] : b.label, bed: c?.bed ?? null, wake: c?.wake ?? null, ghost: b.ghost, current: b.current };
+                })}
+                usualBed={usualClock?.bed ?? null}
+                usualWake={usualClock?.wake ?? null}
+                onBarTap={range === "month" ? openDay : undefined}
+                barLabel={(n) => `${n.key}, ${timesOf(n.key)?.range ?? ""}`}
+              />
+            ) : (
+              <GoalBarChart
+                metric="sleep"
+                mode={range}
+                bars={buildGoalBars(p, byDay, today)}
+                goal={null}
+                ghostValue={usual}
+                onBarTap={range === "month" ? openDay : undefined}
+                barLabel={(b) => (b.value === null ? `${b.key}, nothing recorded` : `${b.key}, ${hm(b.value * 60)} asleep`)}
+                plotTop={range === "year" && avgBed !== null ? 42 : undefined}
+                overlay={range === "year" && avgBed !== null ? <YearBedtimeLine months={monthBeds} /> : undefined}
+              />
+            )}
           </ChartCard>
         ))}
       <StatCard metric="sleep" stats={stats} valueSize={17} style={{ marginTop: 10 }} />

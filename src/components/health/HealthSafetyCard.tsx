@@ -13,8 +13,13 @@ import { useHealthMode, hairline } from "./metric/MetricKit";
  *
  * - tone "alert" (severe, pregnancy Urgent): bg #FCEDEC (dark #3C2A30), r15
  *   (widget radius), pad 16, role="alert" (HE1#45, HE1.6.a#52);
- * - tone "note" (pregnancy Same day, check flag): white + 0.5px #241F1B@8%
+ * - tone "soon" (pregnancy Same day): the amber tint main gave it (FlagNote
+ *   "soon": #D9622B@10% with a 3px #D9622B left border, label ink #A9481B,
+ *   dark #F29466), so the emphasis does not weaken (release review, safety);
+ * - tone "note" (check flag below Urgent): white + 0.5px #241F1B@8%
  *   (dark #1C1F28, #F5F3FA@8%), r15, pad 16 (HE1.5.a#10).
+ * Alert text (severe, Urgent) is status-high red, 12/18 600 (main: red,
+ * semibold, on the role="alert" element), never charcoal.
  * Tile 28 r9 #FFFFFF@80% (dark @8%*) with AlertCircle 16 #A4231C (dark
  * #FF6B5E, R3); caps label 9/13.5 700 ls1.4 #7D3B62 (dark #B8B3C7) "Blood
  * pressure"; optional title 13.5/20.3 700 (pregnancy / check level); text
@@ -22,13 +27,14 @@ import { useHealthMode, hairline } from "./metric/MetricKit";
  * #C3B3FB), 44 hit area.
  */
 export const HealthSafetyCard: React.FC<{
-  tone: "alert" | "note";
+  tone: "alert" | "soon" | "note";
   title?: string;
   text: string;
   onSeeReadings?: () => void;
 }> = ({ tone, title, text, onSeeReadings }) => {
   const { dark, hc } = useHealthMode();
   const alert = tone === "alert";
+  const soon = tone === "soon";
   return (
     <div
       role={alert ? "alert" : undefined}
@@ -36,8 +42,9 @@ export const HealthSafetyCard: React.FC<{
       style={{
         borderRadius: 15,
         padding: 16,
-        background: alert ? (dark ? "#3C2A30" : "#FCEDEC") : dark ? "#1C1F28" : "#FFFFFF",
-        border: alert ? undefined : `0.5px solid ${hairline(dark, hc)}`,
+        background: alert ? (dark ? "#3C2A30" : "#FCEDEC") : soon ? "rgba(217,98,43,0.10)" : dark ? "#1C1F28" : "#FFFFFF",
+        border: alert || soon ? undefined : `0.5px solid ${hairline(dark, hc)}`,
+        borderLeft: soon ? "3px solid #D9622B" : undefined,
       }}
     >
       <div className="flex items-center" style={{ gap: 8 }}>
@@ -52,9 +59,9 @@ export const HealthSafetyCard: React.FC<{
         </span>
       </div>
       {title && (
-        <p style={{ marginTop: 10, fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
+        <p style={{ marginTop: 10, fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700, color: alert ? "rgb(var(--c-status-high))" : soon ? (dark ? "#F29466" : "#A9481B") : "rgb(var(--c-charcoal))" }}>{title}</p>
       )}
-      <p style={{ marginTop: title ? 2 : 10, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 400, color: "rgb(var(--c-charcoal))" }}>{text}</p>
+      <p style={{ marginTop: title ? 2 : 10, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: alert ? 600 : 400, color: alert ? "rgb(var(--c-status-high))" : "rgb(var(--c-charcoal))" }}>{text}</p>
       {onSeeReadings && (
         <button
           type="button"

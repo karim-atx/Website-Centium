@@ -378,8 +378,8 @@ export interface WorkoutKcalSession {
   kcal: number;
 }
 
-/** One local day's Centium workouts that carry a kcal (HE1.4 "From workouts", HA-07). */
-export function useWorkoutSessionsKcal(day: string) {
+/** One local day's Centium workouts that carry a kcal (HE1.4 "From workouts", HA-07); with `toDay`, every day from `day` to it (HE1.4.m foot). */
+export function useWorkoutSessionsKcal(day: string, toDay?: string) {
   return useB1Read<WorkoutKcalSession[]>(
     (uid) =>
       db
@@ -387,7 +387,8 @@ export function useWorkoutSessionsKcal(day: string) {
         .select("id, routine_name, started_at, duration_sec, kcal, activity_date")
         .eq("user_id", uid)
         .not("kcal", "is", null)
-        .eq("activity_date", day)
+        .gte("activity_date", day)
+        .lte("activity_date", toDay ?? day)
         .order("started_at", { ascending: true })
         .then(({ data, error }) =>
           error
@@ -400,7 +401,7 @@ export function useWorkoutSessionsKcal(day: string) {
                 kcal: Number(r.kcal),
               }))
         ),
-    [day],
+    [day, toDay],
     []
   );
 }

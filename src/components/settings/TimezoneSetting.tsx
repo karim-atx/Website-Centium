@@ -11,7 +11,7 @@ import { buildZoneOptions, filterZones, zoneCity, zoneDisplay } from "./timezone
 import { TimezoneWheel } from "./TimezoneWheel";
 
 /**
- * Settings â†’ Data & account â†’ Time zone (MO1.8 #59â€“#73, MO1.8.13). Writes the
+ * Settings → Data & account → Time zone (MO1.8 #59–#73, MO1.8.13). Writes the
  * profile's one zone (profiles.timezone) for every account.
  *
  * Two rows. "Time zone": our field ("(GMT+03:00) Riyadh") that opens an
@@ -297,7 +297,7 @@ export const TimezoneSetting: React.FC = () => {
         </div>
       </div>
 
-      {/* MO1.8 #68â€“#73: its own switch row. On = follows the device
+      {/* MO1.8 #68–#73: its own switch row. On = follows the device
           (timezone_chosen_at null). Off keeps the current zone as set by you. */}
       <SettingsRow
         icon={Smartphone}
@@ -309,7 +309,7 @@ export const TimezoneSetting: React.FC = () => {
               ? "This browser doesn't share its time zone."
               : chosen
                 ? "Off while a zone is set by you"
-                : `On Â· ${zoneCity(device)}`}
+                : `On · ${zoneCity(device)}`}
           </span>
         }
         toggle={{

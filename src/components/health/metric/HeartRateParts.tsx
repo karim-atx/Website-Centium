@@ -9,9 +9,10 @@ import { HR_ALERT_COPY } from "../../../services/health-metrics/clinicalCopy";
 // Heart rate (HE1.5 family) hero, charts and the HE1.5.a notice card.
 // Literal values from health-handover.md HE1.5 / .d / .m / .y / .a; chart
 // geometry measured from the 2x PNGs (pt = px / 2), recorded in the
-// checklists. V6-21: no resting source yet, so every "resting" label reads
-// "Latest" (day / week) or "Average" (month / year); V6-07: never a rhythm
-// label.
+// checklists. Resting (B1 HA-08: activity_daily.resting_bpm, else a sample
+// with context rest) drives the "resting" labels; with no resting value in
+// the range they read "Latest" (day / week) or "Average" (month / year)
+// (V6-21); V6-07: never a rhythm label.
 
 const K = "heart-rate" as const;
 
@@ -227,20 +228,38 @@ export interface HrChartUnit {
   ahead: boolean;
 }
 
-/** Build the chart units for a period from the day-keyed readings. */
-export function hrUnits(range: MetricRange, p: Period, byDay: Record<string, number>, today: string): HrChartUnit[] {
+/**
+ * Build the chart units for a period from the day-keyed readings. With B1
+ * (HA-08) `samples` gives each day its low to high (every sample is kept)
+ * and `resting` the dot: the day's resting value, or a month's average
+ * resting (HE1.5 #32 "range capsules with resting dots"). Without them the
+ * capsule is the day's one value and the dot the latest / the average.
+ */
+export function hrUnits(
+  range: MetricRange,
+  p: Period,
+  byDay: Record<string, number>,
+  today: string,
+  samples: Record<string, number[]> = {},
+  resting: Record<string, number> = {}
+): HrChartUnit[] {
+  const lowOf = (d: string) => (samples[d]?.length ? Math.min(...samples[d]) : byDay[d]);
+  const highOf = (d: string) => (samples[d]?.length ? Math.max(...samples[d]) : byDay[d]);
+  const mean = (v: number[]) => (v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null);
   if (range === "year") {
     const y = Number(p.start.slice(0, 4));
     return Array.from({ length: 12 }, (_, i) => {
       const prefix = `${y}-${String(i + 1).padStart(2, "0")}`;
-      const vals = Object.entries(byDay).filter(([d]) => d.startsWith(prefix)).map(([, v]) => v);
+      const days = Object.keys(byDay).filter((d) => d.startsWith(prefix));
+      const vals = days.map((d) => byDay[d]);
+      const rest = Object.entries(resting).filter(([d]) => d.startsWith(prefix)).map(([, v]) => v);
       const cur = today.startsWith(prefix);
       return {
         key: prefix,
         label: monthLetter(i + 1),
-        low: vals.length ? Math.min(...vals) : null,
-        high: vals.length ? Math.max(...vals) : null,
-        dot: vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null,
+        low: days.length ? Math.min(...days.map(lowOf)) : null,
+        high: days.length ? Math.max(...days.map(highOf)) : null,
+        dot: rest.length ? mean(rest) : mean(vals),
         current: cur,
         ahead: `${prefix}-01` > today,
       };
@@ -249,7 +268,7 @@ export function hrUnits(range: MetricRange, p: Period, byDay: Record<string, num
   return daysOf(p).map((d) => {
     const v = byDay[d];
     const has = typeof v === "number";
-    return { key: d, label: d, low: has ? v : null, high: has ? v : null, dot: has ? v : null, current: d === today, ahead: d > today };
+    return { key: d, label: d, low: has ? lowOf(d) : null, high: has ? highOf(d) : null, dot: has ? (resting[d] ?? v) : null, current: d === today, ahead: d > today };
   });
 }
 
@@ -359,8 +378,12 @@ export const HeartRateChart: React.FC<{
   );
 };
 
-/** Legend swatches (HE1.5 #33): capsule, dot, ghost, dash. */
-export function hrLegend(range: MetricRange, dark: boolean): { label: string; swatch: React.ReactNode }[] {
+/**
+ * Legend swatches (HE1.5 #33): capsule, dot, ghost, dash. `resting` (B1,
+ * HA-08) switches to the handover labels: "Resting" dots and the
+ * "Week avg resting" / "Avg resting" line; Day: "Resting level".
+ */
+export function hrLegend(range: MetricRange, dark: boolean, resting = false): { label: string; swatch: React.ReactNode }[] {
   const capsule = <span style={{ width: 8, height: 14, borderRadius: 4, background: mc(K, "main"), display: "inline-block" }} />;
   const dot = <span style={{ width: 8, height: 8, borderRadius: 9999, background: dark ? mc(K, "main") : mc(K, "accent"), display: "inline-block" }} />;
   const ghost = (
@@ -371,34 +394,34 @@ export function hrLegend(range: MetricRange, dark: boolean): { label: string; sw
   if (range === "day")
     return [
       { label: "Heart rate", swatch: line },
-      { label: "Latest level", swatch: dash },
+      { label: resting ? "Resting level" : "Latest level", swatch: dash },
     ];
   if (range === "week")
     return [
       { label: "Daily range", swatch: capsule },
-      { label: "Latest", swatch: dot },
+      { label: resting ? "Resting" : "Latest", swatch: dot },
       { label: "Days ahead", swatch: ghost },
-      { label: "Week average", swatch: dash },
+      { label: resting ? "Week avg resting" : "Week average", swatch: dash },
     ];
   if (range === "month")
     return [
       { label: "Daily range", swatch: capsule },
-      { label: "Latest", swatch: dot },
-      { label: "Average", swatch: dash },
+      { label: resting ? "Resting" : "Latest", swatch: dot },
+      { label: resting ? "Avg resting" : "Average", swatch: dash },
     ];
   return [
     { label: "Monthly range", swatch: capsule },
-    { label: "Month average", swatch: dot },
+    { label: resting ? "Resting" : "Month average", swatch: dot },
     { label: "Months ahead", swatch: ghost },
-    { label: "Year average", swatch: dash },
+    { label: resting ? "Avg resting" : "Year average", swatch: dash },
   ];
 }
 
-/** The split stat card (HE1.5 #34-#43): Average · Lowest · Highest. */
-export function hrStats(avg: number | null, low: number | null, high: number | null): Stat[] {
+/** The split stat card (HE1.5 #34-#43): Avg resting (B1, HA-08; "Average" without resting values) · Lowest · Highest. */
+export function hrStats(avg: number | null, low: number | null, high: number | null, resting = false): Stat[] {
   const n = (v: number | null) => (v === null ? "–" : String(Math.round(v)));
   return [
-    { icon: HeartPulse, value: n(avg), label: "Average" },
+    { icon: HeartPulse, value: n(avg), label: resting ? "Avg resting" : "Average" },
     { icon: ArrowDownToLine, value: n(low), label: "Lowest" },
     { icon: ArrowUpToLine, value: n(high), label: "Highest" },
   ];

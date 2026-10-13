@@ -214,6 +214,26 @@ export function useWorkoutWeek(reloadKey: unknown): { done: number; scheduled: n
   );
 }
 
+/**
+ * HO1.W6-S #7a rest day: the coach-assigned days from today on (the same
+ * workout_template_assignments.assigned_day rows B3 my_workout_week() counts
+ * as "scheduled"; the client reads its own rows, RLS select_client). Each
+ * carries the client's routine it was pushed into.
+ */
+export function useAssignedDays(fromDay: string, reloadKey: unknown): { day: string; routineId: string | null }[] | null {
+  return useRead(
+    (uid) =>
+      supabase
+        .from("workout_template_assignments")
+        .select("assigned_day, routine_id")
+        .eq("client_id", uid)
+        .gte("assigned_day", fromDay)
+        .order("assigned_day", { ascending: true })
+        .then(({ data, error }) => (error ? null : (data ?? []).filter((r) => !!r.assigned_day).map((r) => ({ day: r.assigned_day as string, routineId: r.routine_id })))),
+    [fromDay, reloadKey]
+  );
+}
+
 /** B3 `my_journal_week()`: entries and words this week; locked folders are left out entirely. */
 export function useJournalWeek(reloadKey: unknown): { entries: number; words: number } | null {
   return useRead(

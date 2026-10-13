@@ -938,6 +938,11 @@ html.high-contrast {
   --hair-11: rgb(17 17 17 / 0.3);
   --list-rule: rgb(17 17 17 / 0.3);
 }
+/* The fixed gold ink on the gold-pale pill (#9A7424 on #FBF3E2, 3.88:1):
+   High contrast light darkens it to #8C6A21 (4.53:1). Used through
+   --gold-pill-ink. */
+:root { --gold-pill-ink: #9A7424; }
+html.high-contrast:not(.dark) { --gold-pill-ink: #8C6A21; }
 html.high-contrast.dark {
   --c-charcoal: 245 243 250;
   --c-charcoal-soft: 245 243 250;

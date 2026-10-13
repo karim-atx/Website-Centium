@@ -85,8 +85,14 @@ export default function Health() {
     nutritionGoal,
     theme,
     accessibility,
+    bloodMarkers,
   } = useApp();
   const dark = theme === "dark";
+  // Release review (NOTHING_LOST, worth-an-OK #4): main named real markers
+  // outside their reference range under the Biomarkers row; kept as the row's
+  // second line, only while something is flagged (main copy, verbatim).
+  const flaggedMarkers = bloodMarkers.filter((m) => m.status && m.status !== "normal").map((m) => m.name);
+  const biomarkersSubtitle = flaggedMarkers.length > 0 ? `${flaggedMarkers.slice(0, 2).join(" and ")} suggested` : undefined;
   const hc = !!accessibility.highContrast;
   const online = useOnline();
   // O1 / O2: the health_metrics read state (AppContext), never a null value.
@@ -386,7 +392,7 @@ export default function Health() {
         {bpSevere && <HealthSafetyCard tone="alert" text={SEVERE_READING_MESSAGE} onSeeReadings={() => go("/app/health/blood-pressure")} />}
         {bpPregFlag && (
           <HealthSafetyCard
-            tone={bpPregFlag.level === "urgent" ? "alert" : "note"}
+            tone={bpPregFlag.level === "urgent" ? "alert" : bpPregFlag.level === "soon" ? "soon" : "note"}
             title={bpPregFlag.label}
             text={bpPregFlag.text}
             onSeeReadings={() => go("/app/health/blood-pressure")}
@@ -394,7 +400,8 @@ export default function Health() {
         )}
         {bpCheckFlag && (
           <HealthSafetyCard
-            tone="note"
+            // Urgent ("seek medical care today") keeps main's alert role and tint; lower levels stay a note.
+            tone={bpCheckFlag.level === "urgent" ? "alert" : "note"}
             title={FLAG_LABEL[bpCheckFlag.level]}
             text={bpCheckFlag.bloodPressure && bpCheckFlag.level === "discuss" ? BP_DISCUSS_TEXT : FLAG_TEXT[bpCheckFlag.level]}
             onSeeReadings={() => go("/app/health/blood-pressure")}
@@ -439,13 +446,13 @@ export default function Health() {
 
       <SectionCaps style={{ marginTop: 20 }}>Health records</SectionCaps>
       {/* K13: the one-time tracker question, above the rows, while unanswered. */}
-      <TrackerQuestion tile className="mb-2" />
+      <TrackerQuestion variant="health" className="mb-2" />
       <div className="flex flex-col" style={{ gap: 8 }}>
         {showChecks && <RecordRow icon={<ClipboardCheck size={21} strokeWidth={1.5} />} title={SCREENING_COPY.cardTitle} onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })} />}
         {/* K17 (OURS-health-advanced-monitoring-entry): only while the plan
             is active; its title is the plan's own (never the mode's name). */}
         {checkFlags.active && <RecordRow icon={<ClipboardList size={21} strokeWidth={1.5} />} title={CHECKS_COPY.planTitle} onClick={() => go("/app/health/checks")} />}
-        <RecordRow icon={<Microscope size={21} strokeWidth={1.5} />} title="Biomarkers & imaging" onClick={() => go("/app/health/records#biomarkers")} />
+        <RecordRow icon={<Microscope size={21} strokeWidth={1.5} />} title="Biomarkers & imaging" subtitle={biomarkersSubtitle} onClick={() => go("/app/health/records#biomarkers")} />
         {/* K14: the tracker's way in; "Pregnancy" during a pregnancy (V6-135). */}
         {showCycle && <RecordRow icon={<CycleCalendarIcon size={21} />} title={pregnancy ? "Pregnancy" : "Cycle tracking"} onClick={() => go("/app/cycle")} />}
         {/* #84-#88: who can see the data → Profile › Connected professionals. */}
@@ -522,7 +529,7 @@ function SectionCaps({ children, style }: { children: React.ReactNode; style?: R
  * tile 40 r12 #F0EDF9 (dark #2F2E47) with a 21 icon #7D6BB5 (dark
  * #C3B3FB); title 14/19 600; ChevronRight 17 #8C8378 / #B8B3C7.
  */
-function RecordRow({ icon, title, onClick, radius = 18 }: { icon: React.ReactNode; title: string; onClick: () => void; radius?: number }) {
+function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: React.ReactNode; title: string; subtitle?: string; onClick: () => void; radius?: number }) {
   const { dark, hc } = useHealthMode();
   const primaryText = hc && !dark ? "#4B3BA0" : dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))";
   return (
@@ -533,7 +540,7 @@ function RecordRow({ icon, title, onClick, radius = 18 }: { icon: React.ReactNod
       style={{
         minHeight: 60,
         borderRadius: radius,
-        padding: "0 40px 0 10px",
+        padding: subtitle ? "10px 40px 10px 10px" : "0 40px 0 10px",
         gap: 12,
         background: dark ? "#1C1F28" : "#FFFFFF",
         border: `0.5px solid ${hairline(dark, hc)}`,
@@ -542,8 +549,16 @@ function RecordRow({ icon, title, onClick, radius = 18 }: { icon: React.ReactNod
       <span className="shrink-0 grid place-items-center" style={{ width: 40, height: 40, borderRadius: 12, background: dark ? "rgb(var(--th-2f2e47))" : "rgb(var(--th-f0edf9))", color: primaryText }} aria-hidden>
         {icon}
       </span>
-      <span className="flex-1 min-w-0 line-clamp-2" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-        {title}
+      <span className="flex-1 min-w-0">
+        <span className="block line-clamp-2" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+          {title}
+        </span>
+        {subtitle && (
+          // Second line: the History-row meta type (11/15 400 #8C8378, dark #B8B3C7).
+          <span className="block line-clamp-2" data-record-subtitle style={{ marginTop: 2, fontSize: textPx(11), lineHeight: linePx(15), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
+            {subtitle}
+          </span>
+        )}
       </span>
       <ChevronRight size={17} aria-hidden className="absolute" style={{ right: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
     </button>
