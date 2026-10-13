@@ -17,12 +17,12 @@ import {
   HeartPulse,
   MessageCircle,
   CalendarDays,
-  Building2,
   Banknote,
   Globe2,
   Store,
 } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
+import BusinessMoreIndex from "../business-more/BusinessMoreIndex";
 
 // MO1.4 · More (handover 2026-09-30 More supplement, assets/MO1.4.png, built in
 // full on 2026-09-30). Every measurement below is taken from the frame, which
@@ -58,12 +58,18 @@ type Entry = {
 };
 
 export default function More() {
+  const { user } = useApp();
+  // v6 Batch 3 (MO1B-007 to -010): a business account gets the BizMoreV8 More.
+  if (user.accountType === "business") return <BusinessMoreIndex />;
+  return <PersonalMore />;
+}
+
+function PersonalMore() {
   const navigate = useNavigate();
   const { user } = useApp();
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
-  const isBusiness = user.accountType === "business";
-  const isClient = !isProfessional && !isBusiness;
+  const isClient = !isProfessional;
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
@@ -88,8 +94,8 @@ export default function More() {
   ].filter(Boolean) as Entry[];
 
   // The grouped list. The client rows are the frame's five, in its order;
-  // the professional and business rows are the ones those accounts had
-  // before (V6 / V8 / V9 / QA 12.0), in the same list style.
+  // the professional rows are the ones that account had before (V6 / V8 /
+  // V9 / QA 12.0), in the same list style. Business accounts: BusinessMoreIndex.
   const rows = (
     isClient
       ? [
@@ -102,14 +108,11 @@ export default function More() {
         ]
       : [
           isProfessional && { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
-          isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
           isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/app/messages" },
           isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
           isProfessional && forumAllowed && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
           isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
           isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
-          isBusiness && { icon: MessageCircle, label: "Messages", desc: "Your conversations", to: "/app/messages" },
-          isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
           hasVenues && { icon: Store, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" },
           isProfessional && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
           { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },

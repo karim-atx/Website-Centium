@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typed } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import { businessNavKind, type BusinessNavKind } from "./navItems";
+import { BUSINESS_TYPE_CHANGED_EVENT } from "../../services/business-more";
 
 // v6 Business UI navbar per type (X-31, V6-54). The business type lives on
 // business_profiles (profiles carries none), and "Wellness with appointments
@@ -66,6 +67,18 @@ export function useBusinessNavKind(): BusinessNavKind {
   const uid = isBusiness ? authUserId : null;
   const fallback = businessNavKind(user.businessType ?? null, null);
   const [loaded, setLoaded] = useState<{ uid: string; kind: BusinessNavKind } | null>(null);
+  const [epoch, setEpoch] = useState(0);
+
+  // A type change in Business Profile: drop the cached answer and read again.
+  useEffect(() => {
+    if (!uid) return;
+    const onChange = () => {
+      memo.delete(uid);
+      setEpoch((e) => e + 1);
+    };
+    window.addEventListener(BUSINESS_TYPE_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(BUSINESS_TYPE_CHANGED_EVENT, onChange);
+  }, [uid]);
   const kind = uid ? (loaded?.uid === uid ? loaded.kind : memo.get(uid) ?? readStored(uid)) : null;
 
   useEffect(() => {
@@ -86,7 +99,7 @@ export function useBusinessNavKind(): BusinessNavKind {
     return () => {
       alive = false;
     };
-  }, [uid]);
+  }, [uid, epoch]);
 
   return kind && kind !== "unknown" ? kind : fallback !== "unknown" ? fallback : kind ?? "unknown";
 }

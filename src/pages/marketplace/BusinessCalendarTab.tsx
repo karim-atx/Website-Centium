@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
-import { PageHeader } from "../../components/ui/PageHeader";
+import { SubHeader } from "../../components/business-more/kit";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -193,15 +193,15 @@ export default function BusinessCalendarTab() {
           {loadError ?? classesError}
         </p>
       )}
-      <PageHeader
-        title="Calendar"
-        showBack
-        right={
-          <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40" aria-label="New event">
-            <Plus size={18} />
-          </button>
-        }
-      />
+      {/* v6 Batch 3 (OURS-MO1B-calendar): the More sub-page header. */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <SubHeader title="Calendar" />
+        </div>
+        <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40 shrink-0" aria-label="New event">
+          <Plus size={18} />
+        </button>
+      </div>
       <BusinessPrototypeNotice />
 
       <div className="flex items-center gap-2 mb-4">

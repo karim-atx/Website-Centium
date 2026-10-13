@@ -17,6 +17,7 @@ import {
 } from "../../services/mfa";
 import { generateRecoveryCodes } from "../../services/recoveryCodes";
 import { RecoveryCodesView } from "../../components/security/RecoveryCodesView";
+import { BusinessRecoveryCodesView, BusinessTwoFactorSetupView } from "../business-more/BusinessTwoFactorViews";
 
 // MO1.8.4.1 Set up two-factor, on one page (R18; scan and verify used to be
 // two steps of a sheet): Step 1 of 2, the QR on white with the setup key in
@@ -50,7 +51,8 @@ import { RecoveryCodesView } from "../../components/security/RecoveryCodesView";
 const grouped = (secret: string) => secret.replace(/(.{4})/g, "$1 ").trim();
 
 export default function TwoFactorSetupPage() {
-  const { refreshMfaState } = useApp();
+  const { refreshMfaState, user } = useApp();
+  const [bizStep, setBizStep] = useState<1 | 2>(1);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const changing = params.get("change") === "1";
@@ -159,6 +161,36 @@ export default function TwoFactorSetupPage() {
       // The key is on screen and selectable either way.
     }
   };
+
+  // v6 Batch 3 (MO1B-038 to -041): business accounts see the BizMoreV8 steps,
+  // scan then code, over the same enrolment and verification.
+  if (user.accountType === "business") {
+    if (codes) {
+      const done = () => navigate("/app/settings/two-factor", { replace: true });
+      return <BusinessRecoveryCodesView codes={codes} onDone={done} onBack={done} />;
+    }
+    return (
+      <BusinessTwoFactorSetupView
+        step={bizStep}
+        ready={!!enrollment}
+        startError={startError}
+        qrCode={enrollment?.qrCode ?? null}
+        secret={enrollment?.secret ?? null}
+        copied={copied}
+        onCopy={() => void copySecret()}
+        onNext={() => setBizStep(2)}
+        code={code}
+        onCode={(v) => {
+          setCode(v);
+          if (error) setError(null);
+        }}
+        error={error}
+        busy={busy}
+        onVerify={() => void singleFlight(verify)}
+        onBack={bizStep === 2 ? () => setBizStep(1) : undefined}
+      />
+    );
+  }
 
   if (codes) {
     const done = () => navigate("/app/settings/two-factor", { replace: true });

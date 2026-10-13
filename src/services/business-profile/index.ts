@@ -41,10 +41,6 @@ export type BusinessProfilePatch = Partial<
   Pick<BusinessProfile, "branchType" | "bio" | "location" | "publicEmail" | "publicPhone" | "publicWebsite">
 >;
 
-export type BusinessProfileResult =
-  | { ok: true; profile: BusinessProfile | null }
-  | { ok: false; message: string };
-
 export type BusinessSaveResult =
   | { ok: true; profile: BusinessProfile }
   | { ok: false; message: string };
@@ -113,29 +109,6 @@ function toRow(patch: BusinessProfilePatch): Partial<PatchRow> {
 }
 
 /**
- * This account's listing, or null when it has never been saved.
- *
- * ADDRESSED BY profile_id, NOT BY THE BIZ- CODE. business_profiles.id is a
- * uuid and `user.businessId` is a four-character display code minted at
- * onboarding — the mismatch that would have made BusinessEmployeesTab read an
- * empty team forever. This screen never needs either: the policy is
- * `auth.uid() = profile_id`, so the owner's own id addresses the row directly.
- */
-export async function fetchMyBusinessProfile(userId: string): Promise<BusinessProfileResult> {
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select(COLUMNS)
-    .eq("profile_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[business-profile] Could not read the listing:", error.message);
-    return { ok: false, message: "Couldn't load your listing. Check your connection and try again." };
-  }
-  return { ok: true, profile: data ? toProfile(data as Row) : null };
-}
-
-/**
  * Saves the listing, creating the row on first use.
  *
  * UPDATE THEN INSERT, matching saveMyProfile in services/professional-profile
@@ -154,7 +127,8 @@ export async function fetchMyBusinessProfile(userId: string): Promise<BusinessPr
 export async function saveMyBusinessProfile(
   userId: string,
   patch: BusinessProfilePatch,
-  identity?: { businessName?: string; businessType?: BusinessTypeEnum }
+  // "studio" (v6 D8, B5) is newer than the production-generated enum.
+  identity?: { businessName?: string; businessType?: BusinessTypeEnum | "studio" }
 ): Promise<BusinessSaveResult> {
   const row = toRow(patch);
 
@@ -184,7 +158,7 @@ export async function saveMyBusinessProfile(
   const insert: TablesInsert<"business_profiles"> = {
     profile_id: userId,
     business_name: businessName,
-    business_type: businessType,
+    business_type: businessType as BusinessTypeEnum,
     ...row,
   };
 

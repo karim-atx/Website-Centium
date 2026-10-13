@@ -14,6 +14,7 @@ import { generateRecoveryCodes, getRecoveryStatus } from "../../services/recover
 import { useApp } from "../../context/AppContext";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, unenrollFactor, verifyTotp } from "../../services/mfa";
+import { BusinessGenerateConfirm, BusinessRecoveryCodesView, BusinessTwoFactorView } from "../business-more/BusinessTwoFactorViews";
 
 // MO1.8.4 / MO1.8.4.3 Two-factor authentication, as a page (R18; it was a
 // sheet). A toggle row, then two widgets 16 apart: Authenticator app (greyed
@@ -185,6 +186,60 @@ export default function TwoFactorPage() {
       </button>
     </CentredPopup>
   );
+
+  // v6 Batch 3 (MO1B-035 to -044): business accounts see the BizMoreV8
+  // screens. Same state, same MFA calls, same verify-then-unenroll order.
+  if (user.accountType === "business") {
+    const bizProps = {
+      loading,
+      enabled,
+      factorCreatedAt: factor?.created_at ?? null,
+      loadError,
+      rc: enabled ? rcStatus : null,
+      onToggle: (next: boolean) => (next ? navigate("/app/settings/two-factor/setup") : setOffOpen(true)),
+      onViewCodes: rcStatus && rcStatus.total > 0 ? () => setView("masked") : undefined,
+      onGenerate: () => {
+        setGenError(null);
+        setGenOpen(true);
+      },
+      genOpen,
+      genBusy,
+      genError,
+      onGenConfirm: () => void singleFlight(generate),
+      onGenCancel: () => setGenOpen(false),
+      offOpen,
+      offBusy: busy,
+      offError,
+      code,
+      onCode: (v: string) => {
+        setCode(v);
+        if (offError) setOffError(null);
+      },
+      onTurnOff: () => void singleFlight(turnOff),
+      onCloseOff: closeOff,
+    };
+    if (view === "fresh") {
+      const done = () => {
+        setFreshCodes([]);
+        setView("page");
+      };
+      return <BusinessRecoveryCodesView codes={freshCodes} onDone={done} onBack={done} />;
+    }
+    if (view === "masked" && rcStatus) {
+      return (
+        <>
+          <BusinessRecoveryCodesView
+            codes={[]}
+            onDone={() => setView("page")}
+            onBack={() => setView("page")}
+            masked={{ left: rcStatus.left, total: rcStatus.total, generating: genBusy, onGenerate: () => { setGenError(null); setGenOpen(true); } }}
+          />
+          <BusinessGenerateConfirm open={genOpen} busy={genBusy} onConfirm={bizProps.onGenConfirm} onCancel={bizProps.onGenCancel} />
+        </>
+      );
+    }
+    return <BusinessTwoFactorView {...bizProps} />;
+  }
 
   if (view === "fresh") {
     const done = () => {

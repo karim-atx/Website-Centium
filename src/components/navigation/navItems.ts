@@ -152,6 +152,7 @@ export const BUSINESS_MORE_PAGES = [
   "/app/subscription",
   "/app/settings",
   "/app/business/profile",
+  "/app/business/more",
   "/app/messages",
   "/app/business/calendar",
 ];

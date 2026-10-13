@@ -4,6 +4,9 @@ import { SettingsBody } from "../../components/ui/SettingsRows";
 import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
 import { TERMS_GOVERNING_LAW, TERMS_INTRO, TERMS_SECTIONS } from "./legalCopy";
+import { useApp } from "../../context/AppContext";
+import { SubHeader } from "../../components/business-more/kit";
+import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
 
 // MO1.8.8 Terms of Service, as a page (was a sheet); handover-complete pass:
 // the frame's text (the "Last updated" line, the intro, the medical-disclaimer
@@ -15,9 +18,13 @@ import { TERMS_GOVERNING_LAW, TERMS_INTRO, TERMS_SECTIONS } from "./legalCopy";
 // frame's own sentence pair) and links to the website's Health & Medical
 // Disclaimer.
 export default function TermsPage() {
+  const { user } = useApp();
+  const business = user.accountType === "business";
   return (
     <div>
-      <PageHeader title="Terms of Service" showBack sub tightBack />
+      {/* v6 Batch 3 (OURS-MO1B-legal): business accounts take the More
+          sub-page header and see the business sections after the general ones. */}
+      {business ? <SubHeader title="Terms of Service" /> : <PageHeader title="Terms of Service" showBack sub tightBack />}
 
       {/* MO1.8.8: 24 pt side insets; the date line 12 under the 36 pt title,
           the intro 8 under it. */}
@@ -46,6 +53,7 @@ export default function TermsPage() {
 
       {/* Sections 24 under the callout and 24 apart. */}
       <LegalSections doc="terms" sections={TERMS_SECTIONS} className="mt-6" />
+      {business && <BusinessLegalSections doc="terms" />}
 
       {/* MO1.8.8: 12 / 400 muted on an 18 line, 24 under the last section. */}
       <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{TERMS_GOVERNING_LAW}</p>

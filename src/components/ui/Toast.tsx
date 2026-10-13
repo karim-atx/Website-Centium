@@ -27,6 +27,8 @@ export const BUSINESS_TOAST_MS = 3000;
  * rgba(36,31,27,0.28), stroke 2.4. Bottom 96 above the home indicator
  * (20 above the navbar); `bottom` lifts it above a fixed CTA (150 in
  * OpsTabsV4, 152 in MA1). It slides up in 220 ms. The client toast is unchanged.
+ * "more" (BizMoreV8, MO1B-019): r14, no shadow, gap 8, 12.5 / 700, a plain
+ * check 15 / 2.6 (no circle) in the X-08 icon colour.
  */
 export const Toast: React.FC<{
   open: boolean;
@@ -40,7 +42,7 @@ export const Toast: React.FC<{
   /** "client" (default, unchanged) or "business" (X-08). */
   variant?: "client" | "business";
   /** Business: which drawing component's shape. */
-  shape?: "ops" | "market";
+  shape?: "ops" | "market" | "more";
   /** Business: distance from the bottom above the home indicator (default 96). */
   bottom?: number;
   /** A general action button (business; on the client toast too, after Undo). */
@@ -77,6 +79,7 @@ export const Toast: React.FC<{
 
   if (business) {
     const market = shape === "market";
+    const more = shape === "more";
     return createPortal(
       <div
         role="status"
@@ -85,20 +88,22 @@ export const Toast: React.FC<{
           left: "calc(var(--app-gutter) + 16px)",
           right: "calc(var(--app-gutter) + 16px)",
           bottom: `calc(env(safe-area-inset-bottom) + ${bottom ?? 96}px)`,
-          gap: 10,
+          gap: more ? 8 : 10,
           background: "#241F1B",
-          borderRadius: market ? 14 : 16,
+          borderRadius: market || more ? 14 : 16,
           padding: "12px 14px",
-          boxShadow: market ? "0 12px 30px rgba(36,31,27,0.28)" : "0 10px 26px rgba(36,31,27,0.28)",
+          boxShadow: more ? "none" : market ? "0 12px 30px rgba(36,31,27,0.28)" : "0 10px 26px rgba(36,31,27,0.28)",
           color: "#FFFFFF",
-          fontSize: textPx(13),
+          fontSize: textPx(more ? 12.5 : 13),
           lineHeight: linePx(18),
           fontWeight: 700,
           animation: "business-toast-in .22s cubic-bezier(0.22,1,0.36,1) both",
         }}
       >
         <style>{`@keyframes business-toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        {icon ?? (
+        {icon ?? (more ? (
+          <Check size={15} strokeWidth={2.6} aria-hidden className="flex-none" style={{ color: dark ? "#A2C8C2" : "#7FC79C" }} />
+        ) : (
           <CircleCheck
             size={18}
             strokeWidth={market ? 2.4 : 2.2}
@@ -106,7 +111,7 @@ export const Toast: React.FC<{
             className="flex-none"
             style={{ color: dark ? "#A2C8C2" : "#7FC79C" }}
           />
-        )}
+        ))}
         <span className="flex-1 min-w-0 break-words">{message}</span>
         {onUndo && actionButton("Undo", onUndo)}
         {action && actionButton(action.label, action.onClick)}

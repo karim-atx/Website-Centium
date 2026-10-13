@@ -36,6 +36,7 @@ import {
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
+import BusinessSettings from "../business-more/BusinessSettings";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -75,7 +76,11 @@ const ANCHORS = ["#timezone", "#devices"];
  */
 export default function Settings() {
   const { pathname } = useLocation();
+  const { user } = useApp();
   if (pathname.replace(/\/$/, "") === "/app/settings/devices") return <DevicesSourcesPage />;
+  // v6 Batch 3 (MO1B-029 to -034): business accounts get the BizMoreV8 layout;
+  // client and professional accounts keep this v5.1 page as built.
+  if (user.accountType === "business") return <BusinessSettings />;
   return <SettingsHub />;
 }
 
