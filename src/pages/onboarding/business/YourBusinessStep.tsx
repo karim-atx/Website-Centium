@@ -17,7 +17,7 @@ import {
   visibleCategoryChips,
   yourBusinessErrors,
 } from "./lanes";
-import { imageUrl, removeBusinessImage, saveBusinessBasics, uploadBusinessImage } from "../../../services/business-onboarding";
+import { imageUrl, removeBusinessImage, uploadBusinessImage } from "../../../services/business-onboarding";
 import type { LaneStepProps } from "./laneTypes";
 
 // OB-218 / 248 / 281 (+ 220 activities menu, 250 contact, 251 field errors,
@@ -67,19 +67,6 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
     }
     setUploading(kind);
     setUploadError(null);
-    // business-covers is written by somebody who may act for the business
-    // (may_write_business_file), so the business row has to exist before its
-    // first cover: it is created here (inactive, as Continue would) when the
-    // cover comes first. Continue then saves the rest of Step 1 onto it.
-    if (kind === "cover" && !biz.businessId) {
-      const row = await saveBusinessBasics(uid, biz);
-      if (!row.ok) {
-        setUploading(null);
-        setUploadError(row.message);
-        return;
-      }
-      setBiz((b) => ({ ...b, businessId: row.value.id }));
-    }
     const res = await uploadBusinessImage(uid, kind, file, kind === "cover" ? biz.coverPath : biz.logoPath);
     setUploading(null);
     if (!res.ok) {

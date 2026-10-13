@@ -139,7 +139,8 @@ export function imageUrl(kind: "logo" | "cover", path: string | null): string | 
 
 /**
  * Uploads a logo (business-logos, <uid>/<file>) or cover (business-covers,
- * <owner_uid>/<file>; the onboarding account is the owner) after re-drawing
+ * <own uid>/<file>: the policy accepts the uploader's own uid, so no business
+ * row is needed yet, and the onboarding account is the owner) after re-drawing
  * it (metadata stripped), and removes the object it replaces. The column is
  * written with Step 1's save.
  */

@@ -9,7 +9,8 @@ import { hostedImageUrl, storagePath } from "../venues/venueLogic";
 // BUSINESS OWNER's uid even when somebody else uploads, because
 // storage_object_owner() charges the file to that uid and the erasure sweep
 // removes it with that account. Writes are allowed to an insider with the
-// `marketing` permission (may_write_business_file).
+// `marketing` permission (may_write_business_file), and to the uploader's own
+// uid prefix (so onboarding can add a cover before the business row exists).
 //
 // OLD COVERS KEEP DISPLAYING. Before that bucket existed covers went into
 // `business-logos` as <uid>/cover-<id>.jpg. A stored value is read as it was
