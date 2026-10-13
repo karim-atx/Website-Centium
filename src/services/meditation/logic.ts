@@ -3,8 +3,9 @@
  * (Database 20261006000000). Pure, so they are tested without a server.
  */
 
-/** The shortest session worth saving; the table's own floor too. */
-export const MIN_SESSION_SECONDS = 10;
+/** The shortest session worth saving; the table's own floor too (Database
+ *  B3 lowered it from 10 to 8 so one Simple Deep cycle, 8 s, can be stored). */
+export const MIN_SESSION_SECONDS = 8;
 /** The table's ceiling (4 hours). A runner left going longer is clamped. */
 export const MAX_SESSION_SECONDS = 14400;
 
@@ -42,9 +43,10 @@ export function sessionSeconds(startedAtMs: number, endedAtMs: number): number |
 
 /**
  * Whether a breathing run is saved when it ends (MO1.1.4 S2-S5, V6-144):
- * only after one full cycle AND at least the table's 10 s floor; under that
+ * only after one full cycle AND at least the table's 8 s floor; under that
  * nothing is written. Reset never saves (the caller does not ask). "short"
- * is the one case a full cycle is under 10 s (Simple Deep's 8 s cycle).
+ * is a full cycle under 8 s (none of today's patterns since B3 lowered the
+ * floor from 10 s, which Simple Deep's 8 s cycle used to miss).
  */
 export function breathingSaveRule(cycles: number, seconds: number | null): "save" | "cycle" | "short" {
   if (cycles < 1) return "cycle";

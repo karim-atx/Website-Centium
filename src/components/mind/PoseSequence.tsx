@@ -33,7 +33,7 @@ import { meditationPoseV2Urls, type MeditationPoseV2 } from "../../utils/assetUr
 // yoga_sequence, completed true}. Its clock starts at the first timer start
 // (Stretching) or when the tab opened / the sequence restarted (Yoga, and
 // Stretching tapped through without the timer). A sequence left unfinished
-// (tab switch, back) is not logged. Under the table's 10 s floor nothing is
+// (tab switch, back) is not logged. Under the table's 8 s floor (B3) nothing is
 // saved ("Too short to save.").
 
 export interface Pose {
@@ -126,7 +126,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
     clockRef.current = { startMs: Date.now(), fromTimer: false };
   }, []);
 
-  /** The finished sequence: seconds saved (null under the 10 s floor), seconds shown, save state. */
+  /** The finished sequence: seconds saved (null under the 8 s floor), seconds shown, save state. */
   const [complete, setComplete] = useState<{ seconds: number | null; shown: number; save: SaveState } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const live = useRef({ authUserId, refreshMeditationSummary, refreshAchievements });
@@ -160,6 +160,8 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
       durationSeconds: seconds,
       kind: meditationKind(kind),
       completed: true,
+      // B3 (PB-O-21): a sequence is logged only when finished, so every pose was done.
+      posesCompleted: poses.length,
     }).then((r) => {
       if (!r.ok) {
         setComplete((c) => (c ? { ...c, save: "hidden" } : c));

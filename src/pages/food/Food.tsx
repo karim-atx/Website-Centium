@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -16,7 +16,7 @@ import {
   sumNutrition,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { copyDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
+import { copyDiaryEntry, deleteDiaryEntry, getNutritionGoalOn, isRemoteEntryId } from "../../services/food";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { SwipeActions } from "../../components/ui/SwipeActions";
@@ -130,7 +130,24 @@ export default function Food() {
     [foodLog, selectedDate]
   );
   const totals = useMemo(() => sumNutrition(todaysEntries), [todaysEntries]);
-  const targets = targetsFromGoal(nutritionGoal);
+  // FO1 B-1 (B3 PB-O-30): a PAST day is measured against the goal that
+  // applied on it (nutrition_goal_on); today, a future day, no stored goal or
+  // a failed read keep the current goal. The pregnancy addition is today's
+  // (it is not part of the stored goal).
+  const isPastDay = selectedDate < todayLocal();
+  const [pastGoal, setPastGoal] = useState<{ date: string; goal: Awaited<ReturnType<typeof getNutritionGoalOn>> } | null>(null);
+  useEffect(() => {
+    if (!isPastDay) return;
+    let live = true;
+    void getNutritionGoalOn(selectedDate).then((goal) => {
+      if (live) setPastGoal({ date: selectedDate, goal });
+    });
+    return () => {
+      live = false;
+    };
+  }, [selectedDate, isPastDay]);
+  const goalOfDay = isPastDay && pastGoal?.date === selectedDate && pastGoal.goal ? { ...nutritionGoal, ...pastGoal.goal } : nutritionGoal;
+  const targets = targetsFromGoal(goalOfDay);
 
   const grouped = useMemo(() => {
     const map: Record<MealType, typeof foodLog> = { breakfast: [], lunch: [], snack: [], dinner: [] };

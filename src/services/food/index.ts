@@ -2,7 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
-import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
+import type { FoodLogEntry, MealType, NutritionGoal, ServingUnit } from "../../types";
 import { servingMultiplier, rescaleEntry } from "../nutrition";
 import { getFoodNutrientsById } from "../food-nutrients";
 import { normalizeGtin } from "../../utils/gtin";
@@ -1085,4 +1085,38 @@ export async function deleteCustomFood(id: string): Promise<{ ok: boolean; messa
   }
   if (!data || data.length === 0) return { ok: false, message: "That food couldn't be deleted." };
   return { ok: true };
+}
+
+// --- B3 nutrition_goal_on(date) (PB-O-30) -----------------------------------
+
+/**
+ * The nutrition goal that APPLIED on `date` (yyyy-mm-dd), from the account's
+ * goal history (Database B3 nutrition_goal_on), so a past diary day is
+ * measured against the target of the time rather than today's.
+ *
+ * Null when there is no stored goal on or before that day, or the read
+ * failed: the caller keeps the current goal. NOTE: this app keeps the goal
+ * on the device (AppContext usePersistentState "nutritionGoal") and does not
+ * write nutrition_goals yet, so until goals are saved to the account this
+ * answers null for every day and the current goal is used.
+ */
+export async function getNutritionGoalOn(date: string): Promise<Omit<NutritionGoal, "pregnancyKcal"> | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
+  const { data, error } = await (supabase as any).rpc("nutrition_goal_on", { p_date: date });
+  if (error) {
+    if (!isOffline(error)) console.error("[food] Could not read the goal for that day:", error.message);
+    return null;
+  }
+  const r = Array.isArray(data) ? data[0] : data;
+  // A function returning a composite answers an all-null row when nothing matched.
+  if (!r || r.id == null) return null;
+  return {
+    weightGoal: r.weight_goal,
+    weeklyRateKg: Number(r.weekly_rate_kg),
+    planType: r.plan_type,
+    macroSplit: { proteinPct: Number(r.protein_pct), carbsPct: Number(r.carbs_pct), fatPct: Number(r.fat_pct) },
+    targetCalories: Number(r.target_calories),
+    desiredWeightKg: r.desired_weight_kg == null ? undefined : Number(r.desired_weight_kg),
+    desiredWeightConfirmed: !!r.desired_weight_confirmed,
+  };
 }

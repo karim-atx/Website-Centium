@@ -60,6 +60,9 @@ export interface FolderWriteResult {
  * Neither is retryable and neither is a bug to hide. The raised message names
  * folder uuids, which is why it is replaced here rather than shown.
  */
+/** OURS (WO1 B-1, B3 PB-O-36): a routine folder's name rule. */
+export const FOLDER_NAME_RULE = "A folder name is 1 to 40 characters.";
+
 export function describeFolderError(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "ATX16") {
@@ -71,6 +74,9 @@ export function describeFolderError(error: PostgrestError): string {
   // The server's depth ceiling (Database 20260930100000), on routine and
   // template folders alike: the same sentence the UI limit shows.
   if (code === "ATX33") return `${MAX_DEPTH_NOTE}.`;
+  // Database B3 (PB-O-36): routine_folders.name is 1 to 40 trimmed. The
+  // screen already caps it at 40 and trims, so this is the server's backstop.
+  if (code === "23514" && (error.message ?? "").includes("routine_folders_name_check")) return FOLDER_NAME_RULE;
   if (code === "42501") return "You don't have permission to do that.";
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
   if (isOffline(error)) return OFFLINE_MESSAGE;

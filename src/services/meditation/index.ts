@@ -19,7 +19,15 @@ export interface MeditationSessionInput {
    *  breathing run with at least one full cycle, or a finished pose sequence;
    *  anything shorter or unfinished is not written at all. */
   completed: boolean;
+  /** B3 (PB-O-21): full breathing cycles in the run (0 to 500). Breathing only. */
+  cyclesCompleted?: number;
+  /** B3 (PB-O-21): poses finished in a Stretching / Yoga sequence (0 to 500). */
+  posesCompleted?: number;
 }
+
+/** The table's CHECK: null, or a whole number 0 to 500. */
+const count = (n: number | undefined): number | null =>
+  n === undefined || !Number.isFinite(n) ? null : Math.max(0, Math.min(500, Math.floor(n)));
 
 export async function logMeditationSession(input: MeditationSessionInput): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
@@ -29,7 +37,11 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
       duration_seconds: input.durationSeconds,
       kind: input.kind,
       completed: input.completed,
-    });
+      // B3 columns, INSERT-granted; not in the production-generated types yet.
+      cycles_completed: count(input.cyclesCompleted),
+      poses_completed: count(input.posesCompleted),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     if (!error) return { ok: true };
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     // ATX02: 20 sessions an hour. Real use does not reach it.

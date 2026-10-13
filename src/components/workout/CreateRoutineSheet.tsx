@@ -7,6 +7,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet"
 import { ExerciseSettingsSheet } from "./ExerciseSettingsSheet";
 import { GripVertical, Library, Search, Settings2, X } from "lucide-react";
 import { FOLDER_SWATCHES } from "../../data/folderColors";
+import { matchesSearch, searchKey } from "./LibraryParts";
 
 const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
@@ -79,8 +80,10 @@ export const CreateRoutineSheet: React.FC<{
     const fromCustom = customExercises
       .filter((e) => e.name.toLowerCase().includes(q))
       .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const, customExerciseId: e.id }));
+    // The catalogue's aliases too ("rdl", "ohp"; B3 PB-O-33), as the Library does.
+    const qKey = searchKey(searchQuery);
     const fromLibrary = exerciseCatalog
-      .filter((e) => e.name.toLowerCase().includes(q))
+      .filter((e) => e.name.toLowerCase().includes(q) || matchesSearch(qKey, e.name, e.aliases))
       .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const, exerciseId: e.id }));
     return [...fromCustom, ...fromLibrary].slice(0, 6);
   }, [searchQuery, customExercises, exerciseCatalog]);

@@ -1,15 +1,17 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { HabitIconKey } from "../../types";
+import type { HabitColour, HabitIconKey } from "../../types";
 
 export * from "./streak";
 export * from "./icons";
+export * from "./colours";
 import { toHabitIcon, validateHabitIcon } from "./icons";
+import { toHabitColour } from "./colours";
 
 // Habits, in public.habit_items and public.habit_completions.
 //
 // NO UPSERTS, and the grants are why rather than taste. habit_items grants
-// UPDATE on (label, icon, position) ONLY — `owner_id`, `id` and `created_at`
+// UPDATE on (label, icon, position, colour, archived_at) ONLY — `owner_id`, `id` and `created_at`
 // are INSERT-only, because they identify the row. `.upsert()` compiles to
 // INSERT … ON CONFLICT DO UPDATE and its UPDATE branch writes every column in
 // the payload, so it asks for a privilege that does not exist and comes back
@@ -31,6 +33,8 @@ export interface HabitRow {
   id: string;
   label: string;
   icon: HabitIconKey;
+  /** B3 habit_items.colour, default lavender. */
+  colour: HabitColour;
   position: number;
 }
 
@@ -41,9 +45,14 @@ export interface HabitsSnapshot {
 }
 
 // v6 MO1.1.1.1 / V6-143: a habit name is 1 to 40 characters and an account
-// keeps up to 30 habits. The database still allows 80 characters and has no
-// count or uniqueness rule (stage B3, PB-O-02), so the screen enforces these.
+// keeps up to 30 ACTIVE habits. Database B3 enforces the 30 (ATXA8, archived
+// habits exempt) and the unique active name (ATXA9, case-insensitive,
+// trimmed); its label CHECK stays at 80, so the 40 is the screen's rule
+// (HANDOVER_API.md B3: "Validate 40 in the UI").
 export const HABIT_LIMITS = { labelMax: 40, maxHabits: 30 } as const;
+
+/** MO1.1.1 O4: the handover's write-failure copy (tick, colour, edit, delete). */
+export const HABIT_SAVE_FAILED = "Couldn't save. Try again.";
 
 /** MO1.1.1.1 O3: the handover's duplicate-name line. */
 export const DUPLICATE_HABIT = "You already have a habit with this name.";
@@ -61,10 +70,19 @@ export type WriteResult = { ok: true } | { ok: false; message: string };
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
-  if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
+  const message = error.message ?? "";
+  if (code === "PGRST301" || /jwt|not authenticated/i.test(message)) {
     return "Your session expired. Sign in again to save this.";
   }
-  // A unique index on the name arrives with stage B3 (PB-O-02).
+  // Database B3 (HANDOVER_API.md "Habits"): the guard triggers raise their
+  // rule as the message's ATX prefix under a standard SQLSTATE (23514 /
+  // 23505), so the prefix is read first and mapped to the checklist's copy.
+  if (message.startsWith("ATXA8")) return TOO_MANY_HABITS; // thirty active habits
+  if (message.startsWith("ATXA9")) return DUPLICATE_HABIT; // same active name
+  // A tick outside this Monday-start week in the owner's timezone. The screen
+  // offers only this week up to today, so this is a clock / timezone edge:
+  // the circle goes back with the O4 toast.
+  if (message.startsWith("ATXB0")) return HABIT_SAVE_FAILED;
   if (code === "23505") return DUPLICATE_HABIT;
   if (code === "23514") return `Give the habit a name, up to ${HABIT_LIMITS.labelMax} characters.`;
   // 22P02: not a habit_icon value. validateHabitIcon catches it first; this
@@ -75,6 +93,21 @@ function describe(error: PostgrestError): string {
   }
   return "Couldn't save that. Check your connection and try again.";
 }
+
+interface RawHabit {
+  id: string;
+  label: string;
+  icon: string;
+  colour?: string | null;
+  position: number;
+}
+const fromRaw = (r: RawHabit): HabitRow => ({
+  id: r.id,
+  label: r.label,
+  icon: toHabitIcon(r.icon),
+  colour: toHabitColour(r.colour),
+  position: r.position,
+});
 
 /** Mirrors habit_items' CHECK. Returns a sentence, or null. */
 export function validateLabel(label: string): string | null {
@@ -98,10 +131,14 @@ export function validateLabel(label: string): string | null {
  * caller never has to distinguish "no rows" from "habit I have not seen".
  */
 export async function getHabits(userId: string, sinceDay: string): Promise<Result<HabitsSnapshot>> {
+  // ARCHIVED HABITS ARE NOT ON THE LIST (B3): archived_at keeps the row and
+  // its history, takes it off every screen, and frees its name and its place
+  // in the thirty. Their completions are not read either.
   const { data: items, error: itemsError } = await supabase
     .from("habit_items")
-    .select("id, label, icon, position")
+    .select("id, label, icon, colour, position")
     .eq("owner_id", userId)
+    .is("archived_at", null)
     .order("position", { ascending: true });
 
   if (itemsError) {
@@ -109,12 +146,8 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
     return { ok: false, message: describe(itemsError) };
   }
 
-  const rows: HabitRow[] = (items ?? []).map((r) => ({
-    id: r.id,
-    label: r.label,
-    icon: toHabitIcon(r.icon),
-    position: r.position,
-  }));
+  // The generated types are read from production, which has no colour yet.
+  const rows: HabitRow[] = ((items ?? []) as unknown as RawHabit[]).map(fromRaw);
   const completions: Record<string, string[]> = {};
   for (const r of rows) completions[r.id] = [];
 
@@ -142,49 +175,86 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
 /** Adds a habit at the end of the list. */
 export async function createHabit(
   userId: string,
-  habit: { label: string; icon: HabitIconKey; position: number }
+  habit: { label: string; icon: HabitIconKey; position: number; colour?: HabitColour }
 ): Promise<Result<HabitRow>> {
   const invalid = validateLabel(habit.label) ?? validateHabitIcon(habit.icon);
   if (invalid) return { ok: false, message: invalid };
 
   const { data, error } = await supabase
     .from("habit_items")
-    // The cast also covers the 12 Stage A1 icon values, which the generated
-    // types (read from production) do not list until the enum ships there.
+    // The cast also covers the 12 Stage A1 icon values and the B3 colour,
+    // which the generated types (read from production) do not list yet.
     .insert({
       owner_id: userId,
       label: habit.label.trim(),
       icon: habit.icon,
+      colour: habit.colour ?? "lavender",
       position: habit.position,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    .select("id, label, icon, position")
+    .select("id, label, icon, colour, position")
     .maybeSingle();
 
   if (error || !data) {
     console.error("[habits] Could not add the habit:", error?.message);
     return { ok: false, message: error ? describe(error) : "Couldn't add that habit." };
   }
-  return {
-    ok: true,
-    value: { id: data.id, label: data.label, icon: toHabitIcon(data.icon), position: data.position },
-  };
+  return { ok: true, value: fromRaw(data as unknown as RawHabit) };
 }
 
-/** Saves a habit's name and icon (MO1.1.1 S5 Edit). UPDATE, never upsert:
- *  label and icon are both in the UPDATE grant; the colour waits for B3. */
-export async function updateHabitRemote(id: string, patch: { label: string; icon: HabitIconKey }): Promise<WriteResult> {
+/** Saves a habit's name, icon and colour (MO1.1.1 S5 Edit). UPDATE, never
+ *  upsert: label, icon and colour are all in the UPDATE grant (B3). */
+export async function updateHabitRemote(
+  id: string,
+  patch: { label: string; icon: HabitIconKey; colour: HabitColour }
+): Promise<WriteResult> {
   const invalid = validateLabel(patch.label) ?? validateHabitIcon(patch.icon);
   if (invalid) return { ok: false, message: invalid };
 
   const { error } = await supabase
     .from("habit_items")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({ label: patch.label.trim(), icon: patch.icon } as any)
+    .update({ label: patch.label.trim(), icon: patch.icon, colour: patch.colour } as any)
     .eq("id", id);
 
   if (error) {
     console.error("[habits] Could not update the habit:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
+/** MO1.1.1 S3: one tap on the icon tile saves the next colour at once. */
+export async function setHabitColourRemote(id: string, colour: HabitColour): Promise<WriteResult> {
+  const { error } = await supabase
+    .from("habit_items")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ colour } as any)
+    .eq("id", id);
+  if (error) {
+    console.error("[habits] Could not save the colour:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
+/**
+ * Archives a habit, or brings it back (B3 archived_at).
+ *
+ * ARCHIVED, NOT DELETED: the row and every completion stay, so the history
+ * and the achievements counted from it are untouched; the habit leaves the
+ * list, stops counting towards the thirty, and frees its name. Bringing it
+ * back is the same column set to null, which the guard re-checks like an
+ * insert (ATXA8 at thirty, ATXA9 if the name was reused meanwhile).
+ */
+export async function setHabitArchivedRemote(id: string, archived: boolean): Promise<WriteResult> {
+  const { error } = await supabase
+    .from("habit_items")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ archived_at: archived ? new Date().toISOString() : null } as any)
+    .eq("id", id);
+  if (error) {
+    console.error("[habits] Could not archive the habit:", error.message);
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

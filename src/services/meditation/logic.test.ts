@@ -19,9 +19,10 @@ test("every kind matches the table's CHECK", () => {
   assert.equal(meditationKind("yoga"), "yoga_sequence");
 });
 
-test("time spent, floored to whole seconds, from 10 seconds up", () => {
+test("time spent, floored to whole seconds, from 8 seconds up (B3 floor)", () => {
   const t0 = 1_000_000;
-  assert.equal(sessionSeconds(t0, t0 + 9_999), null);
+  assert.equal(sessionSeconds(t0, t0 + 7_999), null);
+  assert.equal(sessionSeconds(t0, t0 + 8_000), 8);
   assert.equal(sessionSeconds(t0, t0 + 10_000), 10);
   assert.equal(sessionSeconds(t0, t0 + 480_900), 480);
   assert.equal(sessionSeconds(t0, t0 + 5 * 3600 * 1000), 14400);
@@ -44,7 +45,7 @@ test("empty only when there is nothing at all", () => {
   assert.equal(isEmptySummary({ ...zero, secondsThisWeek: 120, sessionsThisWeek: 1 }), false);
 });
 
-test("a breathing run is saved only after one full cycle and 10 seconds", () => {
+test("a breathing run is saved only after one full cycle and 8 seconds", () => {
   assert.equal(breathingSaveRule(0, 40), "cycle");
   assert.equal(breathingSaveRule(0, null), "cycle");
   assert.equal(breathingSaveRule(1, null), "short");

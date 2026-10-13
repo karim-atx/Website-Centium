@@ -9,11 +9,12 @@ import { CreateCustomExerciseSheet, type CustomExerciseData } from "./CreateCust
 import { BuiltInExerciseSheet } from "./BuiltInExerciseSheet";
 import { ExerciseInfoSheet } from "./ExerciseInfoSheet";
 import { ExerciseHistorySheet } from "./ExerciseHistorySheet";
-import { LoadErrorCard, SkeletonRows, YoursTag, searchKey, useLibraryInk } from "./LibraryParts";
+import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLibraryInk } from "./LibraryParts";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { isUuid } from "../../services/food";
+import { isCustomExerciseRule } from "../../services/exercises";
 import { linePx, textPx } from "../../theme/textSize";
 import type { ExerciseClassification, ExerciseTag, MuscleGroup } from "../../types";
 
@@ -51,6 +52,8 @@ interface LibraryRow {
 }
 
 const SAVE_FAILED = "Couldn't save. Try again.";
+/** A failed custom-exercise write: the rule it broke (B3, PB-O-32), else the toast's copy. */
+const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : SAVE_FAILED);
 
 /**
  * The Exercise Library sheet (v6 WO1.3), opened from a routine's Add
@@ -104,11 +107,12 @@ export const ExerciseLibrarySheet: React.FC<{
   }, [exerciseCatalog]);
 
   // Primary movers only, never secondary — the same rule the Library tab
-  // follows. Search is case- and accent-insensitive (aliases: PB-O-33).
+  // follows. Search is case- and accent-insensitive, by name or by the
+  // catalogue's aliases (B3 PB-O-33).
   const rows = useMemo<LibraryRow[]>(() => {
     const q = searchKey(query);
-    const keep = (name: string, groups: MuscleGroup[]) =>
-      searchKey(name).includes(q) && (category ? groups.includes(category) : true);
+    const keep = (name: string, groups: MuscleGroup[], aliases?: string[]) =>
+      matchesSearch(q, name, aliases) && (category ? groups.includes(category) : true);
     const custom = customExercises
       .filter((e) => keep(e.name, e.muscleGroups ?? []))
       .map((e) => ({
@@ -122,7 +126,7 @@ export const ExerciseLibrarySheet: React.FC<{
         isCustom: true,
       }));
     const catalog = exerciseCatalog
-      .filter((e) => keep(e.name, e.muscleGroups))
+      .filter((e) => keep(e.name, e.muscleGroups, e.aliases))
       .map((e) => ({
         key: `x:${e.id}`,
         id: e.id,
@@ -170,7 +174,7 @@ export const ExerciseLibrarySheet: React.FC<{
   const saveCreated = async (data: CustomExerciseData) => {
     const error = await addCustomExercise(data);
     if (error) {
-      setToast(SAVE_FAILED);
+      setToast(saveFailure(error));
       return;
     }
     onPick({
@@ -331,7 +335,7 @@ export const ExerciseLibrarySheet: React.FC<{
         onHistory={() => detail && setHistory({ name: detail.name, match: { customId: detail.id } })}
         onSave={(data) => {
           if (detail?.isCustom && detail.id) {
-            void updateCustomExercise(detail.id, data).then((error) => error && setToast(SAVE_FAILED));
+            void updateCustomExercise(detail.id, data).then((error) => error && setToast(saveFailure(error)));
           }
         }}
       />

@@ -7,24 +7,30 @@ import { Toast } from "../../components/ui/Toast";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { CentiumMark, EntiumWordmark } from "../../components/icons/CentiumMark";
 import { useApp } from "../../context/AppContext";
-import { Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Archive, Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
+import { useIsDark } from "../../hooks/useIsDark";
 import {
   DUPLICATE_HABIT,
   HABIT_LIMITS,
+  HABIT_SAVE_FAILED as SAVE_FAILED,
   TOO_MANY_HABITS,
+  habitShade,
   isDuplicateLabel,
+  nextHabitColour,
 } from "../../services/habits";
-import type { HabitIconKey, HabitItem } from "../../types";
+import type { HabitColour, HabitIconKey, HabitItem } from "../../types";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COL = 28; // one day column, centre to centre (MO1.1.1 #18: x 172.2 → 200.2)
 
-/** MO1.1.1 O4: the handover's write-failure toast copy. */
-const SAVE_FAILED = "Couldn't save. Try again.";
+/** OURS: the toast after Archive (the menu's B3 action), with Undo. */
+const ARCHIVED = "Habit archived. Its history is kept.";
+/** The panel's rule lines (O3, O4); anything else is the O5 / O4 copy. */
+const PANEL_RULES = new Set([DUPLICATE_HABIT, TOO_MANY_HABITS]);
 
 /** The Monday-first week holding `today`, as yyyy-mm-dd. */
 function weekOf(today: string): string[] {
@@ -51,10 +57,15 @@ function weekOf(today: string): string[] {
 // unknown-icon fallback, Monday weeks. Edit opens the add panel prefilled (S5);
 // Delete asks first with the handover's copy (S6, K3 data safety).
 //
-// BACKEND (stage B3, not on the local stack yet): the habit colour cycle
-// (PB-O-01: tiles stay lavender and are not a control until habit_items has a
-// colour), the server's 40-character / 30-habit / unique-name rules (PB-O-02:
-// the screen enforces them meanwhile).
+// DATABASE B3 (wired): the habit colour (PB-O-01): tapping a row's icon tile
+// cycles lavender → teal → gold → rose → sky and saves at once (S3); in the
+// panel the selected icon tile carries the colour and a second tap cycles it
+// (MO1.1.1.1 S3). The server's rules come back as the checklist's copy:
+// ATXA8 → "You can keep up to 30 habits.", ATXA9 → the duplicate-name line,
+// ATXB0 (a tick outside this week) → the O4 toast. The 40-character name is
+// the screen's rule (the database keeps 80). Archive (OURS, in the ⋮ and
+// long-press menu) keeps a habit's history and frees its name and its place
+// in the thirty; the toast offers Undo.
 //
 // DARK (V6-02, V6-92): a tick, the ✓ and the Plus on the primary fill keep the
 // #0D0B1A ink (white is about 2.6:1 on #A991FE), and an empty ring for today or
@@ -70,13 +81,20 @@ export default function HabitsTab() {
     toggleHabit,
     addHabit,
     updateHabit,
+    setHabitColour,
+    archiveHabit,
     removeHabit,
     reloadHabits,
+    accessibility,
   } = useApp();
+  const dark = useIsDark();
+  // The tile and icon of a habit colour; null = lavender, the theme classes.
+  const shadeOf = (c: HabitColour | undefined) => habitShade(c, dark, !!accessibility.highContrast);
   // The panel (MO1.1.1.1): closed, adding, or editing one habit (S5).
   const [panel, setPanel] = useState<{ mode: "add" } | { mode: "edit"; habit: HabitItem } | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
+  const [newColour, setNewColour] = useState<HabitColour>("lavender");
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   // Deleting a habit erases its history and streak, so it asks first.
@@ -84,8 +102,9 @@ export default function HabitsTab() {
   // D12: Edit and Delete without a swipe, from a long-press or right-click on
   // the row or its ⋮ button.
   const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
-  // O4: a failed write (tick, rename, delete) says so in the shared toast.
-  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  // O4: a failed write (tick, colour, rename, delete) says so in the shared
+  // toast; an archive says so with Undo (`undo` = the habit's id).
+  const [toast, setToast] = useState<{ id: number; message: string; undo?: string } | null>(null);
   const [retrying, setRetrying] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [panelHeight, setPanelHeight] = useState(0);
@@ -100,14 +119,32 @@ export default function HabitsTab() {
   const openAdd = () => {
     setNewLabel("");
     setNewIcon(habitIconOptions[0].key);
+    setNewColour("lavender");
     setPanelError(null);
     setPanel({ mode: "add" });
   };
   const openEdit = (h: HabitItem) => {
     setNewLabel(h.label);
     setNewIcon(h.icon);
+    setNewColour(h.colour ?? "lavender");
     setPanelError(null);
     setPanel({ mode: "edit", habit: h });
+  };
+
+  // S3: the next colour, saved at once; a refused write puts it back (O4).
+  const cycleColour = (h: HabitItem) => void setHabitColour(h.id, nextHabitColour(h.colour)).then(failed);
+
+  // B3 archive (OURS): off the list, history kept; Undo brings it back.
+  const archive = (h: HabitItem) =>
+    void archiveHabit(h.id).then((error) => {
+      if (error) failed(error);
+      else setToast({ id: Date.now(), message: ARCHIVED, undo: h.id });
+    });
+  const undoArchive = (id: string) => {
+    setToast(null);
+    void archiveHabit(id, false).then((error) => {
+      if (error) setToast({ id: Date.now(), message: PANEL_RULES.has(error) ? error : SAVE_FAILED });
+    });
   };
   const closePanel = () => {
     if (saving) return;
@@ -117,8 +154,8 @@ export default function HabitsTab() {
 
   const editingId = panel?.mode === "edit" ? panel.habit.id : undefined;
   const trimmed = newLabel.trim();
-  // O3: the handover's duplicate check, ignoring case and outer spaces (the
-  // database's unique index comes with stage B3, PB-O-02).
+  // O3: the handover's duplicate check, ignoring case and outer spaces, before
+  // the write (the server's ATXA9 says the same among active habits).
   const duplicate = trimmed !== "" && isDuplicateLabel(trimmed, habits, editingId);
 
   const save = async () => {
@@ -127,7 +164,8 @@ export default function HabitsTab() {
       setPanelError(DUPLICATE_HABIT);
       return;
     }
-    // O4 (OURS): up to 30 habits; the server's own limit is stage B3.
+    // O4 (OURS copy): up to 30 active habits, said before the write; the
+    // server refuses a 31st too (B3 ATXA8), mapped to the same line.
     if (panel.mode === "add" && habits.length >= HABIT_LIMITS.maxHabits) {
       setPanelError(TOO_MANY_HABITS);
       return;
@@ -136,12 +174,13 @@ export default function HabitsTab() {
     setPanelError(null);
     const error =
       panel.mode === "edit"
-        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon })
-        : await addHabit(trimmed, newIcon);
+        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon, colour: newColour })
+        : await addHabit(trimmed, newIcon, newColour);
     setSaving(false);
     // S5 / O5: the panel closes only once the write landed; a failure keeps
-    // it open with what was typed, the reason under the field.
-    if (error) setPanelError(error === DUPLICATE_HABIT ? DUPLICATE_HABIT : SAVE_FAILED);
+    // it open with what was typed, the reason under the field (the B3
+    // ATXA8 / ATXA9 rules as O4 / O3, anything else the O5 line).
+    if (error) setPanelError(PANEL_RULES.has(error) ? error : SAVE_FAILED);
     else setPanel(null);
   };
 
@@ -208,6 +247,7 @@ export default function HabitsTab() {
   const row = (h: HabitItem) => {
     const Icon = habitIcon[h.icon];
     const done = new Set(h.doneDates ?? []);
+    const shade = shadeOf(h.colour);
     return (
       <SwipeActions
         radius={0}
@@ -226,11 +266,22 @@ export default function HabitsTab() {
             text can wrap the name to two lines (O8). */}
         <div className="flex items-center min-h-[59px] pl-3 pr-[7px] bg-cream-card">
           <div className="flex items-center gap-2.5 flex-1 min-w-0 py-1.5">
-            {/* #13: 28 r8 tile, lavender #F0EDF9 / #303141. The colour cycle
-                (S3) waits for backend B3 (PB-O-01), so the tile is not a control. */}
-            <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
-              <Icon size={14} className="text-primary-dark" />
-            </span>
+            {/* #13 / #14 / S3: the 28 r8 tile in the habit's colour (lavender
+                #F0EDF9 / #303141 with #7D6BB5 / #C3B3FB through the theme;
+                teal, gold, rose, sky from habitShade), a button with a 44 pt
+                target that cycles the colour and saves it at once. */}
+            <button
+              type="button"
+              onClick={() => cycleColour(h)}
+              aria-label={`${h.label} colour: ${h.colour ?? "lavender"}. Tap to change`}
+              className={clsx(
+                "tap relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0 after:absolute after:-inset-2 after:content-['']",
+                !shade && "bg-primary-pale"
+              )}
+              style={shade ? { background: shade.tile } : undefined}
+            >
+              <Icon size={14} className={shade ? undefined : "text-primary-dark"} style={shade ? { color: shade.ink } : undefined} aria-hidden />
+            </button>
             <span className="min-w-0">
               {/* #15: 13/18 600; one line (two under Larger text), then an ellipsis. */}
               <span className="line-clamp-1 [.larger-text_&]:line-clamp-2 break-words text-[13px] leading-[18px] font-semibold text-charcoal">
@@ -387,19 +438,22 @@ export default function HabitsTab() {
         </div>
       )}
 
-      {/* K2 (D12 restore round): Edit / Delete without a swipe. */}
-      <PopupMenu<"edit" | "delete">
+      {/* K2 (D12 restore round): Edit / Delete without a swipe, and (B3,
+          OURS) Archive between them: history kept, name and place freed. */}
+      <PopupMenu<"edit" | "archive" | "delete">
         open={!!menu}
         onClose={() => setMenu(null)}
         anchor={menu?.anchor ?? null}
         rowLineHeight={16}
         options={[
           { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "archive", label: "Archive", icon: <Archive size={15} strokeWidth={1.75} /> },
           { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
         ]}
         onSelect={(v) => {
           if (!menu) return;
           if (v === "edit") openEdit(menu.habit);
+          else if (v === "archive") archive(menu.habit);
           else setDeleting(menu.habit);
         }}
       />
@@ -416,11 +470,12 @@ export default function HabitsTab() {
         }}
       />
 
-      {/* O4: a failed tick, edit or delete. */}
+      {/* O4: a failed tick, colour, edit or delete; or an archive with Undo. */}
       <Toast
         open={!!toast}
         message={toast?.message ?? ""}
-        tone="error"
+        tone={toast?.undo ? "default" : "error"}
+        onUndo={toast?.undo ? () => undoArchive(toast.undo!) : undefined}
         onExpire={() => setToast(null)}
       />
 
@@ -447,20 +502,30 @@ export default function HabitsTab() {
               {habitIconOptions.map((opt) => {
                 const Icon = habitIcon[opt.key];
                 const selected = newIcon === opt.key;
+                // S3 (OURS placement, D7): the selected tile wears the habit's
+                // colour; tapping it again cycles the colour.
+                const shade = selected ? shadeOf(newColour) : null;
                 return (
                   <button
                     key={opt.key}
                     type="button"
-                    onClick={() => setNewIcon(opt.key)}
-                    aria-label={opt.label}
+                    onClick={() => (selected ? setNewColour(nextHabitColour(newColour)) : setNewIcon(opt.key))}
+                    aria-label={selected ? `${opt.label}, ${newColour}. Tap again to change colour` : opt.label}
                     aria-pressed={selected}
                     className={clsx(
                       "tap shrink-0 w-[38px] h-[38px] rounded-[11px] flex items-center justify-center",
-                      // S1 (OURS fill): selected #F0EDF9 / #303141 with a 2 px primary ring.
-                      selected ? "bg-primary-pale ring-2 ring-primary" : "bg-cream-soft"
+                      // S1 (OURS fill): selected #F0EDF9 / #303141 (or the
+                      // habit's colour) with a 2 px primary ring.
+                      selected ? clsx("ring-2 ring-primary", !shade && "bg-primary-pale") : "bg-cream-soft"
                     )}
+                    style={shade ? { background: shade.tile } : undefined}
                   >
-                    <Icon size={18} strokeWidth={1.75} className={selected ? "text-primary-dark" : "text-charcoal-soft"} />
+                    <Icon
+                      size={18}
+                      strokeWidth={1.75}
+                      className={selected ? (shade ? undefined : "text-primary-dark") : "text-charcoal-soft"}
+                      style={shade ? { color: shade.ink } : undefined}
+                    />
                   </button>
                 );
               })}

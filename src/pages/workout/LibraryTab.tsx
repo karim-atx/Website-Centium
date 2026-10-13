@@ -15,8 +15,9 @@ import { BodyFigure } from "../../components/workout/BodyFigure";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
-import { LoadErrorCard, SkeletonRows, YoursTag, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
+import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
 import { Toast } from "../../components/ui/Toast";
+import { customExerciseUsage, isCustomExerciseRule } from "../../services/exercises";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -35,6 +36,8 @@ interface DbExercise {
   secondaryMuscleGroups: MuscleGroup[];
   classification: ExerciseClassification;
   tags: ExerciseTag[];
+  /** B3 exercises.aliases (catalogue rows only), searched with the name (WO2 S6). */
+  aliases?: string[];
   isCustom: boolean;
 }
 
@@ -113,6 +116,8 @@ const COLORS = {
 } as const;
 
 const SAVE_FAILED = "Couldn't save. Try again.";
+/** A failed custom-exercise write: the rule it broke (B3, PB-O-32), else the WO2 toast. */
+const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : SAVE_FAILED);
 
 /**
  * WO2 #16-#18: a 30px smooth rounded rectangle, pad 0 11, 11.5/17.3 600, a
@@ -224,6 +229,22 @@ export default function LibraryTab() {
   // A custom exercise not yet on the server (local id) has no row to read.
   const customSource = (e: DbExercise | null) =>
     e && /^[0-9a-f-]{36}$/i.test(e.id) ? { id: e.id, kind: "custom" as const } : null;
+  // B3 custom_exercise_usage: how many of the user's own routines use the
+  // custom exercise that is open, counted on the server for the delete
+  // confirm; null until it answers (or for a local-only movement), when the
+  // routines in memory are counted instead.
+  const [usage, setUsage] = useState<{ id: string; routines: number } | null>(null);
+  const usageId = editingExercise?.isCustom ? customSource(editingExercise)?.id ?? null : null;
+  useEffect(() => {
+    if (!usageId) return;
+    let live = true;
+    void customExerciseUsage(usageId).then((n) => {
+      if (live && n !== null) setUsage({ id: usageId, routines: n });
+    });
+    return () => {
+      live = false;
+    };
+  }, [usageId]);
 
   const all: DbExercise[] = useMemo(() => {
     const library = exerciseCatalog.map((e) => ({
@@ -233,6 +254,7 @@ export default function LibraryTab() {
       secondaryMuscleGroups: e.secondaryMuscleGroups,
       classification: e.classification,
       tags: e.tags,
+      aliases: e.aliases,
       isCustom: false,
     }));
     const custom = customExercises.map((e) => ({
@@ -250,8 +272,11 @@ export default function LibraryTab() {
   }, [exerciseCatalog, customExercises]);
 
   const searched = useMemo(
-    // Case- and accent-insensitive (WO2 S6); aliases wait for PB-O-33.
-    () => all.filter((e) => searchKey(e.name).includes(searchKey(query))),
+    // Case- and accent-insensitive, by name or alias (WO2 S6, B3 PB-O-33).
+    () => {
+      const q = searchKey(query);
+      return all.filter((e) => matchesSearch(q, e.name, e.aliases));
+    },
     [all, query]
   );
 
@@ -325,9 +350,10 @@ export default function LibraryTab() {
    * behaviour behind each number is documented on deleteCustomExercise.
    */
   const deleteImpact = (customExerciseId: string) => ({
-    routines: routines.filter((r) =>
-      r.exercises.some((ex) => ex.customExerciseId === customExerciseId)
-    ).length,
+    routines:
+      usage?.id === customExerciseId
+        ? usage.routines
+        : routines.filter((r) => r.exercises.some((ex) => ex.customExerciseId === customExerciseId)).length,
     templates: workoutTemplates.filter((t) =>
       t.exercises.some((ex) => ex.customExerciseId === customExerciseId)
     ).length,
@@ -682,7 +708,7 @@ export default function LibraryTab() {
         onInfo={(name) => setInfo({ name, source: null })}
         onHistory={() => setHistory({ name: "New Custom Exercise", match: {} })}
         onClose={() => setCreating(null)}
-        onSave={(data: CustomExerciseData) => void addCustomExercise(data).then((error) => error && setToast(SAVE_FAILED))}
+        onSave={(data: CustomExerciseData) => void addCustomExercise(data).then((error) => error && setToast(saveFailure(error)))}
       />
 
       <BuiltInExerciseSheet
@@ -712,7 +738,7 @@ export default function LibraryTab() {
         impact={editingExercise?.isCustom ? deleteImpact(editingExercise.id) : undefined}
         onSave={(data: CustomExerciseData) => {
           if (editingExercise?.isCustom)
-            void updateCustomExercise(editingExercise.id, data).then((error) => error && setToast(SAVE_FAILED));
+            void updateCustomExercise(editingExercise.id, data).then((error) => error && setToast(saveFailure(error)));
         }}
       />
 

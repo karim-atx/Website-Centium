@@ -39,7 +39,7 @@ export const useLibraryInk = (): string => {
 
 /**
  * Lower case without accents, for search (WO1.3 S2 / WO2 S6: case- and
- * accent-insensitive; aliases wait for PB-O-33).
+ * accent-insensitive).
  */
 export const searchKey = (s: string) =>
   s
@@ -47,6 +47,14 @@ export const searchKey = (s: string) =>
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
+
+/**
+ * WO1.3 S2 / WO2 S6 (B3 PB-O-33): a search matches the name OR one of the
+ * catalogue's aliases ("bench", "rdl", "ohp"), case- and accent-insensitive.
+ * `query` is already a searchKey; an empty one matches everything.
+ */
+export const matchesSearch = (query: string, name: string, aliases?: readonly string[]) =>
+  !query || searchKey(name).includes(query) || (aliases ?? []).some((a) => searchKey(a).includes(query));
 
 /**
  * Loading rows (WO1.3 O2, WO2 O4): bars #F5F5F6 / #242730 that pulse 1.2 s,

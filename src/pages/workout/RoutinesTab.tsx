@@ -155,7 +155,7 @@ export default function RoutinesTab() {
   // WO1 #6 / K1: the caps labels, #9A94B3 / dark #8A8698; High contrast ink.
   const capsInk = hc ? "rgb(var(--c-charcoal))" : dark ? "#8A8698" : "rgb(var(--thi-9a94b3))";
   // WO1 S2 / K6: the folder name is 1 to 40 characters, a routine's 1 to 60
-  // (front end now; the database check is PB-O-36).
+  // (said here; Database B3 checks the same, PB-O-36).
   const FOLDER_NAME_MAX = 40;
   const ROUTINE_NAME_MAX = 60;
   // WO1 K6: the new-folder field, FO style (42 tall, r14, #F5F5F6 / #242730,
@@ -203,7 +203,8 @@ export default function RoutinesTab() {
   // tried (O4).
   const run = (action: Promise<string | undefined>) => {
     void action.then((message) => {
-      if (message && /filed inside itself|different account|levels deep at most|permission/i.test(message)) setActionError(message);
+      // B3 (PB-O-36): the server's name rules say why too.
+      if (message && /filed inside itself|different account|levels deep at most|permission|name is 1 to/i.test(message)) setActionError(message);
       else {
         setActionError(null);
         if (message) setSaveToast(true);

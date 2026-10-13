@@ -63,7 +63,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
   // table has no UPDATE), with the time actually spent.
   //
   // WHAT IS SAVED (v6 MO1.1.4 S2-S5, V6-144): a run is saved only once it has
-  // at least one full cycle AND the table's 10 s floor, always as completed.
+  // at least one full cycle AND the table's 8 s floor (B3), always as completed.
   // Stop, switching pattern or tab, and leaving the page (K6) all follow that
   // rule; Reset discards the run and never saves. Anything shorter is not
   // written at all.
@@ -90,6 +90,8 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
       durationSeconds: seconds,
       kind: session.kind,
       completed: true,
+      // B3 (PB-O-21): the full cycles of this run.
+      cyclesCompleted: cyclesRef.current,
     }).then((r) => {
       if (!r.ok) {
         // O3 / K7 keep their own text; anything else is the shared one.

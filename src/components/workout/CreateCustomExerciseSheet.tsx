@@ -11,11 +11,13 @@ import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
+import { CUSTOM_EXERCISE_COPY } from "../../services/exercises";
 
 /**
- * v6 PB-O-32 (front end now; the database checks wait for the stage): a
- * custom exercise's name is 2 to 60 characters and unique among the user's
- * own (case-insensitive), and it needs at least one main muscle group.
+ * v6 PB-O-32: a custom exercise's name is 2 to 60 characters and unique among
+ * the user's own (case-insensitive), and it needs at least one main muscle
+ * group. Said here before the write; Database B3 enforces the same rules
+ * (ATXB2 and two CHECKs), mapped back to these sentences by the service.
  */
 export const CUSTOM_EXERCISE_NAME_MAX = 60;
 export function customExerciseProblem(
@@ -25,10 +27,10 @@ export function customExerciseProblem(
 ): { name?: string; muscle?: string } {
   const n = name.trim();
   const out: { name?: string; muscle?: string } = {};
-  if (n.length > 0 && n.length < 2) out.name = "Use at least 2 characters.";
-  else if (n.length > CUSTOM_EXERCISE_NAME_MAX) out.name = "Use up to 60 characters.";
-  else if (n && others.some((o) => o.trim().toLowerCase() === n.toLowerCase())) out.name = "You already have an exercise with this name.";
-  if (muscleGroups.length === 0) out.muscle = "Pick at least one main muscle group.";
+  if (n.length > 0 && n.length < 2) out.name = CUSTOM_EXERCISE_COPY.nameShort;
+  else if (n.length > CUSTOM_EXERCISE_NAME_MAX) out.name = CUSTOM_EXERCISE_COPY.nameLong;
+  else if (n && others.some((o) => o.trim().toLowerCase() === n.toLowerCase())) out.name = CUSTOM_EXERCISE_COPY.duplicate;
+  if (muscleGroups.length === 0) out.muscle = CUSTOM_EXERCISE_COPY.muscle;
   return out;
 }
 
@@ -356,9 +358,12 @@ export const CreateCustomExerciseSheet: React.FC<{
                   Delete “{name.trim() || initial?.name}”?
                 </p>
                 <ul className="text-[11.5px] text-charcoal-soft" style={{ margin: 0, paddingLeft: 16 }}>
+                  {/* B3 custom_exercise_usage: the count of the user's own
+                      routines using it, from the server (the caller). */}
                   {impact && impact.routines > 0 && (
                     <li>
-                      It is removed from {impact.routines} {impact.routines === 1 ? "routine" : "routines"}.
+                      Used in {impact.routines} {impact.routines === 1 ? "routine" : "routines"}. Deleting takes it out of{" "}
+                      {impact.routines === 1 ? "that routine" : "each of them"}.
                     </li>
                   )}
                   {impact && impact.templates > 0 && (
