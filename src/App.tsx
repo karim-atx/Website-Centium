@@ -39,6 +39,7 @@ import Mind from "./pages/mind/Mind";
 import Professionals from "./pages/professionals/Professionals";
 import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
 import ProfessionalReviews from "./pages/professionals/ProfessionalReviews";
+import ProVerification from "./pages/professionals/ProVerification";
 import CalendarTab from "./pages/professionals/CalendarTab";
 import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
 import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
@@ -48,7 +49,8 @@ import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import BusinessAnalyticsTab from "./pages/marketplace/BusinessAnalyticsTab";
 import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
-import BusinessProfileTab from "./pages/marketplace/BusinessProfileTab";
+import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
+import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
 import BusinessMembersTab from "./pages/marketplace/BusinessMembersTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
@@ -396,6 +398,17 @@ function AppRoutes() {
           </RedirectIfOnboarded>
         }
       />
+      {/* v6 Batch 3 · OB-B: a Physiotherapist's / Dietitian's licence check
+          after onboarding (OB-184 / 186 / 188 / 189). Full screen, as the
+          onboarding status screens are; reached from Get set up. */}
+      <Route
+        path="/app/professionals/verification"
+        element={
+          <RequireOnboarded>
+            <ProVerification />
+          </RequireOnboarded>
+        }
+      />
       <Route
         element={
           <RequireOnboarded>
@@ -439,7 +452,12 @@ function AppRoutes() {
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics" element={<BusinessAnalyticsTab />} />
         <Route path="/app/business/marketplace" element={<BusinessMarketplaceTab />} />
-        <Route path="/app/business/profile" element={<BusinessProfileTab />} />
+        {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
+            Today's listings page until the Products shell (OURS-MA1-store-products-tab) lands. */}
+        <Route path="/app/business/products" element={<BusinessMarketplaceTab />} />
+        <Route path="/app/business/profile" element={<BusinessProfilePage />} />
+        {/* v6 Batch 3: the business More sub-pages (MO1B). */}
+        <Route path="/app/business/more/*" element={<BusinessMoreRoutes />} />
         <Route path="/app/business/messages" element={<Navigate to="/app/messages" replace />} />
         <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
         <Route path="/app/business/members" element={<BusinessMembersTab />} />

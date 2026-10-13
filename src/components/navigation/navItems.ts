@@ -1,4 +1,4 @@
-import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, MessageSquare, BarChart3, Tag, Building2, Briefcase, UserPlus } from "lucide-react";
+import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, MessageSquare, Building2, UserPlus, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
@@ -31,25 +31,6 @@ export const professionalPrimaryNavItems: NavItem[] = [
   { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
   { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
-  { to: "/app/more", label: "More", icon: MoreHorizontal },
-];
-
-// V6 (QA 6.0): "remove everything that does not pertain to the business
-// owner related UI" — same trim as professionals. A business account's
-// main page ("/") already renders BusinessDashboard, so there's no separate
-// personal Home/Food/Workout/Health tracking to navigate to.
-// V7 (QA 7.0): Analytics, Marketplace (listing creation) and Messages are
-// now real tabs — Employees/Classes (gym-type only) live in More instead,
-// since the bottom nav only has 5 slots.
-// V9 (QA 9.0): "Add a new button between analytics and marketplace called
-// operations that house both the employees and classes buttons found in
-// more" — Operations takes the bottom-nav slot Messages used to hold;
-// Messages moves into More instead (still a 5-slot bar).
-export const businessPrimaryNavItems: NavItem[] = [
-  { to: "/app", label: "Dashboard", icon: Store },
-  { to: "/app/business/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/app/business/operations", label: "Operations", icon: Briefcase },
-  { to: "/app/business/marketplace", label: "Marketplace", icon: Tag },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -89,15 +70,123 @@ export const professionalSidebarNavItems: NavItem[] = [
   { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];
 
-export const businessSidebarNavItems: NavItem[] = [
-  { to: "/app", label: "Dashboard", icon: Store },
-  { to: "/app/business/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/app/business/operations", label: "Operations", icon: Briefcase },
-  { to: "/app/business/marketplace", label: "Marketplace", icon: Tag },
-  { to: "/app/messages", label: "Messages", icon: MessageCircle },
-  { to: "/app/business/employees", label: "Employees", icon: Users },
-  { to: "/app/business/members", label: "Members", icon: UserPlus },
-  { to: "/app/business/classes", label: "Classes", icon: CalendarDays },
-  { to: "/app/business/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/business/profile", label: "Business Profile", icon: Building2 },
+// ---------------------------------------------------------------------------
+// v6 Business UI (X-31, V6-54, NAV-001 rows 7-8, S2): one bar per business
+// type. A business account's main page ("/app") renders BusinessDashboard,
+// drawn as the Centium mark in the centre slot.
+// - Classes (business_type `studio`): Analytics · Schedule · [Dashboard] · Marketplace · More
+// - Gym: Analytics · Front desk · [Dashboard] · Marketplace · More
+// - Store (every store sub-type): Analytics · Orders · [Dashboard] · Products · More
+// - Wellness Service with appointments only: the Orders slot becomes Appointments
+// - Type not known yet: the generic Operations / Marketplace pair
+// The Operations slot keeps one route for every type (NAV-001 row 8); the
+// pages it opens today (venue console, gym plans, employees, classes) light
+// it too. Store Products is its own route.
+// ---------------------------------------------------------------------------
+
+export type BusinessNavKind = "classes" | "gym" | "store" | "appointments" | "unknown";
+
+const STORE_TYPES = new Set(["store", "supplement_store", "equipment_seller", "wellness_service", "clothing_store", "meal_prep_service"]);
+
+export function businessNavKind(
+  businessType: string | null | undefined,
+  storeSettings: { sells_products: boolean; offers_appointments: boolean } | null
+): BusinessNavKind {
+  if (businessType === "studio") return "classes";
+  if (businessType === "gym") return "gym";
+  if (businessType === "wellness_service" && storeSettings?.offers_appointments && !storeSettings.sells_products) return "appointments";
+  if (businessType && STORE_TYPES.has(businessType)) return "store";
+  return "unknown";
+}
+
+export type BusinessGlyphKey = "mark" | "analytics" | "operations" | "schedule" | "front-desk" | "orders" | "appointments" | "marketplace" | "products" | "more";
+
+export interface BusinessTab {
+  to: string;
+  label: string;
+  glyph: BusinessGlyphKey;
+}
+
+export const BUSINESS_OPERATIONS_ROUTE = "/app/business/operations";
+export const BUSINESS_PRODUCTS_ROUTE = "/app/business/products";
+
+const OPERATIONS_TAB: Record<BusinessNavKind, BusinessTab> = {
+  classes: { to: BUSINESS_OPERATIONS_ROUTE, label: "Schedule", glyph: "schedule" },
+  gym: { to: BUSINESS_OPERATIONS_ROUTE, label: "Front desk", glyph: "front-desk" },
+  store: { to: BUSINESS_OPERATIONS_ROUTE, label: "Orders", glyph: "orders" },
+  appointments: { to: BUSINESS_OPERATIONS_ROUTE, label: "Appointments", glyph: "appointments" },
+  unknown: { to: BUSINESS_OPERATIONS_ROUTE, label: "Operations", glyph: "operations" },
+};
+
+const isStoreKind = (k: BusinessNavKind) => k === "store" || k === "appointments";
+
+/** The bar's five tabs, left to right (Dashboard is the centre slot). */
+export function businessTabs(kind: BusinessNavKind): BusinessTab[] {
+  return [
+    { to: "/app/business/analytics", label: "Analytics", glyph: "analytics" },
+    OPERATIONS_TAB[kind],
+    { to: "/app", label: "Dashboard", glyph: "mark" },
+    isStoreKind(kind)
+      ? { to: BUSINESS_PRODUCTS_ROUTE, label: "Products", glyph: "products" }
+      : { to: "/app/business/marketplace", label: "Marketplace", glyph: "marketplace" },
+    { to: "/app/more", label: "More", glyph: "more" },
+  ];
+}
+
+/** Pages reached from the Operations slot today; they keep it lit. */
+const OPERATIONS_PAGES = [
+  BUSINESS_OPERATIONS_ROUTE,
+  "/app/business/venue",
+  "/app/business/gym",
+  "/app/business/classes",
+  "/app/business/employees",
 ];
+
+/**
+ * NAV-001 S2, kept: More is lit on More, Profile, Subscription, Settings,
+ * Business Profile, Messages, Calendar and every More sub-page.
+ */
+export const BUSINESS_MORE_PAGES = [
+  "/app/more",
+  "/app/profile",
+  "/app/subscription",
+  "/app/settings",
+  "/app/business/profile",
+  "/app/messages",
+  "/app/business/calendar",
+];
+
+const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
+
+export function isBusinessTabActive(tab: BusinessTab, pathname: string): boolean {
+  if (tab.to === "/app") return pathname === "/app";
+  if (tab.to === "/app/more") return BUSINESS_MORE_PAGES.some((p) => under(pathname, p));
+  if (tab.to === BUSINESS_OPERATIONS_ROUTE) return OPERATIONS_PAGES.some((p) => under(pathname, p));
+  return under(pathname, tab.to);
+}
+
+/** Team and access wording per type (COPY.md vocabulary map, Staff row). */
+const TEAM_LABEL: Record<BusinessNavKind, string> = {
+  classes: "Instructors",
+  gym: "Team",
+  store: "Staff",
+  appointments: "Staff",
+  unknown: "Team",
+};
+
+export interface BusinessShortcut extends NavItem {
+  /** Shows the unread badge (keyed on the route, not the translated label). */
+  unread?: boolean;
+}
+
+/** OURS-NAV-desktop-sidebar row 5: the More shortcuts under the five tabs. */
+export function businessSidebarShortcuts(kind: BusinessNavKind): BusinessShortcut[] {
+  return [
+    { to: "/app/messages", label: "Messages", icon: MessageCircle, unread: true },
+    { to: "/app/business/calendar", label: "Calendar", icon: CalendarDays },
+    { to: "/app/business/members", label: "Members", icon: UserPlus },
+    { to: "/app/business/employees", label: TEAM_LABEL[kind], icon: Users },
+    { to: "/app/business/profile", label: "Business Profile", icon: Building2 },
+    { to: "/app/settings", label: "Settings", icon: Settings },
+  ];
+}

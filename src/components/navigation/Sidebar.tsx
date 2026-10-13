@@ -1,7 +1,28 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import clsx from "clsx";
-import { sidebarNavItems, professionalSidebarNavItems, businessSidebarNavItems } from "./navItems";
+import {
+  sidebarNavItems,
+  professionalSidebarNavItems,
+  businessTabs,
+  businessSidebarShortcuts,
+  isBusinessTabActive,
+  type BusinessGlyphKey,
+  type NavItem,
+} from "./navItems";
+import { useBusinessNavKind } from "./useBusinessNavKind";
+import { SectionLabel } from "../ui/SectionLabel";
+import {
+  AnalyticsNavGlyph,
+  FrontDeskNavGlyph,
+  MarketplaceNavGlyph,
+  MoreNavGlyph,
+  OperationsNavGlyph,
+  OrdersNavGlyph,
+  ProductsNavGlyph,
+  ScheduleNavGlyph,
+  type BusinessNavGlyphProps,
+} from "../icons/BusinessNavGlyphs";
 import { useApp } from "../../context/AppContext";
 import { Flame } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
@@ -10,6 +31,68 @@ import { PlanLine } from "./PlanLine";
 import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
 import { forumAccess } from "../../services/forum/rules";
 import { CentiumMark } from "../icons/CentiumMark";
+
+const NAV_ACCENT = "rgb(var(--c-team-nav-accent))";
+const NAV_IDLE = "rgb(var(--c-nav-idle))";
+
+const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
+
+const SIDEBAR_GLYPHS: Record<Exclude<BusinessGlyphKey, "mark">, React.FC<BusinessNavGlyphProps>> = {
+  analytics: AnalyticsNavGlyph,
+  operations: OperationsNavGlyph,
+  schedule: ScheduleNavGlyph,
+  "front-desk": FrontDeskNavGlyph,
+  orders: OrdersNavGlyph,
+  appointments: ScheduleNavGlyph,
+  marketplace: MarketplaceNavGlyph,
+  products: ProductsNavGlyph,
+  more: MoreNavGlyph,
+};
+
+/**
+ * OURS-NAV-desktop-sidebar row 3: the navbar SVGs at 22 (two-tone when
+ * active, idle #9A94B3); Dashboard is the mark at 19 in the same 22 box.
+ */
+const BusinessSidebarGlyph: React.FC<{ glyph: BusinessGlyphKey; active: boolean }> = ({ glyph, active }) => {
+  if (glyph === "mark") {
+    return (
+      <span className="w-[22px] h-[22px] flex items-center justify-center shrink-0">
+        <CentiumMark height={19} className={active ? undefined : "opacity-90"} />
+      </span>
+    );
+  }
+  const Glyph = SIDEBAR_GLYPHS[glyph];
+  return <Glyph active={active} size={22} color={active ? NAV_ACCENT : NAV_IDLE} />;
+};
+
+/**
+ * One sidebar row. Primary: h44 r16 pad 0 14 gap 12, label 14/700, idle ink
+ * #5B5349; active fill #F0EDF9 (dark #303141), label #7D6BB5 (dark #C3B3FB)
+ * (primary-pale / primary-dark, so other themes follow). Compact (the More
+ * shortcuts, row 5): h40, label 13.5/600.
+ */
+const SidebarRow: React.FC<{
+  to: string;
+  active: boolean;
+  label: string;
+  icon: React.ReactNode;
+  badge?: React.ReactNode;
+  compact?: boolean;
+}> = ({ to, active, label, icon, badge, compact }) => (
+  <Link
+    to={to}
+    aria-current={active ? "page" : undefined}
+    className={clsx(
+      "flex items-center gap-3 px-3.5 rounded-2xl transition-colors duration-150 shrink-0",
+      compact ? "h-10 text-[13.5px] font-semibold" : "h-11 text-sm font-bold",
+      active ? "bg-primary-pale text-primary-dark" : "text-charcoal-soft hover:bg-cream-soft"
+    )}
+  >
+    {icon}
+    <span className="flex-1 min-w-0 truncate">{label}</span>
+    {badge}
+  </Link>
+);
 
 export const Sidebar: React.FC = () => {
   const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries } = useApp();
@@ -21,25 +104,32 @@ export const Sidebar: React.FC = () => {
     { foodLog, waterByDate, workoutLog, journalEntries },
     today
   );
-  // V7 (QA 7.0): Employees/Classes only apply to gym-type businesses.
+  const { pathname } = useLocation();
+  const businessKind = useBusinessNavKind();
   // The forum is for adults (Database ATX55): no entry for anyone the app
   // cannot confirm is 18 or over.
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
-  const items = (
-    user.accountType === "professional"
-      ? professionalSidebarNavItems
-      : isBusiness
-      ? businessSidebarNavItems.filter(
-          (item) =>
-            user.businessType === "gym" || (item.to !== "/app/business/employees" && item.to !== "/app/business/classes")
-        )
-      : sidebarNavItems
-  ).filter((item) => forumAllowed || item.to !== "/app/forum");
+  const items = (user.accountType === "professional" ? professionalSidebarNavItems : sidebarNavItems).filter(
+    (item) => forumAllowed || item.to !== "/app/forum"
+  );
+  // One lit row: the item whose route is the longest prefix of the page
+  // (so Clients is not lit on Calendar, which sits under /app/professionals).
+  const activeTo = items
+    .filter((i) => under(pathname, i.to))
+    .sort((a, b) => b.to.length - a.to.length)[0]?.to;
+
+  // OURS-NAV-desktop-sidebar row 5: the More shortcuts. Employees and
+  // Classes fold into the Operations slot and Team (both stay reachable).
+  const shortcuts = isBusiness ? businessSidebarShortcuts(businessKind) : [];
+  const shortcutActive = shortcuts.find((s) => under(pathname, s.to))?.to;
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
+    // OURS-NAV-desktop-sidebar row 1: w256, #FFFFFF (dark #121317), right
+    // hairline charcoal 6%, pad 24 16.
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-white dark:bg-cream px-4 py-6 overflow-y-auto">
       {/* v6 (TK 4.1, X-24): the one vector mark in the theme's brand pair,
-          framed as the PNG it replaces (30 tall, centium-mark.png's canvas). */}
+          framed as the PNG it replaces (30 tall, centium-mark.png's canvas).
+          Row 2: + Centium 20/700, mb 32. */}
       <div className="flex items-center gap-2.5 px-2 mb-8">
         <span className="w-[30px] h-[30px] flex items-center justify-center shrink-0">
           <CentiumMark height={30} framing="png" />
@@ -49,30 +139,55 @@ export const Sidebar: React.FC = () => {
         </span>
       </div>
 
-      <nav className="flex flex-col gap-1 flex-1">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                clsx(
-                  "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-semibold transition-colors duration-150",
-                  isActive
-                    ? "bg-primary-pale text-primary-dark"
-                    : "text-charcoal-soft hover:bg-cream-soft"
-                )
-              }
-            >
-              <Icon size={19} />
-              <span className="flex-1 min-w-0 truncate">{t(item.label)}</span>
-              {/* Keyed on the route, not the label: the label is translated
-                  and would stop matching in another language. */}
-              {item.to === "/app/messages" && <UnreadBadge count={unread.total} />}
-            </NavLink>
-          );
-        })}
+      <nav aria-label={isBusiness ? t("Business tabs") : undefined} className="flex flex-col gap-1 flex-1">
+        {isBusiness ? (
+          <>
+            {/* Row 3: the bar's five destinations for this type, Dashboard first. */}
+            {[...businessTabs(businessKind)].sort((a, b) => Number(b.glyph === "mark") - Number(a.glyph === "mark")).map((tab) => {
+              const active = !shortcutActive && isBusinessTabActive(tab, pathname);
+              return (
+                <SidebarRow key={tab.label} to={tab.to} active={active} label={t(tab.label)} icon={<BusinessSidebarGlyph glyph={tab.glyph} active={active} />} />
+              );
+            })}
+            {/* Row 4: section label More, 11/600 0.14em uppercase #8C8378
+                with the 1.5px primary rule, mt 20 mb 8. */}
+            <SectionLabel as="p" className="mt-5 mb-2 mx-3.5">
+              <span style={{ color: "rgb(var(--c-charcoal-faint))" }}>{t("More")}</span>
+            </SectionLabel>
+            {shortcuts.map((s) => {
+              const Icon = s.icon;
+              const active = shortcutActive === s.to;
+              return (
+                <SidebarRow
+                  key={s.to}
+                  to={s.to}
+                  active={active}
+                  label={t(s.label)}
+                  compact
+                  icon={<Icon size={18} strokeWidth={1.75} style={{ color: "rgb(var(--c-primary-accent))" }} />}
+                  badge={s.unread ? <UnreadBadge count={unread.total} /> : null}
+                />
+              );
+            })}
+          </>
+        ) : (
+          items.map((item: NavItem) => {
+            const Icon = item.icon;
+            const active = item.to === activeTo;
+            // The badge is keyed on the route, not the label: the label is
+            // translated and would stop matching in another language.
+            return (
+              <SidebarRow
+                key={item.to}
+                to={item.to}
+                active={active}
+                label={t(item.label)}
+                icon={<Icon size={22} strokeWidth={active ? 2.2 : 1.6} style={{ color: active ? NAV_ACCENT : NAV_IDLE }} />}
+                badge={item.to === "/app/messages" ? <UnreadBadge count={unread.total} /> : null}
+              />
+            );
+          })
+        )}
       </nav>
 
       {/* CUSTOMERS ONLY, not "everyone who isn't a business". The four

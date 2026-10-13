@@ -115,7 +115,12 @@ export const Layout: React.FC = () => {
                   // floating nav below, plus the WO17 bar while it shows
                   // (--active-bar is its height + gap, else 0).
                   "max-w-[430px] mx-auto px-4 pt-[calc(env(safe-area-inset-top)+24px)] pb-[calc(env(safe-area-inset-bottom)+112px+var(--active-bar,0px))]"
-                : "max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12"
+                : user.accountType === "business"
+                  ? // OURS-NAV-desktop-sidebar row 7: business pages keep the
+                    // 430 phone column (the frames are phone-only), centred
+                    // beside the sidebar at lg.
+                    "max-w-[430px] mx-auto px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+112px)] lg:pb-12"
+                  : "max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12"
             }
           >
             {/* First, because it explains why the other two might not be able to

@@ -1,12 +1,158 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import clsx from "clsx";
-import { primaryNavItems, professionalPrimaryNavItems, businessPrimaryNavItems } from "./navItems";
+import {
+  primaryNavItems,
+  professionalPrimaryNavItems,
+  businessTabs,
+  isBusinessTabActive,
+  type BusinessNavKind,
+  type BusinessGlyphKey,
+} from "./navItems";
+import { useBusinessNavKind } from "./useBusinessNavKind";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadDot } from "../messages/UnreadBadge";
 import { CentiumMark } from "../icons/CentiumMark";
 import { FoodNavGlyph, WorkoutNavGlyph } from "../icons/ClientNavGlyphs";
+import {
+  AnalyticsNavGlyph,
+  FrontDeskNavGlyph,
+  MarketplaceNavGlyph,
+  MoreNavGlyph,
+  OperationsNavGlyph,
+  OrdersNavGlyph,
+  ProductsNavGlyph,
+  ScheduleNavGlyph,
+  type BusinessNavGlyphProps,
+} from "../icons/BusinessNavGlyphs";
+
+// Navbar inks (X-23): the accent follows the colour theme (#8F68F6 in
+// Centium); idle is nav.idle (#9A94B3 light, #8A8698 dark) in normal mode and
+// the earlier AA value in High contrast (--c-nav-idle).
+const NAV_ACCENT = "rgb(var(--c-team-nav-accent))";
+const NAV_IDLE = "rgb(var(--c-nav-idle))";
+// NAV-001 O2: Larger text leaves the navbar alone (labels stay 10.5 for the
+// fit rule at 360, glyphs stay 24), so the .larger-icons scale is undone.
+const NO_ICON_SCALE: React.CSSProperties = { transform: "none" };
+
+// The floating pill shared by the business and professional bars (the
+// client bar's own values below, NAV-001 row 2): h58, r999, blur 16,
+// 18 above the bottom edge plus the safe area.
+const FLOATING_BAR = clsx(
+  "fixed z-40 h-[58px] rounded-full bottom-[calc(env(safe-area-inset-bottom)+18px)] backdrop-blur-[16px]",
+  "bg-white/[0.72] dark:bg-[#1C1F28]/[0.94]",
+  "border border-team-nav-accent/[0.28] dark:border-[rgba(238,239,242,0.08)]",
+  "shadow-[0_10px_28px_rgb(var(--c-primary-deep-text)/0.16)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.55)]"
+);
+
+/** 10.5 / line 1, 600 idle · 800 active, nowrap; inline so Larger text does not boost it (O2). */
+const NavLabel: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => (
+  <span
+    className={clsx("leading-none whitespace-nowrap", active ? "font-extrabold text-nav-label-active" : "font-semibold text-nav-idle")}
+    style={{ fontSize: "10.5px" }}
+  >
+    {children}
+  </span>
+);
+
+// Wellness Service Appointments has no supplied glyph: the calendar
+// (Schedule) is the closest drawn one (OURS).
+const BUSINESS_GLYPHS: Record<Exclude<BusinessGlyphKey, "mark">, React.FC<BusinessNavGlyphProps>> = {
+  analytics: AnalyticsNavGlyph,
+  operations: OperationsNavGlyph,
+  schedule: ScheduleNavGlyph,
+  "front-desk": FrontDeskNavGlyph,
+  orders: OrdersNavGlyph,
+  appointments: ScheduleNavGlyph,
+  marketplace: MarketplaceNavGlyph,
+  products: ProductsNavGlyph,
+  more: MoreNavGlyph,
+};
+
+// Professional bar: Calendar and More take the business bar's drawn glyphs,
+// Nutrition the client Food glyph; Clients and Training stay lucide.
+const PRO_GLYPHS: Record<string, React.FC<{ active: boolean; size?: number; color?: string; style?: React.CSSProperties }>> = {
+  "/app/professionals/calendar": ScheduleNavGlyph,
+  "/app/professionals/meal-plans": FoodNavGlyph,
+  "/app/more": MoreNavGlyph,
+};
+
+const PRO_OTHER_TABS = [
+  "/app/professionals/calendar",
+  "/app/professionals/templates",
+  "/app/professionals/meal-plans",
+  "/app/professionals/health-metrics",
+  "/app/professionals/messages",
+];
+
+/** Clients stays lit on a client's detail page; the other tabs on their own route. */
+function isProfessionalTabActive(to: string, pathname: string): boolean {
+  if (to === "/app/professionals") {
+    return (
+      pathname === to ||
+      (pathname.startsWith(to + "/") && !PRO_OTHER_TABS.some((p) => pathname === p || pathname.startsWith(p + "/")))
+    );
+  }
+  return pathname === to || pathname.startsWith(to + "/");
+}
+
+const BusinessBar: React.FC<{ kind: BusinessNavKind; pathname: string; unread: boolean; t: (s: string) => string }> = ({
+  kind,
+  pathname,
+  unread,
+  t,
+}) => (
+  <nav
+    data-bottom-nav
+    aria-label={t("Business tabs")}
+    className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+10px)] right-[calc(var(--app-gutter)+10px)]")}
+  >
+    {/* padX 0 · 5 equal columns (NAV-001 row 2). */}
+    <div className="grid grid-cols-5 items-center h-full">
+      {businessTabs(kind).map((tab) => {
+        const active = isBusinessTabActive(tab, pathname);
+        const label = t(tab.label);
+        return (
+          <Link
+            key={tab.label}
+            to={tab.to}
+            aria-current={active ? "page" : undefined}
+            aria-label={tab.glyph === "mark" ? label : undefined}
+            className="tap relative flex items-center justify-center h-full"
+          >
+            {tab.glyph === "more" && <UnreadDot show={unread} />}
+            {tab.glyph === "mark" ? (
+              // NAV-001 rows 5-6: 66 disc overflowing the bar, 2px accent ring
+              // when active, 1px accent/0.28 (dark 0.42) otherwise; mark 54.
+              <span
+                className={clsx(
+                  "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                  "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#1C1F28] flex items-center justify-center",
+                  active
+                    ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
+                    : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
+                )}
+              >
+                <CentiumMark height={54} className={active ? "opacity-100" : "opacity-90"} style={NO_ICON_SCALE} />
+              </span>
+            ) : (
+              <span className="flex flex-col items-center justify-center gap-[3px]">
+                {React.createElement(BUSINESS_GLYPHS[tab.glyph], {
+                  active,
+                  size: 24,
+                  color: active ? NAV_ACCENT : NAV_IDLE,
+                  style: NO_ICON_SCALE,
+                })}
+                <NavLabel active={active}>{label}</NavLabel>
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  </nav>
+);
 
 const gridColsForCount: Record<number, string> = {
   2: "grid-cols-2",
@@ -71,11 +217,13 @@ export const BottomNav: React.FC = () => {
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
-  const items = isProfessional ? professionalPrimaryNavItems : isBusiness ? businessPrimaryNavItems : primaryNavItems;
+  const businessKind = useBusinessNavKind();
+  const items = isProfessional ? professionalPrimaryNavItems : primaryNavItems;
   // V6 (QA 6.0): professionals now have their own richer sub-nav
   // (Calendar/Templates/Messages get their own bottom-nav tab; Meal Plans
   // and Health Metrics live under More instead, alongside Explore/Profile).
-  // Businesses get the same "remove everything that doesn't pertain" trim.
+  // The business list lives with the business tabs (navItems
+  // BUSINESS_MORE_PAGES).
   const isMoreActive =
     location.pathname === "/app/more" ||
     (isProfessional
@@ -87,8 +235,6 @@ export const BottomNav: React.FC = () => {
           "/app/messages",
           "/app/professionals/health-metrics",
         ]
-      : isBusiness
-      ? ["/app/profile", "/app/subscription", "/app/settings", "/app/business/profile", "/app/messages", "/app/business/calendar"]
       : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals", "/app/calendar", "/app/forum"]
     ).some((p) => location.pathname.startsWith(p));
 
@@ -100,37 +246,40 @@ export const BottomNav: React.FC = () => {
     location.pathname === "/app/cycle" ||
     location.pathname === "/app/contraception";
 
-  // Professional and Business keep the pre-Team bar exactly as it was: the
-  // "Team" handoff explicitly calls both out as DO NOT TOUCH (different tab
-  // sets, not part of this pass).
-  if (isProfessional || isBusiness) {
+  // v6 Business UI (NAV-001 to NAV-010, X-31): ClientNavBarV3 two-tone, one
+  // tab set per business type, 10 in from the column edges (V6-103).
+  if (isBusiness) {
+    return <BusinessBar kind={businessKind} pathname={location.pathname} unread={unread.total > 0} t={t} />;
+  }
+
+  // The professional bar has no frame: kept (its five tabs) and restyled in
+  // the client bar's language (floating pill, 22 in, 24 / 1.6 glyphs, 10.5
+  // labels, the navbar inks).
+  if (isProfessional) {
     return (
-      <nav data-bottom-nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-cream-card/95 backdrop-blur-md border-t border-charcoal/[0.06] pb-[env(safe-area-inset-bottom)]">
-        <div className={clsx("grid max-w-xl mx-auto", gridColsForCount[items.length] ?? "grid-cols-5")}>
+      <nav data-bottom-nav aria-label={t("Professional tabs")} className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)]")}>
+        <div className={clsx("grid items-center h-full px-1", gridColsForCount[items.length] ?? "grid-cols-5")}>
           {items.map((item) => {
+            const active = item.to === "/app/more" ? isMoreActive : isProfessionalTabActive(item.to, location.pathname);
+            const ProGlyph = PRO_GLYPHS[item.to];
             const Icon = item.icon;
-            const active = item.to === "/app/more" ? isMoreActive : location.pathname === item.to;
             return (
-              <NavLink
+              <Link
                 key={item.to}
                 to={item.to}
-                className="tap relative flex flex-col items-center justify-center gap-1 py-2.5"
+                aria-current={active ? "page" : undefined}
+                className="tap relative flex items-center justify-center h-full"
               >
                 {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
-                <Icon
-                  size={22}
-                  strokeWidth={active ? 2.4 : 2}
-                  className={clsx(active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-nav-idle")}
-                />
-                <span
-                  className={clsx(
-                    "text-[11px] font-semibold",
-                    active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-nav-idle"
+                <span className="flex flex-col items-center justify-center gap-[3px]">
+                  {ProGlyph ? (
+                    <ProGlyph active={active} size={24} color={active ? NAV_ACCENT : NAV_IDLE} style={NO_ICON_SCALE} />
+                  ) : (
+                    <Icon size={24} strokeWidth={active ? 2.2 : 1.6} style={{ ...NO_ICON_SCALE, color: active ? NAV_ACCENT : NAV_IDLE }} />
                   )}
-                >
-                  {t(item.label)}
+                  <NavLabel active={active}>{t(item.label)}</NavLabel>
                 </span>
-              </NavLink>
+              </Link>
             );
           })}
         </div>
