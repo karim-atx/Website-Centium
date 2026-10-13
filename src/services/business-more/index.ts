@@ -174,8 +174,10 @@ export async function saveBusiness(businessId: string, patch: BusinessPatch): Pr
   }
   if (!data || data.length === 0) return { ok: false, code: "42501", message: "Couldn't save. Try again." };
   // The business navbar caches the type; tell it to read again after a type change.
-  if ("type" in patch && patch.type !== undefined && typeof window !== "undefined") {
-    window.dispatchEvent(new Event(BUSINESS_TYPE_CHANGED_EVENT));
+  if ("type" in patch && patch.type !== undefined) {
+    // Services build without the DOM lib, so the browser globals are reached loosely.
+    const g = globalThis as unknown as { dispatchEvent?: (e: object) => boolean; Event?: new (type: string) => object };
+    if (g.dispatchEvent && g.Event) g.dispatchEvent(new g.Event(BUSINESS_TYPE_CHANGED_EVENT));
   }
   return { ok: true, value: toBusiness(data[0] as BusinessRow) };
 }
