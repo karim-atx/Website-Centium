@@ -3,7 +3,7 @@ import { supabase } from "../../../lib/supabase/client";
 
 // Display units, synced everywhere (Database B3, 20261116000000:
 // app_preferences.unit_system metric / imperial and water_unit ml / l / fl_oz,
-// both NOT NULL, defaulting to metric / ml). STORAGE STAYS METRIC: kilograms
+// both NOT NULL, defaulting to metric / l). STORAGE STAYS METRIC: kilograms
 // and millilitres in every table; these only change what is shown.
 //
 // REPLACES THE TWO DEVICE STORES, centium.waterUnit and centium.weightUnit
@@ -27,12 +27,12 @@ interface Units {
 
 const WATER_KEY = "centium.waterUnit";
 const WEIGHT_KEY = "centium.weightUnit";
-/** The column defaults (metric / ml): what an account without a row shows. */
-const DEFAULTS: Units = { water: "ml", weight: "kg" };
+/** The column defaults (metric / l, migration 20261116000000): what an account without a row shows. */
+const DEFAULTS: Units = { water: "l", weight: "kg" };
 
 type Row = { unit_system: string | null; water_unit: string | null };
 
-const toWater = (v: string | null | undefined): WaterUnit => (v === "l" ? "l" : v === "fl_oz" ? "floz" : "ml");
+const toWater = (v: string | null | undefined): WaterUnit => (v === "ml" ? "ml" : v === "fl_oz" ? "floz" : "l");
 const toWeight = (v: string | null | undefined): WeightUnit => (v === "imperial" ? "lb" : "kg");
 const waterColumn = (u: WaterUnit) => (u === "floz" ? "fl_oz" : u);
 const weightColumn = (u: WeightUnit) => (u === "lb" ? "imperial" : "metric");
@@ -113,7 +113,7 @@ async function load(): Promise<void> {
   const localWater = readLocal(WATER_KEY);
   const localWeight = readLocal(WEIGHT_KEY);
   if (localWater !== null || localWeight !== null) {
-    const untouched = (data?.water_unit ?? "ml") === "ml" && (data?.unit_system ?? "metric") === "metric";
+    const untouched = (data?.water_unit ?? "l") === "l" && (data?.unit_system ?? "metric") === "metric";
     if (untouched) {
       const carried: Units = {
         water: localWater === "ml" || localWater === "floz" ? localWater : localWater === "l" ? "l" : next.water,
