@@ -9,7 +9,7 @@ import { supabase } from "../../../lib/supabase/client";
 // REPLACES THE TWO DEVICE STORES, centium.waterUnit and centium.weightUnit
 // (localStorage, one browser only). A choice made there before this existed
 // is carried up ONCE: if the account's row still holds the defaults (no row,
-// or metric / ml), the stored choice is written to it; either way the local
+// or metric / l), the stored choice is written to it; either way the local
 // key is then removed, so it can never overwrite a later choice made on
 // another device.
 //
