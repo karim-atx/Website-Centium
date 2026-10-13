@@ -310,6 +310,8 @@ type ScheduleRow = Row & {
 export interface LinkedBooking {
   calendarEventId: string;
   bookingId: string;
+  /** The booked class, for the Calendar's "View booking" (its class page). */
+  classId: string;
   businessName: string;
   businessActive: boolean;
 }
@@ -366,6 +368,7 @@ export async function fetchMyBookedClasses(): Promise<
       .map((r) => ({
         calendarEventId: eventOf.get(r.booking_id)!,
         bookingId: r.booking_id,
+        classId: r.class_id,
         businessName: r.business_name,
         businessActive: r.business_active,
       })),

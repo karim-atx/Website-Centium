@@ -1,8 +1,9 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, GlassWater, HeartPulse, Link, Ruler, Smartphone, Footprints } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GlassWater, GripVertical, HeartPulse, Link, Ruler, Smartphone, Footprints } from "lucide-react";
 import clsx from "clsx";
 import { FixedHeader } from "../../components/ui/FixedHeader";
+import { Toast } from "../../components/ui/Toast";
 import { SettingsSection, settingsRowClass } from "../../components/ui/SettingsRows";
 import { WeightScaleIcon } from "../../components/icons/PartBIcons";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
@@ -10,7 +11,7 @@ import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { linePx, textPx } from "../../theme/textSize";
 import { clock12 } from "../../utils/time12";
-import { readSources, type ConnectedSource, type ManualKey, type ManualSummary } from "./sourcesData";
+import { readSources, savePriorities, type ConnectedSource, type ManualKey, type ManualSummary } from "./sourcesData";
 
 // OURS-Sources: "Devices and sources" (/app/settings/devices). Designed by
 // us in the handover's language (Health full-page header, MO1.8 rows, the
@@ -20,9 +21,11 @@ import { readSources, type ConnectedSource, type ManualKey, type ManualSummary }
 // Web (Apple Health / WHOOP later, decided): the "No device connected" card
 // and the "Logged by you" rows. If health_integrations ever holds connected
 // rows (the phone app writes them), they show as source rows on neutral
-// placeholder tiles (DECIDED-2, no brand marks). Priority, the source detail,
-// disconnect and the access state are native and need Database stage B1
-// (PB-O-80 / 81): not built on the web. No Settings row leads here (V6-124).
+// placeholder tiles (DECIDED-2, no brand marks), with their access state
+// (Database B1: "Access is off" / "Couldn't sync"; the taps that fix them
+// are native), and with two or more, the order used when they overlap
+// (PB-O-81, health_integrations.priority). The source detail and disconnect
+// are native. No Settings row leads here (V6-124).
 
 const META: Record<ManualKey, { name: string; to?: string; tile: string; ink: string; icon: React.ReactNode }> = {
   water: {
@@ -46,7 +49,7 @@ const META: Record<ManualKey, { name: string; to?: string; tile: string; ink: st
     ink: "rgb(var(--metric-blood-pressure-ink))",
     icon: <HeartPulse size={17} strokeWidth={1.75} />,
   },
-  // Body measurements live in Workout â€º Metrics, which has no address of its
+  // Body measurements live in Workout › Metrics, which has no address of its
   // own, so this row doesn't navigate. Tile: the weight family (unspecified).
   measurements: {
     name: "Body measurements",
@@ -66,13 +69,33 @@ const META: Record<ManualKey, { name: string; to?: string; tile: string; ink: st
 const PROVIDER_NAME: Record<ConnectedSource["provider"], string> = {
   apple_health: "Apple Health",
   android_health: "Health Connect",
+  whoop: "WHOOP",
 };
+
+const PROVIDER_ICON = {
+  apple_health: DEVICE_PLACEHOLDER_ICON["apple-health"],
+  android_health: DEVICE_PLACEHOLDER_ICON["health-connect"],
+  whoop: DEVICE_PLACEHOLDER_ICON.whoop,
+} as const;
+
+/**
+ * #7b-#7d: the source's line. Access off (7c) and a failed sync (7d) in the
+ * danger ink win over the freshness line; a NULL access state is unknown and
+ * shows the freshness line, never "ok" claims. A failed sync is
+ * access_state = error, or an error newer than the last good sync.
+ */
+function sourceLine(src: ConnectedSource): { text: string; danger: boolean } {
+  if (src.accessState === "access_off") return { text: "Access is off. Turn it on", danger: true };
+  const errorNewer = !!src.lastErrorAt && (!src.lastSyncedAt || src.lastErrorAt > src.lastSyncedAt);
+  if (src.accessState === "error" || errorNewer) return { text: "Couldn't sync. Try again", danger: true };
+  return { text: freshness(src.lastSyncedAt), danger: false };
+}
 
 function dayMonth(d: Date): string {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(d).replace("Sept", "Sep");
 }
 
-/** "Last synced today at 8:40 AM" / "yesterday at â€¦" / "on 3 Oct at â€¦". */
+/** "Last synced today at 8:40 AM" / "yesterday at …" / "on 3 Oct at …". */
 function freshness(iso: string | null): string {
   if (!iso) return "Not synced yet";
   const at = new Date(iso);
@@ -88,7 +111,7 @@ function freshness(iso: string | null): string {
 
 function manualLine(m: ManualSummary): string {
   if (m.count === 0 || !m.lastAt) return "No entries yet";
-  return `${m.count} ${m.count === 1 ? "entry" : "entries"} Â· last on ${dayMonth(new Date(m.lastAt))}`;
+  return `${m.count} ${m.count === 1 ? "entry" : "entries"} · last on ${dayMonth(new Date(m.lastAt))}`;
 }
 
 const Row: React.FC<{
@@ -96,8 +119,12 @@ const Row: React.FC<{
   tileStyle: React.CSSProperties;
   name: string;
   sub: string;
+  /** 7c / 7d: 12/16 600 in the danger ink #B4372C / #F09A8E. */
+  subDanger?: boolean;
   onClick?: () => void;
-}> = ({ tile, tileStyle, name, sub, onClick }) => {
+  /** In place of the chevron (#10a's reorder controls). */
+  trailing?: React.ReactNode;
+}> = ({ tile, tileStyle, name, sub, subDanger, onClick, trailing }) => {
   const body = (
     <>
       <span aria-hidden className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0" style={tileStyle}>
@@ -105,11 +132,24 @@ const Row: React.FC<{
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">{name}</span>
-        <span className="block mt-0.5 text-[12px] leading-4 text-charcoal-faint">{sub}</span>
+        {sub && (
+          <span
+            className={clsx("block mt-0.5 text-[12px] leading-4", subDanger ? "font-semibold" : "text-charcoal-faint")}
+            style={subDanger ? { color: "var(--sources-danger)" } : undefined}
+          >
+            {sub}
+          </span>
+        )}
       </span>
     </>
   );
-  if (!onClick) return <div className={settingsRowClass}>{body}</div>;
+  if (!onClick)
+    return (
+      <div className={settingsRowClass}>
+        {body}
+        {trailing}
+      </div>
+    );
   return (
     <button type="button" onClick={onClick} className={clsx("tap", settingsRowClass)}>
       {body}
@@ -126,6 +166,9 @@ export default function DevicesSourcesPage() {
   const navigate = useNavigate();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [phoneNote, setPhoneNote] = useState(false);
+  /** PB-O-81: a reorder that didn't save (the order reverts). */
+  const [orderFailed, setOrderFailed] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const fetchInto = useCallback(() => {
     if (!authUserId) return;
@@ -147,6 +190,30 @@ export default function DevicesSourcesPage() {
         load.manual.filter((m) => m.key !== "steps" || m.count > 0)
       : [];
 
+  /** #10a / S7: move one source up or down; saved at once, put back if it fails. */
+  const move = async (from: number, to: number) => {
+    if (load.state !== "ready" || savingOrder || to < 0 || to >= load.sources.length) return;
+    const before = load.sources;
+    const next = [...before];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setLoad({ ...load, sources: next });
+    setSavingOrder(true);
+    const ok = await savePriorities(next);
+    setSavingOrder(false);
+    if (!ok) {
+      setLoad((l) => (l.state === "ready" ? { ...l, sources: before } : l));
+      setOrderFailed(true);
+    }
+  };
+
+  const tileFor = (src: ConnectedSource) => {
+    const Icon = PROVIDER_ICON[src.provider];
+    return <Icon size={17} strokeWidth={1.75} />;
+  };
+  // DECIDED-2: a neutral tile #F5F5F6 / #242730, glyph #5B5349 / #B8B3C7.
+  const neutralTile = { background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" };
+
   const skeleton = (n: number) =>
     Array.from({ length: n }, (_, i) => (
       <div key={i} className={settingsRowClass} aria-hidden>
@@ -159,7 +226,7 @@ export default function DevicesSourcesPage() {
     ));
 
   return (
-    <div className="pb-[120px]">
+    <div className="pb-[120px] [--sources-danger:#B4372C] dark:[--sources-danger:#F09A8E]">
       {/* OURS #1-#4: the Health full-page header (back 36, title 24 / 30 700
           ls -0.5), fixed with fill #FFFFFF / #1C1F28 once content is under it. */}
       <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
@@ -196,15 +263,15 @@ export default function DevicesSourcesPage() {
             </div>
           ) : sources.length > 0 ? (
             sources.map((s) => {
-              const Icon = DEVICE_PLACEHOLDER_ICON[s.provider === "apple_health" ? "apple-health" : "health-connect"];
+              const line = sourceLine(s);
               return (
                 <Row
-                  key={s.provider}
-                  // DECIDED-2: a neutral tile #F5F5F6 / #242730, glyph #5B5349 / #B8B3C7.
-                  tile={<Icon size={17} strokeWidth={1.75} />}
-                  tileStyle={{ background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}
+                  key={s.id}
+                  tile={tileFor(s)}
+                  tileStyle={neutralTile}
                   name={PROVIDER_NAME[s.provider]}
-                  sub={freshness(s.lastSyncedAt)}
+                  sub={line.text}
+                  subDanger={line.danger}
                 />
               );
             })
@@ -245,12 +312,55 @@ export default function DevicesSourcesPage() {
               </button>
               {phoneNote && (
                 <p role="status" className="mt-1.5 text-charcoal-soft" style={{ fontSize: textPx(11.5), lineHeight: linePx(17) }}>
-                  Open Centium on your phone and go to Settings â€º Connected devices.
+                  Open Centium on your phone and go to Settings › Connected devices.
                 </p>
               )}
             </div>
           )}
         </SettingsSection>
+
+        {/* #10-#10b (PB-O-81): with two or more sources, the order used
+            when they report the same thing. Up / down buttons (44 hit area)
+            beside the grip; the first row is "Used first". */}
+        {sources.length >= 2 && (
+          <SettingsSection label="Order when sources overlap" className="!mt-5">
+            {sources.map((s, i) => (
+              <Row
+                key={s.id}
+                tile={tileFor(s)}
+                tileStyle={neutralTile}
+                name={PROVIDER_NAME[s.provider]}
+                sub={i === 0 ? "Used first" : ""}
+                trailing={
+                  <span className="flex items-center shrink-0 text-charcoal-faint">
+                    <button
+                      type="button"
+                      onClick={() => void move(i, i - 1)}
+                      disabled={i === 0 || savingOrder}
+                      aria-label={`Move ${PROVIDER_NAME[s.provider]} up`}
+                      className="tap w-8 h-8 flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ChevronUp size={16} strokeWidth={1.75} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void move(i, i + 1)}
+                      disabled={i === sources.length - 1 || savingOrder}
+                      aria-label={`Move ${PROVIDER_NAME[s.provider]} down`}
+                      className="tap w-8 h-8 flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ChevronDown size={16} strokeWidth={1.75} aria-hidden />
+                    </button>
+                    <GripVertical size={16} strokeWidth={1.75} aria-hidden />
+                  </span>
+                }
+              />
+            ))}
+            <p className="mt-1.5 text-charcoal-faint" style={{ fontSize: textPx(11), lineHeight: linePx(15) }}>
+              When two sources record the same thing, Centium uses the one higher in this list. It never adds them together.
+            </p>
+          </SettingsSection>
+        )}
 
         <SettingsSection label="Logged by you" className="!mt-5">
           {load.state === "loading"
@@ -275,6 +385,13 @@ export default function DevicesSourcesPage() {
           Removing a synced reading in Centium does not delete it from its source.
         </p>
       </div>
+      {/* ST5: a reorder that didn't save. */}
+      <Toast
+        open={orderFailed}
+        message="Couldn't save. Try again."
+        icon={<AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />}
+        onExpire={() => setOrderFailed(false)}
+      />
     </div>
   );
 }

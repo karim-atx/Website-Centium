@@ -33,7 +33,7 @@ import {
   BP_NOT_SHARED,
 } from "../../services/blood-pressure/guidance";
 import {
-  PHASE_COLOR,
+  phaseThemeColor,
   PHASE_LABEL,
   PHASE_NOT_SHARED,
   PHASE_UNAVAILABLE,
@@ -669,8 +669,9 @@ export const ClientDetailSheet: React.FC<{
                   <span
                     className="inline-block text-[11px] font-bold rounded-full px-2.5 py-1"
                     style={{
-                      color: PHASE_COLOR[client.cyclePhase as CyclePhase],
-                      background: `${PHASE_COLOR[client.cyclePhase as CyclePhase]}1F`,
+                      // V6-110: the theme mapping (follows the colour theme).
+                      color: phaseThemeColor(client.cyclePhase as CyclePhase),
+                      background: phaseThemeColor(client.cyclePhase as CyclePhase, 0.12),
                     }}
                   >
                     {PHASE_LABEL[client.cyclePhase as CyclePhase]}

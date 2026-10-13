@@ -92,6 +92,14 @@ export const BottomNav: React.FC = () => {
       : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals", "/app/calendar", "/app/forum"]
     ).some((p) => location.pathname.startsWith(p));
 
+  // v6: Health stays lit on its sub-pages (metric pages, Records, Checks,
+  // Sources) and on Cycle and Contraception, which now live under Health.
+  const isHealthActive =
+    location.pathname === "/app/health" ||
+    location.pathname.startsWith("/app/health/") ||
+    location.pathname === "/app/cycle" ||
+    location.pathname === "/app/contraception";
+
   // Professional and Business keep the pre-Team bar exactly as it was: the
   // "Team" handoff explicitly calls both out as DO NOT TOUCH (different tab
   // sets, not part of this pass).
@@ -157,7 +165,12 @@ export const BottomNav: React.FC = () => {
       <div className="grid grid-cols-5 items-center h-full px-1 max-w-xl mx-auto">
         {items.map((item) => {
           const isHome = item.to === "/app";
-          const active = item.to === "/app/more" ? isMoreActive : location.pathname === item.to;
+          const active =
+            item.to === "/app/more"
+              ? isMoreActive
+              : item.to === "/app/health"
+                ? isHealthActive
+                : location.pathname === item.to;
           const Glyph = CLIENT_GLYPHS[item.to];
           const Icon = item.icon;
 

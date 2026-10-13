@@ -2,6 +2,7 @@ import React from "react";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
 import { useSharingGrants } from "./useSharingGrants";
+import { ProfessionalSharedFiles } from "../health/records/ProfessionalSharedFiles";
 import {
   Activity,
   Baby,
@@ -291,6 +292,12 @@ export const DataSharingSection: React.FC<{
         professionalId ? (
           <div key={pro.professionalId} className="animate-fade-slide-up">
             {body(pro)}
+            {/* OURS-imaging-revoke #3-#4 (Database B2, imaging_shares): the
+                scans shared with this professional, one by one, each with
+                Stop sharing (Health B component). */}
+            <div className="mt-6">
+              <ProfessionalSharedFiles professionalId={pro.professionalId} name={pro.name} />
+            </div>
           </div>
         ) : (
           <Card key={pro.professionalId} className="mb-2.5 animate-fade-slide-up">

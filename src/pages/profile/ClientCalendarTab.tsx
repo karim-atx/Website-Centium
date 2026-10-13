@@ -8,6 +8,11 @@ import { FixedHeader } from "../../components/ui/FixedHeader";
 import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
+import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
+import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../components/calendar/occurrences";
+import { saveRepeating } from "../../components/calendar/saveRepeating";
+import type { EventAlert } from "../../components/calendar/eventAlert";
+import { useNavigate } from "react-router-dom";
 import { useOnline } from "../../hooks/useOnline";
 import { YearScroll } from "../../components/calendar/YearScroll";
 import {
@@ -25,9 +30,12 @@ import type { CalendarEvent } from "../../types";
 import {
   createEvent,
   deleteEvent,
+  endSeries,
   attachmentUrl,
   getCalendar,
   respondToInvite,
+  setInviteAlert,
+  setOccurrence,
   updateEvent,
   type ClientCalendarEvent,
 } from "../../services/calendar";
@@ -104,6 +112,7 @@ const blankDraft = (date: string, color: string): EventDraft => ({
   url: "",
   // MO1.6.4 draws a new event's Alert as "None".
   alert: "none",
+  repeatUntil: null,
 });
 
 const HOUR_PX = 56;
@@ -135,6 +144,7 @@ const HOUR_PX = 56;
 // only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
   const back = useBack();
+  const navigate = useNavigate();
   const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone, colorTheme } =
     useApp();
   const newEventColour = nearestEventSwatch(
@@ -152,12 +162,18 @@ export default function ClientCalendarTab() {
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** The day of the occurrence being edited (a repeat's series keeps its own first date). */
+  const [editingOccurrence, setEditingOccurrence] = useState<string | null>(null);
+  /** B3 (PB-O-64): which occurrences a save or delete of a repeating event applies to. */
+  const [scopeAsk, setScopeAsk] = useState<"save" | "delete" | null>(null);
   const [draft, setDraft] = useState(() => blankDraft(selectedDate, newEventColour));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [linkError, setLinkError] = useState(false);
   const dark = useIsDark();
 
   const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
+  /** B3: one-off changes to this account's repeating events (calendar_event_exceptions). */
+  const [exceptions, setExceptions] = useState<ExceptionMap>({});
   // OURS O-LD: false until the first read settles (success or failure), so
   // the event list shows skeleton rows on first load only.
   const [loaded, setLoaded] = useState(false);
@@ -170,6 +186,9 @@ export default function ClientCalendarTab() {
   // OURS-Calendar-event-detail: the read-only sheet's event (id, so it shows
   // the latest status after an answer).
   const [detailId, setDetailId] = useState<string | null>(null);
+  /** The invitee's own reminder being saved (PB-O-65), and a failure toast. */
+  const [alertSaving, setAlertSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const online = useOnline();
 
   // Populate on launch, and keep whatever is on screen if the read fails —
@@ -185,6 +204,7 @@ export default function ClientCalendarTab() {
     }
     setLoadError(false);
     setEvents(result.events);
+    setExceptions(result.exceptions);
   }, [authUserId]);
 
   useEffect(() => {
@@ -272,10 +292,11 @@ export default function ClientCalendarTab() {
   // itself.
   //
   // A ROW A BOOKING MADE is owned too, and is not editable here either (v6
-  // MO1.6 B3, PB-O-62): book_class() writes it and the booking is what is
-  // changed or cancelled. The server guard is Database stage B3; until then
-  // the front end alone keeps it read-only. (isMine is defined below, once
-  // the booking links are known.)
+  // MO1.6 B3, PB-O-62): the booking is what is changed or cancelled. Database
+  // B3 marks it (calendar_events.source_kind / source_id) and refuses an edit
+  // or delete from the client (ATXB3); the bookings' calendar_event_id links
+  // still catch a row made before source_kind existed. (isMine is defined
+  // below, once the booking links are known.)
 
   /**
    * Classes this account has booked, overlaid on the calendar.
@@ -343,17 +364,31 @@ export default function ClientCalendarTab() {
   const linkedById = useMemo(() => new Map(linkedBookings.map((b) => [b.calendarEventId, b])), [linkedBookings]);
   /** Who a booked class is with, for an overlay row or a booking-made row. */
   const bookingOf = (e: ClientCalendarEvent) => bookedById.get(e.id) ?? linkedById.get(e.id) ?? null;
-  const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced && !linkedById.has(e.id);
+  const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced && !e.sourceKind && !linkedById.has(e.id);
   /** A tap on any event: own events edit (MO1.6.4), the rest open the detail sheet. */
-  const openEvent = (e: ClientCalendarEvent) => (isMine(e) ? openEdit(e) : setDetailId(e.id));
+  const openEvent = (e: ClientCalendarEvent) => (isMine(e) ? openEdit(e) : setDetailId(occurrenceKey(e)));
+
+  // REPEATS ARE DRAWN ON EVERY DAY THEY FALL ON (B3, PB-O-63 / PB-O-64): a
+  // series used to show on its first date only. Expanded over the years in
+  // view (the cursor's and the selected day's, one either side for Year), by
+  // the reminder sweep's own rule, stopping at repeat_until and applying this
+  // account's one-off changes (occurrences.ts).
+  const selectedYear = Number(selectedDate.slice(0, 4));
+  const rangeFrom = `${Math.min(cursor.year, selectedYear) - 1}-01-01`;
+  // Year scrolls on into later years, so it draws further ahead.
+  const rangeTo = `${Math.max(cursor.year, selectedYear) + (view === "year" ? 5 : 1)}-12-31`;
+  const occurrences = useMemo(
+    () => expandOccurrences([...events, ...bookedClassEvents], exceptions, rangeFrom, rangeTo),
+    [events, bookedClassEvents, exceptions, rangeFrom, rangeTo]
+  );
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, ClientCalendarEvent[]> = {};
-    [...events, ...bookedClassEvents].forEach((e) => {
+    occurrences.forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [events, bookedClassEvents]);
+  }, [occurrences]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = monthLeadingBlanks(cursor.year, cursor.month);
@@ -379,6 +414,7 @@ export default function ClientCalendarTab() {
     setSaveError(null);
     setLinkError(false);
     setEditingId(null);
+    setEditingOccurrence(null);
     setDraft(blankDraft(selectedDate, newEventColour));
     setConfirmDelete(false);
     setComposeOpen(true);
@@ -387,6 +423,8 @@ export default function ClientCalendarTab() {
   const openEdit = (e: ClientCalendarEvent) => {
     if (!isMine(e)) return;
     setEditingId(e.id);
+    // The day tapped; for a repeat, the series keeps its own first date.
+    setEditingOccurrence(e.date);
     setConfirmDelete(false);
     setSaveError(null);
     setLinkError(false);
@@ -405,11 +443,16 @@ export default function ClientCalendarTab() {
       url: e.url ?? "",
       // The saved calendar_events.alert (Stage 2).
       alert: e.alert,
+      repeatUntil: e.repeatUntil ?? null,
     });
     setComposeOpen(true);
   };
 
-  const saveEvent = async () => {
+  /** The series being edited, as stored (not an expanded occurrence). */
+  const editingSeries = editingId ? events.find((e) => e.id === editingId) ?? null : null;
+  const editingRepeats = !!editingSeries && editingSeries.repeat !== "none";
+
+  const saveEvent = async (scope?: RepeatScope) => {
     if (!draft.title.trim() || !authUserId || saving) return;
     // http(s) only (B38): a bare host gets https://, anything else is refused.
     const url = normaliseLink(draft.url);
@@ -432,7 +475,26 @@ export default function ClientCalendarTab() {
       color: draft.color,
       url: url ?? undefined,
       alert: draft.alert,
+      repeatUntil: draft.repeatUntil,
     };
+    // A REPEATING EVENT ASKS FIRST which occurrences change (B3, PB-O-64).
+    if (editingSeries && editingRepeats && !scope) {
+      setSaving(false);
+      setScopeAsk("save");
+      return;
+    }
+    setScopeAsk(null);
+    if (editingSeries && editingRepeats && scope) {
+      const r = await saveRepeating(authUserId, editingSeries, editingOccurrence ?? editingSeries.date, scope, payload);
+      setSaving(false);
+      if (!r.ok) {
+        setSaveError(r.message ?? "Couldn't save your changes. Try again.");
+        return;
+      }
+      await load();
+      setComposeOpen(false);
+      return;
+    }
     const result = editingId
       ? await updateEvent(authUserId, editingId, payload)
       : await createEvent(authUserId, payload);
@@ -459,8 +521,33 @@ export default function ClientCalendarTab() {
     setComposeOpen(false);
   };
 
-  const removeEvent = async () => {
+  const removeEvent = async (scope?: RepeatScope) => {
     if (!editingId || !authUserId || saving) return;
+    if (editingSeries && editingRepeats) {
+      if (!scope) {
+        setScopeAsk("delete");
+        return;
+      }
+      setScopeAsk(null);
+      const occ = editingOccurrence ?? editingSeries.date;
+      setSaving(true);
+      setSaveError(null);
+      // "This and following" from the first date is the whole series.
+      const whole = scope === "all" || (scope === "following" && occ <= editingSeries.date);
+      const r = whole
+        ? await deleteEvent(authUserId, editingId)
+        : scope === "following"
+          ? await endSeries(authUserId, editingId, dayBefore(occ))
+          : await setOccurrence(editingId, occ, { cancelled: true });
+      setSaving(false);
+      if (!r.ok) {
+        setSaveError(r.message ?? "Couldn't delete that event. Try again.");
+        return;
+      }
+      await load();
+      setComposeOpen(false);
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     const result = await deleteEvent(authUserId, editingId);
@@ -493,6 +580,21 @@ export default function ClientCalendarTab() {
           ? { ...x, invite: { ...x.invite, status: accepted ? "accepted" : "declined" } }
           : x
       )
+    );
+  };
+
+  /** The invitee's own reminder (B3, PB-O-65). */
+  const saveInviteAlert = async (e: ClientCalendarEvent, alert: EventAlert) => {
+    if (!e.invite || alertSaving) return;
+    setAlertSaving(true);
+    const r = await setInviteAlert(e.invite.id, alert);
+    setAlertSaving(false);
+    if (!r.ok) {
+      setToast(r.message ?? "Couldn't save your reminder. Try again.");
+      return;
+    }
+    setEvents((prev) =>
+      prev.map((x) => (x.invite && x.invite.id === e.invite!.id ? { ...x, invite: { ...x.invite, alert } } : x))
     );
   };
 
@@ -547,7 +649,7 @@ export default function ClientCalendarTab() {
     const { tint, bar } = eventColours(e.color, dark);
     return (
       <div
-        key={e.id}
+        key={occurrenceKey(e)}
         // v6 MO1.6.2 #21 / #25: r24, padding 20, the side border 3.8 in the
         // event's own colour (V6-112: the PNG's colour over the table's
         // #241F1B; dark shade in dark), so a three-line card is 96.
@@ -609,9 +711,9 @@ export default function ClientCalendarTab() {
             <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-teal-dark dark:text-teal-deep-text">
               <Dumbbell size={11} aria-hidden /> Scheduled
             </span>
-          ) : booked ? (
+          ) : booked || e.sourceKind ? (
             // Same reasoning as the badge above, for the other kind of card
-            // this screen cannot edit.
+            // this screen cannot edit (a booking made it: B3 source_kind).
             <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#9A7424] dark:text-[#CAB082]">
               <Ticket size={11} aria-hidden /> Booked
             </span>
@@ -898,7 +1000,7 @@ export default function ClientCalendarTab() {
                   // 16% (dark shade in dark), a 3 pill gap 11, the title
                   // 12.5 / 18.8 700, the time line 10 / 15 #A79E93 / #9F9CAC.
                   <div
-                    key={e.id}
+                    key={occurrenceKey(e)}
                     className="flex items-start gap-[11px] rounded-[15px] px-3.5 py-3"
                     style={{ background: tint, opacity: e.invite?.status === "declined" ? 0.6 : undefined }}
                   >
@@ -1049,7 +1151,7 @@ export default function ClientCalendarTab() {
                 const href = normaliseLink(e.url);
                 return (
                   <div
-                    key={e.id}
+                    key={occurrenceKey(e)}
                     className="absolute left-0 right-1 rounded-xl overflow-hidden shadow-soft"
                     style={{
                       top,
@@ -1116,6 +1218,11 @@ export default function ClientCalendarTab() {
         linkError={linkError}
         onSave={() => void saveEvent()}
         onDelete={() => {
+          // A repeat asks which occurrences instead (that popup is the confirm).
+          if (editingRepeats) {
+            void removeEvent();
+            return;
+          }
           if (!confirmDelete) {
             setConfirmDelete(true);
             setTimeout(() => setConfirmDelete(false), 3000);
@@ -1126,8 +1233,18 @@ export default function ClientCalendarTab() {
         confirmDelete={confirmDelete}
       />
 
+      <RepeatScopePopup
+        mode={scopeAsk}
+        busy={saving}
+        onCancel={() => setScopeAsk(null)}
+        onChoose={(scope) => void (scopeAsk === "delete" ? removeEvent(scope) : saveEvent(scope))}
+      />
+
       {(() => {
-        const detail = detailId ? [...events, ...bookedClassEvents].find((x) => x.id === detailId) ?? null : null;
+        const detail = detailId ? occurrences.find((x) => occurrenceKey(x) === detailId) ?? null : null;
+        // "View booking" (#13): the class page, where the booking is changed
+        // or cancelled. A hire or an appointment has no page to open.
+        const classId = detail ? (bookedById.get(detail.id)?.id ?? linkedById.get(detail.id)?.classId) : undefined;
         // An overlay row's notes start "Booked with …" for the cards; the
         // sheet says that in its status line, so it shows the class's own.
         const overlay = detail ? bookedById.get(detail.id) : undefined;
@@ -1141,6 +1258,10 @@ export default function ClientCalendarTab() {
             online={online}
             onRespond={(accepted) => detail && void respond(detail, accepted)}
             onOpenAttachment={(path) => void openAttachment(path)}
+            bookingMade={!!detail?.sourceKind}
+            onViewBooking={classId ? () => navigate(`/app/marketplace/class?id=${encodeURIComponent(classId)}`) : undefined}
+            onInviteAlert={(alert) => detail && void saveInviteAlert(detail, alert)}
+            alertSaving={alertSaving}
           />
         );
       })()}
@@ -1152,6 +1273,12 @@ export default function ClientCalendarTab() {
         message="Couldn't save your response. Try again."
         icon={<AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />}
         onExpire={() => setRespondFailed(false)}
+      />
+      <Toast
+        open={!!toast}
+        message={toast ?? ""}
+        icon={<AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />}
+        onExpire={() => setToast(null)}
       />
     </div>
   );

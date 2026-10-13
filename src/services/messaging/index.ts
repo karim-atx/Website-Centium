@@ -105,6 +105,16 @@ export interface MessageThread {
    * the member's name with the venue as context ("Lina · Flex Gym").
    */
   venue: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
+  /**
+   * Who the other party is, from my_conversations().other_role (Database B3,
+   * 20261116040000; PB-O-41): "official", "gym", a professional_subtype, or
+   * null for a group or a fellow customer (never an invented label).
+   */
+  otherRole: string | null;
+  /** The latest message's sender's first name (B3), for "Lina: …" in a group. */
+  lastSenderFirstName: string | null;
+  /** When the caller last deleted this conversation for themselves (B3), or null. */
+  clearedAt: string | null;
 }
 
 /** The letters an avatar shows when there's no photo: the venue's initials on the member side. */
@@ -475,8 +485,17 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     return { ok: false, message: describe(error) };
   }
 
-  // The venue columns are newer than the generated types (production).
-  type VenueCols = { venue_id?: string | null; venue_name?: string | null; venue_initials?: string | null; venue_logo_url?: string | null };
+  // The venue columns and B3's three (other_role, last_sender_first_name,
+  // cleared_at) are newer than the generated types (production).
+  type VenueCols = {
+    venue_id?: string | null;
+    venue_name?: string | null;
+    venue_initials?: string | null;
+    venue_logo_url?: string | null;
+    other_role?: string | null;
+    last_sender_first_name?: string | null;
+    cleared_at?: string | null;
+  };
   const venueThreadIds = (data ?? []).filter((r) => !!(r as VenueCols).venue_id).map((r) => r.thread_id as string);
   const memberSideThreads = await venueThreadsIStarted(venueThreadIds);
 
@@ -538,6 +557,9 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
     venue,
+    otherRole: v.other_role ?? null,
+    lastSenderFirstName: v.last_sender_first_name?.trim() || null,
+    clearedAt: v.cleared_at ?? null,
     };
     if (!venue) return base;
     // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".

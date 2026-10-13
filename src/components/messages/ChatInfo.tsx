@@ -82,7 +82,7 @@ export const ChatInfo: React.FC<{
     onChanged: () => void;
     onReport: (() => void) | null;
   };
-  /** MO1.7 O14: "Delete conversation" (delete for me) in the danger card; absent until PB-O-40. */
+  /** MO1.7 O14: "Delete conversation" (delete for me) in the danger card (B3); absent hides the row. */
   onDelete?: () => void;
 }> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group, onDelete }) => {
   const s = settings ?? NO_SETTINGS;

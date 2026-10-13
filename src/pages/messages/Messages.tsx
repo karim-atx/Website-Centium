@@ -19,8 +19,9 @@ import { StarredMessages } from "../../components/messages/StarredMessages";
 import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
 import { ThreadLiveProvider } from "../../context/ThreadLiveContext";
+import { useUnread } from "../../context/UnreadContext";
 import { fetchThreads, migrateLegacyStars, startThread, threadForPush, type MessageThread } from "../../services/messaging";
-import { fetchGroupInvitations, fetchGroupMembers, type GroupInvitation } from "../../services/messaging/groups";
+import { fetchGroupInvitations, type GroupInvitation } from "../../services/messaging/groups";
 import { fetchBroadcastLists, fetchBroadcasts, type BroadcastList } from "../../services/messaging/broadcasts";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import {
@@ -48,8 +49,8 @@ import {
  * archived chats in their own view, a mute mark, and a sent/read tick on your
  * own last message. Pin, mute and archive are the reader's own and change
  * nothing for the other person. v6: the title, search and sub-tabs are one
- * fixed area (FixedHeader); rows swipe left for Pin / Mute (and Delete once
- * PB-O-40 ships), and the row ⋮ menu adds Archive (decision D1: Archive and
+ * fixed area (FixedHeader); rows swipe left for Pin / Mute / Delete (for
+ * me, B3), and the row ⋮ menu adds Archive (decision D1: Archive and
  * Delete both kept).
  *
  * PHASE 2B (screens 4 and 5): groups sit in the same list as direct chats,
@@ -70,26 +71,12 @@ import {
  * returning from a thread, which is the moment it is actually stale.
  */
 
-/**
- * Delete for me stays hidden until PB-O-40 is on the backend. In development
- * only, `localStorage["centium.dev.previewDeleteConversation"] = "1"` shows
- * the tile, the menu item and the confirm so they can be checked; the
- * confirm's Delete then writes nothing and reports "Couldn't delete".
- */
-function deletePreview(): boolean {
-  if (!import.meta.env.DEV) return false;
-  try {
-    return localStorage.getItem("centium.dev.previewDeleteConversation") === "1";
-  } catch {
-    return false;
-  }
-}
-
 type Filter = "all" | "unread" | "groups" | "broadcasts";
 const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
 
 export default function Messages() {
   const { authUserId, user, professionalClients } = useApp();
+  const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const c = useListColors();
   // The professional's connected clients, for every picker in 2B. Only these
@@ -121,8 +108,6 @@ export default function Messages() {
   const [lists, setLists] = useState<BroadcastList[]>([]);
   /** The newest broadcast's "Sent to N" per list. */
   const [lastSent, setLastSent] = useState<Record<string, number>>({});
-  /** First names of group members by thread, for "Lina: …" previews. */
-  const [senderNames, setSenderNames] = useState<Record<string, Record<string, string>>>({});
   const [openList, setOpenList] = useState<BroadcastList | null>(null);
   const [openInvitation, setOpenInvitation] = useState<GroupInvitation | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -138,7 +123,7 @@ export default function Messages() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   /** Polite announcements ("Conversation deleted."). */
   const [announce, setAnnounce] = useState("");
-  const canDelete = CONVERSATION_DELETE_READY || deletePreview();
+  const canDelete = CONVERSATION_DELETE_READY;
   /**
    * O10: when the fixed area would take more than 40% of the screen (Larger
    * text on a short screen), only the title row stays fixed and the search
@@ -192,11 +177,6 @@ export default function Messages() {
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
-      // Names for group previews; one small read per group.
-      const groups = result.threads.filter((t) => t.kind === "group");
-      void Promise.all(groups.map(async (g) => [g.id, await fetchGroupMembers(g.id)] as const)).then((rows) =>
-        setSenderNames(Object.fromEntries(rows.map(([id, ms]) => [id, Object.fromEntries(ms.map((m) => [m.userId, m.firstName]))])))
-      );
       if (thenOpenId) {
         const target = result.threads.find((t) => t.id === thenOpenId);
         if (target) {
@@ -408,6 +388,11 @@ export default function Messages() {
       return;
     }
     setAnnounce("Conversation deleted.");
+    // Gone from the list at once; my_conversations() leaves it out from now on
+    // until a newer message arrives. The server dropped its pin and archive
+    // and kept its mute, so the settings are re-read, not guessed.
+    setThreads((all) => all.filter((x) => x.id !== t.id));
+    unread.refresh();
     if (open?.id === t.id) {
       setOpen(null);
       setFocusId(null);
@@ -701,7 +686,6 @@ export default function Messages() {
         <ThreadList
           items={items}
           settings={settings}
-          senderNames={senderNames}
           onOpenInvitation={(inv) => {
             setOpenInvitation(inv);
             setView("invitation");

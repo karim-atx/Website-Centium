@@ -87,27 +87,29 @@ export async function saveThreadSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Delete a conversation for me (v6 MO1.7 S3, V6-75; backend PB-O-40 / ME-02,
-// stage B3: thread_user_settings.cleared_at + delete_conversation_for_me()).
+// Delete a conversation for me (v6 MO1.7 S3, V6-75; Database B3,
+// 20261116040000: thread_user_settings.cleared_at + delete_conversation_for_me()).
 // ---------------------------------------------------------------------------
 
-/**
- * Whether delete-for-me exists on the backend. FALSE UNTIL PB-O-40 SHIPS:
- * neither HANDOVER_API.md nor the local stack has cleared_at or
- * delete_conversation_for_me() yet, so the Delete tile, menu item and Chat
- * info row stay hidden (no fake delete). Flip this, and wire the call below,
- * once both have it.
- */
-export const CONVERSATION_DELETE_READY = false;
+/** Delete for me is on the backend (B3, HANDOVER_API.md "Messaging: delete a conversation for me"). */
+export const CONVERSATION_DELETE_READY = true;
 
 /**
- * Hides one conversation for the caller only (pin and archive cleared, mute
- * kept, V6-75). Until PB-O-40 ships there is nothing to call: it writes
- * nothing and reports the failure the confirm shows.
+ * Hides one conversation for the caller only, through the one function that
+ * may set cleared_at (the column is not client-writable, ATXB4). The server
+ * drops pin and archive and keeps mute; my_conversations() then leaves the
+ * thread out until a newer message arrives, and the older messages count
+ * neither as its preview nor as unread. Nothing is removed for anybody else.
  */
-export async function deleteConversationForMe(threadId: string): Promise<{ ok: true } | Fail> {
-  void threadId;
-  return { ok: false, message: "Couldn't delete. Try again." };
+export async function deleteConversationForMe(threadId: string): Promise<{ ok: true; clearedAt: string | null } | Fail> {
+  // Newer than the generated types (production), hence the casts.
+  const { data, error } = await supabase.rpc("delete_conversation_for_me" as never, { p_thread_id: threadId } as never);
+  if (error) {
+    console.error("[chat] Could not delete the conversation:", error.message);
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return { ok: false, message: "Couldn't delete. Try again." };
+  }
+  return { ok: true, clearedAt: (data as string | null) ?? null };
 }
 
 export type MuteChoice = "1h" | "8h" | "1w" | "always" | "off";

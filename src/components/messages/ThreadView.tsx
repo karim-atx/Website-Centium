@@ -179,7 +179,7 @@ export const ThreadView: React.FC<{
   onBack: () => void;
   /** A message to show on opening, e.g. a search result; older pages load until it is there. */
   focusMessageId?: string | null;
-  /** MO1.7 O14: Chat info's "Delete conversation"; absent until PB-O-40. */
+  /** MO1.7 O14: Chat info's "Delete conversation" (delete for me, B3). */
   onDeleteConversation?: () => void;
 }> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation }) => {
   const { authUserId, user } = useApp();

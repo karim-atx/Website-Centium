@@ -25,6 +25,7 @@ import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { listTime } from "./chatTime";
 import { useListColors, type ListColors } from "./listColors";
+import { typeColours } from "../professionals/typeColour";
 
 /**
  * The caller's conversations (Messages phase 2A, screen 1; v6 MO1.7).
@@ -46,8 +47,7 @@ import { useListColors, type ListColors } from "./listColors";
  * grey when read); line 2 the preview 13 / 19.5 (600 ink unread, 500 grey
  * read) and the unread badge (20, 11 / 16.5 800, theme primary).
  *
- * SWIPE LEFT (threads only): Pin, Mute and, once the backend can delete a
- * conversation for one reader (PB-O-40), Delete: 58 r14 tiles, gap 6, 4 from
+ * SWIPE LEFT (threads only): Pin, Mute and Delete (for me, B3): 58 r14 tiles, gap 6, 4 from
  * the edge. The same actions plus Archive sit in the row's ⋮ menu (O13):
  * long-press, right-click, Shift+F10, or a ⋮ button that shows on keyboard
  * focus and on hover. Invitation and broadcast-list rows do not swipe.
@@ -62,27 +62,43 @@ export type ChatListItem =
   | { type: "invite"; invitation: GroupInvitation }
   | { type: "broadcast"; list: BroadcastList; lastSentCount: number | null };
 
-/** What a row's swipe tiles and ⋮ menu can do. Delete is absent until PB-O-40. */
+/** What a row's swipe tiles and ⋮ menu can do. */
 export interface RowActions {
   pin: (t: MessageThread) => void;
   mute: (t: MessageThread, choice: MuteChoice) => void;
   archive: (t: MessageThread) => void;
-  /** Absent while delete-for-me has no backend (PB-O-40): no tile, no menu item. */
+  /** Delete for me (B3); absent means no tile and no menu item. */
   delete?: (t: MessageThread) => void;
 }
 
-/** The role label a row can say without the backend (PB-O-41 adds Coach / Nutritionist). */
-function roleFor(t: MessageThread): "Official" | "Gym" | null {
-  if (t.kind === "official_support") return "Official";
-  if (t.venue?.memberSide) return "Gym";
-  return null;
+/**
+ * #16 / #32 role label, from my_conversations().other_role (B3, PB-O-41):
+ * "official" and "gym" as drawn, a professional's subtype in MO1.2's type
+ * colour (V6-170: the deep ink of the type's family, which is the drawn
+ * Nutritionist #3C6B65 / #93C1B9; "Coach" takes the purple family's
+ * #5F5093 / #C3B3FB instead of the drawn #8A6A3E). Null (a group, a fellow
+ * customer) shows nothing. The kind and venue fallbacks keep Official and
+ * Gym on a server without the column.
+ */
+const SUBTYPE_ROLE: Record<string, string> = {
+  trainer: "Coach",
+  dietitian: "Nutritionist",
+  physiotherapist: "Physiotherapist",
+  doctor: "Doctor",
+  other: "Professional",
+};
+function roleFor(t: MessageThread, c: ListColors): { label: string; ink: string } | null {
+  if (t.otherRole === "official" || t.kind === "official_support") return { label: "Official", ink: c.tealInk };
+  if (t.otherRole === "gym" || t.venue?.memberSide) return { label: "Gym", ink: c.neutralInk };
+  if (t.kind === "group" || !t.otherRole) return null;
+  const label = SUBTYPE_ROLE[t.otherRole];
+  if (!label) return null;
+  return { label, ink: typeColours(t.otherRole, c.dark).deep };
 }
 
 export const ThreadList: React.FC<{
   items: ChatListItem[];
   settings: Record<string, ThreadSettings>;
-  /** First names of group members, by thread, for "Lina: …" previews. */
-  senderNames: Record<string, Record<string, string>>;
   onOpenInvitation: (inv: GroupInvitation) => void;
   onOpenBroadcast: (list: BroadcastList) => void;
   readState: Record<string, string | null>;
@@ -92,7 +108,7 @@ export const ThreadList: React.FC<{
   onOpen: (thread: MessageThread) => void;
   /** Swipe and ⋮ actions; absent rows do not swipe. */
   actions?: RowActions;
-}> = ({ items, settings, senderNames, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions }) => {
+}> = ({ items, settings, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions }) => {
   const unread = useUnread();
   const live = useThreadLive();
   const c = useListColors();
@@ -175,7 +191,6 @@ export const ThreadList: React.FC<{
               thread={t}
               settings={settings[t.id]}
               count={unread.byThread[t.id] ?? 0}
-              senderNames={senderNames}
               readState={readState}
               delivered={delivered}
               authUserId={authUserId}
@@ -263,7 +278,6 @@ const ThreadRow: React.FC<{
   thread: MessageThread;
   settings: ThreadSettings | undefined;
   count: number;
-  senderNames: Record<string, Record<string, string>>;
   readState: Record<string, string | null>;
   delivered: Set<string>;
   authUserId: string | null;
@@ -274,7 +288,7 @@ const ThreadRow: React.FC<{
   onMenu: (anchor: HTMLElement) => void;
   onMuteMenu: (anchor: HTMLElement) => void;
   c: ListColors;
-}> = ({ thread: t, settings: s, count, senderNames, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c }) => {
+}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c }) => {
   const rowRef = useRef<HTMLLIElement | null>(null);
   const group = t.kind === "group";
   const muted = isMuted(s);
@@ -282,9 +296,9 @@ const ThreadRow: React.FC<{
   const mine = !!t.lastMessageId && t.lastMessageSenderId === authUserId;
   const read = mine && t.lastMessageId ? !!readState[t.lastMessageId] : false;
   const reached = mine && !!t.lastMessageId && delivered.has(t.lastMessageId);
-  // "Lina: …" in a group, so the preview says who.
-  const groupSender = group && !mine && t.lastMessageSenderId ? senderNames[t.id]?.[t.lastMessageSenderId] : undefined;
-  const role = roleFor(t);
+  // "Lina: …" in a group, so the preview says who (B3 last_sender_first_name).
+  const groupSender = group && !mine && t.lastMessageSenderId ? t.lastSenderFirstName ?? undefined : undefined;
+  const role = roleFor(t, c);
   const name = t.participantName;
   const unread = count > 0;
 
@@ -360,9 +374,9 @@ const ThreadRow: React.FC<{
                 <span
                   data-row-role=""
                   className="shrink-0 text-[11px] leading-[16.5px] font-bold"
-                  style={{ color: role === "Official" ? c.tealInk : c.neutralInk }}
+                  style={{ color: role.ink }}
                 >
-                  {role}
+                  {role.label}
                 </span>
               )}
               {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0" style={{ color: c.muted }} />}
