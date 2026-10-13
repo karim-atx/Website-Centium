@@ -2,6 +2,8 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
+import { isOffline } from "../network-error";
+import { readPassCache, writePassCache } from "./passCache";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -78,6 +80,8 @@ export interface GymMembership {
   passValid: boolean;
   passState: PassState;
   access: { qr: boolean; nfc: boolean; bluetooth: boolean };
+  /** V6-30: set when this row is the device's offline copy (ISO time it was saved). */
+  cachedAt?: string;
 }
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
@@ -241,32 +245,42 @@ export async function fetchPlansFor(businessIds: string[]): Promise<Result<Venue
   };
 }
 
-/** The caller's memberships, newest first (MO1.4.2.2.2 / .2.3, Profile). */
+/**
+ * The caller's memberships, newest first (MO1.4.2.2.2 / .2.3, Profile).
+ *
+ * V6-30: when the server can't be reached, the last read from this device
+ * (at most PASS_CACHE_HOURS old, active memberships only) is returned with
+ * `cachedAt` set, so the pass still shows at a door with no signal.
+ */
 export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> {
   const { data, error } = await rpc<MembershipRow[]>("my_gym_memberships");
+  const uid = (await supabase.auth.getSession().catch(() => null))?.data.session?.user.id ?? null;
   if (error) {
     console.error("[venues] Could not read your memberships:", error.message);
+    if (uid && isOffline(error)) {
+      const cached = readPassCache<GymMembership>(uid, (m) => m.expiresOn);
+      if (cached) return { ok: true, value: cached.rows.map((m) => ({ ...m, cachedAt: cached.savedAt })) };
+    }
     return fail(error, "Couldn't load your memberships right now.");
   }
-  return {
-    ok: true,
-    value: (data ?? []).map((r) => ({
-      id: r.id,
-      gymId: r.gym_id,
-      gymName: r.gym_name,
-      planName: r.plan_name,
-      status: r.status,
-      paymentMethod: r.payment_method,
-      paymentStatus: r.payment_status,
-      priceAgreed: Number(r.price_agreed),
-      startedOn: r.started_on,
-      expiresOn: r.expires_on,
-      passToken: r.pass_token,
-      passValid: r.pass_valid,
-      passState: r.pass_state,
-      access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
-    })),
-  };
+  const value: GymMembership[] = (data ?? []).map((r) => ({
+    id: r.id,
+    gymId: r.gym_id,
+    gymName: r.gym_name,
+    planName: r.plan_name,
+    status: r.status,
+    paymentMethod: r.payment_method,
+    paymentStatus: r.payment_status,
+    priceAgreed: Number(r.price_agreed),
+    startedOn: r.started_on,
+    expiresOn: r.expires_on,
+    passToken: r.pass_token,
+    passValid: r.pass_valid,
+    passState: r.pass_state,
+    access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
+  }));
+  if (uid) writePassCache(uid, value.filter((m) => m.status === "active"));
+  return { ok: true, value };
 }
 
 /**

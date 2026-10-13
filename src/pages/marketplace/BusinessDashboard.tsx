@@ -164,7 +164,7 @@ export default function BusinessDashboard() {
       classes: "/app/business/classes",
       plans: "/app/business/gym",
       members: "/app/business/members",
-      checkin: "/app/business/venue",
+      checkin: "/app/business/operations",
       products: "/app/business/marketplace",
       delivery: "/app/business/profile",
       orders: "/app/business/operations",

@@ -5,6 +5,7 @@ import { memberTag, planLine, validRange } from "../../services/venues/venueLogi
 import type { GymMembership } from "../../services/venues";
 import { PassQr } from "./PassQr";
 import { MemberTag } from "./MemberTag";
+import { clock12 } from "../../utils/time12";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
 // MO1.4.2.2.5 Bluetooth), shown on the confirmed screen and in the member's
@@ -140,6 +141,12 @@ export function MembershipPass({
       </div>
 
       <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{UNDER[method]}</p>
+      {/* V6-30: the device's short-lived offline copy is showing. */}
+      {membership.cachedAt && (
+        <p role="status" className="mt-1 mb-0 text-center text-[12px] font-semibold text-charcoal-faint">
+          Offline. Last updated {clock12(membership.cachedAt)}.
+        </p>
+      )}
 
       {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. Wallet
           passes are native (signed pass files), so it is drawn disabled. */}
