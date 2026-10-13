@@ -23,7 +23,12 @@ export const DobInline: React.FC<{
       like the Recovery card. Unset keeps the gold inline block (Home, the
       public listing sheet). */
   tile?: boolean;
-}> = ({ title, body, onSaved, tile }) => {
+  /** Business Dashboard (OURS-DA-kept-features #3): the setup card language,
+      #F0EDF9 r 24 pad 18 20, title 15/800. `after` renders inside the card
+      (the Dashboard's "Not now"). */
+  setup?: boolean;
+  after?: React.ReactNode;
+}> = ({ title, body, onSaved, tile, setup, after }) => {
   const { authUserId, user, updateProfile } = useApp();
   const [dob, setDob] = useState(user.dateOfBirth ?? "");
   const [saving, setSaving] = useState(false);
@@ -64,6 +69,16 @@ export const DobInline: React.FC<{
       </Button>
     </>
   );
+
+  if (setup)
+    return (
+      <div className="rounded-[24px] bg-primary-pale px-5 pt-[18px] pb-2.5 flex flex-col gap-2" role="region" aria-label="Date of birth">
+        <p className="text-[15px] font-extrabold text-charcoal">{title}</p>
+        <p className="text-[12.5px] leading-[18px] text-charcoal-soft">{body}</p>
+        {field}
+        {after}
+      </div>
+    );
 
   if (tile)
     // As the Recovery card (MO1.5 row 7): r18, padding 16 16 18, the glyph
