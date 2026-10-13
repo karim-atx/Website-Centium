@@ -340,7 +340,7 @@ export const BizLink: React.FC<{ icon: LucideIcon; text: string; onClick: () => 
 
 export type UploadState = "empty" | "done" | "err" | "busy";
 
-/** Upload row (isUpload): Upload / Uploaded / Retake, plus OURS Uploading… and Retry. */
+/** Upload row (isUpload): Upload / Uploaded / Retake, plus OURS Uploading… (with a byte progress bar) and Retry. */
 export const BizUpload: React.FC<{
   icon: LucideIcon;
   title: string;
@@ -348,18 +348,20 @@ export const BizUpload: React.FC<{
   state: UploadState;
   error?: string;
   retryLabel?: "Retake" | "Retry";
-  onPick: () => void;
-}> = ({ icon: Icon, title, sub, state, error, retryLabel = "Retake", onPick }) => {
+  /** 0 to 1 while busy (bytes sent). */
+  progress?: number;
+  onPick: (anchor: HTMLElement) => void;
+}> = ({ icon: Icon, title, sub, state, error, retryLabel = "Retake", progress, onPick }) => {
   const errId = useId();
   return (
     <div className="mb-[10px]">
       <button
         type="button"
-        onClick={onPick}
+        onClick={(e) => onPick(e.currentTarget)}
         disabled={state === "busy"}
         aria-describedby={error ? errId : undefined}
         className={clsx(
-          "w-full text-left flex items-center gap-3 rounded-[16px] py-[11px] px-[14px] box-border",
+          "relative overflow-hidden w-full text-left flex items-center gap-3 rounded-[16px] py-[11px] px-[14px] box-border",
           state === "done" || state === "busy" ? "border border-solid border-hair-11 bg-cream-card" : "border-[1.5px]",
           state === "empty" && "border-dashed border-primary-fill bg-primary-pale",
           state === "err" && "border-solid border-status-high bg-cream-card"
@@ -384,6 +386,17 @@ export const BizUpload: React.FC<{
           )}
           {state === "done" ? "Uploaded" : state === "err" ? retryLabel : state === "busy" ? "Uploading…" : "Upload"}
         </span>
+        {state === "busy" && progress !== undefined && (
+          <span
+            role="progressbar"
+            aria-label={`Uploading ${title}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
+            className="absolute left-0 bottom-0 h-[3px] bg-primary-fill transition-[width] duration-150"
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+        )}
       </button>
       {error && (
         <p id={errId} role="alert" className="text-[11.5px] font-semibold leading-[15px] text-status-high mt-[6px] mx-1">

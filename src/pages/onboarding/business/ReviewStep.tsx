@@ -18,6 +18,10 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
   const typeL = laneTypeLabel(lane, biz.storeType);
   const docs = docsFor(biz);
   const uploaded = [biz.proof, biz.idFront, biz.idBack].filter((s) => s.path).length;
+  // All three verification files are needed to submit (Policies and
+  // verification will not continue without them; a draft from before uploads
+  // opened can still arrive here without them).
+  const docsMissing = uploaded < 3;
   const ess =
     lane === "classes"
       ? [e.classTypes.join(", ") || "No class types yet", `Free cancel until ${e.cancelHours} hours before · ${e.spots} spots`]
@@ -41,6 +45,10 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
   const area = areaOf(biz.location.address);
 
   const submit = () => {
+    if (docsMissing) {
+      goTo("bizPolicies");
+      return;
+    }
     if (!biz.termsAccepted) {
       setTermsError(true);
       return;
@@ -76,7 +84,8 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
       <BizSummary
         n={4}
         title={names.policies}
-        lines={[docLine.replace(/^./, (m) => m.toUpperCase()), uploaded === 0 ? "Documents asked for before you go live" /* OURS */ : `${uploaded} documents uploaded`]}
+        lines={[docLine.replace(/^./, (m) => m.toUpperCase()), docsMissing ? "Verification documents missing" /* OURS */ : `${uploaded} documents uploaded`]}
+        bad={docsMissing}
         onAction={() => goTo("bizPolicies")}
       />
       <BizSummary n={5} title={names.payments} lines={[biz.cash ? "Cash now, Whish after approval" : "Whish after approval"]} onAction={() => goTo("bizPayments")} />

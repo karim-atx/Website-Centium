@@ -1,19 +1,27 @@
 import React, { useRef, useState } from "react";
-import { Calendar, FileCheck, FileText, IdCard, RotateCcw, ScrollText, Truck, type LucideIcon } from "lucide-react";
+import { Calendar, Camera, FileCheck, FileText, FolderOpen, IdCard, RotateCcw, ScrollText, Trash2, Truck, type LucideIcon } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
+import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ageFromDateOfBirth, isoDateYearsAgo, MAX_AGE, MIN_AGE, validateDateOfBirth } from "../../../utils/date";
 import { BizFrame } from "./BizFrame";
 import { BizDocCard, BizUpload, type UploadState } from "./ui";
 import { ObSectionLabel } from "../shell";
 import { docCardLines, type PolicyDoc } from "./lanes";
-import { docsFor, type UploadSlot } from "./draft";
-import { uploadVerificationFile } from "../../../services/business-onboarding";
+import { docsFor, emptySlot, type UploadSlot } from "./draft";
+import { removeVerificationFile, uploadVerificationFile } from "../../../services/business-onboarding";
 import type { LaneStepProps } from "./laneTypes";
 
 // OB-228 / 262 / 291 (+ 230 / 264 waiver preview, 231 verification, 265 ID
 // photo blurry, 293 returns preview): Step 4 · Policies and verification.
 // The owner's date of birth moved here from DobStep (HANDOVER 5), with its
 // 16+ rule and lock (KEEP-SAFETY).
+//
+// Verification files (B5 + Database 20261120040000): the private
+// business-verification bucket, <owner_uid>/<verification_id>/<file>. The
+// onboarding account is the owner. Each row uploads with byte progress; an
+// uploaded row opens Take a photo / Choose a file / Remove file; an ID photo
+// is checked for blur first (OB-265), and the same row flagged twice in a row
+// is accepted (services/business-onboarding/blur.ts).
 
 const DOC_ICON: Record<PolicyDoc["icon"], LucideIcon> = {
   "file-check": FileCheck,
@@ -32,48 +40,65 @@ const SLOTS: { key: SlotKey; title: string; icon: LucideIcon }[] = [
 
 const sizeLabel = (n: number | null) => (n == null ? "" : n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
-/** Uploads not open yet (the bucket refused an own-prefix write): a pending state. */
-export const VERIFY_PENDING_NOTE = "Verification uploads open soon. We'll ask for these before you go live."; // OURS
 
 export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onContinue, onBack, saveExit, save, uid, dob, setDob, dobLocked, online }) => {
   const lane = biz.lane ?? "gym";
   const docs = docsFor(biz);
   const [preview, setPreview] = useState<PolicyDoc | null>(null);
   const [edit, setEdit] = useState<{ doc: PolicyDoc; text: string } | null>(null);
-  const [busy, setBusy] = useState<SlotKey | null>(null);
-  const [slotError, setSlotError] = useState<Partial<Record<SlotKey, string>>>({});
-  const [bucketClosed, setBucketClosed] = useState(false);
+  const [busy, setBusy] = useState<{ key: SlotKey; name: string; progress: number } | null>(null);
+  const [slotError, setSlotError] = useState<Partial<Record<SlotKey, { message: string; sub: string; blurry: boolean }>>>({});
+  const [flaggedBlurry, setFlaggedBlurry] = useState<Partial<Record<SlotKey, boolean>>>({});
+  const [menu, setMenu] = useState<{ key: SlotKey; anchor: HTMLElement } | null>(null);
   const [used, setUsed] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const pickFor = useRef<SlotKey>("proof");
 
   const dobProblem = dob ? validateDateOfBirth(dob) : null;
   const dobOk = !!dob && !dobProblem;
   const uploadsDone = SLOTS.every((s) => !!biz[s.key].path);
-  const canContinue = dobOk && (uploadsDone || bucketClosed) && !busy;
+  const canContinue = dobOk && uploadsDone && !busy;
 
   const onFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || busy) return;
     const key = pickFor.current;
     if (!uid) return;
     if (!online) {
-      setSlotError((e) => ({ ...e, [key]: "Connect to the internet to upload." })); // OURS
+      setSlotError((e) => ({ ...e, [key]: { message: "Connect to the internet to upload.", sub: file.name, blurry: false } })); // OURS
       return;
     }
-    setBusy(key);
+    // The submission these files are grouped under, made on the first upload.
+    const verificationId = biz.verificationId ?? crypto.randomUUID();
+    const previous = biz[key].path;
+    setBusy({ key, name: file.name, progress: 0 });
     setSlotError((e) => ({ ...e, [key]: undefined }));
-    const res = await uploadVerificationFile(uid, file);
+    const res = await uploadVerificationFile({
+      ownerUid: uid,
+      verificationId,
+      file,
+      checkBlur: key !== "proof",
+      acceptBlurry: !!flaggedBlurry[key],
+      onProgress: (p) => setBusy((b) => (b && b.key === key ? { ...b, progress: p } : b)),
+    });
     setBusy(null);
     if (!res.ok) {
-      if (res.code === "BUCKET_CLOSED") {
-        setBucketClosed(true);
-        return;
-      }
-      setSlotError((e) => ({ ...e, [key]: res.message }));
+      const blurry = res.code === "BLURRY";
+      setFlaggedBlurry((m) => ({ ...m, [key]: blurry }));
+      setSlotError((e) => ({ ...e, [key]: { message: res.message, sub: blurry ? `${file.name} · blurry` : file.name, blurry } }));
       return;
     }
+    setFlaggedBlurry((m) => ({ ...m, [key]: false }));
     const slot: UploadSlot = { path: res.value.path, fileName: res.value.name, sizeBytes: res.value.size };
-    setBiz((b) => ({ ...b, [key]: slot }));
+    setBiz((b) => ({ ...b, verificationId: b.verificationId ?? verificationId, [key]: slot }));
+    // The file it replaces, if it was part of this (unsubmitted) submission.
+    void removeVerificationFile(previous, verificationId);
+  };
+
+  const removeFile = (key: SlotKey) => {
+    void removeVerificationFile(biz[key].path, biz.verificationId);
+    setBiz((b) => ({ ...b, [key]: emptySlot() }));
+    setSlotError((e) => ({ ...e, [key]: undefined }));
   };
 
   const docStatus = (d: PolicyDoc, i: number): "Ready" | "Template" | "Edited" =>
@@ -92,8 +117,8 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
         onClick: () => canContinue && onContinue(),
         disabled: !canContinue,
         busy: save.busy,
-        error: save.error ?? (bucketClosed ? VERIFY_PENDING_NOTE : undefined),
-        errorTone: save.offline || (bucketClosed && !save.error) ? "info" : "error",
+        error: save.error ?? undefined,
+        errorTone: save.offline ? "info" : "error",
       }}
       overlay={
         <>
@@ -105,6 +130,39 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
             onChange={(e) => {
               void onFile(e.target.files?.[0]);
               e.target.value = "";
+            }}
+          />
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              void onFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <PopupMenu
+            open={!!menu}
+            onClose={() => setMenu(null)}
+            anchor={menu?.anchor ?? null}
+            heading={SLOTS.find((s) => s.key === menu?.key)?.title}
+            align="right"
+            width={200}
+            options={[
+              { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={2.2} /> },
+              { value: "file", label: "Choose a file", icon: <FolderOpen size={15} strokeWidth={2.2} /> },
+              { value: "remove", label: "Remove file", icon: <Trash2 size={15} strokeWidth={2.2} />, destructive: true },
+            ]}
+            onSelect={(v) => {
+              const key = menu?.key;
+              setMenu(null);
+              if (!key) return;
+              pickFor.current = key;
+              if (v === "camera") cameraRef.current?.click();
+              else if (v === "file") fileRef.current?.click();
+              else removeFile(key);
             }}
           />
           <BottomSheet
@@ -188,19 +246,32 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
       <ObSectionLabel title="Verification" tag="Clients never see these" margin="14px 2px 12px" />
       {SLOTS.map((s) => {
         const slot = biz[s.key];
-        const state: UploadState = busy === s.key ? "busy" : slotError[s.key] ? "err" : slot.path ? "done" : "empty";
+        const err = slotError[s.key];
+        const up = busy?.key === s.key ? busy : null;
+        const state: UploadState = up ? "busy" : err ? "err" : slot.path ? "done" : "empty";
         return (
           <BizUpload
             key={s.key}
             icon={s.icon}
             title={s.title}
-            sub={slot.path ? `${slot.fileName ?? "file"} · ${sizeLabel(slot.sizeBytes)}` : "Take a photo or upload a file"}
+            sub={
+              up
+                ? `${up.name} · ${Math.round(up.progress * 100)}%`
+                : err
+                ? err.sub
+                : slot.path
+                ? `${slot.fileName ?? "file"} · ${sizeLabel(slot.sizeBytes)}`
+                : "Take a photo or upload a file"
+            }
             state={state}
-            error={slotError[s.key]}
-            retryLabel={slotError[s.key] && /blurry/i.test(slotError[s.key]!) ? "Retake" : "Retry"}
-            onPick={() => {
+            progress={up?.progress}
+            error={err?.message}
+            retryLabel={err?.blurry ? "Retake" : "Retry"}
+            onPick={(anchor) => {
+              if (busy) return;
               pickFor.current = s.key;
-              fileRef.current?.click();
+              if (slot.path && !err) setMenu({ key: s.key, anchor });
+              else fileRef.current?.click();
             }}
           />
         );

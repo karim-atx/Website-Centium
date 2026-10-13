@@ -182,7 +182,9 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
       setSave({ busy: false, error: sent.message, offline: !!sent.offline });
       return;
     }
-    d = { ...d, submittedAt: new Date().toISOString(), reached: "review" };
+    // The submitted files now belong to that submission: a later upload (after
+    // "A few things to fix") starts a new verification id.
+    d = { ...d, submittedAt: new Date().toISOString(), reached: "review", verificationId: null };
     setBiz(() => d);
     try {
       localStorage.setItem(`centium-business-lane:${uid}`, JSON.stringify(d));

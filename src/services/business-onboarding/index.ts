@@ -5,6 +5,10 @@ import { prepareForumPhoto } from "../forum/photo";
 import { recordLegalAcceptances } from "../legal/acceptances";
 import { COVER_MAX_BYTES, LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
 import { storagePath } from "../venues/venueLogic";
+import { uploadWithProgress } from "../storage";
+import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "../business-more/cover";
+import { OB_STRINGS } from "../../pages/onboarding/shell/flow";
+import { looksBlurry } from "./blurCheck";
 import {
   businessTypeFor,
   dbCategories,
@@ -126,16 +130,18 @@ export async function saveBusinessBasics(uid: string, d: BusinessLaneDraft): Pro
   return { ok: true, value: made.value };
 }
 
-/** The public URL of a stored logo or cover path. */
+/** The public URL of a stored logo or cover path (an old cover is read from where it was written: ../business-more/cover). */
 export function imageUrl(kind: "logo" | "cover", path: string | null): string | null {
+  if (kind === "cover") return coverUrlFor(path, (bucket, p) => db.storage.from(bucket).getPublicUrl(p).data.publicUrl);
   const p = storagePath(path);
-  return p ? db.storage.from(kind === "logo" ? "business-logos" : "gym-covers").getPublicUrl(p).data.publicUrl : null;
+  return p ? db.storage.from("business-logos").getPublicUrl(p).data.publicUrl : null;
 }
 
 /**
- * Uploads a logo (business-logos, <uid>/<file>) or cover (gym-covers,
- * <uid>/cover-<file>) after re-drawing it (metadata stripped), and removes the
- * object it replaces. The column is written with Step 1's save.
+ * Uploads a logo (business-logos, <uid>/<file>) or cover (business-covers,
+ * <owner_uid>/<file>; the onboarding account is the owner) after re-drawing
+ * it (metadata stripped), and removes the object it replaces. The column is
+ * written with Step 1's save.
  */
 export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", file: File, previous: string | null): Promise<Res<string>> {
   const prepared = await prepareForumPhoto(file);
@@ -144,18 +150,22 @@ export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", f
   if (prepared.file.size > max) {
     return { ok: false, message: kind === "logo" ? "This logo is too large. Choose one under 2 MB." : "This photo is too large. Choose one under 5 MB." };
   }
-  const bucket = kind === "logo" ? "business-logos" : "gym-covers";
-  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : `${uid}/cover-${crypto.randomUUID()}.jpg`;
+  const bucket = kind === "logo" ? "business-logos" : BUSINESS_COVER_BUCKET;
+  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : coverObjectPath(uid, crypto.randomUUID());
   const { error } = await db.storage.from(bucket).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
   if (error) return fail(error, "The image couldn't be uploaded. Try again.");
-  const old = replacedObject(previous, uid, path);
-  if (old) await db.storage.from(bucket).remove([old]);
+  await removeBusinessImage(uid, kind, previous, path);
   return { ok: true, value: path };
 }
 
-export async function removeBusinessImage(uid: string, kind: "logo" | "cover", previous: string | null): Promise<void> {
-  const old = replacedObject(previous, uid, "");
-  if (old) await db.storage.from(kind === "logo" ? "business-logos" : "gym-covers").remove([old]);
+export async function removeBusinessImage(uid: string, kind: "logo" | "cover", previous: string | null, next = ""): Promise<void> {
+  if (kind === "logo") {
+    const old = replacedObject(previous, uid, next);
+    if (old) await db.storage.from("business-logos").remove([old]);
+    return;
+  }
+  const old = coverToRemove(previous, { ownerUid: uid, callerUid: uid }, next);
+  if (old) await db.storage.from(old.bucket).remove([old.path]);
 }
 
 // ---------------------------------------------------------------------------
@@ -382,35 +392,72 @@ async function publishPolicies(businessId: string): Promise<Res<null>> {
 
 export const VERIFY_MAX_BYTES = 10 * 1024 * 1024;
 const VERIFY_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const VERIFY_BUCKET = "business-verification";
+export const ID_BLURRY = "This photo is blurry. Retake it in good light so all 4 corners show.";
+
+/**
+ * A verification file's path: <owner_uid>/<verification_id>/<file>
+ * (Database 20261120040000). Segment 1 is the BUSINESS OWNER even when a
+ * manager uploads (may_write_business_file, `members`), so the file counts
+ * against and is purged with the owner; the verification id groups one
+ * submission's files and becomes business_verifications.id on submit.
+ */
+export function verificationObjectPath(ownerUid: string, verificationId: string, fileId: string, ext: "jpg" | "pdf"): string {
+  return `${ownerUid}/${verificationId}/${fileId}.${ext}`;
+}
 
 /**
  * Uploads one verification file to the private business-verification bucket
- * (<uid>/<file>, 10 MB, images and PDF). Images are re-drawn first (metadata
- * stripped); PDFs go as they are.
+ * (10 MB, images and PDF), with byte progress. Images are re-drawn first and
+ * PDFs rewritten (metadata stripped, as the forum photos and course PDFs
+ * are); an ID photo is checked for blur first unless `acceptBlurry` (code
+ * "BLURRY", OB-265).
  */
-export async function uploadVerificationFile(uid: string, file: File): Promise<Res<{ path: string; name: string; size: number }>> {
+export async function uploadVerificationFile(params: {
+  ownerUid: string;
+  verificationId: string;
+  file: File;
+  checkBlur: boolean;
+  acceptBlurry: boolean;
+  onProgress: (fraction: number) => void;
+}): Promise<Res<{ path: string; name: string; size: number }>> {
+  const { ownerUid, verificationId, file, checkBlur, acceptBlurry, onProgress } = params;
   if (!VERIFY_TYPES.includes(file.type)) return { ok: false, message: "Choose a photo or a PDF." }; // OURS
-  if (file.size > VERIFY_MAX_BYTES) return { ok: false, message: "This file is over 10 MB. Choose a smaller one." };
-  let body: File = file;
-  if (file.type !== "application/pdf") {
+  let body: Blob;
+  let ext: "jpg" | "pdf";
+  if (file.type === "application/pdf") {
+    if (file.size > VERIFY_MAX_BYTES) return { ok: false, message: "This file is over 10 MB. Choose a smaller one." };
+    const { preparePdf } = await import("../courses/pdf");
+    const prepared = await preparePdf(file);
+    if (!prepared.ok) return { ok: false, message: prepared.message };
+    body = new Blob([prepared.bytes as BlobPart], { type: "application/pdf" });
+    ext = "pdf";
+  } else {
+    if (checkBlur && !acceptBlurry && (await looksBlurry(file))) return { ok: false, code: "BLURRY", message: ID_BLURRY };
     const prepared = await prepareForumPhoto(file);
     if (!prepared.ok) return { ok: false, message: prepared.message };
     body = prepared.file;
+    ext = "jpg";
   }
-  const ext = body.type === "application/pdf" ? "pdf" : "jpg";
-  const path = `${uid}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await db.storage.from("business-verification").upload(path, body, { contentType: body.type, upsert: false });
+  if (body.size > VERIFY_MAX_BYTES) return { ok: false, message: "This file is over 10 MB. Choose a smaller one." };
+  const path = verificationObjectPath(ownerUid, verificationId, crypto.randomUUID(), ext);
+  const { error } = await uploadWithProgress(VERIFY_BUCKET, path, body, body.type, { onProgress });
   if (error) {
-    // The bucket refusing an own-prefix upload means its storage policies are
-    // not in place yet (B5 created the bucket; see the report): a pending
-    // state, not the user's connection.
-    const e = error as { statusCode?: string | number; message?: string };
-    if (String(e.statusCode) === "403" || /row-level security|not authorized|unauthorized/i.test(e.message ?? "")) {
-      return { ok: false, code: "BUCKET_CLOSED", message: "Uploads aren't open yet." };
-    }
-    return fail(error, "Upload failed. Check your connection and try again.");
+    console.warn("[business-onboarding] verification upload refused:", error.status ?? "", error.message);
+    return { ok: false, message: OB_STRINGS.uploadFailed };
   }
-  return { ok: true, value: { path, name: file.name, size: file.size } };
+  return { ok: true, value: { path, name: file.name, size: body.size } };
+}
+
+/**
+ * Removes a replaced or removed verification file, but only one from the
+ * submission being put together (its second segment is `verificationId`):
+ * a file already submitted belongs to that submission's record.
+ */
+export async function removeVerificationFile(path: string | null, verificationId: string | null): Promise<void> {
+  const p = storagePath(path);
+  if (!p || !verificationId || p.split("/")[1] !== verificationId) return;
+  await db.storage.from(VERIFY_BUCKET).remove([p]);
 }
 
 // ---------------------------------------------------------------------------
@@ -436,7 +483,13 @@ export async function submitForReview(uid: string, businessId: string, d: Busine
   if (pending.error) return fail(pending.error, "Couldn't submit. Check your connection and try again.");
   if (!pending.data) {
     const files = [d.proof.path, d.idFront.path, d.idBack.path].filter((p): p is string => !!p);
-    const ins = await db.from("business_verifications").insert({ business_id: businessId, file_paths: files });
+    // The id the files were grouped under (<owner>/<verification_id>/…), so
+    // the folder and the row agree; a fresh one when nothing new was uploaded.
+    const insert = (id: string) => db.from("business_verifications").insert({ id, business_id: businessId, file_paths: files });
+    let ins = await insert(d.verificationId ?? crypto.randomUUID());
+    // An id already used by an earlier submission (a draft that missed being
+    // cleared after a submit): the files stay where they are, the row gets a new id.
+    if (ins.error?.code === "23505" && d.verificationId) ins = await insert(crypto.randomUUID());
     if (ins.error) return fail(ins.error, "Couldn't submit. Check your connection and try again.");
   }
   return { ok: true, value: null };
@@ -454,6 +507,8 @@ export interface ReviewItem {
 
 export interface ReviewStatus {
   status: "pending" | "approved" | "rejected" | "none";
+  /** The latest submission's id (its files sit under <owner_uid>/<id>/), or null. */
+  verificationId: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   items: ReviewItem[];
@@ -468,13 +523,14 @@ export async function fetchReviewStatus(uid: string): Promise<Res<ReviewStatus |
   if (biz.error) return fail(biz.error, "Couldn't load your review status. Try again.");
   if (!biz.data) return { ok: true, value: null };
   const b = biz.data as { id: string; active: boolean; business_name: string; business_type: string; business_code: string | null };
-  const v = await db.from("business_verifications").select("status, items, submitted_at, reviewed_at").eq("business_id", b.id).order("submitted_at", { ascending: false }).limit(1);
+  const v = await db.from("business_verifications").select("id, status, items, submitted_at, reviewed_at").eq("business_id", b.id).order("submitted_at", { ascending: false }).limit(1);
   if (v.error) return fail(v.error, "Couldn't load your review status. Try again.");
-  const row = (v.data as { status: ReviewStatus["status"]; items: ReviewItem[]; submitted_at: string; reviewed_at: string | null }[])[0];
+  const row = (v.data as { id: string; status: ReviewStatus["status"]; items: ReviewItem[]; submitted_at: string; reviewed_at: string | null }[])[0];
   return {
     ok: true,
     value: {
       status: row?.status ?? "none",
+      verificationId: row?.id ?? null,
       submittedAt: row?.submitted_at ?? null,
       reviewedAt: row?.reviewed_at ?? null,
       items: Array.isArray(row?.items) ? row.items : [],

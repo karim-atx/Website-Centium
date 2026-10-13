@@ -20,7 +20,7 @@ import {
 } from "./lanes";
 
 export interface UploadSlot {
-  /** Storage object path once uploaded (business-verification, private). */
+  /** Storage object path once uploaded (business-verification, private: <owner_uid>/<verification_id>/<file>). */
   path: string | null;
   fileName: string | null;
   sizeBytes: number | null;
@@ -59,6 +59,13 @@ export interface BusinessLaneDraft {
   proof: UploadSlot;
   idFront: UploadSlot;
   idBack: UploadSlot;
+  /**
+   * The submission the uploads are grouped under (business-verification
+   * <owner_uid>/<verification_id>/<file>, and business_verifications.id on
+   * submit). Made on the first upload; cleared once submitted, so a
+   * re-submission after review gets its own.
+   */
+  verificationId: string | null;
   // Step 5
   cash: boolean;
   // Step 6
@@ -97,6 +104,7 @@ export function emptyBusinessDraft(): BusinessLaneDraft {
     proof: emptySlot(),
     idFront: emptySlot(),
     idBack: emptySlot(),
+    verificationId: null,
     cash: true,
     termsAccepted: false,
     reached: null,

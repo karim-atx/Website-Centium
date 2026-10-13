@@ -86,6 +86,11 @@ export default function BusinessSetupPage() {
       const lane = laneForBusinessType(t);
       setBizState((b) => ({ ...b, businessId: row.value!.id, lane: b.lane ?? lane, storeType: b.storeType ?? (lane === "store" ? (t as StoreType) : null) }));
     }
+    // The draft's verification id is the submission it was sent as: files
+    // added while fixing belong to the next one, so they start a new id (and
+    // never replace a file the submitted record points at).
+    const submittedId = st.value?.verificationId;
+    if (submittedId) setBizState((b) => (b.verificationId === submittedId ? { ...b, verificationId: null } : b));
     if (st.value?.status === "approved" && row.ok && row.value) {
       const seen = await hasProgress(row.value.id, "approval_seen");
       if (!seen) {

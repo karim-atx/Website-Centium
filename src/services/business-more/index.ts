@@ -2,7 +2,8 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { prepareForumPhoto } from "../forum/photo";
 import { storagePath } from "../venues/venueLogic";
-import { LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
+import { COVER_MAX_BYTES, LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
+import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "./cover";
 import { fetchGymHours } from "../venues";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
@@ -43,6 +44,8 @@ const fail = <T>(error: { code?: string; message?: string } | null | undefined, 
 
 export interface BusinessFull {
   id: string;
+  /** business_profiles.profile_id: the owner's uid, segment 1 of every business-covers path. */
+  ownerId: string;
   name: string;
   type: BusinessTypeValue;
   bio: string | null;
@@ -65,10 +68,11 @@ export interface BusinessFull {
 }
 
 const BUSINESS_COLUMNS =
-  "id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at";
+  "id, profile_id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at";
 
 type BusinessRow = {
   id: string;
+  profile_id: string;
   business_name: string;
   business_type: BusinessTypeValue;
   bio: string | null;
@@ -87,13 +91,16 @@ type BusinessRow = {
   deactivated_at: string | null;
 };
 
+const storagePublicUrl = (bucket: string, path: string): string => supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+
 const publicUrl = (bucket: string, value: string | null): string | null => {
   const p = storagePath(value);
-  return p ? supabase.storage.from(bucket).getPublicUrl(p).data.publicUrl : null;
+  return p ? storagePublicUrl(bucket, p) : null;
 };
 
 const toBusiness = (r: BusinessRow): BusinessFull => ({
   id: r.id,
+  ownerId: r.profile_id,
   name: r.business_name,
   type: r.business_type,
   bio: r.bio,
@@ -107,7 +114,7 @@ const toBusiness = (r: BusinessRow): BusinessFull => ({
   logoPath: r.logo_url,
   logoUrl: publicUrl("business-logos", r.logo_url),
   coverPath: r.cover_url,
-  coverUrl: publicUrl(COVER_BUCKET, r.cover_url),
+  coverUrl: coverUrlFor(r.cover_url, storagePublicUrl),
   code: r.business_code,
   slug: r.slug,
   active: r.active,
@@ -179,30 +186,30 @@ export async function saveBusiness(businessId: string, patch: BusinessPatch): Pr
 // Logo and cover
 
 /**
- * The business cover (business_profiles.cover_url, B5). B5 adds the column
- * but names no bucket for it, so it goes in the business's own logo bucket
- * under the same <owner_uid>/<file> shape the storage policies, the purge
- * registry and the erasure sweep already know (flagged to the Database
- * session). The logo bucket's 2 MB cap applies: covers are re-drawn to
- * 2048 px JPEG first, which lands well under it.
+ * The logo goes in business-logos under the uploader's own uid (that bucket's
+ * policy is own-prefix). The cover goes in business-covers under the OWNER's
+ * uid (Database 20261120040000; see ./cover): an insider with `marketing` may
+ * write there, and the file is charged to and purged with the owner. Old
+ * covers in business-logos (<uid>/cover-<id>.jpg) keep displaying, and are
+ * removed from there when replaced.
  */
-const COVER_BUCKET = "business-logos";
-
 type ImageKind = "logo" | "cover";
 
 export async function uploadBusinessImage(params: {
   kind: ImageKind;
   uid: string;
+  ownerId: string;
   businessId: string;
   file: File;
   previousPath: string | null;
 }): Promise<Result<{ path: string; url: string | null }>> {
-  const { kind, uid, businessId, file, previousPath } = params;
+  const { kind, uid, ownerId, businessId, file, previousPath } = params;
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
-  if (prepared.file.size > LOGO_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 2 MB." };
-  const bucket = kind === "logo" ? "business-logos" : COVER_BUCKET;
-  const path = logoObjectPath(uid, `${kind === "cover" ? "cover-" : ""}${crypto.randomUUID()}`);
+  if (kind === "logo" && prepared.file.size > LOGO_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 2 MB." };
+  if (kind === "cover" && prepared.file.size > COVER_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
+  const bucket = kind === "logo" ? "business-logos" : BUSINESS_COVER_BUCKET;
+  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : coverObjectPath(ownerId, crypto.randomUUID());
   const up = await supabase.storage.from(bucket).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
   if (up.error) {
     console.warn(`[business-more] ${kind} upload refused:`, up.error.message);
@@ -217,26 +224,36 @@ export async function uploadBusinessImage(params: {
     await supabase.storage.from(bucket).remove([path]);
     return { ok: false, message: "Couldn't upload the photo. Try again." };
   }
-  const old = replacedObject(previousPath, uid, path);
-  if (old) await supabase.storage.from(bucket).remove([old]);
+  await removeOldImage(kind, previousPath, uid, ownerId, path);
   return { ok: true, value: { path, url: publicUrl(bucket, path) } };
+}
+
+/** The object a replaced or removed image leaves behind, removed from wherever it was written. */
+async function removeOldImage(kind: ImageKind, previousPath: string | null, uid: string, ownerId: string, next: string): Promise<void> {
+  if (kind === "logo") {
+    const old = replacedObject(previousPath, uid, next);
+    if (old) await supabase.storage.from("business-logos").remove([old]);
+    return;
+  }
+  const old = coverToRemove(previousPath, { ownerUid: ownerId, callerUid: uid }, next);
+  if (old) await supabase.storage.from(old.bucket).remove([old.path]);
 }
 
 export async function removeBusinessImage(params: {
   kind: ImageKind;
   uid: string;
+  ownerId: string;
   businessId: string;
   previousPath: string | null;
 }): Promise<Result<null>> {
-  const { kind, uid, businessId, previousPath } = params;
+  const { kind, uid, ownerId, businessId, previousPath } = params;
   const written = await db
     .from("business_profiles")
     .update(kind === "logo" ? { logo_url: null } : { cover_url: null })
     .eq("id", businessId)
     .select("id");
   if (written.error) return fail(written.error, "Couldn't remove the photo. Try again.");
-  const old = replacedObject(previousPath, uid, "");
-  if (old) await supabase.storage.from(kind === "logo" ? "business-logos" : COVER_BUCKET).remove([old]);
+  await removeOldImage(kind, previousPath, uid, ownerId, "");
   return { ok: true, value: null };
 }
 
