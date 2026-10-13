@@ -6,124 +6,51 @@ import { getBloodPressureForDay, type BloodPressureReading } from "../../service
 import { classifyBloodPressure } from "../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL } from "../../services/blood-pressure/guidance";
 import { BloodPressureSheet } from "./BloodPressureSheet";
-import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
+import { LogWaterSheet } from "./log/LogWaterSheet";
+import { LogWeightSheet } from "./log/LogWeightSheet";
+import { X, Camera, ChevronRight } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { useOnline } from "../../hooks/useOnline";
+import { textPx, linePx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { clock12 } from "../../utils/time12";
+import { supabase } from "../../../lib/supabase/client";
 
-// Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
-// frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
-// BottomSheet and becomes its own centred floating card, because the
-// reference has all four corners rounded (a bottom sheet only rounds the
-// top). Colors/paths below are pulled from that handoff's own generated
-// markup (CentiumFrame.dc.html) rather than its README prose table where
-// the two disagreed — see the final report for the specific conflicts.
-const quickAmounts = [100, 250, 500] as const;
+// HO1.1 "Add metric popup" (home-handover.md, HO1.1; checklist
+// design-handover/v5-partB/frame-check/HO1.1.md). A centred card over Home.
+//
+// A CHOOSER (V6-129): nothing is saved from this card any more. The inline
+// water tiles and the autosaving weight field are gone; each row opens the
+// shared log sheet from Health B (HE1.1.1 Log water, HE1.7.1 Log weight,
+// HE1.6.1 Log blood pressure), stacked over this card so the card shows the
+// new value when the sheet saves. Add records goes to Medical Records.
 
 /**
- * Mobile v5.1 R3, dark mode (no light islands): the card's colours that are
- * not a token, as [light, dark]. Shell primary.tint #303141 with the
- * #B2A9F4 hairline as a 38% tint on the card; title and close the same
- * violet lifted to 4.5:1 on the shell; section labels text.secondary; grey
- * captions text.tertiary (4.6:1 on the rows); the grey rows surface.soft;
- * the weight field the card, recessed into its row; the water tiles their
- * #0A80E8 blue at 16% on the card with the label lifted to 4.5:1; line icons
- * primary.deep; the confirmation strip primary.tint.2 with primary.deeper
- * text (7.9:1). The bottle glyphs are illustrations and keep their colours.
- * Batch E (E11): the lavender ones follow the colour theme (th-/thi- colours,
- * Centium values unchanged), though the sheet lives with Health: it opens
- * from Home.
+ * The card's colours that are not a shared token, as [light, dark]. Light
+ * values are the handover's light column; the lavender ones follow the colour
+ * theme through the th-/thi- variables (Centium values unchanged). Dark values
+ * are the handover's dark column (shell #1C1F28, border #A991FE, title and
+ * icons #C3B3FB, strip #303141 with #C3B3FB ink). Greys go through the
+ * charcoal tokens in dark so High contrast lifts them; light greys are swapped
+ * for the ink in High contrast below.
  */
 const AM_COLORS = {
-  shell: ["rgb(var(--th-ecebfe))", "rgb(var(--th-303141))"],
-  shellBorder: ["rgb(var(--th-b2a9f4))", "rgb(var(--th-555376))"],
-  title: ["rgb(var(--thi-9c7ef8))", "rgb(var(--thi-a387f8))"],
-  label: ["#655B69", "#B8B3C7"],
-  caption: ["rgb(var(--thi-827c9c))", "rgb(var(--thi-918da0))"],
+  shell: ["rgb(var(--th-ecebfe))", "#1C1F28"],
+  shellBorder: ["rgb(var(--th-b2a9f4))", "rgb(var(--th-a991fe))"],
+  title: ["rgb(var(--thi-9c7ef8))", "rgb(var(--thi-c3b3fb))"],
+  label: ["#655B69", "rgb(var(--c-charcoal-soft))"],
+  caption: ["rgb(var(--thi-827c9c))", "rgb(var(--c-charcoal-soft))"],
+  card: ["#FFFDF9", "#1C1F28"],
   row: ["#F3F3F4", "#242730"],
-  field: ["#FBFBFD", "#1C1F28"],
-  waterTile: ["#E1F2FE", "#192F47"],
-  waterInk: ["#0A80E8", "#3B99ED"],
-  icon: ["rgb(var(--thi-4a22ce))", "rgb(var(--thi-b7abde))"],
-  strip: ["rgb(var(--th-f0f0fd))", "rgb(var(--th-2b2c3a))"],
-  stripInk: ["rgb(var(--thi-1a00e0))", "rgb(var(--thi-c8bfe9))"],
+  icon: ["rgb(var(--thi-4a22ce))", "rgb(var(--thi-c3b3fb))"],
+  strip: ["rgb(var(--th-f0f0fd))", "rgb(var(--th-303141))"],
+  stripInk: ["rgb(var(--thi-1a00e0))", "rgb(var(--thi-c3b3fb))"],
+  alertStrip: ["#FBE7E4", "#3C2A30"],
+  alertInk: ["#C0392B", "#F09A8E"],
 } as const;
 type AmKey = keyof typeof AM_COLORS;
-const amColor = (key: AmKey, dark: boolean): string => AM_COLORS[key][dark ? 1 : 0];
 
-// Traced bottle glyphs, one shared scale per dose (source boxes 61x130,
-// 71x173, 123x194 -> rendered 17x56, 20x56, 35x56px). Outline and cap paths
-// are copied verbatim from the handoff markup, as are the water fill
-// (#BEE3FB) and each water rect (+100ml y61 h70, +250ml y81 h92, +500ml
-// y115 h79).
-const WaterGlyph100: React.FC = () => (
-  <svg width={17} height={56} viewBox="0 0 61 198" fill="none" style={{ display: "block" }}>
-    <defs>
-      <clipPath id="metric-water-100">
-        <path d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25 Z" />
-      </clipPath>
-    </defs>
-    <g transform="translate(0,68)">
-      <path
-        d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25 Z"
-        fill="#FFFFFF"
-      />
-      <rect x={0} y={61} width={61} height={70} fill="#BEE3FB" clipPath="url(#metric-water-100)" />
-      <path
-        d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25"
-        fill="none"
-        stroke="#4A80DC"
-        strokeWidth={5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <rect x={9} y={0} width={43} height={27} rx={6} fill="#4274D7" />
-    </g>
-  </svg>
-);
-
-const WaterGlyph250: React.FC = () => (
-  <svg width={20} height={56} viewBox="0 0 71 198" fill="none" style={{ display: "block" }}>
-    <defs>
-      <clipPath id="metric-water-250">
-        <rect x={3} y={59} width={65} height={111} rx={14} />
-      </clipPath>
-    </defs>
-    <g transform="translate(0,25)">
-      <rect x={3} y={59} width={65} height={111} rx={14} fill="#FFFFFF" />
-      <rect x={0} y={81} width={71} height={92} fill="#BEE3FB" clipPath="url(#metric-water-250)" />
-      <rect x={3} y={59} width={65} height={111} rx={14} fill="none" stroke="#4A80DC" strokeWidth={6} />
-      <path d="M19 28 L19 16 C19 11 23 8 28 8 L46 8 L46 28 Z" fill="#4274D7" />
-      <rect x={41.5} y={3.5} width={23} height={15} rx={7} fill="none" stroke="#4274D7" strokeWidth={7} />
-      <rect x={5} y={22} width={61} height={31} rx={9} fill="#4274D7" />
-    </g>
-  </svg>
-);
-
-const WaterGlyph500: React.FC = () => (
-  <svg width={35} height={56} viewBox="0 0 123 198" fill="none" style={{ display: "block" }}>
-    <defs>
-      <clipPath id="metric-water-500">
-        <rect x={4} y={65} width={93} height={125} rx={16} />
-      </clipPath>
-    </defs>
-    <g transform="translate(0,4)">
-      <rect x={4} y={65} width={93} height={125} rx={16} fill="#FFFFFF" />
-      <rect x={0} y={115} width={101} height={79} fill="#BEE3FB" clipPath="url(#metric-water-500)" />
-      <circle cx={100} cy={22} r={17} fill="none" stroke="#4A80DC" strokeWidth={8} />
-      <rect x={29} y={49} width={43} height={12} fill="#FFFFFF" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
-      <rect x={21} y={19} width={54} height={22} rx={8} fill="#4A80DC" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
-      <rect x={4} y={65} width={93} height={125} rx={16} fill="none" stroke="#4A80DC" strokeWidth={8} />
-      <path d="M77 85 H97 M77 110 H97 M77 136 H97 M77 160 H97" stroke="#4A80DC" strokeWidth={6} strokeLinecap="round" />
-    </g>
-  </svg>
-);
-
-const waterGlyphs: Record<(typeof quickAmounts)[number], React.FC> = {
-  100: WaterGlyph100,
-  250: WaterGlyph250,
-  500: WaterGlyph500,
-};
+const INK = "rgb(var(--c-charcoal))";
 
 const WeightGlyph: React.FC = () => (
   <svg width={28} height={26} viewBox="0 0 93 85" fill="none" style={{ display: "block", flex: "none", color: "var(--am-icon)" }}>
@@ -156,6 +83,15 @@ const CuffGlyph: React.FC = () => (
   </svg>
 );
 
+// OURS (V6-129): the water row's glyph, a line glass with its water level, in
+// the cuff glyph's 27 x 24 box and the same line weight and ink.
+const WaterRowGlyph: React.FC = () => (
+  <svg width={27} height={24} viewBox="0 0 27 24" fill="none" style={{ display: "block", flex: "none", color: "var(--am-icon)" }}>
+    <path d="M6.5 2.5 H20.5 L18.6 21.5 H8.4 Z" stroke="currentColor" strokeWidth={1.4} strokeLinejoin="round" />
+    <path d="M7.6 10 C9.6 11 11.4 9 13.5 10 C15.6 11 17.4 9 19.4 10" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" />
+  </svg>
+);
+
 const CheckCircleGlyph: React.FC = () => (
   <svg
     width={20}
@@ -173,85 +109,108 @@ const CheckCircleGlyph: React.FC = () => (
   </svg>
 );
 
-// V4: weight/body fat/steps/sleep/calories burned are now auto-sourced from
-// Apple/Android Health and no longer manually loggable — Water is the only
-// metric left to quickly add from here (Home's "Add Metric" quick action).
-// V8 (QA 8.0): "should not only log water but be able to add weight of that
-// day. It should reset if it is a new day" — weight gets its own section,
-// pre-filled only if already logged today (weightLoggedDate === today).
-// V10 (QA 10.0): both water and weight now log against whichever day is
-// selected on Home, not always literal "today".
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Today · 7:05 AM", or "Thu 1 Oct · 7:12 AM" for another day (12-hour rule). */
+function readingTime(recordedAt: string, isToday: boolean): string {
+  const d = new Date(recordedAt);
+  const clock = clock12(d);
+  if (isToday) return `Today · ${clock}`;
+  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${clock}`;
+}
+
+/** The local day's [start, end) as ISO instants. */
+function dayBounds(day: string): [string, string] {
+  const [y, m, d] = day.split("-").map(Number);
+  return [new Date(y, m - 1, d).toISOString(), new Date(y, m - 1, d + 1).toISOString()];
+}
+
+type WeightReading = { value: number; recordedAt: string | null };
+
 export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const {
     water,
     waterGoalMl,
-    addWater,
-    metricValues,
-    weightLoggedDate,
     weightByDate,
-    logWeightForToday,
     selectedDate,
     today,
     authUserId,
+    recoverySensitive,
+    recoveryModePending,
+    accessibility,
   } = useApp();
   const dark = useIsDark();
-  const am = (key: AmKey) => amColor(key, dark);
+  const hc = !!accessibility.highContrast;
+  const online = useOnline();
+  const am = (key: AmKey): string => {
+    // High contrast: the light greys (label, captions) become the ink.
+    if (hc && !dark && (key === "label" || key === "caption")) return INK;
+    return AM_COLORS[key][dark ? 1 : 0];
+  };
   const isToday = selectedDate === today;
-  const loggedForDay = weightLoggedDate === selectedDate;
-  // ?? rather than ||, and null-checked: metricValues.weight is null for an
-  // account with no weigh-ins, and String(null) is the string "null" in the
-  // draft field.
-  const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight ?? undefined : undefined);
-  // With no weight logged for the day the field shows the handoff's "70"
-  // (CentiumFrame.dc.html `v2Weight`). Like blood pressure's 120/80, that is
-  // a display default only: autosave waits until the user edits the field,
-  // so 70 is never logged as a weight nobody entered.
-  const initialWeightDraft = () => (loggedForDay && dayWeight !== undefined ? String(dayWeight) : "70");
-  const [weightDraft, setWeightDraft] = useState(initialWeightDraft);
-  const [weightDirty, setWeightDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  // Both halves of this sheet now write to Supabase, so both can fail. One
-  // slot rather than two: only one write is ever in flight at a time.
-  const [error, setError] = useState<string | null>(null);
+  // KEEP-SAFETY K3: weight is never shown, nor read, while recovery-sensitive
+  // mode is on or not yet known.
+  const weightHidden = recoverySensitive || recoveryModePending;
+  const dayWeight = weightByDate[selectedDate];
 
-  // Blood pressure, in public.blood_pressure_readings.
-  //
-  // A ROW THAT OPENS A SHEET, where two autosaving fields used to sit. The
-  // pair opened on "120/80" — a real, normal, classifiable reading in the
-  // fields of somebody who had measured nothing — and saved on a 700 ms
-  // debounce. A reading also carries a pulse, a time, an arm, a position and a
-  // note; autosaving after the numbers would have written a row and then
-  // updated it while the user was still choosing the arm. It is one event,
-  // saved once, when they say so.
+  // Blood pressure, in public.blood_pressure_readings: the day's latest
+  // reading, or nothing.
   const [bpLatest, setBpLatest] = useState<BloodPressureReading | null>(null);
   const [bpSheetOpen, setBpSheetOpen] = useState(false);
+  const [waterSheetOpen, setWaterSheetOpen] = useState(false);
+  const [weightSheetOpen, setWeightSheetOpen] = useState(false);
+
+  // The selected day's weigh-in with its recorded_at (health_metrics, owner
+  // SELECT). undefined = loading; null = none for the day.
+  const [weight, setWeight] = useState<WeightReading | null | undefined>(undefined);
+  const [weightReload, setWeightReload] = useState(0);
 
   useEffect(() => {
-    if (open) {
-      setWeightDraft(initialWeightDraft());
-      setWeightDirty(false);
-      setError(null);
+    if (!open || !authUserId) return;
+    let cancelled = false;
+    void getBloodPressureForDay(authUserId, selectedDate).then((result) => {
+      if (cancelled || !result.ok) return;
+      setBpLatest(result.reading);
+    });
+    return () => {
+      cancelled = true;
       setBpLatest(null);
-      if (authUserId) {
-        let cancelled = false;
-        void getBloodPressureForDay(authUserId, selectedDate).then((result) => {
-          if (cancelled || !result.ok) return;
-          setBpLatest(result.reading);
-        });
-        return () => {
-          cancelled = true;
-        };
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, selectedDate]);
+    };
+  }, [open, authUserId, selectedDate]);
 
+  useEffect(() => {
+    if (!open || weightHidden || !authUserId) return;
+    let cancelled = false;
+    const [from, to] = dayBounds(selectedDate);
+    void supabase
+      .from("health_metrics")
+      .select("value, recorded_at")
+      .eq("user_id", authUserId)
+      .eq("metric_type", "weight")
+      .gte("recorded_at", from)
+      .lt("recorded_at", to)
+      .order("recorded_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const row = data?.[0];
+        if (row) setWeight({ value: Number(row.value), recordedAt: row.recorded_at });
+        // A failed read (or a reading the app holds that the query missed)
+        // never reads as "no weigh-in": the day's value from the app's own
+        // history stands, without a time.
+        else setWeight(dayWeight !== undefined ? { value: dayWeight, recordedAt: null } : null);
+      });
+    return () => {
+      cancelled = true;
+      setWeight(undefined);
+    };
+  }, [open, weightHidden, authUserId, selectedDate, dayWeight, weightReload]);
 
-  // Lock background scroll while the card is open — ported from
-  // BottomSheet's own open-effect now that this sheet no longer renders
-  // through it.
+  // Lock background scroll while the card is open.
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -263,167 +222,195 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     };
   }, [open]);
 
-  const saveWeight = async (value: string) => {
-    const n = Number(value);
-    if (!n || n <= 0) return;
-    setSaving(true);
-    setError(null);
-    const result = await logWeightForToday(n);
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.message ?? "Couldn't save that weight.");
-    }
-  };
-
-  // The handoff drops the old manual "check" save button entirely (the
-  // weight row is input + "kg" suffix only) in favour of the confirmation
-  // strip's "saved automatically" copy, so weight now autosaves on a short
-  // debounce instead of on tap. This is a state-wiring choice, not a fresh
-  // feature: it reuses the same saveWeight()/logWeightForToday() path the
-  // old save button used to call.
-  useEffect(() => {
-    if (!open || !weightDirty) return;
-    if (!weightDraft) return;
-    if (loggedForDay && dayWeight !== undefined && String(dayWeight) === weightDraft) return;
-    const t = setTimeout(() => void saveWeight(weightDraft), 700);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weightDraft, weightDirty, open]);
-
-  const quickAddWater = async (ml: number) => {
-    setSaving(true);
-    setError(null);
-    const result = await addWater(ml);
-    setSaving(false);
-    if (!result.ok) setError(result.message ?? "Couldn't save that.");
-  };
-
-  // Add Records' destination is Medical Records: close this card and open the
-  // Health page's Records sheet (the photo/upload flows live there).
+  // Add records: Medical Records (HE1.9 / HE1.9.2 live there).
   const navigate = useNavigate();
   const handleAddRecords = () => {
     onClose();
-    navigate("/app/health", { state: { openRecords: true } });
+    navigate("/app/health/records");
   };
 
   if (!open) return null;
 
-  const confirmationText = error ? error : saving ? "Saving…" : "Your entries are saved automatically.";
+  const labelStyle: React.CSSProperties = {
+    margin: "0 0 6px",
+    fontSize: textPx(12),
+    lineHeight: linePx(18),
+    fontWeight: 400,
+    letterSpacing: "0.2px",
+    color: am("label"),
+  };
+  const rowTitle: React.CSSProperties = { display: "block", fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 600, color: INK };
+  const rowCaption: React.CSSProperties = { display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 400, color: am("caption") };
+  const chevron = <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />;
+
+  const weightLoading = !weightHidden && weight === undefined && !!authUserId;
+  const weightValue = !weightHidden && weight ? weight : null;
+
+  // The card saves nothing itself any more (V6-129), so the strip has no
+  // failed save of its own to report: each log sheet reports its own. Offline,
+  // the sheets queue an entry and send it when the connection is back.
+  const offline = !online;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* X-07: the same scrim in light and dark. */}
       <div
         className="absolute inset-0 backdrop-blur-[3px] animate-fade-in"
         style={{ background: "rgba(36,31,27,0.4)" }}
         onClick={onClose}
       />
       <div
-        className="relative w-full sm:max-w-md rounded-[20px] shadow-lift overflow-hidden animate-pop flex flex-col max-h-[calc(100dvh-32px)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-metric-title"
+        className="relative w-full sm:max-w-md rounded-[20px] overflow-hidden animate-popup-in flex flex-col max-h-[calc(100dvh-32px)]"
         style={{
           background: am("shell"),
-          border: `1px solid ${am("shellBorder")}`,
-          // The line glyphs above (weight, cuff, check) read these.
+          // Hairlines as inset shadows, not borders: Chromium snaps a border under
+          // 1 px (and 1.09545) to whole pixels; a shadow keeps the literal width.
+          // The padding keeps the content inside the hairline. Light keeps the
+          // lift shadow; dark has none.
+          padding: 0.547723,
+          boxShadow: `inset 0 0 0 0.547723px ${am("shellBorder")}${dark ? "" : ", 0 16px 40px rgb(0 0 0 / 0.20)"}`,
+          // The line glyphs above (weight, cuff, water, check) read these.
           ["--am-icon" as string]: am("icon"),
           ["--am-strip-ink" as string]: am("stripInk"),
         }}
       >
         <div className="relative shrink-0 flex items-center justify-center" style={{ height: 42 }}>
-          <p style={{ margin: 0, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", color: am("title"), whiteSpace: "nowrap" }}>
+          <p
+            id="add-metric-title"
+            style={{
+              margin: 0,
+              fontSize: textPx(20),
+              lineHeight: linePx(30),
+              fontWeight: 800,
+              letterSpacing: "-0.3px",
+              color: am("title"),
+              whiteSpace: "nowrap",
+            }}
+          >
             Add Metric
           </p>
+          {/* 26 ring inside a 44 x 44 target, the ring where the handover draws it. */}
           <button
             onClick={onClose}
             aria-label="Close"
-            className="tap absolute flex items-center justify-center rounded-full"
-            style={{ right: 12, top: 8, width: 26, height: 26, border: `1.5px solid ${am("title")}`, background: "none" }}
+            className="tap absolute flex items-center justify-center"
+            style={{ right: 3, top: -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
           >
-            <X size={12} strokeWidth={2.4} style={{ color: am("title") }} />
+            <span
+              className="flex items-center justify-center rounded-full box-border"
+              style={{ width: 26, height: 26, boxShadow: `inset 0 0 0 1.09545px ${am("title")}` }}
+            >
+              <X size={12} strokeWidth={2.4} style={{ color: am("title") }} />
+            </span>
           </button>
         </div>
 
-        {/* Scrolls only on a screen too short to fit the card; the shell itself
-            stays overflow hidden per the handover. */}
-        <div className="bg-cream-card min-h-0 overflow-y-auto" style={{ borderRadius: 18, padding: 14 }}>
+        {/* Scrolls only on a screen too short to fit the card. */}
+        <div className="min-h-0 overflow-y-auto" style={{ background: am("card"), borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
-            <p style={{ margin: 0, fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>WATER</p>
+            <p style={{ ...labelStyle, margin: 0 }}>WATER</p>
             <div style={{ textAlign: "right" }}>
               <p
                 style={{
                   margin: 0,
                   fontSize: textPx(22),
+                  lineHeight: linePx(22),
                   fontWeight: 800,
-                  lineHeight: 1,
-                  letterSpacing: "-0.02em",
-                  color: "rgb(var(--c-charcoal))",
+                  letterSpacing: "-0.4px",
+                  color: INK,
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {(water / 1000).toFixed(2)}L
               </p>
-              <p style={{ margin: "3px 0 0", fontSize: textPx(10), color: am("caption") }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
+              <p style={{ margin: "3px 0 0", fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: am("caption") }}>
+                of {(waterGoalMl / 1000).toFixed(1)}L goal
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2" style={{ marginBottom: 14 }}>
-            {quickAmounts.map((ml) => {
-              const Glyph = waterGlyphs[ml];
-              return (
-                <button
-                  key={ml}
-                  onClick={() => void quickAddWater(ml)}
-                  disabled={saving}
-                  className="flex flex-col items-center active:scale-[0.97] disabled:opacity-50"
-                  style={{
-                    background: am("waterTile"),
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "10px 0 9px",
-                    gap: 7,
-                    transition: "transform .15s cubic-bezier(.22,1,.36,1)",
-                  }}
-                >
-                  <Glyph />
-                  <span style={{ fontSize: textPx(14), fontWeight: 700, color: am("waterInk") }}>+{ml}ml</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* OURS (V6-129): the water tiles' place, one row in the drawn grey-row
+              pattern, opening the shared Log water sheet. */}
+          <button
+            onClick={() => setWaterSheetOpen(true)}
+            className="tap w-full flex items-center gap-[9px] text-left"
+            style={{ background: am("row"), border: "none", borderRadius: 12, padding: "9px 11px", marginBottom: 14 }}
+          >
+            <WaterRowGlyph />
+            <span className="flex-1 min-w-0">
+              <span style={rowTitle}>Log water</span>
+              <span style={rowCaption}>Add a drink to this day</span>
+            </span>
+            {chevron}
+          </button>
 
           <div className="grid grid-cols-2 gap-[10px]" style={{ marginBottom: 13 }}>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>
-                {isToday ? "WEIGHT TODAY" : "WEIGHT FOR THIS DAY"}
-              </p>
-              <div
-                className="flex items-center gap-2 box-border"
-                style={{ background: am("row"), borderRadius: 12, padding: "0 10px", height: 42 }}
+              <p style={labelStyle}>{isToday ? "WEIGHT TODAY" : "WEIGHT FOR THIS DAY"}</p>
+              <button
+                onClick={() => setWeightSheetOpen(true)}
+                // LogWeightSheet renders nothing in recovery-sensitive mode
+                // (HE1.7.1 K1), so the box does not pretend to open it.
+                disabled={weightHidden}
+                aria-label={weightValue ? undefined : "Log weight"}
+                className="tap flex items-center w-full text-left box-border"
+                style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 10px", height: 42, gap: 8 }}
               >
                 <WeightGlyph />
-                <input
-                  value={weightDraft}
-                  onChange={(e) => {
-                    setWeightDraft(e.target.value.replace(/[^\d.]/g, ""));
-                    setWeightDirty(true);
-                  }}
-                  placeholder="e.g. 70"
-                  inputMode="decimal"
-                  className="flex-1 w-full min-w-0 outline-none"
-                  style={{
-                    background: am("field"),
-                    border: "1px solid rgb(var(--c-charcoal) / 0.06)",
-                    borderRadius: 8,
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    fontSize: textPx(15),
-                    fontWeight: 700,
-                    color: "rgb(var(--c-charcoal))",
-                  }}
-                />
-                <span style={{ fontSize: textPx(11), color: am("caption"), flex: "none" }}>kg</span>
-              </div>
+                <span className="flex-1 min-w-0">
+                  {weightLoading ? (
+                    <span
+                      aria-hidden="true"
+                      className="block animate-pulse"
+                      style={{ width: 40, height: 16, borderRadius: 4, background: "rgb(var(--c-charcoal) / 0.1)" }}
+                    />
+                  ) : weightValue ? (
+                    <>
+                      <span
+                        className="truncate"
+                        style={{
+                          display: "block",
+                          fontSize: textPx(15),
+                          lineHeight: linePx(18),
+                          fontWeight: 700,
+                          color: INK,
+                          whiteSpace: "nowrap",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {weightValue.value.toFixed(1)}
+                        <span style={{ fontSize: textPx(11), fontWeight: 400, color: am("caption"), marginLeft: 2 }}>kg</span>
+                      </span>
+                      {weightValue.recordedAt && (
+                        <span
+                          className="truncate"
+                          style={{
+                            display: "block",
+                            fontSize: textPx(7.5),
+                            lineHeight: linePx(10),
+                            fontWeight: 400,
+                            color: am("caption"),
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {readingTime(weightValue.recordedAt, isToday)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="truncate" style={{ display: "block", fontSize: textPx(15), lineHeight: linePx(18), fontWeight: 700, color: INK, whiteSpace: "nowrap" }}>
+                      Log weight
+                    </span>
+                  )}
+                </span>
+                {!weightHidden && chevron}
+              </button>
             </div>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>ADD RECORDS</p>
+              <p style={labelStyle}>ADD RECORDS</p>
               <button
                 onClick={handleAddRecords}
                 aria-label="Add records"
@@ -432,10 +419,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               >
                 <Camera size={21} strokeWidth={1.8} style={{ color: am("icon"), flex: "none" }} />
                 <span className="flex-1 min-w-0">
-                  <span style={{ display: "block", fontSize: textPx(8.5), fontWeight: 600, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
+                  <span className="truncate" style={{ display: "block", fontSize: textPx(8.5), lineHeight: linePx(12.8), fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>
                     Add Photo / Upload File
                   </span>
-                  <span style={{ display: "block", fontSize: textPx(7.5), color: am("caption"), whiteSpace: "nowrap" }}>
+                  <span className="truncate" style={{ display: "block", fontSize: textPx(7.5), fontWeight: 400, color: am("caption"), whiteSpace: "nowrap" }}>
                     Lab results, reports, etc.
                   </span>
                 </span>
@@ -444,77 +431,67 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             </div>
           </div>
 
-          <p style={{ margin: "0 0 6px", fontSize: textPx(12), letterSpacing: "0.02em", color: am("label") }}>BLOOD PRESSURE</p>
-          {/* THE DAY'S LATEST READING, or nothing. This was two number fields
-              pre-filled with 120/80 for everybody, saving themselves on a
-              debounce. A reading needs a time, an arm and a position to be
-              comparable with the next one, so it gets a sheet of its own. */}
+          <p style={labelStyle}>BLOOD PRESSURE</p>
           <button
             onClick={() => setBpSheetOpen(true)}
             className="tap w-full flex items-center gap-[9px] text-left"
-            style={{ background: am("row"), borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
+            style={{ background: am("row"), border: "none", borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
           >
             <CuffGlyph />
             <span className="flex-1 min-w-0">
               {bpLatest ? (
                 <>
-                  <span style={{ display: "block", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+                  {/* V6-140: the logged state keeps the repo copy (category + pulse). */}
+                  <span style={{ display: "block", fontSize: textPx(15), fontWeight: 700, color: INK }}>
                     {bpLatest.systolic}/{bpLatest.diastolic}
                     <span style={{ fontSize: textPx(11), fontWeight: 500, color: am("caption") }}> mmHg</span>
                   </span>
-                  <span style={{ display: "block", fontSize: textPx(10.5), color: am("label") }}>
+                  <span style={{ display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), color: am("label") }}>
                     {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
                     {bpLatest.pulse != null && ` · ${bpLatest.pulse} bpm`}
                   </span>
                 </>
               ) : (
                 <>
-                  <span style={{ display: "block", fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-                    Add a reading
-                  </span>
-                  <span style={{ display: "block", fontSize: textPx(10.5), color: am("caption") }}>
-                    Nothing recorded for this day
-                  </span>
+                  <span style={rowTitle}>Add a reading</span>
+                  <span style={rowCaption}>Nothing recorded for this day</span>
                 </>
               )}
             </span>
-            <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />
+            {chevron}
           </button>
 
           <div
             className="flex items-center gap-[9px]"
-            style={{ background: am("strip"), borderRadius: 12, padding: "11px 13px" }}
-            role={error ? "alert" : undefined}
+            style={{ background: am(offline ? "alertStrip" : "strip"), borderRadius: 12, padding: "11px 13px" }}
+            role={offline ? "status" : undefined}
           >
-            {/* Same strip, same colour; an error gets an alert glyph so it
-                doesn't read as a confirmation. */}
-            {error ? (
-              <AlertCircle size={20} strokeWidth={1.8} style={{ color: am("stripInk"), flex: "none" }} />
-            ) : (
-              <CheckCircleGlyph />
-            )}
-            <span style={{ fontSize: textPx(12), fontWeight: 600, color: am("stripInk") }}>{confirmationText}</span>
+            {!offline && <CheckCircleGlyph />}
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: am(offline ? "alertInk" : "stripInk") }}>
+              {offline ? "You're offline. Entries save when you reconnect." : "Your entries are saved automatically."}
+            </span>
           </div>
 
           {/* Steps, sleep and calories burned are not manually loggable and
-              nothing syncs them either -- device sync is not built. The old
-              line said they "sync automatically from Apple/Android Health",
-              which no account has ever done. */}
-          <p style={{ margin: "13px 4px 2px", fontSize: textPx(10), lineHeight: 1.5, color: am("caption"), textAlign: "center" }}>
+              nothing syncs them either: device sync is not built. */}
+          <p style={{ margin: "13px 4px 2px", fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: am("caption"), textAlign: "center" }}>
             Steps, sleep and calories burned would come from a connected device. Device sync isn't
             available yet.
           </p>
         </div>
       </div>
 
+      <LogWaterSheet open={waterSheetOpen} onClose={() => setWaterSheetOpen(false)} />
+      <LogWeightSheet
+        open={weightSheetOpen}
+        onClose={() => setWeightSheetOpen(false)}
+        onSaved={() => setWeightReload((n) => n + 1)}
+      />
       <BloodPressureSheet
         open={bpSheetOpen}
         onClose={() => setBpSheetOpen(false)}
-        // ALWAYS ADDS, never edits. The row shows the day's latest reading as
-        // information; tapping it records a NEW one, because the measurement
-        // advice this app now gives says to take two or three a minute apart.
-        // Corrections are made from the list in the detail view, where the
-        // reading being corrected is the one you tapped.
+        // ALWAYS ADDS, never edits: the row shows the day's latest reading as
+        // information; tapping it records a new one.
         editing={null}
         onSaved={() => {
           if (!authUserId) return;

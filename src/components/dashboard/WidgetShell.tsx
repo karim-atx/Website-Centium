@@ -12,8 +12,33 @@ interface WidgetShellProps {
   onGripPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
   /** HO1.1: the tile's grid-column span on the widget board (6 tracks). */
   span?: number;
+  /**
+   * v6 Batch 2 (V6-137 / D3): a 500 ms press on a tile outside edit mode
+   * enters edit mode, a second way in beside the Edit button. A move of more
+   * than 8 px (a scroll) cancels it, and the click that ends the press does
+   * not open the widget.
+   */
+  onLongPress?: () => void;
+  /** OURS-home-widget-motion #8: the tile's place on the board, for the wiggle offset (index x 60 ms). */
+  index?: number;
+  /** OURS-home-widget-motion #11: "enter" fades + scales 0.96 -> 1 over 250 ms; "leave" fades out over 200 ms. */
+  motion?: "enter" | "leave" | null;
   children: React.ReactNode;
 }
+
+const LONG_PRESS_MS = 500;
+const MOTION_CSS = `
+@keyframes hw-wiggle { from { transform: rotate(-1deg) } to { transform: rotate(1deg) } }
+@keyframes hw-chrome-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes hw-tile-in { from { opacity: 0; transform: scale(0.96) } to { opacity: 1; transform: scale(1) } }
+@keyframes hw-tile-out { from { opacity: 1 } to { opacity: 0 } }
+.hw-wiggle { animation: hw-wiggle 260ms ease-in-out infinite alternate; }
+.hw-chrome-in { animation: hw-chrome-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hw-tile-in { animation: hw-tile-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hw-tile-out { animation: hw-tile-out 200ms cubic-bezier(0.22, 1, 0.36, 1) both; pointer-events: none; }
+.reduce-motion .hw-wiggle, .reduce-motion .hw-chrome-in, .reduce-motion .hw-tile-in { animation: none; }
+@media (prefers-reduced-motion: reduce) { .hw-wiggle, .hw-chrome-in, .hw-tile-in { animation: none; } }
+`;
 
 // Iteration 6.2 "Team" canonical widget library: every widget tile has its
 // own flat tinted ground, radius and padding baked into the widget's own
@@ -35,7 +60,7 @@ interface WidgetShellProps {
 // (lift, live reflow, placeholder, auto-scroll, settle) since it needs
 // sibling tile rects and the board's own bounds.
 export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
-  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, children }, ref) => {
+  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, onLongPress, index = 0, motion = null, children }, ref) => {
     // Mobile v5.1 R3, dark mode (no light islands): the edit controls are
     // surface.raised #262932 at the same 92% (charcoal ink 13:1; the remove
     // glyph secondary.deep #7FB3A9, 6.2:1); the grip is the charcoal token.
@@ -53,17 +78,76 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
       },
       onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
     });
+
+    // Long-press (V6-137): timer from the first pointer down; a scroll or a
+    // release before 500 ms is an ordinary tap. Once fired, the release's
+    // click is swallowed so the widget's own screen does not open too.
+    const press = React.useRef<{ timer: number; x: number; y: number } | null>(null);
+    const fired = React.useRef(false);
+    const cancel = () => {
+      if (press.current) window.clearTimeout(press.current.timer);
+      press.current = null;
+    };
+    React.useEffect(() => cancel, []);
+    const pressHandlers =
+      onLongPress && !editMode
+        ? {
+            onPointerDown: (e: React.PointerEvent) => {
+              if (e.button !== 0) return;
+              fired.current = false;
+              cancel();
+              press.current = {
+                x: e.clientX,
+                y: e.clientY,
+                timer: window.setTimeout(() => {
+                  press.current = null;
+                  fired.current = true;
+                  onLongPress();
+                }, LONG_PRESS_MS),
+              };
+            },
+            onPointerMove: (e: React.PointerEvent) => {
+              const p = press.current;
+              if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 8) cancel();
+            },
+            onPointerUp: cancel,
+            onPointerCancel: cancel,
+            onPointerLeave: cancel,
+            onContextMenu: (e: React.MouseEvent) => {
+              if (fired.current || press.current) e.preventDefault();
+            },
+            onClickCapture: (e: React.MouseEvent) => {
+              if (fired.current) {
+                fired.current = false;
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            },
+          }
+        : {};
+
     return (
       <div
         ref={ref}
+        {...pressHandlers}
         className={clsx(
           "relative min-w-0 w-full rounded-[15px] transition-transform",
-          editMode && "ring-2 ring-team-nav-accent/30"
+          editMode && "ring-2 ring-team-nav-accent/30 hw-wiggle",
+          motion === "enter" && "hw-tile-in",
+          motion === "leave" && "hw-tile-out"
         )}
-        style={span ? { gridColumn: `span ${span}` } : undefined}
+        style={{
+          ...(span ? { gridColumn: `span ${span}` } : {}),
+          ...(editMode ? { animationDelay: `${index * 60}ms` } : {}),
+          // A long press must not select text or raise the iOS callout.
+          WebkitTouchCallout: "none",
+          WebkitUserSelect: "none",
+          userSelect: "none",
+        }}
       >
+        <style href="home-board-motion" precedence="default">{MOTION_CSS}</style>
         {editMode && (
-          <>
+          <span className="hw-chrome-in">
             <div style={{ position: "absolute", top: 7, right: 7, display: "flex", gap: 4, zIndex: 10 }}>
               <button
                 {...control(onResize)}
@@ -140,13 +224,15 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
               />
               <GripVertical size={12} />
             </div>
-          </>
+          </span>
         )}
         {/* THE TILE ITSELF IS INERT WHILE EDITING: a tap on it (including one
             meant for a control that a resize has just moved) never opens the
-            widget's screen or sheet. pointer-events is inherited, and
-            display: contents keeps the tile's own layout untouched. */}
-        <div style={editMode ? { display: "contents", pointerEvents: "none" } : { display: "contents" }}>{children}</div>
+            widget's screen or sheet. pointer-events is inherited.
+            OURS-home-widget-motion #8: while editing, the tile wiggles
+            (rotate -1deg <-> 1deg, 260 ms, ease-in-out, offset index x 60 ms);
+            none under Reduce motion. */}
+        <div style={editMode ? { pointerEvents: "none" } : undefined}>{children}</div>
       </div>
     );
   }

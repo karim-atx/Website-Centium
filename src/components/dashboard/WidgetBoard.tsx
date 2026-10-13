@@ -3,10 +3,14 @@ import { useApp } from "../../context/AppContext";
 import { WidgetShell } from "./WidgetShell";
 import { HomeWidget } from "./HomeWidget";
 import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
-import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Pencil, Check, Plus, Footprints, Droplet, Moon, Utensils, Dumbbell, CircleCheck, BookOpen, HeartPulse } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { createEditTapGuard, dropSlot, storedMove, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
+import { CycleCalendarIcon, WeightScaleIcon } from "../icons/PartBIcons";
+import { LotusGlyph } from "./LotusGlyph";
+import { useIsDark } from "../../hooks/useIsDark";
+import { textPx, linePx } from "../../theme/textSize";
+import { useWidgetConfigSync } from "./useWidgetConfigSync";
 
 // HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
 function useWidgetColumns() {
@@ -19,22 +23,81 @@ function useWidgetColumns() {
   return columns;
 }
 
-// V4: Body Fat removed as a Home widget option per QA (repeated from the
-// V1 pass — it stays as a Health-page metric, just not offered here).
-const allWidgetTypes: { type: WidgetType; label: string; icon: LucideIcon }[] = [
-  { type: "steps", label: "Steps", icon: Footprints },
-  { type: "weight", label: "Weight", icon: Scale },
-  { type: "water", label: "Water", icon: Droplet },
-  { type: "sleep", label: "Sleep", icon: Moon },
-  { type: "nutrition", label: "Nutrition", icon: Utensils },
-  { type: "workout", label: "Workout", icon: Dumbbell },
+type PickerIcon = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
+const Lotus: PickerIcon = ({ size = 12, style }) => <LotusGlyph size={size} stroke={style?.color as string | undefined} />;
+
+/**
+ * OURS-home-shell "Add widget picker": one row per widget type in the
+ * widget's own tint, its header tile and icon (the same as the widget), the
+ * name 13.5/18 600 and "Small or large" 11/15 400, and S / L chips.
+ * V4: Body Fat is not offered (a Health-page metric only). Tints and inks:
+ * [light, dark] from each HO1 table; Water and Food keep their repo tints.
+ */
+const allWidgetTypes: { type: WidgetType; label: string; icon: PickerIcon; tint: [string, string]; ink: [string, string] }[] = [
+  { type: "steps", label: "Steps", icon: Footprints, tint: ["#EAF1E4", "rgb(var(--metric-steps-tint))"], ink: ["#55733F", "rgb(var(--metric-steps-main))"] },
+  { type: "weight", label: "Weight", icon: WeightScaleIcon, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--metric-weight-tint))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--metric-weight-main))"] },
+  { type: "water", label: "Water", icon: Droplet, tint: ["rgba(143,192,232,.17)", "rgba(143,192,232,.17)"], ink: ["#3F6F98", "#9CC8EE"] },
+  { type: "sleep", label: "Sleep", icon: Moon, tint: ["#E8F2F0", "rgb(var(--metric-sleep-tint))"], ink: ["#3E716D", "rgb(var(--metric-sleep-main))"] },
+  { type: "nutrition", label: "Food", icon: Utensils, tint: ["rgb(var(--th-aea1dc) / .16)", "rgb(var(--th-aea1dc) / .16)"], ink: ["rgb(var(--c-primary-deep-text))", "rgb(var(--c-primary-deep-text))"] },
+  { type: "workout", label: "Workout", icon: Dumbbell, tint: ["#EDEFF3", "rgb(var(--c-widget-workout-tint))"], ink: ["#5F6878", "#B8C0CE"] },
   // V10 (QA 10.0): "Add a heart rate widget that syncs with the one found
   // in health metrics."
-  { type: "heartRate", label: "Heart Rate", icon: HeartPulse },
-  { type: "habits", label: "Habits", icon: CheckSquare },
-  { type: "journal", label: "Journal", icon: BookOpen },
-  { type: "meditation", label: "Meditation", icon: Sparkles },
+  { type: "heartRate", label: "Heart rate", icon: HeartPulse, tint: ["#F7E2E2", "rgb(var(--metric-heart-rate-tint))"], ink: ["#962F2F", "rgb(var(--metric-heart-rate-main))"] },
+  { type: "habits", label: "Habits", icon: CircleCheck, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--thi-c3b3fb))"] },
+  { type: "journal", label: "Journal", icon: BookOpen, tint: ["#F8F0DC", "#3A342C"], ink: ["#8A6418", "#DCBB7F"] },
+  { type: "meditation", label: "Meditation", icon: Lotus, tint: ["#E3F0EC", "#293339"], ink: ["#3F7A6B", "#93C1B9"] },
+  // HO1.W11: only offered when the cycle section is offered and the tracker is on.
+  { type: "cycle", label: "Cycle", icon: CycleCalendarIcon, tint: ["#FBEDF2", "rgb(var(--metric-cycle-tint))"], ink: ["#B8607F", "rgb(var(--metric-cycle-main))"] },
 ];
+
+/** One picker row (OURS-home-shell picker #2-#3). The S / L chips choose the size; the row adds it. */
+const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean; onAdd: (size: WidgetSize) => void }> = ({ item, dark, onAdd }) => {
+  const [size, setSize] = useState<WidgetSize>("small");
+  const ink = item.ink[dark ? 1 : 0];
+  return (
+    <div className="flex items-center" style={{ height: 56, padding: "0 14px", gap: 10, borderRadius: 15, background: item.tint[dark ? 1 : 0] }}>
+      <button type="button" onClick={() => onAdd(size)} className="tap flex-1 min-w-0 flex items-center text-left self-stretch" style={{ gap: 10 }}>
+        <span className="shrink-0 grid place-items-center" style={{ width: 20, height: 20, borderRadius: 6, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} aria-hidden>
+          <item.icon size={12} strokeWidth={1.5} style={{ color: ink }} />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+            {item.label}
+          </span>
+          <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(15), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
+            Small or large
+          </span>
+        </span>
+      </button>
+      <span className="flex shrink-0" style={{ gap: 6 }} role="radiogroup" aria-label={`${item.label} widget size`}>
+        {(["small", "large"] as const).map((s) => {
+          const on = size === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={s === "small" ? "Small" : "Large"}
+              onClick={() => setSize(s)}
+              className="tap grid place-items-center rounded-full"
+              style={{
+                width: 44,
+                height: 28,
+                fontSize: textPx(11),
+                fontWeight: 700,
+                color: on ? ink : "rgb(var(--c-charcoal-faint))",
+                background: dark ? (on ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)") : on ? "#FFFFFF" : "rgba(255,255,255,0.6)",
+              }}
+            >
+              {s === "small" ? "S" : "L"}
+            </button>
+          );
+        })}
+      </span>
+    </div>
+  );
+};
 
 // Handoff §7b — a drag in progress. Kept out of `widgets`/`visibleWidgets`
 // (the persisted order) until drop; only what's needed to render the
@@ -62,7 +125,10 @@ interface DragInfo {
 export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   onWaterClick,
 }) => {
-  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, recoverySensitive } = useApp();
+  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, recoverySensitive, cycleOffered, cycleSettings } = useApp();
+  const dark = useIsDark();
+  // V6-141 D22: the board lives in widget_configs (platform web).
+  useWidgetConfigSync();
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragRender, setDragRender] = useState<DragRenderState | null>(null);
@@ -74,12 +140,37 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   // measurement features." The widget itself is only hidden from view (not
   // removed from the underlying board), so turning the mode back off
   // restores it exactly where it was, per "without losing any data."
+  // MO11 / HO1.W11: the Cycle widget is hidden the same way while the cycle
+  // section is not offered to this profile, and offered in the picker only
+  // when the tracker is on.
   const visibleWidgets = widgets.filter(
-    (w) => (w.type as string) !== "bodyFat" && !(recoverySensitive && w.type === "weight")
+    (w) => (w.type as string) !== "bodyFat" && !(recoverySensitive && w.type === "weight") && !(w.type === "cycle" && !cycleOffered)
   );
   const availableToAdd = allWidgetTypes.filter(
-    (t) => !widgets.some((w) => w.type === t.type) && !(recoverySensitive && t.type === "weight")
+    (t) =>
+      !widgets.some((w) => w.type === t.type) &&
+      !(recoverySensitive && t.type === "weight") &&
+      !(t.type === "cycle" && !(cycleOffered && cycleSettings?.trackerEnabled))
   );
+
+  // OURS-home-widget-motion #11: a tile added after the board first drew
+  // fades and scales in (250 ms); a removed one fades out (200 ms) before the
+  // grid reflows.
+  const seenIds = useRef<Set<string> | null>(null);
+  const [entering, setEntering] = useState<Set<string>>(() => new Set());
+  const [leaving, setLeaving] = useState<string | null>(null);
+  useEffect(() => {
+    if (seenIds.current === null) {
+      seenIds.current = new Set(widgets.map((w) => w.id));
+      return;
+    }
+    const added = widgets.filter((w) => !seenIds.current!.has(w.id)).map((w) => w.id);
+    widgets.forEach((w) => seenIds.current!.add(w.id));
+    if (added.length === 0) return;
+    setEntering((prev) => new Set([...prev, ...added]));
+    const t = window.setTimeout(() => setEntering((prev) => new Set([...prev].filter((id) => !added.includes(id)))), 260);
+    return () => window.clearTimeout(t);
+  }, [widgets]);
 
   // ---- Handoff §7b: pointer-events touch drag (native HTML5 draggable
   // never fires on touch, so it's replaced entirely). Only the grip handle
@@ -257,7 +348,12 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
     resizeWidget(widget.id, widget.size === "small" ? "large" : "small");
   };
   const removeTile = (id: string) => {
-    if (tapGuard.allowed(Date.now())) removeWidget(id);
+    if (!tapGuard.allowed(Date.now()) || leaving) return;
+    setLeaving(id);
+    window.setTimeout(() => {
+      removeWidget(id);
+      setLeaving(null);
+    }, 200);
   };
 
   const handleGripPointerDown = useCallback(
@@ -343,11 +439,16 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
 
   return (
     <div>
-      {/* Iteration 6 "Team" §1.5: context-only, token restyle — same
-          mechanic, recoloured to the fixed nav-accent lavender (not the
-          theme-reactive `primary`) and the literal "Today" copy. */}
+      {/* OURS-home-shell H8: the HE1 caps-label pattern (HE1 #4), 9.5/14.3
+          700 ls 1.9 #9A94B3 (dark #8A8698); the Edit button stays (V6-137:
+          long-press is a second way in). */}
       <div className="flex items-center justify-between mb-[9px]">
-        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-primary-deep-text/60 dark:text-primary-deep-text/[0.72]">Today</p>
+        <p
+          className="uppercase"
+          style={{ margin: 0, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: dark ? "rgb(var(--th-8a8698))" : "rgb(var(--th-9a94b3))" }}
+        >
+          Today
+        </p>
         <button
           onClick={() => setEditMode((v) => !v)}
           className="tap flex items-center gap-[5px] text-[10.5px] font-bold text-team-nav-accent"
@@ -389,6 +490,9 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
               size={item.size}
               span={spans[i]}
               editMode={editMode}
+              index={i}
+              motion={leaving === item.id ? "leave" : entering.has(item.id) ? "enter" : null}
+              onLongPress={() => setEditMode(true)}
               onRemove={() => removeTile(item.id)}
               onResize={() => resizeTile(item)}
               onGripPointerDown={(e) => handleGripPointerDown(e, item)}
@@ -408,11 +512,17 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
               if (tapGuard.allowed(Date.now())) setPickerOpen(true);
             }}
             disabled={availableToAdd.length === 0}
-            style={{ gridColumn: `span ${spans[spans.length - 1]}` }}
-            className="tap h-[114px] rounded-[15px] border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 text-charcoal-faint disabled:opacity-40"
+            // OURS-home-shell H10: dashed 1.09545 #241F1B@18% (the HO1.W6·e dot
+            // outline), Plus 20 and "Add widget" 12/700 in #5F5093.
+            style={{
+              gridColumn: `span ${spans[spans.length - 1]}`,
+              border: `1.09545px dashed ${dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)"}`,
+              color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-5f5093))",
+            }}
+            className="tap h-[114px] rounded-[15px] flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
           >
             <Plus size={20} />
-            <span className="text-xs font-semibold">Add widget</span>
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 700 }}>Add widget</span>
           </button>
         )}
       </div>
@@ -440,22 +550,20 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
       )}
 
       <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Add a widget">
-        <div className="space-y-2">
+        <div className="flex flex-col" style={{ gap: 8 }}>
           {availableToAdd.map((t) => (
-            <button
+            <PickerRow
               key={t.type}
-              onClick={() => {
-                addWidget(t.type, "small");
+              item={t}
+              dark={dark}
+              onAdd={(size) => {
+                addWidget(t.type, size);
                 setPickerOpen(false);
               }}
-              className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
-            >
-              <t.icon size={18} className="text-primary" />
-              <span className="text-sm font-semibold text-charcoal">{t.label}</span>
-            </button>
+            />
           ))}
           {availableToAdd.length === 0 && (
-            <p className="text-center text-sm text-charcoal-faint py-6">
+            <p className="text-center py-6" style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
               All available widgets are already on your board.
             </p>
           )}
