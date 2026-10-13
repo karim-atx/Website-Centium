@@ -1,9 +1,10 @@
 import { supabase } from "../../../lib/supabase/client";
 import { fetchMyTeam } from "../../services/business-team";
-import { getCalendar, type ClientCalendarEvent } from "../../services/calendar";
+import { getCalendar } from "../../services/calendar";
 import { fetchClassRoster, fetchVenueMembers } from "../../services/venues/console";
 import { shiftDate, todayLocal } from "../../utils/date";
 import { startOfWeekISO } from "../../utils/week";
+import type { DashBusiness, DashClass, DashLoad, DashRaw } from "./dashboardTypes";
 
 // THE DASHBOARD'S READS, all real rows on the local stack (no mock figures).
 //
@@ -42,81 +43,10 @@ interface Loose {
 }
 const db = supabase as unknown as Loose;
 
+export type { DashBusiness, DashBooking, DashClass, DashCode, DashLoad, DashMember, DashRaw, DashSeats } from "./dashboardTypes";
+
 /** The dashboard's onboarding_progress item for the setup card (BU4-08). */
 export const SETUP_ITEM = "dashboard_setup";
-
-export interface DashBusiness {
-  id: string;
-  name: string;
-  type: string;
-  active: boolean;
-  perk: string | null;
-}
-
-export interface DashClass {
-  id: string;
-  title: string;
-  date: string;
-  start: string;
-  end: string;
-  cap: number;
-  professionalId: string | null;
-  createdAt: string;
-}
-
-export interface DashBooking {
-  classId: string;
-  clientId: string;
-  createdAt: string;
-}
-
-export interface DashMember {
-  id: string;
-  memberId: string;
-  planId: string | null;
-  invitedAt: string;
-  respondedAt: string | null;
-  accepted: boolean | null;
-  endedAt: string | null;
-}
-
-export interface DashCode {
-  redeemed: boolean;
-  redeemedBy: string | null;
-  expiresAt: string;
-}
-
-export interface DashSeats {
-  blocks: number;
-  perUnit: number;
-  capacity: number;
-  used: number;
-}
-
-export interface DashRaw {
-  /** null: this account has no business_profiles row yet (a new business). */
-  business: DashBusiness | null;
-  classes: DashClass[];
-  bookings: DashBooking[];
-  members: DashMember[];
-  planNames: Record<string, string>;
-  codes: DashCode[];
-  plansCount: number;
-  productsCount: number;
-  discountsCount: number;
-  seats: DashSeats | null;
-  team: Record<string, string>;
-  events: ClientCalendarEvent[];
-  accessQr: boolean;
-  storeDeliveryOrPickup: boolean;
-  dismissed: boolean;
-  /** Waitlist entries per class for today's classes (venue_class_roster). */
-  waitlists: Record<string, number>;
-  /** Active memberships ending in the next 7 days (venue_members), null without a venue. */
-  renewalsDue: number | null;
-  /** Reads that failed but did not stop the page (shown as pending, never as zero). */
-  partial: string[];
-}
 
 const ok = <T>(r: { data: T | null; error: Err }, what: string, partial: string[], fallback: T): T => {
   if (r.error) {
@@ -127,7 +57,6 @@ const ok = <T>(r: { data: T | null; error: Err }, what: string, partial: string[
   return r.data ?? fallback;
 };
 
-export type DashLoad = { ok: true; raw: DashRaw } | { ok: false; message: string };
 
 /**
  * Everything the Dashboard shows, in one pass. The business row and the

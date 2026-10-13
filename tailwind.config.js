@@ -395,34 +395,8 @@ export default {
           "0%": { opacity: 1 },
           "100%": { opacity: 0 },
         },
-        // Design refinement §3a/3b (Welcome, handoff canvas frames): the
-        // real mark blooms with a squash/overshoot while two brand-colour
-        // rings expand behind it and a conic-gradient sweep masked to the
-        // mark's own shape rotates across it — keyframes taken verbatim
-        // from the canvas's embedded <style>.
-        "cent-bloom": {
-          "0%": { transform: "scale(1) rotate(0)" },
-          "18%": { transform: "scale(0.93) rotate(-5deg)" },
-          "52%": { transform: "scale(1.14) rotate(2deg)" },
-          "100%": { transform: "scale(1.55) rotate(0)", opacity: 0 },
-        },
-        "cent-ring-a": {
-          "0%": { transform: "scale(0.8)", opacity: 0.5 },
-          "100%": { transform: "scale(3)", opacity: 0 },
-        },
-        "cent-ring-b": {
-          "0%": { transform: "scale(0.8)", opacity: 0.38 },
-          "100%": { transform: "scale(4.2)", opacity: 0 },
-        },
-        "cent-sweep": {
-          "0%": { transform: "rotate(-30deg)", opacity: 0 },
-          "22%": { opacity: 1 },
-          "100%": { transform: "rotate(400deg)", opacity: 0 },
-        },
-        "cent-out": {
-          "0%": { opacity: 1, transform: "translateY(0)" },
-          "100%": { opacity: 0, transform: "translateY(14px)" },
-        },
+        // The v6 Welcome (BU1 OB-033…050) replaced the launch rings, bloom,
+        // sweep and fade-out; only the breathing pulse stays (marketing NotFound).
         "cent-breathe": {
           "0%, 100%": { transform: "scale(1)" },
           "50%": { transform: "scale(1.035)" },
@@ -553,11 +527,6 @@ export default {
         "logo-launch-ring": "logo-launch-ring 0.85s cubic-bezier(0,0,0.2,1) both",
         "logo-launch-ring-2": "logo-launch-ring-2 0.95s cubic-bezier(0,0,0.2,1) 0.1s both",
         "welcome-fade-out": "welcome-fade-out 0.5s ease 0.15s both",
-        "cent-bloom": "cent-bloom 0.95s cubic-bezier(0.34,1.4,0.64,1) both",
-        "cent-ring-a": "cent-ring-a 0.9s cubic-bezier(0,0,0.2,1) both",
-        "cent-ring-b": "cent-ring-b 1.05s cubic-bezier(0,0,0.2,1) 0.12s both",
-        "cent-sweep": "cent-sweep 0.95s cubic-bezier(0.4,0,0.4,1) both",
-        "cent-out": "cent-out 0.5s ease 0.2s both",
         "cent-breathe": "cent-breathe 5s ease-in-out infinite",
         // QA 12.0: "the animation in reaching the [water] goal is
         // distracting, please reduce frequency substantially" — same pulse,

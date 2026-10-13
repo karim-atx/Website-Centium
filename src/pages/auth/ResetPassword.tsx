@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../../components/ui/Button";
-import { Lock, Eye, EyeOff, Check, X, ShieldCheck } from "lucide-react";
+import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { updatePassword } from "../../services/auth";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import { CodeBoxes } from "../../components/ui/CodeBoxes";
-import {
-  passwordChecks,
-  meetsPasswordRule,
-  passwordStrength,
-  shouldWarnPasswordMismatch,
-} from "../../utils/password";
-
-const inputClass =
-  "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
+import { meetsPasswordRule, shouldWarnPasswordMismatch } from "../../utils/password";
+import { ObFooter, ObHeader, ObLockup, ObPage, ObTitle, ObToast, useObToast } from "../onboarding/shell/ObShell";
+import { ObField, ObStatus, ObStrength } from "../onboarding/shell/ObBlocks";
+import { CI, LF, OB } from "../onboarding/shell/visuals";
 
 /**
  * The destination of a password-reset link, and the only thing a recovery
@@ -25,11 +19,16 @@ const inputClass =
  * Reached two ways: the emailed link lands here directly (see
  * passwordResetRedirectUrl), and the /app guards bounce a pending recovery
  * back here if the user navigates elsewhere before finishing.
+ *
+ * v6 (OURS-reset-password): restyled in the shared-onboarding language
+ * (Create your account fields and strength card, Check your email info card,
+ * the status block for a link that didn't open, the dark toast when done).
+ * Behaviour unchanged: recovery session only, two-factor first when the
+ * account has it, the same password rule as sign-up, "Cancel and sign out".
  */
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const { authReady, authUserId, recoveryPending, clearRecovery, signOut, refreshMfaState } =
-    useApp();
+  const { authReady, authUserId, recoveryPending, clearRecovery, signOut, refreshMfaState } = useApp();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,26 +39,14 @@ export default function ResetPassword() {
   const singleFlight = useSingleFlight();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [toast, showToast] = useObToast(2000);
 
   // --- the second factor, which has to come first --------------------------
   //
-  // WITHOUT THIS, TWO-FACTOR IS A LOCKOUT. Measured end to end against a real
-  // emailed reset link: a recovery session for an enrolled account arrives at
-  // aal1 with amr ["recovery"], and updateUser({ password }) is REFUSED with
-  // "AAL2 session is required to update email or password when MFA is
-  // enabled." The old screen would have shown that sentence, the password
-  // would never have changed, and recoveryPending — which only clears on a
-  // successful update — would have kept bouncing every /app route back here.
-  // Across reloads and browser restarts. Permanently.
-  //
-  // The fix is the order, and it is small: challenge, reach aal2, then
-  // update. Also measured — challengeAndVerify on the recovery session
-  // returns amr ["totp", "recovery"], after which the password write
-  // succeeds.
-  //
-  // ONLY WHEN THERE IS A FACTOR. An account without one stays at aal1/aal1,
-  // `needsMfa` never turns on, and this screen behaves exactly as it did
-  // before any of this existed.
+  // WITHOUT THIS, TWO-FACTOR IS A LOCKOUT: a recovery session for an enrolled
+  // account arrives at aal1, and updateUser({ password }) is refused below
+  // aal2. So: challenge, reach aal2, then update. Only when there is a
+  // factor; an account without one behaves exactly as before.
   const [mfaChecked, setMfaChecked] = useState(false);
   const [mfaFactor, setMfaFactor] = useState<{ id: string; name: string | null } | null>(null);
   const [mfaCleared, setMfaCleared] = useState(false);
@@ -71,17 +58,11 @@ export default function ResetPassword() {
     void getMfaStatus().then((result) => {
       if (cancelled) return;
       setMfaChecked(true);
-      if (!result.ok) {
-        // A failed read must not block the reset. If a factor really is
-        // required the server refuses the password write anyway, and that
-        // error now reads as "confirm your two-factor code first" rather
-        // than naming an internal concept.
-        return;
-      }
+      // A failed read must not block the reset: the server still refuses a
+      // write that needs a factor, and that error reads clearly.
+      if (!result.ok) return;
       const factor = result.data.factors[0];
-      if (result.data.pending && factor) {
-        setMfaFactor({ id: factor.id, name: factor.friendly_name ?? null });
-      }
+      if (result.data.pending && factor) setMfaFactor({ id: factor.id, name: factor.friendly_name ?? null });
     });
     return () => {
       cancelled = true;
@@ -101,22 +82,14 @@ export default function ResetPassword() {
       setError(result.message);
       return;
     }
-    // THE GUARD HAS TO BE TOLD, and forgetting this cost a second challenge.
-    // Measured: the session reached aal2 here and the password write went
-    // through, but AppContext had resolved mfaPending back when this page
-    // loaded at aal1 — so /app, one navigation later, asked for a code the
-    // user had just given. Everything else that verifies a factor refreshes
-    // the context; this screen is the one that verifies outside the guard.
+    // THE GUARD HAS TO BE TOLD, or /app asks for a code the user just gave.
     await refreshMfaState();
     setBusy(false);
     setMfaCleared(true);
   };
 
   const mismatch = shouldWarnPasswordMismatch(password, confirmPassword, confirmBlurred);
-  const { passed: passedChecks, label: strengthLabel, color: strengthColor } = passwordStrength(password);
-
-  const canSubmit =
-    !busy && meetsPasswordRule(password) && confirmPassword === password && !!authUserId;
+  const canSubmit = !busy && meetsPasswordRule(password) && confirmPassword === password && !!authUserId;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -124,237 +97,180 @@ export default function ResetPassword() {
     setBusy(true);
     const result = await updatePassword(password);
     setBusy(false);
-
     if (!result.ok) {
       setError(result.message ?? "Could not update your password.");
       return;
     }
-
-    // Only now, once the password has actually changed, does the session stop
-    // being a recovery session and become an ordinary one. Goes through the
-    // context so the guards' state clears too — clearing storage alone left
-    // them redirecting back here forever.
+    // Only now does the session stop being a recovery session. Through the
+    // context so the guards' state clears too.
     clearRecovery();
     setDone(true);
+    showToast("Password updated. Taking you to Centium…");
     setTimeout(() => navigate("/app", { replace: true }), 900);
   };
 
-  if (!authReady) {
+  const cancel = () => {
+    clearRecovery();
+    void signOut();
+    navigate("/app/onboarding", { replace: true });
+  };
+
+  const header = <ObHeader margin="nobar" />;
+
+  if (!authReady || (authUserId && !mfaChecked && !done)) {
+    // Held rather than showing the password form first: an enrolled user
+    // would otherwise see the form replaced under them a moment later.
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-cream">
-        <p className="text-sm text-charcoal-faint">Loading…</p>
-      </div>
+      <ObPage backdrop>
+        <div className="ob-body">
+          <div className="ob-head" data-m="nobar" style={{ justifyContent: "center" }}>
+            <ObLockup />
+          </div>
+          <p role="status" style={{ textAlign: "center", fontSize: 13, lineHeight: "19.5px", fontWeight: 500, color: "var(--ob-faint)" }}>
+            {authReady ? "Checking your account…" : "Loading…"}
+          </p>
+        </div>
+      </ObPage>
     );
   }
 
-  // No session here means the code exchange never happened. Under PKCE the
-  // verifier lives in the browser that requested the reset, so opening the
-  // link somewhere else — another browser, or an email client's in-app
-  // browser — cannot complete. Saying so beats a blank screen.
+  // No session means the code exchange never happened: under PKCE the
+  // verifier lives in the browser that requested the reset.
   if (!authUserId) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-cream px-6 text-center">
-        <h1 className="font-display text-2xl font-bold text-charcoal mb-2">This link didn't open</h1>
-        <p className="text-sm text-charcoal-soft max-w-sm mb-6">
-          Password reset links only work in the same browser you requested them from. Open
-          the link there, or request a new one.
-        </p>
-        <Button onClick={() => navigate("/app/onboarding", { replace: true })}>
-          Back to sign in
-        </Button>
-      </div>
+      <ObPage>
+        <div className="ob-body ob-step-in">
+          {header}
+          <ObStatus
+            vis={[LF(50, 82, 0.13, -45, OB.leaf, 0.5), CI(50, 50, 40, "none", { s: OB.high, sw: 1.5, o: 0.5 })]}
+            eyebrow="Link expired"
+            eyebrowColor="var(--ob-high)"
+            title="This link didn't open"
+            body="Password reset links only work in the same browser you requested them from. Open the link there, or request a new one."
+          />
+        </div>
+        <ObFooter
+          primary={{ label: "Back to sign in", onClick: () => navigate("/app/onboarding?auth=signin", { replace: true }) }}
+          link={{ node: "Send a new link", onClick: () => navigate("/app/onboarding?auth=forgot", { replace: true }) }}
+        />
+      </ObPage>
+    );
+  }
+
+  if (needsMfa) {
+    return (
+      <ObPage backdrop>
+        <form
+          id="ob-reset-mfa"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!busy && mfaCode.length === 6) void singleFlight(submitMfa);
+          }}
+          className="ob-body ob-step-in"
+        >
+          {header}
+          <ObTitle
+            variant="intro"
+            eyebrow="Reset password"
+            title="Confirm it's you"
+            subtitle="This account uses two-factor authentication. Enter a code before choosing a new password."
+          />
+          <div className="ob-info" style={{ marginBottom: 16 }}>
+            <ShieldCheck size={16} />
+            <span>{mfaFactor?.name ? `Enter the code from ${mfaFactor.name}` : "Enter the code from your authenticator app"}</span>
+          </div>
+          {/* Six boxes (Foundations 2.5), as on every two-factor screen. */}
+          <CodeBoxes
+            value={mfaCode}
+            onChange={(v) => {
+              setMfaCode(v);
+              setError(null);
+            }}
+            error={!!error}
+            disabled={busy}
+            autoFocus
+            label="Six-digit authentication code"
+          />
+          {error && (
+            <div className="ob-help" data-err="true" style={{ justifyContent: "center" }}>
+              <span role="alert" style={{ flex: "none", textAlign: "center" }}>
+                {error}
+              </span>
+            </div>
+          )}
+          {/* No backup path to offer from here: says what actually happens. */}
+          <p style={{ fontSize: 11.5, lineHeight: "17px", color: "var(--ob-faint)", textAlign: "center", marginTop: 16 }}>
+            Lost access to your authenticator? Contact Centium support. Resetting your password alone won't get you back in.
+          </p>
+        </form>
+        <ObFooter
+          primary={{ label: busy ? "Checking…" : "Continue", type: "submit", form: "ob-reset-mfa", disabled: busy || mfaCode.length < 6 }}
+          link={{ node: "Cancel and sign out", onClick: cancel }}
+        />
+      </ObPage>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-cream px-6 py-12 flex flex-col justify-center">
-      <div className="w-full max-w-md mx-auto">
-        <h1 className="font-display text-2xl font-bold text-charcoal mb-2">
-          {needsMfa ? "Confirm it's you" : "Set a new password"}
-        </h1>
-        <p className="text-sm text-charcoal-soft mb-6">
-          {needsMfa
-            ? "This account uses two-factor authentication. Enter a code before choosing a new password."
-            : recoveryPending
-            ? "Choose a new password to finish signing in."
-            : "Choose a new password for your account."}
-        </p>
-
-        {done ? (
-          <div className="flex items-center gap-2 rounded-2xl bg-primary-pale px-4 py-3.5 text-sm font-semibold text-primary-deep-text">
-            <Check size={16} /> Password updated. Taking you to Centium…
-          </div>
-        ) : !mfaChecked ? (
-          // Held rather than showing the password form first: an enrolled
-          // user would otherwise see the form, start typing, and have it
-          // replaced under them a moment later.
-          <p className="text-sm text-charcoal-faint">Checking your account…</p>
-        ) : needsMfa ? (
-          <form
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!busy && mfaCode.length === 6) void singleFlight(submitMfa);
-            }}
-            className="space-y-4"
-          >
-            <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-4 py-3.5">
-              <ShieldCheck size={16} className="shrink-0 text-primary-dark" />
-              <span className="text-sm text-primary-dark">
-                {mfaFactor?.name
-                  ? `Enter the code from ${mfaFactor.name}`
-                  : "Enter the code from your authenticator app"}
-              </span>
-            </div>
-
-            {/* Six boxes (Foundations 2.5), as on every two-factor screen. */}
-            <CodeBoxes
-              value={mfaCode}
-              onChange={(v) => {
-                setMfaCode(v);
-                setError(null);
-              }}
-              error={!!error}
-              disabled={busy}
-              autoFocus
-              label="Six-digit authentication code"
-            />
-
-            {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}
-
-            <Button type="submit" fullWidth size="lg" disabled={busy || mfaCode.length < 6}>
-              {busy ? "Checking…" : "Continue"}
-            </Button>
-
-            {/* The same honesty as the sign-in challenge: there are no backup
-                codes to offer, so this says what actually happens instead. */}
-            <p className="text-[11px] text-charcoal-faint leading-relaxed text-center">
-              Lost access to your authenticator? Contact Centium support. Resetting your password
-              alone won't get you back in.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                clearRecovery();
-                void signOut();
-                navigate("/app/onboarding", { replace: true });
-              }}
-              className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
-            >
-              Cancel and sign out
+    <ObPage backdrop>
+      <form
+        id="ob-reset"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit) void singleFlight(handleSubmit);
+        }}
+        className="ob-body ob-step-in"
+      >
+        {header}
+        <ObTitle
+          variant="intro"
+          eyebrow="Reset password"
+          title="Set a new password"
+          subtitle={recoveryPending ? "Choose a new password to finish signing in." : "Choose a new password for your account."}
+        />
+        <ObField
+          variant="intro"
+          icon={Lock}
+          type={showPassword ? "text" : "password"}
+          autoComplete="new-password"
+          placeholder="New password"
+          aria-label="New password"
+          // First field of the step, so Enter-to-submit works without a pointer.
+          autoFocus
+          value={password}
+          readOnly={busy || done}
+          onChange={(e) => setPassword(e.target.value)}
+          end={
+            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? "Hide password" : "Show password"} style={{ display: "flex" }}>
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-          </form>
-        ) : (
-          <form
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (canSubmit) void singleFlight(handleSubmit);
-            }}
-            className="space-y-4"
-          >
-            <label className="block relative">
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="New password"
-                // First field of the step, so Enter-to-submit works without a
-                // pointer, including straight after the code step unmounts.
-                autoFocus
-                type={showPassword ? "text" : "password"}
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={passwordVisibility.toggle}
-                className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </label>
-
-            <label className="block relative">
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
-              <input
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onBlur={() => setConfirmBlurred(true)}
-                placeholder="Confirm new password"
-                type={showPassword ? "text" : "password"}
-                className={inputClass}
-              />
-            </label>
-
-            {mismatch && (
-              <p className="text-[11px] font-semibold text-status-high -mt-1.5 pl-1">
-                Passwords don't match
-              </p>
-            )}
-
-            {password && (
-              <div className="rounded-2xl bg-cream-card px-4 py-3.5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-charcoal-soft">Password strength</span>
-                  <span className="text-xs font-bold" style={{ color: strengthColor }}>
-                    {strengthLabel}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden mb-3">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${(passedChecks / passwordChecks.length) * 100}%`,
-                      background: strengthColor,
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  {passwordChecks.map((c) => {
-                    const passed = c.test(password);
-                    return (
-                      <div key={c.label} className="flex items-center gap-1.5 text-[11px]">
-                        {passed ? (
-                          <Check size={11} className="text-primary-dark" />
-                        ) : (
-                          <X size={11} className="text-charcoal-faint" />
-                        )}
-                        <span className={passed ? "text-charcoal-soft" : "text-charcoal-faint"}>
-                          {c.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <p className="text-xs font-semibold text-status-high text-center">{error}</p>
-            )}
-
-            <Button type="submit" fullWidth size="lg" disabled={!canSubmit}>
-              {busy ? "Saving…" : "Set new password"}
-            </Button>
-
-            {/* The way out for someone who opened the link by mistake. Signing
-                out ends the recovery session rather than leaving it usable. */}
-            <button
-              type="button"
-              onClick={() => {
-                clearRecovery();
-                void signOut();
-                navigate("/app/onboarding", { replace: true });
-              }}
-              className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
-            >
-              Cancel and sign out
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          }
+        />
+        <ObField
+          variant="intro"
+          icon={Lock}
+          type={showPassword ? "text" : "password"}
+          autoComplete="new-password"
+          placeholder="Confirm new password"
+          aria-label="Confirm new password"
+          value={confirmPassword}
+          readOnly={busy || done}
+          error={mismatch ? "Passwords don't match" : null}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          onBlur={() => setConfirmBlurred(true)}
+        />
+        {password && <ObStrength password={password} />}
+      </form>
+      <ObFooter
+        error={error}
+        primary={{ label: busy ? "Saving…" : "Set new password", type: "submit", form: "ob-reset", disabled: !canSubmit || done }}
+        // The way out for someone who opened the link by mistake: signing
+        // out ends the recovery session rather than leaving it usable.
+        link={{ node: "Cancel and sign out", onClick: cancel }}
+      />
+      <ObToast message={toast} />
+    </ObPage>
   );
 }

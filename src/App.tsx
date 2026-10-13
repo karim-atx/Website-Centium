@@ -17,6 +17,7 @@ import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
 import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
 import Onboarding from "./pages/onboarding/Onboarding";
+import BusinessSetupPage from "./pages/onboarding/business/BusinessSetupPage";
 import Home from "./pages/home/Home";
 import Food from "./pages/food/Food";
 import NutrientSummaryPage from "./pages/food/NutrientSummaryPage";
@@ -406,6 +407,16 @@ function AppRoutes() {
         element={
           <RequireOnboarded>
             <ProVerification />
+          </RequireOnboarded>
+        }
+      />
+      {/* v6 business lanes, after Submit for review (Pending review, You're
+          live, A few things to fix): full screen, outside the app layout. */}
+      <Route
+        path="/app/business/setup"
+        element={
+          <RequireOnboarded>
+            <BusinessSetupPage />
           </RequireOnboarded>
         }
       />

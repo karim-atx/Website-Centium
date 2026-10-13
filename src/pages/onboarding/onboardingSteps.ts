@@ -4,86 +4,152 @@
 import type { AccountType } from "../../types";
 import { validateDateOfBirth } from "../../utils/date";
 
+/**
+ * Step names. v6 (Batch 3): the client lane's four numbered steps are
+ * "about", "gentle", "goals", "track" (BizOnboardingV10 KEYS for the client
+ * lane), then "ready" (You're all set). The professional and business lanes
+ * keep their own keys; their agents (OB-B, OB-C) add theirs here.
+ */
 export type StepKey =
   | "welcome"
   | "auth"
   | "accountType"
+  // client lane (v6)
+  | "about"
+  | "gentle"
+  | "goals"
+  | "track"
+  // professional lane (v6, Batch 3 · OB-B): specialty, six numbered steps
+  | "proAbout"
+  | "proWork"
+  | "proServices"
+  | "proCreds"
+  | "proReview"
+  // business lanes (v6, Batch 3 · OB-C): the type step, then six numbered
+  // steps (BizOnboardingV10 KEYS business…review, prefixed so no key collides
+  // with another lane's)
+  | "bizType"
+  | "bizBusiness"
+  | "bizWhere"
+  | "bizEssentials"
+  | "bizPolicies"
+  | "bizPayments"
+  | "bizReview"
+  // before v6 (read for old drafts)
   | "subtype"
   | "aboutYou"
   | "dateOfBirth"
   | "background"
-  | "goal"
-  | "activity"
-  | "recovery"
-  | "tracking"
   | "ready";
 
 const STEP_KEYS: readonly StepKey[] = [
   "welcome",
   "auth",
   "accountType",
+  "about",
+  "gentle",
+  "goals",
+  "track",
+  "proAbout",
+  "proWork",
+  "proServices",
+  "proCreds",
+  "proReview",
+  "bizType",
+  "bizBusiness",
+  "bizWhere",
+  "bizEssentials",
+  "bizPolicies",
+  "bizPayments",
+  "bizReview",
   "subtype",
   "aboutYou",
   "dateOfBirth",
   "background",
-  "goal",
-  "activity",
-  "recovery",
-  "tracking",
   "ready",
 ];
 
+/**
+ * Names a professional draft saved before v6 used: About you is now Step 1,
+ * and the old finish screen ("ready") is now Review and submit.
+ */
+const PRO_ALIASES: Record<string, StepKey> = {
+  aboutYou: "proAbout",
+  ready: "proReview",
+};
+
+/**
+ * Names a business draft saved before v6 used: the type step replaced
+ * "subtype" (its business name moved to Your business), the owner's date of
+ * birth moved into Policies and verification, and the old finish screen
+ * ("ready") is now Review and submit.
+ */
+const BIZ_ALIASES: Record<string, StepKey> = {
+  subtype: "bizType",
+  dateOfBirth: "bizPolicies",
+  ready: "bizReview",
+};
+
+/** The business lane's steps after the account type, in order. */
+export const BIZ_FLOW_STEPS = ["bizType", "bizBusiness", "bizWhere", "bizEssentials", "bizPolicies", "bizPayments", "bizReview"] as const;
+
+/**
+ * Names a client draft saved before v6 used, mapped to today's step: About you
+ * keeps its place, the recovery question became A gentler start, goal and
+ * activity merged into Goals and activity, tracking became What to track.
+ */
+const CLIENT_ALIASES: Record<string, StepKey> = {
+  aboutYou: "about",
+  recovery: "gentle",
+  goal: "goals",
+  activity: "goals",
+  tracking: "track",
+};
+
 // V4 (QA 4.0): professionals are onboarding to add clients, not to be
-// tracked themselves — the goal/activity-level/tracking-preference steps
-// are customer-only questions, so professionals skip straight from About
-// You to the finish screen (coaching-app style onboarding, not a client
-// health-tracking wizard).
+// tracked themselves, and a business is not a person to profile: neither
+// gets the client lane's tracking questions.
 //
-// V7's "a client with a valid code skips About You entirely" is GONE, and
-// deliberately so: it depended on the professional having pre-entered the
-// client's name/age/height/sex/weight onto the code. The real `client_codes`
-// table has no such columns and `preview_client_code` returns none — only
-// the professional's own name, avatar, subtype and expiry. With no data to
-// prefill from, skipping the step would have left the client defaulted to
-// "Friend", 28 years, 170cm, 70kg. Every client now fills in About You.
-// Restoring the shortcut needs those columns added on the database side
-// first. `skipAboutYou` is kept as a parameter so the shape of this
-// function doesn't change if that happens.
+// V7's "a client with a valid code skips About You entirely" is GONE (the
+// real client_codes table carries no client profile data to prefill from).
+// `skipAboutYou` is kept as a parameter so the shape of this function does
+// not change if that returns.
 //
 // "subtype" is the professional's specialty or the business's kind, asked on
-// its own step straight after the account type. Customers skip it: their
-// "General / Client of a professional" choice stays on the account-type step.
+// its own step straight after the account type.
 export function stepsFor(accountType: AccountType | null, skipAboutYou: boolean): StepKey[] {
   const isProfessional = accountType === "professional";
-  // V7 (QA 7.0): a business isn't a person to profile/track either — same
-  // "land straight past the personal-tracking questions" treatment as a
-  // professional.
   const isBusiness = accountType === "business";
-  return [
-    "welcome",
-    "auth",
-    "accountType",
-    ...(isProfessional || isBusiness ? (["subtype"] as StepKey[]) : []),
-    ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
-    // Task T: a date of birth is required for every account type. Clients and
-    // professionals give it on About You; a business has no About You, so it
-    // gets this one-field step for the person who runs the account.
-    ...(isBusiness ? (["dateOfBirth"] as StepKey[]) : []),
-    // The optional CV step, straight after the name + certificate step.
-    ...(isProfessional ? (["background"] as StepKey[]) : []),
-    // QA 13.0: recovery-sensitive is asked before goal and activity so those
-    // two steps can already read `draft.recoverySensitive` when they render.
-    ...(isProfessional || isBusiness ? [] : (["recovery", "goal", "activity", "tracking"] as StepKey[])),
-    "ready",
-  ];
+  if (!isProfessional && !isBusiness) {
+    // Client lane (OB-084…112): Step 1 of 4 About you, 2 A gentler start
+    // (asked before goals so goals and tracking can read it), 3 Goals and
+    // activity, 4 What to track, then You're all set.
+    return ["welcome", "auth", "accountType", ...(skipAboutYou ? [] : (["about"] as StepKey[])), "gentle", "goals", "track", "ready"];
+  }
+  if (isProfessional) {
+    // Professional lane (OB-136…215): the specialty ("Before step 1"), then
+    // Step 1 of 6 About you, 2 Where you work, 3 Specialties and services,
+    // 4 Credentials, 5 Your background, 6 Review and submit. The status
+    // screens after submitting are the lane's own (not a flow step).
+    return ["welcome", "auth", "accountType", "subtype", ...(skipAboutYou ? [] : (["proAbout"] as StepKey[])), "proWork", "proServices", "proCreds", "background", "proReview"];
+  }
+  // Business lanes (OB-051…083, 216…306): the type ("Before step 1"), then
+  // Step 1 of 6 Your business, 2 Where and when, 3 Essentials, 4 Policies and
+  // verification (with the owner's date of birth, task T), 5 Payments, 6 Review
+  // and submit. After submitting the business lands on /app/business/setup.
+  return ["welcome", "auth", "accountType", ...BIZ_FLOW_STEPS];
 }
 
 /**
  * The step list BEFORE the subtype step existed. A draft saved then stored a
  * position in this list, so it is read through it to find the step by name.
  */
-function legacyStepsFor(accountType: AccountType | null): StepKey[] {
-  return stepsFor(accountType, false).filter((k) => k !== "subtype" && k !== "dateOfBirth");
+function legacyStepsFor(accountType: AccountType | null): string[] {
+  if (accountType !== "professional" && accountType !== "business") {
+    return ["welcome", "auth", "accountType", "aboutYou", "recovery", "goal", "activity", "tracking", "ready"];
+  }
+  if (accountType === "professional") return ["welcome", "auth", "accountType", "aboutYou", "background", "ready"];
+  return ["welcome", "auth", "accountType", "ready"];
 }
 
 export interface ResumeDraft {
@@ -97,7 +163,8 @@ export interface ResumeDraft {
 /** Whether the step after the account type has what it needs. */
 export function subtypeComplete(d: ResumeDraft): boolean {
   if (d.accountType === "professional") return !!d.professionalSubtype;
-  if (d.accountType === "business") return !!d.businessType && d.businessName.trim().length > 0;
+  // v6: the business name is asked on Your business, after the type.
+  if (d.accountType === "business") return !!d.businessType;
   return true;
 }
 
@@ -108,26 +175,45 @@ export function dateOfBirthComplete(d: Pick<ResumeDraft, "dateOfBirth">): boolea
 
 /** The step that asks for the date of birth for this account type. */
 export function dateOfBirthStep(accountType: AccountType | null): StepKey {
-  return accountType === "business" ? "dateOfBirth" : "aboutYou";
+  if (accountType === "business") return "bizPolicies";
+  if (accountType === "professional") return "proAbout";
+  return "about";
+}
+
+/** The draft lane a step belongs to (onboarding_drafts.lane). */
+export function laneOf(accountType: AccountType | null): "client" | "professional" | "business" | null {
+  if (accountType === "customer") return "client";
+  if (accountType === "professional") return "professional";
+  if (accountType === "business") return "business";
+  return null;
 }
 
 /**
  * Where a saved draft resumes, as an index into stepsFor(draft).
  *
- * THE STEP IS SAVED BY NAME now ("aboutYou"), not by position, because a new
- * step shifts every position after it. An older draft saved a number; that is
- * read against the old list to recover the name. Either way the name is then
- * found in today's list, so nobody resumes one step off.
+ * THE STEP IS SAVED BY NAME ("about"), not by position, because a new step
+ * shifts every position after it. An older draft saved a number; that is read
+ * against the old list to recover the name. A client draft from before v6
+ * carries an old name, mapped through CLIENT_ALIASES. Either way the name is
+ * then found in today's list, so nobody resumes one step off.
  *
- * Never past an unanswered subtype: someone saved beyond it without a
- * specialty or business type lands on the subtype step first. And never past
- * a missing date of birth (task T): it lands on the step that asks for it.
+ * Never past an unanswered subtype, and never past a missing date of birth
+ * (task T): it lands on the step that asks for it.
  */
 export function resumeIndex(stored: string | null, draft: ResumeDraft, skipAboutYou: boolean): number {
   const steps = stepsFor(draft.accountType, skipAboutYou);
-  let key: StepKey | null = null;
-  if (stored && (STEP_KEYS as readonly string[]).includes(stored)) {
-    key = stored as StepKey;
+  const isClient = draft.accountType !== "professional" && draft.accountType !== "business";
+  const isPro = draft.accountType === "professional";
+  const isBiz = draft.accountType === "business";
+  let key: string | null = null;
+  if (
+    stored &&
+    ((STEP_KEYS as readonly string[]).includes(stored) ||
+      (isClient && stored in CLIENT_ALIASES) ||
+      (isPro && stored in PRO_ALIASES) ||
+      (isBiz && stored in BIZ_ALIASES))
+  ) {
+    key = stored;
   } else if (stored !== null && stored.trim() !== "") {
     const n = Number(stored);
     if (Number.isInteger(n) && n >= 0) {
@@ -136,12 +222,18 @@ export function resumeIndex(stored: string | null, draft: ResumeDraft, skipAbout
     }
   }
   if (!key) return 0;
-  let at = steps.indexOf(key);
+  if (isClient && key in CLIENT_ALIASES) key = CLIENT_ALIASES[key];
+  if (isPro && key in PRO_ALIASES) key = PRO_ALIASES[key];
+  if (isBiz && key in BIZ_ALIASES) key = BIZ_ALIASES[key];
+  let at = steps.indexOf(key as StepKey);
   // A key this account type does not have (e.g. "subtype" for a customer):
   // back to choosing the account type.
   if (at < 0) at = steps.indexOf("accountType");
-  const sub = steps.indexOf("subtype");
+  const sub = steps.indexOf(isBiz ? "bizType" : "subtype");
   if (sub >= 0 && at > sub && !subtypeComplete(draft)) at = sub;
+  // A business never resumes past Your business without its name.
+  const named = steps.indexOf("bizBusiness");
+  if (named >= 0 && at > named && !draft.businessName.trim()) at = named;
   const dob = steps.indexOf(dateOfBirthStep(draft.accountType));
   if (dob >= 0 && at > dob && !dateOfBirthComplete(draft)) at = dob;
   return at;

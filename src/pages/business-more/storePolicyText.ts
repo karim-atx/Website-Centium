@@ -1,4 +1,4 @@
-import type { StoreSettings } from "../../services/business-more";
+import type { StoreSettings } from "../../services/business-more/types";
 
 // Store policies (MO1B-005, OURS-MO1B-store-policies-edit). The returns
 // policy is stored as one sentence (business_store_settings.returns_policy,

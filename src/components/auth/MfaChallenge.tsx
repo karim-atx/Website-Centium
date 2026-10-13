@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import { Button } from "../ui/Button";
+import { ObFooter, ObHeader, ObPage, ObProgress, ObTitle } from "../../pages/onboarding/shell/ObShell";
+import { ObField } from "../../pages/onboarding/shell/ObBlocks";
 import { CodeBoxes } from "../ui/CodeBoxes";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useApp } from "../../context/AppContext";
@@ -108,11 +109,17 @@ export const MfaChallenge: React.FC = () => {
     await refreshMfaState();
   };
 
+  // v6 (OURS-sign-in-errors T1…T4): on the Sign in shell (OB-007): eyebrow
+  // "Welcome back", title "Two-factor authentication", the code boxes or the
+  // recovery-code field (52 r16 field spec), the error under them, footer
+  // Continue with the two text links. Behaviour unchanged.
+  const canSubmit = !busy && (useRecovery ? !!recovery.trim() : code.length === 6);
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-cream px-6">
+    <ObPage backdrop>
       {/* A real form: Enter, and the keyboard's Go key, verify exactly as the
           button does, and never while it is disabled. */}
       <form
+        id="ob-mfa"
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
@@ -121,24 +128,25 @@ export const MfaChallenge: React.FC = () => {
             if (recovery.trim()) void singleFlight(submitRecovery);
           } else if (code.length === 6) void singleFlight(submit);
         }}
-        className="w-full max-w-sm text-center space-y-4"
+        className="ob-body ob-step-in"
       >
-        <div className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center mx-auto">
-          <ShieldCheck size={22} className="text-primary-dark" />
-        </div>
-        <h1 className="text-lg font-semibold text-charcoal">Two-factor authentication</h1>
-        <p className="text-[13px] text-charcoal-soft leading-relaxed">
-          {useRecovery
-            ? "Enter one of the recovery codes you saved when you turned on two-factor."
-            : factorName
-              ? `Enter the 6-digit code from ${factorName}.`
-              : "Enter the 6-digit code from your authenticator app."}
-        </p>
-
+        <ObProgress count={3} index={1} variant="intro" />
+        <ObHeader margin="intro" />
+        <ObTitle
+          variant="intro"
+          eyebrow="Welcome back"
+          title="Two-factor authentication"
+          subtitle={
+            useRecovery
+              ? "Enter one of the recovery codes you saved when you turned on two-factor."
+              : factorName
+                ? `Enter the 6-digit code from ${factorName}.`
+                : "Enter the 6-digit code from your authenticator app."
+          }
+        />
         {useRecovery ? (
-          // Foundations › Inputs: 44 tall, radius 12, surface.soft. The
-          // server forgives case, spaces, the hyphen, O/0 and I/1.
-          <input
+          // The server forgives case, spaces, the hyphen, O/0 and I/1.
+          <ObField
             value={recovery}
             onChange={(e) => {
               setRecovery(e.target.value);
@@ -151,60 +159,58 @@ export const MfaChallenge: React.FC = () => {
             spellCheck={false}
             placeholder="XXXX-XXXX"
             aria-label="Recovery code"
-            aria-invalid={!!error}
-            className={`w-full h-11 rounded-xl bg-cream-soft border px-3.5 text-center text-[15px] font-bold tracking-[0.12em] text-charcoal placeholder:text-charcoal-faint placeholder:font-semibold focus:outline-none focus:border-primary-accent ${error ? "border-status-high" : "border-charcoal/10"}`}
+            icon={ShieldCheck}
+            error={error}
+            style={{ fontWeight: 700, letterSpacing: "0.12em" }}
           />
         ) : (
-        /* Six boxes (Foundations 2.5). They take focus once the factor has
-            loaded: autoFocus waits for the boxes to be enabled. */
-        <CodeBoxes
-          value={code}
-          onChange={(v) => {
+          <>
+            {/* Six boxes (Foundations 2.5). They take focus once the factor
+                has loaded: autoFocus waits for the boxes to be enabled. */}
+            <CodeBoxes
+              value={code}
+              onChange={(v) => {
                 setCode(v);
                 setError(null);
               }}
-          error={!!error}
-          disabled={loading || !factorId || busy}
-          autoFocus
-          label="Six-digit authentication code"
-        />
+              error={!!error}
+              disabled={loading || !factorId || busy}
+              autoFocus
+              label="Six-digit authentication code"
+            />
+            {error && (
+              <div className="ob-help" data-err="true">
+                <span role="alert" style={{ textAlign: "center" }}>
+                  {error}
+                </span>
+              </div>
+            )}
+          </>
         )}
-
-        {error && <p className="text-[11.5px] font-semibold text-status-high">{error}</p>}
-
-        <Button type="submit" fullWidth size="lg" disabled={busy || (useRecovery ? !recovery.trim() : code.length < 6)}>
-          {busy ? "Checking…" : "Verify"}
-        </Button>
-
-        {/* The way in without the phone: a recovery code (stage 1), and back
-            to the authenticator from there. With no codes left either,
-            support removes the factor once they've confirmed who it is. */}
-        <button
-          type="button"
-          onClick={() => {
+        {/* With no codes either, support removes the factor once they have
+            confirmed who it is. */}
+        <p style={{ fontSize: 11.5, lineHeight: "17px", color: "var(--ob-faint)", textAlign: "center", marginTop: 16 }}>
+          No codes either? Contact Centium support to have two-factor removed. We'll need to confirm who you are first.
+        </p>
+      </form>
+      <ObFooter
+        primary={{ label: busy ? "Checking…" : "Continue", type: "submit", form: "ob-mfa", disabled: !canSubmit }}
+        link={{
+          node: <b>{useRecovery ? "Use my authenticator app" : "Use a recovery code"}</b>,
+          disabled: busy,
+          onClick: () => {
             setUseRecovery((v) => !v);
             setError(null);
             setCode("");
             setRecovery("");
-          }}
-          disabled={busy}
-          className="tap w-full text-center text-sm font-semibold text-primary"
-        >
-          {useRecovery ? "Use my authenticator app" : "Use a recovery code"}
-        </button>
-        <p className="text-[11px] text-charcoal-faint leading-relaxed">
-          No codes either? Contact Centium support to have two-factor removed. We'll need to confirm
-          who you are first.
-        </p>
-
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="tap w-full text-center text-sm font-semibold text-charcoal-soft"
-        >
-          Not you? <span className="text-primary">Sign out</span>
-        </button>
-      </form>
-    </div>
+          },
+        }}
+        after={
+          <button type="button" className="ob-link hit" onClick={() => void signOut()}>
+            Not you? <b>Sign out</b>
+          </button>
+        }
+      />
+    </ObPage>
   );
 };

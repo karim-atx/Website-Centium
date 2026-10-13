@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { dateKicker, gaugeModels, greeting, kindOf, maskedMember, setupSteps, shortHour } from "./dashboardModel";
-import type { DashRaw } from "./dashboardData";
+import type { DashRaw } from "./dashboardTypes";
 
 const raw = (over: Partial<DashRaw> = {}): DashRaw => ({
   business: { id: "b", name: "Studio", type: "gym", active: true, perk: null },

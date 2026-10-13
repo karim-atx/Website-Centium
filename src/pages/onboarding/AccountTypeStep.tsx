@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { OnboardingShell } from "./OnboardingShell";
-import { Button } from "../../components/ui/Button";
+import { BadgeCheck, CalendarDays, Check, HeartPulse, Loader2, MessageCircle, Store, Users, Utensils, Wallet, type LucideIcon } from "lucide-react";
 import type { OnboardingDraft } from "./Onboarding";
 import type { AccountType, CustomerSubtype, ProfessionalSubtype } from "../../types";
-import clsx from "clsx";
-import { User, Dumbbell, Building2, AlertCircle, Check, Loader2 } from "lucide-react";
 import { previewClientCode, type ClientCodePreview } from "../../services/redemption";
+import { BottomSheet } from "../../components/ui/BottomSheet";
+import { ObFooter, ObHeader, ObPage, ObProgress, ObTitle } from "./shell/ObShell";
+import { ObSelectCard } from "./shell/ObBlocks";
+import { Composed, OB, type Composition } from "./shell/visuals";
+import { useOnboardingFlow } from "./shell/flow";
 
 interface Props {
   draft: OnboardingDraft;
@@ -14,16 +16,72 @@ interface Props {
   onBack: () => void;
 }
 
-const accountTypes: { value: AccountType; label: string; desc: string; icon: typeof User }[] = [
-  { value: "customer", label: "Customer", desc: "I want to track my own health & fitness", icon: User },
-  { value: "professional", label: "Professional", desc: "I'm a trainer, dietitian, or physiotherapist.", icon: Dumbbell },
-  { value: "business", label: "Business", desc: "Gym, studio or wellness business", icon: Building2 },
+// v6 (OB-013…032, 084…086): SharedOnboardingV4 screen "accountType" — three
+// rich cards, Personal's General user / Client of a professional pair, the
+// confirmation sheet ("Continue as …") and the account-type-continue motion.
+// Kept (V6-70, OURS-client-code): the professional's code entry, preview and
+// redemption at finish. Changing the type clears the old type's answers.
+
+const CARDS: {
+  type: AccountType;
+  comp: Composition;
+  title: string;
+  desc: string;
+  points: string[];
+  tile: "pale" | "teal";
+  dot: string;
+}[] = [
+  { type: "customer", comp: "personal", title: "Personal", desc: "Look after your own health.", points: ["Log food, training and sleep", "Work with your professional"], tile: "teal", dot: OB.leaf },
+  { type: "professional", comp: "professional", title: "Professional", desc: "Coach, treat or advise clients.", points: ["Plans and check-ins for each client", "Get found on Explore"], tile: "pale", dot: OB.brand },
+  { type: "business", comp: "business", title: "Business", desc: "Run a gym, studio or store.", points: ["Classes, members, payments and team", "Sell products or services"], tile: "pale", dot: OB.brand },
 ];
 
-// Sequential order per QA: General User first, then Client of Professional.
-const customerSubtypes: { value: CustomerSubtype; label: string }[] = [
-  { value: "general", label: "General User" },
-  { value: "client", label: "Client of Professional" },
+/** The confirmation sheet's contents (SharedOnboardingV4 CC). */
+const CONFIRM: Record<AccountType, { title: string; lead: string; rows: [LucideIcon, string][]; note: string; button: string; tile: "pale" | "teal"; comp: Composition }> = {
+  customer: {
+    title: "Personal account",
+    lead: "For looking after your own health, your way.",
+    rows: [
+      [Utensils, "Log food, workouts and sleep"],
+      [HeartPulse, "See trends in your health metrics"],
+      [Users, "Work with a professional if you have one"],
+    ],
+    note: "Free to start. Premium adds AI logging and deeper insights.",
+    button: "Continue as personal",
+    tile: "teal",
+    comp: "personal",
+  },
+  professional: {
+    title: "Professional account",
+    lead: "For coaching, treating or advising clients.",
+    rows: [
+      [Users, "Your clients, plans and check-ins"],
+      [MessageCircle, "Messages and progress in one place"],
+      [BadgeCheck, "A public profile clients can find"],
+    ],
+    note: "Some professions are verified before going live.",
+    button: "Continue as professional",
+    tile: "pale",
+    comp: "professional",
+  },
+  business: {
+    title: "Business account",
+    lead: "For gyms, studios and stores.",
+    rows: [
+      [CalendarDays, "Classes, members and bookings"],
+      [Wallet, "Payments, team and your listing"],
+      [Store, "Sell products or services on Explore"],
+    ],
+    note: "We review every business before it goes live.",
+    button: "Continue as business",
+    tile: "pale",
+    comp: "business",
+  },
+};
+
+const SUBS: { value: CustomerSubtype; label: string }[] = [
+  { value: "general", label: "General user" },
+  { value: "client", label: "Client of a professional" },
 ];
 
 type CodeCheck =
@@ -43,14 +101,17 @@ const subtypeLabel: Record<ProfessionalSubtype | "doctor", string> = {
 };
 
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
+  const flow = useOnboardingFlow();
   const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
   const enteredCode = draft.professionalUserIdCode.trim().toUpperCase();
   const [check, setCheck] = useState<CodeCheck>({ status: "idle" });
+  const [sheet, setSheet] = useState(false);
+  /** account-type-continue: unselected cards fade (180 ms), the title dims, the picked card lifts. */
+  const [leaving, setLeaving] = useState(false);
 
-  // V6 (QA 6.0): the code must actually match one a professional generated.
-  // That check used to run against a local array; it now calls
-  // preview_client_code() — debounced, since it fires per keystroke — and
-  // shows who the code actually belongs to before anything is redeemed.
+  // V6 (QA 6.0): the code must match one a professional generated:
+  // preview_client_code() debounced 450 ms, showing who it belongs to before
+  // anything is redeemed (it is spent at the end of onboarding).
   useEffect(() => {
     if (!needsCode || enteredCode.length === 0) {
       setCheck({ status: "idle" });
@@ -62,7 +123,6 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
     const timer = setTimeout(async () => {
       const result = await previewClientCode(enteredCode);
       if (cancelled) return;
-
       if (result.status === "error") {
         setCheck({ status: "error", message: result.message });
         return;
@@ -72,7 +132,6 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         setDraft((d) => ({ ...d, clientCodeProfessional: null }));
         return;
       }
-      // Found, but that alone doesn't mean it can be used.
       if (result.data.redeemed) {
         setCheck({ status: "unusable", message: "That code has already been used." });
         setDraft((d) => ({ ...d, clientCodeProfessional: null }));
@@ -94,7 +153,6 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         },
       }));
     }, 450);
-
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -102,21 +160,15 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
   }, [enteredCode, needsCode, setDraft]);
 
   const codeIsValid = check.status === "found";
-
-  // A professional's specialty and a business's name and kind are asked on
-  // the next step (SubtypeStep), so here they only need to have picked one.
-  // A customer still answers General / Client of a professional here.
   const canContinue =
     draft.accountType === "customer"
       ? !!draft.customerSubtype && (!needsCode || codeIsValid)
       : draft.accountType === "professional" || draft.accountType === "business";
 
   /**
-   * CHANGING THE ACCOUNT TYPE CLEARS THE OLD ONE'S ANSWERS, so a specialty
-   * picked as a professional cannot ride along into a business, or a client
-   * code into a professional account. Picking the same type again keeps them,
-   * which is what coming Back from the next step relies on. The business name
-   * is kept: it is typed rather than picked, and only saved for a business.
+   * CHANGING THE ACCOUNT TYPE CLEARS THE OLD ONE'S ANSWERS (a specialty never
+   * rides into a business, a client code never into a professional). Picking
+   * the same type again keeps them. Personal starts on General user, as drawn.
    */
   const chooseType = (value: AccountType) =>
     setDraft((d) =>
@@ -127,155 +179,185 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
             accountType: value,
             professionalSubtype: null,
             businessType: null,
-            customerSubtype: null,
+            customerSubtype: value === "customer" ? "general" : null,
             professionalUserIdCode: "",
             clientCodeProfessional: null,
           }
     );
 
+  const confirm = () => {
+    setSheet(false);
+    setLeaving(true);
+    window.setTimeout(() => {
+      setLeaving(false);
+      onNext();
+    }, 180);
+  };
+
+  const sel = draft.accountType;
+  const codeError = check.status === "not_found" ? "Code not found. Check it and try again." : check.status === "unusable" || check.status === "error" ? check.message : null;
+  const conf = sel ? CONFIRM[sel] : null;
+
   return (
-    <OnboardingShell
-      title="What brings you to Centium?"
-      subtitle="This shapes your experience. You can adjust it later."
-      onBack={onBack}
-      footer={
-        <Button fullWidth size="lg" disabled={!canContinue} onClick={onNext}>
-          Continue
-        </Button>
-      }
-    >
-      <div className="space-y-2.5 mb-6" role="group" aria-label="Account type">
-        {accountTypes.map((t) => {
-          const active = draft.accountType === t.value;
-          return (
-            <button
-              key={t.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => chooseType(t.value)}
-              className={clsx(
-                "tap w-full flex items-center gap-3.5 text-left rounded-2xl p-4 border transition-colors",
-                active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
-              )}
-            >
-              <div
-                className={clsx(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
-                  active ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
-                )}
-              >
-                <t.icon size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-charcoal">{t.label}</p>
-                <p className="text-xs text-charcoal-soft">{t.desc}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {draft.accountType === "customer" && (
-        <div className="animate-fade-slide-up">
-          <p className="section-label text-charcoal-faint mb-2">
-            I am a…
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {customerSubtypes.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                aria-pressed={draft.customerSubtype === s.value}
-                onClick={() => setDraft((d) => ({ ...d, customerSubtype: s.value }))}
-                className={clsx(
-                  "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
-                  draft.customerSubtype === s.value
-                    ? "bg-primary-fill text-on-primary-fill border-primary-fill"
-                    : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {needsCode && (
-            <label className="block animate-fade-slide-up">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-                Your professional's User ID
-              </span>
-              <input
-                value={draft.professionalUserIdCode}
-                onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
-                placeholder="SOHA-XXXX"
-                className={clsx(
-                  "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  check.status === "not_found" || check.status === "unusable" || check.status === "error"
-                    ? "border-status-high/50"
-                    : check.status === "found"
-                    ? "border-status-good/60"
-                    : "border-primary/50"
-                )}
+    <ObPage backdrop>
+      <div className={`ob-body ${flow?.leaving ? "ob-step-out" : "ob-step-in"}`}>
+        <ObProgress count={12} index={2} variant="intro" />
+        <ObHeader margin="intro" onBack={onBack} />
+        <ObTitle
+          variant="intro"
+          eyebrow="Your account"
+          title="What brings you to Centium?"
+          subtitle="This shapes your experience. You can adjust it later."
+          fade={leaving ? 0.25 : 1}
+        />
+        <div className="ob-cards" role="radiogroup" aria-label="Account type">
+          {CARDS.map((c) => {
+            const on = sel === c.type;
+            const recede = !!sel && !on;
+            return (
+              <ObSelectCard
+                key={c.type}
+                title={c.title}
+                desc={c.desc}
+                points={c.points}
+                dot={c.dot}
+                tile={c.tile}
+                on={on}
+                recede={recede}
+                leaving={leaving}
+                visual={({ recede: r }) => <Composed comp={c.comp} w={r ? 34 : 40} />}
+                onSelect={() => chooseType(c.type)}
+                subs={
+                  c.type === "customer"
+                    ? SUBS.map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          className="ob-card-sub tap"
+                          aria-pressed={draft.customerSubtype === s.value}
+                          onClick={() => setDraft((d) => ({ ...d, customerSubtype: s.value }))}
+                        >
+                          {s.label}
+                        </button>
+                      ))
+                    : undefined
+                }
+                extra={c.type === "customer" && needsCode ? <ClientCodeField draft={draft} setDraft={setDraft} check={check} error={codeError} /> : undefined}
               />
-
-              {check.status === "checking" && (
-                <p className="flex items-center gap-1.5 text-[11px] text-charcoal-faint mt-1.5">
-                  <Loader2 size={12} className="animate-spin" /> Checking code…
-                </p>
-              )}
-
-              {check.status === "found" && (
-                // Confirmation before anything is redeemed — the code is only
-                // actually spent at the end of onboarding.
-                <div className="mt-2 rounded-2xl bg-primary-pale p-3 flex items-center gap-3 animate-fade-slide-up">
-                  {check.data.professionalAvatarUrl ? (
-                    <img
-                      src={check.data.professionalAvatarUrl}
-                      alt=""
-                      className="w-10 h-10 rounded-2xl object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0">
-                      <Dumbbell size={18} />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-primary-deep-text truncate">
-                      You'll connect with {check.data.professionalFirstName}
-                    </p>
-                    <p className="text-[11px] text-primary-dark">
-                      {subtypeLabel[check.data.professionalSubtype] ?? "Health professional"}
-                    </p>
-                  </div>
-                  <Check size={16} className="text-status-good ml-auto shrink-0" />
-                </div>
-              )}
-
-              {(check.status === "not_found" ||
-                check.status === "unusable" ||
-                check.status === "error") && (
-                <p className="flex items-center gap-1.5 text-[11px] text-status-high mt-1.5">
-                  <AlertCircle size={12} />{" "}
-                  {check.status === "not_found"
-                    ? "Code not found. Check it and try again."
-                    : check.message}
-                </p>
-              )}
-
-              {check.status === "idle" && (
-                <p className="text-[11px] text-charcoal-faint mt-1.5">
-                  Ask your trainer, dietitian or physiotherapist for the code they generated for you.
-                </p>
-              )}
-            </label>
-          )}
-
-          <p className="text-xs text-charcoal-faint mt-3">
-            <em>This can be changed later in settings at anytime.</em>
-          </p>
+            );
+          })}
         </div>
+        <p className="ob-cards-note" style={{ opacity: leaving ? 0.25 : 1 }}>
+          {/* V6-69: no multi-account backend, so the second line. */}
+          You can change this later in Settings.
+        </p>
+      </div>
+      <ObFooter primary={{ label: "Continue", disabled: !canContinue || leaving, onClick: () => setSheet(true) }} />
+      {conf && (
+        <BottomSheet
+          open={sheet}
+          onClose={() => setSheet(false)}
+          title={conf.title}
+          bodyPadding={{ top: 20, right: 20, bottom: 12, left: 20 }}
+          footer={
+            <div className="ob-vars" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button type="button" className="ob-btn ob-btn-primary tap" style={{ background: "var(--ob-fill)", color: "var(--ob-on-fill)", boxShadow: "none" }} onClick={confirm}>
+                {conf.button}
+              </button>
+              <button type="button" className="ob-btn ob-btn-secondary tap" style={{ border: "1px solid var(--ob-border)", background: "var(--ob-card)", color: "var(--ob-ink)" }} onClick={() => setSheet(false)}>
+                Choose another
+              </button>
+            </div>
+          }
+        >
+          <div className="ob-vars" style={{ color: "var(--ob-ink)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+              <span
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 18,
+                  background: conf.tile === "teal" ? "var(--ob-teal-pale)" : "var(--ob-pale)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Composed comp={conf.comp} w={42} />
+              </span>
+              <p style={{ fontSize: 14, lineHeight: "20px", color: "var(--ob-ink-soft)", textWrap: "pretty" }}>{conf.lead}</p>
+            </div>
+            <div style={{ background: "var(--ob-list)", borderRadius: 18, padding: "4px 0" }}>
+              {conf.rows.map(([Icon, t], k) => (
+                <div key={t} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "8px 14px" }}>
+                  {k > 0 && <span style={{ position: "absolute", top: 0, left: 62, right: 14, height: 1, background: "var(--ob-ring)" }} />}
+                  <span className="ob-sq-ic">
+                    <Icon size={17} strokeWidth={1.75} />
+                  </span>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: "18px" }}>{t}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, lineHeight: "17px", color: "var(--ob-faint)", marginTop: 12, textAlign: "center" }}>{conf.note}</p>
+          </div>
+        </BottomSheet>
       )}
-
-    </OnboardingShell>
+    </ObPage>
   );
 };
+
+/** OURS-client-code: the professional's code inside the Personal card. */
+const ClientCodeField: React.FC<{
+  draft: OnboardingDraft;
+  setDraft: React.Dispatch<React.SetStateAction<OnboardingDraft>>;
+  check: CodeCheck;
+  error: string | null;
+}> = ({ draft, setDraft, check, error }) => (
+  <div style={{ margin: "12px 0 0 70px" }}>
+    <label className="ob-label" htmlFor="ob-client-code" style={{ display: "block", marginBottom: 6 }}>
+      Your professional's code
+    </label>
+    <span className="ob-box" data-err={error ? "true" : undefined}>
+      <input
+        id="ob-client-code"
+        value={draft.professionalUserIdCode}
+        onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
+        placeholder="e.g. SOHA-XXXX"
+        autoCapitalize="characters"
+        autoComplete="off"
+        aria-invalid={error ? true : undefined}
+        aria-describedby="ob-client-code-help"
+        style={{ textTransform: "uppercase" }}
+      />
+    </span>
+    {check.status === "found" ? (
+      // Confirmation before anything is redeemed: the code is only spent at the end.
+      <div style={{ marginTop: 6, borderRadius: 16, background: "var(--ob-pale)", padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }} id="ob-client-code-help">
+        {check.data.professionalAvatarUrl ? (
+          <img src={check.data.professionalAvatarUrl} alt="" style={{ width: 36, height: 36, borderRadius: 11, objectFit: "cover", flexShrink: 0 }} />
+        ) : (
+          <span style={{ width: 36, height: 36, borderRadius: 11, background: "var(--ob-tile)", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+            {check.data.professionalFirstName.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 700, lineHeight: "19.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            You'll connect with {check.data.professionalFirstName}
+          </span>
+          <span style={{ display: "block", fontSize: 11.5, lineHeight: "17.25px", color: "var(--ob-accent)" }}>
+            {subtypeLabel[check.data.professionalSubtype] ?? "Health professional"}
+          </span>
+        </span>
+        <Check size={16} style={{ color: "var(--ob-good)", flexShrink: 0 }} />
+      </div>
+    ) : (
+      <div className="ob-help" data-err={error ? "true" : undefined} id="ob-client-code-help">
+        <span role={error ? "alert" : undefined} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {check.status === "checking" && <Loader2 size={12} className="ob-spin" />}
+          {check.status === "checking" ? "Checking code…" : error ?? "Ask your trainer, dietitian or physiotherapist for the code they gave you."}
+        </span>
+      </div>
+    )}
+  </div>
+);

@@ -5,6 +5,9 @@ import { storagePath } from "../venues/venueLogic";
 import { LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
 import { fetchGymHours } from "../venues";
 import type { HoursRow } from "../venues/hours";
+import type { BusinessTypeValue, StoreSettings } from "./types";
+
+export type { BusinessTypeValue, StoreSettings } from "./types";
 
 // v6 Batch 3 · business More, Business Profile and Settings (MO1B). The reads
 // and writes behind the business sub-pages that the older services do not
@@ -37,16 +40,6 @@ const fail = <T>(error: { code?: string; message?: string } | null | undefined, 
 // ---------------------------------------------------------------------------
 // The business row
 
-/** The stored business_type value. "studio" is shown as "Classes" (D8, B5). */
-export type BusinessTypeValue =
-  | "studio"
-  | "gym"
-  | "store"
-  | "supplement_store"
-  | "equipment_seller"
-  | "wellness_service"
-  | "clothing_store"
-  | "meal_prep_service";
 
 export interface BusinessFull {
   id: string;
@@ -275,18 +268,6 @@ export async function setBusinessPaused(businessId: string, paused: boolean): Pr
 // ---------------------------------------------------------------------------
 // Store settings (B5 business_store_settings)
 
-export interface StoreSettings {
-  exists: boolean;
-  sellsProducts: boolean;
-  offersAppointments: boolean;
-  deliveryEnabled: boolean;
-  pickupEnabled: boolean;
-  deliveryFee: number | null;
-  freeDeliveryOver: number | null;
-  deliveryTimeText: string | null;
-  returnsPolicy: string | null;
-  allowExchanges: boolean;
-}
 
 const STORE_COLUMNS =
   "sells_products, offers_appointments, delivery_enabled, pickup_enabled, delivery_fee, free_delivery_over, delivery_time_text, returns_policy, allow_exchanges";

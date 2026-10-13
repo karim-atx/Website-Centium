@@ -1,4 +1,4 @@
-import type { BusinessTypeValue } from "../../services/business-more";
+import type { BusinessTypeValue } from "../../services/business-more/types";
 
 // The business's lane for the MO1B per-type rows (COPY.md "Type variants",
 // More (MO1)): Classes (stored "studio", D8), Gym, or a store (the five store

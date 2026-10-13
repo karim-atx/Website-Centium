@@ -5,7 +5,7 @@
 // row is marked OURS in the checklists; every OURS string is listed in the
 // Batch 3 report.
 
-import type { DashRaw, DashClass } from "./dashboardData";
+import type { DashRaw, DashClass } from "./dashboardTypes";
 import type { GaugeSpec } from "./clusterGeometry";
 import type { DashPalette } from "./palette";
 import { occurrenceDates } from "../calendar/occurrences";
