@@ -90,6 +90,39 @@ export const PHASE_COLOR: Record<CyclePhase, string> = {
   unavailable: "#B8BCC4",
 };
 
+/**
+ * THE PHASE COLOURS AS THE THEME MAPS THEM (v6 HE1.10 board note, V6-110):
+ * Period = theme primary-deep, Follicular = theme primary, Ovulation = theme
+ * secondary-deep, Luteal = theme secondary. CSS colours (tokens), so every
+ * colour theme and dark mode follow; `alpha` gives the same colour at an
+ * opacity. Light / dark (HE1.10 #14-#20): Period #7D6BB5 / #C3B3FB,
+ * Follicular #AEA1DC / #A991FE, Ovulation #4F7F78, Luteal #A2C8C2. The two
+ * states keep their fixed greys / amber.
+ *
+ * PHASE_COLOR above stays as it was (fixed hexes) for the readers that still
+ * build a hex-with-alpha string from it: the professional client sheet and
+ * the HE1 cycle row tile (reported, not owned here).
+ */
+const PHASE_THEME_VAR: Record<CyclePhase, string> = {
+  menstrual: "--c-primary-dark",
+  follicular: "--c-primary",
+  ovulatory: "--th-4f7f78",
+  luteal: "--c-teal",
+  hormonal_contraception: "",
+  pregnant: "",
+  unavailable: "",
+};
+const PHASE_FIXED_RGB: Partial<Record<CyclePhase, string>> = {
+  hormonal_contraception: "138 143 163",
+  pregnant: "201 138 62",
+  unavailable: "184 188 196",
+};
+export function phaseThemeColor(phase: CyclePhase, alpha?: number): string {
+  const v = PHASE_THEME_VAR[phase];
+  const rgb = v ? `var(${v})` : PHASE_FIXED_RGB[phase] ?? "184 188 196";
+  return alpha === undefined ? `rgb(${rgb})` : `rgb(${rgb} / ${alpha})`;
+}
+
 /** The four phases the bar shows, in order. The other three are states, not phases. */
 export const PHASE_BAR: readonly CyclePhase[] = [
   "menstrual",
@@ -371,6 +404,120 @@ export const DELETE_ALL_CONFIRM = "Delete everything";
 export const TRACKER_OFF_KEEPS_DATA =
   "Switching the tracker off hides it and stops sharing your phase. Your logs are kept. " +
   "Use Delete all cycle data if you want them gone.";
+
+/** HE1.10.b.5: the confirm before the tracker goes off (body is TRACKER_OFF_KEEPS_DATA). */
+export const TURN_OFF_TITLE = "Turn off cycle tracking?";
+export const TURN_OFF_KEEP = "Keep tracking";
+export const TURN_OFF_CONFIRM = "Turn off";
+/** The off card's way back on (OURS-cycle-empty-states #3). */
+export const TURN_BACK_ON = "Turn it back on";
+/** HE1.10.b.4's cancel. */
+export const DELETE_ALL_KEEP = "Keep my data";
+/** HE1.10.b.4 Error (handover assumption): the popup stays with this line. */
+export const DELETE_ALL_FAILED = "Couldn't delete. Try again.";
+
+/**
+ * The privacy line under every cycle tab (V6-12: the handover line, extended
+ * because sharing can be switched on in two places now).
+ */
+export const PRIVACY_LINE =
+  "Cycle data is private. It isn't shared with professionals unless you turn it on in " +
+  "Who can see your cycle or Profile › Connected professionals.";
+
+/** Under the three lengths (HE1.10.b, drawn under Luteal length). */
+export const LENGTHS_HELP =
+  "Your estimates are worked out from the days you log. These lengths are a starting point.";
+/** Typing a length out of range (HE1.10.b #22). */
+export const LENGTH_RANGE_ERROR = (min: number, max: number) => `Enter a number from ${min} to ${max} days.`;
+
+// ---------------------------------------------------------------------------
+// The v6 page (HE1.10 → HE1.10.b.3): labels
+// ---------------------------------------------------------------------------
+
+export const PAGE_TITLE = "Cycle tracking";
+export const LOG_THIS_DAY = "Log this day";
+export const BACK_TO_TODAY = "Back to today";
+export const SCRUB_EARLIER = "Earlier";
+export const SCRUB_LATER = "Later";
+export const LOAD_ERROR = "Couldn't load your cycle.";
+export const INSIGHTS_LOAD_ERROR = "Couldn't load your insights.";
+export const RETRY = "Retry";
+
+export const INSIGHTS_CYCLE_LENGTH = "Cycle length";
+export const INSIGHTS_PERIOD_DAYS = "Period days";
+export const INSIGHTS_REST_OF_CYCLE = "Rest of the cycle";
+/** "Last 6 cycles. Strip length is the cycle in days." (the count follows the data). */
+export const INSIGHTS_STRIPS_NOTE = (n: number) =>
+  `Last ${n} cycle${n === 1 ? "" : "s"}. Strip length is the cycle in days.`;
+export const INSIGHTS_AVG_CYCLE = "Avg cycle";
+export const INSIGHTS_AVG_PERIOD = "Avg period";
+export const INSIGHTS_VARIATION = "Variation";
+export const INSIGHTS_AVERAGES_NOTE =
+  "Averages come from the cycles you've logged. Your next cycle length is an estimate.";
+export const SYMPTOMS_BY_PHASE = "Symptoms by phase";
+export const SYMPTOMS_GRID_NOTE = "Days you logged each symptom, grouped by the phase it happened in.";
+/** The grid's column heads, abbreviated as drawn (HE1.10.a #34). */
+export const GRID_HEAD_SYMPTOM = "Symptom";
+export const GRID_PHASE_SHORT: Record<CyclePhase, string> = {
+  menstrual: "Period",
+  follicular: "Follic.",
+  ovulatory: "Ovul.",
+  luteal: "Luteal",
+  hormonal_contraception: "",
+  pregnant: "",
+  unavailable: "",
+};
+
+export const SETTINGS_TRACKING = "Tracking";
+export const SETTINGS_YOUR_CYCLE = "Your cycle";
+export const SETTINGS_PREGNANCY = "Pregnancy";
+export const SETTINGS_MORE = "More";
+export const SETTINGS_CONDITIONS = "Conditions";
+export const SETTINGS_DATA = "Data and privacy";
+export const SETTINGS_CYCLE_LENGTH = "Typical cycle length";
+export const SETTINGS_PERIOD_LENGTH = "Typical period length";
+export const SETTINGS_LUTEAL_LENGTH = "Luteal length";
+export const SETTINGS_CONTRACEPTION = "Contraception";
+export const SETTINGS_CONTRACEPTION_SET_UP = "Set up";
+export const SETTINGS_REMINDERS = "Reminders";
+export const SETTINGS_REMINDERS_VALUE = "Notifications";
+export const SETTINGS_WHO_CAN_SEE = "Who can see your cycle phase";
+export const SETTINGS_ONLY_YOU = "Only you";
+export const SETTINGS_SHARED_WITH = (n: number) => `Shared with ${n}`;
+export const SETTINGS_TIMEZONE_NOT_SET = "Not set";
+export const SWITCH_ON_TO_TRACK = "Switch it on to start tracking.";
+
+/**
+ * The period-due reminder (Database B2 + B4 period_due). The help line quotes
+ * exactly what the lock screen will say for the wording chosen in
+ * Contraception (queue_period_reminders' own titles).
+ */
+export const PERIOD_REMINDER_TITLE = "Period reminder";
+export const PERIOD_REMINDER_SUB = "Before your next period is expected.";
+export const PERIOD_REMINDER_DAYS_LABEL = "How many days before";
+export const PERIOD_REMINDER_DAYS_OPTION = (n: number) => `${n} day${n === 1 ? "" : "s"} before`;
+export const PERIOD_REMINDER_WORDING: Record<"neutral" | "detailed", string> = {
+  neutral: 'Your lock screen shows "A reminder from your tracker". Change the wording in Contraception.',
+  detailed: 'Your lock screen shows "Your period may be due soon". Change the wording in Contraception.',
+};
+
+// ---------------------------------------------------------------------------
+// Who can see your cycle (HE1.10.b.3)
+// ---------------------------------------------------------------------------
+
+export const SHARING_TITLE = "Who can see your cycle";
+/**
+ * The intro. The board's line ends "Sex…"; the drawn frame completes it with
+ * SEX_ACTIVITY_PRIVACY's own rule ("Sexual activity is private: never
+ * shared."), which is what no sharing category covers.
+ */
+export const SHARING_INTRO =
+  "Professionals you choose see only the phase name or the trimester. Logged days, " +
+  "symptoms and notes stay with you. Sexual activity is private: never shared.";
+export const SHARING_MIRRORED = "The same switches are in Profile › Connected professionals.";
+export const SHARING_NONE = "You haven't connected any professionals.";
+export const SHARING_FIND = "Find a professional";
+export const SHARING_LOAD_ERROR = "Couldn't load your professionals.";
 
 // ---------------------------------------------------------------------------
 // Sharing

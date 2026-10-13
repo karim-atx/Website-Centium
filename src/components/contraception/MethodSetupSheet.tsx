@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
+import { CtaButton } from "../ui/PinnedCta";
+import { Toggle } from "../ui/Toggle";
+import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
+import { TimeWheel, partBSheetTone } from "../health/log/LogSheetParts";
+import { useIsDark } from "../../hooks/useIsDark";
+import { CycleDateField, OptionButton, hair, type, useCycleMode } from "../cycle/cycleUi";
 import { useApp } from "../../context/AppContext";
 import {
   SCHEDULED_METHODS,
@@ -47,6 +51,14 @@ const METHODS: readonly Method[] = [
 // Stored as a JS weekday (0 = Sunday); listed Monday first (X-13, reorder only).
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+type DateKey = "startedOn" | "packStartDate" | "insertedOn" | "firstAppliedOn" | "lastGivenOn" | "replaceBy";
+type NumKey = "activeDays" | "breakDays" | "weeksIn" | "weeksOut" | "intervalWeeks";
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const parseTime = (t: string | null | undefined) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(t ?? "");
+  return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 21, m: 0 };
+};
+
 const todayISO = () => {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -60,7 +72,10 @@ export const MethodSetupSheet: React.FC<{
   onSaved: () => void;
 }> = ({ open, onClose, plan, onSaved }) => {
   const { authUserId } = useApp();
+  const dark = useIsDark();
+  const { hc } = useCycleMode();
   const today = todayISO();
+  const [picking, setPicking] = useState<{ key: DateKey; max?: string; title: string } | null>(null);
 
   const [draft, setDraft] = useState<PlanShape>(
     plan ?? { method: "pill_combined", startedOn: today, packStartDate: today, activeDays: 21, breakDays: 7 }
@@ -127,112 +142,116 @@ export const MethodSetupSheet: React.FC<{
     onClose();
   };
 
-  const label = "block text-[11px] font-bold text-charcoal mb-1.5 mt-3";
-  const field =
-    "w-full rounded-xl bg-cream-soft px-3.5 py-2.5 text-[13px] text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
+  // HE1.10.b.2 S3 / K3: the Part B lavender-header sheet (chrome "partB",
+  // pinned Save), field labels 12/16 600 #8C8378, smooth-square options,
+  // 44 r12 fields; dates open the standard calendar popup; the pill's
+  // reminder time is the 12-hour wheel (X-14). The change day lists Monday
+  // first and still stores 0 = Sunday (X-13, reorder only).
+  const fieldStyle: React.CSSProperties = {
+    height: 44,
+    borderRadius: 12,
+    padding: "0 12px",
+    border: `0.5px solid ${hair(dark, hc, 0.1)}`,
+    ...type(14, 21, 400),
+  };
+  const field = "w-full bg-cream-soft text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const label = (text: string) => (
+    <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "16px 0 6px 2px" })}>
+      {text}
+    </p>
+  );
+  const dateField = (key: DateKey, labelText: string, max?: string) => (
+    <>
+      {label(labelText)}
+      <CycleDateField value={(draft[key] as string | null | undefined) || null} onClick={() => setPicking({ key, max, title: labelText })} ariaLabel={labelText} />
+    </>
+  );
+  const numberField = (key: NumKey, labelText: string, min: number, max: number) => (
+    <div>
+      {label(labelText)}
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        aria-label={labelText}
+        className={field}
+        style={fieldStyle}
+        value={(draft[key] as number | null | undefined) ?? ""}
+        onChange={(e) => set(key, (e.target.value === "" ? null : Number(e.target.value)) as PlanShape[NumKey])}
+      />
+    </div>
+  );
+  const time = parseTime(draft.reminderTime);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={plan ? G.CHANGE_METHOD : G.SETUP_TITLE}>
-      <div className="animate-fade-slide-up">
-        <div className="flex flex-wrap gap-2">
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        title={plan ? G.CHANGE_METHOD : G.SETUP_TITLE}
+        chrome="partB"
+        tone={partBSheetTone(dark)}
+        footerBottom={30}
+        footer={
+          <div>
+            {error && (
+              <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
+                {error}
+              </p>
+            )}
+            <CtaButton label="Save" disabled={!authUserId} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+          </div>
+        }
+      >
+        <div className="flex flex-wrap" role="radiogroup" aria-label="Method" style={{ gap: 6 }}>
           {METHODS.map((m) => (
-            <Chip key={m} active={draft.method === m} onClick={() => chooseMethod(m)}>
+            <OptionButton key={m} role="radio" size="sheet" selected={draft.method === m} onClick={() => chooseMethod(m)}>
               {G.METHOD_LABEL[m]}
-            </Chip>
+            </OptionButton>
           ))}
         </div>
-        <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">{G.NOT_A_PRESCRIBER}</p>
+        <p className="text-charcoal-faint" style={type(11, 16, 400, { marginTop: 8 })}>
+          {G.NOT_A_PRESCRIBER}
+        </p>
 
-        <label className={label}>Started on</label>
-        <input
-          type="date"
-          className={field}
-          value={draft.startedOn}
-          max={today}
-          onChange={(e) => set("startedOn", e.target.value)}
-        />
+        {dateField("startedOn", "Started on", today)}
 
         {/* --- the pill --- */}
         {isPill(draft.method) && (
           <>
-            <label className={label}>First day of this pack</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.packStartDate ?? ""}
-              onChange={(e) => set("packStartDate", e.target.value)}
-            />
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className={label}>Active days</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={20}
-                  max={28}
-                  className={field}
-                  value={draft.activeDays ?? ""}
-                  onChange={(e) => set("activeDays", e.target.value === "" ? null : Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <label className={label}>Break days</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={7}
-                  className={field}
-                  value={draft.breakDays ?? ""}
-                  onChange={(e) => set("breakDays", e.target.value === "" ? null : Number(e.target.value))}
-                />
-              </div>
+            {dateField("packStartDate", "First day of this pack")}
+            <div className="grid grid-cols-2" style={{ columnGap: 10 }}>
+              {numberField("activeDays", "Active days", 20, 28)}
+              {numberField("breakDays", "Break days", 0, 7)}
             </div>
-            <label className={label}>{G.REMINDER_TIME_LABEL}</label>
-            <input
-              type="time"
-              className={field}
-              value={(draft.reminderTime ?? "").slice(0, 5)}
-              onChange={(e) => set("reminderTime", e.target.value ? e.target.value : null)}
-            />
+            {label(G.REMINDER_TIME_LABEL)}
+            {draft.reminderTime ? (
+              <>
+                <TimeWheel
+                  value={time}
+                  minuteStep={5}
+                  onChange={(v) => set("reminderTime", `${pad2(v.h)}:${pad2(v.m)}`)}
+                />
+                <button type="button" onClick={() => set("reminderTime", null)} className="tap text-charcoal-faint" style={{ minHeight: 36, ...type(12, 18, 600) }}>
+                  No reminder time
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => set("reminderTime", "21:00")} className="tap text-primary-dark" style={{ minHeight: 36, ...type(13, 19.5, 700) }}>
+                Set a time
+              </button>
+            )}
           </>
         )}
 
         {/* --- the ring --- */}
         {draft.method === "ring" && (
           <>
-            <label className={label}>Put in on</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.insertedOn ?? ""}
-              onChange={(e) => set("insertedOn", e.target.value)}
-            />
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className={label}>Weeks in</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={4}
-                  className={field}
-                  value={draft.weeksIn ?? ""}
-                  onChange={(e) => set("weeksIn", e.target.value === "" ? null : Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <label className={label}>Weeks out</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={2}
-                  className={field}
-                  value={draft.weeksOut ?? ""}
-                  onChange={(e) => set("weeksOut", e.target.value === "" ? null : Number(e.target.value))}
-                />
-              </div>
+            {dateField("insertedOn", "Put in on")}
+            <div className="grid grid-cols-2" style={{ columnGap: 10 }}>
+              {numberField("weeksIn", "Weeks in", 1, 4)}
+              {numberField("weeksOut", "Weeks out", 0, 2)}
             </div>
           </>
         )}
@@ -240,94 +259,64 @@ export const MethodSetupSheet: React.FC<{
         {/* --- the patch --- */}
         {draft.method === "patch" && (
           <>
-            <label className={label}>First patch on</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.firstAppliedOn ?? ""}
-              onChange={(e) => set("firstAppliedOn", e.target.value)}
-            />
-            <label className={label}>Change day</label>
-            <select
-              className={field}
-              value={draft.changeWeekday ?? 0}
-              onChange={(e) => set("changeWeekday", Number(e.target.value))}
-            >
+            {dateField("firstAppliedOn", "First patch on")}
+            {label("Change day")}
+            <div className="flex flex-wrap" role="radiogroup" aria-label="Change day" style={{ gap: 6 }}>
               {MONDAY_FIRST_JS_WEEKDAYS.map((i) => (
-                <option key={i} value={i}>
-                  {WEEKDAYS[i]}
-                </option>
+                <OptionButton key={i} role="radio" size="sheet" selected={(draft.changeWeekday ?? 0) === i} onClick={() => set("changeWeekday", i)}>
+                  <span aria-hidden>{WEEKDAYS[i].slice(0, 3)}</span>
+                  <span className="sr-only">{WEEKDAYS[i]}</span>
+                </OptionButton>
               ))}
-            </select>
-            <label className="flex items-center gap-2 mt-3">
-              <input
-                type="checkbox"
-                checked={draft.patchFreeWeek ?? false}
-                onChange={(e) => set("patchFreeWeek", e.target.checked)}
-              />
-              <span className="text-[12px] text-charcoal">I have a patch-free week</span>
-            </label>
+            </div>
+            <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 14 }}>
+              <span className="text-charcoal" style={type(14, 19, 600)}>
+                I have a patch-free week
+              </span>
+              <Toggle checked={draft.patchFreeWeek ?? false} onChange={(v) => set("patchFreeWeek", v)} label="I have a patch-free week" />
+            </div>
           </>
         )}
 
         {/* --- the injection --- */}
         {draft.method === "injection" && (
           <>
-            <label className={label}>Last injection</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.lastGivenOn ?? ""}
-              onChange={(e) => set("lastGivenOn", e.target.value)}
-            />
-            <label className={label}>Every (weeks)</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={4}
-              max={16}
-              className={field}
-              value={draft.intervalWeeks ?? ""}
-              onChange={(e) => set("intervalWeeks", e.target.value === "" ? null : Number(e.target.value))}
-            />
+            {dateField("lastGivenOn", "Last injection")}
+            {numberField("intervalWeeks", "Every (weeks)", 4, 16)}
           </>
         )}
 
         {/* --- implant and IUDs --- */}
         {isDevice(draft.method) && (
           <>
-            <label className={label}>Fitted on</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.insertedOn ?? ""}
-              onChange={(e) => set("insertedOn", e.target.value)}
-            />
-            <label className={label}>Replace by</label>
-            <input
-              type="date"
-              className={field}
-              value={draft.replaceBy ?? ""}
-              onChange={(e) => set("replaceBy", e.target.value)}
-            />
-            <p className="mt-1.5 text-[10px] leading-[1.45] text-charcoal-faint">{G.DEVICE_NOTE}</p>
+            {dateField("insertedOn", "Fitted on")}
+            {dateField("replaceBy", "Replace by")}
+            <p className="text-charcoal-faint" style={type(11, 16, 400, { marginTop: 6 })}>
+              {G.DEVICE_NOTE}
+            </p>
           </>
         )}
 
         {/* Methods with no schedule say so, rather than showing an empty form. */}
         {!SCHEDULED_METHODS.includes(draft.method) && (
-          <p className="mt-3 text-[11.5px] leading-relaxed text-charcoal-soft">
-            There's no schedule to keep for this one. It's recorded so the rest of the app knows
-            what you use.
+          <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 14 })}>
+            There's no schedule to keep for this one. It's recorded so the rest of the app knows what you use.
           </p>
         )}
-
-        {error && <p className="mt-3 text-[11.5px] font-semibold text-status-high">{error}</p>}
-
-        <Button fullWidth className="mt-4" disabled={busy || !authUserId} onClick={() => void save()}>
-          Save
-        </Button>
-      </div>
-    </BottomSheet>
+      </BottomSheet>
+      <CalendarPickerSheet
+        variant="partB"
+        open={picking !== null}
+        onClose={() => setPicking(null)}
+        selectedDate={(picking && (draft[picking.key] as string | null | undefined)) || today}
+        today={today}
+        maxDate={picking?.max}
+        title={picking?.title}
+        onSelect={(d) => {
+          if (picking) set(picking.key, d as PlanShape[DateKey]);
+          setPicking(null);
+        }}
+      />
+    </>
   );
 };

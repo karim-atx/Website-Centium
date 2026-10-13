@@ -1,15 +1,15 @@
 import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
 import { FlagNote } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
+import { CtaButton } from "../ui/PinnedCta";
+import { Toast } from "../ui/Toast";
 import { useApp } from "../../context/AppContext";
+import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 import {
-  BP_ARMS,
   BP_LIMITS,
-  BP_POSITIONS,
   deleteBloodPressure,
   logBloodPressure,
   updateBloodPressure,
@@ -22,39 +22,49 @@ import { classifyBloodPressure, isSevere } from "../../services/blood-pressure/c
 import {
   BP_CATEGORY_LABEL,
   BP_CATEGORY_RANGE,
-  BP_HOW_TO_MEASURE_STEPS,
   BP_HOW_TO_MEASURE_TITLE,
-  BP_WHY_ARM_AND_POSITION,
+  BP_LOG_SHEET_DISCLAIMER,
   SEVERE_READING_MESSAGE,
 } from "../../services/blood-pressure/guidance";
-import { AlertTriangle, ChevronDown, Info, Trash2 } from "lucide-react";
+import { BpVeryHighPopup, shouldOpenBpVeryHigh } from "./BpVeryHighPopup";
+import { BpHowToMeasureSheet } from "./BpHowToMeasureSheet";
+import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../../services/health-log/offlineQueue";
+import { FieldLabel, MeasuredOnPopup, Segmented, WhenField, hairAt, isoDay, partBSheetTone, whenLabel } from "./log/LogSheetParts";
+import type { BloodPressureInput } from "../../services/blood-pressure/reading";
+import { useLogQueueFlush } from "./log/useLogQueue";
+import { AlertTriangle, Info, Trash2 } from "lucide-react";
 
-// Entering one blood-pressure reading.
+// HE1.6.1 "Log blood pressure" (health-b-handover.md 3014-3145): the shared
+// Log sheet for one reading. Systolic / Diastolic / Pulse boxes in one row,
+// Arm and Position as segmented controls, When (the Measured on popup,
+// HE1.6.1.a), Note, "How to measure", the sheet's disclaimer line, pinned
+// "Save reading".
 //
-// ITS OWN SHEET, WHERE TWO FIELDS USED TO SIT INLINE. AddMetricSheet had a
-// systolic/diastolic pair that autosaved on a 700 ms debounce, which is the
-// wrong shape for this: a reading also carries a pulse, a time, an arm, a
-// position and a note, and autosaving after the numbers would write a row and
-// then update it two or three times while the user was still choosing the arm.
-// A reading is one event, saved once, when the person says so.
+// A READING IS ONE EVENT, saved once, when the person says so: no autosave,
+// and the empty form has no numbers in it (a "120/80" default would be a
+// real, classifiable reading for somebody who measured nothing).
 //
-// DEFAULTS ARE DISPLAY ONLY, and the empty form has none. The old pair opened
-// on "120/80" — a real, normal, classifiable reading sitting in the fields of
-// somebody who had measured nothing. The fields here start blank.
+// SAFETY, KEPT AS IT WAS (HE1.6.1 K1-K4):
+// - SEVERE_READING_MESSAGE shows inline (role=alert) while the numbers are
+//   very high, above Save. A saved reading that is very high (or Urgent in a
+//   pregnancy) opens Health A's HE1.6.a popup (BpVeryHighPopup, its own
+//   rule shouldOpenBpVeryHigh) in place of the sheet; "Measure again"
+//   brings the sheet back empty, Close closes both.
+// - During a pregnancy its own levels replace the general category and the
+//   severe alert (usePregnancyFlags), shown above Save.
+// - The database limits and the repo's validation copy (V6-17).
+// - Editing and deleting a reading.
 
-const ARM_LABEL: Record<BpArm, string> = { left: "Left", right: "Right" };
-const POSITION_LABEL: Record<BpPosition, string> = {
-  sitting: "Sitting",
-  standing: "Standing",
-  lying: "Lying down",
-};
-
-/** yyyy-mm-ddThh:mm in LOCAL time, which is what <input type="datetime-local"> wants. */
-function toLocalInputValue(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+const ARMS: { value: BpArm; label: string }[] = [
+  { value: "left", label: "Left" },
+  { value: "right", label: "Right" },
+];
+// V6-167: "Lying" (was "Lying down").
+const POSITIONS: { value: BpPosition; label: string }[] = [
+  { value: "sitting", label: "Sitting" },
+  { value: "standing", label: "Standing" },
+  { value: "lying", label: "Lying" },
+];
 
 const digitsOnly = (v: string, max: number) => v.replace(/\D/g, "").slice(0, max);
 
@@ -66,23 +76,29 @@ export const BloodPressureSheet: React.FC<{
   /** Called after a successful save or delete, so the caller can re-read. */
   onSaved: () => void;
 }> = ({ open, onClose, editing, onSaved }) => {
-  const { authUserId, selectedDate, today, refreshAchievements } = useApp();
+  const { authUserId, today, refreshAchievements } = useApp();
+  const dark = useIsDark();
+  useLogQueueFlush();
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
   const [pulse, setPulse] = useState("");
-  const [when, setWhen] = useState("");
+  const [when, setWhen] = useState<Date>(() => new Date());
+  const [whenOpen, setWhenOpen] = useState(false);
   const [arm, setArm] = useState<BpArm | null>(null);
   const [position, setPosition] = useState<BpPosition | null>(null);
   const [notes, setNotes] = useState("");
   const [howToOpen, setHowToOpen] = useState(false);
+  const [veryHigh, setVeryHigh] = useState<(BloodPressureInput & { recordedAt: string }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const diaRef = useRef<HTMLInputElement | null>(null);
+  const pulseRef = useRef<HTMLInputElement | null>(null);
 
-  // Reset on each fresh open, the pattern MetricDetailSheet uses: one instance
-  // is reused for adding and for editing every row, so nothing may bleed from
-  // the last visit.
+  // Reset on each fresh open: one instance is reused for adding and for
+  // editing every row, so nothing may bleed from the last visit.
   const [wasOpen, setWasOpen] = useState(false);
   if (open && !wasOpen) {
     setWasOpen(true);
@@ -90,41 +106,33 @@ export const BloodPressureSheet: React.FC<{
     setDia(editing ? String(editing.diastolic) : "");
     setPulse(editing?.pulse != null ? String(editing.pulse) : "");
     // Defaults to NOW for a new reading, because that is when a cuff is
-    // almost always read — but it is an editable field, not an assumption.
-    setWhen(toLocalInputValue(editing ? editing.recordedAt : new Date().toISOString()));
+    // almost always read; it is an editable field, not an assumption.
+    setWhen(editing ? new Date(editing.recordedAt) : new Date());
     setArm(editing?.arm ?? null);
     setPosition(editing?.position ?? null);
     setNotes(editing?.notes ?? "");
     setHowToOpen(false);
     setError(null);
     setConfirmDelete(false);
+    setVeryHigh(null);
   } else if (!open && wasOpen) {
     setWasOpen(false);
   }
 
   const systolic = sys === "" ? null : Number(sys);
   const diastolic = dia === "" ? null : Number(dia);
-  // Classified live, so the chip moves as the numbers are typed — but only
-  // once both are present, because one number does not have a category.
-  const category =
-    systolic !== null && diastolic !== null && systolic > diastolic
-      ? classifyBloodPressure(systolic, diastolic)
-      : null;
+  // Classified live once both are present: one number has no category.
+  const category = systolic !== null && diastolic !== null && systolic > diastolic ? classifyBloodPressure(systolic, diastolic) : null;
   // Task Y: during a pregnancy its own levels replace the general category
   // and the severe-reading alert.
   const pregnancyFlags = usePregnancyFlags();
   const inPregnancy = pregnancyFlags.replacesBpBands;
   const severe = !inPregnancy && systolic !== null && diastolic !== null && isSevere(systolic, diastolic);
-  const pFlag =
-    systolic !== null && diastolic !== null && systolic > diastolic ? pregnancyFlags.bp({ systolic, diastolic }) : null;
+  const pFlag = systolic !== null && diastolic !== null && systolic > diastolic ? pregnancyFlags.bp({ systolic, diastolic }) : null;
 
   const save = async () => {
     if (systolic === null || diastolic === null) {
       setError("Enter both numbers.");
-      return;
-    }
-    if (!when) {
-      setError("Enter when you took this reading.");
       return;
     }
     const reading = {
@@ -135,8 +143,8 @@ export const BloodPressureSheet: React.FC<{
       position,
       notes: notes.trim() ? notes.trim() : null,
     };
-    // The same validator the service runs, called here so the message appears
-    // beside the fields rather than after a round trip.
+    // The same validator the service runs, so the message appears beside the
+    // fields rather than after a round trip.
     const invalid = validateBloodPressure(reading);
     if (invalid) {
       setError(invalid);
@@ -146,27 +154,47 @@ export const BloodPressureSheet: React.FC<{
       setError("You need to be signed in to save a reading.");
       return;
     }
+    const recordedAt = when.toISOString();
+    const day = isoDay(when);
+    const opensPopup = shouldOpenBpVeryHigh({ systolic, diastolic }, pregnancyFlags);
+    const queue = () => {
+      enqueueLog(authUserId, { kind: "bp", reading, day, recordedAt });
+      setToast(QUEUED_COPY);
+      // The severe check still runs on the device: the message is put in
+      // front of the person while the reading waits for a connection.
+      if (opensPopup) setVeryHigh({ ...reading, recordedAt });
+      else onClose();
+    };
+    if (!editing && browserOffline()) {
+      queue();
+      return;
+    }
 
     setSaving(true);
     setError(null);
-    const recordedAt = new Date(when).toISOString();
     const result = editing
       ? await updateBloodPressure({ id: editing.id, reading, recordedAt })
-      : await logBloodPressure({ userId: authUserId, reading, day: selectedDate, today, recordedAt });
+      : await logBloodPressure({ userId: authUserId, reading, day, today, recordedAt });
     // first_bp and the bp_days count both read blood_pressure_readings, so a
     // saved reading is a moment an achievement can land.
     if (result.ok) refreshAchievements();
     setSaving(false);
 
     if (!result.ok) {
+      if (!editing && isOfflineFailure(result)) {
+        queue();
+        return;
+      }
       setError(result.message);
       return;
     }
     onSaved();
-    // A SEVERE READING KEEPS THE SHEET OPEN. Closing straight onto the card
-    // would show the same message a scroll away, which is not the same as
-    // putting it in front of somebody who has just seen the number.
-    if (!severe) onClose();
+    // A VERY HIGH READING IS PUT IN FRONT OF THE PERSON (HE1.6.a).
+    if (opensPopup) {
+      setVeryHigh({ ...reading, recordedAt });
+      return;
+    }
+    onClose();
   };
 
   const remove = async () => {
@@ -182,191 +210,209 @@ export const BloodPressureSheet: React.FC<{
     onClose();
   };
 
-  const fieldStyle =
-    "w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const box = (filled: boolean): React.CSSProperties => ({
+    width: "100%",
+    height: 56,
+    borderRadius: 14,
+    border: `0.5px solid ${filled ? (dark ? "rgba(169,145,254,0.9)" : "rgba(174,161,220,0.9)") : hairAt(dark, 0.1)}`,
+    textAlign: "center",
+    fontSize: textPx(24),
+    lineHeight: "36px",
+    fontWeight: 800,
+    fontVariantNumeric: "tabular-nums",
+  });
+  const boxClass = "bg-cream-soft text-charcoal placeholder:text-charcoal-faint focus:outline-none";
+  const valueLabel = { margin: "0 0 5px", fontSize: textPx(12), lineHeight: "18px", fontWeight: 600 } as const;
+  const unit = { margin: "5px 0 0", fontSize: textPx(11), lineHeight: "16.5px", fontWeight: 700 } as const;
+  const unitClass = "text-center text-th-7d6bb5 dark:text-primary-deep-text";
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={editing ? "Edit reading" : "Add blood pressure"}
-    >
-      <div className="animate-fade-slide-up">
-        {/* --- the two numbers ------------------------------------------- */}
-        <div className="flex items-end gap-2.5 mb-1">
-          <label className="flex-1 min-w-0">
-            <span className="block text-[11px] font-semibold text-charcoal-soft mb-1">Systolic</span>
+    <>
+      <BottomSheet
+        open={open && !veryHigh && !howToOpen}
+        onClose={onClose}
+        title={editing ? "Edit reading" : "Log blood pressure"}
+        chrome="partB"
+        tone={partBSheetTone(dark)}
+        footerBottom={30}
+        footer={
+          <div>
+            {pFlag && (
+              <FlagNote tone={pFlag.level} label={pFlag.label} className="mb-3">
+                <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
+              </FlagNote>
+            )}
+            {severe && (
+              <div role="alert" className="flex gap-2.5 rounded-2xl px-3.5 py-3 mb-3" style={{ background: "rgba(164,35,28,0.08)" }}>
+                {/* Mobile v5.1 R3, dark mode: danger #FF6B5E for ink and icon (5.7:1 on the 8% red tint over the dark sheet). */}
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#A4231C] dark:text-[#FF6B5E]" />
+                <p className="text-[12px] leading-[1.5] font-semibold text-[#7E1B15] dark:text-[#FF6B5E]">{SEVERE_READING_MESSAGE}</p>
+              </div>
+            )}
+            {error && (
+              <p role="alert" className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-3">
+                {error}
+              </p>
+            )}
+            <CtaButton
+              label={editing ? "Save changes" : "Save reading"}
+              disabled={sys === "" || dia === ""}
+              loading={saving}
+              onClick={() => void save()}
+              style={{ lineHeight: "21px" }}
+            />
+          </div>
+        }
+      >
+        {/* --- the three numbers (HE1.6.1 #56-#59) ----------------------- */}
+        <div className="flex items-start">
+          <label className="block shrink-0" style={{ width: 100.3 }}>
+            <p className="text-center text-charcoal-faint" style={valueLabel}>
+              Systolic
+            </p>
             <input
               autoFocus={!editing}
               value={sys}
-              onChange={(e) => setSys(digitsOnly(e.target.value, 3))}
+              onChange={(e) => {
+                const v = digitsOnly(e.target.value, 3);
+                setSys(v);
+                if (v.length === 3) diaRef.current?.focus();
+              }}
               inputMode="numeric"
               placeholder="–"
               aria-label="Systolic, in mmHg"
-              className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
+              className={boxClass}
+              style={box(sys !== "")}
             />
+            <p className={unitClass} style={unit}>
+              mmHg
+            </p>
           </label>
-          <span className="pb-3 text-xl font-bold text-charcoal-faint">/</span>
-          <label className="flex-1 min-w-0">
-            <span className="block text-[11px] font-semibold text-charcoal-soft mb-1">Diastolic</span>
+          <span
+            aria-hidden
+            className="shrink-0 text-charcoal"
+            style={{ margin: "36px 9px 0 8px", width: 10.1, fontSize: textPx(26), lineHeight: "39px", fontWeight: 300, opacity: 0.35 }}
+          >
+            /
+          </span>
+          <label className="block shrink-0" style={{ width: 100 }}>
+            <p className="text-center text-charcoal-faint" style={valueLabel}>
+              Diastolic
+            </p>
             <input
+              ref={diaRef}
               value={dia}
-              onChange={(e) => setDia(digitsOnly(e.target.value, 3))}
+              onChange={(e) => {
+                const v = digitsOnly(e.target.value, 3);
+                setDia(v);
+                if (v.length === 3) pulseRef.current?.focus();
+              }}
               inputMode="numeric"
               placeholder="–"
               aria-label="Diastolic, in mmHg"
-              className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
+              className={boxClass}
+              style={box(dia !== "")}
             />
+            <p className={unitClass} style={unit}>
+              mmHg
+            </p>
           </label>
-          <label className="w-[86px] shrink-0">
-            <span className="block text-[11px] font-semibold text-charcoal-soft mb-1">
-              Pulse <span className="font-normal text-charcoal-faint">(optional)</span>
-            </span>
+          <span className="flex-1" />
+          <label className="block shrink-0" style={{ width: 100 }}>
+            <p className="text-center text-charcoal-faint whitespace-nowrap" style={valueLabel}>
+              Pulse (optional)
+            </p>
             <input
+              ref={pulseRef}
               value={pulse}
               onChange={(e) => setPulse(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
               placeholder="–"
-              aria-label="Pulse, in beats per minute"
-              className={`${fieldStyle} text-center text-base font-bold tabular-nums`}
+              aria-label="Pulse, in beats per minute (optional)"
+              className={boxClass}
+              style={box(pulse !== "")}
             />
+            <p className={unitClass} style={unit}>
+              bpm
+            </p>
           </label>
         </div>
-        <p className="text-[10.5px] text-charcoal-faint mb-3">mmHg · mmHg · bpm</p>
 
-        {/* The live category. Text, never colour alone. */}
-        {pFlag && (
-          <FlagNote tone={pFlag.level} label={pFlag.label} className="mb-3">
-            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
-          </FlagNote>
-        )}
+        {/* The live category (kept, not drawn): text, never colour alone. */}
         {category && !inPregnancy && (
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-cream-soft px-3.5 py-2.5 mb-3">
-            <span className="text-[12.5px] font-bold text-charcoal">{BP_CATEGORY_LABEL[category]}</span>
-            <span className="text-[11px] text-charcoal-faint">{BP_CATEGORY_RANGE[category]}</span>
-          </div>
-        )}
-
-        {severe && (
-          <div
-            role="alert"
-            className="flex gap-2.5 rounded-2xl px-3.5 py-3 mb-3"
-            style={{ background: "rgba(164,35,28,0.08)" }}
-          >
-            {/* Mobile v5.1 R3, dark mode: danger #FF6B5E for ink and icon (5.7:1 on the 8% red tint over the dark sheet). */}
-            <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#A4231C] dark:text-[#FF6B5E]" />
-            <p className="text-[12px] leading-[1.5] font-semibold text-[#7E1B15] dark:text-[#FF6B5E]">
-              {SEVERE_READING_MESSAGE}
-            </p>
-          </div>
-        )}
-
-        {/* --- when ------------------------------------------------------- */}
-        <label className="block mb-3">
-          <span className="block text-[11px] font-semibold text-charcoal-soft mb-1">When</span>
-          <input
-            type="datetime-local"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            className={`${fieldStyle} text-sm`}
-          />
-        </label>
-
-        {/* --- arm and position ------------------------------------------- */}
-        <div className="mb-3">
-          <span className="block text-[11px] font-semibold text-charcoal-soft mb-1.5">Arm</span>
-          <div className="flex gap-2">
-            {BP_ARMS.map((a) => (
-              <Chip key={a} active={arm === a} onClick={() => setArm(arm === a ? null : a)}>
-                {ARM_LABEL[a]}
-              </Chip>
-            ))}
-          </div>
-        </div>
-        <div className="mb-3">
-          <span className="block text-[11px] font-semibold text-charcoal-soft mb-1.5">Position</span>
-          <div className="flex flex-wrap gap-2">
-            {BP_POSITIONS.map((p) => (
-              <Chip key={p} active={position === p} onClick={() => setPosition(position === p ? null : p)}>
-                {POSITION_LABEL[p]}
-              </Chip>
-            ))}
-          </div>
-        </div>
-
-        {/* --- notes ------------------------------------------------------ */}
-        <label className="block mb-3">
-          <span className="block text-[11px] font-semibold text-charcoal-soft mb-1">
-            Note <span className="font-normal text-charcoal-faint">(optional)</span>
-          </span>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value.slice(0, BP_LIMITS.notesMaxLength))}
-            rows={2}
-            placeholder="e.g. after a walk, felt dizzy"
-            className={`${fieldStyle} text-sm resize-none`}
-          />
-        </label>
-
-        {/* --- how to measure --------------------------------------------- */}
-        <div className="rounded-2xl bg-cream-soft mb-4 overflow-hidden">
-          <button
-            onClick={() => setHowToOpen((v) => !v)}
-            aria-expanded={howToOpen}
-            className="tap w-full flex items-center gap-2 px-3.5 py-3 text-left"
-          >
-            <Info size={14} className="text-primary-dark shrink-0" />
-            <span className="flex-1 text-[12.5px] font-bold text-charcoal">{BP_HOW_TO_MEASURE_TITLE}</span>
-            <ChevronDown
-              size={14}
-              className="text-charcoal-faint shrink-0 transition-transform duration-200"
-              style={{ transform: howToOpen ? "rotate(180deg)" : undefined }}
-            />
-          </button>
-          {howToOpen && (
-            <div className="px-3.5 pb-3.5">
-              <ol className="list-decimal pl-4 space-y-1">
-                {BP_HOW_TO_MEASURE_STEPS.map((step) => (
-                  <li key={step} className="text-[11.5px] leading-[1.5] text-charcoal-soft">
-                    {step}
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-2.5 text-[11px] leading-[1.5] text-charcoal-faint">
-                {BP_WHY_ARM_AND_POSITION}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <p className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-3">
-            {error}
+          <p className="flex items-center justify-between gap-2 text-charcoal-soft" style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "17px" }}>
+            <span className="font-bold text-charcoal">{BP_CATEGORY_LABEL[category]}</span>
+            <span className="text-charcoal-faint">{BP_CATEGORY_RANGE[category]}</span>
           </p>
         )}
 
-        <Button fullWidth onClick={() => void save()} disabled={saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Save reading"}
-        </Button>
+        {/* --- arm and position (HE1.6.1 #60-#63, S7) --------------------- */}
+        <div style={{ marginTop: 16 }}>
+          <FieldLabel>Arm</FieldLabel>
+          <Segmented label="Arm" options={ARMS} value={arm} onChange={setArm} clearable />
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <FieldLabel>Position</FieldLabel>
+          <Segmented label="Position" options={POSITIONS} value={position} onChange={setPosition} clearable />
+        </div>
+
+        {/* --- when (HE1.6.1 #64-#68) -------------------------------------- */}
+        <div style={{ marginTop: 16 }}>
+          <FieldLabel>When</FieldLabel>
+          <WhenField value={whenLabel(when, today)} onClick={() => setWhenOpen(true)} ariaLabel={`When: ${whenLabel(when, today)}`} />
+        </div>
+
+        {/* --- note (HE1.6.1 #69-#70) -------------------------------------- */}
+        <div style={{ marginTop: 16 }}>
+          <FieldLabel htmlFor="bp-note">Note</FieldLabel>
+          <textarea
+            id="bp-note"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value.slice(0, BP_LIMITS.notesMaxLength))}
+            placeholder="e.g. after a walk, felt dizzy"
+            className="block w-full bg-cream-soft text-charcoal placeholder:text-charcoal-faint resize-none focus:outline-none"
+            style={{ height: 70, borderRadius: 12, padding: 12, fontSize: textPx(14), lineHeight: "20px", border: `0.5px solid ${hairAt(dark, 0.1)}` }}
+          />
+        </div>
+
+        {/* --- how to measure (HE1.6.1 #71-#72, S4) ------------------------ */}
+        <button
+          type="button"
+          onClick={() => setHowToOpen(true)}
+          aria-haspopup="dialog"
+          className="tap relative flex items-center text-th-7d6bb5 dark:text-primary-deep-text before:absolute before:-inset-y-3 before:-inset-x-1 before:content-['']"
+          style={{ marginTop: 16, gap: 6, fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}
+        >
+          <Info size={15} aria-hidden />
+          {BP_HOW_TO_MEASURE_TITLE}
+        </button>
+        {/* --- disclaimer (HE1.6.1 #73, V6-13) ----------------------------- */}
+        <p className="text-center text-charcoal-faint" style={{ margin: "16px 0 0", fontSize: textPx(10.5), lineHeight: "15.8px", fontWeight: 400 }}>
+          {BP_LOG_SHEET_DISCLAIMER}
+        </p>
 
         {editing && (
-          <div className="mt-2.5">
+          <div className="mt-3">
             {confirmDelete ? (
               <div className="rounded-2xl bg-cream-soft px-3.5 py-3">
-                <p className="text-[12px] text-charcoal-soft mb-2.5">
-                  Delete this reading? It won't be recoverable.
-                </p>
+                <p className="text-[12px] text-charcoal-soft mb-2.5">Delete this reading? It won't be recoverable.</p>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>
+                  <button type="button" onClick={() => setConfirmDelete(false)} className="tap flex-1 h-10 rounded-xl text-[13px] font-bold text-charcoal-soft border border-charcoal/[0.14]">
                     Keep it
-                  </Button>
-                  <Button size="sm" onClick={() => void remove()} disabled={saving}>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void remove()}
+                    disabled={saving}
+                    className="tap flex-1 h-10 rounded-xl text-[13px] font-bold bg-status-high text-on-destructive disabled:opacity-40"
+                  >
                     Delete
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : (
               <button
+                type="button"
                 onClick={() => setConfirmDelete(true)}
                 className="tap w-full flex items-center justify-center gap-1.5 py-2 text-[12px] font-semibold text-status-high"
               >
@@ -375,8 +421,28 @@ export const BloodPressureSheet: React.FC<{
             )}
           </div>
         )}
-        <HealthDisclaimer className="mt-4" />
-      </div>
-    </BottomSheet>
+        <HealthDisclaimer className="mt-2" />
+      </BottomSheet>
+      <BpHowToMeasureSheet open={open && howToOpen} onClose={() => setHowToOpen(false)} />
+      <BpVeryHighPopup
+        open={open && !!veryHigh}
+        reading={veryHigh}
+        pregnancy={inPregnancy}
+        onClose={() => {
+          setVeryHigh(null);
+          onClose();
+        }}
+        onMeasureAgain={() => {
+          setVeryHigh(null);
+          setSys("");
+          setDia("");
+          setPulse("");
+          setNotes("");
+          setWhen(new Date());
+        }}
+      />
+      <MeasuredOnPopup open={whenOpen} onClose={() => setWhenOpen(false)} value={when} today={today} onDone={setWhen} />
+      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+    </>
   );
 };

@@ -1,23 +1,27 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
+import { CtaButton } from "../ui/PinnedCta";
+import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
+import { partBSheetTone } from "../health/log/LogSheetParts";
 import { useApp } from "../../context/AppContext";
 import { endPregnancy, shiftDay, type PregnancyOutcome } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
+import { CycleDateField, OptionButton, type } from "../cycle/cycleUi";
+import { useIsDark } from "../../hooks/useIsDark";
 
-// Ending pregnancy tracking.
+// Ending pregnancy tracking (HE1.10.b K1), in the Part B lavender-header
+// sheet (chrome "partB", pinned footer).
 //
-// THREE BUTTONS OF EQUAL WEIGHT, and the words are in guidance.ts where they
+// THREE OPTIONS OF EQUAL WEIGHT, and the words are in guidance.ts where they
 // can be reviewed. Nothing here congratulates and nothing commiserates: a list
-// of options is not the place for either, and somebody reaching for the second
-// one does not need an app's feelings before it has registered what happened.
+// of options is not the place for either.
 //
 // THE OUTCOME DECIDES WHAT HAPPENS NEXT, and only these two things:
 //   birth → postpartum_until is set, the tracker stays ON, and predictions
 //           resume with POSTPARTUM_BODY saying how rough they will be.
 //   loss  → cycle_settings.tracker_enabled goes false, which is what actually
 //           pauses my_cycle_prediction(). The user turns it back on when they
-//           want to, from here or from Settings. Nothing is deleted either way.
+//           want to, from the Cycle tab or Settings. Nothing is deleted.
 // `other` ends tracking and changes nothing else, because the app does not
 // know what happened and should not guess.
 
@@ -36,8 +40,10 @@ export const EndPregnancySheet: React.FC<{
   onEnded: () => void;
 }> = ({ open, onClose, pregnancyId, onEnded }) => {
   const { saveCycleSettingsAndReload } = useApp();
+  const dark = useIsDark();
   const [outcome, setOutcome] = useState<PregnancyOutcome | null>(null);
   const [endedOn, setEndedOn] = useState(todayISO());
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,12 +57,7 @@ export const EndPregnancySheet: React.FC<{
     if (!outcome) return;
     setBusy(true);
     setError(null);
-    const result = await endPregnancy(
-      pregnancyId,
-      outcome,
-      endedOn,
-      outcome === "birth" ? shiftDay(endedOn, G.POSTPARTUM_WEEKS * 7) : null
-    );
+    const result = await endPregnancy(pregnancyId, outcome, endedOn, outcome === "birth" ? shiftDay(endedOn, G.POSTPARTUM_WEEKS * 7) : null);
     if (!result.ok) {
       setBusy(false);
       setError(result.message);
@@ -70,9 +71,8 @@ export const EndPregnancySheet: React.FC<{
         trackerChosenAt: new Date().toISOString(),
       });
       if (!paused.ok) {
-        // The pregnancy HAS ended at this point, so this is not a failure to
-        // report as one — it is one half of the change not landing. Say what
-        // did not happen, plainly, and leave the sheet open.
+        // The pregnancy HAS ended at this point: say what did not happen,
+        // plainly, and leave the sheet open.
         setBusy(false);
         setError("Tracking ended, but cycle estimates couldn't be paused. Try from Settings.");
         return;
@@ -84,36 +84,40 @@ export const EndPregnancySheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={close} title={G.END_TITLE}>
-      <div className="animate-fade-slide-up">
-        <div className="space-y-2">
+    <>
+      <BottomSheet
+        open={open}
+        onClose={close}
+        title={G.END_TITLE}
+        chrome="partB"
+        tone={partBSheetTone(dark)}
+        footerBottom={30}
+        footer={
+          <div>
+            {error && (
+              <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
+                {error}
+              </p>
+            )}
+            <CtaButton label={G.END_CONFIRM} disabled={!outcome} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+          </div>
+        }
+      >
+        <div className="flex flex-col" role="radiogroup" aria-label={G.END_TITLE} style={{ gap: 8 }}>
           {OUTCOMES.map((o) => (
-            <button
-              key={o}
-              onClick={() => setOutcome(o)}
-              className={`tap w-full text-left rounded-xl px-3.5 py-3 text-[12.5px] font-semibold ${
-                outcome === o ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal"
-              }`}
-            >
+            <OptionButton key={o} role="radio" size="tall" selected={outcome === o} onClick={() => setOutcome(o)} className="w-full !justify-start text-start">
               {G.END_OUTCOME_LABEL[o]}
-            </button>
+            </OptionButton>
           ))}
         </div>
 
         {outcome && (
           <>
-            <label className="block mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">
+            <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "16px 0 6px 2px" })}>
               Date
-            </label>
-            <input
-              type="date"
-              value={endedOn}
-              max={todayISO()}
-              onChange={(e) => setEndedOn(e.target.value)}
-              className="w-full rounded-xl bg-cream-soft px-3.5 py-2.5 text-[13px] text-charcoal"
-            />
-
-            <p className="mt-3 text-[11.5px] leading-relaxed text-charcoal-soft">
+            </p>
+            <CycleDateField value={endedOn} onClick={() => setPickerOpen(true)} ariaLabel="Date" />
+            <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 12 })}>
               {outcome === "birth"
                 ? G.POSTPARTUM_BODY
                 : outcome === "loss"
@@ -122,18 +126,19 @@ export const EndPregnancySheet: React.FC<{
             </p>
           </>
         )}
-
-        {error && <p className="mt-2.5 text-[11.5px] font-semibold text-status-high">{error}</p>}
-
-        <div className="flex gap-2 mt-4">
-          <Button fullWidth variant="secondary" onClick={close}>
-            Cancel
-          </Button>
-          <Button fullWidth disabled={busy || !outcome} onClick={() => void save()}>
-            {G.END_CONFIRM}
-          </Button>
-        </div>
-      </div>
-    </BottomSheet>
+      </BottomSheet>
+      <CalendarPickerSheet
+        variant="partB"
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selectedDate={endedOn}
+        today={todayISO()}
+        maxDate={todayISO()}
+        onSelect={(d) => {
+          setEndedOn(d);
+          setPickerOpen(false);
+        }}
+      />
+    </>
   );
 };

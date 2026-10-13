@@ -1,4 +1,4 @@
-// The draft behind one row of "Add blood work", and the rules for it. Kept
+// The draft behind one result row of Enter results (HE1.9.2.2), and its rules. Kept
 // out of MarkerEntryRow.tsx so that file only exports a component.
 
 import type { LabPhase } from "../../services/labs/catalogueLogic";
@@ -24,6 +24,8 @@ export interface MarkerDraft {
    * which picks the list's range. Only used to pre-fill; not saved.
    */
   phase: LabPhase | null;
+  /** HE1.9.2.2 tick: unticked rows are left out of the save. */
+  ticked: boolean;
   /** Whether `phase` is the cycle tracker's suggestion, not yet changed. */
   phaseSuggested: boolean;
 }
@@ -39,6 +41,7 @@ export const emptyMarker = (): MarkerDraft => ({
   rangeFrom: null,
   phase: null,
   phaseSuggested: false,
+  ticked: true,
 });
 
 /** Digits and at most one decimal point. Lab values are never negative. */

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import {
   AtSign,
   Bell,
@@ -45,6 +45,7 @@ import {
 import { fromParts, minuteOptions, toParts, type Meridiem } from "../../components/calendar/calendarTime";
 import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
+import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
 // every group and row the frame draws, Quiet hours included.
@@ -484,19 +485,29 @@ export default function NotificationsPage() {
       {GROUPS.map((g) => (
         <SettingsSection key={g.label} label={g.label}>
           {g.rows.map((r) => (
-            <SettingsRow
-              key={r.key}
-              icon={r.icon}
-              title={r.label}
-              srDescription={r.desc}
-              dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
-              toggle={{
-                // Off and disabled until the row has loaded: never a guess.
-                checked: prefs?.[r.key] ?? false,
-                disabled: !prefs || saving.has(r.key),
-                onChange: (v) => void toggleRow(g.label, r.key, v),
-              }}
-            />
+            <React.Fragment key={r.key}>
+              <SettingsRow
+                icon={r.icon}
+                title={r.label}
+                srDescription={r.desc}
+                dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
+                toggle={{
+                  // Off and disabled until the row has loaded: never a guess.
+                  checked: prefs?.[r.key] ?? false,
+                  disabled: !prefs || saving.has(r.key),
+                  onChange: (v) => void toggleRow(g.label, r.key, v),
+                }}
+              />
+              {/* MO1.8.3 #31-#36 (Health B): Health checks, after Water. */}
+              {r.key === "water" && (
+                <HealthChecksNotificationRow
+                  dimmed={dimmed}
+                  checked={prefs?.healthChecks ?? false}
+                  disabled={!prefs || saving.has("healthChecks")}
+                  onChange={(v) => void toggleRow(g.label, "healthChecks", v)}
+                />
+              )}
+            </React.Fragment>
           ))}
           {notes[g.label] && <ErrorLine>{notes[g.label]}</ErrorLine>}
         </SettingsSection>

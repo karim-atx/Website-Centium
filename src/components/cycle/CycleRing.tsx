@@ -1,149 +1,148 @@
 import React from "react";
 import type { CyclePhase } from "../../services/cycle/types";
-import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
-import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { PHASE_LABEL, phaseThemeColor } from "../../services/cycle/guidance";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { linePx, textPx } from "../../theme/textSize";
 
-// The ring of cycle days, coloured by phase, with the selected day at the
-// bottom.
+// The ring of cycle days (HE1.10 #10, HE1.10.d #10).
 //
-// AT THE BOTTOM, NOT THE TOP, which is the preview's choice and a good one:
-// the headline sits above the ring, so the selected day's marker reads as
-// pointing at it rather than away from it, and the eye travels marker →
-// headline without crossing the ring.
+// ONE DOT PER DAY, evenly spaced and coloured by phase through the theme
+// mapping (Period primary-deep, Follicular primary, Ovulation secondary-deep,
+// Luteal secondary: V6-110). A cycle is counted in whole days, the user taps a
+// day, and a continuous sweep would imply a precision the prediction does not
+// have.
 //
-// ONE SEGMENT PER DAY. Not a smooth gradient: a cycle is counted in whole
-// days, the user taps a day, and a continuous sweep would imply a precision
-// the prediction does not have. The gaps between segments are the honest
-// rendering of "day 12" being a thing and "day 12.4" not being one.
+// THE SELECTED DAY SITS AT THE BOTTOM, ringed and numbered, and the whole ring
+// turns as the scrubber moves rather than a marker sliding round a fixed
+// ring (repo rule, kept). The turn follows within 120 ms (HE1.10.d); under
+// Reduce motion it jumps.
+//
+// The centre text is on three lines. Its sizes are not in the layout table
+// (the ring is one inline-SVG row, #10): measured on the 2x PNG.
 
-const SIZE = 260;
-const RADIUS = 104;
-const STROKE = 17;
+const SIZE = 160;
+/** Radius of the dot centres (2x PNG: ~127 pt across). */
+const RADIUS = 63.5;
 
-/** Polar to cartesian, with 0° at the BOTTOM and running clockwise. */
+/** Polar to cartesian, 0° at the BOTTOM, clockwise. */
 function pointAt(angleDeg: number, radius: number) {
   const rad = ((angleDeg + 90) * Math.PI) / 180;
   return { x: SIZE / 2 + radius * Math.cos(rad), y: SIZE / 2 + radius * Math.sin(rad) };
-}
-
-function arcPath(fromDeg: number, toDeg: number, radius: number): string {
-  const a = pointAt(fromDeg, radius);
-  const b = pointAt(toDeg, radius);
-  const large = toDeg - fromDeg > 180 ? 1 : 0;
-  return `M ${a.x} ${a.y} A ${radius} ${radius} 0 ${large} 1 ${b.x} ${b.y}`;
 }
 
 export const CycleRing: React.FC<{
   cycleLength: number;
   /** The day the ring is centred on, 1-based. */
   selectedDay: number;
-  /** Which phase each day belongs to. Index 0 is day 1. */
   phaseOfDay: (day: number) => CyclePhase;
-  /** Big number in the middle. */
-  headline: string;
-  /** Small line under it. */
-  subline?: string | null;
+  /** The three centre lines (top small, middle large, bottom small); any may be empty. */
+  lines: [string, string, string];
+  /** Recovery-sensitive mode: the selected dot carries no day number. */
+  hideNumber?: boolean;
   onSelectDay?: (day: number) => void;
-}> = ({ cycleLength, selectedDay, phaseOfDay, headline, subline, onSelectDay }) => {
+  ariaLabel: string;
+}> = ({ cycleLength, selectedDay, phaseOfDay, lines, hideNumber, onSelectDay, ariaLabel }) => {
   const length = Math.max(1, Math.round(cycleLength));
   const step = 360 / length;
-  // The selected day is rotated to the bottom, so the whole ring turns as the
-  // scrubber moves rather than a marker sliding around a fixed ring.
   const rotation = -(selectedDay - 1) * step;
-  const dark = useIsDark();
+  const reduced = useReducedMotion();
+  // 2x PNG: dots ~8.4 pt across at 28 days; smaller for long cycles so they
+  // never touch.
+  const dotR = Math.min(4.2, ((Math.PI * 2 * RADIUS) / length) * 0.32);
 
   return (
-    <svg
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
-      width="100%"
-      style={{ display: "block", maxWidth: SIZE, margin: "0 auto" }}
-      role="img"
-      aria-label={`Cycle day ${selectedDay} of about ${length}. ${headline}`}
-    >
-      <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: "50% 50%", transition: "transform 240ms ease" }}>
-        {Array.from({ length }, (_, i) => {
-          const day = i + 1;
-          const phase = phaseOfDay(day);
-          const from = i * step + step * 0.12;
-          const to = (i + 1) * step - step * 0.12;
-          const isSelected = day === selectedDay;
-          return (
-            <path
-              key={day}
-              d={arcPath(from, to, RADIUS)}
-              stroke={PHASE_COLOR[phase]}
-              strokeWidth={isSelected ? STROKE + 6 : STROKE}
-              strokeLinecap="butt"
-              fill="none"
-              opacity={isSelected ? 1 : 0.62}
-              style={{ cursor: onSelectDay ? "pointer" : undefined }}
-              onClick={onSelectDay ? () => onSelectDay(day) : undefined}
-            />
-          );
-        })}
-      </g>
-
-      {/* The marker stays at the bottom; the ring turns under it. It straddles
-          the gap before the selected segment, so half of it sits on the page.
-          Mobile v5.1 R3, dark mode: the charcoal token (light ink on the dark
-          page) with a page-coloured outline that keeps it apart from the
-          segment colour it also overlaps. */}
-      <circle
-        cx={SIZE / 2}
-        cy={SIZE / 2 + RADIUS}
-        r={4.5}
-        fill="rgb(var(--c-charcoal))"
-        stroke={dark ? "rgb(var(--c-cream))" : undefined}
-        strokeWidth={dark ? 1.5 : undefined}
-        opacity={0.85}
-      />
-
-      <text
-        x={SIZE / 2}
-        y={SIZE / 2 - (subline ? 6 : 0)}
-        textAnchor="middle"
-        style={{ fontSize: textPx(21), fontWeight: 800, fill: "rgb(var(--c-charcoal))", letterSpacing: "-0.02em" }}
-      >
-        {headline}
-      </text>
-      {subline && (
-        <text
-          x={SIZE / 2}
-          y={SIZE / 2 + 18}
-          textAnchor="middle"
-          style={{ fontSize: textPx(11.5), fill: "rgb(var(--c-charcoal-faint))" }}
+    <div className="relative mx-auto" style={{ width: SIZE, height: SIZE }}>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} role="img" aria-label={ariaLabel} style={{ display: "block", overflow: "visible" }}>
+        <g
+          data-ring-rotation={rotation}
+          style={{
+            transform: `rotate(${rotation}deg)`,
+            transformOrigin: "50% 50%",
+            transition: reduced ? "none" : "transform 120ms ease-out",
+          }}
         >
-          {subline}
-        </text>
-      )}
-    </svg>
+          {Array.from({ length }, (_, i) => {
+            const day = i + 1;
+            if (day === selectedDay) return null;
+            const p = pointAt(i * step, RADIUS);
+            return (
+              <circle
+                key={day}
+                cx={p.x}
+                cy={p.y}
+                r={dotR}
+                fill={phaseThemeColor(phaseOfDay(day))}
+                data-phase={phaseOfDay(day)}
+                style={{ cursor: onSelectDay ? "pointer" : undefined }}
+                onClick={onSelectDay ? () => onSelectDay(day) : undefined}
+              />
+            );
+          })}
+        </g>
+        {/* The selected day: ringed and numbered at the bottom (2x PNG: 21 pt,
+            1.6 charcoal ring, page-coloured fill, 9.5 / 700 number). */}
+        <g data-selected-day={selectedDay}>
+          <circle cx={SIZE / 2} cy={SIZE / 2 + RADIUS} r={10.5} fill="rgb(var(--c-cream-card))" stroke="rgb(var(--c-charcoal))" strokeWidth={1.6} />
+          {!hideNumber && (
+            <text
+              x={SIZE / 2}
+              y={SIZE / 2 + RADIUS}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fontSize: textPx(9.5), fontWeight: 700, fill: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}
+            >
+              {selectedDay}
+            </text>
+          )}
+        </g>
+      </svg>
+      <div aria-hidden className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none" style={{ padding: "0 28px" }}>
+        {lines[0] && (
+          <span className="text-charcoal" style={{ fontSize: textPx(11.5), lineHeight: linePx(15), fontWeight: 500 }}>
+            {lines[0]}
+          </span>
+        )}
+        {lines[1] && (
+          <span className="text-charcoal" style={{ fontSize: textPx(20), lineHeight: linePx(25), fontWeight: 800, letterSpacing: -0.4 }}>
+            {lines[1]}
+          </span>
+        )}
+        {lines[2] && (
+          <span className="text-charcoal-faint" style={{ fontSize: textPx(11), lineHeight: linePx(15), fontWeight: 500 }}>
+            {lines[2]}
+          </span>
+        )}
+      </div>
+    </div>
   );
 };
 
-/** The four-phase bar under the ring. Colour AND name, never colour alone. */
-export const PhaseBar: React.FC<{ phases: readonly CyclePhase[]; active: CyclePhase }> = ({
-  phases,
-  active,
-}) => (
-  <div className="flex gap-1.5">
+/**
+ * The four-phase bar (HE1.10 #14-#21): pills 4 tall r9999 in the phase
+ * colour, 0.3 except the active one; under each, its name in small caps 9/20
+ * 700 ls1.1 #8C8378, the active one as a pill 9/13.5 800 #5F5093 on
+ * #AEA1DC@22% pad 0 9 (dark #C3B3FB / #A991FE@22%). Colour AND name, never
+ * colour alone.
+ */
+export const PhaseBar: React.FC<{ phases: readonly CyclePhase[]; active: CyclePhase }> = ({ phases, active }) => (
+  <div className="flex" style={{ gap: 6 }} role="list" aria-label="Cycle phases">
     {phases.map((p) => {
       const on = p === active;
       return (
-        <div key={p} className="flex-1 min-w-0">
-          <div
-            className="h-1.5 rounded-full"
-            style={{ background: PHASE_COLOR[p], opacity: on ? 1 : 0.28 }}
-          />
-          <p
-            className="mt-1.5 text-[9.5px] text-center truncate"
-            style={{
-              color: on ? PHASE_COLOR[p] : "rgb(var(--c-charcoal-faint))",
-              fontWeight: on ? 700 : 500,
-            }}
-          >
-            {PHASE_LABEL[p]}
-          </p>
+        <div key={p} role="listitem" aria-current={on || undefined} className="flex-1 min-w-0 flex flex-col items-center">
+          <div className="w-full rounded-full" data-phase-pill={p} style={{ height: 4, background: phaseThemeColor(p), opacity: on ? 1 : 0.3 }} />
+          <div className="flex items-center justify-center" style={{ marginTop: 5, height: 20 }}>
+            <span
+              className={`uppercase whitespace-nowrap rounded-full ${on ? "text-primary-deep-text" : "text-charcoal-faint"}`}
+              style={
+                on
+                  ? { fontSize: textPx(9), lineHeight: linePx(13.5), fontWeight: 800, letterSpacing: 1.1, padding: "3.25px 9px", background: "rgb(var(--c-primary) / 0.22)" }
+                  : { fontSize: textPx(9), lineHeight: linePx(20), fontWeight: 700, letterSpacing: 1.1 }
+              }
+            >
+              {PHASE_LABEL[p]}
+            </span>
+          </div>
         </div>
       );
     })}

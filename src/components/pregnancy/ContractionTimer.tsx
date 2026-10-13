@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Card } from "../ui/Card";
+import { CapsLabel, CycleCard } from "../cycle/cycleUi";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import {
@@ -95,8 +95,8 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
   const finished = rows.filter((c) => c.endedAt !== null);
 
   return (
-    <Card className="mb-3">
-      <p className="text-[13px] font-bold text-charcoal">{G.CONTRACTIONS_TITLE}</p>
+    <CycleCard style={{ marginBottom: 12 }}>
+      <CapsLabel>{G.CONTRACTIONS_TITLE}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">
         {G.CONTRACTIONS_EXPLAINER}
       </p>
@@ -166,6 +166,6 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
           })}
         </div>
       )}
-    </Card>
+    </CycleCard>
   );
 };

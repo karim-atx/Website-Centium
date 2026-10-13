@@ -125,6 +125,8 @@ export const METHOD_REMINDER_HELP =
   "Ring changes, patch days, injections and replace-by dates.";
 
 export const REMINDER_TIME_LABEL = "Reminder time";
+/** No time chosen yet. */
+export const REMINDER_TIME_NOT_SET = "Not set";
 
 /**
  * A REMINDER NEEDS PUSH, and saying so beats a switch that does nothing.
@@ -174,3 +176,12 @@ export const STOP_TITLE = "Stop tracking this method";
 export const STOP_BODY =
   "Your history is kept. Set up a new method whenever you want to.";
 export const STOP_CONFIRM = "Stop tracking";
+/** OURS-contraception-stop-confirm: the cancel. */
+export const STOP_KEEP = "Keep";
+
+// v6 page labels (HE1.10.b.2).
+export const PAGE_TITLE = "Contraception";
+export const YOUR_METHOD = "Your method";
+export const STARTED_ON = (date: string) => `Started ${date}`;
+/** Write failures (handover shared state). */
+export const SAVE_FAILED = "Couldn't save. Try again.";

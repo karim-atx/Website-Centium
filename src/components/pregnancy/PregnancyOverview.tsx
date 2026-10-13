@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "../ui/Card";
-import { Button } from "../ui/Button";
+import { CapsLabel, CycleCard, type } from "../cycle/cycleUi";
 import { PregnancyRing, TrimesterBar, PREGNANCY_COLOR } from "./PregnancyRing";
 import { KickCounter } from "./KickCounter";
 import { ContractionTimer } from "./ContractionTimer";
@@ -36,7 +36,12 @@ const todayISO = () => {
 export const PregnancyOverview: React.FC<{
   pregnancy: Pregnancy;
   onLogDay: () => void;
-}> = ({ pregnancy, onLogDay }) => {
+  /**
+   * The cycle page's hero card (HE1.10 #8-#9, K1): the PregnancyRing sits in
+   * it at the ring's 160. Unset keeps the ring on the page.
+   */
+  hero?: (children: React.ReactNode, opts?: { label?: string }) => React.ReactNode;
+}> = ({ pregnancy, onLogDay, hero }) => {
   const navigate = useNavigate();
   const g = gestationOn(todayISO(), pregnancy);
 
@@ -54,13 +59,13 @@ export const PregnancyOverview: React.FC<{
   }
 
   return (
-    <div className="mt-4">
-      <PregnancyRing
-        week={g.week}
-        headline={`Week ${g.week}`}
-        subline={`Day ${g.day} · trimester ${g.trimester}`}
-        footline={dueLabel(g)}
-      />
+    <div className={hero ? undefined : "mt-4"}>
+      {(() => {
+        const ring = (
+          <PregnancyRing week={g.week} headline={`Week ${g.week}`} subline={`Day ${g.day} · trimester ${g.trimester}`} footline={dueLabel(g)} />
+        );
+        return hero ? hero(<div className="mx-auto" style={{ width: 160 }}>{ring}</div>, { label: "Pregnancy" }) : ring;
+      })()}
 
       {/* THE DATING IS WRONG, SAID PLAINLY. Past 42 weeks the number on the
           ring is an arithmetic result, not a fact about a pregnancy. */}
@@ -76,17 +81,22 @@ export const PregnancyOverview: React.FC<{
       </div>
 
       <div className="mt-4 flex justify-center">
-        <Button variant="secondary" size="sm" onClick={onLogDay}>
-          <Plus size={13} /> Log today
-        </Button>
+        <button
+          type="button"
+          onClick={onLogDay}
+          className="tap inline-flex items-center bg-th-efecf9 dark:bg-th-303141 text-primary-dark"
+          style={{ height: 40, borderRadius: 12, padding: "0 16px", gap: 6, ...type(13, 19.5, 700) }}
+        >
+          <Plus size={14} aria-hidden /> Log today
+        </button>
       </div>
 
       <div className="mt-4">
         {g.week >= G.KICKS_FROM_WEEK && <KickCounter pregnancyId={pregnancy.id} />}
         {g.week >= G.CONTRACTIONS_FROM_WEEK && <ContractionTimer pregnancyId={pregnancy.id} />}
 
-        <Card className="mb-3">
-          <p className="text-[13px] font-bold text-charcoal mb-2">Guidance for week {g.week}</p>
+        <CycleCard style={{ marginBottom: 12 }}>
+          <CapsLabel style={{ marginBottom: 6 }}>Guidance for week {g.week}</CapsLabel>
           {(
             [
               [HeartPulse, "Pregnancy health", "/app/health"],
@@ -105,7 +115,7 @@ export const PregnancyOverview: React.FC<{
             </button>
           ))}
           <p className="mt-1.5 text-[10px] font-semibold text-charcoal-faint">{G.PROVIDER_FIRST}</p>
-        </Card>
+        </CycleCard>
       </div>
 
       <p className="mt-1 text-[10px] leading-[1.45] text-charcoal-faint text-center px-2">

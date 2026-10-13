@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Card } from "../ui/Card";
+import { CapsLabel, CycleCard } from "../cycle/cycleUi";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import {
@@ -94,8 +94,8 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
   const elapsed = startedAt ? Math.max(0, Math.round((now - new Date(startedAt).getTime()) / 1000)) : 0;
 
   return (
-    <Card className="mb-3">
-      <p className="text-[13px] font-bold text-charcoal">{G.KICKS_TITLE}</p>
+    <CycleCard style={{ marginBottom: 12 }}>
+      <CapsLabel>{G.KICKS_TITLE}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">{G.KICKS_EXPLAINER}</p>
 
       {sessionId ? (
@@ -169,6 +169,6 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
           })}
         </div>
       )}
-    </Card>
+    </CycleCard>
   );
 };

@@ -3,6 +3,7 @@ import { HealthScanIcon } from "./HealthScanIcon";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
+import { TurnOffTrackingPopup } from "../cycle/TurnOffTrackingPopup";
 
 // Cycle tracking, the one switch every profile can reach for the cycle and
 // pregnancy section (handover 2026-09-29 MO11). Moved from Settings to the
@@ -19,8 +20,16 @@ export const CycleTrackingRow: React.FC = () => {
   const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // HE1.10.b K5: turning off asks first (HE1.10.b.5), the same popup as Cycle
+  // tracking › Settings; the switch moves only after Turn off.
+  const [confirmOff, setConfirmOff] = useState(false);
 
   const toggle = async (on: boolean) => {
+    if (!on) {
+      setError(null);
+      setConfirmOff(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     const r = await setCycleTracking(on);
@@ -50,6 +59,7 @@ export const CycleTrackingRow: React.FC = () => {
       {error && (
         <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{error}</p>
       )}
+      <TurnOffTrackingPopup open={confirmOff} onClose={() => setConfirmOff(false)} onError={(m) => setError(m)} />
     </div>
   );
 };

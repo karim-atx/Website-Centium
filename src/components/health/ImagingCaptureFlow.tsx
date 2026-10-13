@@ -1,265 +1,199 @@
-import React, { useRef, useState } from "react";
+import { partBSheetTone } from "./log/LogSheetParts";
+import React, { useEffect, useState } from "react";
+import { CalendarDays, FileText } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
-import { Camera, Check, FileText } from "lucide-react";
-import { acceptFor, validateFileFor } from "../../services/storage";
-import { todayLocal } from "../../utils/date";
+import { CtaButton } from "../ui/PinnedCta";
+import { Toast } from "../ui/Toast";
+import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import { useApp } from "../../context/AppContext";
+import { useOnline } from "../../hooks/useOnline";
+import { updateImagingRecordRemote } from "../../services/imaging";
+import { textPx, linePx } from "../../theme/textSize";
+import type { ImagingRecord } from "../../types";
 import { imagingTypes } from "./imagingTypes";
+import { UploadChoiceSheet } from "./records/UploadChoiceSheet";
+import { sizeLabel } from "../../services/storage/fileMeta";
+import { useHealthMode, hairline, fieldStyle, fieldFill, fmtDate, fileKind, deepInk, FieldLabel, HelpLine, INK, INK_FAINT } from "./records/kit";
 
-// Photograph an imaging or test result, then TYPE WHAT IT SAYS.
+// HE1.9.b.3 · Edit imaging, and the same sheet empty as "Add imaging"
+// (HE1.9.b S4). Lavender-header Part B sheet: Type as smooth-square options in
+// one sideways row (MRI, X-ray, Ultrasound, CT scan, ECG, Other; DEXA scan
+// kept, V6-133), Date (required, the repo help line verbatim; the standard
+// calendar popup, future disabled, Monday start), Note (textarea, 300
+// characters), File with Replace (camera or files), pinned Save.
 //
-// WHAT THIS REPLACED, AND WHY IT HAD TO GO. This flow used to hand the file to
-// services/ai/parseImagingFile, which ignored its argument and returned the
-// same two findings every time — an "X-Ray" dated today noting "No acute
-// findings noted on the report", and a "Follow-up recommended" suggesting a
-// review in 6 weeks — under the words "Reading your result…" and "Identifying
-// study type, date and findings." The first was pre-ticked.
-//
-// "No acute findings" is not a neutral placeholder. It is a reassuring
-// clinical statement about a document the app had not read, offered to
-// somebody who had just photographed a real one, and it was written into
-// their medical history as their own record when they pressed Add.
-//
-// NOW NOTHING IS PREFILLED EXCEPT THE DATE, which is today and is editable,
-// the way the manual add sheet in MedicalRecordsSection has always worked —
-// and this form deliberately mirrors that one, down to sharing its type list.
-// The file is still uploaded to medical-imaging and still attached, which is
-// what makes the typed record checkable later.
+// NOTHING IS READ FROM THE FILE: the type, date and note are typed. A new
+// file is uploaded on Save, the row re-pointed, then the old object removed
+// (services/imaging updateImagingRecordRemote). The file row shows the B2
+// description (file_name, type, pages, size; written on upload with the
+// page count read on the device).
 
-type Stage = "capture" | "entry" | "done";
-type Source = "camera" | "pdf" | null;
+const sameType = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { addImagingRecord } = useApp();
-  const today = todayLocal();
-  const [stage, setStage] = useState<Stage>("capture");
-  const [source, setSource] = useState<Source>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [type, setType] = useState(imagingTypes[0]);
-  // Today, and editable. A scan is usually added the day it is collected, so
-  // this is the one prefill that saves a tap without asserting anything the
-  // user did not know — and imaging_date is NOT NULL, so it cannot be blank.
-  const [date, setDate] = useState(today);
+export const ImagingCaptureFlow: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  /** Edit this record; none = add. */
+  record?: ImagingRecord | null;
+  /** Add with a file picked on the upload choice. */
+  file?: File | null;
+  onSaved?: (message: string) => void;
+}> = ({ open, onClose, record = null, file = null, onSaved }) => {
+  const { addImagingRecord, authUserId, today, reloadHealthRecords } = useApp();
+  const { dark, hc } = useHealthMode();
+  const online = useOnline();
+  const editing = !!record;
+  const [type, setType] = useState<string>("");
+  const [date, setDate] = useState("");
   const [note, setNote] = useState("");
-  // THE FILE ITSELF, kept alongside the preview. The data URL is only ever a
-  // thumbnail; the File is what actually gets uploaded. Sending the data URL
-  // to Storage would upload a base64 string roughly a third larger than the
-  // original for no reason.
-  const [file, setFile] = useState<File | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [choiceOpen, setChoiceOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [touched, setTouched] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const reset = () => {
-    setStage("capture");
-    setSource(null);
-    setPhoto(null);
-    setType(imagingTypes[0]);
-    setDate(today);
-    setNote("");
-    setFile(null);
-    setSaveError(null);
+  useEffect(() => {
+    if (!open) return;
+    const match = record ? imagingTypes.find((t) => sameType(t, record.type)) : undefined;
+    setType(record ? match ?? record.type : "");
+    setDate(record?.date ?? "");
+    setNote(record?.note ?? "");
+    setNewFile(file);
+    setTouched(false);
+  }, [open, record, file]);
+
+  const save = async () => {
+    setTouched(true);
+    if (!type || !date) return;
+    if (!online) {
+      setToast("You're offline. Try again when you're connected.");
+      return;
+    }
+    setSaving(true);
+    let ok: boolean;
+    if (record) {
+      if (!authUserId) return;
+      const r = await updateImagingRecordRemote(authUserId, record.id, { type, date, note }, newFile ? { file: newFile, oldPath: record.filePath } : undefined);
+      ok = r.ok;
+      if (ok) await reloadHealthRecords();
+    } else {
+      const r = await addImagingRecord({ type, date, note: note.trim() || undefined }, newFile ?? undefined);
+      ok = r.ok;
+    }
     setSaving(false);
-  };
-
-  const handleClose = () => {
-    reset();
+    if (!ok) {
+      setToast("Couldn't save. Try again.");
+      return;
+    }
+    onSaved?.(editing ? "Changes saved." : "Imaging added.");
     onClose();
   };
 
-  const handleFile = (picked: File, via: Source) => {
-    // CHECKED BEFORE ANYTHING ELSE HAPPENS TO IT — see the same guard in
-    // BiomarkerCaptureFlow. Running the check only inside uploadPrivateFile
-    // meant an unusable file was read and reviewed before the rejection
-    // arrived. Nothing here advances the stage, so the sheet stays on capture
-    // with the message beside the buttons.
-    const check = validateFileFor("medical-imaging", picked);
-    if (!check.ok) {
-      setSaveError(check.message ?? "That file can't be used.");
-      return;
-    }
-    setSource(via);
-    setFile(picked);
-    setSaveError(null);
-
-    // STRAIGHT TO THE FORM. There is nothing to wait for.
-    setStage("entry");
-
-    if (via !== "camera") return;
-    const reader = new FileReader();
-    reader.onload = () => setPhoto(reader.result as string);
-    reader.readAsDataURL(picked);
-  };
-
-  /**
-   * Saves ONE record with the file attached.
-   *
-   * One upload, one row. The old flow could produce several findings from a
-   * single file and attached the object to the first of them only, so that
-   * deleting that one record left the others pointing at storage nobody
-   * owned. A capture is one document and is now one record, which removes
-   * that whole class of problem rather than managing it.
-   */
-  const save = async () => {
-    if (!date) return;
-    setSaving(true);
-    setSaveError(null);
-    const result = await addImagingRecord(
-      { type, date, note: note.trim() || undefined },
-      file ?? undefined
-    );
-    setSaving(false);
-    if (!result.ok) {
-      setSaveError(result.message ?? "That couldn't be saved.");
-      return;
-    }
-    setStage("done");
-    setTimeout(handleClose, 900);
-  };
+  const kind = newFile ? (newFile.type === "application/pdf" ? "PDF" : "Photo") : fileKind(record?.filePath);
+  const options = record && !imagingTypes.some((t) => sameType(t, record.type)) ? [record.type, ...imagingTypes] : imagingTypes;
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={handleClose}
-      title="Add imaging or test"
-      onBack={stage === "entry" ? reset : undefined}
-    >
-      <div className="min-h-[280px] flex flex-col animate-fade-slide-up">
-        {stage === "capture" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept={acceptFor("medical-imaging", true)}
-              capture="environment"
-              className="hidden"
-              // Cleared after every pick so choosing the SAME file again still
-              // fires onChange — otherwise a rejected file cannot be retried
-              // without picking something else first.
-              onChange={(e) => {
-                const picked = e.target.files?.[0];
-                e.target.value = "";
-                if (picked) handleFile(picked, "camera");
-              }}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={acceptFor("medical-imaging")}
-              className="hidden"
-              onChange={(e) => {
-                const picked = e.target.files?.[0];
-                e.target.value = "";
-                if (picked) handleFile(picked, "pdf");
-              }}
-            />
-            <div className="flex items-center gap-4 mb-6">
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        title={editing ? "Edit imaging" : "Add imaging"}
+        chrome="partB" tone={partBSheetTone(dark)}
+        footerBottom={30}
+        footer={<CtaButton label={editing ? "Save changes" : "Save"} onClick={() => void save()} loading={saving} disabled={!type || !date} />}
+      >
+        <FieldLabel>Type</FieldLabel>
+        <div role="radiogroup" aria-label="Type" className="flex overflow-x-auto no-scrollbar -mx-5 px-5" style={{ gap: 6 }}>
+          {options.map((t) => {
+            const on = type === t;
+            return (
               <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="tap w-24 h-24 rounded-full bg-charcoal flex items-center justify-center shadow-lift"
-                aria-label="Take a photo"
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setType(t)}
+                className="tap shrink-0 whitespace-nowrap"
+                style={{
+                  height: 36,
+                  padding: "0 14px",
+                  borderRadius: 11,
+                  background: on ? "rgb(var(--c-seg-active))" : dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f5f4fe))",
+                  color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
+                  fontSize: textPx(12.5),
+                  lineHeight: linePx(18.8),
+                  fontWeight: 700,
+                }}
               >
-                <Camera size={30} className="text-cream" />
+                {t}
               </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="tap w-24 h-24 rounded-full bg-primary-pale flex items-center justify-center shadow-soft"
-                aria-label="Attach a file"
-              >
-                <FileText size={26} className="text-primary-dark" />
-              </button>
-            </div>
-            <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Take a picture, or attach a file, of your imaging or test result
-            </p>
-            <p className="text-sm text-charcoal-soft max-w-xs">
-              Then add what it says. Your file is saved with it for reference.
-            </p>
-            {saveError && (
-              <p className="text-[11px] text-status-high mt-3 text-center max-w-xs">{saveError}</p>
+            );
+          })}
+        </div>
+        <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
+        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? INK : INK_FAINT }}>
+          <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
+          {date ? fmtDate(date) : "Choose a date"}
+        </button>
+        {/* Required for the same reason as a surgery date: imaging_date is
+            NOT NULL, so an undated record has nowhere to be stored, and a
+            placeholder date would be a false fact in a medical record. */}
+        <HelpLine error={touched && !date}>Required. If you're not sure of the exact day, your best estimate is fine.</HelpLine>
+        <FieldLabel htmlFor="imaging-note" style={{ marginTop: 16 }}>
+          Note
+        </FieldLabel>
+        <textarea
+          id="imaging-note"
+          value={note}
+          maxLength={300}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. Right knee, follow-up in 6 weeks"
+          className="block resize-none outline-none placeholder:text-charcoal-faint"
+          style={{ ...fieldStyle(dark, hc), height: 84, padding: 12 }}
+        />
+        <FieldLabel style={{ marginTop: 16 }}>File</FieldLabel>
+        <div className="flex items-center" style={{ minHeight: 57.8, padding: "10px 12px", gap: 12, borderRadius: 12, background: fieldFill(dark), border: `0.5px solid ${hairline(dark, hc, 0.1)}` }}>
+          <FileText size={20} style={{ color: deepInk(dark) }} aria-hidden />
+          <span className="flex-1 min-w-0">
+            <span className="block truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: kind ? INK : INK_FAINT }}>
+              {newFile ? newFile.name : record?.fileName ? record.fileName : kind ? `${kind === "PDF" ? "PDF file" : "Photo"}` : "No file"}
+            </span>
+            {kind && (
+              <span className="block" style={{ fontSize: textPx(11), lineHeight: linePx(16.5), color: INK_FAINT }}>
+                {newFile
+                  ? `${kind} · ${sizeLabel(newFile.size)}`
+                  : [kind, record?.filePages ? `${record.filePages} page${record.filePages === 1 ? "" : "s"}` : null, record?.fileBytes ? sizeLabel(record.fileBytes) : null].filter(Boolean).join(" · ")}
+              </span>
             )}
-          </div>
-        )}
-
-        {stage === "entry" && (
-          <div className="space-y-4">
-            {/* The document, kept in view while it is described. */}
-            <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-3.5 py-3">
-              {photo ? (
-                <img src={photo} alt="Your imaging result" className="w-12 h-12 object-cover rounded-xl shrink-0" />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-cream-card flex items-center justify-center shrink-0">
-                  <FileText size={20} className="text-charcoal-faint" />
-                </div>
-              )}
-              <div className="min-w-0 text-left">
-                <p className="text-sm font-semibold text-charcoal">Add what your result says</p>
-                <p className="text-[11px] text-charcoal-faint">
-                  Your {source === "pdf" ? "file" : "photo"} is saved with it for reference.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Type</span>
-              <div className="flex flex-wrap gap-2">
-                {imagingTypes.map((t) => (
-                  <Chip key={t} active={type === t} onClick={() => setType(t)}>
-                    {t}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Date</span>
-              <input
-                type="date"
-                value={date}
-                max={today}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              {/* Required for the same reason the manual add sheet says so:
-                  imaging_date is NOT NULL, so an undated record has nowhere to
-                  be stored, and a placeholder date would be a false fact in a
-                  medical record. */}
-              <span className="text-[11px] text-charcoal-faint mt-1.5 block">
-                Required. If you're not sure of the exact day, your best estimate is fine.
-              </span>
-            </label>
-
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-                Findings (optional)
-              </span>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="What the report says, in your own words"
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-
-            {saveError && <p className="text-[11px] text-status-high text-center">{saveError}</p>}
-            <Button fullWidth size="lg" onClick={() => void save()} disabled={!date || saving}>
-              {saving ? "Saving…" : "Save result"}
-            </Button>
-          </div>
-        )}
-
-        {stage === "done" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
-            <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center mb-4 animate-pop">
-              <Check size={24} className="text-white" strokeWidth={3} />
-            </div>
-            <p className="font-display text-lg font-semibold text-charcoal">Added to your health history</p>
-          </div>
-        )}
-      </div>
-    </BottomSheet>
+          </span>
+          <button type="button" onClick={() => setChoiceOpen(true)} className="tap min-h-[44px] shrink-0" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
+            {kind ? "Replace" : "Add a file"}
+          </button>
+        </div>
+      </BottomSheet>
+      <CalendarPickerSheet variant="partB"
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        selectedDate={date || today}
+        today={today}
+        maxDate={today}
+        onSelect={(d) => {
+          setDate(d);
+          setCalendarOpen(false);
+        }}
+      />
+      <UploadChoiceSheet
+        open={choiceOpen}
+        onClose={() => setChoiceOpen(false)}
+        title={kind ? "Replace file" : "Add imaging"}
+        bucket="medical-imaging"
+        onFile={(f) => {
+          setNewFile(f);
+          setChoiceOpen(false);
+        }}
+      />
+      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+    </>
   );
 };

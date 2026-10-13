@@ -1,73 +1,70 @@
 import React, { useState } from "react";
-import { Card } from "../ui/Card";
-import { Toggle } from "../ui/Toggle";
+import { Bell, BellOff, CalendarClock, Clock } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contraception";
 import type { NotificationDetail } from "../../services/cycle/types";
 import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import * as G from "../../services/contraception/guidance";
-import { zoneLabel } from "../../services/timezone/logic";
-import { BellOff } from "lucide-react";
+import { time12 } from "../../utils/time12";
+import { TimeWheel } from "../health/log/LogSheetParts";
+import { CycleHelp, CycleRow, CycleSection, OptionButton, type } from "../cycle/cycleUi";
 
-// Reminders: what is sent, when, and how much it says.
+// Reminders (HE1.10.b.2 #25-#46): what is sent, when, and how much it says.
 //
 // THE SWITCHES AND THE DETAIL LEVEL LIVE ON cycle_settings; the TIME lives on
 // the plan, as `reminder_time`, because it is a property of the pack rather
-// than of the account — changing method changes when the reminder makes sense.
+// than of the account. WHICH IS WHY THE PILL ROW AND THE TIME ARE HIDDEN FOR
+// EVERY OTHER METHOD: reminder_time is a pill-only column
+// (contraception_plans_schedule_shape_check).
 //
-// WHICH IS WHY THE PILL ROW AND THE TIME ARE HIDDEN FOR EVERY OTHER METHOD.
-// reminder_time is a pill-only column: contraception_plans_schedule_shape_
-// check requires it to be null for a ring or an implant, so planRow() nulls
-// it, so a time field on a ring plan would be a control that silently does
-// nothing. A ring has no daily dose to be reminded of either.
+// A SWITCH WITHOUT PUSH IS A SWITCH THAT DOES NOTHING: queue_contraception_
+// reminders() sends an id-only push, so with no permission nothing arrives.
+// The switches are disabled until push is on, and the prompt is raised by
+// services/push's enablePush from a real button press (K2, the repo
+// PUSH_NEEDED line and "Turn on notifications").
 //
-// A SWITCH WITHOUT PUSH IS A SWITCH THAT DOES NOTHING.
-// queue_contraception_reminders() writes a row and sends an id-only push; with
-// no permission and no push_subscriptions row, the queue fills and nothing
-// ever arrives. So the switches are disabled until push is on, and the prompt
-// is raised by services/push's enablePush — the same two-step flow Settings
-// uses, from a real button press, because some engines reject
-// requestPermission() outside a user gesture.
+// NEUTRAL IS THE DEFAULT AND IT IS EXPLAINED RATHER THAN ASSUMED: the help
+// line says exactly what each option puts on a lock screen.
 //
-// NEUTRAL IS THE DEFAULT AND IT IS EXPLAINED RATHER THAN ASSUMED. A phone on a
-// table shows its notifications to whoever is in the room, and what somebody
-// takes is not the app's to disclose to a flatmate reading over a shoulder.
-// The copy says exactly what each option puts on a lock screen, so the choice
-// is an informed one instead of a preference nobody understands.
+// The reminder time is 12-hour (X-14) and opens an inline wheel (S5).
+// Quiet hours for these reminders are backend B4 (V6-22): not built here.
 
 const DETAILS: readonly NotificationDetail[] = ["neutral", "detailed"];
 
-export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }) => {
-  const { authUserId, cycleSettings, saveCycleSettingsAndReload, reloadContraception, myTimezone } = useApp();
+const parseTime = (t: string | null | undefined) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(t ?? "");
+  return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 21, m: 0 };
+};
+const pad = (n: number) => String(n).padStart(2, "0");
+
+export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (message: string) => void }> = ({ plan, onError }) => {
+  const { authUserId, cycleSettings, saveCycleSettingsAndReload, reloadContraception } = useApp();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  const [draftTime, setDraftTime] = useState(() => parseTime(plan.reminderTime));
 
   const [supported] = useState(pushSupported);
-  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() =>
-    pushSupported() ? permissionTriState(Notification.permission) : null
-  );
+  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() => (pushSupported() ? permissionTriState(Notification.permission) : null));
   const [pushError, setPushError] = useState<string | null>(null);
 
-  // No settings row yet means nothing to switch — the tracker creates one on
-  // first open, and guessing a default here would write somebody's preference
-  // for them.
+  // No settings row yet means nothing to switch.
   if (!cycleSettings) return null;
+
+  const fail = (m?: string | null) => onError?.(m ?? G.SAVE_FAILED);
 
   const save = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]) => {
     setBusy(true);
-    setError(null);
     const result = await saveCycleSettingsAndReload(patch);
     setBusy(false);
-    if (!result.ok) setError(result.message ?? "Couldn't save that.");
+    if (!result.ok) fail(result.message);
   };
 
   const saveTime = async (value: string) => {
     setBusy(true);
-    setError(null);
     const result = await updatePlan(plan.id, { ...plan, reminderTime: value || null });
     setBusy(false);
     if (!result.ok) {
-      setError(result.message);
+      fail(result.message);
       return;
     }
     reloadContraception();
@@ -87,118 +84,114 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
     setPushError(result.message);
   };
 
-  // GRANTED IS THE ONLY STATE THE SWITCHES OPEN ON. Undecided is not "probably
-  // fine" — it means the browser has not been asked yet.
+  // GRANTED IS THE ONLY STATE THE SWITCHES OPEN ON.
   const reminders = pushAllowed === true;
+  const stored = (plan.reminderTime ?? "").slice(0, 5);
 
   return (
-    <Card className="mb-3">
-      <p className="text-[11px] font-bold text-charcoal mb-2">{G.REMINDERS_TITLE}</p>
-
+    <CycleSection label={G.REMINDERS_TITLE} style={{ marginTop: 32 }}>
       {!reminders && (
-        <div className="flex gap-2.5 rounded-xl bg-cream-soft px-3.5 py-3 mb-2.5">
-          <BellOff size={15} className="text-charcoal-faint shrink-0 mt-0.5" />
+        <div className="flex" style={{ gap: 8, marginTop: 12 }}>
+          <BellOff size={14} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginTop: 2 }} />
           <div className="min-w-0">
-            <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
-              {!supported
-                ? G.PUSH_UNSUPPORTED
-                : pushAllowed === false
-                  ? G.PUSH_BLOCKED
-                  : G.PUSH_NEEDED}
-            </p>
+            <CycleHelp>{!supported ? G.PUSH_UNSUPPORTED : pushAllowed === false ? G.PUSH_BLOCKED : G.PUSH_NEEDED}</CycleHelp>
             {supported && pushAllowed !== false && (
               <button
+                type="button"
                 onClick={() => void turnPushOn()}
                 disabled={busy}
-                className="tap mt-1.5 text-[11.5px] font-bold text-primary-dark disabled:opacity-40"
+                className="tap text-primary-dark disabled:opacity-40"
+                style={{ minHeight: 36, ...type(13, 19.5, 700) }}
               >
                 {G.PUSH_ENABLE}
               </button>
             )}
             {pushError && (
-              <p className="mt-1.5 text-[11px] font-semibold text-status-high">{pushError}</p>
+              <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>
+                {pushError}
+              </p>
             )}
           </div>
         </div>
       )}
 
       {isPill(plan.method) && (
-        <Row
-          label={G.PILL_REMINDER_LABEL}
-          help={G.PILL_REMINDER_HELP}
-          on={cycleSettings.pillReminder && reminders}
-          disabled={busy || !reminders}
-          onToggle={() => void save({ pillReminder: !cycleSettings.pillReminder })}
-        />
+        <>
+          <CycleRow
+            icon={Bell}
+            title={G.PILL_REMINDER_LABEL}
+            subtitle={G.PILL_REMINDER_HELP}
+            toggle={{
+              checked: cycleSettings.pillReminder && reminders,
+              disabled: busy || !reminders,
+              onChange: () => void save({ pillReminder: !cycleSettings.pillReminder }),
+            }}
+          />
+          <CycleRow
+            icon={Clock}
+            title={G.REMINDER_TIME_LABEL}
+            value={stored ? time12(stored) : G.REMINDER_TIME_NOT_SET}
+            onClick={busy || !reminders ? undefined : () => {
+              setDraftTime(parseTime(plan.reminderTime));
+              setWheelOpen((o) => !o);
+            }}
+            className={!reminders ? "opacity-40" : undefined}
+          />
+          {wheelOpen && reminders && (
+            <div style={{ padding: "8px 0 4px" }}>
+              <TimeWheel value={draftTime} onChange={setDraftTime} minuteStep={5} />
+              <div className="flex justify-end" style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setWheelOpen(false);
+                    void saveTime(`${pad(draftTime.h)}:${pad(draftTime.m)}`);
+                  }}
+                  className="tap text-primary-dark"
+                  style={{ minHeight: 44, padding: "0 4px", ...type(13, 19.5, 700) }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
-      <Row
-        label={G.METHOD_REMINDER_LABEL}
-        help={G.METHOD_REMINDER_HELP}
-        on={cycleSettings.methodReminders && reminders}
-        disabled={busy || !reminders}
-        onToggle={() => void save({ methodReminders: !cycleSettings.methodReminders })}
+      <CycleRow
+        icon={CalendarClock}
+        title={G.METHOD_REMINDER_LABEL}
+        subtitle={G.METHOD_REMINDER_HELP}
+        toggle={{
+          checked: cycleSettings.methodReminders && reminders,
+          disabled: busy || !reminders,
+          onChange: () => void save({ methodReminders: !cycleSettings.methodReminders }),
+        }}
+        last
       />
 
-      {isPill(plan.method) && (
-        <div className="flex items-center justify-between gap-3 py-2 border-t border-charcoal/8 mt-1">
-          <p className="text-[12.5px] text-charcoal">{G.REMINDER_TIME_LABEL}</p>
-          <input
-            type="time"
-            disabled={busy || !reminders}
-            value={(plan.reminderTime ?? "").slice(0, 5)}
-            onChange={(e) => void saveTime(e.target.value)}
-            className="shrink-0 rounded-lg bg-cream-soft px-2.5 py-1.5 text-[12.5px] text-charcoal disabled:opacity-50"
-          />
-        </div>
-      )}
-
-      <p className="mt-2.5 text-[11px] font-bold text-charcoal mb-1.5">{G.DETAIL_TITLE}</p>
-      <div className="flex gap-2">
-        {DETAILS.map((d) => {
-          const on = cycleSettings.notificationDetail === d;
-          return (
-            <button
-              key={d}
-              disabled={busy}
-              onClick={() => void save({ notificationDetail: d })}
-              className={`tap flex-1 rounded-xl px-3 py-2 text-[12px] font-semibold disabled:opacity-50 ${
-                on ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
-              }`}
-            >
-              {G.DETAIL_LABEL[d]}
-              {d === "neutral" && " · default"}
-            </button>
-          );
-        })}
+      <p className="text-charcoal-faint" style={type(12, 18, 600, { marginTop: 14 })}>
+        {G.DETAIL_TITLE}
+      </p>
+      <div className="flex" role="radiogroup" aria-label={G.DETAIL_TITLE} style={{ gap: 6, marginTop: 6 }}>
+        {DETAILS.map((d) => (
+          <OptionButton
+            key={d}
+            role="radio"
+            size="tall"
+            className="flex-1 min-w-0"
+            selected={cycleSettings.notificationDetail === d}
+            disabled={busy}
+            onClick={() => void save({ notificationDetail: d })}
+          >
+            {G.DETAIL_LABEL[d]}
+          </OptionButton>
+        ))}
       </div>
-      <p className="mt-1.5 text-[10.5px] leading-[1.45] text-charcoal-faint">
-        {G.DETAIL_HELP[cycleSettings.notificationDetail]}
-      </p>
-
+      <CycleHelp style={{ marginTop: 6 }}>{G.DETAIL_HELP[cycleSettings.notificationDetail]}</CycleHelp>
       {/* The zone is set in general Settings (task T) and governs every
-          reminder, so this only says which one is in force: the profile's,
-          or UTC when there is none, exactly as the server resolves it. */}
-      <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">
-        {G.TIMEZONE_HELP} ({zoneLabel(myTimezone?.timezone ?? "UTC")})
-      </p>
-
-      {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{error}</p>}
-    </Card>
+          reminder; the Cycle Settings Time zone row shows which. */}
+      <CycleHelp>{G.TIMEZONE_HELP}.</CycleHelp>
+    </CycleSection>
   );
 };
-
-const Row: React.FC<{
-  label: string;
-  help: string;
-  on: boolean;
-  disabled?: boolean;
-  onToggle: () => void;
-}> = ({ label, help, on, disabled, onToggle }) => (
-  <div className={`flex items-center justify-between gap-3 py-2 ${disabled ? "opacity-55" : ""}`}>
-    <div className="min-w-0">
-      <p className="text-[12.5px] text-charcoal">{label}</p>
-      <p className="text-[10.5px] text-charcoal-faint leading-snug">{help}</p>
-    </div>
-    <Toggle checked={on} onChange={() => onToggle()} label={label} disabled={disabled} />
-  </div>
-);
