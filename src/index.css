@@ -963,6 +963,8 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   /* V6-01 / X-10: every filled control #5B48B8 with white. */
   --c-fill-pinned: 91 72 184;
   --c-seg-active: 91 72 184;
+  /* MO1.1.1 #40 / MO1.1.2 #25 O9 / O7: the #A198DF page CTA too. */
+  --c-fill-cta: 91 72 184;
   /* X-23: the active navbar label #825FE0 (4.50:1). */
   --c-nav-label-active: 130 95 224;
 }

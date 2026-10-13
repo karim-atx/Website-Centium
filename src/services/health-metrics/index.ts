@@ -118,8 +118,11 @@ export async function logHealthMetric(params: {
   day: string;
   /** The app's current local day, so backdating can be detected. */
   today: string;
+  /** Weight only (B1 health_metrics.note, <= 200 characters; the database refuses it on any other type). */
+  note?: string | null;
 }): Promise<MetricWriteResult> {
   const { userId, kind, value, day, today } = params;
+  const note = kind === "weight" && params.note ? params.note.trim().slice(0, 200) : null;
   const limit = LIMITS[kind];
 
   if (!Number.isFinite(value)) {
@@ -142,10 +145,38 @@ export async function logHealthMetric(params: {
     // Honest provenance: this is the manual-entry path. Device sync, when it
     // exists, writes apple_health / android_health from the mobile app.
     source: "manual",
-  });
+    ...(note ? { note } : {}),
+    // B1 note is newer than lib/supabase/database.types.ts (generated from production).
+  } as never);
 
   if (error) {
     console.error("[health-metrics] Could not save reading:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
+/**
+ * Deletes every manual reading of one metric filed under one LOCAL day (HE1.7
+ * weigh-in Delete). The day is bounded by local midnights converted to UTC,
+ * the same days localDayOf files readings under. Manual rows only: a synced
+ * reading is hidden in Centium instead (V6-169), not deleted. Uses the
+ * health_metrics DELETE grant.
+ */
+export async function deleteHealthMetricsForDay(params: { userId: string; kind: MetricKind; day: string }): Promise<MetricWriteResult> {
+  const [y, m, d] = params.day.split("-").map(Number);
+  const from = new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+  const to = new Date(y, m - 1, d + 1, 0, 0, 0, 0).toISOString();
+  const { error } = await supabase
+    .from("health_metrics")
+    .delete()
+    .eq("user_id", params.userId)
+    .eq("metric_type", params.kind)
+    .eq("source", "manual")
+    .gte("recorded_at", from)
+    .lt("recorded_at", to);
+  if (error) {
+    console.error("[health-metrics] Could not delete readings:", error.message);
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

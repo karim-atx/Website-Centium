@@ -50,7 +50,15 @@ export const FixedHeader: React.FC<{
   onUnderChange?: (under: boolean) => void;
   /** Accessible landmark-free container: pass an id if a page needs one. */
   id?: string;
-}> = ({ children, className, bleedClassName = "-mx-4 px-4", paddingBottom = 16, onUnderChange, id }) => {
+  /** Fill classes of the scrolled state (default "bg-cream"; Health metric pages "bg-cream dark:bg-[#1C1F28]", HE1.2 #1). */
+  fillClassName?: string;
+  /**
+   * Hide the bottom hairline while the fill stays (MO1.4.s S2: once a second
+   * pinned group sits under this header, the one hairline moves to that
+   * group's bottom). Default false.
+   */
+  hideHairline?: boolean;
+}> = ({ children, className, bleedClassName = "-mx-4 px-4", paddingBottom = 16, onUnderChange, id, fillClassName = "bg-cream", hideHairline = false }) => {
   const headerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [under, setUnder] = useState(false);
@@ -130,7 +138,11 @@ export const FixedHeader: React.FC<{
             notch and the shell's 24 top gap, faded as one (120 ms). */}
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 pointer-events-none bg-cream border-b border-hair-08 dark:border-hair-10"
+          className={clsx(
+            "absolute inset-x-0 bottom-0 pointer-events-none border-b",
+            hideHairline ? "border-transparent" : "border-hair-08 dark:border-hair-10",
+            fillClassName
+          )}
           style={{
             top: "calc(-1 * (env(safe-area-inset-top) + 24px))",
             opacity: under ? 1 : 0,

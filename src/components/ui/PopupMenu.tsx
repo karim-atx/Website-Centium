@@ -57,7 +57,7 @@ interface PopupMenuProps<V extends string> {
    * when multi-select), selected border primary (#AEA1DC / #A991FE), and no
    * dim by default.
    */
-  variant?: "tint" | "filled" | "plain" | "field";
+  variant?: "tint" | "filled" | "plain" | "field" | "health";
   /**
    * Dim the page behind the card (default true; false for "field"). MO1.3.2.1 opens over an
    * already-dimmed sheet and leaves it undimmed; tap outside still closes.
@@ -103,6 +103,12 @@ interface PopupMenuProps<V extends string> {
    */
   onDone?: () => void;
   doneLabel?: string;
+  /**
+   * v6 Part B menus (HE1.9.b #28-#31): 0.5px card and row borders, the card
+   * border #AEA1DC@50% (dark #A991FE@50%), no card shadow in dark. Off by
+   * default, so every other menu is unchanged.
+   */
+  hairline?: boolean;
 }
 
 /**
@@ -156,10 +162,16 @@ export function PopupMenu<V extends string>({
   clampTo,
   onDone,
   doneLabel = "Done",
+  hairline,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
-  const plain = variant === "plain";
+  // "health" (OURS-health-overflow-menus #1, the Health metric pages' ⋮):
+  // white r16 + 0.5px #241F1B@8% (dark #1C1F28, #F5F3FA@8%; High contrast
+  // 30% of ink), rows 44 tall pad 0 14, 14/19 600 charcoal, icons #7D6BB5
+  // (dark #C3B3FB). Shadow: the app menu shadow (UNSPECIFIED there).
+  const health = variant === "health";
+  const plain = variant === "plain" || health;
   const field = variant === "field";
   const dimmed = backdrop ?? !field;
   const pad = plain ? 6 : 8;
@@ -237,9 +249,12 @@ export function PopupMenu<V extends string>({
             maxHeight: pos.maxHeight,
             boxSizing: "content-box",
             background: "rgb(var(--c-cream-card))",
-            border: "1px solid rgb(var(--th-aea1dc) / 0.5)",
-            borderRadius: 14,
-            boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)",
+            border: health
+              ? `0.5px solid ${document.documentElement.classList.contains("high-contrast") ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "rgba(36,31,27,0.08)"}`
+              : hairline && dark ? "0.5px solid rgb(var(--c-primary) / 0.5)" : `${hairline ? 0.5 : 1}px solid rgb(var(--th-aea1dc) / 0.5)`,
+            borderRadius: health ? 16 : 14,
+            ...(health ? { background: dark ? "#1C1F28" : "#FFFFFF" } : null),
+            boxShadow: hairline && dark ? "none" : "0 12px 32px rgb(var(--th-5f5093) / 0.18)",
             padding: pad,
             animation: "popup-menu-in .22s cubic-bezier(.22,1,.36,1) both",
             ["--pm-dy" as string]: pos.up ? "6px" : "-6px",
@@ -267,13 +282,14 @@ export function PopupMenu<V extends string>({
                   ? {
                       gap: 10,
                       borderRadius: 10,
-                      padding: "0 10px",
-                      minHeight: 40,
+                      padding: health ? "0 14px" : "0 10px",
+                      minHeight: health ? 44 : 40,
                       border: "none",
                       background: on ? c("onFill") : "transparent",
                       color: opt.destructive ? c("destructive") : on ? c("plainOn") : "rgb(var(--c-charcoal))",
                       fontSize: textPx(14),
-                      fontWeight: on ? 700 : 500,
+                      fontWeight: on ? 700 : health ? 600 : 500,
+                      ...(health ? { lineHeight: linePx(19) } : null),
                     }
                   : {
                       gap: field ? 10 : 9,
@@ -283,7 +299,7 @@ export function PopupMenu<V extends string>({
                       ...(field ? { minHeight: 44 } : null),
                       // The filled selection: the board's #A092E0 in light, primary-fill in dark.
                       // Field: the selected border is primary (#AEA1DC / #A991FE, OP1-158 #8).
-                      border: `1px solid ${
+                      border: `${hairline ? 0.5 : 1}px solid ${
                         filled ? "rgb(var(--c-fill-chip))" : on ? (field ? "rgb(var(--c-primary))" : c("onBorder")) : "rgb(var(--c-border-option))"
                       }`,
                       background: filled ? "rgb(var(--c-fill-chip))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
@@ -294,7 +310,7 @@ export function PopupMenu<V extends string>({
                     }
               }
             >
-              {opt.icon && <span className="flex-none flex">{opt.icon}</span>}
+              {opt.icon && <span className="flex-none flex" style={health ? { color: dark ? "rgb(var(--th-c3b3fb))" : document.documentElement.classList.contains("high-contrast") ? "#4B3BA0" : "rgb(var(--th-7d6bb5))" } : undefined}>{opt.icon}</span>}
               <span className="flex-1 min-w-0">
                 {opt.label}
                 {opt.note && (

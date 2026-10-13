@@ -11,16 +11,26 @@ const dayLabel = (iso: string) => {
 
 // Iteration 6 "Team" §1.1: a pill-shaped day navigator with the same
 // lavender border as the bottom-nav pill, replacing the plain card.
-export const DateSelector: React.FC = () => {
+/**
+ * `partB` (FO1 #7-#8, v6 Part B): the pill's 0.5px #8F68F6@28% border in both
+ * modes (X-09) and 44px hit areas on the 24px chevrons. Off by default, so
+ * Home is unchanged.
+ */
+export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) => {
   const { selectedDate, goToPrevDate, goToNextDate, goToToday, goToDate, today } = useApp();
   const isToday = selectedDate === today;
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
-    <div className="flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34] px-3 py-2 mb-[13px] animate-fade-slide-up">
+    <div
+      className={`flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#1C1F28] px-3 py-2 mb-[13px] animate-fade-slide-up ${
+        partB ? "" : "border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34]"
+      }`}
+      style={partB ? { border: "0.5px solid rgb(var(--c-team-nav-accent) / 0.28)" } : undefined}
+    >
       <button
         onClick={goToPrevDate}
-        className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"
+        className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
         aria-label="Previous day"
       >
         <ChevronLeft size={15} />
@@ -41,7 +51,7 @@ export const DateSelector: React.FC = () => {
       </span>
       <button
         onClick={goToNextDate}
-        className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"
+        className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
         aria-label="Next day"
       >
         <ChevronRight size={15} />

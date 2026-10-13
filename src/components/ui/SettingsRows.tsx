@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+﻿import React, { useId } from "react";
 import clsx from "clsx";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Toggle } from "./Toggle";
@@ -79,6 +79,12 @@ type RowBase = {
   dimmed?: boolean;
   className?: string;
   id?: string;
+  /**
+   * The glyph ink. "accent" (default) primary.accent #7D67D9 / #9A8CD6; "dark"
+   * primary.dark #7D6BB5 / #C3B3FB, the ink MO1.8 draws on the Data & account
+   * rows (#49, #53, #60, #69).
+   */
+  iconTone?: "accent" | "dark";
 };
 
 type RowProps = RowBase &
@@ -88,6 +94,11 @@ type RowProps = RowBase &
         onClick: () => void;
         /** Shown before the chevron, e.g. the current language. */
         value?: React.ReactNode;
+        /**
+         * MO1.8 #77-#78: the value 12.5 / 18.8 and 4 from the chevron (one
+         * group) instead of the row's 14 gap. Unset keeps the 14.
+         */
+        valueTight?: boolean;
         toggle?: never;
       }
     | {
@@ -95,8 +106,9 @@ type RowProps = RowBase &
         toggle: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string };
         onClick?: never;
         value?: never;
+        valueTight?: never;
       }
-    | { onClick?: never; toggle?: never; value?: React.ReactNode }
+    | { onClick?: never; toggle?: never; value?: React.ReactNode; valueTight?: never }
   );
 
 /** The row geometry and inset divider, for a page's own row shape (MO1.8.3 From / To). */
@@ -121,7 +133,9 @@ export const SettingsRow: React.FC<RowProps> = ({
   id,
   onClick,
   value,
+  valueTight,
   toggle,
+  iconTone = "accent",
 }) => {
   const body = (
     <>
@@ -135,10 +149,12 @@ export const SettingsRow: React.FC<RowProps> = ({
               ? ""
               : destructive
                 ? "bg-status-high-bg text-status-high"
-                : "bg-primary-pale text-primary-accent"
+                : iconTone === "dark"
+                  ? "bg-primary-pale text-primary-dark"
+                  : "bg-primary-pale text-primary-accent"
           )}
         >
-          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}
+          {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe â€¦ all 17 / 1.75. */}
           {tile ?? (Icon && <Icon size={17} strokeWidth={1.75} />)}
         </span>
       )}
@@ -154,10 +170,18 @@ export const SettingsRow: React.FC<RowProps> = ({
         {subtitle && <span className="block mt-0.5 text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
         {srDescription && <span className="sr-only">{srDescription}</span>}
       </span>
-      {value !== undefined && value !== null && (
+      {!valueTight && value !== undefined && value !== null && (
         <span className="shrink-0 max-w-[45%] truncate text-[12.5px] text-charcoal-faint">{value}</span>
       )}
     </>
+  );
+  const chevron = (
+    <ChevronRight
+      size={16}
+      strokeWidth={1.75}
+      aria-hidden
+      className="shrink-0 text-charcoal-faint rtl:-scale-x-100"
+    />
   );
 
   // Dimmed (BR-12): the whole row at 40% and inert, so it takes no tap and no
@@ -184,12 +208,14 @@ export const SettingsRow: React.FC<RowProps> = ({
     return (
       <button id={id} type="button" onClick={onClick} inert={inert} disabled={dimmed} className={clsx("tap", settingsRowClass, dim, className)}>
         {body}
-        <ChevronRight
-          size={16}
-          strokeWidth={1.75}
-          aria-hidden
-          className="shrink-0 text-charcoal-faint rtl:-scale-x-100"
-        />
+        {valueTight && value !== undefined && value !== null ? (
+          <span className="shrink-0 max-w-[45%] flex items-center gap-1">
+            <span className="min-w-0 truncate text-[12.5px] leading-[18.8px] text-charcoal-faint">{value}</span>
+            {chevron}
+          </span>
+        ) : (
+          chevron
+        )}
       </button>
     );
   }

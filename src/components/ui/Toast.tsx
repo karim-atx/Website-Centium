@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, CircleCheck } from "lucide-react";
+import { AlertCircle, Check, CircleCheck } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
 
@@ -45,7 +45,15 @@ export const Toast: React.FC<{
   bottom?: number;
   /** A general action button (business; on the client toast too, after Undo). */
   action?: { label: string; onClick: () => void };
-}> = ({ open, message, onUndo, onExpire, duration, icon, variant = "client", shape = "ops", bottom, action }) => {
+  /**
+   * Client toast only: "error" is the shared write-failure toast ("Couldn't
+   * save. Try again."): #FBE7E4 with #C0392B text and icon, dark #3C2A30 with
+   * #F09A8E (the handover's error banner colours); the text wraps. `bottom`
+   * (default 88) also applies to the client toast, to lift it above a pinned CTA.
+   */
+  tone?: "default" | "error";
+}> = ({ open, message, onUndo, onExpire, duration, icon, variant = "client", shape = "ops", bottom, action, tone = "default" }) => {
+  const error = tone === "error";
   const business = variant === "business";
   const hold = duration ?? (business ? BUSINESS_TOAST_MS : TOAST_MS);
   const dark = useIsDark();
@@ -114,18 +122,23 @@ export const Toast: React.FC<{
       style={{
         left: "calc(var(--app-gutter) + 16px)",
         right: "calc(var(--app-gutter) + 16px)",
-        bottom: "calc(env(safe-area-inset-bottom) + 88px + var(--active-bar, 0px))",
+        bottom: `calc(env(safe-area-inset-bottom) + ${bottom ?? 88}px + var(--active-bar, 0px))`,
         gap: 10,
-        background: "#241F1B",
+        background: error ? (dark ? "#3C2A30" : "#FBE7E4") : "#241F1B",
         borderRadius: 12,
         padding: "11px 14px",
-        color: "#FFFFFF",
+        color: error ? (dark ? "#F09A8E" : "#C0392B") : "#FFFFFF",
         fontSize: textPx(12.5),
         fontWeight: 600,
       }}
     >
-      {icon ?? <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />}
-      <span className="flex-1 min-w-0 truncate">{message}</span>
+      {icon ??
+        (error ? (
+          <AlertCircle size={15} strokeWidth={2.4} className="flex-none" aria-hidden />
+        ) : (
+          <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />
+        ))}
+      <span className={error ? "flex-1 min-w-0 break-words" : "flex-1 min-w-0 truncate"}>{message}</span>
       {onUndo && actionButton("Undo", onUndo)}
       {action && actionButton(action.label, action.onClick)}
     </div>,

@@ -1223,6 +1223,8 @@ export interface ClientLabsSummary {
   /** yyyy-mm-dd of the most recent panel. */
   latestPanelDate: string;
   panelCount: number;
+  /** Results typed in on their own, with no panel (B2). */
+  standaloneCount?: number;
   /** Panels with an attached report, newest first. */
   reports: LabReport[];
 }

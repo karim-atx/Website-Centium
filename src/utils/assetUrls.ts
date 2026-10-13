@@ -59,6 +59,17 @@ export const meditationPoseV2Urls = (pose: MeditationPoseV2) => ({
   still: `/meditation/v2/${pose}.png`,
   /** 88 x 88 PNG thumbnail (shown at 40). */
   thumb: `/meditation/v2/${pose}-thumb.png`,
+  /**
+   * Dark mode (V6-100, interim until dark exports exist): the same three
+   * files with the lavender ground re-coloured, hero ground #242730 (the dark
+   * disc), thumbnail ground #33314A (#A991FE@16% on #1C1F28, the current
+   * tile); edges re-blended, figure colours unchanged.
+   */
+  dark: {
+    gif: `/meditation/v2/dark/${pose}.gif`,
+    still: `/meditation/v2/dark/${pose}.png`,
+    thumb: `/meditation/v2/dark/${pose}-thumb.png`,
+  },
 });
 
 // ---------------------------------------------------------------------------

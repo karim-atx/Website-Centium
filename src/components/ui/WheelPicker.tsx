@@ -16,6 +16,10 @@ export interface WheelColumn<V extends string | number = string> {
   label: string;
   /** Relative width (flex grow); defaults to 1. */
   flex?: number;
+  /** variant "partB": this column's own selection band width in px (HE1.1.1 #75 160, HE1.7.1 #83 90 / #88 60, HE1.6.1.a #87 70). */
+  bandWidth?: number;
+  /** variant "partB": a unit after the selected value, inside the band (HE1.1.1 #79 "ml" 12/18 700). */
+  unit?: string;
 }
 
 const ROW = 36;
@@ -32,8 +36,28 @@ const VISIBLE = 5; // selected row plus two neighbours either side
 export function WheelPicker({
   columns,
   band = "default",
+  variant = "default",
+  separator,
+  gap = 6,
+  trailing,
+  rowHeight = ROW,
 }: {
   columns: WheelColumn<string | number>[];
+  /**
+   * "partB" (Health B log sheets, HE1.1.1 #75-#79, HE1.7.1 #83-#92,
+   * HE1.6.1.a #87-#91, HE1.8.2 #56-#60): each column has its own band
+   * (`bandWidth` × 40, r10, --sheet-band light / #303141 dark); the selected
+   * row 24/36 800 tnum, the next rows 16/24 600 at 45%, the outer rows
+   * 14/21 600 at 22%. Columns sit centred, `gap` apart, with `separator`
+   * between them (":" 22/33 800, "." 24/36 800) and `trailing` after the
+   * last (HE1.7.1 #92 "kg"). Default "default" is unchanged.
+   */
+  variant?: "default" | "partB";
+  separator?: { text: string; size: 22 | 24 };
+  gap?: number;
+  trailing?: React.ReactNode;
+  /** variant "partB": row pitch. 36 for value wheels (HE1.1.1, HE1.7.1); 28.5 for time wheels (HE1.6.1.a #88-#90, HE1.8.2 #57-#59). */
+  rowHeight?: number;
   /**
    * The selection band (v6 X-18): "default" --wheel-band (#F3F3FD, dark
    * #242730: Part B and client wheels); "business" --wheel-band-business
@@ -41,6 +65,36 @@ export function WheelPicker({
    */
   band?: "default" | "business";
 }) {
+  if (variant === "partB") {
+    return (
+      <div className="relative w-full flex justify-center items-stretch" style={{ height: rowHeight * VISIBLE, gap }}>
+        {columns.map((col, i) => (
+          <React.Fragment key={col.label}>
+            {i > 0 && separator && (
+              <span
+                aria-hidden
+                className="self-center"
+                style={{ fontSize: textPx(separator.size), lineHeight: separator.size === 22 ? "33px" : "36px", fontWeight: 800, color: "var(--wheel-text)" }}
+              >
+                {separator.text}
+              </span>
+            )}
+            <div className="relative shrink-0" style={{ width: col.bandWidth ?? 70 }}>
+              <div
+                aria-hidden
+                className="absolute inset-x-0 pointer-events-none bg-[var(--sheet-band)] dark:bg-th-303141"
+                style={{ top: rowHeight * 2.5 - 20, height: 40, borderRadius: 10 }}
+              />
+              <div className="relative flex h-full">
+                <WheelColumnView column={col} look="partB" row={rowHeight} />
+              </div>
+            </div>
+          </React.Fragment>
+        ))}
+        {trailing && <span className="self-center flex">{trailing}</span>}
+      </div>
+    );
+  }
   return (
     <div className="relative w-full" style={{ height: ROW * VISIBLE }}>
       {/* The selection band sits behind every column. */}
@@ -58,7 +112,8 @@ export function WheelPicker({
   );
 }
 
-function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
+function WheelColumnView({ column, look = "default", row = ROW }: { column: WheelColumn<string | number>; look?: "default" | "partB"; row?: number }) {
+  const ROW = row;
   const ref = useRef<HTMLDivElement | null>(null);
   const settle = useRef<number | null>(null);
   const [top, setTop] = React.useState(0);
@@ -70,7 +125,7 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
     if (!el) return;
     if (Math.round(el.scrollTop / ROW) !== index) el.scrollTop = index * ROW;
     setTop(el.scrollTop);
-  }, [index]);
+  }, [index, ROW]);
 
   // A wheel closed mid-settle must not report afterwards: its element is gone,
   // scrollTop reads 0, and the first option would be chosen (seen on the
@@ -114,6 +169,43 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
         // Distance from the centre row, from the live scroll position.
         const d = Math.abs(i - top / ROW);
         const on = d < 0.5;
+        if (look === "partB") {
+          const near = d < 1.5;
+          return (
+            <button
+              key={String(opt.value)}
+              role="option"
+              aria-selected={opt.value === column.value}
+              aria-disabled={opt.disabled || undefined}
+              onClick={() => {
+                if (opt.disabled) return;
+                ref.current?.scrollTo({ top: i * ROW, behavior: "smooth" });
+                column.onChange(opt.value);
+              }}
+              className="w-full flex items-center justify-center whitespace-nowrap"
+              style={{
+                height: ROW,
+                scrollSnapAlign: "center",
+                fontSize: textPx(on ? 24 : near ? 16 : 14),
+                fontWeight: on ? 800 : 600,
+                color: opt.disabled ? "var(--wheel-disabled)" : "var(--wheel-text)",
+                opacity: opt.disabled ? 1 : on ? 1 : near ? 0.45 : 0.22,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {opt.label}
+              {column.unit && (
+                <span
+                  aria-hidden={!on}
+                  className="text-th-7d6bb5 dark:text-primary-deep-text"
+                  style={{ marginLeft: 5, fontSize: textPx(12), lineHeight: "18px", fontWeight: 700, visibility: on ? "visible" : "hidden" }}
+                >
+                  {column.unit}
+                </span>
+              )}
+            </button>
+          );
+        }
         return (
           <button
             key={String(opt.value)}

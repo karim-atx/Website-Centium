@@ -509,14 +509,6 @@ export default {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
-        // Mobile v5.1 MO1.1.3.2: the unlock pill's one light sheen while it
-        // holds. Never runs under reduced motion (the pill is static). Moves
-        // a pill-wide layer whose stripe starts 56 px off the left edge, so
-        // 100% + 72 px carries it (and its skew) fully past the right one.
-        "unlock-sheen": {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(calc(100% + 72px))" },
-        },
         // v2 Centium landing handoff: the reviews conveyor belt (duplicated
         // card list, translated exactly -50% of its own width minus the
         // gap so the loop seam is invisible) and the two drifting decorative
@@ -606,7 +598,6 @@ export default {
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
         "ekg-scroll": "ekg-scroll 3s linear infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
-        "unlock-sheen": "unlock-sheen 1.4s ease-in-out 1 both",
         "mkt-belt": "mkt-belt 46s linear infinite",
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
         "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",

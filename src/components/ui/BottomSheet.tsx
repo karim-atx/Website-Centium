@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
@@ -90,6 +90,16 @@ interface BottomSheetProps {
    * pass through. Instant under Reduce motion. Off by default.
    */
   animateExit?: boolean;
+  /** The close X's size when a frame draws other than the chrome's (WO1.3 #60: 13). */
+  xSize?: number;
+  /** Body padding when a frame draws other than the chrome's (WO1.3 #61: 16 16 0 16); the safe area is added at the bottom. */
+  bodyPadding?: { top: number; right: number; bottom: number; left: number };
+  /** The title's line height when a frame draws it (WO1.3 #58: 30). */
+  titleLineHeight?: number;
+  /** The sheet takes its full max height instead of hugging its content (WO1.3 #57: 740 of 844, the list fills it). */
+  fillHeight?: boolean;
+  /** Drag the header down to close (WO1.3 S1 "swipe down"): past 80 px, or a quick flick, it closes. */
+  swipeToClose?: boolean;
 }
 
 const EXIT_MS = 350;
@@ -171,7 +181,41 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   scrimBlur = true,
   maxHeightPct = 88,
   leaving,
+  xSize: xSizeProp,
+  bodyPadding: bodyPaddingProp,
+  titleLineHeight,
+  fillHeight,
+  swipeToClose,
 }) => {
+  // Swipe down to close, from the header (WO1.3 S1).
+  const [dragY, setDragY] = useState(0);
+  const dragStart = useRef<{ y: number; t: number; id: number } | null>(null);
+  const swipeHandlers = swipeToClose
+    ? {
+        onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+          if ((e.target as HTMLElement).closest("button")) return;
+          dragStart.current = { y: e.clientY, t: Date.now(), id: e.pointerId };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        },
+        onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+          if (!dragStart.current || dragStart.current.id !== e.pointerId) return;
+          setDragY(Math.max(0, e.clientY - dragStart.current.y));
+        },
+        onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => {
+          const start = dragStart.current;
+          dragStart.current = null;
+          if (!start) return;
+          const dy = Math.max(0, e.clientY - start.y);
+          const fast = dy > 30 && dy / Math.max(1, Date.now() - start.t) > 0.6;
+          setDragY(0);
+          if (dy > 80 || fast) onClose();
+        },
+        onPointerCancel: () => {
+          dragStart.current = null;
+          setDragY(0);
+        },
+      }
+    : undefined;
   // The handover's light chrome, and its dark-mode counterpart, come from the
   // --sheet-* variables in index.css.
   const colours = typeof tone === "object" ? tone : undefined;
@@ -183,7 +227,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   const partB = chrome === "partB";
   const borderWidth = partB ? 0.5 : 1;
   const ring = partB ? 1.1 : market ? 1.5 : 1.6;
-  const xSize = market ? 14 : 12;
+  const xSize = xSizeProp ?? (market ? 14 : 12);
   const scrimColour = (scrim ?? (market ? "black" : "warm")) === "black" ? "rgba(0,0,0,0.4)" : "rgba(36,31,27,0.4)";
 
   // The whole sheet never reaches the status area (notch / Dynamic Island),
@@ -197,9 +241,14 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   const footerPad = footerBottom === undefined ? bottomPad : `calc(env(safe-area-inset-bottom) + ${footerBottom}px)`;
   // Body padding: 20 (34 at the bottom) for the app and Part B; MA1 /
   // BizMoreV8 16 16 28.
-  const bodyPadding: React.CSSProperties = market
-    ? { padding: "16px 16px", paddingBottom: footer ? 16 : "max(28px, calc(env(safe-area-inset-bottom) + 20px))" }
-    : { padding: 20, paddingBottom: footer ? 20 : bottomPad };
+  const bodyPadding: React.CSSProperties = bodyPaddingProp
+    ? {
+        padding: `${bodyPaddingProp.top}px ${bodyPaddingProp.right}px 0 ${bodyPaddingProp.left}px`,
+        paddingBottom: `calc(env(safe-area-inset-bottom) + ${bodyPaddingProp.bottom}px)`,
+      }
+    : market
+      ? { padding: "16px 16px", paddingBottom: footer ? 16 : "max(28px, calc(env(safe-area-inset-bottom) + 20px))" }
+      : { padding: 20, paddingBottom: footer ? 20 : bottomPad };
 
   const sheetAnim = leaving ? "bottom-sheet-out .35s cubic-bezier(0.22,1,0.36,1) both" : undefined;
   const scrimAnim = leaving ? "bottom-sheet-scrim-out .35s ease both" : undefined;
@@ -242,14 +291,26 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
       ) : (
         <div
           className={`relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden ${leaving ? "" : "animate-sheet-up"}`}
-          style={{ maxHeight, background: band, border: `${borderWidth}px solid ${border}`, borderBottom: "none", animation: sheetAnim }}
+          style={{
+            maxHeight,
+            ...(fillHeight ? { height: maxHeight } : null),
+            background: band,
+            border: `${borderWidth}px solid ${border}`,
+            borderBottom: "none",
+            animation: sheetAnim,
+            ...(dragY ? { transform: `translateY(${dragY}px)` } : null),
+          }}
         >
           {handle && (
             <div aria-hidden className="shrink-0 flex justify-center" style={{ paddingTop: 8 }}>
               <span style={{ width: 36, height: 4, borderRadius: 2, background: "var(--sheet-handle)" }} />
             </div>
           )}
-          <div className="shrink-0 flex items-center justify-between" style={{ height: handle ? 46 : headerHeight, padding: "0 18px" }}>
+          <div
+            className="shrink-0 flex items-center justify-between"
+            {...swipeHandlers}
+            style={{ height: handle ? 46 : headerHeight, padding: "0 18px", ...(swipeToClose ? { touchAction: "none" } : null) }}
+          >
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (
                 // 26px visual on a 44px hit area (01 GLOBAL touch targets).
@@ -266,7 +327,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
             {title && (
               <h2
                 className="flex-1 min-w-0 flex items-center justify-center"
-                style={{ color: titleColor, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", gap: 9 }}
+                style={{ color: titleColor, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", gap: 9, ...(titleLineHeight ? { lineHeight: linePx(titleLineHeight) } : null) }}
               >
                 {titleIcon && <span className="flex shrink-0">{titleIcon}</span>}
                 <span className="min-w-0 truncate">{title}</span>

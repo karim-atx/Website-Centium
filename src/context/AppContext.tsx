@@ -35,6 +35,7 @@ import type {
   ColorTheme,
   CustomFood,
   HabitIconKey,
+  HabitColour,
   CustomExerciseLibraryItem,
   CalendarEvent,
   WorkoutTemplate,
@@ -132,8 +133,10 @@ import {
   getHabits,
   habitStreak,
   isDoneOn,
-  renameHabitRemote,
+  updateHabitRemote,
   setCompletion,
+  setHabitColourRemote,
+  setHabitArchivedRemote,
   type HabitsSnapshot,
 } from "../services/habits";
 import {
@@ -155,6 +158,7 @@ import {
   getAchievements,
   getPointsSummary,
   getPointTiers,
+  markAchievementsNotified,
   recordFeatureMilestone,
   type Achievement,
   type PointsSummary,
@@ -235,8 +239,10 @@ import {
   removeComorbidityRemote,
   updateMedicationRemote,
 } from "../services/medical-history";
+import { GOAL_DEFAULT, fetchGoalHistory, goalOnFrom, normaliseGoal, saveGoal, upsertGoalRow, type GoalRow } from "../services/health-metrics/goals";
 import {
   getHealthMetrics,
+  deleteHealthMetricsForDay,
   latestDayOf,
   logHealthMetric,
   type MetricHistory,
@@ -415,6 +421,10 @@ interface AppState {
   workoutHistoryError: string | null;
   /** Set when weight/water history could not be read. Never means "empty". */
   metricsError: string | null;
+  /** v6 Batch 2 Home (OURS-home-widget-states): when health_metrics last loaded (ISO); null until the first answer. */
+  metricsLoadedAt: string | null;
+  /** v6 Batch 2 Home: reads health_metrics again (a widget's "Tap to retry"). */
+  reloadMetrics: () => void;
   /** Set when medical records could not be read. Never means "none". */
   medicalError: string | null;
   /** Set when imaging records could not be read. Never means "none". */
@@ -637,7 +647,8 @@ interface AppState {
   // case these used to cover cannot arise, and a local fallback would mean a
   // value on screen that no other device will ever see. Both report failure
   // instead of silently keeping a number that was never stored.
-  addWater: (ml: number) => Promise<{ ok: boolean; message?: string }>;
+  /** `day` (yyyy-mm-dd) defaults to the selected day; the Health B log sheets and their offline queue pass the day the drink was logged for. */
+  addWater: (ml: number, day?: string) => Promise<{ ok: boolean; message?: string }>;
   setWaterAmount: (ml: number) => Promise<{ ok: boolean; message?: string }>;
   waterGoalMl: number;
   setWaterGoal: (ml: number) => void;
@@ -658,10 +669,20 @@ interface AppState {
   habitSuggestions: { label: string; icon: HabitIconKey }[];
   /** Ticks or unticks a habit for `date` (default today; MO1.1.1 ticks any
    *  day of the week up to today). A later date is ignored. */
-  toggleHabit: (id: string, date?: string) => void;
-  addHabit: (label: string, icon: HabitIconKey) => void;
-  removeHabit: (id: string) => void;
-  renameHabit: (id: string, label: string) => void;
+  toggleHabit: (id: string, date?: string) => Promise<string | null>;
+  /** v6 MO1.1.1 / MO1.1.1.1: every habit write resolves to null once saved, or
+   *  the reason it failed. A failed write no longer sets `habitsError` (that is
+   *  the read's error, shown as the Retry banner); the screen shows a toast. */
+  addHabit: (label: string, icon: HabitIconKey, colour?: HabitColour) => Promise<string | null>;
+  removeHabit: (id: string) => Promise<string | null>;
+  /** MO1.1.1 S5: Edit saves the name, the icon and (B3) the colour from the prefilled panel. */
+  updateHabit: (id: string, patch: { label: string; icon: HabitIconKey; colour?: HabitColour }) => Promise<string | null>;
+  /** MO1.1.1 S3 (B3): the tile's colour, saved at once; reverts on a failed write. */
+  setHabitColour: (id: string, colour: HabitColour) => Promise<string | null>;
+  /** B3 archived_at: off the list with its history kept; `false` brings it back. */
+  archiveHabit: (id: string, archived?: boolean) => Promise<string | null>;
+  /** MO1.1.1 O3 Retry: reads the habits again (the cached grid stays meanwhile). */
+  reloadHabits: () => Promise<void>;
 
   // The four automatic streaks only: manual streaks were removed on 7 October
   // 2026 (decision 23, kept-list items 27–28).
@@ -764,12 +785,17 @@ interface AppState {
   // a new day starts instead of staying pre-filled forever.
   weightLoggedDate: string | null;
   weightByDate: Record<string, number>;
-  logWeightForToday: (value: number) => Promise<{ ok: boolean; message?: string }>;
+  /** `day` (yyyy-mm-dd) defaults to the selected day (HE1.7.1's When field, date only until PB-HB-43). */
+  logWeightForToday: (value: number, day?: string, note?: string | null) => Promise<{ ok: boolean; message?: string }>;
+  /** v6 Batch 2 Health A (HE1.7 weigh-in Delete): removes that local day's manual weight readings, then re-reads health_metrics (metricHistory, weightByDate, metricValues.weight). */
+  deleteWeighIn: (day: string) => Promise<{ ok: boolean; message?: string }>;
   // V8 (QA 8.0): "Pressing the edit feature only prompts you to edit daily
   // step count goal" — the goal is user-configurable; the count itself
   // stays auto-synced.
   stepsGoal: number;
   setStepsGoal: (goal: number) => void;
+  /** v6 Batch 2 Health A (B1 metric_goals): the steps / water goal as it stood on a local day (history); before any stored goal, the app default (or the device goal when none was ever stored). */
+  metricGoalOn: (metric: "steps" | "water", day: string) => number;
 
   // V9 (QA 9.0): "swiping down on [Health] should prompt syncing data with
   // selected integrated health data device" — lifted out of IntegrationsCard
@@ -782,6 +808,8 @@ interface AppState {
   removeWidget: (id: string) => void;
   reorderWidgets: (fromIndex: number, toIndex: number) => void;
   resizeWidget: (id: string, size: WidgetSize) => void;
+  /** v6 Batch 2: replaces the whole board (the web layout read back from widget_configs). */
+  replaceWidgets: (list: WidgetConfig[]) => void;
 
   nutritionGoal: NutritionGoal;
   setNutritionGoal: (goal: NutritionGoal) => void;
@@ -918,15 +946,20 @@ interface AppState {
    *  sheet open, with what was written, until the save lands). */
   addJournalEntry: (folderId: string, title: string, text: string) => Promise<string | null>;
   updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => Promise<string | null>;
-  removeJournalEntry: (id: string) => void;
-  addJournalFolder: (name: string) => void;
+  /** v6 MO1.1.2: journal writes resolve to null once saved, or the reason;
+   *  a failed write no longer sets `journalError` (the read's error, shown as
+   *  the Retry banner); the screen shows the "Couldn't save" toast. */
+  removeJournalEntry: (id: string) => Promise<string | null>;
+  addJournalFolder: (name: string) => Promise<string | null>;
   /** MO1.1.2.1 folder options. */
-  renameJournalFolder: (id: string, name: string) => void;
+  renameJournalFolder: (id: string, name: string) => Promise<string | null>;
   /** Moves the folder `step` places along the tab order (-1 one left, +1 one
    *  right, larger steps straight to that place; the others close up). */
-  moveJournalFolder: (id: string, step: number) => void;
+  moveJournalFolder: (id: string, step: number) => Promise<string | null>;
   /** Deletes the folder and, by the schema's cascade, every entry in it. */
-  removeJournalFolder: (id: string) => void;
+  removeJournalFolder: (id: string) => Promise<string | null>;
+  /** MO1.1.2 O3 Retry: reads folders and entries again (open lock windows kept). */
+  reloadJournal: () => Promise<void>;
   /** Stage 3 folder lock: folder id → the end of its open unlock window
    *  (only windows this tab opened; a lapsed one is dropped). */
   journalUnlockedUntil: UnlockWindows;
@@ -981,6 +1014,8 @@ interface AppState {
   addMedication: (m: Omit<Medication, "id">) => Promise<{ ok: boolean; message?: string }>;
   updateMedication: (id: string, patch: Partial<Medication>) => Promise<{ ok: boolean; message?: string }>;
   removeMedication: (id: string) => Promise<{ ok: boolean; message?: string }>;
+  /** Re-reads lab results, lab reports, imaging and medical history (HE1.9 page writes that have no writer here). */
+  reloadHealthRecords: () => Promise<void>;
 
   selectedDate: string;
   goToPrevDate: () => void;
@@ -1027,6 +1062,14 @@ interface AppState {
   exerciseCatalog: CatalogExercise[];
   /** Null until the first catalog read finishes or fails. */
   exerciseCatalogError: string | null;
+  /** v6 WO1.3 / WO2 O3: the "Retry" on "Couldn't load exercises." reads the catalog again. */
+  retryExerciseCatalog: () => void;
+  /** v6 FO1 O3: the "Retry" on "Couldn't load your diary." reads the diary again. */
+  retryDiary: () => void;
+  /** v6 WO1 O2: the "Retry" on "Couldn't load your routines." reads folders and routines again. */
+  retryRoutines: () => void;
+  /** v6 WO1 O1: true once the first folder/routine read has answered (ok or not). */
+  routinesHydrated: boolean;
 
   // V4 (QA 4.0): custom exercises are saved to a searchable library, not
   // auto-added to whichever routine was open when they were created.
@@ -2149,6 +2192,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [workoutHistoryError, setWorkoutHistoryError] = useState<string | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [metricsLoadedAt, setMetricsLoadedAt] = useState<string | null>(null);
+  const [metricsReloadKey, setMetricsReloadKey] = useState(0);
+  const reloadMetrics = useCallback(() => setMetricsReloadKey((k) => k + 1), []);
   const [medicalError, setMedicalError] = useState<string | null>(null);
   const [imagingError, setImagingError] = useState<string | null>(null);
   const [labsError, setLabsError] = useState<string | null>(null);
@@ -2268,6 +2314,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: h.id,
           label: h.label,
           icon: h.icon,
+          colour: h.colour,
           done: isDoneOn(dates, today),
           streakDays: habitStreak(dates, today),
           doneDates: dates,
@@ -2623,6 +2670,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  // HE1.9 (Biomarkers & imaging page): its edits and moves write through the
+  // services directly, then re-read here so every screen sees the same lists.
+  const reloadHealthRecords: AppState["reloadHealthRecords"] = async () => {
+    if (!authUserId) return;
+    const [labs, reports, imaging, history] = await Promise.all([
+      getBloodMarkers(authUserId),
+      getLabReports(authUserId),
+      getImagingRecords(authUserId),
+      getMedicalHistory(authUserId),
+    ]);
+    if (labs.ok) setBloodMarkers(labs.markers);
+    setLabsError(labs.ok ? null : labs.message);
+    if (reports.ok) setLabReports(reports.reports);
+    if (imaging.ok) setImagingRecords(imaging.records);
+    setImagingError(imaging.ok ? null : imaging.message);
+    if (history.ok) {
+      setComorbidities_(history.history.comorbidities);
+      setSurgeries(history.history.surgeries);
+      setMedications(history.history.medications);
+    }
+    setMedicalError(history.ok ? null : history.message);
+  };
+
   // Medical history, hydrated from its three tables.
   //
   // A PLAIN REPLACE, like the workout and metric histories: these lists are
@@ -2687,6 +2757,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [diaryLoading, setDiaryLoading] = useState(false);
   const [diaryError, setDiaryError] = useState<string | null>(null);
+  // Bumped by retryDiary, to read the diary range again.
+  const [diaryAttempt, setDiaryAttempt] = useState(0);
+  const retryDiary = useCallback(() => setDiaryAttempt((n) => n + 1), []);
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
@@ -2735,7 +2808,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, diaryStart, diaryEnd, setFoodLog]);
+  }, [authUserId, profileReady, diaryStart, diaryEnd, setFoodLog, diaryAttempt]);
 
   // --- custom meal hydration ----------------------------------------------
   //
@@ -2964,6 +3037,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // they cannot date.
   const [exerciseCatalog, setExerciseCatalog] = useState<CatalogExercise[]>([]);
   const [exerciseCatalogError, setExerciseCatalogError] = useState<string | null>(null);
+  // Bumped by retryExerciseCatalog, to read the catalog again.
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const retryExerciseCatalog = useCallback(() => {
+    setExerciseCatalogError(null);
+    setCatalogAttempt((n) => n + 1);
+  }, []);
 
   // NO auth GATE. exercises is anon-readable (`exercises_select_public` is
   // `using (true)`, and the SELECT grant covers anon), so this runs once on
@@ -2983,7 +3062,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [catalogAttempt]);
 
   // --- custom exercise hydration ------------------------------------------
   //
@@ -3061,6 +3140,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // the lookup every write resolves names against.
   const [routinesError, setRoutinesError] = useState<string | null>(null);
   const routineUploadAttempted = useRef<string | null>(null);
+  // Bumped by retryRoutines, to read folders and routines again.
+  const [routinesAttempt, setRoutinesAttempt] = useState(0);
+  const retryRoutines = useCallback(() => setRoutinesAttempt((n) => n + 1), []);
+  // v6 WO1 O1: false until the first folder/routine read has answered (either
+  // way), so a device with nothing cached can show loading rows meanwhile.
+  const [routinesHydrated, setRoutinesHydrated] = useState(false);
 
   // A ref, not a dependency: every routine write needs the current libraries,
   // and threading them through the dependency array would rebuild each of
@@ -3075,6 +3160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void Promise.all([getRoutineFolders(authUserId), getRoutines(authUserId)]).then(
       async ([folderResult, routineResult]) => {
         if (cancelled) return;
+        setRoutinesHydrated(true);
         if (!folderResult.ok || !routineResult.ok) {
           setRoutinesError(
             folderResult.message ?? routineResult.message ?? "Couldn't load your routines."
@@ -3212,7 +3298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // routines/routineFolders are read for the one-time upload and must not
     // re-trigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUserId, profileReady]);
+  }, [authUserId, profileReady, routinesAttempt]);
 
   // --- personal records and paused sessions --------------------------------
   //
@@ -3374,6 +3460,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // resolves after its replacement -- would otherwise queue the same sheet
   // again from the same payload.
   const celebrated = useRef<Set<string>>(new Set());
+  // B3: queued unlocks whose notified_at is still null on the server.
+  const owedUnlocks = useRef<Set<string>>(new Set());
   const refreshTimer = useRef<number | null>(null);
   const lastEvaluated = useRef(0);
   const evaluating = useRef(false);
@@ -3405,11 +3493,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (rows.ok) {
         setAchievements(rows.value);
         setAchievementsError(null);
-        const fresh = rows.value.filter(
-          (a) => a.newlyEarned && !celebrated.current.has(a.key)
-        );
+        // B3 (PB-O-11): an unlock is OWED while its notified_at is null,
+        // whoever awarded it (this call, the 01:15 sweep, another device),
+        // and is marked shown once its pill finishes (dismissUnlock). No time
+        // window: B3's migration backfills notified_at = earned_at for every
+        // row earned before it, so a null means genuinely new. Before B3 (no
+        // notified_at in the payload) the pill falls back to newlyEarned.
+        const owedPill = (a: Achievement) =>
+          a.notifiedAt === undefined ? a.newlyEarned : !!a.earnedAt && a.notifiedAt === null;
+        const fresh = rows.value
+          .filter((a) => owedPill(a) && !celebrated.current.has(a.key))
+          .sort((a, b) => (a.earnedAt ?? "").localeCompare(b.earnedAt ?? ""));
         if (fresh.length > 0) {
-          for (const a of fresh) celebrated.current.add(a.key);
+          for (const a of fresh) {
+            celebrated.current.add(a.key);
+            if (a.notifiedAt === null) owedUnlocks.current.add(a.key);
+          }
           // QUEUED, NOT REPLACED. Finishing a workout can earn first_workout,
           // a rung of the workouts ladder and a streak rung in one call, and
           // each of those is its own moment.
@@ -3445,10 +3544,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, wait);
   }, [authUserId, runAchievementRead]);
 
-  const dismissUnlock: AppState["dismissUnlock"] = React.useCallback(
-    () => setUnlockQueue((prev) => prev.slice(1)),
-    []
-  );
+  // B3: the pill at the head of the queue has been shown; record it on the
+  // server (mark_achievements_notified is idempotent) so no other device and
+  // no later read shows it again. Dev-helper pills are never in owedUnlocks.
+  const unlockQueueRef = useRef<Achievement[]>([]);
+  useEffect(() => {
+    unlockQueueRef.current = unlockQueue;
+  }, [unlockQueue]);
+  const dismissUnlock: AppState["dismissUnlock"] = React.useCallback(() => {
+    const head = unlockQueueRef.current[0];
+    if (head && owedUnlocks.current.delete(head.key)) void markAchievementsNotified([head.key]);
+    setUnlockQueue((prev) => prev.slice(1));
+  }, []);
 
   // DEV BUILDS ONLY: `__centiumUnlock(n)` in the console queues n unlock
   // pills (MO1.1.3.2) for frame-by-frame checks, using this account's own
@@ -3456,19 +3563,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // loaded). Nothing is written anywhere; the guard drops it from production.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const w = window as unknown as { __centiumUnlock?: (n?: number) => number };
-    w.__centiumUnlock = (n = 1) => {
-      const pool: Achievement[] = achievements && achievements.length > 0 ? achievements : [
+    const w = window as unknown as { __centiumUnlock?: (n?: number, key?: string) => number };
+    // Real keys are kept (the pill draws `/achievements/<key>.svg` and links
+    // to `?badge=<key>`); `key` picks one achievement (e.g. "workouts_bronze").
+    w.__centiumUnlock = (n = 1, key?: string) => {
+      const loaded: Achievement[] = achievements && achievements.length > 0 ? achievements : [
         {
-          key: "dev-sample", category: "training", title: "Ten down", description: "Finish 10 workouts",
-          icon: "🏋️", points: 50, groupKey: null, level: "bronze", threshold: 10, currentValue: 10,
+          key: "workouts_bronze", category: "training", title: "Ten down", description: "Finish 10 workouts",
+          icon: "🏋️", points: 50, groupKey: "workouts", level: "bronze", threshold: 10, currentValue: 10,
           sortOrder: 0, earnedAt: null, newlyEarned: true,
         },
       ];
-      const stamp = Date.now();
+      const picked = key ? loaded.filter((a) => a.key === key) : [];
+      const pool = picked.length > 0 ? picked : loaded;
       const items = Array.from({ length: Math.max(1, n) }, (_, i) => ({
         ...pool[i % pool.length],
-        key: `dev-unlock-${stamp}-${i}`,
         newlyEarned: true,
       }));
       setUnlockQueue((prev) => [...prev, ...items]);
@@ -3533,6 +3642,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (authUserId) return;
     celebrated.current.clear();
+    owedUnlocks.current.clear();
     setAchievements(null);
     setPointsSummary(null);
     setUnlockQueue([]);
@@ -4728,23 +4838,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // running total AS OF that moment, not an increment, so a delta has to be
   // resolved against the current total before it is sent — see the header of
   // services/health-metrics for why the table cannot hold increments.
-  const writeWater = async (ml: number) => {
+  const writeWater = async (ml: number, day: string = selectedDate) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to log water." };
     const clamped = Math.max(0, Math.min(ml, 5000));
     const result = await logHealthMetric({
       userId: authUserId,
       kind: "water",
       value: clamped,
-      day: selectedDate,
+      day,
       today,
     });
     if (!result.ok) return result;
-    setWaterByDate((prev) => ({ ...prev, [selectedDate]: clamped }));
+    setWaterByDate((prev) => ({ ...prev, [day]: clamped }));
     return { ok: true };
   };
-  const addWater: AppState["addWater"] = (ml) => writeWater((waterByDate[selectedDate] ?? 0) + ml);
+  const addWater: AppState["addWater"] = (ml, day = selectedDate) => writeWater((waterByDate[day] ?? 0) + ml, day);
   const setWaterAmount: AppState["setWaterAmount"] = (ml) => writeWater(ml);
-  const setWaterGoal = (ml: number) => setWaterGoalState(Math.max(500, Math.min(ml, 6000)));
+  // B1 metric_goals (V6-59): the goal is stored with the day it applies from;
+  // the local copy is the cache the screens read synchronously.
+  const setWaterGoal = (ml: number) => {
+    const v = normaliseGoal("water", ml);
+    setWaterGoalState(v);
+    if (authUserId) void saveGoal(authUserId, "water", v, today).then((r) => r.ok && setMetricGoalRows((rows) => upsertGoalRow(rows, "water", v, today)));
+  };
 
   // OPTIMISTIC, THEN CORRECTED BY THE WRITE. Ticking a box should feel
   // instant; a failed write puts the box back and says why, rather than
@@ -4753,9 +4869,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // THE DATE IS `today` — the user's own local date, which is what the
   // completion is stored under. Not the server's: that lesson cost the cycle
   // read path a whole migration.
-  const toggleHabit = (id: string, date?: string) => {
+  const toggleHabit = (id: string, date?: string): Promise<string | null> => {
     const day = date ?? today;
-    if (day > today) return;
+    if (day > today) return Promise.resolve(null);
     const dates = habitSnapshot.completions[id] ?? [];
     const nowDone = !isDoneOn(dates, day);
 
@@ -4770,14 +4886,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
-    void setCompletion(id, day, nowDone).then((result) => {
+    return setCompletion(id, day, nowDone).then((result) => {
       // Only a tick can earn one: the habit_days ladder counts distinct days
       // with a completion, and un-ticking removes the row it would count.
       if (result.ok) {
         if (nowDone) refreshAchievements();
-        return;
+        return null;
       }
-      setHabitsError(result.message);
+      // v6 MO1.1.1 K7 / O4: the circle goes back; the screen says so in a
+      // toast (the caller), not in the read's error line.
       setHabitSnapshot((prev) => {
         const current = prev.completions[id] ?? [];
         return {
@@ -4788,53 +4905,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
         };
       });
+      return result.message;
     });
   };
 
-  const addHabit = (label: string, icon: HabitIconKey) => {
-    if (!authUserId) return;
-    void createHabit(authUserId, { label, icon, position: habitSnapshot.items.length }).then(
-      (result) => {
-        if (!result.ok) {
-          setHabitsError(result.message);
-          return;
-        }
-        setHabitsError(null);
-        setHabitSnapshot((prev) => ({
-          items: [...prev.items, result.value],
-          completions: { ...prev.completions, [result.value.id]: [] },
-        }));
-      }
-    );
+  const addHabit = (label: string, icon: HabitIconKey, colour?: HabitColour): Promise<string | null> => {
+    if (!authUserId) return Promise.resolve("Your session expired. Sign in again to save this.");
+    return createHabit(authUserId, { label, icon, colour, position: habitSnapshot.items.length }).then((result) => {
+      if (!result.ok) return result.message;
+      setHabitSnapshot((prev) => ({
+        items: [...prev.items, result.value],
+        completions: { ...prev.completions, [result.value.id]: [] },
+      }));
+      return null;
+    });
   };
 
-  const removeHabit = (id: string) => {
-    void deleteHabitRemote(id).then((result) => {
-      if (!result.ok) {
-        setHabitsError(result.message);
-        return;
-      }
-      setHabitsError(null);
+  const removeHabit = (id: string): Promise<string | null> =>
+    deleteHabitRemote(id).then((result) => {
+      if (!result.ok) return result.message;
       setHabitSnapshot((prev) => {
         const completions = { ...prev.completions };
         delete completions[id];
         return { items: prev.items.filter((h) => h.id !== id), completions };
       });
+      return null;
+    });
+
+  // MO1.1.1 S5: Edit saves the name, the icon and the colour (all three
+  // UPDATE-granted since B3). A caller that sends no colour keeps the saved one.
+  const updateHabit = (id: string, patch: { label: string; icon: HabitIconKey; colour?: HabitColour }): Promise<string | null> => {
+    const colour = patch.colour ?? habitSnapshot.items.find((h) => h.id === id)?.colour ?? "lavender";
+    return updateHabitRemote(id, { label: patch.label, icon: patch.icon, colour }).then((result) => {
+      if (!result.ok) return result.message;
+      setHabitSnapshot((prev) => ({
+        ...prev,
+        items: prev.items.map((h) => (h.id === id ? { ...h, label: patch.label.trim(), icon: patch.icon, colour } : h)),
+      }));
+      return null;
     });
   };
 
-  const renameHabit = (id: string, label: string) => {
-    void renameHabitRemote(id, label).then((result) => {
-      if (!result.ok) {
-        setHabitsError(result.message);
-        return;
-      }
-      setHabitsError(null);
-      setHabitSnapshot((prev) => ({
-        ...prev,
-        items: prev.items.map((h) => (h.id === id ? { ...h, label: label.trim() } : h)),
-      }));
+  // MO1.1.1 S3 (B3 PB-O-01): optimistic, then corrected by the write, as a tick is.
+  const setHabitColour = (id: string, colour: HabitColour): Promise<string | null> => {
+    const before = habitSnapshot.items.find((h) => h.id === id)?.colour ?? "lavender";
+    const paint = (c: HabitColour) =>
+      setHabitSnapshot((prev) => ({ ...prev, items: prev.items.map((h) => (h.id === id ? { ...h, colour: c } : h)) }));
+    paint(colour);
+    return setHabitColourRemote(id, colour).then((result) => {
+      if (result.ok) return null;
+      paint(before);
+      return result.message;
     });
+  };
+
+  // B3 archived_at. Archiving takes the habit off the list once the server
+  // agrees; bringing one back re-reads the list (the guard may refuse it at
+  // thirty, ATXA8, or for a reused name, ATXA9).
+  const archiveHabit = (id: string, archived = true): Promise<string | null> =>
+    setHabitArchivedRemote(id, archived).then(async (result) => {
+      if (!result.ok) return result.message;
+      if (archived) {
+        setHabitSnapshot((prev) => {
+          const completions = { ...prev.completions };
+          delete completions[id];
+          return { items: prev.items.filter((h) => h.id !== id), completions };
+        });
+      } else {
+        await reloadHabits();
+      }
+      return null;
+    });
+
+  // MO1.1.1 O3: Retry re-reads the habits; whatever is on screen stays until
+  // the read answers.
+  const reloadHabits = async () => {
+    if (!authUserId) return;
+    const result = await getHabits(authUserId, metricWindowStart);
+    if (result.ok) {
+      setHabitsError(null);
+      setHabitSnapshot(result.value);
+    } else {
+      setHabitsError(result.message);
+    }
   };
 
   // --- auto streak hydration ---------------------------------------------
@@ -5115,6 +5268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       setMetricsError(null);
+      setMetricsLoadedAt(new Date().toISOString());
       setMetricHistory(result.history);
       setWeightByDate(result.history.weight ?? {});
       setWaterByDate(result.history.water ?? {});
@@ -5145,7 +5299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUserId, profileReady, metricWindowStart]);
+  }, [authUserId, profileReady, metricWindowStart, metricsReloadKey]);
 
   // ONE SET OF READINGS PER METRIC, derived rather than stored: metricHistory
   // is the only source, so a sparkline on Home and the same sparkline on
@@ -5436,26 +5590,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     readBloodPressure();
   }, [authUserId, profileReady, readBloodPressure]);
 
-  const logWeightForToday: AppState["logWeightForToday"] = async (value) => {
+  const logWeightForToday: AppState["logWeightForToday"] = async (value, day = selectedDate, note = null) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to log your weight." };
     const result = await logHealthMetric({
       userId: authUserId,
       kind: "weight",
       value,
-      day: selectedDate,
+      day,
       today,
+      note,
     });
     if (!result.ok) return result;
-    setWeightByDate((prev) => ({ ...prev, [selectedDate]: value }));
+    setWeightByDate((prev) => ({ ...prev, [day]: value }));
     // The live current weight still only moves when logging for today —
     // backfilling last Tuesday should not rewrite what the user weighs now.
-    if (selectedDate === today) updateMetricValue("weight", value);
+    if (day === today) updateMetricValue("weight", value);
     refreshAchievements();
-    setWeightLoggedDate(selectedDate);
+    setWeightLoggedDate(day);
     return { ok: true };
   };
 
-  const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
+  const deleteWeighIn: AppState["deleteWeighIn"] = async (day) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to delete a weigh-in." };
+    const result = await deleteHealthMetricsForDay({ userId: authUserId, kind: "weight", day });
+    if (!result.ok) return result;
+    // The server is the truth: one re-read refreshes the series, the
+    // day-keyed map and the headline weight together.
+    reloadMetrics();
+    return { ok: true };
+  };
+
+  const [stepsGoal, setStepsGoalState] = usePersistentState<number>("stepsGoal", 10000);
+  const setStepsGoal = (goal: number) => {
+    const v = normaliseGoal("steps", goal);
+    setStepsGoalState(v);
+    if (authUserId) void saveGoal(authUserId, "steps", v, today).then((r) => r.ok && setMetricGoalRows((rows) => upsertGoalRow(rows, "steps", v, today)));
+  };
+
+  // B1 metric_goals: read the history; a one-time migration writes a goal the
+  // device held before B1 (localStorage) as the goal from today, once, only
+  // when the server has none for that metric. Afterwards the server wins.
+  const [metricGoalRows, setMetricGoalRows] = useState<GoalRow[]>([]);
+  const [goalsMigrated, setGoalsMigrated] = usePersistentState<boolean>("metricGoalsMigrated", false);
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void fetchGoalHistory(authUserId).then(async (r) => {
+      if (cancelled || !r.ok) return;
+      let rows = r.rows;
+      if (!goalsMigrated) {
+        for (const [metric, local] of [["steps", stepsGoal], ["water", waterGoalMl]] as const) {
+          if (rows.some((x) => x.metric === metric) || local === GOAL_DEFAULT[metric]) continue;
+          const v = normaliseGoal(metric, local);
+          const w = await saveGoal(authUserId, metric, v, today);
+          if (w.ok) rows = upsertGoalRow(rows, metric, v, today);
+        }
+        if (!cancelled) setGoalsMigrated(true);
+      }
+      if (cancelled) return;
+      setMetricGoalRows(rows);
+      const s = goalOnFrom(rows, "steps", today);
+      const w = goalOnFrom(rows, "water", today);
+      if (s !== null) setStepsGoalState(s);
+      if (w !== null) setWaterGoalState(w);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+  const metricGoalOn: AppState["metricGoalOn"] = (metric, day) =>
+    goalOnFrom(metricGoalRows, metric, day) ?? (metricGoalRows.some((r) => r.metric === metric) ? GOAL_DEFAULT[metric] : metric === "steps" ? stepsGoal : waterGoalMl);
 
 
   const addWidget: AppState["addWidget"] = (type, size = "small") => {
@@ -5481,6 +5686,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // decision 7 had fixed large). A resize only ever changes the size.
   const resizeWidget = (id: string, size: WidgetSize) =>
     setWidgets((prev) => prev.map((w) => (w.id === id ? { ...w, size } : w)));
+  // v6 Batch 2 (V6-141 D22): the board read back from widget_configs (platform web).
+  const replaceWidgets = useCallback((list: WidgetConfig[]) => setWidgets(list), [setWidgets]);
 
   // MO11: while the cycle section is hidden, the pregnancy addition is hidden
   // too, so a write from this profile never changes the stored value.
@@ -5756,66 +5963,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const removeJournalEntry = (id: string) => {
-    void deleteJournalEntryRemote(id).then((result) => {
-      if (!result.ok) {
-        setJournalError(result.message);
-        return;
-      }
-      setJournalError(null);
+  // v6 MO1.1.2: journal writes resolve to null or the reason; the screen
+  // shows a failure as the "Couldn't save" toast. journalError is the read's.
+  const removeJournalEntry = (id: string): Promise<string | null> =>
+    deleteJournalEntryRemote(id).then((result) => {
+      if (!result.ok) return result.message;
       setJournalEntries((prev) => prev.filter((e) => e.id !== id));
+      return null;
     });
-  };
 
-  const addJournalFolder = (name: string) => {
-    if (!authUserId) return;
-    void createJournalFolder(authUserId, name, journalFolders.length).then((result) => {
-      if (!result.ok) {
-        setJournalError(result.message);
-        return;
-      }
-      setJournalError(null);
+  const addJournalFolder = (name: string): Promise<string | null> => {
+    if (!authUserId) return Promise.resolve("Your session expired. Sign in again to save this.");
+    return createJournalFolder(authUserId, name, journalFolders.length).then((result) => {
+      if (!result.ok) return result.message;
       setJournalFolders((prev) => [...prev, { id: result.value.id, name: result.value.name }]);
+      return null;
     });
   };
 
-  const renameJournalFolder = (id: string, name: string) => {
-    void updateJournalFolderRemote(id, { name }).then((result) => {
-      if (!result.ok) {
-        setJournalError(result.message);
-        return;
-      }
-      setJournalError(null);
+  const renameJournalFolder = (id: string, name: string): Promise<string | null> =>
+    updateJournalFolderRemote(id, { name }).then((result) => {
+      if (!result.ok) return result.message;
       setJournalFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)));
+      return null;
     });
-  };
 
   // EVERY FOLDER'S POSITION IS REWRITTEN, not just the two that swap. New
   // folders take `position = count`, so after a delete two folders can share
   // a position, and swapping only their values would leave the order between
   // them up to the database. Writing 0..n-1 makes the stored order exactly
   // the order on screen. Folders are few, so this is a handful of updates.
-  const moveJournalFolder = (id: string, step: number) => {
+  const moveJournalFolder = (id: string, step: number): Promise<string | null> => {
     const from = journalFolders.findIndex((f) => f.id === id);
     const to = from + step;
-    if (from < 0 || step === 0 || to < 0 || to >= journalFolders.length) return;
+    if (from < 0 || step === 0 || to < 0 || to >= journalFolders.length) return Promise.resolve(null);
     const next = [...journalFolders];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
     setJournalFolders(next);
-    void Promise.all(next.map((f, position) => updateJournalFolderRemote(f.id, { position }))).then((results) => {
+    return Promise.all(next.map((f, position) => updateJournalFolderRemote(f.id, { position }))).then((results) => {
       const failed = results.find((r) => !r.ok);
-      setJournalError(failed && !failed.ok ? failed.message : null);
+      return failed && !failed.ok ? failed.message : null;
     });
   };
 
-  const removeJournalFolder = (id: string) => {
-    void deleteJournalFolderRemote(id).then((result) => {
-      if (!result.ok) {
-        setJournalError(result.message);
-        return;
-      }
-      setJournalError(null);
+  const removeJournalFolder = (id: string): Promise<string | null> =>
+    deleteJournalFolderRemote(id).then((result) => {
+      if (!result.ok) return result.message;
       setJournalFolders((prev) => prev.filter((f) => f.id !== id));
       setJournalEntries((prev) => prev.filter((e) => e.folderId !== id));
       setJournalUnlockedUntil((prev) => {
@@ -5823,8 +6017,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         delete next[id];
         return next;
       });
+      return null;
     });
-  };
 
   // --- the folder lock (backend stage 3) -------------------------------------
   //
@@ -5845,6 +6039,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     setJournalEntries(
       result.value
+        .filter((e) => !shut.has(e.folderId))
+        .map((e) => ({ id: e.id, folderId: e.folderId, title: e.title, text: e.body, date: e.entryDate, createdAt: e.createdAt }))
+    );
+  };
+
+  // MO1.1.2 O3: Retry re-reads the folders and the entries; open lock windows
+  // stay open, and what is on screen stays until the read answers.
+  const reloadJournal = async () => {
+    if (!authUserId) return;
+    const folderResult = await getJournalFolders(authUserId);
+    if (!folderResult.ok) {
+      setJournalError(folderResult.message);
+      return;
+    }
+    const folders = folderResult.value.map((f) => ({ id: f.id, name: f.name, locked: f.locked }));
+    setJournalFolders(folders);
+    const windows = liveWindows(journalUnlockedUntil, Date.now());
+    const entryResult = await getJournalEntries();
+    if (!entryResult.ok) {
+      setJournalError(entryResult.message);
+      return;
+    }
+    setJournalError(null);
+    const now = Date.now();
+    const shut = new Set(folders.filter((f) => !isFolderOpen(f, windows, now)).map((f) => f.id));
+    setJournalEntries(
+      entryResult.value
         .filter((e) => !shut.has(e.folderId))
         .map((e) => ({ id: e.id, folderId: e.folderId, title: e.title, text: e.body, date: e.entryDate, createdAt: e.createdAt }))
     );
@@ -6316,6 +6537,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryError,
       workoutHistoryError,
       metricsError,
+      metricsLoadedAt,
+      reloadMetrics,
       medicalError,
       imagingError,
       labsError,
@@ -6393,7 +6616,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toggleHabit,
       addHabit,
       removeHabit,
-      renameHabit,
+      updateHabit,
+      setHabitColour,
+      archiveHabit,
+      reloadHabits,
       streaks,
       plantStage,
       setPlantStage,
@@ -6424,13 +6650,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       weightLoggedDate,
       weightByDate,
       logWeightForToday,
+      deleteWeighIn,
       stepsGoal,
       setStepsGoal,
+      metricGoalOn,
       widgets,
       addWidget,
       removeWidget,
       reorderWidgets,
       resizeWidget,
+      replaceWidgets,
       nutritionGoal: visibleNutritionGoal,
       setNutritionGoal,
       setWeightGoal,
@@ -6477,6 +6706,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       renameJournalFolder,
       moveJournalFolder,
       removeJournalFolder,
+      reloadJournal,
       journalUnlockedUntil,
       lockJournalFolder,
       unlockJournalFolder,
@@ -6497,6 +6727,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addMedication,
       updateMedication,
       removeMedication,
+      reloadHealthRecords,
       selectedDate,
       goToPrevDate,
       goToNextDate,
@@ -6515,6 +6746,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addClientCustomFood,
       exerciseCatalog,
       exerciseCatalogError,
+      retryExerciseCatalog,
+      retryDiary,
+      retryRoutines,
+      routinesHydrated,
       customExercises,
       addCustomExercise,
       updateCustomExercise,
@@ -6587,6 +6822,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryError,
       workoutHistoryError,
       metricsError,
+      metricsLoadedAt,
+      reloadMetrics,
       medicalError,
       imagingError,
       labsError,
@@ -6649,6 +6886,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       weightLoggedDate,
       weightByDate,
       stepsGoal,
+      metricGoalRows,
       widgets,
       visibleNutritionGoal,
       customMeals,
@@ -6692,6 +6930,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientCustomFoods,
       exerciseCatalog,
       exerciseCatalogError,
+      retryExerciseCatalog,
+      retryDiary,
+      retryRoutines,
+      routinesHydrated,
       customExercises,
       customExercisesError,
       businessDirectory,

@@ -77,6 +77,22 @@ export const SegmentedTabs: React.FC<{
    * #B8B3C7 600. The size props above still override it.
    */
   variant?: "default" | "teal";
+  /**
+   * The active tab's DARK fill, when a frame draws other than the variant's
+   * (WO1.3 #68: the teal sub-tabs keep the literal #79A8A1 in dark, V6-94).
+   * Light mode is unaffected.
+   */
+  activeFillDark?: string;
+  /**
+   * The idle tabs' DARK fill, when a frame draws other than the variant's
+   * (MO1.2 #13 / MO1.3 #11: the category chips sit transparent on the rail
+   * in dark too). Light mode is unaffected (`light` covers it).
+   */
+  idleFillDark?: string;
+  /** Gap between an item's icon and label when a frame draws other than 6 (MO1.2 #8: 7). */
+  iconGap?: number;
+  /** Label line height in px when a frame draws one (MO1.1.4 #7: 15, #9: 13.8); grows with Larger text. */
+  lineHeight?: number;
 }> = ({
   items,
   activeKey,
@@ -97,6 +113,10 @@ export const SegmentedTabs: React.FC<{
   tabRadius,
   darkTone = "default",
   variant = "default",
+  activeFillDark,
+  idleFillDark,
+  iconGap,
+  lineHeight,
 }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
@@ -123,9 +143,12 @@ export const SegmentedTabs: React.FC<{
     : dark && partB ? "rgb(var(--th-303141))" : "rgb(var(--c-seg-track))";
   // Active: fill.segmentedActive #A79AD5 with white (V6-01; #5B48B8 under High
   // contrast; dark the primary fill with #0D0B1A), or the teal secondary.
-  const activeFill = teal ? "rgb(var(--c-fill-prep))" : "rgb(var(--c-seg-active))";
+  const activeFill =
+    dark && activeFillDark ? activeFillDark : teal ? "rgb(var(--c-fill-prep))" : "rgb(var(--c-seg-active))";
   const activeInk = teal ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
-  const idleFill = teal
+  const idleFill = dark && idleFillDark
+    ? idleFillDark
+    : teal
     ? "transparent"
     : dark ? (partB ? "rgb(var(--th-303141))" : "rgb(var(--th-2b2c3a))") : "rgb(var(--th-f5f4fe))";
   const idleLabel = teal
@@ -159,13 +182,14 @@ export const SegmentedTabs: React.FC<{
               flex: scroll ? "none" : item.weight ?? 1,
               minWidth: scroll ? (teal && scrollMinWidth === 86 ? 0 : scrollMinWidth) : 0,
               height,
-              gap: item.icon ? 6 : undefined,
+              gap: item.icon ? iconGap ?? 6 : undefined,
               padding: pad,
               borderRadius: radius,
               background: lit ? (active ? lit.activeFill : lit.idleFill) : active ? activeFill : idleFill,
               color: lit ? (active ? lit.activeInk : lit.idleInk) : active ? activeInk : idleLabel,
               fontSize: textPx(labelSize ?? (teal ? 12 : 12.5)),
               ...(teal ? { lineHeight: linePx(18) } : null),
+              ...(lineHeight !== undefined ? { lineHeight: linePx(lineHeight) } : null),
               fontWeight: active ? 700 : idleWeight ?? (teal ? 600 : 700),
             }}
           >

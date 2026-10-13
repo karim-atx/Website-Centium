@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from "react";
+﻿import React, { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { CtaButton, type CtaButtonProps } from "./PinnedCta";
@@ -21,7 +21,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 //
 // v6 GEOMETRY (X-01): each drawn popup takes its frame's measured geometry.
 // - "foundations" (default, unchanged): the v5.1 card above, 342 / r20 /
-//   padding 24 × 20 / CTA 48, scrim with a 2 px blur.
+//   padding 24 Ã— 20 / CTA 48, scrim with a 2 px blur.
 // - "partB": the Part B tables (MO1.8.12, MO1.8.13, achievement detail,
 //   Health B popups): 350 wide, r24, padding 20 on every side, shadow.sheet
 //   in light and none in dark, no blur on the scrim, title 17 / 25.5 800
@@ -69,6 +69,17 @@ export const CentredPopup: React.FC<{
   align?: "center" | "start";
   /** Override the scrim blur: on for foundations / ours, off for partB. */
   scrimBlur?: boolean;
+  /** Drawn right of the title on one row (HE1.9.3: the status word). Unset: unchanged. */
+  titleAside?: React.ReactNode;
+  /** Title size / line height / tracking classes in place of the geometry's
+      (MO1.1.3.1 draws 19 / 24 800 ls -0.4 on the Part B card). */
+  titleClass?: string;
+  /** The dialog is aria-describedby its body line (MO1.1.3.1 O-6). */
+  describeBody?: boolean;
+  /** A downward drag of more than 24 px on the card closes it (MO1.1.3.1 S2). */
+  swipeToClose?: boolean;
+  /** role="alertdialog" instead of "dialog" (a confirmation; MO1.7 delete confirm). */
+  alert?: boolean;
 }> = ({
   open,
   onClose,
@@ -87,12 +98,19 @@ export const CentredPopup: React.FC<{
   geometry = "foundations",
   align = "center",
   scrimBlur,
+  titleAside,
+  titleClass,
+  describeBody,
+  swipeToClose,
+  alert,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const dark = useIsDark();
   const titleId = useId();
+  const bodyId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
+  const swipeY = useRef<number | null>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -107,7 +125,11 @@ export const CentredPopup: React.FC<{
     document.body.style.overflow = "hidden";
     cardRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      if (e.key !== "Escape") return;
+      // Stacked popups (MO1.8.12.1 over MO1.8.12): only the top one closes.
+      const modals = document.querySelectorAll('[aria-modal="true"]');
+      if (cardRef.current && modals.length > 1 && modals[modals.length - 1] !== cardRef.current) return;
+      onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -143,10 +165,14 @@ export const CentredPopup: React.FC<{
       />
       <div
         ref={cardRef}
-        role="dialog"
+        role={alert ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={describeBody && body ? bodyId : undefined}
         tabIndex={-1}
+        onPointerDown={swipeToClose ? (e) => { swipeY.current = cardRef.current?.scrollTop ? null : e.clientY; } : undefined}
+        onPointerUp={swipeToClose ? (e) => { const y = swipeY.current; swipeY.current = null; if (y !== null && e.clientY - y > 24) onClose(); } : undefined}
+        onPointerCancel={swipeToClose ? () => { swipeY.current = null; } : undefined}
         className={clsx(
           "relative w-full max-h-full overflow-y-auto overscroll-contain",
           "bg-cream-card outline-none animate-popup-in",
@@ -171,17 +197,24 @@ export const CentredPopup: React.FC<{
           <h2
             id={titleId}
             className={clsx(
-              partB
-                ? "text-[17px] leading-[25.5px] tracking-[-0.3px]"
-                : clsx(titleSize === 21 ? "text-[21px]" : titleSize === 19 ? "text-[19px]" : "text-[18px]", "leading-tight"),
+              titleClass ??
+                (partB
+                  ? "text-[17px] leading-[25.5px] tracking-[-0.3px]"
+                  : clsx(titleSize === 21 ? "text-[21px]" : titleSize === 19 ? "text-[19px]" : "text-[18px]", "leading-tight")),
               "font-extrabold text-balance",
               titleInk ?? "text-charcoal"
             )}
           >
             {title}
           </h2>
+          {titleAside && (
+            <span className="absolute" style={{ top: partB ? 23.7 : 24, right: 20 }}>
+              {titleAside}
+            </span>
+          )}
           {body && (
             <div
+              id={bodyId}
               className={clsx(
                 "mt-1.5 text-[13px] leading-[1.55] text-charcoal-soft",
                 bodyWeight === 400 ? "font-normal" : "font-medium"

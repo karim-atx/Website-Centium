@@ -24,6 +24,15 @@ import Workout from "./pages/workout/Workout";
 import Health from "./pages/health/Health";
 import HealthChecks from "./pages/health/HealthChecks";
 import HealthSources from "./pages/health/HealthSources";
+import HealthRecords from "./pages/health/HealthRecords";
+import WaterPage from "./pages/health/metrics/WaterPage";
+import StepsPage from "./pages/health/metrics/StepsPage";
+import SleepPage from "./pages/health/metrics/SleepPage";
+import CaloriesPage from "./pages/health/metrics/CaloriesPage";
+import HeartRatePage from "./pages/health/metrics/HeartRatePage";
+import HeartRateAlertsPage from "./pages/health/metrics/HeartRateAlertsPage";
+import BloodPressurePage from "./pages/health/metrics/BloodPressurePage";
+import WeightPage from "./pages/health/metrics/WeightPage";
 import Cycle from "./pages/cycle/Cycle";
 import Contraception from "./pages/contraception/Contraception";
 import Mind from "./pages/mind/Mind";
@@ -55,6 +64,7 @@ import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
 import Community, { CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 import Settings from "./pages/settings/Settings";
 import NotificationsPage from "./pages/settings/NotificationsPage";
+import HealthCheckRemindersPage from "./pages/settings/HealthCheckRemindersPage";
 import AccessibilityPage from "./pages/settings/AccessibilityPage";
 import PrivacyPage from "./pages/settings/PrivacyPage";
 import TermsPage from "./pages/settings/TermsPage";
@@ -400,6 +410,16 @@ function AppRoutes() {
         <Route path="/app/health" element={<Health />} />
         <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/health/sources" element={<HealthSources />} />
+        <Route path="/app/health/records" element={<HealthRecords />} />
+        {/* Batch 2 · Health A: the seven metric pages (HE1.1-HE1.7) and heart-rate alert settings. */}
+        <Route path="/app/health/water" element={<WaterPage />} />
+        <Route path="/app/health/steps" element={<StepsPage />} />
+        <Route path="/app/health/sleep" element={<SleepPage />} />
+        <Route path="/app/health/calories" element={<CaloriesPage />} />
+        <Route path="/app/health/heart-rate" element={<HeartRatePage />} />
+        <Route path="/app/health/heart-rate/alerts" element={<HeartRateAlertsPage />} />
+        <Route path="/app/health/blood-pressure" element={<BloodPressurePage />} />
+        <Route path="/app/health/weight" element={<WeightPage />} />
         <Route path="/app/cycle" element={<Cycle />} />
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
@@ -448,7 +468,9 @@ function AppRoutes() {
         <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/app/settings" element={<Settings />} />
         {/* MO1.8 sub-screens, pages since batch C (they were sheets). */}
+        <Route path="/app/settings/devices" element={<Settings />} />
         <Route path="/app/settings/notifications" element={<NotificationsPage />} />
+        <Route path="/app/settings/notifications/health-checks" element={<HealthCheckRemindersPage />} />
         <Route path="/app/settings/accessibility" element={<AccessibilityPage />} />
         <Route path="/app/settings/privacy" element={<PrivacyPage />} />
         <Route path="/app/settings/terms" element={<TermsPage />} />
