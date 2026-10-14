@@ -30,10 +30,12 @@ export interface ProductEditorProps {
   stockShipped: boolean;
   /** null = New product. */
   product: Product | null;
+  /** New product prefilled (AN11 Duplicate: "{name} (copy)"); ignored when editing. */
+  initial?: { name: string; price: number | null; description: string } | null;
   onSaved: (message: string) => void;
 }
 
-export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, onSaved }: ProductEditorProps) {
+export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved }: ProductEditorProps) {
   const online = useOnline();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -48,13 +50,14 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   // Prefill each time the sheet opens (OP1-011 #2; O2: no skeleton, the row's values).
   useEffect(() => {
     if (!open) return;
-    setName(product?.name ?? "");
-    setPrice(product?.price != null ? String(product.price) : "");
+    const seed = product ?? initial ?? null;
+    setName(seed?.name ?? "");
+    setPrice(seed?.price != null ? String(seed.price) : "");
     setStock(product?.stock != null ? String(product.stock) : "");
-    setDescription(product?.description ?? "");
+    setDescription(seed?.description ?? "");
     setTouched({ price: false, stock: false });
     setError(null);
-  }, [open, product, stockShipped]);
+  }, [open, product, initial, stockShipped]);
 
   const p = parsePrice(price);
   const priceOk = p.ok && p.value !== null;
