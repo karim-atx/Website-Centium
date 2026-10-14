@@ -10,9 +10,10 @@ import { VenueHoursSheet } from "./VenueHoursSheet";
 // Opening hours in the venue console (stage A4), restyled per
 // OURS-OP1-venue-hours: a K9 card of the shared hours lines (the venue page
 // reads the same helper, so "(next day)" and "Not published" read alike) and,
-// for the owner, the one hours sheet (VenueHoursSheet, MA1 values). Everyone
-// at the venue sees the hours; only the owner edits (gym_hours' write
-// policies are owner-only, and so is gyms' UPDATE). Insiders read
+// for whoever may edit, the one hours sheet (VenueHoursSheet, MA1 values).
+// Everyone at the venue sees the hours. Since B7 the hours (gym_hours) need
+// 'schedule' and the time zone (gyms UPDATE) needs 'venues'; the owner holds
+// both (`isOwner` below means "may edit the hours"). Insiders read
 // public.gym_hours directly: gym_hours_for() is the public reader and
 // returns nothing for a hidden venue.
 
@@ -20,6 +21,7 @@ export function VenueHoursCard({
   gymId,
   timezone,
   isOwner,
+  canEditZone,
   onTimezoneSaved,
   onToast,
   openSignal = 0,
@@ -27,7 +29,10 @@ export function VenueHoursCard({
 }: {
   gymId: string;
   timezone: string;
+  /** May edit the opening hours (owner, or B7 'schedule'). */
   isOwner: boolean;
+  /** May change the venue's time zone (owner, or B7 'venues'); defaults to isOwner. */
+  canEditZone?: boolean;
   onTimezoneSaved: () => void;
   onToast?: (message: string) => void;
   /** Bumped by the console's "Hours" tile to open the editor. */
@@ -129,6 +134,7 @@ export function VenueHoursCard({
           gymId={gymId}
           timezone={timezone}
           rows={current}
+          zoneEditable={canEditZone ?? isOwner}
           onSaved={(saved, zoneChanged) => {
             setRows({ gymId, value: saved });
             setEditing(false);

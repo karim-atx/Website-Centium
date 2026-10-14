@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MailPlus, ShoppingBag, Users } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useAnalytics } from "../analyticsContext";
 import { AnCard, AnEmptyCard, AnHint, AnIndexRow, AnIndexSkeleton, AnStrip } from "./anKit";
 import { pagesOf, vocabOf } from "./membersModel";
@@ -26,12 +27,15 @@ export function MembersSection() {
   const navigate = useNavigate();
   const online = useOnline();
   const data = useMembersData();
+  const access = useConsoleAccess();
   const vocab = vocabOf(kind);
   const pages = useMemo(() => pagesOf(kind), [kind]);
 
   const waiting = data.codes ? liveCodes(data.codes).length : null;
   const activeAtVenues = data.venues.reduce((s, v) => s + v.activeMembers, 0);
-  const anyMembers = (data.members?.length ?? 0) > 0 || data.venues.some((v) => v.activeMembers > 0 || v.membershipsAwaitingPayment > 0);
+  // B7: list_business_members' total_count is every membership the business
+  // has ever had (pending, active, declined, ended), so "none ever" is real now.
+  const anyMembers = data.memberTotal > 0 || (data.members?.length ?? 0) > 0 || data.venues.some((v) => v.activeMembers > 0 || v.membershipsAwaitingPayment > 0);
   const known = !data.loading && !data.venuesLoading && (data.members !== null || !data.businessId);
   const empty = kind !== "classes" && known && !anyMembers;
 
@@ -56,7 +60,7 @@ export function MembersSection() {
   if (sub) {
     const page = pages.find((p) => p.key === sub);
     if (!page) return <Navigate to={BASE} replace />;
-    return <MembersPage page={page} pages={pages} vocab={vocab} plansCount={data.plans.length} data={data} />;
+    return <MembersPage page={page} pages={pages} vocab={vocab} plansCount={data.plans.length} data={data} empty={empty} />;
   }
 
   if (kind === "store") {
@@ -124,8 +128,8 @@ export function MembersSection() {
         </AnCard>
       )}
 
-      {/* AN1-026 K1 / V6-28: the Client outcomes screen, also reached from the Overview "More insights" card. */}
-      {known && (
+      {/* AN1-026 K1 / V6-28: the Client outcomes screen, also reached from the Overview "More insights" card. The owner's (B7: it adds up the whole business). */}
+      {known && !access.isStaff && (
         <AnCard className="mt-[12px]" label="Client outcomes">
           <AnIndexRow
             first

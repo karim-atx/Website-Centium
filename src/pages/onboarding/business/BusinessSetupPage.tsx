@@ -18,6 +18,7 @@ import {
   type ReviewStatus,
 } from "../../../services/business-onboarding";
 import { listDrafts } from "../../../services/onboarding/drafts";
+import { saveListingActive } from "../../../services/business-market";
 import "../shell/onboarding.css";
 
 // /app/business/setup: where a business lands after Submit for review, and
@@ -185,7 +186,22 @@ export default function BusinessSetupPage() {
     };
     return (
       <>
-        <ApprovedScreen lane={lane} name={name} preview={preview} animate={celebrate} onOpenDashboard={() => navigate("/app")} onShare={() => void share()} />
+        <ApprovedScreen
+          lane={lane}
+          name={name}
+          preview={preview}
+          animate={celebrate}
+          onOpenDashboard={() => navigate("/app")}
+          onShare={() => void share()}
+          listed={status.active}
+          onShowOnExplore={async () => {
+            const r = await saveListingActive(status.businessId, true);
+            if (!r.ok) return r.message ?? "Couldn't turn your listing on. Try again.";
+            setStatus({ ...status, active: true });
+            showToast("Your listing is on Explore.");
+            return null;
+          }}
+        />
         <ObToast message={toast} bottom={142} />
       </>
     );

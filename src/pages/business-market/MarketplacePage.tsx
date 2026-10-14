@@ -120,7 +120,10 @@ export function HiddenBanner() {
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", fontSize: px(13), fontWeight: 800, color: c.ink, lineHeight: lh(19.5) }}>Hidden from Explore</span>
         <span style={{ display: "block", fontSize: px(11.5), color: c.inkSoft, lineHeight: lh(16) }}>{v.bannerBody}</span>
+        {/* B7: Show on Explore is a business_profiles write, the owner's alone. */}
+        {!m.isOwner && <span style={{ display: "block", fontSize: px(11), color: c.faint, lineHeight: lh(15), marginTop: 2 }}>Only the owner can turn it on.</span>}
       </span>
+      {m.isOwner && (
       <button
         type="button"
         onClick={() => void sw.turnOn()}
@@ -130,6 +133,7 @@ export function HiddenBanner() {
       >
         Turn on
       </button>
+      )}
       {sw.toast}
     </div>
   );

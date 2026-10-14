@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import { ConsoleGate } from "../../components/business-console/ConsoleGate";
 import LocationsPage from "./LocationsPage";
 import { BookingPoliciesEditor, BookingPoliciesPage, PolicyEditorPage, StorePoliciesPage } from "./PoliciesPages";
 import { BusinessIdPage, EmployeesPage, JoinRequestsPage, RolesPage, SeatsPage } from "./TeamPages";
@@ -9,10 +10,17 @@ import { HelpArticlePage, HelpCentrePage, HelpTopicPage } from "./help/HelpPages
 
 // v6 Batch 3 · the business More sub-pages (MO1B), all under
 // /app/business/more/* so App.tsx carries one route line. Business accounts
-// only; anyone else is sent back to More.
+// only; anyone else is sent back to More, except Locations and hours, which
+// staff holding 'venues' or 'schedule' may use since B7 (ConsoleGate).
 export default function BusinessMoreRoutes() {
   const { user } = useApp();
-  if (user.accountType !== "business") return <Navigate to="/app/more" replace />;
+  if (user.accountType !== "business")
+    return (
+      <Routes>
+        <Route path="locations" element={<ConsoleGate need={["venues", "schedule"]}><LocationsPage /></ConsoleGate>} />
+        <Route path="*" element={<Navigate to="/app/more" replace />} />
+      </Routes>
+    );
   return (
     <Routes>
       <Route index element={<Navigate to="/app/more" replace />} />

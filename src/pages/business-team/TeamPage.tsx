@@ -39,7 +39,7 @@ const PER_BLOCK = 5;
 
 export function TeamPage({ data }: { data: TeamData }) {
   const navigate = useNavigate();
-  const { kind, people, capacity, requests, sessions, error, today, businessId, code, businessName } = data;
+  const { kind, people, capacity, requests, sessions, error, today, businessId, code, businessName, readOnly } = data;
   const [toast, showToast] = useTeamToast(150);
   const [selected, setSelected] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -159,6 +159,7 @@ export function TeamPage({ data }: { data: TeamData }) {
             <p className="tm-team-t">Your team</p>
             <p className="tm-team-s">{ready ? seatLine(counts) : "–"}</p>
           </div>
+          {!readOnly && (
           <button type="button" className="tm-outbtn tm-hit tap" disabled={offline} onClick={() => {
               setAddMode(counts.free > 0 ? "add" : "full");
               setFullOpen(true);
@@ -166,6 +167,7 @@ export function TeamPage({ data }: { data: TeamData }) {
             <Plus size={14} strokeWidth={2.4} />
             Add seats
           </button>
+          )}
         </div>
 
         {ready &&
@@ -245,13 +247,19 @@ export function TeamPage({ data }: { data: TeamData }) {
             onProfile={() => navigate(`/app/business/employees/${selPerson.professionalId}`)}
           />
         ) : (
-          ready && <p className="tm-hint">{seatHint(counts, per)}</p>
+          ready && <p className="tm-hint">{readOnly ? "Tap a seat to see who's in it." : seatHint(counts, per)}</p>
         )}
       </div>
 
-      <TeamCta label="Add an employee" icon={<UserPlus size={17} strokeWidth={2.4} />} onClick={invite} disabled={!ready || offline} />
+      {readOnly ? (
+        <p className="tm-note" role="note" style={{ textAlign: "center", marginTop: 14 }}>
+          {`You can see ${businessName || "the business"}'s team. Only the owner can add people, change what they can do or remove someone.`}
+        </p>
+      ) : (
+        <TeamCta label="Add an employee" icon={<UserPlus size={17} strokeWidth={2.4} />} onClick={invite} disabled={!ready || offline} />
+      )}
 
-      {businessId && (
+      {businessId && !readOnly && (
         <InviteSheet
           open={inviteOpen}
           onClose={() => setInviteOpen(false)}

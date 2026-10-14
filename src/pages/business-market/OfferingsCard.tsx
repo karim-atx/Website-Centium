@@ -46,9 +46,9 @@ export function OfferingsCard() {
                 type="button"
                 aria-label={`Remove ${o.title}`}
                 onClick={() => setRemove({ id: o.id, title: o.title })}
-                disabled={!online || !m.isOwner}
+                disabled={!online || !m.can("marketing")}
                 className="tap"
-                style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, opacity: !online || !m.isOwner ? 0.4 : 1 }}
+                style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, opacity: !online || !m.can("marketing") ? 0.4 : 1 }}
               >
                 <Trash2 size={15} strokeWidth={2.2} aria-hidden />
               </button>
@@ -59,7 +59,7 @@ export function OfferingsCard() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        disabled={!online || !m.isOwner || !offerings.businessId}
+        disabled={!online || !m.can("marketing") || !offerings.businessId}
         className="tap"
         style={{
           width: "100%",
@@ -74,7 +74,7 @@ export function OfferingsCard() {
           fontSize: px(13),
           fontWeight: 800,
           color: c.pDark,
-          opacity: !online || !m.isOwner || !offerings.businessId ? 0.4 : 1,
+          opacity: !online || !m.can("marketing") || !offerings.businessId ? 0.4 : 1,
         }}
       >
         <Plus size={15} strokeWidth={2.4} aria-hidden />

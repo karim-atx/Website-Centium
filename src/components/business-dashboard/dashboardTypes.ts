@@ -33,6 +33,8 @@ export interface DashBooking {
 export interface DashMember {
   id: string;
   memberId: string;
+  /** First name from list_business_members (B7); null where the reader gives none ("Member #code"). */
+  firstName?: string | null;
   planId: string | null;
   invitedAt: string;
   respondedAt: string | null;

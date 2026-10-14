@@ -1,5 +1,6 @@
 import type React from "react";
 import type { BizKind } from "../../components/business-more/kind";
+import type { ConsoleNeed } from "../../services/business-console";
 import { MembersSection } from "./members/MembersSection";
 import ClassesSection from "./classes/ClassesSection";
 import TeamSection from "./team/TeamSection";
@@ -74,6 +75,22 @@ export interface PushedView {
 
 export const PUSHED_VIEWS: Record<string, PushedView> = {
   outcomes: { View: ClientOutcomesPage, title: "Client outcomes", sub: "Only from clients who share with you", kinds: ["classes", "gym"] },
+};
+
+/**
+ * B7: what each section needs from a staff member (the owner sees all).
+ * Overview and Client outcomes add up the whole business, so they stay the
+ * owner's; the rest follow the permission their readers ask business_can for.
+ */
+export const SECTION_NEED: Record<string, ConsoleNeed> = {
+  overview: "owner",
+  outcomes: "owner",
+  classes: "schedule",
+  members: "members",
+  team: "members",
+  products: "store",
+  reputation: "marketing",
+  revenue: "revenue",
 };
 
 export const pushedFor = (kind: BizKind): string[] => Object.keys(PUSHED_VIEWS).filter((k) => !PUSHED_VIEWS[k].kinds || PUSHED_VIEWS[k].kinds.includes(kind));

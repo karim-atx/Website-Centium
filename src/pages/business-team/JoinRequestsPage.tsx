@@ -70,7 +70,11 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
         requestsError && <Notice message="Couldn't load join requests. Try again." onRetry={data.reload} />
       )}
 
-      {n > 0 && <p className="tm-rq-line">Approving someone adds them to your team and uses a free seat once they accept.</p>}
+      {n > 0 && (
+        <p className="tm-rq-line">
+          {data.readOnly ? "Only the owner can approve or deny a request." : "Approving someone adds them to your team and uses a free seat once they accept."}
+        </p>
+      )}
 
       {requests === null && !requestsError && (
         <div className="tm-rq-card" aria-busy>
@@ -99,7 +103,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                   <p className="tm-rq-w">{requestedWhen(r.createdAt, today)}</p>
                 </div>
               </div>
-              <div className="tm-rq-btns">
+              {!data.readOnly && <div className="tm-rq-btns">
                 <button
                   type="button"
                   className={busy?.id === r.id && !busy.approve ? "tm-deny busy tap" : "tm-deny tap"}
@@ -117,7 +121,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                   <Check size={15} strokeWidth={2.6} />
                   Approve
                 </button>
-              </div>
+              </div>}
             </div>
           ))}
           {n === 0 && (

@@ -254,6 +254,7 @@ export function VenueHoursSheet({
   timezone,
   rows,
   onSaved,
+  zoneEditable = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -261,6 +262,11 @@ export function VenueHoursSheet({
   timezone: string;
   rows: GymHoursTableRow[];
   onSaved: (rows: GymHoursTableRow[], zoneChanged: boolean) => void;
+  /**
+   * B7: the hours are gym_hours ('schedule') and the zone is gyms.timezone
+   * ('venues'). Somebody holding only 'schedule' sees the zone, fixed.
+   */
+  zoneEditable?: boolean;
 }) {
   const online = useOnline();
   const [drafts, setDrafts] = useState<DayDraft[]>(() => draftsFromRows(rows));
@@ -471,6 +477,12 @@ export function VenueHoursSheet({
 
           <div className="mt-[16px]">
             <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">Venue time zone</p>
+            {!zoneEditable ? (
+              <div className="w-full min-h-[48px] rounded-[14px] bg-cream-soft flex flex-col justify-center" style={{ padding: "6px 14px" }}>
+                <span className="text-[14px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{zone}</span>
+                <span className="text-[11px] leading-[15px] text-charcoal-faint">You need venue access to change the time zone.</span>
+              </div>
+            ) : (
             <button
               type="button"
               onClick={() => {
@@ -484,6 +496,7 @@ export function VenueHoursSheet({
               <span className="text-[14px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{zone}</span>
               <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
             </button>
+            )}
           </div>
         </div>
       </BottomSheet>

@@ -51,7 +51,8 @@ import { range12 } from "../../utils/time12";
 // WHO SEES IT (V6-54): the owner from Business Profile › Locations and hours
 // (a business OR a professional account: the seeded Flex Fitness owner is a
 // coach), staff (professionals the business employs) from More › Venues,
-// read-only, every edit control hidden. Never for stores: a store owner's
+// read-only except what B7 lets them change: opening hours with 'schedule',
+// the time zone with 'venues'. Logo and cover stay the owner's. Never for stores: a store owner's
 // location keeps only its hours and photos here.
 //
 // /app/business/venue/members is the full roster ("See all"), the same one
@@ -71,7 +72,11 @@ export default function BusinessVenueTab() {
   const businessAccount = user.accountType === "business";
   const { kind, kindKnown } = useBusiness();
   const store = businessAccount && kindKnown && kind === "store";
-  const { venues, selected, select, isOwner, loading, error, reload } = useMyVenues();
+  const { venues, selected, select, isOwner, can, loading, error, reload } = useMyVenues();
+  // B7: opening hours need 'schedule', the venue's details (time zone) need
+  // 'venues'; the logo and cover stay the owner's.
+  const canHours = can("schedule");
+  const canVenue = can("venues");
   const [toast, showToast] = useOpsToast();
   const [classes, setClasses] = useState<{ gymId: string; value: VenueClassLite[] } | null>(null);
   const [classesError, setClassesError] = useState<string | null>(null);
@@ -150,7 +155,7 @@ export default function BusinessVenueTab() {
   const pill = selected ? venuePill(selected) : null;
   const tiles = selected
     ? [
-        { icon: Clock, label: "Hours", onClick: () => (scrollTo("venue-hours"), isOwner && setHoursSignal((s) => s + 1)) },
+        { icon: Clock, label: "Hours", onClick: () => (scrollTo("venue-hours"), canHours && setHoursSignal((s) => s + 1)) },
         ...(isOwner ? [{ icon: ImageIcon, label: "Photos", onClick: () => scrollTo("venue-photos") }] : []),
         ...(hasVenueThreads.has(selected.gymId) ? [{ icon: MessageCircle, label: "Message", onClick: () => navigate("/app/messages") }] : []),
       ]
@@ -219,7 +224,9 @@ export default function BusinessVenueTab() {
           <VenueHiddenNotice venue={selected} onContact={() => navigate(businessAccount ? "/app/business/more/help" : "/app/messages")} />
           {!isOwner && (
             <p className="text-[11px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-              You're staff at this venue, so you can view it but only the owner can change it.
+              {canHours || canVenue
+                ? `You're staff at this venue. You can change its ${canHours && canVenue ? "opening hours and time zone" : canHours ? "opening hours" : "time zone"}. The owner changes the rest.`
+                : "You're staff at this venue, so you can view it but only the owner can change it."}
             </p>
           )}
           {tiles.length > 0 && <VActionTiles items={tiles} />}
@@ -263,7 +270,8 @@ export default function BusinessVenueTab() {
             id="venue-hours"
             gymId={selected.gymId}
             timezone={selected.timezone}
-            isOwner={isOwner}
+            isOwner={canHours}
+            canEditZone={canVenue}
             onTimezoneSaved={reload}
             onToast={showToast}
             openSignal={hoursSignal}

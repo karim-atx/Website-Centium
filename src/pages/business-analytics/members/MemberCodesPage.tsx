@@ -8,7 +8,7 @@ import { MemberTag } from "../../../components/marketplace/MemberTag";
 import { useOpsToast } from "../../../components/marketplace/VenueKit";
 import { copyText, shareOrCopy } from "../../../components/business-more/share";
 import { useOnline } from "../../../hooks/useOnline";
-import { createMemberCode, endMembership, type MemberCode, type Membership } from "../../../services/business-members";
+import { createMemberCode, endMembership, maskedMemberLabel, type MemberCode, type Membership } from "../../../services/business-members";
 import { AnAvatar, AnCard, AnCountLine, AnHeaderRow, AnLead, AnListRow, AnNoneRow, AnNumberBoxes, AnRowButton, AnSeeAll, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
 import { liveCodes, type MembersData } from "./useMembersData";
@@ -16,17 +16,18 @@ import { liveCodes, type MembersData } from "./useMembersData";
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Analytics › Members › Member codes (OURS-AN4-member-codes, with the
-// OURS-OP1-member-codes differences: the End pop-up is OP1-019's K16, no
-// names, Declined shown, the venue roster lives on its own page). The live
+// OURS-OP1-member-codes differences: the End pop-up is OP1-019's K16,
+// Declined shown, the venue roster lives on its own page). The live
 // walk-in desk: a code, not a search box (no account lookup exists), and
 // redeeming IS the consent, so the membership starts accepted.
 //
-// NO NAMES ON THIS ROSTER, by structure: a business cannot read who a
-// business member is (B7 adds names once shared, V6-27). Rows say what is
-// known (plan and dates) and the note under the list says why. The roster is
-// NOT filtered to active: pending and declined explain who is missing. Either
-// side may end a membership; the business's half is offered while active or
-// pending. Codes are owner-only (ATX09); the plan must be the business's
+// FIRST NAMES (B7 list_business_members): a first name and an Under 18 tag,
+// never a surname or a date of birth; "Member #code" only where the reader
+// gives no name. Pending first, then newest; the count is total_count and the
+// full list pages. The roster is NOT filtered to active: pending and declined
+// explain who is missing. Either side may end a membership; the business's
+// half is offered while active or pending. Codes need business_can(members)
+// (the owner, or staff with Members, ATX09); the plan must be the business's
 // (ATX25); creating is rate-limited (ATX02).
 
 const BASE = "/app/business/analytics/members";
@@ -57,7 +58,7 @@ const memberFact = (m: Membership) =>
         : `Invited ${dMMMyyyy(m.invitedAt)}`;
 
 function createError(code: string | undefined, message: string): string {
-  if (code === "ATX09") return "Only the business owner can create member codes.";
+  if (code === "ATX09") return "You need Members access to create member codes. Ask the owner.";
   if (code === "ATX25") return "That plan belongs to another business. Choose another plan.";
   if (code === "ATX02") return "You've created a lot of codes in the last hour. Try again later.";
   return message || "Couldn't create a code. Try again.";
@@ -78,6 +79,9 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const codes = data.codes ?? [];
   const waiting = liveCodes(codes);
   const members = data.members ?? [];
+  const memberCount = Math.max(data.memberTotal, members.length);
+  const memberName = (m: Membership) => m.firstName ?? maskedMemberLabel(m.id);
+  const memberCountLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
   const redeemed = codes.filter((c) => c.redeemed).length;
   const pct = codes.length > 0 ? Math.round((redeemed / codes.length) * 100) : null;
   const planName = (id: string | null) => (id ? (data.plans.find((p) => p.id === id)?.name ?? "Plan") : "No plan");
@@ -129,9 +133,10 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       <AnListRow
         key={m.id}
         first={i === 0}
-        avatar={<AnAvatar masked />}
-        name={m.planName ?? "Member"}
-        fact={memberFact(m)}
+        avatar={m.firstName ? <AnAvatar initial={m.firstName.charAt(0).toUpperCase()} index={i} /> : <AnAvatar masked />}
+        name={memberName(m)}
+        nameExtra={m.isMinor ? <MemberTag label="Under 18" tone="muted" /> : undefined}
+        fact={`${m.planName ?? "No plan"} · ${memberFact(m)}`}
         trailing={
           <span className="flex items-center gap-[8px]">
             <MemberTag label={st.label} tone={st.tone} />
@@ -140,7 +145,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
                 icon={UserMinus}
                 label="End"
                 tone="high"
-                ariaLabel={`End this membership (${m.planName ?? "Member"})`}
+                ariaLabel={`End ${memberName(m)}'s membership`}
                 onClick={() => {
                   setEndError(null);
                   setEnding(m);
@@ -158,7 +163,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       crumb={list ? "Member codes" : vocab.label}
       backLabel={list ? "Back to Member codes" : `Back to ${vocab.label}`}
       onBack={() => (list ? setParams({}, { replace: false }) : navigate(BASE))}
-      title={list === "codes" ? "Waiting to be used" : list === "members" ? `${members.length} ${members.length === 1 ? "member" : "members"}` : "Member codes"}
+      title={list === "codes" ? "Waiting to be used" : list === "members" ? memberCountLabel : "Member codes"}
     />
   );
 
@@ -176,15 +181,20 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
               </>
             ) : (
               <>
-                <AnCountLine count={`${members.length} ${members.length === 1 ? "member" : "members"}`} order="Newest first" />
+                <AnCountLine count={memberCountLabel} order="Waiting first, then newest" />
                 {members.map(memberRow)}
               </>
             )}
           </div>
         </AnCard>
+        {list === "members" && members.length < memberCount && (
+          <div className="text-center mt-[12px]">
+            <AnRowButton icon={Users} label={data.loadingMore ? "Loading…" : `Show more (${memberCount - members.length})`} onClick={data.loadMoreMembers} disabled={data.loadingMore || !online} />
+          </div>
+        )}
         {list === "members" && (
           <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-            Names aren't shown. Members redeem a code from their own Centium profile, so we only know the plan and dates.
+            First names only. Members under 18 are marked.
           </p>
         )}
         {endPopup()}
@@ -267,7 +277,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
 
       <AnCard className="mt-[12px]" label="Members">
         <div style={{ padding: "4px 16px 4px" }}>
-          <AnCountLine count={`${members.length} ${members.length === 1 ? "member" : "members"}`} order="Newest first" />
+          <AnCountLine count={memberCountLabel} order="Waiting first, then newest" />
           {members.length === 0 ? (
             <AnNoneRow icon={Users} tone="pale">
               {data.businessId ? "No members yet. Create a member code and hand it over at the desk." : "Save your business profile first. Members belong to it."}
@@ -276,10 +286,10 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
             members.slice(0, 3).map(memberRow)
           )}
         </div>
-        {members.length > 3 && <AnSeeAll n={members.length} onClick={() => setParams({ list: "members" })} />}
+        {memberCount > 3 && <AnSeeAll n={memberCount} onClick={() => setParams({ list: "members" })} />}
       </AnCard>
       <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-        Names aren't shown. Members redeem a code from their own Centium profile, so we only know the plan and dates.
+        First names only. Members under 18 are marked.
       </p>
 
       <CreateCodeSheet

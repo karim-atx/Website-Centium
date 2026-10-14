@@ -3,10 +3,13 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Download } from "lucide-react";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useBusiness } from "../../components/business-more/useBusiness";
+import { ConsoleGate } from "../../components/business-console/ConsoleGate";
+import { useApp } from "../../context/AppContext";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { AnalyticsContext, type CsvRow } from "./analyticsContext";
 import { presetRange, rangeLine, type AnalyticsRange, type RangeKey } from "./analyticsRange";
 import { CustomRangeSheet } from "./CustomRangeSheet";
-import { FULL_PAGE_SECTIONS, PUSHED_VIEWS, SECTION_VIEWS, pushedFor, sectionTabs, type SectionKey } from "./sections";
+import { FULL_PAGE_SECTIONS, PUSHED_VIEWS, SECTION_NEED, SECTION_VIEWS, pushedFor, sectionTabs, type SectionKey } from "./sections";
 
 // The Analytics shell (AN5-001 / AN4-001 rows 1-8, shared by AN1, AN3, AN4,
 // AN5): title "Analytics" 27/700, subtitle, section tabs per type
@@ -39,8 +42,14 @@ export default function AnalyticsShell() {
   const navigate = useNavigate();
   const biz = useBusiness();
   const { kind } = biz;
-  const tabs = sectionTabs(kind);
-  const section = (param ?? "overview") as SectionKey;
+  const { user } = useApp();
+  const access = useConsoleAccess();
+  // B7: staff (non-business accounts on a team) see only the sections their
+  // permissions allow (SECTION_NEED); the owner sees every tab.
+  const staffView = user.accountType !== "business";
+  const allowed = (key: string) => !staffView || access.meets(SECTION_NEED[key] ?? "owner");
+  const tabs = sectionTabs(kind).filter((t) => allowed(t.key));
+  const section = (param ?? (staffView ? (tabs[0]?.key ?? "overview") : "overview")) as SectionKey;
   const [range, setRange] = useState<AnalyticsRange>(() => presetRange("4w"));
   const [customOpen, setCustomOpen] = useState(false);
   const [csv, setCsv] = useState<{ name: string; rows: CsvRow[] } | null>(null);
@@ -53,7 +62,11 @@ export default function AnalyticsShell() {
   // /app/business/analytics/<section> waits for the business row's own type:
   // the profile's onboarding type alone can name another lane, whose tabs
   // would not hold <section> and would send it to Overview.
-  const typeKnown = !biz.loading && biz.kindKnown;
+  const typeKnown = !biz.loading && biz.kindKnown && (!staffView || access.ready);
+  // Staff without the section's permission: the no-access card (the gate
+  // also covers somebody on no team at all).
+  if (staffView && (access.ready || access.failed) && !allowed(section))
+    return <ConsoleGate need={SECTION_NEED[section] ?? "owner"}>{null}</ConsoleGate>;
   if (!typeKnown) {
     const failed = !biz.loading && !biz.business && !!biz.error;
     return (
@@ -79,7 +92,7 @@ export default function AnalyticsShell() {
   const push = PUSHED_VIEWS[section];
   const pushedOk = !!push && pushed.includes(section);
   const fullPage = FULL_PAGE_SECTIONS.includes(section);
-  if (!fullPage && !pushedOk && !tabs.some((t) => t.key === section)) return <Navigate to="/app/business/analytics/overview" replace />;
+  if (!fullPage && !pushedOk && !tabs.some((t) => t.key === section)) return <Navigate to={`/app/business/analytics/${tabs[0]?.key ?? "overview"}`} replace />;
   if (fullPage) {
     const Full = SECTION_VIEWS[section];
     return (

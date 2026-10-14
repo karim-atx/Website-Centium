@@ -3,6 +3,8 @@ import { useApp } from "../../context/AppContext";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import type { BizKind } from "../../components/business-more/kind";
 import { useMyVenues } from "../../hooks/useMyVenues";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import type { ConsolePermission } from "../../services/business-console";
 import { useBusinessNavKind } from "../../components/navigation/useBusinessNavKind";
 import { useBusinessClasses, useBusinessDiscounts, useBusinessOfferings, useMembershipPlans } from "../../hooks/useBusinessCatalog";
 import type { BusinessFull } from "../../services/business-more";
@@ -40,7 +42,14 @@ export interface MarketData {
   perk: string | null;
   setPerk: (p: string | null) => void;
   venue: MyVenue | null;
+  /**
+   * The business's owner. Since B7 this is only what stays the owner's:
+   * business_profiles writes (Show on Explore, categories, perk, the cover
+   * and logo). Everything else asks `can`.
+   */
   isOwner: boolean;
+  /** B7 business_can(): marketing (offerings, discounts, promotions), schedule (opening hours), … */
+  can: (p: ConsolePermission) => boolean;
   hours: GymHoursTableRow[] | null;
   setHours: (rows: GymHoursTableRow[]) => void;
   discounts: ReturnType<typeof useBusinessDiscounts>;
@@ -77,7 +86,8 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   const nav = useBusinessNavKind();
   const navKind: BizKind | null = nav === "store" || nav === "appointments" ? "store" : nav === "gym" ? "gym" : nav === "classes" ? "classes" : null;
   const kind: BizKind = forceKind ?? (biz.business ? biz.kind : navKind ?? biz.kind);
-  const { venues, selected, isOwner: venueOwner } = useMyVenues();
+  const { venues, selected } = useMyVenues();
+  const access = useConsoleAccess();
   const discounts = useBusinessDiscounts();
   const offerings = useBusinessOfferings();
   const plans = useMembershipPlans();
@@ -192,7 +202,10 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
     perk,
     setPerk,
     venue,
-    isOwner: venue ? venueOwner : owner,
+    isOwner: owner,
+    // A business account before its row exists is its own owner-to-be; the
+    // writes then fail on the missing business, as before.
+    can: (p: ConsolePermission) => owner || access.can(p),
     hours,
     setHours,
     discounts,

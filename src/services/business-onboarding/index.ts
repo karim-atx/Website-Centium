@@ -509,6 +509,8 @@ export interface ReviewItem {
 
 export interface ReviewStatus {
   status: "pending" | "approved" | "rejected" | "none";
+  /** business_profiles.id (the Show on Explore switch writes it). */
+  businessId: string;
   /** The latest submission's id (its files sit under <owner_uid>/<id>/), or null. */
   verificationId: string | null;
   submittedAt: string | null;
@@ -532,6 +534,7 @@ export async function fetchReviewStatus(uid: string): Promise<Res<ReviewStatus |
     ok: true,
     value: {
       status: row?.status ?? "none",
+      businessId: b.id,
       verificationId: row?.id ?? null,
       submittedAt: row?.submitted_at ?? null,
       reviewedAt: row?.reviewed_at ?? null,

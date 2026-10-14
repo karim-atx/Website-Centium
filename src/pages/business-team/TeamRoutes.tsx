@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useApp } from "../../context/AppContext";
 import { JoinRequestsPage } from "./JoinRequestsPage";
 import { PersonPage } from "./PersonPage";
 import { TeamPage } from "./TeamPage";
@@ -11,9 +10,10 @@ import { useTeamData } from "./useTeamData";
 // /app/business/employees (team), /requests (join requests), /:id (person).
 // Replaces BusinessEmployeesTab (HANDOVER §5 "Replaced"). One data load is
 // shared by the three screens so going in and out of a person page doesn't
-// refetch the team.
+// refetch the team. B7: staff holding 'members' reach it too (App.tsx
+// ConsoleGate); what they may change is decided per control (TeamPage,
+// PersonPage) from useConsoleAccess.
 export default function TeamRoutes() {
-  const { user } = useApp();
   const data = useTeamData();
   const location = useLocation();
   const navigate = useNavigate();
@@ -27,7 +27,6 @@ export default function TeamRoutes() {
     navigate(location.pathname, { replace: true, state: null });
   }, [passed, showToast, navigate, location.pathname]);
 
-  if (user.accountType !== "business") return <Navigate to="/app/more" replace />;
   return (
     <>
       <Routes>

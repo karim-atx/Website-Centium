@@ -4,6 +4,7 @@ import { Clock, LocateFixed, MapPin, MapPinOff, Pencil, Phone, Plus, Search, Sto
 import { BizButton, BizButtonSoft, BizConfirm, BizField, BizFieldButton, BizPage, BizRow, BizSection, BizSheet, LoadError, RowsSkeleton, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { useBusiness } from "../../components/business-more/useBusiness";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { venueKindOf } from "../../components/business-more/kind";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
@@ -46,6 +47,13 @@ export default function LocationsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { business, kind, kindKnown, loading: bizLoading, error: bizError } = useBusiness();
+  // B7: staff reach this page too. A venue's details (gyms UPDATE) need
+  // 'venues', its opening hours (gym_hours) need 'schedule'; adding or
+  // removing a location stays the owner's (gyms INSERT / DELETE).
+  const access = useConsoleAccess();
+  const owner = access.isOwner || (!access.isStaff && !!business);
+  const canEdit = owner || access.can("venues");
+  const canHours = owner || access.can("schedule");
   const [toast, showToast] = useBizToast();
   const [locations, setLocations] = useState<BizLocation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,24 +130,29 @@ export default function LocationsPage() {
         const lines = hoursLines(loc.hours, isoWeekdayIn(loc.timezone));
         return (
           <BizSection key={loc.id} label={`${business?.name ?? "Your business"} · ${loc.name}`}>
-            <BizRow icon={MapPin} title={loc.address} desc="Pinned on the map" value="Edit" onClick={() => setParams({ edit: loc.id }, { replace: true })} />
+            <BizRow icon={MapPin} title={loc.address} desc="Pinned on the map" value={canEdit ? "Edit" : undefined} onClick={canEdit ? () => setParams({ edit: loc.id }, { replace: true }) : undefined} />
             {lines.length > 0 ? (
-              lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={() => void openHours(loc)} />)
+              lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={canHours || !store ? () => void openHours(loc) : undefined} />)
             ) : (
-              <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value="Add" onClick={() => void openHours(loc)} />
+              <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value={canHours ? "Add" : undefined} onClick={canHours || !store ? () => void openHours(loc) : undefined} />
             )}
             {/* V6-54: the venue console, for owners, from here; never for stores. */}
             {!store && <BizRow icon={Store} title="Venue console" desc="Members, classes, hours & photos" onClick={() => openConsole(loc.id)} />}
           </BizSection>
         );
       })}
-      {locations && (
+      {locations && !owner && (
+        <p className="text-[11.5px] leading-[16px] text-charcoal-faint text-center" style={{ margin: "4px 8px 16px" }}>
+          Only the owner can add or remove a location.
+        </p>
+      )}
+      {locations && owner && (
         <BizSection>
           <BizRow icon={Plus} title="Add a location" desc="Each location gets its own hours and classes" onClick={() => setParams({ add: "1" }, { replace: true })} />
         </BizSection>
       )}
 
-      {business && editing && (
+      {business && editing && canEdit && (
         <LocationSheet
           key={`e-${editing.id}`}
           mode="edit"
@@ -154,7 +167,7 @@ export default function LocationsPage() {
             showToast("Location updated.");
             return null;
           }}
-          onRemove={async () => {
+          onRemove={!owner ? undefined : async () => {
             const r = await removeLocation(editing.id);
             if (!r.ok) return r.message;
             closeSheet();
@@ -166,7 +179,7 @@ export default function LocationsPage() {
           onToast={showToast}
         />
       )}
-      {business && adding && (
+      {business && adding && owner && (
         <LocationSheet
           key="add"
           mode="add"
@@ -190,6 +203,7 @@ export default function LocationsPage() {
           gymId={storeHours.loc.id}
           timezone={storeHours.loc.timezone}
           rows={storeHours.rows}
+          zoneEditable={canEdit}
           onSaved={() => {
             setStoreHours(null);
             reload();
@@ -325,7 +339,7 @@ function LocationSheet({
       <BizField id="loc-phone" label="Phone" value={d.phone} onChange={(v) => setD({ ...d, phone: v })} icon={Phone} type="tel" inputMode="tel" autoComplete="tel" />
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton label={mode === "add" ? "Add location" : "Save changes"} onClick={() => void submit()} busy={busy} disabled={mode === "edit" && !dirty} />
-      {mode === "edit" && <BizButtonSoft label="Remove location" tone="high" onClick={() => void askRemove()} />}
+      {mode === "edit" && onRemove && <BizButtonSoft label="Remove location" tone="high" onClick={() => void askRemove()} />}
 
       <BizConfirm
         open={discardAsk}

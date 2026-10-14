@@ -41,6 +41,7 @@ import {
   fetchSetupChecklist,
   fetchStoreSettings,
   fetchTeamRows,
+  SHOW_ON_EXPLORE_ITEM,
   type ChecklistItem,
 } from "../../services/business-more";
 import { returnsSummary } from "./storePolicyText";
@@ -119,10 +120,13 @@ export default function BusinessMoreIndex() {
   const sub = (p: string) => go(`/app/business/more/${p}`);
 
   // D3 · Setup checklist: shown while the Dashboard's Get set up is dismissed
-  // and not every item is done; hidden once complete.
+  // and not every item is done; hidden once complete. B7: Show on Explore is
+  // an item (new businesses start hidden), and while the listing is off the
+  // row shows whatever was dismissed, saying so.
   const done = checklist?.filter((c) => c.done).length ?? 0;
   const totalItems = checklist?.length ?? 0;
-  const showChecklist = !!checklist && totalItems > 0 && done < totalItems && checklist.some((c) => c.dismissed);
+  const hidden = !!checklist?.some((c) => c.item === SHOW_ON_EXPLORE_ITEM && !c.done);
+  const showChecklist = !!checklist && totalItems > 0 && done < totalItems && (hidden || checklist.some((c) => c.dismissed));
 
   const hasStaff = (team?.total ?? 0) > 0;
   const showTeam = kind !== "store" || hasStaff;
@@ -138,8 +142,8 @@ export default function BusinessMoreIndex() {
           well="index"
           icon={ListChecks}
           title="Setup checklist"
-          desc={`${done} of ${totalItems} done`}
-          onClick={go("/app")}
+          desc={hidden ? `${done} of ${totalItems} done · Show on Explore is off` : `${done} of ${totalItems} done`}
+          onClick={go(hidden ? "/app/business/profile" : "/app")}
           extra={
             <span aria-hidden className="block bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16] overflow-hidden" style={{ height: 4, borderRadius: 999, marginTop: 6 }}>
               <span className="block h-full bg-th-8e7fd0" style={{ width: `${Math.round((done / totalItems) * 100)}%`, borderRadius: 999 }} />

@@ -136,7 +136,7 @@ export function ListingTab() {
         navigate("/app/business/more/locations");
         break;
       case "hours":
-        if (m.venue && m.isOwner) setHoursOpen(true);
+        if (m.venue && m.can("schedule")) setHoursOpen(true);
         else navigate("/app/business/more/locations");
         break;
       case "amenities":

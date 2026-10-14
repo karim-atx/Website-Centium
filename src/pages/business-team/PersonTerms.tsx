@@ -13,7 +13,12 @@ import { ROLE_DOES, ROLE_LABEL, roleOptions } from "./teamLogic";
 // trainers only. Pay per class sits in the Role card (OURS): NULL means "not
 // agreed", cleared with p_clear_pay_rate.
 
-/** The seven B6 permissions. Handover labels where the drawing has one (OP1-061 #14), ours otherwise. */
+/**
+ * The eight permissions: B6's seven plus B7's `venues` (edit a venue's
+ * details; adding or removing a venue stays the owner's; on for managers by
+ * default). Handover labels where the drawing has one (OP1-061 #14), ours
+ * otherwise.
+ */
 export const PERMISSIONS: { key: string; title: string; sub: string }[] = [
   { key: "schedule", title: "Edit the schedule", sub: "Classes, times and descriptions" },
   { key: "messages", title: "Message booked members", sub: "For classes they teach" },
@@ -21,6 +26,7 @@ export const PERMISSIONS: { key: string; title: string; sub: string }[] = [
   { key: "front_desk", title: "Front desk", sub: "Check members in and take cash" },
   { key: "store", title: "Store", sub: "Products and orders" },
   { key: "marketing", title: "Marketing", sub: "Promotions and your listing" },
+  { key: "venues", title: "Venues", sub: "Venue name, address and time zone. On for managers" },
   { key: "revenue", title: "See Revenue", sub: "Payments and pay" },
 ];
 
@@ -191,11 +197,14 @@ export function PermissionsCard({
   disabled,
   onSaved,
   onToast,
+  readOnly = false,
 }: {
   person: TeamPerson;
   disabled: boolean;
   onSaved: () => void;
   onToast: (m: string, error?: boolean) => void;
+  /** B7: staff see the switches but only the owner changes them. */
+  readOnly?: boolean;
 }) {
   const [perms, setPerms] = useState<string[]>(person.permissions);
   const [busy, setBusy] = useState<string | null>(null);
@@ -209,7 +218,7 @@ export function PermissionsCard({
     setBusy(null);
     if (!r.ok) {
       setPerms(before);
-      return onToast(r.reason === "own" ? r.message : "Couldn't save. Try again.", true);
+      return onToast(r.reason === "own" || r.reason === "unknown_permission" ? r.message : "Couldn't save. Try again.", true);
     }
     onSaved();
   };
@@ -225,7 +234,11 @@ export function PermissionsCard({
         />
       ))}
       <p className="tm-note">
-        {person.acceptedAt ? "Changes apply straight away. Revenue is never on by default." : `These apply once ${person.name} accepts. Revenue is never on by default.`}
+        {readOnly
+          ? "Only the owner can change what people can do."
+          : person.acceptedAt
+            ? "Changes apply straight away. Revenue is never on by default."
+            : `These apply once ${person.name} accepts. Revenue is never on by default.`}
       </p>
     </DCard>
   );

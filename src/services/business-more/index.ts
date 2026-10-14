@@ -5,6 +5,7 @@ import { storagePath } from "../venues/venueLogic";
 import { COVER_MAX_BYTES, LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
 import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "./cover";
 import { fetchGymHours } from "../venues";
+import { loadConsoleAccess } from "../business-console";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
 
@@ -121,9 +122,16 @@ const toBusiness = (r: BusinessRow): BusinessFull => ({
   deactivatedAt: r.deactivated_at,
 });
 
-/** This account's business row, or null when it has none yet. */
+/**
+ * The console's business row (the owned one, or since B7 the business this
+ * account works for, services/business-console), or null when it has none.
+ */
 export async function fetchBusinessFull(userId: string): Promise<Result<BusinessFull | null>> {
-  const { data, error } = await db.from("business_profiles").select(BUSINESS_COLUMNS).eq("profile_id", userId).maybeSingle();
+  const access = await loadConsoleAccess(userId);
+  if (!access.ok) return { ok: false, message: "Couldn't load your profile." };
+  const id = access.value.current?.businessId;
+  if (!id) return { ok: true, value: null };
+  const { data, error } = await db.from("business_profiles").select(BUSINESS_COLUMNS).eq("id", id).maybeSingle();
   if (error) {
     console.error("[business-more] Could not read the business:", error.message);
     return fail(error, "Couldn't load your profile.");
@@ -269,10 +277,26 @@ export interface ChecklistItem {
   dismissed: boolean;
 }
 
+/** The checklist item for Show on Explore (business_profiles.active), added on top of business_setup_checklist(). */
+export const SHOW_ON_EXPLORE_ITEM = "show_on_explore";
+
+/**
+ * business_setup_checklist() plus Show on Explore. B7 (20261120140000): new
+ * businesses start hidden (business_profiles.active defaults to false), and
+ * the contract asks the console to make the switch part of the setup journey
+ * so a business is never invisible without knowing why. The server's list
+ * does not carry it yet, so it is derived here from the same row the
+ * Dashboard reads; it can't be dismissed, only done by turning the listing on.
+ */
 export async function fetchSetupChecklist(businessId: string): Promise<Result<ChecklistItem[]>> {
-  const { data, error } = await db.rpc("business_setup_checklist", { p_business_id: businessId });
-  if (error) return fail(error, "Couldn't load your checklist.");
-  return { ok: true, value: (data ?? []) as ChecklistItem[] };
+  const [list, row] = await Promise.all([
+    db.rpc("business_setup_checklist", { p_business_id: businessId }),
+    db.from("business_profiles").select("active").eq("id", businessId).maybeSingle(),
+  ]);
+  if (list.error) return fail(list.error, "Couldn't load your checklist.");
+  const items = (list.data ?? []) as ChecklistItem[];
+  if (row.error || !row.data) return { ok: true, value: items };
+  return { ok: true, value: [...items, { item: SHOW_ON_EXPLORE_ITEM, done: !!(row.data as { active: boolean }).active, dismissed: false }] };
 }
 
 /** set_business_paused (B5): pausing also hides the listing; resuming does not re-list. */

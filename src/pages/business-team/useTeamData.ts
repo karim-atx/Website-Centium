@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBusiness } from "../../components/business-more/useBusiness";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import {
   fetchJoinRequests,
   fetchSeatCapacity,
@@ -11,7 +12,7 @@ import {
   type TeamPerson,
 } from "../../services/business-team/team";
 import { shiftDate, todayLocal } from "../../utils/date";
-import { weekRange } from "./teamLogic";
+import { isAccepted, seatHolders, weekRange } from "./teamLogic";
 
 // One load for the Team screens: the team (accepted and invited), seat
 // capacity, pending join requests and the sessions from last Monday to two
@@ -20,6 +21,13 @@ import { weekRange } from "./teamLogic";
 // A FAILED READ KEEPS WHAT IS ON SCREEN (the old Employees tab's rule): an
 // empty list after a dropped connection is indistinguishable from "everybody
 // left", which is the wrong thing to tell a business.
+//
+// B7 · STAFF READ, THE OWNER WRITES. An employee holding 'members' may read
+// the team (business_employees SELECT widened to business_can(members)), but
+// business_employees writes stay the owner's, so the screens are read-only for
+// them (`readOnly`). my_business_seat_capacity() answers for the caller's OWN
+// business only, so staff get the seats counted from the team they can read
+// (no free seats are shown: adding seats is the owner's).
 
 export interface TeamData {
   businessId: string | null;
@@ -39,10 +47,14 @@ export interface TeamData {
   reload: () => void;
   setPeople: (p: TeamPerson[]) => void;
   setRequests: (r: JoinRequest[]) => void;
+  /** B7: an employee (not the owner) is looking; every team write is hidden. */
+  readOnly: boolean;
 }
 
 export function useTeamData(): TeamData {
   const biz = useBusiness();
+  const access = useConsoleAccess();
+  const readOnly = access.isStaff;
   const [people, setPeople] = useState<TeamPerson[] | null>(null);
   const [capacity, setCapacity] = useState<SeatCapacity | null>(null);
   const [requests, setRequests] = useState<JoinRequest[] | null>(null);
@@ -62,11 +74,13 @@ export function useTeamData(): TeamData {
     let cancelled = false;
     const from = weekRange(today, -1).from;
     const to = shiftDate(today, 21);
-    void Promise.all([fetchTeam(bizId), fetchSeatCapacity(), fetchJoinRequests(bizId), fetchSessions(bizId, from, to)]).then(
-      ([team, cap, req, sess]) => {
+    const seats = readOnly ? Promise.resolve(null) : fetchSeatCapacity();
+    void Promise.all([fetchTeam(bizId), seats, fetchJoinRequests(bizId), fetchSessions(bizId, from, to)]).then(
+      ([team, capRes, req, sess]) => {
         if (cancelled) return;
         setLoading(false);
         if (team.ok) setPeople(team.value);
+        const cap = capRes ?? (team.ok ? { ok: true as const, value: staffSeats(team.value) } : { ok: false as const, message: team.message });
         if (cap.ok) setCapacity(cap.value);
         if (req.ok) {
           setRequests(req.value);
@@ -80,7 +94,7 @@ export function useTeamData(): TeamData {
     return () => {
       cancelled = true;
     };
-  }, [bizId, biz.loading, tick, today]);
+  }, [bizId, biz.loading, tick, today, readOnly]);
 
   const hasBusiness = !!biz.business;
   const bizReload = biz.reload;
@@ -107,5 +121,14 @@ export function useTeamData(): TeamData {
     reload,
     setPeople,
     setRequests,
+    readOnly,
   };
+}
+
+/** Staff can't read the owner's seat capacity: the seats in use, and no free ones. */
+function staffSeats(people: TeamPerson[]): SeatCapacity {
+  const holders = seatHolders(people);
+  const used = holders.filter(isAccepted).length;
+  const invited = holders.length - used;
+  return { capacity: used + invited, seatBlocks: 0, seatsPerUnit: null, used, invited };
 }

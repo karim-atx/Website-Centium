@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanLine, Ticket } from "lucide-react";
+import { MailPlus, ScanLine, Ticket, Users } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { AnCard, AnEmptyCard, AnHeaderRow, AnHintBox, AnLead, AnNumberBoxes } from "./anKit";
 import type { MembersPageDef, MembersVocab } from "./membersModel";
@@ -13,7 +13,9 @@ import type { MembersData } from "./useMembersData";
 // what is coming; the Growth page keeps the empty chart frame (AN4-023 row
 // 11). Visits and Not seen in 14 days wait for check-ins (gym variant row
 // 18). Plans shows the plan count (live) and the member-codes redeemed share
-// (AN4-013 row 19a, live).
+// (AN4-013 row 19a, live). With no member ever (B7 list_business_members
+// total_count, `empty`), a section shows the AN4-023 empty card instead
+// (Growth with its ghost chart), the same card as the index (AN4-043).
 
 const BASE = "/app/business/analytics/members";
 
@@ -23,12 +25,15 @@ export function MembersPage({
   vocab,
   plansCount,
   data,
+  empty = false,
 }: {
   page: MembersPageDef;
   pages: MembersPageDef[];
   vocab: MembersVocab;
   plansCount: number;
   data: MembersData;
+  /** No member ever (AN4-023 O2): the section empty card. */
+  empty?: boolean;
 }) {
   const navigate = useNavigate();
   const [picker, setPicker] = useState<HTMLElement | null>(null);
@@ -62,7 +67,15 @@ export function MembersPage({
         }}
       />
 
-      {page.waits === "check-ins" ? (
+      {empty && page.waits !== "check-ins" ? (
+        <AnEmptyCard
+          icon={Users}
+          ghost={page.key === "growth"}
+          title={`No ${vocab.people} yet`}
+          body="Invite members with a code. Growth, first-90-day health, engagement and plans appear once people join."
+          button={{ label: "Invite members", icon: MailPlus, onClick: () => navigate(`${BASE}/codes?create=1`) }}
+        />
+      ) : page.waits === "check-ins" ? (
         <>
           <AnHintBox>{page.coming}</AnHintBox>
           <AnEmptyCard

@@ -162,10 +162,10 @@ export function PromotionsTab() {
               <button
                 type="button"
                 aria-label={`Options for ${o.label}`}
-                disabled={!online || !m.isOwner}
+                disabled={!online || !m.can("marketing")}
                 onClick={(e) => setMenuFor({ row: o, el: e.currentTarget })}
                 className="tap"
-                style={{ marginLeft: "auto", width: 32, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, opacity: !online || !m.isOwner ? 0.4 : 1 }}
+                style={{ marginLeft: "auto", width: 32, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, opacity: !online || !m.can("marketing") ? 0.4 : 1 }}
               >
                 <Ellipsis size={16} strokeWidth={2.4} aria-hidden />
               </button>
@@ -176,7 +176,7 @@ export function PromotionsTab() {
       <button
         type="button"
         onClick={() => setOfferSheet({ mode: "add" })}
-        disabled={!online || !m.isOwner || !business}
+        disabled={!online || !m.can("marketing") || !business}
         className="tap"
         style={{
           width: "100%",
@@ -192,7 +192,7 @@ export function PromotionsTab() {
           fontSize: px(13),
           fontWeight: 800,
           color: c.pDark,
-          opacity: !online || !m.isOwner || !business ? 0.4 : 1,
+          opacity: !online || !m.can("marketing") || !business ? 0.4 : 1,
         }}
       >
         <Plus size={15} strokeWidth={2.4} aria-hidden />
@@ -238,7 +238,7 @@ export function PromotionsTab() {
               </span>
               {price && <span style={{ fontSize: px(13), fontWeight: 800, color: c.ink }}>{price}</span>}
             </div>
-            <MOutline c={c} onClick={() => setFeature({ item: null })} disabled={!online || !m.isOwner} style={{ width: "100%", marginTop: 10 }}>
+            <MOutline c={c} onClick={() => setFeature({ item: null })} disabled={!online || !m.can("marketing")} style={{ width: "100%", marginTop: 10 }}>
               Feature for a week
             </MOutline>
           </MCard>
@@ -246,7 +246,7 @@ export function PromotionsTab() {
       )}
       <div style={{ height: 72 }} />
 
-      {!sheetOpen && <MFixedCta c={c} label="Create promotion" icon={<Plus size={17} strokeWidth={2.6} aria-hidden />} onClick={() => setCreate({ what: null })} disabled={!online || !m.isOwner || !business} />}
+      {!sheetOpen && <MFixedCta c={c} label="Create promotion" icon={<Plus size={17} strokeWidth={2.6} aria-hidden />} onClick={() => setCreate({ what: null })} disabled={!online || !m.can("marketing") || !business} />}
 
       {create && (
         <PromotionSheet

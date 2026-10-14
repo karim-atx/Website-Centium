@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Building2, Check, LogOut, Send, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Building2, Check, ChevronRight, LogOut, Send, X } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -16,6 +17,8 @@ import {
   type MyJoinRequest,
 } from "../../services/business-team/employment";
 import { formatDisplayDate, localDayOf } from "../../utils/date";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import { chooseConsoleBusiness, invalidateConsoleAccess, staffAreas, type StaffArea } from "../../services/business-console";
 
 // v6 Batch 4 · B0 consent, the professional's side (OURS: not drawn in the
 // handover). A business that adds a professional (an invite, or approving
@@ -28,6 +31,11 @@ import { formatDisplayDate, localDayOf } from "../../utils/date";
 // Accepting turns off the professional's public directory listing the first
 // time they join a team (business_employees_sync_affiliation), so the page
 // says so before they accept.
+//
+// B7 · THE WAY INTO THE CONSOLE FOR STAFF. Each team lists the console areas
+// the owner's permissions open (services/business-console staffAreas); a tap
+// makes that business the console's current one and opens the area. A team
+// with no permissions says the owner turns them on.
 
 /** Role names (B6 business_role) for "Invited … · as {role}". */
 const ROLE_NAME: Record<string, string> = {
@@ -40,7 +48,13 @@ const ROLE_NAME: Record<string, string> = {
 };
 
 export default function MyBusinessesPage() {
-  const { user } = useApp();
+  const { user, authUserId } = useApp();
+  const navigate = useNavigate();
+  const access = useConsoleAccess();
+  const openArea = (businessId: string, a: StaffArea) => {
+    if (authUserId) chooseConsoleBusiness(authUserId, businessId);
+    navigate(a.to);
+  };
   const [list, setList] = useState<MyEmployment[] | null>(null);
   const [requests, setRequests] = useState<MyJoinRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +98,7 @@ export default function MyBusinessesPage() {
     setBusy(null);
     if (!r.ok) return setToast(r.message);
     setToast(`You joined ${e.businessName}.`);
+    invalidateConsoleAccess();
     await load();
   };
 
@@ -96,6 +111,7 @@ export default function MyBusinessesPage() {
     setConfirm(null);
     if (!r.ok) return setToast(r.message);
     setToast(kind === "decline" ? `You declined ${e.businessName}'s invitation.` : `You left ${e.businessName}.`);
+    invalidateConsoleAccess();
     await load();
   };
 
@@ -169,20 +185,51 @@ export default function MyBusinessesPage() {
         <>
           <p className="section-label text-charcoal-faint mb-2.5">Your teams</p>
           <div className="space-y-2.5 mb-6">
-            {teams.map((e) => (
-              <Card key={e.businessId} className="flex items-center gap-3 animate-fade-slide-up">
-                <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-                  <Building2 size={18} className="text-primary-dark" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal truncate">{e.businessName}</p>
-                  <p className="text-xs text-charcoal-faint">{`Joined ${formatDisplayDate(localDayOf(e.acceptedAt!))}`}</p>
-                </div>
-                <Button variant="outline" size="sm" disabled={busy === e.businessId} onClick={() => setConfirm({ kind: "leave", e })}>
-                  <LogOut size={13} /> Leave
-                </Button>
-              </Card>
-            ))}
+            {teams.map((e) => {
+              const seat = access.seats.find((s) => s.businessId === e.businessId && !s.isOwner) ?? null;
+              const areas = seat ? staffAreas(seat) : [];
+              return (
+                <Card key={e.businessId} className="animate-fade-slide-up">
+                  <div className="flex items-center gap-3">
+                    <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                      <Building2 size={18} className="text-primary-dark" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-charcoal truncate">{e.businessName}</p>
+                      <p className="text-xs text-charcoal-faint">{`Joined ${formatDisplayDate(localDayOf(e.acceptedAt!))}` + (e.role && ROLE_NAME[e.role] ? ` · ${ROLE_NAME[e.role]}` : "")}</p>
+                    </div>
+                    <Button variant="outline" size="sm" disabled={busy === e.businessId} onClick={() => setConfirm({ kind: "leave", e })}>
+                      <LogOut size={13} /> Leave
+                    </Button>
+                  </div>
+                  {access.ready && (
+                    <div className="mt-3 pt-1 border-t border-charcoal/[0.06]">
+                      {areas.length === 0 ? (
+                        <p className="text-xs text-charcoal-faint pt-2 leading-[17px]">{`${e.businessName}'s owner hasn't turned on anything you can do in their business console yet.`}</p>
+                      ) : (
+                        <ul aria-label={`What you can do at ${e.businessName}`}>
+                          {areas.map((a) => (
+                            <li key={a.key}>
+                              <button
+                                type="button"
+                                onClick={() => openArea(e.businessId, a)}
+                                className="tap w-full min-h-[48px] flex items-center gap-3 text-left"
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] font-semibold text-charcoal">{a.label}</span>
+                                  <span className="block text-[11.5px] leading-[16px] text-charcoal-faint">{a.desc}</span>
+                                </span>
+                                <ChevronRight size={16} aria-hidden className="text-charcoal-faint shrink-0" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
             {teams.length === 0 && (
               <Card className="text-center py-6">
                 <p className="text-sm text-charcoal-faint">You're not on a business's team yet.</p>

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typed } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import { businessNavKind, type BusinessNavKind } from "./navItems";
 import { BUSINESS_TYPE_CHANGED_EVENT } from "../../services/business-more";
+import { CONSOLE_ACCESS_CHANGED, loadConsoleAccess } from "../../services/business-console";
 
 // v6 Business UI navbar per type (X-31, V6-54). The business type lives on
 // business_profiles (profiles carries none), and "Wellness with appointments
@@ -34,10 +36,16 @@ function writeStored(uid: string, kind: BusinessNavKind) {
 }
 
 async function load(uid: string): Promise<BusinessNavKind | null> {
+  // The console's business: the owned one, or (B7) the one this account works
+  // for with permissions (services/business-console).
+  const access = await loadConsoleAccess(uid);
+  if (!access.ok) return null;
+  const id = access.value.current?.businessId;
+  if (!id) return "unknown";
   const { data, error } = await db
     .from("business_profiles")
     .select("id, business_type")
-    .eq("profile_id", uid)
+    .eq("id", id)
     .maybeSingle();
   if (error) return null;
   if (!data) return "unknown";
@@ -63,8 +71,12 @@ async function load(uid: string): Promise<BusinessNavKind | null> {
  */
 export function useBusinessNavKind(): BusinessNavKind {
   const { user, authUserId } = useApp();
+  const { pathname } = useLocation();
   const isBusiness = user.accountType === "business";
-  const uid = isBusiness ? authUserId : null;
+  // B7: staff (professional accounts with permissions) open console pages
+  // too, and those pages read the type from here. Outside /app/business a
+  // non-business account never needs it, so it costs them nothing.
+  const uid = isBusiness || pathname.startsWith("/app/business") ? authUserId : null;
   const fallback = businessNavKind(user.businessType ?? null, null);
   const [loaded, setLoaded] = useState<{ uid: string; kind: BusinessNavKind } | null>(null);
   const [epoch, setEpoch] = useState(0);
@@ -77,7 +89,12 @@ export function useBusinessNavKind(): BusinessNavKind {
       setEpoch((e) => e + 1);
     };
     window.addEventListener(BUSINESS_TYPE_CHANGED_EVENT, onChange);
-    return () => window.removeEventListener(BUSINESS_TYPE_CHANGED_EVENT, onChange);
+    // Another business chosen from Your businesses (or a team joined or left).
+    window.addEventListener(CONSOLE_ACCESS_CHANGED, onChange);
+    return () => {
+      window.removeEventListener(BUSINESS_TYPE_CHANGED_EVENT, onChange);
+      window.removeEventListener(CONSOLE_ACCESS_CHANGED, onChange);
+    };
   }, [uid]);
   const kind = uid ? (loaded?.uid === uid ? loaded.kind : memo.get(uid) ?? readStored(uid)) : null;
 

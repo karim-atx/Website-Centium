@@ -83,6 +83,7 @@ import TwoFactorPage from "./pages/settings/TwoFactorPage";
 import TwoFactorSetupPage from "./pages/settings/TwoFactorSetupPage";
 import ResetPassword from "./pages/auth/ResetPassword";
 import PublicCertificate from "./pages/courses/PublicCertificate";
+import { ConsoleGate } from "./components/business-console/ConsoleGate";
 
 const RouteLoading: React.FC = () => (
   <div className="min-h-[100dvh] flex items-center justify-center bg-cream">
@@ -469,34 +470,35 @@ function AppRoutes() {
         <Route path="/app/marketplace" element={<Marketplace />} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
-        <Route path="/app/business/marketplace/*" element={<MarketRoutes />} />
+        {/* B7: staff reach the console pages their permissions allow (ConsoleGate). */}
+        <Route path="/app/business/marketplace/*" element={<ConsoleGate need="marketing"><MarketRoutes /></ConsoleGate>} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
             Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
             types keep today's listings page on this address. */}
-        <Route path="/app/business/products/*" element={<StoreProductsRoute />} />
+        <Route path="/app/business/products/*" element={<ConsoleGate need={["store", "marketing"]}><StoreProductsRoute /></ConsoleGate>} />
         {/* v6 Batch 4: Store orders (detail, returns, See all) and appointments. */}
-        <Route path="/app/business/orders/*" element={<BusinessOrdersRoutes />} />
-        <Route path="/app/business/appointments/*" element={<BusinessAppointmentsRoutes />} />
-        <Route path="/app/business/services" element={<AppointmentServicesPage />} />
+        <Route path="/app/business/orders/*" element={<ConsoleGate need="store"><BusinessOrdersRoutes /></ConsoleGate>} />
+        <Route path="/app/business/appointments/*" element={<ConsoleGate need="owner"><BusinessAppointmentsRoutes /></ConsoleGate>} />
+        <Route path="/app/business/services" element={<ConsoleGate need="owner"><AppointmentServicesPage /></ConsoleGate>} />
         {/* v6 Batch 4 (V6-49, designed by us): the customer side. */}
         <Route path="/app/store/*" element={<StoreRoutes />} />
         <Route path="/app/appointments/*" element={<AppointmentRoutes />} />
-        <Route path="/app/business/profile" element={<BusinessProfilePage />} />
+        <Route path="/app/business/profile" element={<ConsoleGate need="owner"><BusinessProfilePage /></ConsoleGate>} />
         {/* v6 Batch 3: the business More sub-pages (MO1B). */}
         <Route path="/app/business/more/*" element={<BusinessMoreRoutes />} />
         <Route path="/app/business/messages" element={<Navigate to="/app/messages" replace />} />
-        <Route path="/app/business/employees/*" element={<TeamRoutes />} />
+        <Route path="/app/business/employees/*" element={<ConsoleGate need="members"><TeamRoutes /></ConsoleGate>} />
         <Route path="/app/businesses" element={<MyBusinessesPage />} />
         <Route path="/app/business/members" element={<Navigate to="/app/business/analytics/members/codes" replace />} />
         {/* v6 Batch 4 · Classes: Schedule, Class rules and the session page (OP1-074 … 155). */}
-        <Route path="/app/business/classes" element={<SchedulePage />} />
-        <Route path="/app/business/classes/rules" element={<ClassRulesPage />} />
-        <Route path="/app/business/classes/:id" element={<SessionPage />} />
+        <Route path="/app/business/classes" element={<ConsoleGate need="schedule"><SchedulePage /></ConsoleGate>} />
+        <Route path="/app/business/classes/rules" element={<ConsoleGate need="schedule"><ClassRulesPage /></ConsoleGate>} />
+        <Route path="/app/business/classes/:id" element={<ConsoleGate need={["schedule", "front_desk"]}><SessionPage /></ConsoleGate>} />
         <Route path="/app/business/operations" element={<BusinessOperationsTab />} />
         {/* v6 Batch 4: plans (Front desk › Memberships) and the plan page. */}
-        <Route path="/app/business/gym/*" element={<PlansRoutes />} />
+        <Route path="/app/business/gym/*" element={<ConsoleGate need="members"><PlansRoutes /></ConsoleGate>} />
         <Route path="/app/business/venue/*" element={<BusinessVenueTab />} />
-        <Route path="/app/business/calendar" element={<BusinessCalendarTab />} />
+        <Route path="/app/business/calendar" element={<ConsoleGate need="schedule"><BusinessCalendarTab /></ConsoleGate>} />
         <Route path="/app/profile" element={<Profile />} />
         <Route path="/app/profile/cv" element={<MyCv />} />
         <Route path="/app/subscription" element={<Subscription />} />

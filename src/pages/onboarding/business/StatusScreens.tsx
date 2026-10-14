@@ -6,6 +6,7 @@ import { ObStatus, ObSkeleton, ObTip, Shapes } from "../shell";
 import { BizFrame, type BizFooter } from "./BizFrame";
 import { BizListingPreview, BizSummary } from "./ui";
 import { approvedBody, submittedLabel } from "./lanes";
+import { Toggle } from "../../../components/ui/Toggle";
 import { STATUS_REJECTED_VIS, STATUS_SUBMITTED_VIS, statusFan } from "./bizLanes";
 import type { ReviewItem } from "../../../services/business-onboarding";
 
@@ -99,7 +100,24 @@ export const ApprovedScreen: React.FC<{
   animate: boolean;
   onOpenDashboard: () => void;
   onShare: () => void;
-}> = ({ lane, name, preview, animate, onOpenDashboard, onShare }) => {
+  /**
+   * B7 (20261120140000): business_profiles.active. New businesses start
+   * hidden; approval lists them, but a business that is off (switched off, or
+   * paused) is told here and can turn Show on Explore on in place.
+   */
+  listed?: boolean;
+  onShowOnExplore?: () => Promise<string | null>;
+}> = ({ lane, name, preview, animate, onOpenDashboard, onShare, listed = true, onShowOnExplore }) => {
+  const [busy, setBusy] = useState(false);
+  const [showError, setShowError] = useState<string | null>(null);
+  const turnOn = async () => {
+    if (!onShowOnExplore || busy) return;
+    setBusy(true);
+    setShowError(null);
+    const err = await onShowOnExplore();
+    setBusy(false);
+    if (err) setShowError(err);
+  };
   const reduced = useReducedMotion();
   const [k, setK] = useState(animate && !reduced ? 1 : 4);
   const [fade, setFade] = useState(animate && reduced ? 0 : 1);
@@ -122,7 +140,7 @@ export const ApprovedScreen: React.FC<{
             eyebrow="Approved"
             eyebrowColor="var(--ob-good)"
             title="You're live"
-            body={approvedBody(lane, name)}
+            body={listed ? approvedBody(lane, name) : `${name} is approved. Turn on Show on Explore so people can find you.`}
             ringOpacity={A.ro}
             ringScale={A.rs}
             glowOpacity={A.gl}
@@ -130,6 +148,18 @@ export const ApprovedScreen: React.FC<{
             textOpacity={A.to}
           />
         </div>
+        {!listed && k >= 3 && (
+          <div className="rounded-[20px] bg-list px-4 mb-[14px]" role="group" aria-label="Show on Explore">
+            <div className="flex items-center gap-3 min-h-[62px]">
+              <span className="flex-1 min-w-0">
+                <span className="block text-[14px] leading-[19px] font-bold text-charcoal">Show on Explore</span>
+                <span className="block text-[11.5px] leading-[16px] text-charcoal-faint mt-[1px]">Hidden: clients can't find you on Explore.</span>
+              </span>
+              <Toggle checked={false} onChange={() => void turnOn()} label="Show on Explore" size="business-lg" disabled={busy || !onShowOnExplore} />
+            </div>
+            {showError && <p role="alert" className="text-[12px] font-bold text-status-high pb-3">{showError}</p>}
+          </div>
+        )}
         {k >= 3 && <BizListingPreview {...preview} />}
       </BizFrame>
     </div>

@@ -30,7 +30,7 @@ import type { TeamData } from "./useTeamData";
 export function PersonPage({ data }: { data: TeamData }) {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { kind, people, sessions, today, businessId, error } = data;
+  const { kind, people, sessions, today, businessId, error, readOnly } = data;
   const person = people?.find((p) => p.professionalId === id) ?? null;
   const [toast, showToast] = useTeamToast();
   const [confirm, setConfirm] = useState(false);
@@ -114,7 +114,8 @@ export function PersonPage({ data }: { data: TeamData }) {
       ]
     : [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
-        { t: "Cancel invite", i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline, red: true },
+        // B7: business_employees writes stay the owner's.
+        ...(readOnly ? [] : [{ t: "Cancel invite", i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline, red: true }]),
       ];
 
   const doRemove = async () => {
@@ -171,7 +172,7 @@ export function PersonPage({ data }: { data: TeamData }) {
       <RoleCard
         person={person}
         kind={kind}
-        disabled={offline}
+        disabled={offline || readOnly}
         onSaved={data.reload}
         onToast={showToast}
         onNoSeats={() => setFull(true)}
@@ -244,9 +245,9 @@ export function PersonPage({ data }: { data: TeamData }) {
         />
       )}
 
-      <PermissionsCard key={person.permissions.join()} person={person} disabled={offline} onSaved={data.reload} onToast={showToast} />
+      <PermissionsCard key={person.permissions.join()} person={person} disabled={offline || readOnly} onSaved={data.reload} onToast={showToast} readOnly={readOnly} />
 
-      {accepted && (
+      {accepted && !readOnly && (
         <button type="button" className="tm-danger tap" disabled={offline} onClick={() => setConfirm(true)}>
           <UserMinus size={16} strokeWidth={2.2} />
           Remove from team

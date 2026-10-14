@@ -348,7 +348,7 @@ export async function fetchAvailability(businessId: string, professionalId: stri
   };
 }
 
-export type TermsOutcome = { ok: true } | { ok: false; reason: "own" | "no_seats" | "failed"; message: string };
+export type TermsOutcome = { ok: true } | { ok: false; reason: "own" | "no_seats" | "unknown_permission" | "failed"; message: string };
 
 /**
  * set_employee_terms(employment, role, permissions, pay rate, clear pay rate)
@@ -372,6 +372,10 @@ export async function setEmployeeTerms(
   if (isOffline(error)) return { ok: false, reason: "failed", message: "Couldn't save. Check your connection and try again." };
   if (text.includes("your own")) return { ok: false, reason: "own", message: "You can't change your own role or access. Ask the owner." };
   if (text.includes("ATXC0") || error.code === "23514") return { ok: false, reason: "no_seats", message: "All seats are in use." };
+  // B7 added 'venues' to the permission vocabulary, but set_employee_terms()
+  // still checks the B6 list (reported to the Database session), so any list
+  // holding venues is refused until it is updated.
+  if (text.includes("unknown permission")) return { ok: false, reason: "unknown_permission", message: "Venue access can't be saved yet. Try again later." };
   console.error("[business-team] set_employee_terms failed:", error.code, error.message);
   return { ok: false, reason: "failed", message: "Couldn't save. Try again." };
 }

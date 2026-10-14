@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { fetchMyTeam } from "../../services/business-team";
+import { fetchMyMembers } from "../../services/business-members";
 import { getCalendar } from "../../services/calendar";
 import { fetchClassRoster, fetchVenueMembers } from "../../services/venues/console";
 import { shiftDate, todayLocal } from "../../utils/date";
@@ -128,7 +129,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
   const windowIds = classes.filter((k) => k.date >= from && k.date <= to).map((k) => k.id);
   const todayIds = classes.filter((k) => k.date === today).map((k) => k.id);
 
-  const [bookingsRes, membersRes, codesRes, plansRes, offeringsRes, listingsRes, discountsRes, seatsRes, gymsRes, storeRes, progressRes, teamRes, calRes, rosters, venueMembers] =
+  const [bookingsRes, membersRes, codesRes, plansRes, offeringsRes, listingsRes, discountsRes, seatsRes, gymsRes, storeRes, progressRes, teamRes, calRes, rosters, venueMembers, named] =
     await Promise.all([
       windowIds.length
         ? db.from<{ business_class_id: string; client_id: string; created_at: string }>("business_class_bookings").select("business_class_id, client_id, created_at").in("business_class_id", windowIds)
@@ -150,7 +151,10 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       getCalendar(userId),
       Promise.all(todayIds.map(async (id) => [id, await fetchClassRoster(id)] as const)),
       gymId ? fetchVenueMembers(gymId, "active", 200, 0) : Promise.resolve(null),
+      // B7: first names for the activity feed (the table read above has ids only).
+      fetchMyMembers(bid, { limit: 200 }),
     ]);
+  const firstNames = new Map(named.ok ? named.members.map((m) => [m.id, m.firstName ?? null] as const) : []);
 
   const bookings = ok(bookingsRes, "bookings", partial, [] as { business_class_id: string; client_id: string; created_at: string }[]).map((r) => ({
     classId: r.business_class_id,
@@ -160,6 +164,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
   const members = ok(membersRes, "members", partial, []).map((r) => ({
     id: r.id,
     memberId: r.member_id,
+    firstName: firstNames.get(r.id) ?? null,
     planId: r.membership_plan_id,
     invitedAt: r.invited_at,
     respondedAt: r.responded_at,

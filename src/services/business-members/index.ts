@@ -36,10 +36,12 @@ import { supabase } from "../../../lib/supabase/client";
 // real and a caller holding a uuid (a future admin tool, a deep link) can use
 // it; nothing in this UI can currently produce that uuid.
 //
-// MEMBER NAMES ARE NOT AVAILABLE TO THE BUSINESS, same structural reason. A
-// roster can show status, plan and dates, and cannot show who. Fixing that
-// needs a view or a widened grant — a schema decision, not something this file
-// can reach for.
+// MEMBER NAMES (B7): `profiles` is own-row only, so the business's roster is
+// read through list_business_members(business, state, limit, offset), the
+// business-level counterpart of venue_members(): a FIRST NAME and a minor
+// flag, never a date of birth, pending first, with total_count for paging.
+// It needs business_can(members) and returns nothing (not an error) without
+// it.
 
 /** Where a membership row sits. Derived, not stored — see toMembership. */
 export type MembershipStatus = "pending" | "active" | "declined" | "ended";
@@ -47,7 +49,12 @@ export type MembershipStatus = "pending" | "active" | "declined" | "ended";
 export interface Membership {
   id: string;
   businessId: string;
-  memberId: string;
+  /** The member's account. Null on the business's roster: list_business_members never hands it out. */
+  memberId: string | null;
+  /** First name only (B7 list_business_members); null on the member's own side, or when the reader has none. */
+  firstName?: string | null;
+  /** Under 18 (a flag, never an age). */
+  isMinor?: boolean;
   membershipPlanId: string | null;
   status: MembershipStatus;
   invitedAt: string;
@@ -129,20 +136,6 @@ type PgError = { message: string; code?: string } | null;
 // from database.types.ts — newer than the last regeneration, as
 // professional_reviews_readable and my_class_schedule were. Cast to the exact
 // call shapes this file makes rather than hand-editing a generated file.
-type MembersTable = {
-  select: (columns: string) => {
-    eq: (
-      column: string,
-      value: string
-    ) => {
-      order: (
-        column: string,
-        options: { ascending: boolean }
-      ) => PromiseLike<{ data: Row[] | null; error: PgError }>;
-    };
-  };
-};
-
 type CodesTable = {
   select: (columns: string) => {
     eq: (
@@ -181,9 +174,6 @@ type MembershipsView = {
     }>;
   };
 };
-
-const membersTable = (): MembersTable =>
-  (supabase as unknown as { from: (t: "business_members") => MembersTable }).from("business_members");
 
 const membershipsView = (): MembershipsView =>
   (supabase as unknown as { from: (v: "my_business_memberships") => MembershipsView }).from(
@@ -229,50 +219,70 @@ function describe(error: { message?: string; code?: string }, fallback: string):
 }
 
 /**
- * Plan names for the plans actually on screen, batched.
- *
- * STILL HERE, AND ONLY FOR THE BUSINESS'S OWN ROSTER. The member side reads
- * my_business_memberships instead, which carries plan_name already — but
- * membership_plans_select_public is
- * `business_is_listed(business_id) OR is_business_insider(business_id)`, and
- * an owner satisfies the second half whatever their listing is set to. So
- * this read works for fetchMyMembers and would not have worked for a member
- * looking at a delisted business. businessNames() is gone entirely: nothing
- * calls it now.
- */
-async function planNames(ids: string[]): Promise<Map<string, string>> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return new Map();
-  const { data } = await supabase.from("membership_plans").select("id, name").in("id", unique);
-  return new Map((data ?? []).map((p) => [p.id as string, p.name as string]));
-}
-
-/**
- * The business's own roster, every state included.
+ * The business's own roster, every state included (B7 list_business_members).
  *
  * NOT FILTERED TO ACTIVE. An owner needs to see that an invitation is still
  * unanswered and that somebody declined — a roster showing only the people who
- * said yes cannot explain why the person they invited is missing.
+ * said yes cannot explain why the person they invited is missing. The reader
+ * sorts pending first, then newest; `total` is the full count for "See all".
+ *
+ * Staff holding `members` read the same roster; without it the reader
+ * returns no rows rather than an error, so an empty list is all they see.
  */
 export async function fetchMyMembers(
-  businessId: string
-): Promise<{ ok: true; members: Membership[] } | { ok: false; message: string }> {
-  const { data, error } = await membersTable()
-    .select(MEMBER_COLUMNS)
-    .eq("business_id", businessId)
-    .order("invited_at", { ascending: false });
+  businessId: string,
+  opts: { state?: MembershipStatus | null; limit?: number; offset?: number } = {}
+): Promise<{ ok: true; members: Membership[]; total: number } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("list_business_members", {
+    p_business_id: businessId,
+    p_state: opts.state ?? null,
+    p_limit: opts.limit ?? 200,
+    p_offset: opts.offset ?? 0,
+  });
 
   if (error) {
     console.error("[members] Could not read the member roster:", error.message);
     return { ok: false, message: "Couldn't load your members. Try again." };
   }
-  const rows = data ?? [];
-  const plans = await planNames(rows.map((r) => r.membership_plan_id).filter((x): x is string => !!x));
+  const rows = (data ?? []) as ListedMember[];
+  return { ok: true, members: rows.map((r) => listedToMembership(r, businessId)), total: Number(rows[0]?.total_count ?? 0) };
+}
+
+type ListedMember = {
+  membership_id: string;
+  member_first_name: string | null;
+  member_is_minor: boolean | null;
+  plan_name: string | null;
+  plan_price: number | string | null;
+  state: string;
+  invited_at: string;
+  responded_at: string | null;
+  ended_at: string | null;
+  total_count: number | string;
+};
+
+const STATES: MembershipStatus[] = ["pending", "active", "declined", "ended"];
+
+/** The reader's row in the shape the screens already use. */
+export function listedToMembership(r: ListedMember, businessId: string): Membership {
   return {
-    ok: true,
-    members: rows.map((r) => toMembership(r, r.membership_plan_id ? plans.get(r.membership_plan_id) ?? null : null)),
+    id: r.membership_id,
+    businessId,
+    memberId: null,
+    firstName: r.member_first_name?.trim() || null,
+    isMinor: !!r.member_is_minor,
+    membershipPlanId: null,
+    status: STATES.includes(r.state as MembershipStatus) ? (r.state as MembershipStatus) : "pending",
+    invitedAt: r.invited_at,
+    respondedAt: r.responded_at,
+    endedAt: r.ended_at,
+    planName: r.plan_name,
+    businessName: null,
   };
 }
+
+/** "Member #4F2A" where the reader gives no first name (the masking rule, HANDOVER §4). */
+export const maskedMemberLabel = (membershipId: string) => `Member #${membershipId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 
 /**
  * The signed-in person's own memberships and invitations.

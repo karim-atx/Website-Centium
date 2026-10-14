@@ -58,7 +58,7 @@ export function dayLabel(iso: string, today: string): string {
   return shortDay(iso);
 }
 
-/** "Member #4F2A": members are masked unless they shared their profile (HANDOVER §4). */
+/** "Member #4F2A": a member the readers give no first name for (B7 list_business_members gives one; HANDOVER §4). */
 export const maskedMember = (id: string) => `Member #${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 
 const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)[0] : "");
@@ -457,7 +457,7 @@ export function activityEvents(raw: DashRaw, now: Date, days = 30): ActivityEven
         type: "joined",
         at: m.respondedAt,
         day: localDayOf(m.respondedAt),
-        title: `${maskedMember(m.memberId)} joined`,
+        title: `${m.firstName ?? maskedMember(m.memberId)} joined`,
         sub: viaCode ? `Redeemed a code · ${plan ?? "no plan"}` : plan ?? "No plan",
         initial: null,
       });
@@ -471,7 +471,7 @@ export function activityEvents(raw: DashRaw, now: Date, days = 30): ActivityEven
         type: "ended",
         at: m.endedAt,
         day: localDayOf(m.endedAt),
-        title: `${maskedMember(m.memberId)} ended their membership`,
+        title: `${m.firstName ?? maskedMember(m.memberId)} ended their membership`,
         sub: `Member since ${sinceLabel}`,
         initial: null,
       });

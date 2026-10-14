@@ -3,6 +3,7 @@ import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Users, CalendarDays, ChevronRight, KeyRound, Store } from "lucide-react";
 import { useBusinessNavKind } from "../../components/navigation/useBusinessNavKind";
+import { ConsoleGate } from "../../components/business-console/ConsoleGate";
 import { FrontDeskPage } from "../business-ops/frontdesk/FrontDeskPage";
 import { MembershipsTab } from "../business-ops/plans";
 import StoreOrdersPage from "../business-ops/store/StoreOrdersPage";
@@ -16,16 +17,24 @@ import SchedulePage from "../business-ops/classes/SchedulePage";
 //   the Memberships tab is the plan list from business-ops/plans.
 // - classes (Schedule), store (Orders), appointments: their areas' pages.
 // - unknown type: the old landing below, until the type is known.
+// B7: each branch is gated on the permission its readers ask business_can
+// for (staff see the no-access card instead of an empty business); the gym
+// Front desk's Memberships tab needs 'members' on top of 'front_desk'.
 export default function BusinessOperationsTab() {
   const kind = useBusinessNavKind();
-  if (kind === "gym") return <FrontDeskPage memberships={<MembershipsTab />} />;
+  if (kind === "gym")
+    return (
+      <ConsoleGate need={["front_desk", "members"]}>
+        <FrontDeskPage memberships={<ConsoleGate need="members"><MembershipsTab /></ConsoleGate>} />
+      </ConsoleGate>
+    );
   // Batch 4 classes: Schedule (OP1-074 … 155), business-ops/classes.
-  if (kind === "classes") return <SchedulePage />;
+  if (kind === "classes") return <ConsoleGate need="schedule"><SchedulePage /></ConsoleGate>;
   // Batch 4 store: Orders (To fulfil · Completed · Returns); a Wellness
   // Service with appointments only: Appointments (O11).
-  if (kind === "store") return <StoreOrdersPage />;
-  if (kind === "appointments") return <AppointmentsPage />;
-  return <OperationsLanding />;
+  if (kind === "store") return <ConsoleGate need="store"><StoreOrdersPage /></ConsoleGate>;
+  if (kind === "appointments") return <ConsoleGate need="owner"><AppointmentsPage /></ConsoleGate>;
+  return <ConsoleGate need="owner"><OperationsLanding /></ConsoleGate>;
 }
 
 // V9 (QA 9.0): "Add a new button between analytics and marketplace called
