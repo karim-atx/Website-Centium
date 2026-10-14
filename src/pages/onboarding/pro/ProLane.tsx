@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../../services/profile";
 import { recordLegalAcceptances } from "../../../services/legal/acceptances";
-import { setMapArea, setPublicListing } from "../../../services/professional-profile";
+import { fetchMyProfile, setMapArea, UNDER_18_LISTING } from "../../../services/professional-profile";
 import { fetchMyCv } from "../../../services/professional-cv";
 import { requestToJoin } from "../../../services/business-team/employment";
-import { logOtherDiscipline, markOwnerItemDone, saveProLaneColumns } from "../../../services/professional-onboarding";
+import { fetchGoLiveStatus, logOtherDiscipline, markOwnerItemDone, saveProLaneColumns } from "../../../services/professional-onboarding";
 import { OFFLINE_MESSAGE } from "../../../services/network-error";
 import { ageFromDateOfBirth } from "../../../utils/date";
 import type { ActivityLevel, Goal, ProfessionalSubtype, TrackPreference } from "../../../types";
@@ -59,9 +59,10 @@ interface DraftLike extends ProShared {
  * SUBMIT ORDER: the Terms acceptance first (nothing is set up without it on
  * record), then the lane's columns, then the profile row (which marks the
  * account onboarded, server first as task T requires), then the two things
- * that need a date of birth on file: the map area and, for Fitness / Other,
- * the public listing (Go live). A Physiotherapist / Dietitian is listed when
- * the licence is verified (GO_LIVE_ON_VERIFICATION, read by the dashboard).
+ * that need a date of birth on file: the map area, and the go-live item. No
+ * lane is listed at submit: every professional is listed once their licence
+ * or certificate is verified (GO_LIVE_ON_VERIFICATION, read by the dashboard;
+ * user decision 14 Oct 2026).
  */
 export function ProLane<D extends DraftLike>({
   stepKey,
@@ -86,7 +87,7 @@ export function ProLane<D extends DraftLike>({
   const kind = proKindOf(draft.professionalSubtype);
   const pro = restoreProDraft(kind, draft.pro);
   const [returnToReview, setReturnToReview] = useState(false);
-  const [done, setDone] = useState<{ status: ProStatus; at: Date; notListed: string | null; headline: string | null } | null>(null);
+  const [done, setDone] = useState<{ status: ProStatus; at: Date; notListed: string | null; headline: string | null; noDocument: boolean } | null>(null);
 
   const setPro: React.Dispatch<React.SetStateAction<ProLaneDraft>> = useCallback(
     (u) =>
@@ -171,21 +172,24 @@ export function ProLane<D extends DraftLike>({
       const r = await setMapArea(pro.area.lat, pro.area.lng, pro.area.label);
       if (!r.ok) console.warn("[pro-onboarding] Area not saved:", r.message);
     }
+    // Nobody is listed at submit (user decision, 14 Oct 2026, every lane): the
+    // listing waits for the licence or certificate check (GO_LIVE_ON_VERIFICATION,
+    // acted on by the dashboard and the verification screen). Under 18 (ATX47)
+    // and affiliated (ATX03) accounts are never listed individually.
+    const age = ageFromDateOfBirth(draft.dateOfBirth);
+    const mine = await fetchMyProfile(authUserId);
     let notListed: string | null = null;
-    if (isRegulated(kind)) {
-      await markOwnerItemDone(authUserId, GO_LIVE_ON_VERIFICATION).then(() => undefined);
-    } else {
-      const listed = await setPublicListing(true);
-      if (listed.status === "error") notListed = listed.message;
-      else if (listed.status === "affiliated") notListed = "Your listing is handled by your business while you're affiliated.";
-    }
-    const cv = await fetchMyCv(authUserId);
+    if (age != null && age < 18) notListed = UNDER_18_LISTING;
+    else if (mine.ok && mine.profile?.affiliatedBusinessId) notListed = "Your listing is handled by your business while you're affiliated.";
+    else await markOwnerItemDone(authUserId, GO_LIVE_ON_VERIFICATION).then(() => undefined);
+    const [cv, goLive] = await Promise.all([fetchMyCv(authUserId), fetchGoLiveStatus(authUserId, isRegulated(kind))]);
     onFinished();
     setDone({
-      status: isRegulated(kind) ? "pending" : "live",
+      status: notListed ? "live" : "pending",
       at: new Date(),
       notListed,
       headline: cv.ok ? cv.cv.profile.headline : null,
+      noDocument: goLive.ok && goLive.status.kind === "none",
     });
     return { ok: true };
   };
@@ -212,6 +216,7 @@ export function ProLane<D extends DraftLike>({
         firstName={name}
         submittedAt={done.at}
         notListed={done.notListed}
+        noDocument={done.noDocument}
         preview={{
           initials: initials(name),
           avatarUrl: user.avatarUrl ?? null,

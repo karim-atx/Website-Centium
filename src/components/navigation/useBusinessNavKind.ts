@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase as db } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import { businessNavKind, type BusinessNavKind } from "./navItems";
 import { BUSINESS_TYPE_CHANGED_EVENT } from "../../services/business-more";
@@ -9,10 +8,7 @@ import { CONSOLE_ACCESS_CHANGED, loadConsoleAccess } from "../../services/busine
 
 // v6 Business UI navbar per type (X-31, V6-54). The business type lives on
 // business_profiles (profiles carries none), and "Wellness with appointments
-// only" needs business_store_settings (B5). Both are newer than
-// lib/supabase/database.types.ts (generated from production: no `studio`, no
-// store settings), so the reads go through an untyped view of the client.
-const db = typed as unknown as SupabaseClient;
+// only" needs business_store_settings (B5).
 
 const STORAGE_KEY = "centium-business-nav-kind:";
 const memo = new Map<string, BusinessNavKind>();

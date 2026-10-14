@@ -17,7 +17,11 @@ export const PRO_KIND: Record<ProfessionalSubtype, ProKind> = {
 
 export const proKindOf = (s: ProfessionalSubtype | null | undefined): ProKind => PRO_KIND[s ?? "other"] ?? "other";
 
-/** Physiotherapy and dietetics are regulated: the licence is checked before going live. */
+/**
+ * Physiotherapy and dietetics are regulated: a registering body, number and
+ * proof are required. Every lane goes live only once checked (Fitness / Other
+ * on their certificate).
+ */
 export const isRegulated = (k: ProKind): boolean => k === "physio" || k === "diet";
 
 /** The lane's six numbered steps, by name (resume works by name, not position). */
@@ -342,11 +346,15 @@ export function initials(name: string): string {
 }
 
 /**
- * onboarding_progress item set when a Physiotherapist / Dietitian submits for
- * verification: the Get set up card lists them once the licence is verified,
- * then dismisses the item (so a later "off" is respected).
+ * onboarding_progress item set when a professional (every lane, user decision
+ * 14 Oct 2026) submits onboarding: the Get set up card and the verification
+ * screen list them on Explore once their licence or certificate is verified
+ * (fetchGoLiveStatus), then dismiss the item (so a later "off" is respected).
  */
 export const GO_LIVE_ON_VERIFICATION = "pro_go_live_on_verification";
+
+/** What a lane's checked document is called: a regulated licence, or a certificate. */
+export const credentialWord = (k: ProKind): "licence" | "certificate" => (isRegulated(k) ? "licence" : "certificate");
 
 const CHIP_MAX = 22;
 

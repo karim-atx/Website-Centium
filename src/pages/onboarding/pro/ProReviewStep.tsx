@@ -33,8 +33,10 @@ function backgroundLine(cv: ReturnType<typeof useMyCv>["cv"]): string {
  * OB-211). Every summary is the person's own answers (the frames' sample
  * values never ship); Edit opens that step and its Continue comes back here.
  * The Terms checkbox is required and recorded (B5 legal_acceptances).
- * Fitness / Other: "Go live". Physiotherapist / Dietitian: "Submit for
- * verification" (the licence check runs in the existing review queue).
+ * Every lane goes live only once checked (user decision 14 Oct 2026):
+ * "Submit for verification" (the licence or certificate check runs in the
+ * existing review queue); Fitness / Other without a certificate "Finish
+ * setting up" (nothing to check yet, so not listed until one is added).
  * KEEP-SAFETY: the health disclaimer sits above the submit button, so the
  * health_disclaimer acceptance recorded on submit (ProLane) is for text the
  * person has seen (same placement as the client's You're all set).
@@ -61,8 +63,9 @@ export const ProReviewStep: React.FC<
   const credLine = reg
     ? `${kind === "physio" ? "Licence" : "Registration"} ${pro.licenceNumber.trim()}${pro.registrationLicenceId ? " · proof uploaded" : ""}`
     : shared.certificationFile
-    ? "Certificate uploaded, optional"
-    : "No certificate yet, optional";
+    ? "Certificate uploaded, checked before you go live"
+    : "No certificate yet, needed to go live";
+  const toCheck = reg || !!shared.certificationFile;
 
   const submit = async () => {
     if (!pro.termsAccepted) {
@@ -85,7 +88,13 @@ export const ProReviewStep: React.FC<
       chipLabel={chipLabel}
       step="review"
       title="Review and submit"
-      subtitle={reg ? "One last look. Your profile goes live once your licence is checked." : "One last look. Your profile goes live as soon as you submit."}
+      subtitle={
+        reg
+          ? "One last look. Your profile goes live once your licence is checked."
+          : toCheck
+          ? "One last look. Your profile goes live once your certificate is checked."
+          : "One last look. Your profile goes live once you add a certificate and we've checked it."
+      }
       onBack={onBack}
       saveExit={false}
       footer={
@@ -93,7 +102,7 @@ export const ProReviewStep: React.FC<
           error={submitError ?? (offline ? OB_STRINGS.offlineSubmit : null)}
           errorTone={submitError ? "error" : "info"}
           primary={{
-            label: busy ? OB_STRINGS.submitting : submitError ? OB_STRINGS.tryAgain : reg ? "Submit for verification" : "Go live",
+            label: busy ? OB_STRINGS.submitting : submitError ? OB_STRINGS.tryAgain : toCheck ? "Submit for verification" : "Finish setting up",
             onClick: () => void submit(),
             disabled: busy || offline || !!termsError,
           }}

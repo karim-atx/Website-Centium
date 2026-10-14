@@ -20,8 +20,7 @@ export * from "./access";
 // Cached per account for the session and dropped on CONSOLE_ACCESS_CHANGED
 // (choosing another business, accepting or leaving a team, sign-out).
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 columns, newer than the production-generated types
-const db = supabase as any;
+const db = supabase;
 
 export const CONSOLE_ACCESS_CHANGED = "centium:console-access-changed";
 const CHOSEN_KEY = (uid: string) => `centium.consoleBusiness:${uid}`;

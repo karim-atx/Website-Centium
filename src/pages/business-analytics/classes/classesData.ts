@@ -8,8 +8,7 @@ import { lookbackFrom, type RawData, type RangeIn } from "./classesModel";
 // public_profile_summary (first names). business_class_cancellations and
 // business_class_waitlist have no owner policy, so nothing here reads them.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- embedded !inner filters are not in the generated types
-const db = supabase as any;
+const db = supabase;
 
 type ClassRow = {
   id: string;

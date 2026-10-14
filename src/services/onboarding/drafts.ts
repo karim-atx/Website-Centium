@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase } from "../../../lib/supabase/client";
+import type { Json } from "../../../lib/supabase/database.types";
 import { isOffline } from "../network-error";
 
 /**
@@ -18,8 +18,6 @@ import { isOffline } from "../network-error";
  * the signed-out (pre-account) draft and as the offline cache.
  */
 
-// B5 is newer than lib/supabase/database.types.ts (generated from production): untyped here.
-const supabase = typed as unknown as SupabaseClient;
 
 export type DraftLane = "client" | "professional" | "business";
 
@@ -76,13 +74,15 @@ export async function saveDraft(
   profileId: string,
   lane: DraftLane,
   stepKey: string,
-  payload: Record<string, unknown>,
+  draft: Record<string, unknown>,
   businessId: string | null = null
 ): Promise<DraftResult<true>> {
   if (lane === "business" && !businessId) return { ok: false, offline: false, message: "no business yet" };
-  const text = JSON.stringify(payload);
+  const text = JSON.stringify(draft);
   if (new Blob([text]).size > DRAFT_MAX_BYTES) return { ok: false, offline: false, message: "draft too large" };
   const key = stepKey.trim().slice(0, 60) || "welcome";
+  // JSON-safe by construction: it was just serialised above.
+  const payload = draft as Json;
   try {
     let q = supabase.from("onboarding_drafts").update({ step_key: key, payload }).eq("profile_id", profileId).eq("lane", lane);
     q = businessId ? q.eq("business_id", businessId) : q.is("business_id", null);
@@ -94,7 +94,7 @@ export async function saveDraft(
       .insert({ profile_id: profileId, lane, business_id: businessId, step_key: key, payload });
     if (ins.error) {
       // Lost a race with another tab's insert: the row exists now, so update it.
-      if (ins.error.code === "23505") return saveDraft(profileId, lane, stepKey, payload, businessId);
+      if (ins.error.code === "23505") return saveDraft(profileId, lane, stepKey, draft, businessId);
       return fail(ins.error);
     }
     return { ok: true, value: true };

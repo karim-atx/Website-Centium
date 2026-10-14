@@ -19,8 +19,7 @@ import { addDays, previousRange, type OvBooking, type OvClass, type OvRaw, type 
 // the stack: the page polls every 2 minutes instead (D2).
 
 type Err = { message: string } | null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- embedded !inner filters and newer RPCs are not in the generated types
-const db = supabase as any;
+const db = supabase;
 
 export type OverviewLoad = { ok: true; raw: OvRaw } | { ok: false; message: string };
 

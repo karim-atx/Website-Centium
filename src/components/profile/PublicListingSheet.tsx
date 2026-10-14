@@ -16,6 +16,8 @@ import {
   type Affiliation,
   type ProfessionalProfile,
 } from "../../services/professional-profile";
+import { fetchGoLiveStatus } from "../../services/professional-onboarding";
+import type { LicenceStatus } from "../../services/professional-cv";
 
 type Draft = {
   specialty: string;
@@ -81,12 +83,21 @@ const fields: { key: keyof Draft; label: string; placeholder: string; multiline?
  *   affiliated   a business owns this professional's listing. Blocked by the
  *                database (ATX03), explained here by name.
  *   ready        off or on, and writable.
+ *
+ * And a fifth, VERIFICATION (user decision 14 Oct 2026): a professional of
+ * any lane is listed only once their licence (Physiotherapist / Dietitian) or
+ * certificate (Fitness / Other) is verified. Until then the switch can't be
+ * turned on (turning an existing listing off always works). The database does
+ * not gate this, so the check is here and on the dashboard.
  */
 export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
   onClose,
 }) => {
-  const { authUserId, theme } = useApp();
+  const { authUserId, theme, user } = useApp();
+  const regulated = user.professionalSubtype === "physiotherapist" || user.professionalSubtype === "dietitian";
+  const docWord = regulated ? "licence" : "certificate";
+  const [check, setCheck] = useState<LicenceStatus | null>(null);
   /**
    * DATE OF BIRTH (Database 16f2f43). `needsDob` is true when this
    * professional is already published without one: they keep their listing,
@@ -125,6 +136,9 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
       setProfile(result.profile);
       setDraft(draftFrom(result.profile));
       setDobAsk(null);
+      const goLive = await fetchGoLiveStatus(authUserId, regulated);
+      if (cancelled) return;
+      setCheck(goLive.ok ? goLive.status : null);
       void listingNeedsDateOfBirth().then((v) => {
         if (!cancelled) setNeedsDob(v);
       });
@@ -136,7 +150,7 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
     return () => {
       cancelled = true;
     };
-  }, [open, authUserId]);
+  }, [open, authUserId, regulated]);
 
   const save = async () => {
     if (!authUserId || saving) return;
@@ -195,6 +209,15 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
   };
 
   const listed = profile?.listedPublicly ?? false;
+  const verified = check?.kind === "verified";
+  // Not yet checked: the switch can't be turned on (an existing listing can still be turned off).
+  const waiting = !listed && !verified;
+  const waitingLine =
+    check?.kind === "pending"
+      ? `We're checking your ${docWord}. You can be listed once it's verified.`
+      : check?.kind === "rejected"
+      ? `We couldn't verify your ${docWord}. Fix it in My CV to be listed.`
+      : `Add your ${docWord} in My CV. You can be listed once we've checked it.`;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Your public listing">
@@ -276,6 +299,8 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
                   {profile
                     ? listed
                       ? "Clients browsing Explore can find you."
+                      : waiting
+                      ? waitingLine
                       : "You're not listed. Only clients with your code can connect."
                     : "Save your details first. There's nothing to list yet."}
                 </p>
@@ -283,7 +308,7 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
               <Toggle
                 checked={listed}
                 onChange={(v) => void toggleListing(v)}
-                disabled={!profile || listingBusy}
+                disabled={!profile || listingBusy || waiting}
                 label="Show me in Explore"
               />
             </div>

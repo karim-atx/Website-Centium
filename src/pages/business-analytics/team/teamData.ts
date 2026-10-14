@@ -26,8 +26,7 @@ import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../
 // seat purchase (B8). Role, permission and pay changes live on the Team
 // person page (set_employee_terms).
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 columns, not in the production-generated types
-const db = supabase as any;
+const db = supabase;
 
 export type { BusinessRole, ClassRow, SeatInfo, TeamData, TeamPerson };
 

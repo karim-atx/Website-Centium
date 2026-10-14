@@ -21,8 +21,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 // production and B6 ships with Release 2), so calls go through one loose
 // handle at this boundary.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 tables and functions, not in the production-generated types
-const db = supabase as any;
+const db = supabase;
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
 
@@ -210,7 +209,8 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
     p_identifier: identifier.trim(),
     p_role: role,
     p_business_id: businessId,
-    p_message: message?.trim() ? message.trim() : null,
+    // Omitted rather than null: the parameter defaults to null (typed optional).
+    p_message: message?.trim() ? message.trim() : undefined,
   });
   if (!error) return { ok: true };
   const text = `${error.message ?? ""}`;
@@ -383,9 +383,10 @@ export async function setEmployeeTerms(
 ): Promise<TermsOutcome> {
   const { error } = await db.rpc("set_employee_terms", {
     p_employment_id: employmentId,
-    p_role: terms.role ?? null,
-    p_permissions: terms.permissions ?? null,
-    p_pay_rate_per_class: terms.payRate ?? null,
+    // Omitted rather than null: each defaults to null ("leave unchanged").
+    p_role: terms.role,
+    p_permissions: terms.permissions,
+    p_pay_rate_per_class: terms.payRate,
     p_clear_pay_rate: !!terms.clearPayRate,
   });
   if (!error) return { ok: true };

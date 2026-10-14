@@ -31,7 +31,9 @@ import type { ProStepProps } from "./types";
  *
  * Fitness and Other: the certificate (kept from About you: uploaded the moment
  * it is picked, the server path read first so a replace removes the real old
- * file; the database turns it into licence #1) and who issued it.
+ * file; the database turns it into licence #1) and who issued it. Not required
+ * to finish, but every lane is listed only once checked (user decision
+ * 14 Oct 2026), so it is what they go live on.
  */
 export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setShared, pro, setPro, userId, onNext, onBack }) => {
   const flow = useOnboardingFlow();
@@ -246,7 +248,7 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
           ? "Physiotherapy is regulated, so we check your licence before your profile goes live."
           : kind === "diet"
           ? "Dietetics is regulated, so we check your registration before your profile goes live."
-          : "Optional, but a checked certificate adds a badge clients trust."
+          : "We check your certificate before your profile goes live. It adds a badge clients trust too."
       }
       onBack={onBack}
       loading={loading}
@@ -314,7 +316,7 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
         </>
       ) : (
         <>
-          <ObSectionLabel title="Certification" tag="Recommended" margin="0 2px 12px" />
+          <ObSectionLabel title="Certification" tag="To go live" margin="0 2px 12px" />
           <UploadRow
             icon={Award}
             title="Certificate"
@@ -334,7 +336,7 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
             help={!rows?.certificate && pro.issuedBy.trim() ? "Saved with your certificate once you add it." : undefined}
           />
           <ObTip icon={BadgeCheck} margin="4px 0 0">
-            You go live straight away. The Certified badge appears once we've checked it.
+            Usually checked within 2 working days. You go live and get the Certified badge once it's checked.
           </ObTip>
         </>
       )}

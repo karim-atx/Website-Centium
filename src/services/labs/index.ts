@@ -1,8 +1,9 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
 import type { BloodMarker, ExtractedBiomarker, LabReport } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 import { todayLocal } from "../../utils/date";
+import { fileTypeOf } from "../storage/fileMeta";
 import { fetchLabCatalogue } from "./catalogue";
 import { convertUnit, tidy, type CatalogueMarker } from "./catalogueLogic";
 
@@ -481,8 +482,8 @@ export type LabReportResult =
  * has nothing to open.
  */
 export async function getLabReports(userId: string): Promise<LabReportResult> {
-  // B2 columns (name, file_*) through the untyped view: the generated types predate B2.
-  const { data, error } = await (supabase as unknown as SupabaseClient)
+  // B2 columns (name, file_*).
+  const { data, error } = await supabase
     .from("blood_panels")
     .select("id, panel_date, source_image_url, name, file_name, file_type, file_pages, file_bytes")
     .eq("user_id", userId)
@@ -502,7 +503,7 @@ export async function getLabReports(userId: string): Promise<LabReportResult> {
       filePath: p.source_image_url!,
       name: p.name ?? null,
       fileName: p.file_name ?? null,
-      fileType: p.file_type ?? null,
+      fileType: fileTypeOf(p.file_type),
       filePages: p.file_pages ?? null,
       fileBytes: p.file_bytes === null || p.file_bytes === undefined ? null : Number(p.file_bytes),
     })),
@@ -517,7 +518,7 @@ export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult
       .eq("user_id", userId)
       .order("panel_date", { ascending: true }),
     // B2: a result typed in by hand stands alone (blood_panel_id null, result_date set).
-    (supabase as unknown as SupabaseClient)
+    supabase
       .from("blood_markers")
       .select("id, name, marker_key, value, unit, range_low, range_high, status, result_date")
       .eq("user_id", userId)

@@ -1,5 +1,6 @@
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
+import type { Database } from "../../../lib/supabase/database.types";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { fetchMyCv, saveLicence, licenceStatus, type Licence, type LicenceDraft, type LicenceStatus } from "../professional-cv";
 import type { LicenceReviewRow } from "../professional-cv/licenceStatus";
@@ -8,12 +9,9 @@ import type { LicenceReviewRow } from "../professional-cv/licenceStatus";
 // "The professional lanes"): the new professional_profiles columns, the
 // "Other" log, the registration licence and the Get set up items. The Terms
 // acceptance goes through services/legal/acceptances (the shell's).
-//
-// THE B5 TABLES AND COLUMNS ARE NOT IN THE GENERATED TYPES YET (gen:types reads
-// production, which has Release 1 only), so these calls go through an untyped
-// view of the same client. Every column name here is checked against the
-// local stack (migrations 20261119010000 and 20261119020000).
-const db = supabase as unknown as SupabaseClient;
+// Typed by lib/supabase/database.types.ts as generated from the local stack
+// (Release 2; production has Release 1 only, so not by npm run gen:types).
+const db = supabase;
 
 export type Ok<T = object> = { ok: true } & T;
 export type Fail = { ok: false; message: string };
@@ -33,7 +31,7 @@ function describe(error: PostgrestError | null, fallback: string): string {
 export interface ProLaneColumns {
   other_discipline?: string | null;
   /** professional_group (fitness / clinical / nutrition / other), Database 20261120020000. */
-  closest_group?: string | null;
+  closest_group?: Database["public"]["Enums"]["professional_group"] | null;
   work_mode?: "in_person" | "online" | "both" | null;
   home_visit_km?: number | null;
   specialties?: string[];
@@ -229,20 +227,61 @@ export async function saveCertificateIssuer(userId: string, certificate: Licence
   return r.ok ? { ok: true } : r;
 }
 
+async function fetchReviewRows(userId: string, licenceId?: string): Promise<Ok<{ rows: LicenceReviewRow[] }> | Fail> {
+  let q = supabase
+    .from("professional_licence_reviews")
+    .select("id, licence_id, document_path, submitted_at, approved_at, rejected_at, rejection_reason")
+    .eq("professional_id", userId);
+  if (licenceId) q = q.eq("licence_id", licenceId);
+  const { data, error } = await q;
+  if (error) return { ok: false, message: describe(error, "Couldn't load your review status. Try again.") };
+  return {
+    ok: true,
+    rows: (data ?? []).map((r) => ({
+      id: r.id,
+      licenceId: r.licence_id,
+      documentPath: r.document_path,
+      submittedAt: r.submitted_at,
+      approvedAt: r.approved_at,
+      rejectedAt: r.rejected_at,
+      rejectionReason: r.rejection_reason,
+    })),
+  };
+}
+
 /** The review status of one licence (pending / verified / rejected with the reviewer's reason). */
 export async function fetchLicenceStatus(userId: string, licence: Licence): Promise<Ok<{ status: LicenceStatus }> | Fail> {
-  const { data, error } = await supabase.from("professional_licence_reviews").select("*").eq("professional_id", userId).eq("licence_id", licence.id);
-  if (error) return { ok: false, message: describe(error, "Couldn't load your review status. Try again.") };
-  const rows: LicenceReviewRow[] = (data ?? []).map((r) => ({
-    id: r.id,
-    licenceId: r.licence_id,
-    documentPath: r.document_path,
-    submittedAt: r.submitted_at,
-    approvedAt: r.approved_at,
-    rejectedAt: r.rejected_at,
-    rejectionReason: r.rejection_reason,
-  }));
-  return { ok: true, status: licenceStatus(licence, rows) };
+  const r = await fetchReviewRows(userId, licence.id);
+  if (!r.ok) return r;
+  return { ok: true, status: licenceStatus(licence, r.rows) };
+}
+
+/**
+ * The licence a professional goes live on, and its review status. EVERY LANE
+ * is listed on Explore only once it is verified (user decision, 14 Oct 2026;
+ * before it, Fitness / Other were listed at submit).
+ *
+ * Physiotherapist / Dietitian: the registration (the licence carrying a
+ * credential id). Fitness / Other: the certificate (licence #1, the
+ * certification_url mirror) or, without one, the first licence with a
+ * document; any verified licence of theirs counts. The database does not
+ * gate set_public_listing() on verification, so this is the app's rule.
+ */
+export async function fetchGoLiveStatus(userId: string, regulated: boolean): Promise<Ok<{ licence: Licence | null; status: LicenceStatus }> | Fail> {
+  const cv = await fetchMyCv(userId);
+  if (!cv.ok) return cv;
+  const licences = cv.cv.licences;
+  const primary = regulated
+    ? licences.find((l) => !!l.credentialId) ?? null
+    : licences.find((l) => l.mirrorsCertification && !!l.documentPath) ?? licences.find((l) => !!l.documentPath) ?? null;
+  if (!primary) return { ok: true, licence: null, status: { kind: "none" } };
+  const reviews = await fetchReviewRows(userId);
+  if (!reviews.ok) return reviews;
+  if (!regulated) {
+    const verified = licences.find((l) => licenceStatus(l, reviews.rows).kind === "verified");
+    if (verified) return { ok: true, licence: verified, status: { kind: "verified" } };
+  }
+  return { ok: true, licence: primary, status: licenceStatus(primary, reviews.rows) };
 }
 
 // ---------------------------------------------------------------------------

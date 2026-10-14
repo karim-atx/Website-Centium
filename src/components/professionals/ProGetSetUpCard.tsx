@@ -5,8 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { fetchMyPlans } from "../../services/hires/pro";
 import { fetchMyProfile, setPublicListing } from "../../services/professional-profile";
 import {
-  fetchCredentialRows,
-  fetchLicenceStatus,
+  fetchGoLiveStatus,
   fetchOwnerProgress,
   fetchProLaneColumns,
   markOwnerItemDismissed,
@@ -40,8 +39,10 @@ interface Item {
  * V6-72: rates and availability are live features (no "Soon"). The frames'
  * business navbar is a defect: professionals keep their own navigation.
  *
- * A Physiotherapist / Dietitian who submitted through onboarding is listed
- * here once the licence is verified (GO_LIVE_ON_VERIFICATION).
+ * A professional who submitted through onboarding (every lane, user decision
+ * 14 Oct 2026) is listed here once their licence or certificate is verified
+ * (GO_LIVE_ON_VERIFICATION). Fitness / Other get a Certificate check row
+ * beside Specialties and services (OURS), since their listing now waits on it.
  */
 export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () => void; className?: string }> = ({ onAddClient, onPlans, className }) => {
   const { authUserId, user, professionalClients } = useApp();
@@ -62,26 +63,22 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
 
   const load = useCallback(async () => {
     if (!authUserId) return;
-    const [plans, profile, lane, progress, creds] = await Promise.all([
+    const [plans, profile, lane, progress, goLive] = await Promise.all([
       fetchMyPlans(authUserId),
       fetchMyProfile(authUserId),
       fetchProLaneColumns(authUserId),
       fetchOwnerProgress(authUserId),
-      regulated ? fetchCredentialRows(authUserId) : Promise.resolve(null),
+      fetchGoLiveStatus(authUserId, regulated),
     ]);
-    let licence: LicenceStatus | null = null;
-    if (creds && creds.ok && creds.registration) {
-      const st = await fetchLicenceStatus(authUserId, creds.registration);
-      if (st.ok) licence = st.status;
-    } else if (regulated) licence = { kind: "none" };
+    const licence: LicenceStatus | null = goLive.ok ? goLive.status : null;
     const p = profile.ok ? profile.profile : null;
     let listed = !!p?.listedPublicly;
     const items = progress.ok ? progress.items : {};
-    // Listed when the licence is verified, as Review promised ("Your profile
-    // goes live once your licence is checked"). Once only: the row is then
-    // dismissed, so turning the listing off later is respected.
+    // Listed when the licence or certificate is verified, as Review promised
+    // ("Your profile goes live once your licence is checked"). Once only: the
+    // row is then dismissed, so turning the listing off later is respected.
     const pendingLive = items[GO_LIVE_ON_VERIFICATION];
-    if (regulated && licence?.kind === "verified" && pendingLive && !pendingLive.dismissed) {
+    if (licence?.kind === "verified" && pendingLive && !pendingLive.dismissed) {
       const r = await setPublicListing(true);
       if (r.status === "ok") listed = r.listed;
       await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
@@ -111,6 +108,8 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
 
   const descByKind = kind === "dietitian" ? "First consultation and follow-ups" : kind === "physiotherapist" ? "Assessment and treatment blocks" : "Single sessions and blocks";
   const licenceDone = data.licence?.kind === "verified";
+  const checkDesc = (word: "licence" | "certificate") =>
+    data.licence?.kind === "rejected" ? "Needs changes" : data.licence?.kind === "pending" ? "Usually within 2 working days" : `Add your ${word} to go live`;
   const todo: Item[] = [
     { key: "client", icon: UserPlus, title: "Add your first client", desc: "Share a client code", done: professionalClients.length > 0, onClick: onAddClient },
     { key: "plans", icon: Package, title: "Add packages and prices", desc: descByKind, done: data.plans > 0, onClick: onPlans },
@@ -126,7 +125,14 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
         navigate("/app/professionals/calendar");
       },
     },
-    { key: "listing", icon: Globe, title: "Choose who can find you", desc: "Your public listing", done: data.listed, onClick: () => setListing(true) },
+    {
+      key: "listing",
+      icon: Globe,
+      title: "Choose who can find you",
+      desc: licenceDone ? "Your public listing" : `Once your ${regulated ? "licence" : "certificate"} is checked`,
+      done: data.listed,
+      onClick: () => setListing(true),
+    },
   ];
   const doneRows: Item[] = [
     { key: "about", icon: Check, title: "About you", done: true },
@@ -136,17 +142,23 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
           key: "licence",
           icon: licenceDone ? Check : ShieldCheck,
           title: licenceDone ? "Licence verified" : "Licence check",
-          desc: licenceDone
-            ? undefined
-            : data.licence?.kind === "rejected"
-            ? "Needs changes"
-            : data.licence?.kind === "pending"
-            ? "Usually within 2 working days"
-            : "Add your licence to go live",
+          desc: licenceDone ? undefined : checkDesc("licence"),
           done: licenceDone,
           onClick: () => navigate("/app/professionals/verification"),
         }
       : { key: "services", icon: Check, title: "Specialties and services", done: data.specialties },
+    ...(regulated
+      ? []
+      : [
+          {
+            key: "licence",
+            icon: licenceDone ? Check : ShieldCheck,
+            title: licenceDone ? "Certificate verified" : "Certificate check",
+            desc: licenceDone ? undefined : checkDesc("certificate"),
+            done: licenceDone,
+            onClick: () => navigate("/app/professionals/verification"),
+          },
+        ]),
   ];
   const all = [...todo, ...doneRows];
   const rows = [...all.filter((r) => !r.done), ...all.filter((r) => r.done)];

@@ -14,8 +14,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 // auth.uid() = professional_id). Always scoped to ONE business, because a
 // professional may belong to several.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- B0 / B6 functions, not in the production-generated types
-const db = supabase as any;
+const db = supabase;
 
 export type Done = { ok: true } | { ok: false; message: string };
 

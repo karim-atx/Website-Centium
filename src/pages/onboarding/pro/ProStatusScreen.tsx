@@ -30,6 +30,8 @@ export interface ProStatusProps {
   preview?: { initials: string; avatarUrl: string | null; name: string; label: string; tags: string[]; line: string | null };
   /** OURS: an account under 18 is set up but can't be listed (ATX47). */
   notListed?: string | null;
+  /** OURS: pending with nothing to check yet (Fitness / Other submitted without a certificate). */
+  noDocument?: boolean;
   /** The reviewer's reason (one free-text reason today; per-item reasons are BACKEND, B5 open item). */
   rejectionReason?: string | null;
   onPrimary: () => void;
@@ -44,6 +46,11 @@ export interface ProStatusProps {
  * OB-186 / OB-188 Verified, OB-189 Couldn't verify) and the status screens'
  * OURS states (OURS-step-states rows 9 and 10). KEEP-SAFETY: the health
  * disclaimer stays above the footer on every status screen (ReadyStep).
+ *
+ * User decision 14 Oct 2026: no lane is listed at submit. Every lane submits
+ * to "pending" (Fitness / Other: "We're checking your certificate", or "Add a
+ * certificate to go live" without one); OB-155 / OB-212 "You're live" is the
+ * Fitness / Other verified state, shown on the verification screen.
  */
 export const ProStatusScreen: React.FC<ProStatusProps> = ({
   status,
@@ -52,6 +59,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   submittedAt,
   preview,
   notListed,
+  noDocument,
   rejectionReason,
   onPrimary,
   onFix,
@@ -69,6 +77,17 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
 
   const nm = firstName.trim().split(/\s+/)[0] || "there";
   const reg = kind === "physio" || kind === "diet";
+  // Every lane is listed once checked (14 Oct 2026): a licence for the
+  // regulated lanes, a certificate for Fitness / Other.
+  const doc = reg ? "licence" : "certificate";
+  const submittedRow = {
+    title: "Submitted",
+    desc: submittedAt
+      ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" }, undefined)}, ${time12(hhmm(submittedAt))}`
+      : "Sent for review",
+    value: submittedAt && isToday(submittedAt) ? "Today" : "",
+    state: "done" as const,
+  };
 
   let body: React.ReactNode;
   let footer: React.ReactNode;
@@ -91,6 +110,29 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       ) : (
         <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary, disabled: true }} />
       );
+  } else if (status === "pending" && noDocument && !reg) {
+    // OURS: Fitness / Other submitted without a certificate. Nothing to check
+    // yet, so nothing is listed until one is added and checked.
+    body = (
+      <>
+        <ObStatus
+          vis={STATUS_PENDING_VIS}
+          eyebrow="Set up"
+          eyebrowColor="var(--ob-accent)"
+          title="Add a certificate to go live"
+          body="Clients find you on Explore once we've checked a certificate. Add one in My CV. You can set up your services now."
+        />
+        <Timeline
+          items={[
+            submittedRow,
+            { title: "Certificate", desc: "Add one in My CV", value: "Now", state: "now" },
+            { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
+          ]}
+        />
+        {extra}
+      </>
+    );
+    footer = <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary }} />;
   } else if (status === "pending") {
     body = (
       <>
@@ -98,20 +140,15 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           vis={STATUS_PENDING_VIS}
           eyebrow="Submitted"
           eyebrowColor="var(--ob-accent)"
-          title="We're checking your licence"
+          title={`We're checking your ${doc}`}
           body="Usually within 2 working days. We'll message and email you. You can set up your services while you wait."
         />
         <Timeline
           items={[
-            {
-              title: "Submitted",
-              desc: submittedAt
-                ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" }, undefined)}, ${time12(hhmm(submittedAt))}`
-                : "Sent for review",
-              value: submittedAt && isToday(submittedAt) ? "Today" : "",
-              state: "done",
-            },
-            { title: "Licence check", desc: "With the registering body", value: "Now", state: "now" },
+            submittedRow,
+            reg
+              ? { title: "Licence check", desc: "With the registering body", value: "Now", state: "now" as const }
+              : { title: "Certificate check", desc: "With our team", value: "Now", state: "now" as const },
             { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
           ]}
         />
@@ -126,7 +163,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           vis={STATUS_REJECTED_VIS}
           eyebrow="Needs changes"
           eyebrowColor="var(--ob-high)"
-          title="We couldn't verify your licence"
+          title={`We couldn't verify your ${doc}`}
           body="Your profile isn't live yet. Fix these and send it again."
         />
         <SummaryCard n={4} heading="Credentials" lines={[rejectionReason?.trim() || "Not approved."]} action="Edit" onAction={onFix} bad />
@@ -141,7 +178,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       <>
         <ObStatus
           vis={vis}
-          eyebrow={verified ? "Verified" : "Live"}
+          eyebrow={notListed ? "Set up" : verified ? "Verified" : "Live"}
           eyebrowColor="var(--ob-good)"
           title={notListed ? `You're set up, ${nm}` : verified ? `You're verified, ${nm}` : `You're live, ${nm}`}
           body={
@@ -149,7 +186,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
               ? `${notListed} You can still work with the clients you add.`
               : verified
               ? "Your licence is checked. Clients can now find and book you."
-              : "Clients can find and book you now. Your Certified badge appears once your certificate is checked."
+              : "Your certificate is checked. Clients can now find and book you."
           }
           ringOpacity={a.ro}
           ringScale={a.rs}

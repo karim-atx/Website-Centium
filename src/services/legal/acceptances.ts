@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
 
 /**
@@ -14,8 +13,6 @@ import { isOffline } from "../network-error";
  * the two in step when the documents change.
  */
 
-// B5 is newer than lib/supabase/database.types.ts (generated from production): untyped here.
-const supabase = typed as unknown as SupabaseClient;
 
 export type LegalDocument = "terms" | "privacy" | "health_disclaimer";
 export const LEGAL_VERSION = "2026-09-06";

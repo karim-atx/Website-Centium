@@ -336,8 +336,7 @@ export async function updateCustomExercise(
  * what it has in memory).
  */
 export async function customExerciseUsage(id: string): Promise<number | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
-  const { data, error } = await (supabase as any).rpc("custom_exercise_usage", { p_id: id });
+  const { data, error } = await supabase.rpc("custom_exercise_usage", { p_id: id });
   if (error) {
     console.error("[exercises] Could not count where the exercise is used:", error.message);
     return null;

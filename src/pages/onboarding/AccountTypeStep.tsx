@@ -59,7 +59,8 @@ const CONFIRM: Record<AccountType, { title: string; lead: string; rows: [LucideI
       [MessageCircle, "Messages and progress in one place"],
       [BadgeCheck, "A public profile clients can find"],
     ],
-    note: "Some professions are verified before going live.",
+    // User decision 14 Oct 2026: every lane is listed only once verified.
+    note: "Every profile is verified before going live.",
     button: "Continue as professional",
     tile: "pale",
     comp: "professional",

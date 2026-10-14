@@ -1,10 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { fileMetaOf } from "../storage/fileMeta";
+import type { PostgrestError } from "@supabase/supabase-js";
+import { fileMetaOf, fileTypeOf } from "../storage/fileMeta";
 
-// B2 columns (file_*) and imaging_shares go through an untyped view of the
-// client: the generated database types predate B2.
-const db = supabase as unknown as SupabaseClient;
+const db = supabase;
 import type { ImagingRecord } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 
@@ -185,7 +183,7 @@ export async function getImagingRecords(userId: string): Promise<ImagingReadResu
       ...(r.note ? { note: r.note } : {}),
       ...(r.file_url ? { filePath: r.file_url } : {}),
       fileName: r.file_name ?? null,
-      fileType: r.file_type ?? null,
+      fileType: fileTypeOf(r.file_type),
       filePages: r.file_pages ?? null,
       fileBytes: r.file_bytes === null || r.file_bytes === undefined ? null : Number(r.file_bytes),
     })),
