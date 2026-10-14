@@ -5,6 +5,8 @@ import { BizConfirm, BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, R
 import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { fetchPlanRenewal } from "../../services/business-more";
+import { fetchPaymentSettings, type PaymentSettings } from "../../services/business-revenue";
+import { useBusiness } from "../../components/business-more/useBusiness";
 import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { formatShortDate } from "../../utils/date";
 
@@ -37,6 +39,21 @@ const ComingCard = ({ icon: Icon, title, body }: { icon: typeof Landmark; title:
 );
 
 export function PaymentMethodsPage() {
+  // B8 RV-05: the stored settings (business_payment_settings). Whish can't be
+  // turned on yet and turning every method off is refused, so with cash the
+  // only method both switches stay locked; the page reads the row rather
+  // than assuming it.
+  const { business } = useBusiness();
+  const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  useEffect(() => {
+    if (!business?.id) return;
+    let alive = true;
+    void fetchPaymentSettings(business.id).then((s) => alive && setSettings(s));
+    return () => {
+      alive = false;
+    };
+  }, [business?.id]);
+  const cashOn = settings?.cashEnabled ?? true;
   return (
     <BizPage title="Payment methods" sub="Choose how clients can pay you.">
       <BizSection label="Accepted payment methods">
@@ -51,7 +68,7 @@ export function PaymentMethodsPage() {
           toggle={{ checked: false, onChange: () => undefined, disabled: true, label: "Whish" }}
           dim
         />
-        <BizRow title="Cash" desc="Your only method for now" toggle={{ checked: true, onChange: () => undefined, disabled: true, label: "Cash" }} />
+        <BizRow title="Cash" desc="Your only method for now" toggle={{ checked: cashOn, onChange: () => undefined, disabled: true, label: "Cash" }} />
       </BizSection>
       <BizSection label="Payout account">
         <BizRow icon={Landmark} title="Whish payouts" desc="Coming soon. You'll add your Whish account here." />

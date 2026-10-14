@@ -371,6 +371,47 @@ export async function fetchAllMoneyOwed(
   return { ok: true, value: { rows, total: rows.length, denied: false } };
 }
 
+// ---------------------------------------------------------------------------
+// B8 RV-05 payment settings and RV-03 retries (HANDOVER_API "B7 + B8 catch-up")
+// ---------------------------------------------------------------------------
+
+export interface PaymentSettings {
+  cashEnabled: boolean;
+  whishEnabled: boolean;
+}
+
+/**
+ * business_payment_settings (readable with 'revenue'). Null when there is no
+ * row, the table is missing, or the seat can't read it: the page then keeps
+ * its defaults (cash on, Whish off), which is also the server's default.
+ */
+export async function fetchPaymentSettings(businessId: string): Promise<PaymentSettings | null> {
+  const { data, error } = await (supabase as unknown as {
+    from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => PromiseLike<{ data: unknown; error: PostgrestError | null }> } } };
+  })
+    .from("business_payment_settings")
+    .select("cash_enabled, whish_enabled")
+    .eq("business_id", businessId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const r = data as { cash_enabled: boolean; whish_enabled: boolean };
+  return { cashEnabled: !!r.cash_enabled, whishEnabled: !!r.whish_enabled };
+}
+
+/**
+ * retry_payment(id), RV-03: needs revenue. Cash is refused (nothing to
+ * retry); ATX02 means a retry is already running. Only reachable once Whish
+ * is live: the failed list is empty until then.
+ */
+export async function retryPayment(paymentId: string): Promise<Result<true>> {
+  const { error } = await rpc<string>("retry_payment", { p_payment_id: paymentId });
+  if (error) {
+    if (error.code === "ATX02") return { ok: false, code: error.code, message: "Already retrying." };
+    return fail(error, "Couldn't start the retry. Try again.");
+  }
+  return { ok: true, value: true };
+}
+
 /** Undo of Mark as paid (AN14-048): audited, needs revenue; 22023 when it is not paid. */
 export async function unmarkPaymentPaid(
   paymentId: string,

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { retryPayment } from "../../../services/business-revenue";
 import {
   ArrowDownUp,
   BadgeCheck,
@@ -57,7 +58,10 @@ export interface FailedPayment {
   attempts: FailedAttempt[];
 }
 
-/** B8 reader (payment_attempts): none on the server yet. */
+/**
+ * Failed payments: always empty until Whish (B8 RV-03; cash can't fail), and
+ * every route here returns to Payments while WHISH_LIVE is off.
+ */
 export function useFailedPayments(): FailedPayment[] {
   return [];
 }
@@ -445,7 +449,8 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         busy={busy}
         onCancel={() => !busy && setConfirm(false)}
         onConfirm={() => {
-          // B8 retry_payment(id): not on the server. After 30 s without an answer the pop-up closes and the waiting banner shows.
+          // B8 RV-03 retry_payment(id) (f.key is the payment id). After 30 s
+          // without an answer the pop-up closes and the waiting banner shows.
           setBusy(true);
           setErr(null);
           timer.current = window.setTimeout(() => {
@@ -453,6 +458,13 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
             setConfirm(false);
             setWaiting(true);
           }, 30_000);
+          void retryPayment(f.key).then((r) => {
+            if (timer.current) window.clearTimeout(timer.current);
+            setBusy(false);
+            if (!r.ok) return setErr(r.message);
+            setConfirm(false);
+            setWaiting(true);
+          });
         }}
       />
     </div>
