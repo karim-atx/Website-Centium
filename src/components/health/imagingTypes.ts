@@ -19,14 +19,10 @@
  * their doctor lab results but not medical history would not have been
  * sharing it at all. That is a consent divergence, not untidiness.
  *
+ * v6 (HE1.9.b.3, V6-133): the handover order with ECG added and DEXA kept;
+ * "X-ray" spelt as the handover spells it (older rows saying "X-Ray" match).
+ *
  * DEXA STAYS, because a DEXA scan is an imaging study: it is performed on a
  * machine, produces images, and reports densities rather than analytes.
  */
-export const imagingTypes = [
-  "X-Ray",
-  "MRI",
-  "CT scan",
-  "Ultrasound",
-  "DEXA scan",
-  "Other",
-];
+export const imagingTypes = ["MRI", "X-ray", "Ultrasound", "CT scan", "ECG", "DEXA scan", "Other"];

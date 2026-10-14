@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { FixedHeader } from "../../components/ui/FixedHeader";
+import { useOnline } from "../../hooks/useOnline";
 import { mealForCurrentTime } from "../../utils/mealForTime";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
@@ -14,7 +16,7 @@ import {
   sumNutrition,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { copyDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
+import { copyDiaryEntry, deleteDiaryEntry, getNutritionGoalOn, isRemoteEntryId } from "../../services/food";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { SwipeActions } from "../../components/ui/SwipeActions";
@@ -23,24 +25,24 @@ import { CopyToSheet } from "../../components/food/CopyToSheet";
 import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
 import { todayLocal } from "../../utils/date";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check } from "lucide-react";
+import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check, AlertCircle } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
-import MealPrepPanel from "./MealPrepPanel";
+import MealPrepPanel, { MealPrepSubTabs, type SubTab } from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
-import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
 
 /**
- * Mobile v5.1 R3, dark mode (no light islands): the meal cards follow the
- * dark tokens. These are the colours with no exact token, as [light, dark]:
- * the macro letters (primary.deep dark, the carbs lavender, secondary.deep
- * dark), the select circle's ring (3:1 on the card), and the Delete pill
- * (danger.tint and danger dark).
+ * Dark mode: the meal cards follow the dark tokens. These are the colours
+ * with no exact token, as [light, dark]: the macro letters and the protein
+ * segment (v6 FO1 #36 / #39: protein #C3B3FB; carbs #8C7CC4* and fat #4F7F78
+ * read 4.0:1 and 3.1:1 on the dark card, so V6-92 keeps the app's dark inks
+ * #AEA1DC and #7FB3A9), the select circle's ring (3:1 on the card), and the
+ * Delete pill (danger.tint and danger dark).
  */
 const DIARY_COLORS = {
-  protein: ["rgb(var(--th-7d6bb5))", "rgb(var(--th-b7abde))"],
+  protein: ["rgb(var(--th-7d6bb5))", "rgb(var(--th-c3b3fb))"],
   carbs: ["rgb(var(--th-8c7cc4))", "rgb(var(--th-aea1dc))"],
   fat: ["rgb(var(--th-4f7f78))", "rgb(var(--th-7fb3a9))"],
   selectRing: ["#D1CAEB", "#8A8698"],
@@ -71,14 +73,28 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: s
 };
 
 const SWIPE_THRESHOLD = 60;
+const SAVE_FAILED = "Couldn't save. Try again.";
 
 // The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
 const HERO_PLACEHOLDER_HEIGHT = 101;
 
 export default function Food() {
-  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
+  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, diaryLoading, retryDiary, authUserId, addFoodEntryRecord, accessibility } =
     useApp();
   const dark = useIsDark();
+  const hc = !!accessibility.highContrast;
+  const online = useOnline();
+  // v6 FO1 O4 / O5: a write that failed, or one tried offline, says
+  // "Couldn't save. Try again." in the shared toast. A failed single delete
+  // shows the server's message there instead, as main did (release review O6).
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+  // FO1 K9: the Custom tab's sub-tab, pinned in the fixed header.
+  const [prepSub, setPrepSub] = useState<SubTab>("meals");
+  // FO1 #30-#31 / #45 / #49: the lavender washes and hairline, light
+  // #AEA1DC at 34 / 12 / 10 / 16%, dark #A991FE (the primary fill), High
+  // contrast the filled #5B48B8 at the same strengths (O8).
+  const lav = (alpha: number) =>
+    dark || hc ? `rgb(var(--c-primary-fill) / ${alpha})` : `rgb(var(--th-aea1dc) / ${alpha})`;
   // Task X follow-up: every per-meal and per-entry number waits for the
   // account's recovery setting too, not only the totals card.
   const hideNumbers = recoverySensitive || recoveryModePending;
@@ -115,7 +131,24 @@ export default function Food() {
     [foodLog, selectedDate]
   );
   const totals = useMemo(() => sumNutrition(todaysEntries), [todaysEntries]);
-  const targets = targetsFromGoal(nutritionGoal);
+  // FO1 B-1 (B3 PB-O-30): a PAST day is measured against the goal that
+  // applied on it (nutrition_goal_on); today, a future day, no stored goal or
+  // a failed read keep the current goal. The pregnancy addition is today's
+  // (it is not part of the stored goal).
+  const isPastDay = selectedDate < todayLocal();
+  const [pastGoal, setPastGoal] = useState<{ date: string; goal: Awaited<ReturnType<typeof getNutritionGoalOn>> } | null>(null);
+  useEffect(() => {
+    if (!isPastDay) return;
+    let live = true;
+    void getNutritionGoalOn(selectedDate).then((goal) => {
+      if (live) setPastGoal({ date: selectedDate, goal });
+    });
+    return () => {
+      live = false;
+    };
+  }, [selectedDate, isPastDay]);
+  const goalOfDay = isPastDay && pastGoal?.date === selectedDate && pastGoal.goal ? { ...nutritionGoal, ...pastGoal.goal } : nutritionGoal;
+  const targets = targetsFromGoal(goalOfDay);
 
   const grouped = useMemo(() => {
     const map: Record<MealType, typeof foodLog> = { breakfast: [], lunch: [], snack: [], dinner: [] };
@@ -138,6 +171,10 @@ export default function Food() {
     });
 
   const handleCopyYesterdayMeal = async (meal: MealType) => {
+    if (!online) {
+      setSaveToast(SAVE_FAILED);
+      return;
+    }
     // Each copy is now a real insert, so this awaits the writes and only
     // offers Undo for rows that actually landed.
     const ids = await copyYesterdayMeal(meal);
@@ -165,9 +202,15 @@ export default function Food() {
       removeFoodEntry(id);
       return;
     }
+    // FO1 O4 / O5: one entry's delete that fails (or is tried offline) is
+    // the shared toast; the row stays, as the database still has it.
+    if (!online) {
+      setSaveToast(SAVE_FAILED);
+      return;
+    }
     const result = await deleteDiaryEntry(id);
     if (!result.ok) {
-      setDeleteError(result.message ?? "Could not delete that entry.");
+      setSaveToast(result.message ?? SAVE_FAILED);
       return;
     }
     removeFoodEntry(id);
@@ -291,37 +334,87 @@ export default function Food() {
   const macroRow = (label: string, value: number, target: number) => (
     <div key={label} className="flex items-center gap-2">
       <span className="w-[42px] shrink-0 text-[9.5px] font-bold text-white">{label}</span>
-      <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] overflow-hidden">
-        <span className="block h-full rounded-full bg-white" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
+      {/* FO1 #18-#20: track #FFFFFF@28% (dark @8%*), fill #FFFFFF (dark
+          #1C1F28), value #FFFFFF@66% (dark #FFFFFF). */}
+      <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] dark:bg-white/[0.08] overflow-hidden">
+        <span className="block h-full rounded-full bg-white dark:bg-[#1C1F28]" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
       </span>
-      <span className="shrink-0 text-[9px] text-white/[0.66] dark:text-white/90 tabular-nums">
+      <span className="shrink-0 text-[9px] leading-[13.5px] text-white/[0.66] dark:text-white tabular-nums">
         {Math.round(value)} / {target}g
       </span>
     </div>
   );
 
+  // FO1 O1: the first diary read is out and nothing is cached.
+  const firstLoad = diaryLoading && foodLog.length === 0;
+  // FO1 O3: that read failed with nothing cached (K6 covers the cached case).
+  const noCacheError = !!diaryError && foodLog.length === 0;
+
   return (
     <div>
-      {/* Iteration 6 "Team": every redesigned screen uses a compact 19px
-          title instead of PageHeader's 27px default — PageHeader itself is
-          shared by many screens this handoff doesn't touch, so it keeps its
-          existing size and this renders the title directly instead. */}
-      <p className="mb-[11px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">Food</p>
-
-      {/* Goals & Macros draws its own tab bar (GoalsPanel), 5px above its
-          cards; drawing this one too showed two identical bars there. */}
-      {tab !== "goals" && (
+      {/* v6 FO1 #1-#6 / S1 / S12: the "Food" title and the three tabs are one
+          fixed header on every tab (Goals no longer draws a second bar), the
+          Custom tab's sub-tabs pinned under them (K9). Fixed area 390 ×
+          135.5: the shell's 24, title 19/28.5 700 ls -0.6 with 11 under it,
+          the 56 track, 16 at the bottom. Dark track and idle tabs #303141
+          with #B8B3C7 (the drawn #6D50D3* is 2.2:1; V6-92). */}
+      <FixedHeader paddingBottom={16}>
+        <h1 className="m-0 mb-[11px] text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
         <SegmentedTabs
-          className="mb-4 animate-fade-slide-up"
           items={foodTabs}
           activeKey={tab}
           onChange={(key) => setTab(key as Tab)}
+          darkTone="partB"
+          // #6D50D3; High contrast the primary text #4B3BA0 (O8).
+          idleInk={hc ? "rgb(var(--c-primary-deep-text))" : undefined}
         />
+        {tab === "prep" && (
+          <div style={{ marginTop: 12 }}>
+            <MealPrepSubTabs sub={prepSub} onChange={setPrepSub} />
+          </div>
+        )}
+      </FixedHeader>
+
+      {tab === "diary" && firstLoad && (
+        // FO1 O1: skeletons #F5F5F6 / #242730, pulse 1.2 s (static under
+        // Reduce motion): date pill 358×41 r9999, card 358×101 r20, four
+        // meal cards 358×51 r15.
+        <div aria-busy="true" aria-label="Diary, loading" className="flex flex-col">
+          <div className="animate-skeleton-pulse bg-cream-soft rounded-full" style={{ height: 41, marginBottom: 13 }} />
+          <div className="animate-skeleton-pulse bg-cream-soft rounded-[20px]" style={{ height: 101, marginBottom: 13 }} />
+          <div className="flex flex-col gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="animate-skeleton-pulse bg-cream-soft rounded-[15px]" style={{ height: 51 }} />
+            ))}
+          </div>
+        </div>
       )}
 
-      {tab === "diary" && (
+      {tab === "diary" && !firstLoad && (
         <div className="animate-fade-slide-up">
-          <DateSelector />
+          <DateSelector partB />
+
+          {noCacheError && (
+            // FO1 O3: card 358 wide r15, 0.5px #AEA1DC@34%, 13.5/700 text and
+            // "Retry" 11/700 #5F5093 / #C3B3FB.
+            <div
+              role="alert"
+              className="flex items-center justify-between bg-cream-card rounded-[15px] mb-[13px]"
+              style={{ padding: "14px 16px", gap: 10, border: `0.5px solid ${lav(0.34)}` }}
+            >
+              <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700 }}>
+                Couldn't load your diary.
+              </span>
+              <button
+                type="button"
+                onClick={retryDiary}
+                className="tap relative shrink-0 text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']"
+                style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 700 }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* QA 12.0 recovery-sensitive experience: "Hide calorie and macro
               totals... Disable deficit/remaining-calorie language... Use
@@ -330,7 +423,13 @@ export default function Food() {
           {recoveryModePending ? (
             // Task X follow-up: the account's recovery setting is still
             // loading on this browser, so no totals yet, in either form.
-            <NumberPlaceholder height={HERO_PLACEHOLDER_HEIGHT} label="Today" className="mb-[13px]" />
+            // FO1 K8: restyled as the skeleton (O1 colours), the hero's size.
+            <div
+              aria-busy="true"
+              aria-label="Today, loading"
+              className="animate-skeleton-pulse bg-cream-soft rounded-[20px] mb-[13px]"
+              style={{ height: HERO_PLACEHOLDER_HEIGHT }}
+            />
           ) : recoverySensitive ? (
             // Decision 23 (kept item 153): the hero's geometry (r20, 101 tall,
             // pad 15×16, 13 below) in the neutral tint (surface.soft, the
@@ -366,10 +465,10 @@ export default function Food() {
             >
               <div className="flex items-center gap-4">
                 <div className="shrink-0">
-                  <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+                  <p className="text-[26px] font-extrabold leading-none tracking-[-1px] text-white tabular-nums">
                     {Math.round(totals.calories).toLocaleString()}
                   </p>
-                  <p className="mt-1 text-[9.5px] text-white/70 dark:text-white/90">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-1 text-[9.5px] leading-[14.3px] text-white/70 dark:text-white">of {targets.calories.toLocaleString()} kcal</p>
                   {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
                       record the target is a published reference intake rather
                       than anything computed from this person. */}
@@ -378,8 +477,11 @@ export default function Food() {
                       {REFERENCE_INTAKE_NOTE}
                     </p>
                   )}
-                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/20 dark:bg-white/[0.08] rounded-full px-2 py-[3px]">
-                    {targets.calories - Math.round(totals.calories)} left
+                  {/* FO1 S13: "{n} over" once the day passes its goal. */}
+                  <p className="mt-[7px] inline-block text-[9.5px] leading-[14.3px] font-bold text-white bg-white/20 dark:bg-white/[0.08] rounded-full px-2 py-[3px]">
+                    {Math.round(totals.calories) > targets.calories
+                      ? `${Math.round(totals.calories) - targets.calories} over`
+                      : `${targets.calories - Math.round(totals.calories)} left`}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col gap-2 pr-5">
@@ -424,7 +526,7 @@ export default function Food() {
 
           {/* A failed diary read leaves the cached entries on screen, so this
               says the list may be stale rather than implying it is empty. */}
-          {diaryError && !deleteError && (
+          {diaryError && !deleteError && !noCacheError && (
             <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
               Couldn't refresh your diary. Showing what was saved on this device.
             </p>
@@ -455,12 +557,13 @@ export default function Food() {
               // is white (the dark card in dark mode) with the lavender hairline
               // and shadow; only its header carries the lavender wash, and only
               // while open.
-              const headBg = collapsed ? "rgb(var(--c-cream-card))" : "rgb(var(--th-aea1dc) / 0.12)";
+              const headBg = collapsed ? "rgb(var(--c-cream-card))" : lav(0.12);
               return (
                 <div
                   key={meal}
                   className="rounded-[15px] bg-cream-card overflow-hidden"
-                  style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.34)", boxShadow: "0 4px 14px rgb(var(--th-5f5093) / 0.08)" }}
+                  // FO1 #30: 0.5px #AEA1DC@34% (dark #A991FE@34%), the shadow in light only.
+                  style={{ border: `0.5px solid ${lav(0.34)}`, boxShadow: dark ? "none" : "0 4px 14px rgb(var(--th-5f5093) / 0.08)" }}
                   onTouchStart={onMealTouchStart}
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
@@ -503,7 +606,8 @@ export default function Food() {
                           {mealCal > 0 && (
                             <>
                               <span style={{ width: `${(mealProtein / macroTotal) * 100}%`, background: dc("protein", dark) }} />
-                              <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: "rgb(var(--th-aea1dc))" }} />
+                              {/* FO1 #37: carbs #AEA1DC / dark #A991FE. */}
+                              <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: dark ? "rgb(var(--c-primary-fill))" : "rgb(var(--th-aea1dc))" }} />
                               <span style={{ width: `${(mealFat / macroTotal) * 100}%`, background: "rgb(var(--th-a2c8c2))" }} />
                             </>
                           )}
@@ -625,12 +729,14 @@ export default function Food() {
                                   }}
                                   className={clsx(
                                     "tap relative w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left",
-                                    restricted ? "bg-status-high-bg" : "bg-team-lavender/10"
+                                    restricted && "bg-status-high-bg"
                                   )}
+                                  // FO1 #45: #AEA1DC@10% (dark #A991FE@10%).
+                                  style={restricted ? undefined : { background: lav(0.1) }}
                                 >
                                   <span className="min-w-0">
-                                    <span className="flex items-center gap-1.5 text-[12px] font-semibold text-charcoal">
-                                      {e.name}
+                                    <span className="flex items-center gap-1.5 text-[12px] leading-[18px] font-semibold text-charcoal">
+                                      <span className="min-w-0 truncate">{e.name}</span>
                                       {e.display.isLebanese && <Star size={10} className="text-gold fill-gold shrink-0" />}
                                       {restricted && (
                                         <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5 shrink-0">
@@ -638,7 +744,8 @@ export default function Food() {
                                         </span>
                                       )}
                                     </span>
-                                    <span className="block text-[9.5px] text-charcoal-tertiary">
+                                    {/* FO1 #47 / V6-145: one line with an ellipsis. */}
+                                    <span className="block truncate text-[9.5px] leading-[14.3px] text-charcoal-tertiary">
                                       {e.quantity !== 1 ? `${e.quantity} × ` : ""}
                                       {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
                                     </span>
@@ -658,7 +765,7 @@ export default function Food() {
                       )}
 
                       {isAddingHere && (
-                        <div className="flex items-center gap-2 rounded-[11px] bg-teal/[0.13] border border-dashed border-team-teal-deep/40 px-[11px] py-[9px] mb-2">
+                        <div className="flex items-center gap-2 rounded-[11px] bg-teal/[0.13] border-[0.5px] border-dashed border-team-teal-deep/40 px-[11px] py-[9px] mb-2">
                           <RefreshCw size={12} className="text-team-teal-deep shrink-0" />
                           <span className="text-[10.5px] leading-[1.45] text-team-teal-ink">
                             Swipe right or double-tap to copy yesterday's {mealLabels[meal].toLowerCase()}
@@ -705,7 +812,9 @@ export default function Food() {
 
                       <button
                         onClick={() => openAdd(meal)}
-                        className="tap w-full flex items-center justify-center gap-[7px] rounded-[11px] bg-team-lavender/[0.16] text-[11px] font-bold text-primary-deep-text py-[9px]"
+                        // FO1 #49: #5F5093 on #AEA1DC@16% (dark #C3B3FB on #A991FE@16%).
+                        className="tap w-full flex items-center justify-center gap-[7px] rounded-[11px] text-[11px] leading-[16.5px] font-bold text-primary-deep-text py-[9px]"
+                        style={{ background: lav(0.16) }}
                       >
                         <Plus size={13} /> {entries.length > 0 ? "Add more" : "Add food"}
                       </button>
@@ -718,8 +827,8 @@ export default function Food() {
         </div>
       )}
 
-      {tab === "goals" && <GoalsPanel onTabChange={setTab} />}
-      {tab === "prep" && <MealPrepPanel />}
+      {tab === "goals" && <GoalsPanel />}
+      {tab === "prep" && <MealPrepPanel sub={prepSub} />}
 
       {tab === "diary" && (
         // V6 (QA 6.0): rendered outside the animate-fade-slide-up diary
@@ -733,7 +842,9 @@ export default function Food() {
           aria-label="Add Food"
           // 104px over the nav plus the home-indicator inset, and 20px in from
           // the right edge of the centred 430px app column (01 GLOBAL).
-          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab flex items-center justify-center"
+          // FO1 #51-#52: #AEA1DC with its shadow, dark #A991FE without; the
+          // plus is drawn #FFFFFF in dark, V6-02 keeps #0D0B1A on #A991FE.
+          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none flex items-center justify-center"
         >
           <Plus size={22} />
         </button>
@@ -792,6 +903,12 @@ export default function Food() {
       )}
 
       <Toast open={!!bulkToast} message={bulkToast ?? ""} onExpire={() => setBulkToast(null)} />
+      <Toast
+        open={!!saveToast}
+        message={saveToast ?? ""}
+        icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
+        onExpire={() => setSaveToast(null)}
+      />
     </div>
   );
 }

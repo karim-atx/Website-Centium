@@ -1209,6 +1209,12 @@ export interface LabReport {
   date: string;
   /** Object path in the private lab-reports bucket, not a URL. */
   filePath: string;
+  /** B2: blood_panels.name (null = the default "Blood panel") and the file description. */
+  name?: string | null;
+  fileName?: string | null;
+  fileType?: "pdf" | "image" | null;
+  filePages?: number | null;
+  fileBytes?: number | null;
 }
 
 /** A professional's view of one client's blood work. */
@@ -1217,6 +1223,8 @@ export interface ClientLabsSummary {
   /** yyyy-mm-dd of the most recent panel. */
   latestPanelDate: string;
   panelCount: number;
+  /** Results typed in on their own, with no panel (B2). */
+  standaloneCount?: number;
   /** Panels with an attached report, newest first. */
   reports: LabReport[];
 }
@@ -1238,12 +1246,19 @@ export interface ImagingRecord {
    * when the record was typed in by hand rather than captured from a file.
    */
   filePath?: string;
+  /** B2: the file description (imaging_records.file_*); descriptive only. */
+  fileName?: string | null;
+  fileType?: "pdf" | "image" | null;
+  filePages?: number | null;
+  fileBytes?: number | null;
 }
 
 export interface Surgery {
   id: string;
   name: string;
   date: string;
+  /** B2 surgeries.date_precision: how much of the date to show (unknown day = 1st, unknown month = 1 Jan). */
+  datePrecision?: "day" | "month" | "year";
 }
 
 export type MedicationRoute = "oral" | "injectable" | "topical" | "inhaled" | "other";
@@ -1320,10 +1335,15 @@ export type HabitIconKey =
   | "phone_off"
   | "timer";
 
+/** habit_items.colour (B3, PB-O-01): the cycle order lavender → teal → gold → rose → sky. */
+export type HabitColour = "lavender" | "teal" | "gold" | "rose" | "sky";
+
 export interface HabitItem {
   id: string;
   label: string;
   icon: HabitIconKey;
+  /** B3 habit_items.colour; absent only on a row made before the read carried it (treat as lavender). */
+  colour?: HabitColour;
   done: boolean;
   streakDays: number;
   /** yyyy-mm-dd days with a completion, within the loaded window (MO1.1.1 week grid). */
@@ -1363,6 +1383,8 @@ export type WidgetType =
   | "habits"
   | "journal"
   | "meditation"
+  // v6 Batch 2 HO1.W11: the Cycle widget (local board only until widget_type gains `cycle`, Database B2).
+  | "cycle"
 ;
 export type WidgetSize = "small" | "large";
 

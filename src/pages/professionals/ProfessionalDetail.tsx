@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
-import { goldPill, initials, typeColours } from "../../components/professionals/typeColour";
+import { goldPill, initials, pinGround, typeColours } from "../../components/professionals/typeColour";
+import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
 import { useIsDark } from "../../hooks/useIsDark";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { fetchClientSince, isActiveClientOf, professionalRole } from "../../services/connected-professional";
@@ -364,7 +365,8 @@ export default function ProfessionalDetail() {
   );
   // MO1.2.1: pills 26 tall (measured), 10 either side; the icon in the type's
   // main colour, the text in its deep colour (both sampled from the frame).
-  const pill = "inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11px] font-semibold";
+  // v6 MO1.2.1.5.2 #9 / #11: 26 tall, 0 10, icon 12 5 to the label, 11/16.5 600.
+  const pill = "inline-flex items-center gap-[5px] h-[26px] px-2.5 rounded-full text-[11px] leading-[16.5px] font-semibold";
   // The pinned row waits for the connection check, so Message never flashes
   // the non-client outline at someone who is already a client.
   const showPinned = isReal && activeClient !== null;
@@ -385,28 +387,42 @@ export default function ProfessionalDetail() {
 
       {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
           Avatar 96 (measured on the frame). */}
-      <div className="flex flex-col items-center text-center gap-1.5 mb-5 animate-fade-slide-up">
+      <div className="flex flex-col items-center text-center mb-5 animate-fade-slide-up">
+        {/* v6 MO1.2.1.5.2 #3 / #4: 96 round on #E7E2F6 / #E1EEEB (dark the
+            family pill, the drawn #E7E2F6* is a light leak); photo, else
+            initials when a name exists, else the person glyph. */}
         <span
-          className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
-          style={{ background: t.pill, color: t.deep }}
+          className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold"
+          style={{ background: pinGround(listing?.subtype ?? null, dark), color: t.deep }}
         >
-          {listing?.avatarUrl ? <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(professional.name)}
+          {listing?.avatarUrl ? (
+            <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : professional.name.trim() ? (
+            initials(professional.name)
+          ) : (
+            <AvatarPlaceholder size={96} />
+          )}
         </span>
-        <h1 className="flex items-center justify-center gap-1.5 text-[22px] font-bold leading-tight" style={{ color: t.deep }}>
+        {/* #5 / #6: 22/28 700 ls -0.4 in the deep ink, 12 under the avatar;
+            BadgeCheck 18, 6 to the name. */}
+        <h1 className="mt-3 flex items-center justify-center gap-1.5 text-[22px] font-bold leading-[28px] tracking-[-0.4px]" style={{ color: t.deep }}>
           <span className="min-w-0 break-words">{professional.name}</span>
           {professional.verified && <VerifiedCheck size={18} strokeWidth={1.75} />}
         </h1>
         {professional.headline && (
-          <p className="text-[15px] font-bold break-words" style={{ color: t.main }}>
+          // #7: 15/21 700, 3 under the name.
+          <p className="mt-[3px] text-[15px] leading-[21px] font-bold break-words" style={{ color: t.main }}>
             {professional.headline}
           </p>
         )}
-        <p className="text-[14px] font-medium text-charcoal-soft">
+        {/* #8: 14/20 500, 2 under. */}
+        <p className="mt-[2px] text-[14px] leading-[20px] font-medium text-charcoal-soft">
           {[professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }), professional.location]
             .filter(Boolean)
             .join(" · ")}
         </p>
-        <div className="flex flex-wrap justify-center gap-1.5 mt-1.5">
+        {/* #9 / #11: 12 under the role line, 6 apart. */}
+        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
           {isConnected && clientSince && (
             <span className={pill} style={{ background: t.pill, color: t.deep }}>
               <Handshake size={12} strokeWidth={1.75} aria-hidden style={{ color: t.main }} />
@@ -425,9 +441,10 @@ export default function ProfessionalDetail() {
         <button
           type="button"
           onClick={() => navigate(`/app/professionals/${professional.id}/reviews`)}
-          // 28 tall, 8 under the pills (measured on MO1.2.1).
-          className="tap mt-0.5 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-full text-[12px] font-bold"
-          style={{ background: gold.bg, border: `1px solid ${gold.border}`, color: gold.ink }}
+          // #13 / #14: 28 tall, 8 under the pills, padding 0 12, 11.5/17.3 700,
+          // a 1.1px border (#D9A441, dark #E0B360), Star 13 6 to the label.
+          className="tap mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11.5px] leading-[17.3px] font-bold"
+          style={{ background: gold.bg, border: `1.1px solid ${gold.border}`, color: gold.ink }}
         >
           <Star size={13} aria-hidden style={{ fill: gold.star, color: gold.star }} />
           {rating.kind === "average"
@@ -442,8 +459,9 @@ export default function ProfessionalDetail() {
       {professional.bio && (
         <section className="mb-5 animate-fade-slide-up" aria-label="About">
           {sectionLabel("About")}
-          <div className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4">
-            <p className="text-[13px] text-charcoal-soft leading-relaxed whitespace-pre-line">{professional.bio}</p>
+          {/* v6 MO1.2.1.5.2 #16 / #17: pad 16, r18, 0.5px #241F1B@8% / #F5F3FA@8%; 13/21.5. */}
+          <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4">
+            <p className="text-[13px] text-charcoal-soft leading-[21.5px] whitespace-pre-line">{professional.bio}</p>
           </div>
         </section>
       )}

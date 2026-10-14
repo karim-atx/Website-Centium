@@ -32,7 +32,7 @@ import {
   type GroupReader,
   type GroupState,
 } from "../../services/messaging/groups";
-import { clockOptions, clockTime } from "./chatTime";
+import { clockTime } from "./chatTime";
 import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
 import { useThreadLive } from "../../context/threadLive";
 import { computeWaveform } from "../../services/messaging/waveformDecode";
@@ -179,7 +179,9 @@ export const ThreadView: React.FC<{
   onBack: () => void;
   /** A message to show on opening, e.g. a search result; older pages load until it is there. */
   focusMessageId?: string | null;
-}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId }) => {
+  /** MO1.7 O14: Chat info's "Delete conversation" (delete for me, B3). */
+  onDeleteConversation?: () => void;
+}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation }) => {
   const { authUserId, user } = useApp();
   const unread = useUnread();
   // Typing and online for this chat; the database decides who sees them.
@@ -1230,6 +1232,7 @@ export const ThreadView: React.FC<{
       {infoOpen && authUserId ? (
         <ChatInfo
           online={theyAreOnline}
+          onDelete={onDeleteConversation}
           thread={thread}
           authUserId={authUserId}
           settings={settings}
@@ -2173,7 +2176,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm font-semibold text-charcoal">{label}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
-                    ? new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", ...clockOptions() })
+                    ? `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`
                     : "–"}
                 </span>
               </div>
@@ -2319,7 +2322,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     };
   }, [messageId]);
   const when = (at: string) =>
-    new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", ...clockOptions() });
+    `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`;
   const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
   return (
     <>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type React from "react";
 import { Chip } from "../../components/ui/Chip";
-import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/MacroSplitEditor";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
@@ -19,7 +18,6 @@ import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal } f
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // Item 8 shares Food's own tab bar (labels + literal flex-weights) instead
 // of a second, drifting copy of them.
-import { foodTabs, type Tab } from "./foodTabs";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 
@@ -79,14 +77,9 @@ const existingPlanPreset = {
   macroSplit: { proteinPct: 35, carbsPct: 40, fatPct: 25 },
 };
 
-interface GoalsPanelProps {
-  /** Item 8: the shared tab bar lives inside GoalsPanel too, so switching
-   *  away from "Goals & Macros" has to bubble back up to Food's own tab
-   *  state. */
-  onTabChange: (tab: Tab) => void;
-}
-
-export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
+// v6 FO1 S1: the Food tab bar is the page's one fixed header on every tab,
+// so this panel no longer draws a second copy of it.
+export default function GoalsPanel() {
   const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy, cycleOffered } =
     useApp();
   const dark = useIsDark();
@@ -249,7 +242,6 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
   return (
     <div className="flex flex-col animate-fade-slide-up" style={{ gap: 10 }}>
-      <SegmentedTabs items={foodTabs} activeKey="goals" onChange={(key) => onTabChange(key as Tab)} />
 
       {/* PREGNANCY GUIDANCE SITS WITH THE TARGET IT OFFERS TO CHANGE. "Apply
           to my targets" writes into the calorie goal two cards below, so it

@@ -1,6 +1,24 @@
 import React from "react";
 import clsx from "clsx";
 
+/**
+ * Sizes, as [track width, track height, knob]. Padding is 3 in every size.
+ * - default: Part B and client switches, 44 × 26, knob 20 (X-15; MO1.8 #10-#11).
+ * - lead: MO1.8.3's "Allow notifications" lead switch, 56 × 30, knob 24.
+ * - business: Business UI row switches (opening-hours days, offer cards, a
+ *   class's "Show on Explore"), 42 × 26, knob 20.
+ * - business-lg: Business UI listing visibility ("Show on Explore",
+ *   "Visible on Explore"), 46 × 28, knob 22.
+ */
+export type ToggleSize = "default" | "lead" | "business" | "business-lg";
+
+const SIZES: Record<ToggleSize, [number, number, number]> = {
+  default: [44, 26, 20],
+  lead: [56, 30, 24],
+  business: [42, 26, 20],
+  "business-lg": [46, 28, 22],
+};
+
 export const Toggle: React.FC<{
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -16,16 +34,37 @@ export const Toggle: React.FC<{
   /**
    * The larger lead switch of a page's lead card (MO1.8.3 "Allow
    * notifications", measured on the 2x board: track 56 × 30, padding 3, knob
-   * 24, on #9A8CD6). Off and disabled as the default switch. Opt-in; the
-   * default stays the Foundations 44 × 26.
+   * 24, on #9A8CD6). Same as `size="lead"`; kept for existing callers.
    */
   lead?: boolean;
-}> = ({ checked, onChange, label, disabled, lead }) => {
-  // Mobile v5.1 Foundations 2.5 "Toggle" (decision 20, supersedes 17): a
-  // 44 x 26 track with 3 px padding and a 20 px white knob with shadow.knob.
-  // On is primary. Off keeps today's colours (decision 19): rgba(36,31,27,0.15)
-  // light, rgba(238,239,242,0.16) dark; high contrast strengthens it to the 30%
-  // ink its hairlines use (.toggle-off in index.css). Disabled is 40%.
+  /** Track size (see ToggleSize). `lead` wins when both are set. */
+  size?: ToggleSize;
+  /**
+   * The ON track colour when a business frame draws other than primary
+   * (BU3 "Visible on Explore": #7D6BB5 light, #A991FE dark). A CSS colour.
+   */
+  onColor?: string;
+  /**
+   * The knob's shadow on business switches: true draws 0 1px 3px
+   * rgba(36,31,27,0.25) (the frames' default); false for the rows that draw
+   * none (MA1 opening-hours days). Ignored on client sizes.
+   */
+  knobShadow?: boolean;
+}> = ({ checked, onChange, label, disabled, lead, size = "default", onColor, knobShadow = true }) => {
+  const kind: ToggleSize = lead ? "lead" : size;
+  const [w, h, knob] = SIZES[kind];
+  const business = kind === "business" || kind === "business-lg";
+  // Part B and client (X-15, MO1.8 #10-#11): on is primary (#AEA1DC / #A991FE),
+  // the lead switch on fill.pinned #9A8CD6 / #A991FE (#5B48B8 under High
+  // contrast, V6-01); off #241F1B@12% / #F5F3FA@12%, and
+  // 30% of ink under High contrast (.toggle-off in index.css). The knob is
+  // white with shadow.knob in light, #1C1F28 without a shadow in dark.
+  //
+  // Business (X-15, BU3 / BU2 frames): on primary (#AEA1DC / #A991FE) unless a
+  // frame draws its own; off the BU track #D9D6E3 / #3A3D48; white knob in both
+  // modes with 0 1px 3px rgba(36,31,27,0.25). Hit box 44 via .tap.
+  //
+  // Disabled is 40% in every size.
   return (
     <button
       type="button"
@@ -36,14 +75,32 @@ export const Toggle: React.FC<{
       onClick={() => onChange(!checked)}
       className={clsx(
         "tap px-[3px] rounded-full flex items-center transition-colors duration-150 ease-out shrink-0",
-        lead ? "w-14 h-[30px]" : "w-11 h-[26px]",
         checked
-          ? clsx(lead ? "bg-th-9a8cd6 dark:bg-primary" : "bg-primary", "justify-end")
-          : "toggle-off bg-charcoal/15 dark:bg-[rgba(238,239,242,0.16)] justify-start",
+          ? clsx(
+              !onColor && (kind === "lead" ? "bg-fill-pinned" : "bg-primary"),
+              "justify-end"
+            )
+          : clsx(
+              "toggle-off justify-start",
+              // charcoal is #241F1B light and #F5F3FA dark.
+              business ? "bg-track" : "bg-charcoal/[0.12]"
+            ),
         disabled && "opacity-40 cursor-not-allowed"
       )}
+      style={{ width: w, height: h, ...(checked && onColor ? { background: onColor } : null) }}
     >
-      <div className={clsx(lead ? "w-6 h-6" : "w-5 h-5", "rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]")} />
+      <span
+        aria-hidden
+        className={clsx(
+          "block rounded-full shrink-0",
+          business ? "bg-white" : "bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-cream-card dark:shadow-none"
+        )}
+        style={{
+          width: knob,
+          height: knob,
+          ...(business && knobShadow ? { boxShadow: "0 1px 3px rgba(36,31,27,0.25)" } : null),
+        }}
+      />
     </button>
   );
 };

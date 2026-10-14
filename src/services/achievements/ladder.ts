@@ -37,6 +37,12 @@ export interface Achievement {
   earnedAt: string | null;
   /** True only for rows the call that returned this one actually inserted. */
   newlyEarned: boolean;
+  /**
+   * B3 user_achievements.notified_at: when the unlock pill was shown, on any
+   * device. Null on an earned row means the pill is still owed (this, not
+   * newlyEarned, decides the pill since B3). Undefined before B3.
+   */
+  notifiedAt?: string | null;
 }
 
 /** One row of my_points_summary(). */

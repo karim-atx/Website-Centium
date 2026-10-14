@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
 
 export interface SegmentedTabItem {
   key: string;
@@ -62,9 +62,66 @@ export const SegmentedTabs: React.FC<{
   scrollMinWidth?: number;
   /** Tab radius when a frame draws other than 12 (Foundations' FO3 sub-tabs: 9). */
   tabRadius?: number;
-}> = ({ items, activeKey, onChange, className, idleInk = "rgb(var(--th-6d50d3))", idleInkDark = "rgb(var(--th-b7abde))", size = "default", scroll, light, trackStyle, wrapLabels, labelSize = 12.5, tabHeight, idleWeight = 700, scrollTabPadding = "0 16px", scrollMinWidth = 86, tabRadius = 12 }) => {
+  /**
+   * The DARK colours of the main tab bar. "default" keeps the v5.1 set (track
+   * #242730, idle #2B2C3A with #B7ABDE). "partB" is the v6 Part B main tabs
+   * (FO1 #3-#5, WO1 #3-#5): track and idle tab #303141, idle label #B8B3C7.
+   * Light mode is unaffected.
+   */
+  darkTone?: "default" | "partB";
+  /**
+   * "teal" is the FO3-style sub-tab row (WO1.3 #67-#69, MO1.7 #10-#12): track
+   * #F4F3F9 (dark #242730, V6-93) r12 pad 4 gap 4; tabs 32 tall, r9, padding
+   * 0 12, 12 / 18; active the theme secondary fill #79A8A1 with white 700
+   * (dark: the fill-prep dark #4F7F78), idle transparent with #5B5349 /
+   * #B8B3C7 600. The size props above still override it.
+   */
+  variant?: "default" | "teal";
+  /**
+   * The active tab's DARK fill, when a frame draws other than the variant's
+   * (WO1.3 #68: the teal sub-tabs keep the literal #79A8A1 in dark, V6-94).
+   * Light mode is unaffected.
+   */
+  activeFillDark?: string;
+  /**
+   * The idle tabs' DARK fill, when a frame draws other than the variant's
+   * (MO1.2 #13 / MO1.3 #11: the category chips sit transparent on the rail
+   * in dark too). Light mode is unaffected (`light` covers it).
+   */
+  idleFillDark?: string;
+  /** Gap between an item's icon and label when a frame draws other than 6 (MO1.2 #8: 7). */
+  iconGap?: number;
+  /** Label line height in px when a frame draws one (MO1.1.4 #7: 15, #9: 13.8); grows with Larger text. */
+  lineHeight?: number;
+}> = ({
+  items,
+  activeKey,
+  onChange,
+  className,
+  idleInk = "rgb(var(--th-6d50d3))",
+  idleInkDark = "rgb(var(--th-b7abde))",
+  size = "default",
+  scroll,
+  light,
+  trackStyle,
+  wrapLabels,
+  labelSize,
+  tabHeight,
+  idleWeight,
+  scrollTabPadding,
+  scrollMinWidth = 86,
+  tabRadius,
+  darkTone = "default",
+  variant = "default",
+  activeFillDark,
+  idleFillDark,
+  iconGap,
+  lineHeight,
+}) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
+  const teal = variant === "teal";
+  const partB = darkTone === "partB";
   const trackRef = useRef<HTMLDivElement | null>(null);
   // A scrolling track brings the active tab into view (a new folder, or one
   // just moved, can sit past the right edge).
@@ -78,11 +135,38 @@ export const SegmentedTabs: React.FC<{
     else if (left + tab.offsetWidth > track.scrollLeft + track.clientWidth)
       track.scrollTo({ left: left + tab.offsetWidth - track.clientWidth + 6, behavior: "smooth" });
   }, [scroll, activeKey, items.length]);
+
+  // Track: fill.segmentedTrack #F3F3FD (dark #242730, V6-93); the Part B main
+  // tabs draw #303141 in dark; the teal sub-tabs #F4F3F9.
+  const trackFill = teal
+    ? dark ? "rgb(var(--c-seg-track))" : "rgb(var(--th-f4f3f9))"
+    : dark && partB ? "rgb(var(--th-303141))" : "rgb(var(--c-seg-track))";
+  // Active: fill.segmentedActive #A79AD5 with white (V6-01; #5B48B8 under High
+  // contrast; dark the primary fill with #0D0B1A), or the teal secondary.
+  const activeFill =
+    dark && activeFillDark ? activeFillDark : teal ? "rgb(var(--c-fill-prep))" : "rgb(var(--c-seg-active))";
+  const activeInk = teal ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
+  const idleFill = dark && idleFillDark
+    ? idleFillDark
+    : teal
+    ? "transparent"
+    : dark ? (partB ? "rgb(var(--th-303141))" : "rgb(var(--th-2b2c3a))") : "rgb(var(--th-f5f4fe))";
+  const idleLabel = teal
+    ? "rgb(var(--c-charcoal-soft))"
+    : dark ? (partB ? "rgb(var(--c-charcoal-soft))" : idleInkDark) : idleInk;
+  const height = tabHeight ?? (teal ? 32 : size === "compact" ? 38 : 44);
+  const radius = tabRadius ?? (teal ? 9 : 12);
+  const pad = scroll ? scrollTabPadding ?? (teal ? "0 12px" : "0 16px") : teal ? "0 12px" : "0 6px";
+
   return (
     <div
       ref={trackRef}
       className={`flex items-center ${scroll ? "overflow-x-auto no-scrollbar" : ""} ${className ?? ""}`}
-      style={{ background: dark ? "#242730" : "rgb(var(--th-f3f3fd))", borderRadius: 16, padding: 6, gap: 5, ...trackStyle }}
+      style={{
+        background: trackFill,
+        ...(teal ? { borderRadius: 12, padding: 4, gap: 4 } : { borderRadius: 16, padding: 6, gap: 5 }),
+        ...trackStyle,
+      }}
       role="tablist"
     >
       {items.map((item) => {
@@ -96,19 +180,17 @@ export const SegmentedTabs: React.FC<{
             className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : "whitespace-nowrap"}`}
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
-              minWidth: scroll ? scrollMinWidth : 0,
-              height: tabHeight ?? (size === "compact" ? 38 : 44),
-              gap: item.icon ? 6 : undefined,
-              padding: scroll ? scrollTabPadding : "0 6px",
-              borderRadius: tabRadius,
-              background: lit
-                ? active ? lit.activeFill : lit.idleFill
-                : active ? (dark ? "rgb(var(--c-primary-fill))" : "rgb(var(--th-a79ad5))") : dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f5f4fe))",
-              color: lit
-                ? active ? lit.activeInk : lit.idleInk
-                : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
-              fontSize: textPx(labelSize),
-              fontWeight: active ? 700 : idleWeight,
+              minWidth: scroll ? (teal && scrollMinWidth === 86 ? 0 : scrollMinWidth) : 0,
+              height,
+              gap: item.icon ? iconGap ?? 6 : undefined,
+              padding: pad,
+              borderRadius: radius,
+              background: lit ? (active ? lit.activeFill : lit.idleFill) : active ? activeFill : idleFill,
+              color: lit ? (active ? lit.activeInk : lit.idleInk) : active ? activeInk : idleLabel,
+              fontSize: textPx(labelSize ?? (teal ? 12 : 12.5)),
+              ...(teal ? { lineHeight: linePx(18) } : null),
+              ...(lineHeight !== undefined ? { lineHeight: linePx(lineHeight) } : null),
+              fontWeight: active ? 700 : idleWeight ?? (teal ? 600 : 700),
             }}
           >
             {item.icon}

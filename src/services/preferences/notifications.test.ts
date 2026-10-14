@@ -31,15 +31,16 @@ const DEFAULT_ROW = {
   notification_calendar_events: true,
   notification_memberships: true,
   notification_referral_rewards: true,
+  notification_health_checks: true,
   quiet_hours_enabled: false,
   quiet_hours_from: "22:00:00",
   quiet_hours_to: "07:00:00",
 };
 
-test("every MO1.8.3 row has its contract column, and the select names all seventeen", () => {
-  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 17);
+test("every MO1.8.3 row has its contract column, and the select names all eighteen", () => {
+  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 18);
   assert.deepEqual(new Set(Object.values(NOTIFICATION_COLUMNS)), new Set(Object.keys(DEFAULT_ROW)));
-  assert.equal(NOTIFICATION_SELECT.split(", ").length, 17);
+  assert.equal(NOTIFICATION_SELECT.split(", ").length, 18);
   assert.ok(!NOTIFICATION_SELECT.includes("notification_reviews"), "reviews is not on MO1.8.3");
 });
 
@@ -96,7 +97,10 @@ test("quiet hours: same time refused, the window wraps midnight", () => {
   assert.equal(inQuietWindow("12:00", "09:00", "17:00"), true);
   assert.equal(inQuietWindow("20:00", "09:00", "17:00"), false);
 
-  assert.match(describeQuietWindow("22:00", "07:00"), /from 22:00 until 07:00 the next morning/);
+  assert.match(describeQuietWindow("22:00", "07:00"), /^From 10:00 PM until 7:00 AM the next morning/);
+  // B4: held and summarised, not dropped.
+  assert.match(describeQuietWindow("22:00", "07:00"), /one summary when quiet hours end/);
+  assert.doesNotMatch(describeQuietWindow("22:00", "07:00"), /not saved for later/);
   assert.doesNotMatch(describeQuietWindow("09:00", "17:00"), /next morning/);
 });
 

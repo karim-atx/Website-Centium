@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import type { ProfessionalClient } from "../../types";
 import { formatDisplayDate } from "../../utils/date";
 import { FileText, FlaskConical, Stethoscope } from "lucide-react";
 import type { PrivateBucket } from "../../services/storage";
+import { useApp } from "../../context/AppContext";
 
 /** A file the professional asked to open, with the bucket it lives in. */
 export interface ClinicalFileRequest {
@@ -29,6 +30,38 @@ export interface ClinicalFileRequest {
 // decide whether to show the other, and nothing is inferred: each section
 // renders only if its own grant is present, so a client sharing bloods but not
 // their medication list gets exactly that.
+
+/**
+ * Q-14 / V6-25 (Database B2, 20261115*: imaging_shares): imaging is shared one
+ * file at a time now. On the day it ships, a professional who could open every
+ * scan under medical_history sees none until the client shares each one. The
+ * database cannot tell them, so this one-time notice does, on the first client
+ * record they open with the imaging section (dismissed once per professional on
+ * this device). OURS: a primary-pale note in the section's own type.
+ */
+const IMAGING_NOTICE_KEY = "centium.imagingPerFileNotice";
+
+function useImagingNotice(proId: string | null): [boolean, () => void] {
+  const key = proId ? `${IMAGING_NOTICE_KEY}.${proId}` : null;
+  const [seen, setSeen] = useState(() => {
+    if (!key) return true;
+    try {
+      return window.localStorage.getItem(key) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismiss = () => {
+    setSeen(true);
+    if (!key) return;
+    try {
+      window.localStorage.setItem(key, "1");
+    } catch {
+      /* private mode: shown again next visit */
+    }
+  };
+  return [!seen, dismiss];
+}
 
 const statusPill: Record<"low" | "normal" | "high", string> = {
   low: "text-status-low bg-status-low-bg",
@@ -57,6 +90,9 @@ export const ClientClinicalRecords: React.FC<{
    */
   onOpenFile?: (file: ClinicalFileRequest) => void;
 }> = ({ client, onOpenFile }) => {
+  const { authUserId } = useApp();
+  const [showImagingNotice, dismissImagingNotice] = useImagingNotice(authUserId);
+  const firstName = client.name.split(" ")[0];
   const history = client.medicalHistory;
   const hasHistory =
     !!history &&
@@ -123,8 +159,10 @@ export const ClientClinicalRecords: React.FC<{
           {labs ? (
             <div className="space-y-2">
               <p className="text-[11px] text-charcoal-faint">
-                {labs.panelCount} {labs.panelCount === 1 ? "panel" : "panels"} · latest{" "}
-                {formatDisplayDate(labs.latestPanelDate)}
+                {labs.panelCount > 0 && `${labs.panelCount} ${labs.panelCount === 1 ? "panel" : "panels"} · `}
+                {(labs.standaloneCount ?? 0) > 0 &&
+                  `${labs.standaloneCount} single ${labs.standaloneCount === 1 ? "result" : "results"} · `}
+                latest {formatDisplayDate(labs.latestPanelDate)}
               </p>
               {/* The uploaded reports themselves. Only panels carrying a file
                   appear, and only when something can open them. */}
@@ -188,6 +226,22 @@ export const ClientClinicalRecords: React.FC<{
       {client.access.medicalHistory && (
         <div>
           <SectionLabel icon={FileText}>Imaging & tests</SectionLabel>
+          {showImagingNotice && (
+            <div role="status" className="rounded-xl px-3 py-2.5 mb-2 bg-primary-pale">
+              <p className="text-[12px] font-bold text-primary-dark">Scans are now shared one at a time</p>
+              <p className="text-[11.5px] leading-[17px] text-charcoal-soft mt-0.5">
+                You see a scan or test file only once your client shares that file with you. Files you could open before
+                stay hidden until they share each one again.
+              </p>
+              <button
+                type="button"
+                onClick={dismissImagingNotice}
+                className="tap min-h-11 -mb-2 text-[12px] font-bold text-primary-dark"
+              >
+                Got it
+              </button>
+            </div>
+          )}
           {imaging.length > 0 ? (
             <div className="space-y-2">
               {imaging.map((r) => (
@@ -222,7 +276,9 @@ export const ClientClinicalRecords: React.FC<{
               ))}
             </div>
           ) : (
-            <p className="text-xs text-charcoal-faint">No imaging or tests recorded yet.</p>
+            // B2: an empty list means nothing has been SHARED with this
+            // professional; whether the client has scans is not theirs to know.
+            <p className="text-xs text-charcoal-faint">{firstName} hasn't shared any scans or test files with you yet.</p>
           )}
         </div>
       )}
@@ -231,7 +287,7 @@ export const ClientClinicalRecords: React.FC<{
           it means. Absence of a grant is the client's decision, not a gap. */}
       {!client.access.medicalHistory && !client.access.labResults && (
         <p className="text-xs text-charcoal-faint">
-          {client.name.split(" ")[0]} isn't sharing clinical records.
+          {firstName} isn't sharing clinical records.
         </p>
       )}
     </div>

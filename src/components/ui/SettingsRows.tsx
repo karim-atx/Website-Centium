@@ -1,23 +1,22 @@
-import React, { useId } from "react";
+﻿import React, { useId } from "react";
 import clsx from "clsx";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Toggle } from "./Toggle";
 
 // Mobile v5.1 handover, MO1.8 Settings and its sub-pages (Foundations 2.3,
-// 2.4): a labelled section of rows, laid out as the board draws it. Each row
-// is padding 13 0, gap 14, a 36 pt icon tile (radius 11, glyph 17 / 1.75), a 14 / 600 title, an optional
-// 12 / 400 muted subtitle, and on the right a value (12.5 / 400 muted) with a
-// 16 pt chevron, a toggle, or nothing. Rows are divided by a 1 px hairline
-// that starts at the text column (50 pt in) and is absent under the last row.
-// Sections are 32 pt apart.
+// 2.4), restyled to the v6 Part B MO1.8 table (the user's colour rule
+// overrides decisions 22 / 23's kept greys): a labelled section of rows. Each
+// row is padding 13 0, gap 14, a 36 pt icon tile (radius 11, glyph 17 / 1.75),
+// a 14 / 19 600 title, an optional 12 / 16 400 muted subtitle 2 below, and on
+// the right a value (12.5 / 400 muted) with a 16 pt chevron, a toggle, or
+// nothing. Rows are divided by a 1 px hairline that starts at the text column
+// (50 pt in) and is absent under the last row. Sections are 32 pt apart.
 //
-// COLOURS BY AGE (decision 22, refining 15). The section label keeps its
-// pre-R1 grey ink (the line is the theme primary, decision 20); the hairline is
-// the 6% charcoal one the old Settings cards drew between rows. The icon tile
-// is the handover's own primary.tint tile with a primary.accent glyph (MO1.8,
-// measured #F0EDF9 / #7D67D9; dark rgba(174,161,220,0.14) / #9A8CD6) on every
-// row, in light, dark and every theme (decision 23: one tile style; the rows
-// that had a pre-R1 cream-soft tile were unified with the rest).
+// COLOURS (MO1.8 #4-#11, #23): the section label in primary.accent #7D67D9 /
+// #9A8CD6 over a 1.5 primary rule 8 below it; the tile primary.tint #F0EDF9 /
+// #303141 (bg-primary-pale) with a primary.accent glyph; the divider
+// border.row #AEA1DC@15% (dark: the token's rgba(238,239,242,0.08), TK 1.4
+// #4), 30% of ink under High contrast through the token.
 //
 // The first row starts right under the section line (MO1.8: line bottom 96,
 // row 97; MO1.8.3: 222, 222), so the label has no bottom margin.
@@ -36,16 +35,14 @@ export const SettingsSection: React.FC<{
   const labelId = useId();
   return (
     <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
-      {/* MO1.8.5.1: Arabic drops the small caps' letter-spacing. MO1.8.6.1:
-          high contrast (light) draws the labels in the darkened primary
-          #4B3BA0 (primary-accent there); light mode otherwise keeps the
-          pre-R1 grey ink (decision 22). */}
+      {/* MO1.8.5.1: Arabic drops the small caps' letter-spacing. MO1.8 #4:
+          primary.accent ink (High contrast light: the darkened #4B3BA0, the
+          token there). MO1.8 #5: the rule sits 8 under the label (the shared
+          .section-label has 7.5). */}
       <h2
         id={labelId}
-        className={clsx(
-          "section-label text-charcoal-faint rtl:tracking-normal [html.high-contrast:not(.dark)_&]:text-primary-accent",
-          labelClassName
-        )}
+        className={clsx("section-label text-primary-accent rtl:tracking-normal", labelClassName)}
+        style={{ paddingBottom: 8 }}
       >
         {label}
       </h2>
@@ -82,6 +79,12 @@ type RowBase = {
   dimmed?: boolean;
   className?: string;
   id?: string;
+  /**
+   * The glyph ink. "accent" (default) primary.accent #7D67D9 / #9A8CD6; "dark"
+   * primary.dark #7D6BB5 / #C3B3FB, the ink MO1.8 draws on the Data & account
+   * rows (#49, #53, #60, #69).
+   */
+  iconTone?: "accent" | "dark";
 };
 
 type RowProps = RowBase &
@@ -91,6 +94,11 @@ type RowProps = RowBase &
         onClick: () => void;
         /** Shown before the chevron, e.g. the current language. */
         value?: React.ReactNode;
+        /**
+         * MO1.8 #77-#78: the value 12.5 / 18.8 and 4 from the chevron (one
+         * group) instead of the row's 14 gap. Unset keeps the 14.
+         */
+        valueTight?: boolean;
         toggle?: never;
       }
     | {
@@ -98,8 +106,9 @@ type RowProps = RowBase &
         toggle: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string };
         onClick?: never;
         value?: never;
+        valueTight?: never;
       }
-    | { onClick?: never; toggle?: never; value?: React.ReactNode }
+    | { onClick?: never; toggle?: never; value?: React.ReactNode; valueTight?: never }
   );
 
 /** The row geometry and inset divider, for a page's own row shape (MO1.8.3 From / To). */
@@ -108,7 +117,7 @@ export const settingsRowClass = clsx(
   "relative w-full flex items-center gap-3.5 text-start [padding-block:calc(13px_+_var(--row-extra,0px)_/_2)]",
   // The inset divider: from the text column to the end, not under the last row.
   // ::before, not ::after: .tap already uses ::after for its 44 px hit box.
-  "before:content-[''] before:absolute before:bottom-0 before:start-[50px] before:end-0 before:h-px before:bg-charcoal/[0.06] before:pointer-events-none",
+  "before:content-[''] before:absolute before:bottom-0 before:start-[50px] before:end-0 before:h-px before:bg-[var(--border-row)] before:pointer-events-none",
   "last:before:hidden"
 );
 
@@ -124,7 +133,9 @@ export const SettingsRow: React.FC<RowProps> = ({
   id,
   onClick,
   value,
+  valueTight,
   toggle,
+  iconTone = "accent",
 }) => {
   const body = (
     <>
@@ -138,7 +149,9 @@ export const SettingsRow: React.FC<RowProps> = ({
               ? ""
               : destructive
                 ? "bg-status-high-bg text-status-high"
-                : "bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]"
+                : iconTone === "dark"
+                  ? "bg-primary-pale text-primary-dark"
+                  : "bg-primary-pale text-primary-accent"
           )}
         >
           {/* MO1.8 icon list: Sun, Mic, ShieldCheck, Globe … all 17 / 1.75. */}
@@ -148,19 +161,27 @@ export const SettingsRow: React.FC<RowProps> = ({
       <span className="flex-1 min-w-0">
         <span
           className={clsx(
-            "block text-[14px] font-semibold leading-5 break-words",
+            "block text-[14px] font-semibold leading-[19px] break-words",
             destructive ? "text-status-high" : "text-charcoal"
           )}
         >
           {title}
         </span>
-        {subtitle && <span className="block mt-px text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
+        {subtitle && <span className="block mt-0.5 text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
         {srDescription && <span className="sr-only">{srDescription}</span>}
       </span>
-      {value !== undefined && value !== null && (
+      {!valueTight && value !== undefined && value !== null && (
         <span className="shrink-0 max-w-[45%] truncate text-[12.5px] text-charcoal-faint">{value}</span>
       )}
     </>
+  );
+  const chevron = (
+    <ChevronRight
+      size={16}
+      strokeWidth={1.75}
+      aria-hidden
+      className="shrink-0 text-charcoal-faint rtl:-scale-x-100"
+    />
   );
 
   // Dimmed (BR-12): the whole row at 40% and inert, so it takes no tap and no
@@ -187,12 +208,14 @@ export const SettingsRow: React.FC<RowProps> = ({
     return (
       <button id={id} type="button" onClick={onClick} inert={inert} disabled={dimmed} className={clsx("tap", settingsRowClass, dim, className)}>
         {body}
-        <ChevronRight
-          size={16}
-          strokeWidth={1.75}
-          aria-hidden
-          className="shrink-0 text-charcoal-faint rtl:-scale-x-100"
-        />
+        {valueTight && value !== undefined && value !== null ? (
+          <span className="shrink-0 max-w-[45%] flex items-center gap-1">
+            <span className="min-w-0 truncate text-[12.5px] leading-[18.8px] text-charcoal-faint">{value}</span>
+            {chevron}
+          </span>
+        ) : (
+          chevron
+        )}
       </button>
     );
   }

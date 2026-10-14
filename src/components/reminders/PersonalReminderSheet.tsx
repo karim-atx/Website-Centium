@@ -127,7 +127,7 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
             <Toggle checked={enabled} onChange={setEnabled} label="Reminder on" />
           </div>
           <p className="text-[11px] text-charcoal-faint leading-relaxed">
-            Arrives as a notification from 9:00 in your timezone, reading "You have a reminder today". Turn on
+            Arrives as a notification from 9:00 AM in your timezone, reading "You have a reminder today". Turn on
             notifications in Settings to receive it.
           </p>
           {message && (

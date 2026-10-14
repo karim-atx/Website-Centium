@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { PageHeader } from "../../components/ui/PageHeader";
+import type { MindSection } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
@@ -9,6 +9,7 @@ import MeditationPage from "./MeditationPage";
 import { earnedCount } from "../../services/achievements";
 import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
+import { habitShade, type HabitShade } from "../../services/habits/colours";
 import { habitIcon } from "../../utils/icons";
 import {
   Apple,
@@ -30,22 +31,8 @@ import { journalStreak as journalStreakFrom } from "../../services/journal/strea
 import { useBack } from "../../hooks/useBack";
 import { useIsDark } from "../../hooks/useIsDark";
 
-type Section = "habits" | "journal" | "achievements" | "meditation";
+type Section = MindSection;
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
-
-// The sub-page header, for each section.
-const SECTION_TITLE: Record<Section, string> = {
-  habits: "Habits",
-  journal: "Journal",
-  achievements: "Achievements",
-  meditation: "Meditation",
-};
-const SECTION_SUBTITLE: Record<Section, string> = {
-  habits: "Track your daily habits",
-  journal: "Your thoughts, logged",
-  achievements: "What you've earned so far",
-  meditation: "Breathing, stretching & yoga",
-};
 
 const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
   logging: ClipboardList,
@@ -121,10 +108,12 @@ export default function Mind() {
     today,
     habitsLoading,
     journalLoading,
+    accessibility,
   } = useApp();
   const navigate = useNavigate();
   const back = useBack();
   const dark = useIsDark();
+  const hc = !!accessibility.highContrast;
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
   const [autoOpen, setAutoOpen] = useState(false);
@@ -169,14 +158,11 @@ export default function Mind() {
       : "Start a session";
 
   if (section) {
+    // Each section renders its own header (components/mind/MindHeader.tsx):
+    // Journal, Achievements and Meditation hold it in the fixed area with
+    // their tab rows (PB4 §8 1b); Habits scrolls.
     return (
       <div>
-        <PageHeader
-          title={SECTION_TITLE[section]}
-          subtitle={SECTION_SUBTITLE[section]}
-          showBack
-          onBack={back}
-        />
         {section === "habits" && <HabitsTab />}
         {section === "journal" && <JournalTab />}
         {section === "achievements" && <AchievementsTab />}
@@ -337,11 +323,22 @@ export default function Mind() {
           )}
           {habits.map((h, i) => {
             const Icon = habitIcon[h.icon];
+            // B3 PB-O-01: the habit's colour wherever its icon appears
+            // (MO1.1.1 S3); lavender stays the theme classes.
+            const shade = habitShade(h.colour, dark, hc);
             return (
               <Row
                 key={h.id}
                 divider={i > 0 || (autoOpen && autoStreaks.length > 0)}
-                icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
+                shade={shade}
+                icon={
+                  <Icon
+                    size={14}
+                    strokeWidth={1.75}
+                    className={shade ? undefined : "text-primary-dark"}
+                    style={shade ? { color: shade.ink } : undefined}
+                  />
+                }
                 label={h.label}
                 days={h.streakDays}
                 check={
@@ -447,11 +444,14 @@ function Row({
   days,
   check,
   divider,
+  shade,
 }: {
   icon: React.ReactNode;
   label: string;
   days: number;
   check?: React.ReactNode;
+  /** The habit colour's tile (B3); absent = lavender primary-pale. */
+  shade?: HabitShade | null;
   /** A rule above the row, inset to the label column (x 71 on the frame:
       14 padding + 28 tile + 12 gap) and stopping at the streak strip, so
       the strip runs unbroken (MO1.1 #6). */
@@ -461,7 +461,12 @@ function Row({
     <div className="flex items-stretch h-14">
       <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
         {divider && <span aria-hidden className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
-        <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">{icon}</span>
+        <span
+          className={clsx("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", !shade && "bg-primary-pale")}
+          style={shade ? { background: shade.tile } : undefined}
+        >
+          {icon}
+        </span>
         <span className="min-w-0 block text-[13.5px] font-semibold text-charcoal truncate">{label}</span>
       </div>
       {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}

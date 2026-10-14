@@ -45,6 +45,7 @@ import { EnduranceRunner } from "./EnduranceRunner";
 import clsx from "clsx";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { clock12 } from "../../utils/time12";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -773,7 +774,7 @@ export const WorkoutSessionSheet: React.FC<{
             </p>
             <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: linePx(14) }}>
               {started
-                ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
+                ? `Started ${clock12(startedAt)} · ${formatDuration(elapsed)} elapsed`
                 : elapsed > 0
                 ? `Paused · ${formatDuration(elapsed)} elapsed`
                 : "Not started"}

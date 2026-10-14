@@ -4,6 +4,7 @@ import {
   CYCLE_FLAGS,
   LOG_LIMITS,
   SETTINGS_LIMITS,
+  PERIOD_REMINDER_DAYS,
   type CycleDayLog,
   type CyclePrediction,
   type CycleSettings,
@@ -65,7 +66,9 @@ export type SettingsResult =
 // NO contraception COLUMN: 20260924470000 moved it to contraception_plans.
 // NO timezone COLUMN: 20261008000000 dropped it; the zone is profiles.timezone.
 const SETTINGS_COLUMNS =
-  "tracker_enabled, tracker_chosen_at, shown_for_any_sex, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail";
+  "tracker_enabled, tracker_chosen_at, shown_for_any_sex, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail, period_reminder, period_reminder_days";
+// period_reminder / period_reminder_days: Database B2 (20261115000000), not yet
+// in the generated types (gen:types reads production), hence the row cast below.
 
 function toSettings(row: {
   tracker_enabled: boolean;
@@ -78,6 +81,8 @@ function toSettings(row: {
   pill_reminder: boolean;
   method_reminders: boolean;
   notification_detail: NotificationDetail;
+  period_reminder?: boolean | null;
+  period_reminder_days?: number | null;
 }): CycleSettings {
   return {
     trackerEnabled: row.tracker_enabled,
@@ -90,6 +95,8 @@ function toSettings(row: {
     pillReminder: row.pill_reminder,
     methodReminders: row.method_reminders,
     notificationDetail: row.notification_detail,
+    periodReminder: row.period_reminder ?? false,
+    periodReminderDays: row.period_reminder_days ?? 1,
   };
 }
 
@@ -113,7 +120,7 @@ export async function getCycleSettings(userId: string): Promise<SettingsResult> 
     console.error("[cycle] Could not load settings:", error.message);
     return { ok: false, message: describe(error) };
   }
-  return { ok: true, settings: data ? toSettings(data) : null };
+  return { ok: true, settings: data ? toSettings(data as unknown as Parameters<typeof toSettings>[0]) : null };
 }
 
 export type WriteResult = { ok: true } | { ok: false; message: string };
@@ -137,6 +144,12 @@ export function validateSettings(patch: Partial<CycleSettings>): string | null {
     const v = patch.lutealLength;
     if (!Number.isInteger(v) || v < lutealLength.min || v > lutealLength.max) {
       return `Luteal length should be between ${lutealLength.min} and ${lutealLength.max} days.`;
+    }
+  }
+  if (patch.periodReminderDays !== undefined) {
+    const v = patch.periodReminderDays;
+    if (!Number.isInteger(v) || v < PERIOD_REMINDER_DAYS.min || v > PERIOD_REMINDER_DAYS.max) {
+      return `Choose ${PERIOD_REMINDER_DAYS.min} to ${PERIOD_REMINDER_DAYS.max} days before.`;
     }
   }
   return null;
@@ -177,7 +190,11 @@ export async function saveCycleSettings(
   if (patch.conditions !== undefined) patchRow.conditions = patch.conditions;
   if (patch.pillReminder !== undefined) patchRow.pill_reminder = patch.pillReminder;
   if (patch.methodReminders !== undefined) patchRow.method_reminders = patch.methodReminders;
-  if (patch.notificationDetail !== undefined) patchRow.notification_detail = patch.notificationDetail;  if (Object.keys(patchRow).length === 0) return { ok: true };
+  if (patch.notificationDetail !== undefined) patchRow.notification_detail = patch.notificationDetail;
+  // B2: both in the cycle_settings UPDATE grant (checked on the local stack).
+  if (patch.periodReminder !== undefined) patchRow.period_reminder = patch.periodReminder;
+  if (patch.periodReminderDays !== undefined) patchRow.period_reminder_days = patch.periodReminderDays;
+  if (Object.keys(patchRow).length === 0) return { ok: true };
 
   const { data: updated, error: updateError } = await supabase
     .from("cycle_settings")
@@ -441,5 +458,44 @@ export async function fetchClientPregnancy(
     ok: true,
     status: row?.status === "pregnant" ? "pregnant" : "unavailable",
     trimester: (row?.trimester as number | null) ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Stats (Database B2: my_cycle_stats())
+// ---------------------------------------------------------------------------
+
+/**
+ * The caller's averages, worked out by the database: consecutive period days
+ * collapse into one bleed, and gaps outside 15–90 days are left out of the
+ * average (a pause after a pregnancy is not a cycle). Nulls mean not enough
+ * logged yet. Replaces counting averages on the device.
+ */
+export interface CycleServerStats {
+  cyclesObserved: number;
+  avgCycleLength: number | null;
+  avgPeriodLength: number | null;
+  lastPeriodStart: string | null;
+}
+
+export async function getCycleStats(): Promise<{ ok: true; stats: CycleServerStats } | { ok: false; message: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("my_cycle_stats");
+  if (error) {
+    console.error("[cycle] Could not load stats:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { cycles_observed: number | null; avg_cycle_length: number | string | null; avg_period_length: number | string | null; last_period_start: string | null }
+    | undefined;
+  const num = (v: number | string | null | undefined) => (v === null || v === undefined ? null : Number(v));
+  return {
+    ok: true,
+    stats: {
+      cyclesObserved: row?.cycles_observed ?? 0,
+      avgCycleLength: num(row?.avg_cycle_length),
+      avgPeriodLength: num(row?.avg_period_length),
+      lastPeriodStart: row?.last_period_start ?? null,
+    },
   };
 }

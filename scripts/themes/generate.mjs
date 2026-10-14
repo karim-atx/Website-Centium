@@ -61,10 +61,34 @@ const TINT_ALPHA = { light: 0.65, dark: 0.25 };
 // #7A7293, the Community dark muted text #BDB6CF (--forum-muted), and the Add
 // metric sheet's caption grey #827C9C and strip ink #1A00E0, and the program
 // detail band #DDD6F3 (now the theme's, not the level's).
-const LAV_FILLS = new Set(["#797292", "#9a94b3", "#8a8698", "#918da0", "#827c9c", "#1a00e0", "#53506c", "#7a7293", "#bdb6cf", "#ddd6f3"]);
-const TEAL_FILLS = new Set(["#ecf5f3", "#ebf5f2"]);
+// v6 (Batch 1): the navbar's High contrast idle greys #78738C / #A9A1BE
+// (X-23, --c-nav-idle) and the Business UI list wash #F7F7FC follow the theme
+// like nav idle; the meditation widget's dark tint #293339 follows it as teal
+// (Part B, D9).
+const LAV_FILLS = new Set(["#797292", "#9a94b3", "#8a8698", "#918da0", "#827c9c", "#1a00e0", "#53506c", "#7a7293", "#bdb6cf", "#ddd6f3",
+  "#78738c", "#a9a1be", "#f7f7fc"]);
+const TEAL_FILLS = new Set(["#ecf5f3", "#ebf5f2", "#293339"]);
+// v6 (V6-60 / X-25, TK §2.4): colours that are fixed in every theme and are
+// only ever drawn as fixed colours: the Part B Health metric palette (weight
+// excepted, it follows the theme), the range and destructive shades, and the
+// Business UI day-clock minute hand. They are written as --metric-* / --c-*
+// literals in index.css, never as th-<hex>. Hexes the app also uses as theme
+// colours (#A2C8C2, #4F8F8A, #3E716D, #E4F0EE ...) are not listed: there the
+// th- use is the theme one. The generator refuses a th- use of these.
+export const FIXED = new Set([
+  "#6e8fc9", "#e6ecf7", "#4a6aa3", "#273144", "#8fa9d8",
+  "#7fa06a", "#eaf1e4", "#55733f", "#2c3432", "#9cc285",
+  "#e8f2f0", "#313c42", "#c9deda", "#2e4a48", "#e4e1ee",
+  "#d9a15b", "#f8eedf", "#b07a35", "#8a5a1f", "#3e342d", "#e6b877",
+  "#c24e4e", "#f7e2e2", "#962f2f", "#c96b6b", "#37262e", "#e2827e",
+  "#a65c87", "#f3e6ee", "#7d3b62", "#b17598", "#322937", "#d08ab2",
+  "#e29ab2", "#fbedf2", "#b8607f", "#9a4566", "#9c4a68", "#e8a9bf", "#3a2c35", "#f0b9cb",
+  "#c2453f", "#f8e4e2", "#e8837c", "#357a4d", "#e3f1e7", "#6dc08a", "#b4372c", "#fcedec",
+  "#0e4a45", "#2f9b90", "#5fa79d", "#a9eadf",
+]);
 /** "lav", "teal" or null (fixed: greys, near-whites, ink, every other hue). */
 export function family(hex) {
+  if (FIXED.has(hex.toLowerCase())) return null;
   if (LAV_FILLS.has(hex.toLowerCase())) return "lav";
   if (TEAL_FILLS.has(hex.toLowerCase())) return "teal";
   const [L, C, H] = toOklch(hex);
@@ -106,10 +130,13 @@ const lightOf = (name) => rootVars[name];
 const darkOf = (name) => { const v = darkVars[name] ?? rootVars[name]; return v.startsWith("var(") ? (darkVars[v.slice(4, -1)] ?? rootVars[v.slice(4, -1)]) : v; };
 
 // Triplet tokens that follow the theme, and their family.
+// v6: the segmented track, the Business UI row tile, menu row border and
+// menu check follow as lavender; BU tealInk (--c-teal-text) as teal.
 const LAV = ["--c-primary", "--c-primary-light", "--c-primary-pale", "--c-primary-dark", "--c-primary-deep-text", "--c-primary-accent",
-  "--c-team-nav-accent", "--c-team-nav-accent-text", "--c-team-lavender", "--c-team-lavender-deep"];
+  "--c-team-nav-accent", "--c-team-nav-accent-text", "--c-team-lavender", "--c-team-lavender-deep",
+  "--c-seg-track", "--c-row-tile", "--c-menu-row-on-border", "--c-menu-check"];
 const TEAL = ["--c-teal", "--c-teal-light", "--c-teal-pale", "--c-teal-dark", "--c-teal-deep-text", "--c-trend-high-text",
-  "--c-team-teal-ink", "--c-team-teal-deep"];
+  "--c-team-teal-ink", "--c-team-teal-deep", "--c-teal-text"];
 // Tokens with an ink twin, read by Tailwind's text utilities (tailwind.config.js).
 export const INK_TOKENS = [...LAV, ...TEAL];
 // String tokens whose colours follow the theme (gradients, rgba hairlines,
@@ -118,7 +145,13 @@ const STRING_TOKENS = ["--border-row", "--shadow-fab", "--gradient-board", "--gr
   "--gradient-lavender-accent", "--gradient-quick-action", "--sheet-band", "--sheet-border", "--sheet-title", "--sheet-handle",
   "--wheel-band", "--forum-accent", "--forum-track", "--forum-track-active", "--forum-border", "--forum-rules-bg", "--forum-rules-ink",
   "--forum-link", "--forum-teal-bg", "--forum-teal-ink", "--forum-removed-bg", "--forum-photo-bg", "--forum-rule",
-  "--forum-handle", "--forum-done-ink", "--forum-muted"];
+  "--forum-handle", "--forum-done-ink", "--forum-muted",
+  // v6 (Business UI): list wash and rule, menu border, navbar border and
+  // shadow, business sheet outline and wheel band (X-05, X-18), the approval
+  // glow and the lavender shadows.
+  "--list-bg", "--list-rule", "--menu-border", "--nav-border", "--sheet-border-business", "--wheel-band-business",
+  "--gradient-approval-glow", "--shadow-menu", "--shadow-card-selected", "--shadow-focus-ring", "--shadow-primary-button",
+  "--shadow-navbar"];
 
 // ---- the literal colours used in src as th-<hex> ----------------------------
 function scanLiterals() {
@@ -222,13 +255,14 @@ function themeBlock(theme, mode, literals) {
   else { ink = INK_DARK; fill = ensureContrast(p, [INK_DARK], 4.5, 1); }
   v["--c-primary-fill"] = fill;
   v["--c-on-primary-fill"] = ink;
-  for (const n of ["--c-fill-chip", "--c-fill-cta", "--c-fill-sheet", "--c-fill-day", "--c-fill-foods"]) v[n] = fill;
+  // v6 (V6-01): the pinned CTA and the active segment are filled controls too.
+  for (const n of ["--c-fill-chip", "--c-fill-cta", "--c-fill-sheet", "--c-fill-day", "--c-fill-foods", "--c-fill-pinned", "--c-seg-active"]) v[n] = fill;
   const away = ink === WHITE ? -1 : 1;
   v["--c-teal-fill"] = ensureContrast(mapHex(centium("--c-teal-fill"), theme, mode, "teal"), [ink], 4.5, away);
   v["--c-fill-prep"] = ensureContrast(mapHex(tripletToHex(mode === "light" ? lightOf("--c-fill-prep") : darkOf("--c-fill-prep")), theme, mode, "teal"), [ink], 4.5, away);
 
   // Text tokens in dark mode are lifted shades (D8); in light, darkened.
-  for (const n of ["--c-primary-dark", "--c-primary-deep-text", "--c-primary-accent", "--c-team-nav-accent-text", "--c-teal-deep-text", "--c-trend-high-text", "--c-team-teal-ink"]) {
+  for (const n of ["--c-primary-dark", "--c-primary-deep-text", "--c-primary-accent", "--c-team-nav-accent-text", "--c-teal-deep-text", "--c-trend-high-text", "--c-team-teal-ink", "--c-teal-text"]) {
     v[n] = ensureContrast(v[n], [...GROUND[mode], pale], 4.5, mode === "light" ? -1 : 1);
   }
   if (mode === "dark") v["--c-primary-accent"] = ensureContrast(p, [...GROUND.dark, pale], 4.5, 1);
@@ -318,6 +352,9 @@ function hcBlock(theme, mode, literals, data) {
     const fillBase = mode === "light" && theme !== "centium" && data.fillInk === WHITE ? prim : data.v["--c-primary-fill"];
     const fill = ensureContrast(fillBase, [data.fillInk], 4.5, data.fillInk === WHITE ? -1 : 1);
     lines.push(`  --c-primary-fill: ${cssTriplet(fill)};`);
+    // v6 (V6-01): the pinned CTA and the active segment take the same fill.
+    lines.push(`  --c-fill-pinned: ${cssTriplet(fill)};`);
+    lines.push(`  --c-seg-active: ${cssTriplet(fill)};`);
   }
   for (const h of literals) {
     const hex = "#" + h;
@@ -351,6 +388,11 @@ let WHITE_FILLS = new Set();
 function generate() {
   const literals = scanLiterals();
   WHITE_FILLS = scanWhiteFills();
+  // v6 guard: a fixed (metric, range, minute hand) colour written as th-<hex>
+  // would be mapped in the other themes. Write it as its --metric-* / --c-*
+  // variable instead.
+  const fixedAsTheme = literals.filter((h) => FIXED.has("#" + h));
+  if (fixedAsTheme.length) throw new Error("fixed colours written as th-<hex> (use the --metric-* / --c-* variable): " + fixedAsTheme.join(" "));
   const unknown = literals.filter((h) => !family("#" + h));
   const centiumLines = [];
   for (const n of INK_TOKENS) centiumLines.push(`  ${n}-ink: var(${n});`);

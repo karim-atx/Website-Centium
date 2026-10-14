@@ -71,6 +71,10 @@ export const SEVERE_READING_MESSAGE =
 export const BP_DETAIL_FOOTER =
   "Readings alone don't diagnose high blood pressure. Talk to your doctor about your numbers.";
 
+/** The Log blood pressure sheet's line (HE1.6.1 #73, V6-13: shown on the sheet; the detail footer stays). */
+export const BP_LOG_SHEET_DISCLAIMER =
+  "Readings are for tracking. Centium does not diagnose or treat. Talk to your doctor about your blood pressure.";
+
 /** The empty state, where a number would be. */
 export const BP_NO_READINGS = "No readings yet";
 

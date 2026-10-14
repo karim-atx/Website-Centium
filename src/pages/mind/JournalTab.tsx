@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
@@ -6,22 +6,26 @@ import { SwipeActions } from "../../components/ui/SwipeActions";
 import { PinnedCta, CtaButton } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { Toast } from "../../components/ui/Toast";
+import { MindHeader } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
-import { useIsDark } from "../../hooks/useIsDark";
 import {
   ArrowUpDown,
+  BookOpen,
   CalendarDays,
   ChevronDown,
   EllipsisVertical,
   Folder,
   FolderCog,
   FolderPlus,
+  Loader2,
   Lock,
   LockOpen,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
+import { shiftDate } from "../../utils/date";
 import type { JournalEntry, JournalFolder } from "../../types";
 import { JOURNAL_LIMITS, accountCanUseFolderLock } from "../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLogic";
@@ -51,6 +55,18 @@ const FIELD_ERROR = "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-
 const dateLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+};
+
+/** MO1.1.2 S9: the virtual "Recently" tab's key (never a folder id: those are uuids). */
+const RECENT = "recently";
+/** MO1.1.2 O3: the handover's write-failure toast copy. */
+const SAVE_FAILED = "Couldn't save. Try again.";
+
+/** A card tap that ends a swipe (or lands on a row left open) is not a tap. */
+const rowIsShifted = (el: HTMLElement) => {
+  const row = el.closest<HTMLElement>("[role='group']");
+  const t = row ? getComputedStyle(row).transform : "none";
+  return t !== "none" && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(t);
 };
 
 // The Journal tab, mobile v5.1 MO1.1.2 (list), MO1.1.2.1 (folder options),
@@ -100,13 +116,22 @@ export default function JournalTab() {
     renameJournalFolder,
     moveJournalFolder,
     removeJournalFolder,
+    reloadJournal,
     journalUnlockedUntil,
     lockJournalFolder,
     unlockJournalFolder,
     disableJournalFolderLock,
   } = useApp();
-  const dark = useIsDark();
   const [activeFolder, setActiveFolder] = useState("");
+  // S7: an entry confirmed for deletion is hidden at once and deleted on the
+  // server when its Undo toast expires.
+  const [confirmDelete, setConfirmDelete] = useState<JournalEntry | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<JournalEntry | null>(null);
+  const pendingRef = useRef<JournalEntry | null>(null);
+  // O3: write failures, in the shared toast.
+  const [failToast, setFailToast] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  const downAt = useRef<{ x: number; y: number } | null>(null);
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -163,13 +188,50 @@ export default function JournalTab() {
   // a folder can be deleted from another device — either way, a selection
   // pointing at nothing falls back to the first real folder rather than
   // showing an empty list that looks like an empty folder.
-  const selected = journalFolders.some((f) => f.id === activeFolder)
-    ? activeFolder
-    : journalFolders[0]?.id ?? "";
+  // S9: "Recently" is a virtual tab after the folders (not a folder: no
+  // options, and New entry writes into the first folder).
+  const recent = activeFolder === RECENT && journalFolders.length > 0;
+  const selected = recent
+    ? RECENT
+    : journalFolders.some((f) => f.id === activeFolder)
+      ? activeFolder
+      : journalFolders[0]?.id ?? "";
   const selectedIndex = journalFolders.findIndex((f) => f.id === selected);
   const selectedFolder = journalFolders[selectedIndex];
   // MO1.1.2.2: a locked folder with no open window shows the locked list.
   const selectedShut = !!selectedFolder && !openNow(selectedFolder, journalUnlockedUntil);
+  // Where New entry writes: the selected folder, or the first one on Recently.
+  const targetFolder = recent ? journalFolders[0] : selectedFolder;
+  const targetShut = !!targetFolder && !openNow(targetFolder, journalUnlockedUntil);
+
+  const fail = (message: string | null) => {
+    if (message) setFailToast(Date.now());
+  };
+
+  // S7: committing a pending delete (its toast expired, another delete
+  // started, or the page closed). A failure brings the entry back.
+  const commitDelete = (entry: JournalEntry | null) => {
+    if (!entry) return;
+    pendingRef.current = null;
+    setPendingDelete((p) => (p?.id === entry.id ? null : p));
+    void removeJournalEntry(entry.id).then(fail);
+  };
+  const removeRef = useRef(removeJournalEntry);
+  useEffect(() => {
+    removeRef.current = removeJournalEntry;
+  });
+  useEffect(
+    () => () => {
+      // Leaving the page with an Undo still showing completes the delete.
+      if (pendingRef.current) void removeRef.current(pendingRef.current.id);
+    },
+    []
+  );
+  const startDelete = (entry: JournalEntry) => {
+    commitDelete(pendingRef.current);
+    pendingRef.current = entry;
+    setPendingDelete(entry);
+  };
 
   // Ask for the password, then carry on with `then` once it's accepted.
   const askPassword = (purpose: PasswordPurpose, folder: JournalFolder, then?: () => void) => {
@@ -190,8 +252,12 @@ export default function JournalTab() {
     return null;
   };
 
+  // S9: Recently = the last 30 days across the open folders (a shut folder's
+  // entries are never in journalEntries: the server hides them).
+  const since = shiftDate(today, -30);
   const entries = journalEntries
-    .filter((e) => e.folderId === selected)
+    .filter((e) => (recent ? e.date >= since : e.folderId === selected))
+    .filter((e) => e.id !== pendingDelete?.id)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   // D12 + the folder lock: the entry menu stands only while its entry is a
@@ -213,7 +279,7 @@ export default function JournalTab() {
   };
 
   const openCompose = () => {
-    setComposeFolder(selected);
+    setComposeFolder(targetFolder?.id ?? "");
     setSaveError(null);
     setTried(false);
     setComposing(true);
@@ -221,7 +287,7 @@ export default function JournalTab() {
 
   // A shut folder refuses writes, so New entry opens it first.
   const startNew = () => {
-    if (selectedShut && selectedFolder) askPassword("write", selectedFolder, openCompose);
+    if (targetShut && targetFolder) askPassword("write", targetFolder, openCompose);
     else openCompose();
   };
 
@@ -235,7 +301,7 @@ export default function JournalTab() {
       return;
     }
     // The picker's folder, unless it has since been deleted elsewhere.
-    const folderId = journalFolders.some((f) => f.id === composeFolder) ? composeFolder : selected;
+    const folderId = journalFolders.some((f) => f.id === composeFolder) ? composeFolder : targetFolder?.id ?? "";
     // A locked target that isn't open (picked in the sheet, or its window
     // ran out while writing) asks for the password, then saves; what was
     // written stays in the sheet meanwhile.
@@ -267,8 +333,8 @@ export default function JournalTab() {
   const submitName = () => {
     const name = folderName.trim();
     if (name) {
-      if (naming === "rename" && selectedFolder) renameJournalFolder(selectedFolder.id, name);
-      else addJournalFolder(name);
+      if (naming === "rename" && selectedFolder) void renameJournalFolder(selectedFolder.id, name).then(fail);
+      else void addJournalFolder(name).then(fail);
     }
     setFolderName("");
     setNaming(null);
@@ -306,8 +372,9 @@ export default function JournalTab() {
       setActiveFolder(key);
       return;
     }
+    // Recently is not a place a folder can go (findIndex is -1).
     const to = journalFolders.findIndex((f) => f.id === key);
-    if (selectedFolder && to >= 0 && to !== selectedIndex) moveJournalFolder(selectedFolder.id, to - selectedIndex);
+    if (selectedFolder && to >= 0 && to !== selectedIndex) void moveJournalFolder(selectedFolder.id, to - selectedIndex).then(fail);
     setMoving(false);
   };
 
@@ -318,34 +385,87 @@ export default function JournalTab() {
     const rtl = stripRef.current ? getComputedStyle(stripRef.current).direction === "rtl" : false;
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
       e.preventDefault();
-      moveJournalFolder(selectedFolder.id, (e.key === "ArrowLeft") !== rtl ? -1 : 1);
+      void moveJournalFolder(selectedFolder.id, (e.key === "ArrowLeft") !== rtl ? -1 : 1).then(fail);
     } else if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setMoving(false);
     }
   };
 
-  // MO1.1.2 Loading: skeleton blocks at the anatomy positions, fill
-  // surface.soft, each block's own radius: the folder card (56, r16), the
-  // FolderPlus row (22) and the entry cards (94, r24, 10 apart).
+  // MO1.1.2 O1 Loading: the header and the (empty) tab track render at once
+  // in the fixed area; three skeleton blocks (full width × 96, r22,
+  // surface.soft, 10 apart) pulse over 1.2 s, static under Reduce motion.
   if (journalLoading) {
     return (
       <div className="animate-fade-slide-up" aria-busy="true">
+        <MindHeader section="journal">
+          <div aria-hidden className="h-14 rounded-2xl bg-[rgb(var(--c-seg-track))] dark:bg-th-303141" />
+        </MindHeader>
         <span className="sr-only" role="status">Loading your journal…</span>
-        <div aria-hidden>
-          <div className="h-14 rounded-2xl bg-cream-soft" />
-          <div className="flex justify-end mt-[15px] mb-2.5">
-            <div className="w-[18px] h-[22px] rounded-md bg-cream-soft" />
-          </div>
-          <div className="space-y-2.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-[94px] rounded-3xl bg-cream-soft" />
-            ))}
-          </div>
+        <div aria-hidden className="space-y-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
+          ))}
         </div>
       </div>
     );
   }
+
+  // S5: a tap on a card opens the entry (MO1.1.2.3 in edit mode); the ⋮, a
+  // swipe, or a row left open don't.
+  const onCardClick = (ev: MouseEvent<HTMLElement>, entry: JournalEntry) => {
+    const d = downAt.current;
+    downAt.current = null;
+    if (d && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > 6) return;
+    if (rowIsShifted(ev.currentTarget)) return;
+    startEdit(entry);
+  };
+
+  const retry = async () => {
+    setRetrying(true);
+    await reloadJournal();
+    setRetrying(false);
+  };
+
+  // MO1.1.2 #6 / #7: the folders (and Recently) in the segmented track,
+  // inside the fixed area.
+  const tabs =
+    journalFolders.length > 0 ? (
+      <div
+        ref={stripRef}
+        onKeyDown={onStripKey}
+        className={moving ? "[&_[aria-selected=true]]:opacity-90" : undefined}
+      >
+        <SegmentedTabs
+          scroll
+          scrollMinWidth={0}
+          // #6: track #F3F3FD / #303141; #7: idle #F5F4FE / #5B5349 (dark
+          // #303141 / #B8B3C7), active #A79AD5 / white (dark #A991FE /
+          // #0D0B1A), 12.5 / 18.8 700.
+          darkTone="partB"
+          lineHeight={18.8}
+          // MO1.1.2.2 #2: Lock 12/1.75 before a locked folder's name (6
+          // apart). While its window is open the padlock shows open.
+          items={[
+            ...journalFolders.map((f) => ({
+              key: f.id,
+              label: f.name,
+              icon: f.locked ? (
+                openNow(f, journalUnlockedUntil) ? (
+                  <LockOpen size={12} strokeWidth={1.75} role="img" aria-label="Unlocked" />
+                ) : (
+                  <Lock size={12} strokeWidth={1.75} role="img" aria-label="Locked" />
+                )
+              ) : undefined,
+            })),
+            { key: RECENT, label: "Recently" },
+          ]}
+          activeKey={selected}
+          onChange={onTab}
+          idleInk="rgb(var(--c-charcoal-soft))"
+        />
+      </div>
+    ) : null;
 
   const composeFolderName = journalFolders.find((f) => f.id === composeFolder)?.name ?? selectedFolder?.name ?? "";
   // MO1.1.2.3 (2x frame, measured): label 12/600 on a 16 line, 6 above its
@@ -363,31 +483,46 @@ export default function JournalTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      {/* NO FOLDERS IS A REAL STARTING STATE NOW. Four were seeded into every
-          account before — Personal, Training, Nutrition, General — as though
-          somebody had made them. An entry needs a folder to live in, so this
-          asks for the first one rather than inventing it, as Foundations ›
-          Empty state (a 56 primary.tint tile with a 26 thin-stroke icon in
-          primary.accent, title 15/700, one line 12.5/500 muted, max width
-          260); the frame's own FolderPlus below makes it. Restore round 2
-          (user, 2026-10-07): the quick folder chips are back under it, as on
-          main (Personal, Training, Nutrition, one tap each), as Foundations
-          chips (12/600, 13 × 7 padding, full radius) at a 44 pt target; light
-          keeps the pre-redesign cream-soft / charcoal-soft (decision 22). */}
+      {/* #1: the fixed area: back, title, subtitle and the folder tabs stay
+          at the top; once content passes under them it takes the page fill
+          and a 1 px hairline (FixedHeader, V6-91), no shadow or blur. */}
+      <MindHeader section="journal">{tabs}</MindHeader>
+
+      {/* O3 / O4: the read failed (or the device is offline). A banner right
+          under the fixed area with Retry; the loaded list stays. */}
+      {journalError && (
+        <div role="alert" className="mb-2.5 flex items-center gap-3 rounded-xl bg-status-high-bg p-3">
+          <p className="flex-1 min-w-0 text-[12px] leading-4 font-semibold text-status-high">
+            Couldn't load. Check your connection.
+          </p>
+          <button
+            type="button"
+            onClick={() => void retry()}
+            disabled={retrying}
+            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
+          >
+            {retrying ? <Loader2 size={14} className="animate-spin" aria-label="Retrying" /> : "Retry"}
+          </button>
+        </div>
+      )}
+
+      {/* K8: NO FOLDERS IS A REAL STARTING STATE. An entry needs a folder, so
+          this asks for the first one rather than inventing it; restyled to
+          the B empty pattern (BookOpen 28 in the primary without a tile,
+          title 15/700, line 12/500 text.muted). The quick folder chips stay
+          (restore round 2), as Foundations chips at a 44 pt target. */}
       {journalFolders.length === 0 && !journalError && (
         <div className="flex flex-col items-center text-center py-8 mb-4">
-          <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
-            <Folder size={26} strokeWidth={1.5} aria-hidden />
-          </span>
+          <BookOpen size={28} strokeWidth={1.5} className="text-primary" aria-hidden />
           <p className="text-[15px] font-bold text-charcoal mt-3">No folders yet</p>
-          <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 mb-2 leading-relaxed max-w-[260px]">
+          <p className="text-[12px] font-medium text-charcoal-faint mt-1 mb-2 leading-relaxed max-w-[260px]">
             Entries live in folders. Make the first one to start writing.
           </p>
           <div className="flex flex-wrap gap-x-2 justify-center">
             {["Personal", "Training", "Nutrition"].map((name) => (
               <button
                 key={name}
-                onClick={() => addJournalFolder(name)}
+                onClick={() => void addJournalFolder(name).then(fail)}
                 className="tap min-h-11 flex items-center"
               >
                 <span className="flex items-center gap-1.5 rounded-full bg-cream-soft border border-charcoal/[0.11] px-[13px] py-[7px] text-[12px] font-semibold text-charcoal-soft">
@@ -400,48 +535,11 @@ export default function JournalTab() {
         </div>
       )}
 
-      {/* MO1.1.2 #2: the folders as a segmented card (358 × 56), scrolling
-          sideways once they outgrow it. Decision 23: the handover's colours,
-          active #A79AD5 / white, idle #F5F4FE / #5B5349 (SegmentedTabs'
-          defaults plus the #5B5349 idle ink). Tabs keep their natural width,
-          16 each side (2x frame: Personal 84, Training 80). While a Move is
-          on, the held tab shows Foundations' pressed state (active fill at
-          90%). */}
-      {journalFolders.length > 0 && (
-        <div
-          ref={stripRef}
-          onKeyDown={onStripKey}
-          className={moving ? "[&_[aria-selected=true]]:opacity-90" : undefined}
-        >
-          <SegmentedTabs
-            scroll
-            scrollMinWidth={0}
-            // MO1.1.2.2 #2: Lock 12/1.75 before a locked folder's name (6
-            // apart, SegmentedTabs' icon gap). While its window is open the
-            // padlock shows open (LockOpen, UNSPECIFIED: not drawn).
-            items={journalFolders.map((f) => ({
-              key: f.id,
-              label: f.name,
-              icon: f.locked ? (
-                openNow(f, journalUnlockedUntil) ? (
-                  <LockOpen size={12} strokeWidth={1.75} role="img" aria-label="Unlocked" />
-                ) : (
-                  <Lock size={12} strokeWidth={1.75} role="img" aria-label="Locked" />
-                )
-              ) : undefined,
-            }))}
-            activeKey={selected}
-            onChange={onTab}
-            idleInk="rgb(var(--c-charcoal-soft))"
-          />
-        </div>
-      )}
-
-      {/* MO1.1.2 #3: FolderPlus 18, right-aligned on its own 22 pt row, in
-          #6B41EF (2x frame; dark: primary, as Workout's New folder). During a
-          Move the row's empty left side says what to do (UNSPECIFIED: the
-          move state is not drawn; 11.5/500 text.muted, as the error line). */}
-      <div className="flex items-center justify-end gap-2 mt-[15px] mb-2.5">
+      {/* #8 / #9: FolderPlus 18 in a 30 r9 box (m -4 -6 -4 0, so the row is
+          22 tall), 16 under the tab track (the fixed area's own 16), cards 10
+          below; #6B41EF / #C3B3FB. During a Move the row's left side says
+          what to do (K5). */}
+      <div className="flex items-center justify-end gap-2 h-[22px] mb-2.5">
         {moving && selectedFolder && (
           <p role="status" className="flex-1 min-w-0 truncate text-[11.5px] leading-4 font-medium text-charcoal-muted">
             Tap where {selectedFolder.name} should go
@@ -454,15 +552,14 @@ export default function JournalTab() {
           }}
           aria-label="New folder"
           aria-expanded={naming === "new"}
-          className="tap h-[22px] flex items-center text-th-6b41ef dark:text-th-9a8cd6"
+          className="tap relative w-[30px] h-[30px] -my-1 -mr-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark after:absolute after:-inset-[7px] after:content-['']"
         >
           <FolderPlus size={18} />
         </button>
       </div>
 
-      {/* Not drawn: the new-folder / rename field, built from Foundations ›
-          Inputs (44, r12, surface.soft, 14/600, placeholder text.muted,
-          focused border 1.5 primary.accent) beside a 44 filled button. */}
+      {/* K6: the new-folder / rename field (Foundations › Inputs 44 r12,
+          60-character cap) beside a 44 filled button. */}
       {naming && (
         <div className="flex gap-2 mb-4">
           <input
@@ -487,92 +584,93 @@ export default function JournalTab() {
         </div>
       )}
 
-      {/* MO1.1.2 Error: an inline line in danger under the affected element
-          (the list it failed to load or change). An empty journal and an
-          unreachable one look identical once rendered, and only one is true. */}
-      {(lockError || journalError) && (
+      {/* K9: a failed Lock stays an inline line. */}
+      {lockError && (
         <p role="alert" className="mb-2.5 text-[11.5px] leading-4 font-medium text-status-high">
-          {lockError || journalError}
+          {lockError}
         </p>
       )}
 
-      {/* MO1.1.2.2: a locked folder with no open window shows blurred
-          placeholders under "This folder is locked" instead of its entries
-          (the server returns none until the password opens it). */}
-      {/* MO1.1.2 #4–8: entry cards, 358 × 94, radius 24, 10 apart. Swipe left
-          for Edit and Delete (as in Habits); a mouse can drag them open too,
-          and the keyboard opens them with ArrowLeft on the focused card. */}
+      {/* MO1.1.2.2 (K4): a locked folder with no open window shows the locked
+          list. #10-#24: entry cards 358 wide, r24, pad 20, 10 apart; a tap
+          opens the entry (S5), swipe left for Edit / Delete (S6). */}
       {selectedShut && selectedFolder ? (
         <LockedFolderView folderName={selectedFolder.name} onUnlock={() => askPassword("unlock", selectedFolder)} />
       ) : (
         <div className="space-y-2.5">
           {entries.map((e) => (
-            <SwipeActions
+            <div
               key={e.id}
-              radius={24}
-              actions={[
-                {
-                  key: "edit",
-                  label: "Edit",
-                  icon: <Pencil size={16} />,
-                  // The swipe tile is new since the redesign: the frame's
-                  // #F0EEF9 tile with a #7D67D9 pencil, SwipeActions' default.
-                  onClick: () => startEdit(e),
-                },
-                {
-                  key: "delete",
-                  label: "Delete",
-                  icon: <Trash2 size={16} />,
-                  onClick: () => removeJournalEntry(e.id),
-                  // Red in light and dark, as on every swipe row: Delete
-                  // destroys data (the user's call, over keeping the old teal).
-                  destructive: true,
-                },
-              ]}
-              keyboardLabel={`${dateLabel(e.date)}, ${e.title}. Arrow left for Edit and Delete`}
-              onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
+              // K10: Enter on a focused card opens it (S5).
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter" && (ev.target as HTMLElement).getAttribute("role") === "group") {
+                  ev.preventDefault();
+                  startEdit(e);
+                }
+              }}
             >
-              <Card className="px-5 py-[19px]">
-                <div className="flex items-center justify-between gap-2 h-4">
-                  <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
-                  {/* D12 (restore round): the keyboard and mouse path to Edit /
-                      Delete. A 16 pt ⋮ in text.muted (its pre-redesign
-                      colour) on the date line, so the card keeps its 94 pt
-                      anatomy; a 44 pt target is centred on it. */}
-                  <button
-                    type="button"
-                    onClick={(ev) => setEntryMenu({ entry: e, anchor: ev.currentTarget })}
-                    aria-label={`${e.title}, more options`}
-                    aria-haspopup="menu"
-                    aria-expanded={entryMenu?.entry.id === e.id}
-                    className="tap relative -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
-                  >
-                    <EllipsisVertical size={16} aria-hidden />
-                  </button>
-                </div>
-                <div
-                  aria-hidden
-                  className="mt-[9px] h-px"
-                  // #D3CBEC on the 2x frame: #AEA1DC at 55%.
-                  style={{ background: dark ? "var(--border-row)" : "rgb(var(--th-aea1dc) / 0.55)" }}
-                />
-                <p className="mt-2 text-sm leading-5 font-semibold text-charcoal truncate">{e.title}</p>
-              </Card>
-            </SwipeActions>
+              <SwipeActions
+                radius={24}
+                actions={[
+                  { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => startEdit(e) },
+                  { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setConfirmDelete(e), destructive: true },
+                ]}
+                keyboardLabel={`${dateLabel(e.date)}, ${e.title}. Arrow left for Edit and Delete`}
+                onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
+              >
+                <Card
+                  // #10: 1 px #241F1B@11% / #F5F3FA@11%.
+                  className="px-5 py-[19px] cursor-pointer dark:!border-charcoal/[0.11]"
+                  role="button"
+                  aria-label={`${dateLabel(e.date)}, ${e.title}. Open`}
+                  onPointerDown={(ev) => {
+                    downAt.current = { x: ev.clientX, y: ev.clientY };
+                  }}
+                  onClick={(ev) => onCardClick(ev, e)}
+                >
+                  <div className="flex items-center justify-between gap-2 h-4">
+                    {/* #11: 12/16 600 #8C8378 / #B8B3C7. */}
+                    <p className="text-xs leading-4 font-semibold text-charcoal-faint">{dateLabel(e.date)}</p>
+                    {/* K2 (D12 restore round): the ⋮ on the date line, 44 pt
+                        target; it never opens the card. */}
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setEntryMenu({ entry: e, anchor: ev.currentTarget });
+                      }}
+                      aria-label={`${e.title}, more options`}
+                      aria-haspopup="menu"
+                      aria-expanded={entryMenu?.entry.id === e.id}
+                      className="tap relative -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
+                    >
+                      <EllipsisVertical size={16} aria-hidden />
+                    </button>
+                  </div>
+                  {/* #12: the rule, 1 px #AEA1DC@55% / #A991FE@55%, 8 under the date. */}
+                  <div aria-hidden className="mt-[9px] h-px bg-primary/[0.55]" />
+                  {/* #13: 14/20 600; one line (two under Larger text), then an ellipsis. */}
+                  <p className="mt-2 text-sm leading-5 font-semibold text-charcoal line-clamp-1 [.larger-text_&]:line-clamp-2 break-words">
+                    {e.title}
+                  </p>
+                </Card>
+              </SwipeActions>
+            </div>
           ))}
-          {/* MO1.1.2 Empty: the board note's line, "No entries in this folder
-              yet.", set as Foundations › Empty state (56 primary.tint tile, 26
-              thin-stroke icon in primary.accent, line 12.5/500 text.muted, max
-              width 260); the pinned New entry stays below. The board names no
-              icon or title for it: Folder, as on the no-folders state. */}
+          {/* O2: the empty folder (BookOpen 28 in the primary, no tile; title
+              15/700; line 12/500 text.muted); New entry stays pinned below.
+              Recently's own empty line is ours. */}
           {selected !== "" && entries.length === 0 && (
             <div className="flex flex-col items-center text-center py-8">
-              <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
-                <Folder size={26} strokeWidth={1.5} aria-hidden />
-              </span>
-              <p className="text-[12.5px] font-medium text-charcoal-muted mt-3 leading-relaxed max-w-[260px]">
-                No entries in this folder yet.
-              </p>
+              <BookOpen size={28} strokeWidth={1.5} className="text-primary" aria-hidden />
+              {recent ? (
+                <p className="mt-3 text-[15px] font-bold text-charcoal">Nothing in the last 30 days</p>
+              ) : (
+                <>
+                  <p className="mt-3 text-[15px] font-bold text-charcoal">No entries in {selectedFolder?.name} yet</p>
+                  <p className="mt-1 text-[12px] font-medium text-charcoal-faint">Write your first one</p>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -593,18 +691,19 @@ export default function JournalTab() {
             primary={{
               label: "New entry",
               icon: <Plus size={15} />,
-              // MO1.1.2 #10 (decision 23): New entry filled #A198DF
-              // (--c-fill-cta), 13.5/700 white; FolderCog on #EFEEFD with a
-              // #7D67D9 icon.
-              className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
+              // #25 / #26: New entry #A198DF / #A991FE, 13.5/20.3 700.
+              className: "!text-[13.5px] !leading-[20.3px] !bg-[rgb(var(--c-fill-cta))]",
               onClick: startNew,
             }}
             trailing={{
+              // #27 / #28: FolderCog 18 #7D67D9 / #9A8CD6 on #EFEEFD / #303141.
+              // Recently is not a folder (S9): its options are off.
               icon: <FolderCog size={18} strokeWidth={1.75} />,
-              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
+              className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale",
               label: "Folder options",
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,
+              disabled: recent,
             }}
           />
         </>
@@ -651,8 +750,40 @@ export default function JournalTab() {
         onSelect={(v) => {
           if (!entryMenuEntry) return;
           if (v === "edit") startEdit(entryMenuEntry);
-          else removeJournalEntry(entryMenuEntry.id);
+          else setConfirmDelete(entryMenuEntry);
         }}
+      />
+
+      {/* S7: "Delete this entry?" (handover), the entry's title under it
+          (ours); then the entry leaves at once with an Undo toast for 5 s,
+          and the server delete runs when the toast expires. */}
+      <ConfirmCard
+        open={!!confirmDelete}
+        title="Delete this entry?"
+        subtitle={confirmDelete?.title}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) startDelete(confirmDelete);
+          setConfirmDelete(null);
+        }}
+      />
+      <Toast
+        key={pendingDelete?.id ?? "none"}
+        open={!!pendingDelete}
+        message="Entry deleted."
+        icon={<Trash2 size={15} className="shrink-0 text-[#A2C8C2]" aria-hidden />}
+        onUndo={() => {
+          pendingRef.current = null;
+          setPendingDelete(null);
+        }}
+        onExpire={() => commitDelete(pendingRef.current)}
+      />
+      {/* O3: a failed write (folder add / rename / move / delete, entry delete). */}
+      <Toast
+        open={!!failToast && !pendingDelete}
+        message={SAVE_FAILED}
+        tone="error"
+        onExpire={() => setFailToast(0)}
       />
 
       {/* Delete is not linked on the board; deleting a folder deletes its
@@ -667,7 +798,7 @@ export default function JournalTab() {
         }
         onCancel={() => setDeletingFolder(false)}
         onConfirm={() => {
-          if (selectedFolder) removeJournalFolder(selectedFolder.id);
+          if (selectedFolder) void removeJournalFolder(selectedFolder.id).then(fail);
           setDeletingFolder(false);
         }}
       />

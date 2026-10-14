@@ -57,7 +57,7 @@ export function PassQr({ value, size }: { value: string; size: number }) {
   }, [value]);
 
   const current = state && state.value === value ? state : null;
-  if (!current) return <div aria-busy="true" className="rounded-lg bg-cream-soft animate-pulse" style={{ width: size, height: size }} />;
+  if (!current) return <div aria-busy="true" className="rounded-lg bg-cream-soft animate-skeleton-pulse" style={{ width: size, height: size }} />;
   if (current.failed || !current.rows) {
     return (
       <p role="alert" className="m-0 flex items-center justify-center text-center text-[12px] font-semibold text-status-high" style={{ width: size, height: size }}>

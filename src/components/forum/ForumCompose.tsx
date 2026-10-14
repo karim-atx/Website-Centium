@@ -211,7 +211,7 @@ export function ForumCompose({
               // until the recovery setting is known, so a hidden one is never
               // shown first. Drawn as the field it stands in for (44, r12,
               // the field's border), pulsing.
-              <div className="h-[44px] rounded-xl animate-pulse" aria-hidden="true" style={{ border: `1px solid ${fv("border")}`, background: fv("track") }} />
+              <div className="h-[44px] rounded-xl animate-skeleton-pulse" aria-hidden="true" style={{ border: `1px solid ${fv("border")}`, background: fv("track") }} />
             ) : (
               <button
                 ref={setAnchor}

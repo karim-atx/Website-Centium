@@ -2,50 +2,34 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { WidgetConfig } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { MeditationLarge, MeditationSmall } from "../mind/MeditationFigures";
-import { HeartRateEKG } from "../health/HeartRateEKG";
-import {
-  averageOf,
-  emptyHint,
-  NO_READINGS,
-  trendLabel,
-  withinDays,
-} from "../../services/health-metrics/series";
-import { nextRoutine } from "../../services/workout/nextRoutine";
 import {
   isReferenceOnlyTarget,
   REFERENCE_INTAKE_NOTE,
   sumNutrition,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { BookOpen, Play, Check } from "lucide-react";
-import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
-import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
-import { HabitPages } from "../mind/HabitPages";
-import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { useIsDark } from "../../hooks/useIsDark";
+import { CycleWidget } from "./widgets/CycleWidget";
+import { StepsWidget } from "./widgets/StepsWidget";
+import { WeightWidget } from "./widgets/WeightWidget";
+import { SleepWidget } from "./widgets/SleepWidget";
+import { WorkoutWidget } from "./widgets/WorkoutWidget";
+import { HeartRateWidget } from "./widgets/HeartRateWidget";
+import { HabitsWidget } from "./widgets/HabitsWidget";
+import { JournalWidget } from "./widgets/JournalWidget";
+import { MeditationWidget } from "./widgets/MeditationWidget";
 
-// Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
-// 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
-// colour per metric. This is the single source every widget placement
-// draws from; there is no other widget treatment left in the app. See
-// CHANGE_MANIFEST.md §4 in scratchpad/design-handoff-main-app for the
-// literal per-widget spec this was built from.
-//
-// A few design values have no real counterpart in this app's data model
-// (an hourly step-activity trace, HRV, a weekly *target* workout count, an
-// expiry date on a recurring — not one-time — gym membership). Rather than
-// invent numbers, those lines are simplified or omitted; each is called
-// out at its call site below.
-
-// The small Weight tile's value is always 0.176 × the icon size, per the
-// reference markup (CentiumFrame.dc.html `wValueSize`); there is no
-// step-down branch.
+// v6 Batch 2 · Home (home-handover.md HO1.W1-W11): every widget except Water
+// and Food is drawn by its own file in ./widgets on the shared MetricWidget
+// (preset "home", V6-56). Water (HO1.W3, small and large) and Food (HO1.W5
+// small; large kept as the repo draws it, V6-138 / D13) are "Reverted to
+// repo": their branches below are unchanged, including the recovery-pending
+// card and the recovery-sensitive Food summary.
 
 const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 /** The small water tile's one-tap amount: the middle of Add Metric's quick amounts. */
 const WATER_QUICK_ADD_ML = 250;
-const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
 // Master handover item 7: one wave layer's path. For each crest i of n
@@ -114,20 +98,6 @@ const WATER_DARK = {
   goldPillFg: "#CAB082",
 } as const;
 
-/**
- * Mobile v5.1 R3, dark mode: the sleep-stage chip labels where the stage's
- * own colour is under 4.5:1 on the dark chip (cream-card at 55% over the
- * sleep tile, #23242F): teal-dark #4F8F8A (4.1:1) and lavender-deep #7D6BB5
- * (3.4:1), each lifted toward white until it reads. REM (berry) and Light
- * (sky) already pass and keep their token.
- */
-const SLEEP_STAGE_INK_DARK: Record<string, string> = { Awake: "rgb(var(--th-5a9691))", Deep: "rgb(var(--th-9283c1))" };
-
-/**
- * Mobile v5.1 R3, dark mode: the small Weight tile's #7567B7 glyph and "kg"
- * (3.25:1 on the tile over the dark page), lifted to 4.5:1 for the text.
- */
-const WEIGHT_ACCENT_DARK = "rgb(var(--th-8e82c4))";
 
 // Seamless drift. A layer's loop only closes if its travel is a whole number
 // of its own wave periods (716 / crests). 358px is that for 2 and 4 crests;
@@ -355,69 +325,19 @@ export const HomeWidget: React.FC<{
   widget: WidgetConfig;
   onWaterClick?: () => void;
   onGymPassesClick?: () => void;
-  // Handoff §9: the small Weight icon renders at 66px normally, 62px when
-  // this same tile is shown inside an edit-mode widget board — this is the
-  // WidgetBoard's own `editMode` boolean (the only existing signal that
-  // already distinguishes "normal dashboard" from "edit-mode board" for a
-  // tile), threaded through here since HomeWidget previously had no notion
-  // of edit mode at all.
+  /** While the board is being edited the tile does nothing of its own (WidgetShell). */
   editMode?: boolean;
 }> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary, recoverySensitive, recoveryModePending, addWater } =
-    useApp();
+  const { user, water, waterGoalMl, foodLog, nutritionGoal, selectedDate, recoverySensitive, recoveryModePending, addWater } = useApp();
   const isLarge = widget.size === "large";
-  const dark = useIsDark();
+  const size = widget.size;
   // Water quick-add on the small tile: one tap adds a glass, and a tap in
   // flight cannot add a second one.
   const [addingWater, setAddingWater] = React.useState(false);
 
-  // A WEEK OF REAL READINGS. These three used to come from mockHealthData's
-  // seven-value literals, so every widget on every Home screen drew the same
-  // week — 7,200 to 8,421 steps, 107.6 down to 106.4 kg.
-  const stepsMeta = withinDays(healthSeries.steps, 7, today);
-  const weeklyStepsAvg = averageOf(stepsMeta);
-  const stepsMax = Math.max(...stepsMeta.history.map((h) => h.value), stepsGoal);
-  // No stride-length preference exists in this app; 0.762m is the generic
-  // average-adult-stride figure fitness trackers default to absent one.
-  const stepsKm =
-    metricValues.steps === null ? null : ((metricValues.steps * 0.762) / 1000).toFixed(1);
-
-  const weightMeta = withinDays(healthSeries.weight, 7, today);
-  const weightValues = weightMeta.history.map((h) => h.value);
-  const weightMin = Math.min(...weightValues);
-  const weightMax = Math.max(...weightValues);
-
-  const sleepMeta = withinDays(healthSeries.sleep, 7, today);
-  // The stage bar, drawn only when a real night carries all four stages.
-  // This read mockHealthData's sleepDetail — 18/96/210/78 minutes, the same
-  // night for every account that had never worn anything to bed.
-  const sleepStages = sleepDetail?.stages
-    ? [
-        { label: "Awake", min: sleepDetail.stages.awakeMin, color: "rgb(var(--c-teal-dark))" },
-        { label: "REM", min: sleepDetail.stages.remMin, color: "rgb(var(--c-berry))" },
-        { label: "Light", min: sleepDetail.stages.lightMin, color: "rgb(var(--c-sky))" },
-        { label: "Deep", min: sleepDetail.stages.deepMin, color: "rgb(var(--c-team-lavender-deep))" },
-      ]
-    : null;
-  const sleepTotalMin = sleepStages ? sleepStages.reduce((s, x) => s + x.min, 0) || 1 : 1;
-  const fmtMin = (m: number) => `${Math.floor(m / 60)}h${(m % 60).toString().padStart(2, "0")}m`;
-
   const totals = sumNutrition(foodLog.filter((e) => e.date === selectedDate));
   const targets = targetsFromGoal(nutritionGoal);
-  const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
-
-  const week = mondayFirstWeek(today);
-  const workoutDaysThisWeek = week.filter((d) => d <= today && workoutLog.some((w) => w.date === d && w.completed));
-
-  const journalDoneToday = journalEntries.some((e) => e.date === today);
-  const journalWeek = week.map((d) => journalEntries.some((e) => e.date === d));
-  // No dedicated "journal streak" metric exists — derived here the same way
-  // the app's own auto-streaks are, by counting consecutive days with an
-  // entry, walking back from today.
-  const journalStreak = journalStreakFrom(journalEntries.map((e) => e.date), today);
-  const journalWordTotal = journalEntries.reduce((s, e) => s + e.text.trim().split(/\s+/).filter(Boolean).length, 0);
-  const latestEntry = journalEntries[journalEntries.length - 1];
 
   // While the board is being edited the tile does nothing of its own (a tap,
   // a click or Enter): only the edit controls act. See WidgetShell.
@@ -428,29 +348,6 @@ export const HomeWidget: React.FC<{
       <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer h-full">
         {content}
       </div>
-    );
-
-  /**
-   * A widget with nothing behind it yet.
-   *
-   * SAME FRAME, NO FIGURE. Each of these cards is built around a number, a
-   * trend and a small chart; with no readings they used to render the same
-   * seeded ones for everybody — 8,421 steps, 106.4 kg, 68 bpm, 7h42. The card
-   * keeps its place on the board and says it is empty, which is also what
-   * makes it obvious where to start.
-   */
-  const emptyCard = (bg: string, label: string, hint: string | null) =>
-    shell(
-      bg,
-      <>
-        <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
-        <div className="flex-1 flex flex-col justify-center min-h-0">
-          <p className="text-[12px] font-semibold text-charcoal-tertiary leading-snug">{NO_READINGS}</p>
-          {hint && isLarge && (
-            <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">{hint}</p>
-          )}
-        </div>
-      </>
     );
 
   // Small: 114 tall, padding 11px 12px. Large: 150 tall, padding 14px 16px.
@@ -479,100 +376,32 @@ export const HomeWidget: React.FC<{
         <>
           <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
           <div className="flex-1 flex flex-col justify-center gap-2" aria-busy="true">
-            <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-pulse" />
-            <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-pulse" />
+            <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-skeleton-pulse" />
+            <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-skeleton-pulse" />
           </div>
         </>
       )
     );
 
   switch (widget.type) {
-    // ---------------------------------------------------------------- Steps
-    case "steps": {
-      const onClick = () => navigate("/app/health", { state: { openMetric: "steps" } });
-      if (metricValues.steps === null) {
-        return wrap(onClick, emptyCard("rgb(var(--th-a2c8c2) / .2)", "Steps", emptyHint("steps")));
-      }
-      const steps = metricValues.steps;
-      const pct = Math.round((steps / stepsGoal) * 100);
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-a2c8c2) / .2)",
-            <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
-              <p className={`${numeralSmall} mt-[5px]`}>{metricValues.steps.toLocaleString()}</p>
-              <div className="flex items-end gap-[2px] h-[26px] mt-[9px]">
-                {stepsMeta.history.map((h, i) => {
-                  const isToday = i === stepsMeta.history.length - 1;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 rounded-[1px]"
-                      style={{
-                        height: `${Math.max(8, (h.value / stepsMax) * 100)}%`,
-                        background: isToday ? "rgb(var(--c-team-teal-deep))" : "rgb(var(--th-6f9993) / .34)",
-                      }}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex gap-[2px] mt-1">
-                {stepsMeta.history.map((h, i) => {
-                  const isToday = i === stepsMeta.history.length - 1;
-                  return (
-                    <span
-                      key={i}
-                      className={`flex-1 text-center text-[7.5px] ${isToday ? "font-extrabold text-team-teal-ink" : "font-semibold text-team-teal-ink/50"}`}
-                    >
-                      {dayLetter(h.date)}
-                    </span>
-                  );
-                })}
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-a2c8c2) / .2)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
-              <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>{Math.min(999, pct)}% of goal</span>
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="flex items-baseline gap-2.5">
-                <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
-                  {metricValues.steps.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-team-teal-ink/[0.72] dark:text-team-teal-ink">
-                  of {stepsGoal.toLocaleString()} · {stepsKm} km
-                </span>
-              </div>
-              <div>
-                <div className="relative h-[9px] rounded-[5px] bg-teal-dark/20 overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-[5px]"
-                    style={{ width: `${Math.min(100, pct)}%`, background: "linear-gradient(90deg,rgb(var(--th-a9cfc9)),rgb(var(--th-6f9993)))" }}
-                  />
-                </div>
-                <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
-                  <span>0</span>
-                  <span>
-                    {weeklyStepsAvg === null ? "No weekly average yet" : `Weekly avg ${weeklyStepsAvg.toLocaleString()}`}
-                  </span>
-                  <span>{stepsGoal.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </>
-        )
-      );
-    }
+    case "steps":
+      return <StepsWidget size={size} editMode={editMode} />;
+    case "weight":
+      return <WeightWidget size={size} editMode={editMode} />;
+    case "sleep":
+      return <SleepWidget size={size} editMode={editMode} />;
+    case "workout":
+      return <WorkoutWidget size={size} editMode={editMode} />;
+    case "heartRate":
+      return <HeartRateWidget size={size} editMode={editMode} />;
+    case "habits":
+      return <HabitsWidget size={size} editMode={editMode} />;
+    case "journal":
+      return <JournalWidget size={size} editMode={editMode} />;
+    case "meditation":
+      return <MeditationWidget size={size} editMode={editMode} />;
+    case "cycle":
+      return <CycleWidget size={size} editMode={editMode} />;
 
     // ---------------------------------------------------------------- Water
     case "water": {
@@ -630,204 +459,6 @@ export const HomeWidget: React.FC<{
       return wrap(onClick, <LargeWaterWidget water={water} waterGoalMl={waterGoalMl} pct={pct} />);
     }
 
-    // ---------------------------------------------------------------- Sleep
-    case "sleep": {
-      if (metricValues.sleepHours === null) {
-        return wrap(
-          () => navigate("/app/health", { state: { openMetric: "sleep" } }),
-          emptyCard("rgb(var(--th-aea1dc) / .13)", "Sleep", emptyHint("sleep"))
-        );
-      }
-      const onClick = () => navigate("/app/health", { state: { openMetric: "sleep" } });
-      const hours = metricValues.sleepHours;
-      const h = Math.floor(hours);
-      const m = Math.round((hours % 1) * 60);
-      const sleepTrend = trendLabel(sleepMeta, "vs last wk");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-aea1dc) / .13)",
-            <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.65] dark:text-primary-deep-text`}>Sleep</p>
-              <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
-                {h}h{m.toString().padStart(2, "0")}
-              </p>
-              {/* The fixed hypnogram `d` is gone: one zigzag, identical on
-                  every account and every night, drawn whether or not anything
-                  had been slept through. */}
-              <div className="flex-1 min-h-0" />
-              {sleepTrend && (
-                <p className="mt-[6px] text-[9px] text-primary-deep-text">{sleepTrend}</p>
-              )}
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-aea1dc) / .16)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Sleep</p>
-              {sleepDetail?.score != null && (
-                <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>Score {sleepDetail.score}</span>
-              )}
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-1">
-              <div className="flex items-baseline gap-2.5">
-                <span className="text-[24px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
-                  {h}h {m.toString().padStart(2, "0")}m
-                </span>
-                {sleepTrend && (
-                  <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">{sleepTrend}</span>
-                )}
-              </div>
-              {/* A NIGHT'S LENGTH AND A NIGHT'S STAGES ARE DIFFERENT
-                  FACTS. The hours can be recorded without a wearable; the
-                  four-stage split cannot, so it is drawn only when a real
-                  sleep_details row carries all four. */}
-              {sleepStages && (
-              <div className="flex gap-[7px] mt-0.5">
-                {sleepStages.map((s) => (
-                  <span key={s.label} className="flex-1 rounded-[9px] bg-cream-card/55 py-[5px] text-center">
-                    <span className="block text-[11px] font-extrabold text-charcoal tabular-nums">{fmtMin(s.min)}</span>
-                    <span className="block mt-[2px] text-[7.5px] font-semibold" style={{ color: dark ? SLEEP_STAGE_INK_DARK[s.label] ?? s.color : s.color }}>
-                      {s.label}
-                    </span>
-                  </span>
-                ))}
-              </div>
-              )}
-              {sleepStages && (
-              <div>
-                <span className="flex h-[7px] rounded-[3px] overflow-hidden mt-[3px]">
-                  {sleepStages.map((s) => (
-                    <span key={s.label} style={{ width: `${(s.min / sleepTotalMin) * 100}%`, background: s.color }} />
-                  ))}
-                </span>
-                <div className="flex items-center gap-[11px] mt-2">
-                  {sleepStages.map((s) => (
-                    <span key={s.label} className="flex items-center gap-1">
-                      <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: s.color }} />
-                      <span className="text-[7.5px] font-semibold text-primary-deep-text/[0.68] dark:text-primary-deep-text">{s.label}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              )}
-            </div>
-          </>
-        )
-      );
-    }
-
-    // -------------------------------------------------------------- Workout
-    //
-    // THE USER'S NEXT ROUTINE, OR NOTHING. This printed
-    // `data/mockWorkouts.todaysWorkout` — "Upper Body", four exercises, ~52
-    // min — for every account on every day, beside a "Completed" badge driven
-    // by a seeded log entry for a session nobody did. Two invented facts
-    // propping each other up.
-    //
-    // nextRoutine() picks the routine to suggest. Null is an answer: an
-    // account with no routines is offered one to make rather than one it does
-    // not have.
-    case "workout": {
-      const done = !!todaysWorkoutLog?.completed;
-      const suggested = nextRoutine(routines, workoutSessions);
-      const onClick = () => navigate("/app/workout");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-a2c8c2) / .16)",
-            <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                {suggested ? (
-                  <span className="flex flex-col items-center text-center leading-[1.25]">
-                    <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>
-                      {done ? "Completed" : "Up next"}
-                    </span>
-                    <span className="mt-1.5 text-[15px] font-extrabold tracking-[-0.02em] text-charcoal line-clamp-2">
-                      {suggested.name}
-                    </span>
-                    <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
-                      {suggested.exercises.length} exercises
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-center leading-snug text-team-teal-ink/[0.72] dark:text-team-teal-ink px-1">
-                    No workout planned. Pick a routine
-                  </span>
-                )}
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-a2c8c2) / .16)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
-              {suggested && (
-                <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>
-                  {done ? "Completed" : "Up next"}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  {suggested ? (
-                    <>
-                      <p className="text-[20px] font-extrabold tracking-[-0.03em] text-charcoal truncate">
-                        {suggested.name}
-                      </p>
-                      <p className="mt-1 text-[10px] text-team-teal-ink/[0.72] dark:text-team-teal-ink">
-                        {suggested.exercises.length} exercises
-                        {suggested.estimatedDurationMin
-                          ? ` · ~${suggested.estimatedDurationMin} min`
-                          : ""}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-[13px] font-bold leading-snug text-charcoal">
-                      No workout planned. Pick a routine
-                    </p>
-                  )}
-                </div>
-                <span className="w-[38px] h-[38px] rounded-full bg-teal-dark flex items-center justify-center shrink-0">
-                  <Play size={15} className="text-white" fill="currentColor" />
-                </span>
-              </div>
-              {/* The week strip stays either way: it counts logged sessions,
-                  which are real, rather than a plan. */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] font-bold tracking-[.12em] uppercase text-team-teal-ink/[0.72] dark:text-team-teal-ink">This week</span>
-                  <span className="text-[9.5px] font-extrabold text-team-teal-ink">{workoutDaysThisWeek.length} of 7</span>
-                </div>
-                <span className="flex gap-1 w-full">
-                  {week.map((d) => (
-                    <span
-                      key={d}
-                      className="flex-1 h-1.5 rounded-[3px]"
-                      style={{ background: workoutDaysThisWeek.includes(d) ? "rgb(var(--c-teal-dark))" : "rgb(var(--th-6f9993) / .24)" }}
-                    />
-                  ))}
-                </span>
-              </div>
-            </div>
-          </>
-        )
-      );
-    }
 
     // ----------------------------------------------------------- Nutrition
     case "nutrition": {
@@ -938,409 +569,11 @@ export const HomeWidget: React.FC<{
       );
     }
 
-    // --------------------------------------------------------------- Weight
-    case "weight": {
-      // Task X follow-up: no weight until the account's recovery setting is
-      // known on this browser; a neutral tile in its place, never the number.
-      if (recoveryModePending) return pendingCard("rgb(var(--th-aea1dc) / .11)", "Weight");
-      if (metricValues.weight === null) {
-        return wrap(
-          () => navigate("/app/health", { state: { openMetric: "weight" } }),
-          emptyCard("rgb(var(--th-aea1dc) / .11)", "Weight", emptyHint("weight"))
-        );
-      }
-      const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
-      if (!isLarge) {
-        // Handoff §9: the scale glyph is replaced, and the value/unit that
-        // used to render BENEATH it now render inside it instead — no
-        // separate text block below the icon anymore. Icon is 66px
-        // normally, 62px inside an edit-mode widget board (the `editMode`
-        // prop threaded in from WidgetBoard), bottom-aligned in the
-        // content area.
-        const iconSize = editMode ? 62 : 66;
-        const weightStr = String(metricValues.weight);
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-aea1dc) / .11)",
-            <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
-              <div className="flex-1 flex items-end justify-center min-h-0">
-                <div style={{ position: "relative", width: iconSize, height: iconSize, flex: "none" }}>
-                  <svg
-                    viewBox="0 0 64 64"
-                    width={iconSize}
-                    height={iconSize}
-                    fill="none"
-                    stroke={dark ? WEIGHT_ACCENT_DARK : "rgb(var(--th-7567b7))"}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ display: "block" }}
-                  >
-                    <rect x={1.2} y={1.2} width={61.6} height={61.6} rx={7.2} strokeWidth={2.4} />
-                    <path
-                      d="M13.4 14.6 A27.3 27.3 0 0 1 50.4 14.6 L43.2 26.3 A27.8 27.8 0 0 0 20.6 26.3 Z"
-                      strokeWidth={2.7}
-                    />
-                    {/* The three dial "feet" pins, all 4.0 units on their
-                        existing bearings (CentiumFrame.dc.html, iteration
-                        tickA/tickB/tickC). */}
-                    <path d="M22.2 10.2 L23.59 13.95" strokeWidth={2.2} />
-                    <path d="M31.8 9.6 V13.6" strokeWidth={2.2} />
-                    <path d="M41.7 10.2 L40.58 14.04" strokeWidth={2.2} />
-                    <path d="M35.6 14.6 L29.8 22.9" strokeWidth={2.7} />
-                  </svg>
-                  {/* Item 4: the numeric value must be charcoal, not
-                      accent-colored — the unit text and glyph/icon below
-                      keep the existing rgb(var(--th-7567b7)) accent. The theme token, so
-                      it reads #241F1B in light and white in dark (HO1.1). */}
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: "53.1%",
-                      textAlign: "center",
-                      color: "rgb(var(--c-charcoal))",
-                      fontWeight: 800,
-                      lineHeight: 1,
-                      fontSize: iconSize * 0.176,
-                    }}
-                  >
-                    {weightStr}
-                  </span>
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: "73%",
-                      textAlign: "center",
-                      color: dark ? WEIGHT_ACCENT_DARK : "rgb(var(--thi-7567b7))",
-                      fontWeight: 800,
-                      lineHeight: 1,
-                      fontSize: iconSize * 0.119,
-                    }}
-                  >
-                    kg
-                  </span>
-                </div>
-              </div>
-            </>
-          )
-        );
-      }
-      const vbW = 230,
-        vbH = 78,
-        padX = 14,
-        topY = 19,
-        botY = 66;
-      const pts = weightValues.map((v, i) => {
-        const x = padX + (i * (vbW - 2 * padX)) / (weightValues.length - 1);
-        const y = weightMax === weightMin ? (topY + botY) / 2 : botY - ((v - weightMin) / (weightMax - weightMin)) * (botY - topY);
-        return { x, y, v, date: weightMeta.history[i].date };
-      });
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-aea1dc) / .11)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
-              {trendLabel(weightMeta) && (
-                <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>
-                  {trendLabel(weightMeta)}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 flex min-h-0 mt-[9px]">
-              <div className="flex-1 flex items-center gap-3.5 min-w-0">
-                <div className="shrink-0">
-                  <p className="flex items-baseline gap-[3px]">
-                    <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
-                      {metricValues.weight}
-                    </span>
-                    <span className="text-[11px] font-bold text-primary-deep-text/[0.68] dark:text-primary-deep-text">kg</span>
-                  </p>
-                  {nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightConfirmed && nutritionGoal.desiredWeightKg && (
-                    <p className="mt-[5px] text-[9.5px] text-primary-deep-text/[0.68] dark:text-primary-deep-text">Goal {nutritionGoal.desiredWeightKg} kg</p>
-                  )}
-                </div>
-                <svg viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} style={{ display: "block", flex: "none" }}>
-                  <polyline
-                    points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-                    fill="none"
-                    stroke="rgb(var(--c-team-lavender-deep))"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {pts.map((p, i) => (
-                    <React.Fragment key={i}>
-                      <circle cx={p.x} cy={p.y} r={2.6} fill="rgb(var(--c-team-lavender-deep))" />
-                      <text
-                        x={p.x}
-                        y={p.y - 7}
-                        textAnchor="middle"
-                        fontFamily="Manrope"
-                        style={{ fontSize: textPx(8) }}
-                        fontWeight={700}
-                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .6)"}
-                      >
-                        {p.v.toFixed(1)}
-                      </text>
-                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" style={{ fontSize: textPx(7.5) }} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgb(var(--th-5f5093) / .5)"}>
-                        {dayLetter(p.date)}
-                      </text>
-                    </React.Fragment>
-                  ))}
-                </svg>
-              </div>
-            </div>
-          </>
-        )
-      );
-    }
-
-    // --------------------------------------------------------------- Habits
-    case "habits": {
-      const done = habits.filter((h) => h.done).length;
-      const onClick = () => navigate("/app/mind");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-aea1dc) / .16)",
-            <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-2">
-                  <svg viewBox="0 0 24 24" width={40} height={40} style={{ display: "block", flex: "none" }}>
-                    <defs>
-                      <linearGradient id="team-habit-check" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgb(var(--c-team-lavender-deep))" />
-                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgb(var(--th-7d6bb5) / .22)" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M3.6 12.9 9.1 18.4 20.4 6.2" fill="none" stroke="url(#team-habit-check)" strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="text-[15px] font-extrabold tracking-[-0.02em] text-charcoal tabular-nums">
-                    {done}/{habits.length}
-                  </span>
-                </span>
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-aea1dc) / .16)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>
-                {done} of {habits.length} today
-              </span>
-            </div>
-            <HabitPages habits={habits} />
-          </>
-        )
-      );
-    }
-
-    // ----------------------------------------------------------- Heart rate
-    case "heartRate": {
-      const onClick = () => navigate("/app/health", { state: { openMetric: "heartRate" } });
-      if (metricValues.heartRate === null) {
-        // The heart glyph animates at `60 / bpm` seconds a beat, so an empty
-        // card used to pulse at a steady seeded 68.
-        return wrap(onClick, emptyCard("rgba(156,79,124,.1)", "Heart rate", emptyHint("heartRate")));
-      }
-      const bpm = metricValues.heartRate;
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgba(156,79,124,.1)",
-            <>
-              <p className={`${capsLabel} text-team-rose-ink/80`}>Heart rate</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="relative flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" width={70} height={70} style={{ display: "block", flex: "none" }}>
-                    <path
-                      d="M12 20.4S3.6 15 3.6 9.3A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 8.4 2.7c0 5.7-8.4 11.1-8.4 11.1Z"
-                      fill="none"
-                      stroke="rgb(var(--c-berry))"
-                      strokeWidth={0.72}
-                      strokeLinejoin="round"
-                      className="animate-cent-heartbeat"
-                      style={{ transformBox: "fill-box", transformOrigin: "center", animationDuration: `${(60 / Math.max(1, bpm)).toFixed(2)}s` }}
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex flex-col items-center justify-center leading-none pt-1">
-                    <span className="text-[19px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{bpm}</span>
-                    <span className="mt-px text-[7.5px] font-bold text-team-rose-ink/80">bpm</span>
-                  </span>
-                </span>
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgba(156,79,124,.1)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-rose-ink/80`}>Heart rate</p>
-              <span className={`${badge} text-team-rose-ink bg-berry/[0.16]`}>Resting</span>
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="flex items-baseline gap-2">
-                <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{bpm}</span>
-                <span className="text-[11px] font-bold text-team-rose-ink/80">bpm resting</span>
-              </div>
-              {/* Reuses the Health page's own EKG trace component (waveform
-                  AND its real rhythm label) so the two stay in sync by
-                  construction, rather than a second hand-built waveform —
-                  the manifest requires them to mirror exactly. Its rhythm
-                  colour (green/amber/red for brady-/normal/tachycardia) is
-                  real, functional signal, so it's kept rather than
-                  recoloured to the design's flat decorative rose. */}
-              <HeartRateEKG bpm={bpm} />
-              {/* Real min and max across the week's readings. This printed
-                  "Range 58 – 142 bpm today" from a literal, to everybody. */}
-              {healthSeries.heartRate.history.length > 1 && (
-                <p className="text-[9.5px] font-semibold text-team-rose-ink/80">
-                  Range {Math.round(Math.min(...healthSeries.heartRate.history.map((h) => h.value)))} –{" "}
-                  {Math.round(Math.max(...healthSeries.heartRate.history.map((h) => h.value)))} bpm
-                </p>
-              )}
-            </div>
-          </>
-        )
-      );
-    }
-
-    // -------------------------------------------------------------- Journal
-    case "journal": {
-      const onClick = () => navigate("/app/mind");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgba(217,164,65,.14)",
-            <>
-              <p className={`${capsLabel} text-team-gold-ink/[0.82] dark:text-team-gold-ink`}>Journal</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-[7px]">
-                  <BookOpen size={30} className="text-team-gold-deep" />
-                  <span className="flex flex-col items-center leading-none">
-                    <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalStreak}</span>
-                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">day streak</span>
-                  </span>
-                </span>
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgba(217,164,65,.14)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-gold-ink/[0.82] dark:text-team-gold-ink`}>Journal</p>
-              <span className={`${badge} text-team-gold-ink bg-gold/[0.22]`}>{journalDoneToday ? "Written today" : "Not written today"}</span>
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-2.5">
-              <div className="flex items-center gap-[13px]">
-                <BookOpen size={30} className="text-team-gold-deep shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="flex items-baseline gap-1.5">
-                    <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal">{journalStreak}</span>
-                    <span className="text-[10px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">day streak</span>
-                  </p>
-                  {latestEntry && (
-                    <p className="mt-[5px] text-[10px] leading-[1.45] text-team-gold-ink/[0.82] dark:text-team-gold-ink overflow-hidden text-ellipsis whitespace-nowrap">
-                      &ldquo;{latestEntry.text}&rdquo;
-                    </p>
-                  )}
-                </div>
-                <span className="shrink-0 text-right">
-                  <span className="block text-[14px] font-extrabold text-charcoal tabular-nums">{journalWordTotal}</span>
-                  <span className="block mt-[2px] text-[7.5px] font-semibold text-team-gold-ink/[0.82] dark:text-team-gold-ink">words</span>
-                </span>
-              </div>
-              <div className="flex gap-[5px]">
-                {journalWeek.map((has, i) => (
-                  <span
-                    key={i}
-                    className="flex-1 flex flex-col items-center gap-1 rounded-lg py-[5px]"
-                    style={{ background: has ? "rgba(217,164,65,.22)" : "rgb(var(--c-cream-card) / .45)" }}
-                  >
-                    <span className={`text-[7.5px] font-extrabold ${has ? "text-team-gold-ink" : "text-team-gold-ink/50"}`}>{DAY_LETTERS[i]}</span>
-                    {has ? (
-                      <Check size={10} className="text-team-gold-deep" />
-                    ) : (
-                      <span className="w-2.5 h-2.5 rounded-full border-[1.3px] border-team-gold-ink/[0.28]" />
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </>
-        )
-      );
-    }
-
-    // ---------------------------------------------------------- Meditation
-    //
-    // Real figures from meditation_sessions (my_meditation_summary), saved by
-    // the Meditation page's BreathingRunner when a breathing session ends. Still no goal and no
-    // percentage: nobody has set a meditation target. See MeditationFigures.
-    case "meditation": {
-      const onClick = () => navigate("/app/mind");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgb(var(--th-a2c8c2) / .18)",
-            <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <MeditationSmall summary={meditationSummary} />
-              </div>
-            </>
-          )
-        );
-      }
-      return wrap(
-        onClick,
-        shell(
-          "rgb(var(--th-a2c8c2) / .18)",
-          <>
-            <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
-            <MeditationLarge summary={meditationSummary} />
-          </>
-        )
-      );
-    }
 
     // GYM PASSES USED TO BE A WIDGET HERE, and it drew a QR square, a plan
     // name and a countdown for a pass bought from an invented gym with a
-    // prototype payment — three fabrications stacked on one tile. The
-    // purchases were a localStorage map keyed by mock gym ids; nothing was
-    // ever sold, charged or redeemable.
-    //
-    // PAYMENTS ARE THE PREREQUISITE. A pass is a receipt, and a receipt needs
-    // a charge behind it — the Tap integration is what makes that possible.
-    // When it lands, a pass becomes a row a server can issue and verify, and
-    // this widget can come back reading that row rather than a local map.
+    // prototype payment. It comes back reading a server-issued pass once
+    // payments exist (see git history).
 
     default:
       return null;

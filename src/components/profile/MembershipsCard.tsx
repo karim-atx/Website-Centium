@@ -247,7 +247,7 @@ export const MembershipsCard: React.FC = () => {
         // MO1.5 States, Loading: a skeleton block where the card sits
         // (surface.soft, the card's radius 18; the empty card is 113 tall on
         // the 2x frame, y 640–866), in place of the code box flashing in.
-        <div className="h-[113px] rounded-[18px] bg-cream-soft animate-pulse" aria-hidden />
+        <div className="h-[113px] rounded-[18px] bg-cream-soft animate-skeleton-pulse" aria-hidden />
       ) : memberships.length === 0 && gymMemberships.length === 0 ? (
         // The board's empty card: nothing to show is still worth a card,
         // because the code box is how somebody with a code gets anywhere.

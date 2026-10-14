@@ -1,17 +1,11 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { fieldTime, fromParts, linkLabel, minuteOptions, normaliseLink, range24, toParts } from "./calendarTime.ts";
+import { fieldTime, fromParts, linkLabel, minuteOptions, normaliseLink, toParts } from "./calendarTime.ts";
 
-test("the views show 24-hour padded times, as MO1.6 draws them", () => {
-  assert.equal(range24("12:30", "13:00"), "12:30 – 13:00");
-  assert.equal(range24("07:00", "08:00"), "07:00 – 08:00");
-  assert.equal(range24("00:05", "23:59"), "00:05 – 23:59");
-  assert.equal(range24("7:5", "18:00"), "07:05 – 18:00");
-});
-
-test("the sheet's field pads the hour", () => {
-  assert.equal(fieldTime("09:00"), "09:00 AM");
+test("the sheet's field is 12-hour with an unpadded hour (X-14)", () => {
+  assert.equal(fieldTime("09:00"), "9:00 AM");
   assert.equal(fieldTime("22:15"), "10:15 PM");
+  assert.equal(fieldTime("00:05"), "12:05 AM");
 });
 
 test("wheel parts round-trip", () => {

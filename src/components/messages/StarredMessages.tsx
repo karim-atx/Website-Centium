@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import { Card } from "../ui/Card";
 import { describeMessage, type MessageThread } from "../../services/messaging";
 import { fetchStarredMessages, type StarredMessage } from "../../services/messaging/chatFeatures";
 import { listTime } from "./chatTime";
+import { useListColors } from "./listColors";
 
 /**
  * Every message the reader starred, newest star first, across all chats.
@@ -19,6 +19,7 @@ export const StarredMessages: React.FC<{
 }> = ({ threads, authUserId, onOpen }) => {
   const [items, setItems] = useState<StarredMessage[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const c = useListColors();
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +35,7 @@ export const StarredMessages: React.FC<{
 
   if (failed) {
     return (
-      <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+      <p role="alert" className="text-center py-8 text-[12.5px] leading-[18.8px] font-medium" style={{ color: c.dangerText }}>
         Couldn't load your starred messages. Try again.
       </p>
     );
@@ -42,13 +43,19 @@ export const StarredMessages: React.FC<{
 
   if (items && items.length === 0) {
     return (
-      <Card className="text-center py-10">
-        <Star size={22} className="text-charcoal-faint mx-auto mb-2" />
-        <p className="text-sm text-charcoal-faint">No starred messages.</p>
-        <p className="text-[11px] text-charcoal-faint mt-1 max-w-xs mx-auto">
-          Press and hold a message, then tap Star to keep it here. Only you can see your stars.
+      // MO1.7 K11: the MO1.7.e empty pattern with Star 26.
+      <div data-empty-state="" className="flex flex-col items-center text-center gap-2.5 pt-10 pb-10">
+        <span className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: c.primaryTint, color: c.primaryInk }}>
+          <Star size={26} aria-hidden />
+        </span>
+        <p className="text-[16px] leading-[20.8px] font-extrabold" style={{ color: c.ink }}>
+          No starred messages
         </p>
-      </Card>
+        <p className="max-w-[260px] text-[12.5px] leading-[18.8px] font-normal" style={{ color: c.inkSoft }}>
+          {/* The privacy line is main's, kept verbatim (release review O10). */}
+          Long-press a message and tap Star to keep it here. Only you can see your stars.
+        </p>
+      </div>
     );
   }
 

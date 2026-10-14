@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
+import { CtaButton } from "../ui/PinnedCta";
+import { Toggle } from "../ui/Toggle";
+import { partBSheetTone } from "../health/log/LogSheetParts";
+import { useIsDark } from "../../hooks/useIsDark";
+import { OptionButton, hair, type, useCycleMode } from "./cycleUi";
 import { useApp } from "../../context/AppContext";
 import { saveCycleDay, validateDayLog } from "../../services/cycle";
 import {
@@ -47,22 +50,21 @@ import { Info, Lock } from "lucide-react";
 // executable by `authenticated` (checked), so an out-of-vocabulary value would
 // be refused rather than silently kept — but the user should never reach that.
 
-/** A horizontally scrollable row of chips, the preview's pattern. */
-const ChipRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="-mx-1 px-1 scroll-row">
-    <div className="flex gap-2 w-max pb-1">{children}</div>
+/** One row of smooth-square options that scrolls sideways (no wrap), as HE1.9.b.3 #38-#39. */
+const OptionRow: React.FC<{ children: React.ReactNode; label: string }> = ({ children, label }) => (
+  <div className="-mx-5 px-5 overflow-x-auto no-scrollbar" role="group" aria-label={label}>
+    <div className="flex w-max" style={{ gap: 6 }}>
+      {children}
+    </div>
   </div>
 );
 
-const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({
-  title,
-  hint,
-  children,
-}) => (
-  <div className="mb-4">
-    <p className="text-[11px] font-semibold text-charcoal-soft mb-1.5">
+/** A field section: label 12/16 600 #8C8378 (dark #B8B3C7), margin 0 0 6 2; sections 18 apart. */
+const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({ title, hint, children }) => (
+  <div style={{ marginBottom: 18 }}>
+    <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "0 0 6px 2px" })}>
       {title}
-      {hint && <span className="ml-1.5 font-normal text-charcoal-faint">{hint}</span>}
+      {hint && <span style={{ marginLeft: 6, fontWeight: 400 }}>{hint}</span>}
     </p>
     {children}
   </div>
@@ -94,6 +96,8 @@ export const LogDaySheet: React.FC<{
   onStartPregnancy?: () => void;
 }> = ({ open, onClose, date, onSaved, onStartPregnancy }) => {
   const { authUserId, cycleLogs } = useApp();
+  const dark = useIsDark();
+  const { hc } = useCycleMode();
   const existing = cycleLogs.find((l) => l.date === date) ?? null;
 
   const [isPeriod, setIsPeriod] = useState(false);
@@ -171,98 +175,87 @@ export const LogDaySheet: React.FC<{
     if (pregnancyTest !== "positive") onClose();
   };
 
-  const field =
-    "w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20";
+  // Field (HE1.6.1 / HE1.10.b.1 #9): 44 r12 #F5F5F6 with a 0.5px #241F1B@10%
+  // border (dark #242730 / #F5F3FA@10%), 14/21 400.
+  const fieldStyle: React.CSSProperties = {
+    borderRadius: 12,
+    padding: "0 12px",
+    border: `0.5px solid ${hair(dark, hc, 0.1)}`,
+    ...type(14, 21, 400),
+  };
+  const field = "w-full bg-cream-soft text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20";
 
-  const prettyDate = new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  const prettyDate = (() => {
+    const d = new Date(`${date}T00:00:00`);
+    return `${d.toLocaleDateString("en-GB", { weekday: "long" })} ${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
+  })();
 
+  const opt = (key: string, label: string, on: boolean, onClick: () => void, role: "radio" | "checkbox" = "radio") => (
+    <OptionButton key={key} size="sheet" role={role} selected={on} onClick={onClick}>
+      {label}
+    </OptionButton>
+  );
+
+  // K8: the cycle "Log" sheet in the Part B lavender-header chrome (chrome
+  // "partB": 0.5px outline, 1.1 close ring; the shared Log sheet's tone and
+  // pinned footer 12 20 30). Every field the repo logs is kept; chips are now
+  // smooth-square options in sideways rows.
   return (
-    <BottomSheet open={open} onClose={onClose} title={prettyDate}>
-      <div className="animate-fade-slide-up">
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={prettyDate}
+      chrome="partB"
+      tone={partBSheetTone(dark)}
+      footerBottom={30}
+      footer={
+        <div>
+          {error && (
+            <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
+              {error}
+            </p>
+          )}
+          <CtaButton label="Save day" loading={saving} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+        </div>
+      }
+    >
+      <div>
         <Section title="Flow">
-          <ChipRow>
-            {FLOWS.map((f) => (
-              <Chip key={f} active={flow === f} onClick={() => setFlow(flow === f ? null : f)}>
-                {FLOW_LABEL[f]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Flow">{FLOWS.map((f) => opt(f, FLOW_LABEL[f], flow === f, () => setFlow(flow === f ? null : f)))}</OptionRow>
           {/* Only offered where it is not already implied, so the two controls
               cannot contradict each other. */}
           {(flow === null || flow === "none" || flow === "spotting") && (
-            <label className="flex items-center gap-2 mt-2.5">
-              <input
-                type="checkbox"
-                checked={isPeriod}
-                onChange={(e) => setIsPeriod(e.target.checked)}
-                className="w-4 h-4 accent-primary"
-              />
-              <span className="text-[12px] text-charcoal-soft">Count this as a period day</span>
-            </label>
+            <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 10 }}>
+              <span className="text-charcoal-soft" style={type(12.5, 18.8, 400)}>
+                Count this as a period day
+              </span>
+              <Toggle checked={isPeriod} onChange={setIsPeriod} label="Count this as a period day" />
+            </div>
           )}
         </Section>
 
         <Section title="Symptoms">
-          <ChipRow>
-            {SYMPTOMS.map((sym) => (
-              <Chip
-                key={sym}
-                active={symptoms.includes(sym)}
-                onClick={() => setSymptoms(toggle(sym))}
-              >
-                {SYMPTOM_LABEL[sym]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Symptoms">
+            {SYMPTOMS.map((sym) => opt(sym, SYMPTOM_LABEL[sym], symptoms.includes(sym), () => setSymptoms(toggle(sym)), "checkbox"))}
+          </OptionRow>
         </Section>
 
         <Section title="Mood">
-          <ChipRow>
-            {MOODS.map((m) => (
-              <Chip key={m} active={mood.includes(m)} onClick={() => setMood(toggle(m))}>
-                {MOOD_LABEL[m]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Mood">{MOODS.map((m) => opt(m, MOOD_LABEL[m], mood.includes(m), () => setMood(toggle(m)), "checkbox"))}</OptionRow>
         </Section>
 
-        <Section title="Energy" hint={energy ? `· ${ENERGY_LABEL[energy]}` : undefined}>
-          <input
-            type="range"
-            min={LOG_LIMITS.energy.min}
-            max={LOG_LIMITS.energy.max}
-            step={1}
-            value={energy ?? 3}
-            onChange={(e) => setEnergy(Number(e.target.value))}
-            aria-label="Energy, 1 very low to 5 very high"
-            className="w-full accent-primary"
-          />
-          <div className="flex justify-between text-[9.5px] text-charcoal-faint">
-            <span>{ENERGY_LABEL[1]}</span>
-            <span>{ENERGY_LABEL[5]}</span>
-          </div>
-          {energy !== null && (
-            <button
-              onClick={() => setEnergy(null)}
-              className="tap mt-1 text-[10.5px] font-semibold text-charcoal-faint"
-            >
-              Clear
-            </button>
-          )}
+        {/* Energy 1-5, each level named (ENERGY_LABEL); tapping the chosen
+            one again clears it (the repo's Clear). */}
+        <Section title="Energy">
+          <OptionRow label="Energy, 1 very low to 5 very high">
+            {Array.from({ length: LOG_LIMITS.energy.max - LOG_LIMITS.energy.min + 1 }, (_, k) => LOG_LIMITS.energy.min + k).map((e) =>
+              opt(String(e), ENERGY_LABEL[e], energy === e, () => setEnergy(energy === e ? null : e))
+            )}
+          </OptionRow>
         </Section>
 
         <Section title="Cervical mucus">
-          <ChipRow>
-            {MUCUS_OPTIONS.map((m) => (
-              <Chip key={m} active={mucus === m} onClick={() => setMucus(mucus === m ? null : m)}>
-                {MUCUS_LABEL[m]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Cervical mucus">{MUCUS_OPTIONS.map((m) => opt(m, MUCUS_LABEL[m], mucus === m, () => setMucus(mucus === m ? null : m)))}</OptionRow>
         </Section>
 
         <Section title="Temperature" hint="°C">
@@ -273,44 +266,31 @@ export const LogDaySheet: React.FC<{
             placeholder="36.5"
             aria-label="Basal body temperature in degrees Celsius"
             className={field}
+            style={{ ...fieldStyle, height: 44 }}
           />
-          <p className="mt-1 text-[10px] text-charcoal-faint leading-snug">{BBT_HELP}</p>
+          <p className="text-charcoal-faint" style={type(11, 16, 400, { marginTop: 4 })}>
+            {BBT_HELP}
+          </p>
         </Section>
 
         <Section title="LH test">
-          <ChipRow>
-            {LH_OPTIONS.map((o) => (
-              <Chip key={o} active={lh === o} onClick={() => setLh(lh === o ? null : o)}>
-                {LH_LABEL[o]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="LH test">{LH_OPTIONS.map((o) => opt(o, LH_LABEL[o], lh === o, () => setLh(lh === o ? null : o)))}</OptionRow>
         </Section>
 
         <Section title="Pregnancy test">
-          <ChipRow>
-            {PREGNANCY_TEST_OPTIONS.map((o) => (
-              <Chip
-                key={o}
-                active={pregnancyTest === o}
-                onClick={() => setPregnancyTest(pregnancyTest === o ? null : o)}
-              >
-                {PREGNANCY_TEST_LABEL[o]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Pregnancy test">
+            {PREGNANCY_TEST_OPTIONS.map((o) => opt(o, PREGNANCY_TEST_LABEL[o], pregnancyTest === o, () => setPregnancyTest(pregnancyTest === o ? null : o)))}
+          </OptionRow>
           {pregnancyTest === "positive" && (
-            <div className="flex gap-2 mt-2.5 rounded-xl bg-primary-pale px-3 py-2.5">
-              <Info size={14} className="text-primary-dark shrink-0 mt-0.5" />
+            // The shared Info box: #9A8CD6@12% r14 pad 12 14, 12/18 #5B5349.
+            <div className="flex" style={{ gap: 10, marginTop: 10, padding: "12px 14px", borderRadius: 14, background: "rgb(var(--c-fill-pinned) / 0.12)" }}>
+              <Info size={16} aria-hidden className="shrink-0 text-primary-dark" style={{ marginTop: 1 }} />
               <div className="min-w-0">
-                <p className="text-[11.5px] leading-[1.45] text-primary-deep-text">
+                <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                   {POSITIVE_TEST_PROMPT}
                 </p>
                 {onStartPregnancy && (
-                  <button
-                    onClick={onStartPregnancy}
-                    className="tap mt-1.5 text-[11.5px] font-bold text-primary-dark"
-                  >
+                  <button type="button" onClick={onStartPregnancy} className="tap text-primary-dark" style={{ marginTop: 4, minHeight: 32, ...type(13, 19.5, 700) }}>
                     {POSITIVE_TEST_CTA}
                   </button>
                 )}
@@ -320,21 +300,13 @@ export const LogDaySheet: React.FC<{
         </Section>
 
         <Section title="Sexual activity">
-          <ChipRow>
-            {SEX_ACTIVITY_OPTIONS.map((o) => (
-              <Chip
-                key={o}
-                active={sexActivity === o}
-                onClick={() => setSexActivity(sexActivity === o ? null : o)}
-              >
-                {SEX_ACTIVITY_LABEL[o]}
-              </Chip>
-            ))}
-          </ChipRow>
+          <OptionRow label="Sexual activity">
+            {SEX_ACTIVITY_OPTIONS.map((o) => opt(o, SEX_ACTIVITY_LABEL[o], sexActivity === o, () => setSexActivity(sexActivity === o ? null : o)))}
+          </OptionRow>
           {/* TRUE, AND CHECKED: no access_category covers this column, and
               client_cycle_phase returns one word. Nothing can read it. */}
-          <p className="flex items-center gap-1 mt-2 text-[10.5px] font-semibold text-charcoal-faint">
-            <Lock size={11} /> {SEX_ACTIVITY_PRIVACY}
+          <p className="flex items-center text-charcoal-faint" style={{ gap: 5, marginTop: 8, ...type(11, 16, 600) }}>
+            <Lock size={12} aria-hidden /> {SEX_ACTIVITY_PRIVACY}
           </p>
         </Section>
 
@@ -345,18 +317,9 @@ export const LogDaySheet: React.FC<{
             rows={2}
             placeholder="Anything worth remembering about today"
             className={`${field} resize-none`}
+            style={{ ...fieldStyle, padding: "10px 12px" }}
           />
         </Section>
-
-        {error && (
-          <p className="text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-3">
-            {error}
-          </p>
-        )}
-
-        <Button fullWidth onClick={() => void save()} disabled={saving}>
-          {saving ? "Saving…" : "Save day"}
-        </Button>
       </div>
     </BottomSheet>
   );

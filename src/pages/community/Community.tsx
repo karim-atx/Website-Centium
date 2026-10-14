@@ -12,9 +12,12 @@ import { CourseBuilder } from "../../components/courses/author/CourseBuilder";
 import { CourseDetailView } from "../../components/courses/CourseDetailView";
 import { LessonView } from "../../components/courses/LessonView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
-import { DangerLine, ForumPlaceholder } from "../../components/forum/parts";
-import { fv } from "../../components/forum/forumColor";
+import { ForumPlaceholder } from "../../components/forum/parts";
 import { useBack } from "../../hooks/useBack";
+import { useState } from "react";
+import { Users } from "lucide-react";
+import { FixedHeader } from "../../components/ui/FixedHeader";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 
 // The Community page: Forum and Courses (design PgYuBboDr8DEL2bk7EJKtU,
 // screen 1), and the forum's own screens behind it.
@@ -81,14 +84,13 @@ function useForumGate(section: Section):
   };
 }
 
-// MO1.3 #1: a back chevron and the subtitle; the title keeps its 26/800 (A17).
-function Heading() {
+/// v6 MO1.3 #2-#5: the back button and the title block. Title 27/40.5 700
+// ls -0.6 in charcoal (#241F1B / #F5F3FA), subtitle 13/19.5 500 #8C8378 /
+// #B8B3C7 6 under it; 16 to the tabs (the caller's).
+function Heading({ className = "mb-4" }: { className?: string }) {
   const back = useBack();
   return (
-    // Frame check (MO1.3 #1): the header starts at the content edge (chevron
-    // centred at x 34, title at 62 after the 10 gap) and the tabs sit 16 under
-    // the subtitle (measured: the page's 12 gap + 6).
-    <div className="flex items-start gap-2.5 mb-1.5">
+    <div className={`flex items-start gap-2.5 ${className}`}>
       <button
         type="button"
         onClick={back}
@@ -100,9 +102,8 @@ function Heading() {
         </svg>
       </button>
       <div className="min-w-0">
-        <h1 className="m-0 text-[27px] font-bold leading-[1.5] tracking-[-0.022em]" style={{ color: fv("text") }}>Community</h1>
-        {/* New since R1, so the frame's text.muted rgb(140,131,120) (decision 22). */}
-        <p className="mt-1 text-[13px] font-medium text-charcoal-faint">
+        <h1 className="m-0 text-[27px] font-bold leading-[40.5px] tracking-[-0.6px] text-charcoal">Community</h1>
+        <p className="m-0 mt-1.5 text-[13px] leading-[19.5px] font-medium text-charcoal-faint">
           Discuss with other clients, or learn from a course
         </p>
       </div>
@@ -110,13 +111,20 @@ function Heading() {
   );
 }
 
+// K6 (KEEP-SAFETY): the adults-only / date-of-birth answer, restyled as the
+// MO1.7.e empty pattern (no box): a 56 r16 #F0EDF9 / #303141 tile with the
+// icon 26 #7D6BB5 / #C3B3FB and the line 12.5/18.8 #5B5349 / #B8B3C7, 260
+// wide, centred. The words are unchanged.
 function Refused({ text }: { text: string }) {
   return (
-    <div className="flex flex-col gap-3">
-      <Heading />
-      <p className="text-[15px] leading-[1.6] rounded-2xl px-4 py-3.5" style={{ background: fv("rules-bg"), color: fv("rules-ink") }}>
-        {text}
-      </p>
+    <div className="flex flex-col">
+      <Heading className="mb-0" />
+      <div className="flex flex-col items-center text-center gap-2.5 pt-16 mx-auto max-w-[260px]">
+        <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-th-7d6bb5 dark:text-th-c3b3fb" aria-hidden="true">
+          <Users size={26} strokeWidth={1.75} />
+        </span>
+        <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-soft">{text}</p>
+      </div>
     </div>
   );
 }
@@ -127,26 +135,28 @@ function Gated({ render, section = "forum" }: { render: (ctx: Ctx) => React.Reac
   if (gate.state === "refused") return <Refused text={gate.text} />;
   if (gate.state === "error") {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
         <Heading />
-        {/* Handover-complete pass: MO1.3 §4's plain danger line, no box. */}
-        <DangerLine>{gate.message}</DangerLine>
-        <button
-          type="button"
-          onClick={gate.retry}
-          className="tap self-start h-11 rounded-full px-5 text-sm font-bold"
-          style={{ background: fv("accent"), color: fv("on-accent") }}
-        >
-          Try again
-        </button>
+        {/* K8 / O2 (OURS): "Couldn't load the forum." and a Retry text
+            button, 12.5/18.8 500 #C0392B / #F09A8E; Retry #7D6BB5 / #C3B3FB. */}
+        <p role="alert" className="m-0 flex flex-wrap items-center gap-x-2 text-[12.5px] leading-[18.8px] font-medium text-status-high">
+          <span>
+            {typeof navigator !== "undefined" && navigator.onLine === false
+              ? "You're offline. Try again when you're connected."
+              : "Couldn't load the forum."}
+          </span>
+          <button type="button" onClick={gate.retry} className="tap font-bold text-th-7d6bb5 dark:text-th-c3b3fb">
+            Retry
+          </button>
+        </p>
       </div>
     );
   }
   if (gate.state === "loading") {
     return (
       <div className="flex flex-col gap-3" aria-busy="true">
-        <Heading />
-        <ForumPlaceholder height={48} />
+        <Heading className="mb-1" />
+        <ForumPlaceholder height={56} />
         <ForumPlaceholder height={150} />
         <ForumPlaceholder height={150} />
       </div>
@@ -161,6 +171,9 @@ export default function Community({ compose = false }: { compose?: boolean }) {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") === "courses" ? "courses" : "forum";
   const navigate = useNavigate();
+  // MO1.3 #1: the slot in the fixed area that ForumHome draws its category
+  // strip into (the strip's state stays ForumHome's).
+  const [stripSlot, setStripSlot] = useState<HTMLDivElement | null>(null);
 
   return (
     <Gated
@@ -172,29 +185,32 @@ export default function Community({ compose = false }: { compose?: boolean }) {
           return <NicknameScreen firstName={ctx.firstName} initial={null} editing={false} onDone={() => navigate("/app/forum", { replace: true })} />;
         }
         return (
-          <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
-            <Heading />
-            {/* MO1.3 #2: a 56 pt segmented control (44 pt tabs), in the
-                forum's own colours; labels 15/700 in both states. */}
-            <div className="flex gap-[5px] rounded-2xl p-1.5" style={{ background: fv("track") }} role="tablist" aria-label="Community">
-              {(["forum", "courses"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === t}
-                  onClick={() => setParams(t === "courses" ? { tab: "courses" } : {}, { replace: true })}
-                  className="tap grow basis-0 h-11 rounded-xl text-[15px]"
-                  style={
-                    tab === t
-                      ? { background: fv("track-active"), color: fv("text"), fontWeight: 700 }
-                      : { background: "transparent", color: fv("muted"), fontWeight: 700 }
-                  }
-                >
-                  {t === "forum" ? "Forum" : "Courses"}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col">
+            {/* v6 MO1.3 #1 / S8: header, Forum · Courses and (on Forum) the
+                category strip stay fixed (shared FixedHeader: fill + 1px
+                hairline once content passes under; V6-91 dark #121317); the
+                nickname line and the rules card scroll away. Pad 16 under. */}
+            <FixedHeader paddingBottom={16}>
+              <Heading />
+              {/* #6-#8: SegmentedTabs, 15/22.5 700. Active #A79AD5 white
+                  (High contrast #5B48B8; dark #A991FE with #0D0B1A); idle
+                  #F5F4FE with #5B5349; dark track and idle #303141 with
+                  #B8B3C7. */}
+              <SegmentedTabs
+                items={[
+                  { key: "forum", label: "Forum" },
+                  { key: "courses", label: "Courses" },
+                ]}
+                activeKey={tab}
+                onChange={(t) => setParams(t === "courses" ? { tab: "courses" } : {}, { replace: true })}
+                labelSize={15}
+                idleInk="rgb(var(--c-charcoal-soft))"
+                darkTone="partB"
+                className={tab === "forum" ? "mb-2.5" : undefined}
+              />
+              {/* #9: 10 under the tabs. */}
+              {tab === "forum" && <div ref={setStripSlot} data-forum-strip-slot="" />}
+            </FixedHeader>
             {tab === "courses" ? (
               // THE WAY INTO THE BUILDER, for the people who can use it: only
               // a professional sees it, because create_course refuses everybody
@@ -222,6 +238,7 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                 isProfessional={ctx.isProfessional}
                 recoveryOn={ctx.recoveryOn}
                 recoveryPending={ctx.recoveryPending}
+                stripSlot={stripSlot}
               />
               </>
             )}

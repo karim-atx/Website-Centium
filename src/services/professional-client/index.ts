@@ -575,6 +575,12 @@ export interface ClientLabs {
   /** yyyy-mm-dd of the most recent panel. */
   latestPanelDate: string;
   panelCount: number;
+  /**
+   * Results typed in on their own, with no panel (Database B2:
+   * blood_markers.blood_panel_id null, dated by result_date). Their markers
+   * are in `markers` like any other reading.
+   */
+  standaloneCount: number;
   /** Panels carrying an uploaded report, newest first. */
   reports: LabReport[];
 }
@@ -616,6 +622,35 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
     return { ok: false, message: describe(error) };
   }
 
+  // B2: a result can stand alone (no panel, dated by result_date). Read
+  // under the same lab_results grant; without this a client who only types
+  // single results looks to their professional as if they had none.
+  const standalone = await (supabase.from("blood_markers") as unknown as {
+    select: (c: string) => {
+      in: (
+        c: string,
+        v: string[]
+      ) => {
+        is: (
+          c: string,
+          v: null
+        ) => PromiseLike<{
+          data:
+            | { id: string; user_id: string; name: string; marker_key: string | null; value: number; unit: string; range_low: number | null; range_high: number | null; status: string; result_date: string | null }[]
+            | null;
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  })
+    .select("id, user_id, name, marker_key, value, unit, range_low, range_high, status, result_date")
+    .in("user_id", clientIds)
+    .is("blood_panel_id", null);
+  if (standalone.error) {
+    console.error("[professional-client] Could not read client results:", standalone.error.message);
+    return { ok: false, message: describe(standalone.error as PostgrestError) };
+  }
+
   const byClient: Record<string, ClientLabs | null> = {};
   for (const id of clientIds) byClient[id] = null;
   const catalogue = await fetchLabCatalogue();
@@ -639,12 +674,27 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
     }
   }
 
+  // Standalone results join as one dated group per day, so the grouping's
+  // oldest-first contract still holds once merged.
+  const singleFor: Record<string, Record<string, PanelRow["blood_markers"]>> = {};
+  for (const m of standalone.data ?? []) {
+    if (!(m.user_id in byClient) || !m.result_date) continue;
+    ((singleFor[m.user_id] ??= {})[m.result_date] ??= []).push(m as unknown as PanelRow["blood_markers"][number]);
+  }
+  for (const [id, days] of Object.entries(singleFor)) {
+    const list = (panelsFor[id] ??= []);
+    for (const [date, markers] of Object.entries(days)) list.push({ panel_date: date, blood_markers: markers });
+    list.sort((a, b) => a.panel_date.localeCompare(b.panel_date));
+  }
+
   for (const [id, panels] of Object.entries(panelsFor)) {
     if (panels.length === 0) continue;
+    const singles = Object.keys(singleFor[id] ?? {}).length;
     byClient[id] = {
       markers: groupPanelsByMarkerName(panels, catalogue),
       latestPanelDate: panels[panels.length - 1].panel_date,
-      panelCount: panels.length,
+      panelCount: panels.length - singles,
+      standaloneCount: Object.values(singleFor[id] ?? {}).reduce((n, ms) => n + ms.length, 0),
       // Panels arrive oldest-first for the grouping's sake; reports read
       // better newest-first, like every other record list.
       reports: (reportsFor[id] ?? []).slice().reverse(),

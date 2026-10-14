@@ -70,7 +70,8 @@ export default function Home() {
           subtitle that used to sit under the greeting is removed. */}
       <div className="flex items-center justify-between mb-[11px] animate-fade-slide-up">
         <div>
-          <h1 className="font-display text-[19px] font-bold tracking-[-0.03em] text-charcoal flex items-center gap-1.5">
+          {/* HO1.1 #1 (Home shell context): 19/28.5 700 ls -0.6. */}
+          <h1 className="font-display text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal flex items-center gap-1.5">
             {t(getGreeting())}, {user.firstName}
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
@@ -98,19 +99,26 @@ export default function Home() {
           since Home is the first screen a customer lands on after
           onboarding. */}
       {recoverySensitive && !recoverySensitiveIntroSeen && (
-        <div className="flex items-start gap-3 bg-primary-pale rounded-2xl px-4 py-3.5 mb-5 animate-fade-slide-up">
-          <HeartHandshake size={17} className="text-primary-dark shrink-0 mt-0.5" />
+        // OURS-home-shell H3 (KEEP-SAFETY, copy unchanged): r15 card #F0EDF9
+        // (dark #303141), HeartHandshake 17 #5F5093, title 13/700, body
+        // 11/16 500 #5B5349, close X 15 with a 44 hit area.
+        <div
+          className="flex items-start gap-3 px-4 py-3.5 mb-5 animate-fade-slide-up"
+          style={{ borderRadius: 15, background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f0edf9))" }}
+        >
+          <HeartHandshake size={17} className="shrink-0 mt-0.5" style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-5f5093))" }} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-primary-deep-text mb-0.5">You're in a recovery-sensitive experience</p>
-            <p className="text-xs text-charcoal-soft leading-relaxed">
+            <p className="text-[13px] font-bold text-charcoal mb-0.5">You're in a recovery-sensitive experience</p>
+            <p className="text-[11px] leading-[16px] font-medium text-charcoal-soft">
               Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile. Nothing you've logged is ever lost.
             </p>
           </div>
           <button
             onClick={() => setRecoverySensitiveIntroSeen(true)}
             aria-label="Dismiss"
-            className="tap text-charcoal-faint shrink-0"
+            className="tap relative text-charcoal-faint shrink-0"
           >
+            <span aria-hidden className="absolute left-1/2 top-1/2 w-11 h-11 -translate-x-1/2 -translate-y-1/2" />
             <X size={15} />
           </button>
         </div>
@@ -120,7 +128,8 @@ export default function Home() {
       <DobPromptCard className="mb-5 animate-fade-slide-up" />
 
       {/* Widget order per QA: Calendar (fixed, non-adjustable) > Streaks > Quick Actions > Your Health Today */}
-      <DateSelector />
+      {/* OURS-home-shell H5: the HO1.1 pill's hairline border (X-09, both modes) and 44 hit areas. */}
+      <DateSelector partB />
 
       {/* QA 12.0 recovery-sensitive experience: "Disable fasting, streaks,
           badges, and weight-loss prompts." */}

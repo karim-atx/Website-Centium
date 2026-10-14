@@ -22,7 +22,7 @@ import { textPx } from "../../theme/textSize";
 // load-error lines ask the user to "Pull to retry" (Part 4 Q7).
 const PULL_THRESHOLD = 70;
 
-type SubTab = "meals" | "recipes" | "foods";
+export type SubTab = "meals" | "recipes" | "foods";
 
 // Handover 2026-09-29 FO3.2: each sub-tab's colour, its rows' lighter tint
 // and its icon colour, measured from the frame. Custom Foods is Dark Lavender.
@@ -57,11 +57,46 @@ type Opened =
  * Delete); tapping a row opens its detail popup, where Edit changes the same
  * popup into the item's create form, prefilled.
  */
-export default function MealPrepPanel() {
+/**
+ * The Custom tab's three sub-tabs (FO3.2). v6 FO1 K9: they pin directly under
+ * the main tabs inside the Food page's fixed header, so Food renders them there
+ * and drives the panel through `sub`.
+ */
+export function MealPrepSubTabs({ sub, onChange }: { sub: SubTab; onChange: (s: SubTab) => void }) {
+  const dark = useIsDark();
+  return (
+    <div role="tablist" aria-label="Custom" className="flex" style={{ background: TABS_CONTAINER[dark ? 1 : 0], borderRadius: 12, padding: 4, gap: 4 }}>
+      {SUB_ORDER.map((k) => (
+        <button
+          key={k}
+          role="tab"
+          aria-selected={sub === k}
+          onClick={() => onChange(k)}
+          className="tap flex-1 min-w-0 truncate"
+          style={{
+            height: 32,
+            borderRadius: 9,
+            background: sub === k ? SUB[k].color : "transparent",
+            color: sub === k ? SUB[k].ink : "rgb(var(--c-charcoal-soft))",
+            fontSize: textPx(12),
+            fontWeight: sub === k ? 700 : 600,
+          }}
+        >
+          {SUB[k].label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
   const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep, authUserId, removeCustomMeal, removeRecipe, forgetCustomFood } =
     useApp();
   const dark = useIsDark();
-  const [sub, setSub] = useState<SubTab>("meals");
+  const [subOwn, setSub] = useState<SubTab>("meals");
+  // Food drives the sub-tab from its fixed header (FO1 K9); alone, the panel
+  // keeps its own.
+  const sub = subProp ?? subOwn;
 
   // Custom Foods reads custom_foods itself: this device's copy only holds
   // what was created here.
@@ -200,29 +235,9 @@ export default function MealPrepPanel() {
         </div>
       )}
 
-      <div role="tablist" aria-label="Custom" className="flex" style={{ background: TABS_CONTAINER[dark ? 1 : 0], borderRadius: 12, padding: 4, gap: 4 }}>
-        {SUB_ORDER.map((k) => (
-          <button
-            key={k}
-            role="tab"
-            aria-selected={sub === k}
-            onClick={() => setSub(k)}
-            className="tap flex-1 min-w-0 truncate"
-            style={{
-              height: 32,
-              borderRadius: 9,
-              background: sub === k ? SUB[k].color : "transparent",
-              color: sub === k ? SUB[k].ink : "rgb(var(--c-charcoal-soft))",
-              fontSize: textPx(12),
-              fontWeight: sub === k ? 700 : 600,
-            }}
-          >
-            {SUB[k].label}
-          </button>
-        ))}
-      </div>
+      {subProp === undefined && <MealPrepSubTabs sub={sub} onChange={setSub} />}
 
-      <div className="flex flex-col" style={{ gap: 8, marginTop: 12, paddingBottom: 72 }}>
+      <div className="flex flex-col" style={{ gap: 8, marginTop: subProp === undefined ? 12 : 0, paddingBottom: 72 }}>
         {error ? (
           <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
         ) : rows.length === 0 ? (

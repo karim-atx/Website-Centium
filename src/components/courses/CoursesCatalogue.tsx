@@ -184,7 +184,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
           />
         </div>
       ) : (
-        <div className="h-10 rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
+        <div className="h-10 rounded-xl animate-skeleton-pulse" aria-hidden="true" style={{ background: fv("track") }} />
       )}
 
       {!data ? (

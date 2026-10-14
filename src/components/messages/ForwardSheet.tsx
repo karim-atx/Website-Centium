@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { PERSON_ICON } from "../../utils/icons";
+import { AvatarPlaceholder } from "../icons/PartBIcons";
 import {
   describeMessage,
   fetchThreads,
@@ -162,7 +162,12 @@ export const ForwardSheet: React.FC<{
                 {t.participantAvatarUrl ? (
                   <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <PERSON_ICON size={16} className="text-primary-dark" />
+                  // v6 (V6-170, asset map): initials when a name exists, else the placeholder figure.
+                  t.participantName.trim() ? (
+                    <span className="text-[14px] font-bold text-primary-deep-text">{t.participantName.trim().charAt(0).toUpperCase()}</span>
+                  ) : (
+                    <AvatarPlaceholder size={36} />
+                  )
                 )}
               </span>
               <span className="flex-1 min-w-0 text-sm font-medium text-charcoal truncate">

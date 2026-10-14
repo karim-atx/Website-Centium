@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Archive, ArchiveRestore, Ban, BellOff, ChevronLeft, Flag, Pin, PinOff, Search, Users } from "lucide-react";
+import { Archive, ArchiveRestore, Ban, BellOff, ChevronLeft, Flag, Pin, PinOff, Search, Trash2, Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Toggle } from "../ui/Toggle";
-import { PERSON_ICON } from "../../utils/icons";
+import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { InlineImage } from "./InlineImage";
 import { FileCard } from "./FileCard";
 import { LoadMoreSentinel } from "./LoadMoreSentinel";
@@ -82,7 +82,9 @@ export const ChatInfo: React.FC<{
     onChanged: () => void;
     onReport: (() => void) | null;
   };
-}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group }) => {
+  /** MO1.7 O14: "Delete conversation" (delete for me) in the danger card (B3); absent hides the row. */
+  onDelete?: () => void;
+}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group, onDelete }) => {
   const s = settings ?? NO_SETTINGS;
   const { professionalClients } = useApp();
   const dark = useIsDark();
@@ -245,7 +247,7 @@ export const ChatInfo: React.FC<{
           ) : thread.participantName ? (
             threadInitials(thread)
           ) : (
-            <PERSON_ICON size={26} />
+            <AvatarPlaceholder size={80} />
           )}
         </span>
         )}
@@ -458,6 +460,12 @@ export const ChatInfo: React.FC<{
         <button type="button" onClick={(safety?.onReport ?? group?.onReport)!} className={dangerCard}>
           <Flag size={15} strokeWidth={1.75} aria-hidden />
           Report
+        </button>
+      )}
+      {onDelete && (
+        <button type="button" onClick={onDelete} className={dangerCard}>
+          <Trash2 size={15} strokeWidth={1.75} aria-hidden />
+          Delete conversation
         </button>
       )}
 

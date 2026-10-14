@@ -319,6 +319,16 @@ export const START_FROM_DUE = "I know my due date";
 export const DUE_DATE_HELP =
   "If a scan has changed your due date, enter the date from the scan. It's more " +
   "accurate than counting from a period.";
+/** HE1.10.b.1 labels (the board's; the field label follows the chosen way in). */
+export const START_LMP_LABEL = "First day of your last period";
+export const START_DUE_LABEL = "Due date";
+export const START_DUE_SECTION = "If you know your due date";
+export const START_CTA = "Start tracking";
+/** A last period more than 42 weeks back (handover HE1.10.b.1 Error, an assumption). */
+export const START_LMP_TOO_LONG_AGO = "That date is too long ago for this pregnancy.";
+/** HE1.10.b.1's worked-out line: "Due date: 21 June 2027" / "Last period: about 14 September 2026". */
+export const START_DERIVED_DUE = (date: string) => `Due date: ${date}`;
+export const START_DERIVED_LMP = (date: string) => `Last period: about ${date}`;
 
 export const END_TITLE = "End pregnancy tracking";
 /**

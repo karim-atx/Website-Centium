@@ -307,8 +307,17 @@ type ScheduleRow = Row & {
  * at through calendar_event_id. Those are left out here, or the class would
  * show twice; only older bookings without one are overlaid.
  */
+export interface LinkedBooking {
+  calendarEventId: string;
+  bookingId: string;
+  /** The booked class, for the Calendar's "View booking" (its class page). */
+  classId: string;
+  businessName: string;
+  businessActive: boolean;
+}
+
 export async function fetchMyBookedClasses(): Promise<
-  { ok: true; classes: BookedClass[] } | { ok: false }
+  { ok: true; classes: BookedClass[]; linked: LinkedBooking[] } | { ok: false }
 > {
   // my_class_schedule is absent from database.types.ts — the view is newer
   // than the last regeneration, as professional_reviews and ambassador_grants
@@ -347,9 +356,22 @@ export async function fetchMyBookedClasses(): Promise<
     return { ok: false };
   }
   const onCalendar = new Set((linked.data ?? []).filter((b) => b.calendar_event_id).map((b) => b.id));
+  const eventOf = new Map((linked.data ?? []).filter((b) => b.calendar_event_id).map((b) => [b.id, b.calendar_event_id!]));
 
   return {
     ok: true,
+    // v6 MO1.6 B3 (PB-O-62, front end): the calendar rows book_class() made.
+    // The Calendar shows them read-only with the Booked badge, since a
+    // booking is changed or cancelled through the booking, not the event.
+    linked: (data ?? [])
+      .filter((r) => eventOf.has(r.booking_id))
+      .map((r) => ({
+        calendarEventId: eventOf.get(r.booking_id)!,
+        bookingId: r.booking_id,
+        classId: r.class_id,
+        businessName: r.business_name,
+        businessActive: r.business_active,
+      })),
     classes: (data ?? []).filter((r) => !onCalendar.has(r.booking_id)).map((r) => ({
       // toClass wants the class's own id; the view exposes it as class_id
       // because booking_id is the row's identity here.

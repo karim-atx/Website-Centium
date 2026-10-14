@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import {
   AtSign,
   Bell,
@@ -44,6 +44,8 @@ import {
 } from "../../services/push";
 import { fromParts, minuteOptions, toParts, type Meridiem } from "../../components/calendar/calendarTime";
 import { pushUnavailableReason } from "./platform";
+import { time12 } from "../../utils/time12";
+import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
 // every group and row the frame draws, Quiet hours included.
@@ -167,18 +169,18 @@ function TimeRow({
         onClick={onToggle}
         disabled={value === null}
         aria-expanded={open}
-        aria-label={value === null ? label : `${label}, ${value}${spoken ? `, ${spoken}` : ""}`}
+        aria-label={value === null ? label : `${label}, ${time12(value)}${spoken ? `, ${spoken}` : ""}`}
         // The row sits alone in its wrapper, so the shared last-row rule
         // would hide every divider: From keeps its own, To (the section's
         // last row) has none, and an open wheel hides it.
         className={clsx("tap", settingsRowClass, open ? "before:!hidden" : divider && "before:!block")}
       >
-        <span aria-hidden className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 bg-th-f0edf9 text-primary-accent dark:bg-th-aea1dc/[0.14]">
+        <span aria-hidden className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 bg-primary-pale text-primary-accent">
           <Clock size={17} strokeWidth={1.75} />
         </span>
-        <span className="flex-1 min-w-0 text-[14px] font-semibold leading-5 text-charcoal">{label}</span>
+        <span className="flex-1 min-w-0 text-[14px] font-semibold leading-[19px] text-charcoal">{label}</span>
         <span className="shrink-0 flex items-center gap-1.5">
-          <span className="text-[14px] font-bold tabular-nums text-primary-accent">{value ?? "--:--"}</span>
+          <span className="text-[14px] font-bold tabular-nums text-primary-accent">{value ? time12(value) : "--:--"}</span>
           <ChevronDown
             size={16}
             strokeWidth={1.75}
@@ -483,19 +485,29 @@ export default function NotificationsPage() {
       {GROUPS.map((g) => (
         <SettingsSection key={g.label} label={g.label}>
           {g.rows.map((r) => (
-            <SettingsRow
-              key={r.key}
-              icon={r.icon}
-              title={r.label}
-              srDescription={r.desc}
-              dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
-              toggle={{
-                // Off and disabled until the row has loaded: never a guess.
-                checked: prefs?.[r.key] ?? false,
-                disabled: !prefs || saving.has(r.key),
-                onChange: (v) => void toggleRow(g.label, r.key, v),
-              }}
-            />
+            <React.Fragment key={r.key}>
+              <SettingsRow
+                icon={r.icon}
+                title={r.label}
+                srDescription={r.desc}
+                dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
+                toggle={{
+                  // Off and disabled until the row has loaded: never a guess.
+                  checked: prefs?.[r.key] ?? false,
+                  disabled: !prefs || saving.has(r.key),
+                  onChange: (v) => void toggleRow(g.label, r.key, v),
+                }}
+              />
+              {/* MO1.8.3 #31-#36 (Health B): Health checks, after Water. */}
+              {r.key === "water" && (
+                <HealthChecksNotificationRow
+                  dimmed={dimmed}
+                  checked={prefs?.healthChecks ?? false}
+                  disabled={!prefs || saving.has("healthChecks")}
+                  onChange={(v) => void toggleRow(g.label, "healthChecks", v)}
+                />
+              )}
+            </React.Fragment>
           ))}
           {notes[g.label] && <ErrorLine>{notes[g.label]}</ErrorLine>}
         </SettingsSection>

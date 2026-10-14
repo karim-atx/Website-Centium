@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { dayValue, hhmm, hoursLines, isoWeekdayIn, NOT_PUBLISHED, openNowTag, type HoursRow } from "./hours.ts";
+import { dayValue, hoursLines, isoWeekdayIn, NOT_PUBLISHED, openNowTag, type HoursRow } from "./hours.ts";
 
 const range = (weekday: number, opensAt: string, closesAt: string, wrapsMidnight = false): HoursRow => ({
   weekday,
@@ -33,13 +33,8 @@ const flexStudio: HoursRow[] = [
   closed(7),
 ];
 
-test("hhmm: a time column reads 24-hour HH:MM", () => {
-  assert.equal(hhmm("06:00:00"), "06:00");
-  assert.equal(hhmm("23:30"), "23:30");
-});
-
 test("dayValue: the three shapes, and a missing day is not 'Closed'", () => {
-  assert.equal(dayValue(range(1, "06:00:00", "23:00:00")), "06:00 to 23:00");
+  assert.equal(dayValue(range(1, "06:00:00", "23:00:00")), "6:00 AM to 11:00 PM");
   assert.equal(dayValue(closed(7)), "Closed");
   assert.equal(dayValue(allDay(5)), "Open 24 hours");
   assert.equal(dayValue(undefined), NOT_PUBLISHED);
@@ -47,9 +42,9 @@ test("dayValue: the three shapes, and a missing day is not 'Closed'", () => {
 });
 
 test("dayValue: the wrap label comes from wraps_midnight, not from comparing the times", () => {
-  assert.equal(dayValue(range(1, "16:00:00", "02:00:00", true)), "16:00 to 02:00 (next day)");
+  assert.equal(dayValue(range(1, "16:00:00", "02:00:00", true)), "4:00 PM to 2:00 AM (next day)");
   // The flag is the database's answer; the client does not second-guess it.
-  assert.equal(dayValue(range(1, "16:00:00", "02:00:00", false)), "16:00 to 02:00");
+  assert.equal(dayValue(range(1, "16:00:00", "02:00:00", false)), "4:00 PM to 2:00 AM");
 });
 
 test("dayValue: a range with a missing end is not drawn as hours", () => {
@@ -60,8 +55,8 @@ test("hoursLines: Flex Gym groups Mon to Fri, as the frame does", () => {
   assert.deepEqual(
     hoursLines(flexGym, null).map((l) => [l.label, l.value, l.today]),
     [
-      ["Mon to Fri", "06:00 to 23:00", false],
-      ["Saturday", "08:00 to 20:00", false],
+      ["Mon to Fri", "6:00 AM to 11:00 PM", false],
+      ["Saturday", "8:00 AM to 8:00 PM", false],
       ["Sunday", "Closed", false],
     ]
   );
@@ -71,9 +66,9 @@ test("hoursLines: today inside a group gets its own highlighted row after it (th
   assert.deepEqual(
     hoursLines(flexGym, 4).map((l) => [l.label, l.value, l.today]),
     [
-      ["Mon to Fri", "06:00 to 23:00", false],
-      ["Thursday (today)", "06:00 to 23:00", true],
-      ["Saturday", "08:00 to 20:00", false],
+      ["Mon to Fri", "6:00 AM to 11:00 PM", false],
+      ["Thursday (today)", "6:00 AM to 11:00 PM", true],
+      ["Saturday", "8:00 AM to 8:00 PM", false],
       ["Sunday", "Closed", false],
     ]
   );
@@ -90,9 +85,9 @@ test("hoursLines: Flex Studio's wrapping nights, its 24-hour day and its closed 
   assert.deepEqual(
     hoursLines(flexStudio, 5).map((l) => [l.label, l.value, l.today]),
     [
-      ["Mon to Thu", "16:00 to 02:00 (next day)", false],
+      ["Mon to Thu", "4:00 PM to 2:00 AM (next day)", false],
       ["Friday (today)", "Open 24 hours", true],
-      ["Saturday", "10:00 to 18:00", false],
+      ["Saturday", "10:00 AM to 6:00 PM", false],
       ["Sunday", "Closed", false],
     ]
   );
@@ -108,10 +103,10 @@ test("hoursLines: a missing day reads Not published and keys stay unique", () =>
   assert.deepEqual(
     lines.map((l) => [l.label, l.value, l.today]),
     [
-      ["Mon to Tue", "06:00 to 23:00", false],
+      ["Mon to Tue", "6:00 AM to 11:00 PM", false],
       ["Wednesday (today)", NOT_PUBLISHED, true],
-      ["Thu to Fri", "06:00 to 23:00", false],
-      ["Saturday", "08:00 to 20:00", false],
+      ["Thu to Fri", "6:00 AM to 11:00 PM", false],
+      ["Saturday", "8:00 AM to 8:00 PM", false],
       ["Sunday", "Closed", false],
     ]
   );

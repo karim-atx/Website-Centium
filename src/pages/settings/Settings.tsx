@@ -32,9 +32,10 @@ import {
   FileText,
   ShieldCheck,
   KeyRound,
-  Smartphone,
 } from "lucide-react";
-import { AppleHealthMark, WhoopMark } from "../../components/settings/DeviceMarks";
+import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
+import { useIsDark } from "../../hooks/useIsDark";
+import DevicesSourcesPage from "./DevicesSourcesPage";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -49,10 +50,12 @@ import { AppleHealthMark, WhoopMark } from "../../components/settings/DeviceMark
 // open the device settings or HealthKit: "Blocked in browser settings", or a
 // short note after a tap the browser can't carry out.
 //
-// THE ACCOUNT ROWS THE BOARD DOESN'T DRAW STAY (exception 1: safety, privacy
-// and account features): Change password, Storage, Time zone and Forum
-// blocks, in a "Data & account" section above General; the professionals'
-// two-factor reminder lives on the two-factor page (R18).
+// v6 Part B MO1.8 draws the "Data & account" section (Storage, Time zone,
+// Use device time zone, Blocked members); Change password stays in it
+// (DECIDED). The professionals' two-factor reminder lives on the two-factor
+// page (R18). The same page serves customer, professional and business
+// accounts: Connected devices is customers only, Blocked members adults and
+// never businesses.
 
 /** What each permission is for: read to screen readers, not drawn (MO1.8). */
 const PERMISSION_PURPOSE = {
@@ -62,7 +65,21 @@ const PERMISSION_PURPOSE = {
 } as const;
 type PermissionKey = keyof typeof PERMISSION_PURPOSE;
 
+/** Hash targets on this page that scroll into view once the rows settle. */
+const ANCHORS = ["#timezone", "#devices"];
+
+/**
+ * /app/settings and /app/settings/devices. The second is OURS-Sources
+ * ("Devices and sources"), routed here so App.tsx needs one route line and no
+ * new import.
+ */
 export default function Settings() {
+  const { pathname } = useLocation();
+  if (pathname.replace(/\/$/, "") === "/app/settings/devices") return <DevicesSourcesPage />;
+  return <SettingsHub />;
+}
+
+function SettingsHub() {
   const {
     theme,
     toggleTheme,
@@ -77,7 +94,8 @@ export default function Settings() {
   // customer, Health tracking on a professional's Profile, and the Business
   // Profile for a business (components/profile/CycleTrackingRow).
 
-  // The cycle tracker's Settings tab links to /app/settings#timezone.
+  // The cycle tracker's Settings tab links to /app/settings#timezone, and
+  // #devices lands on Connected devices (MO1.8 N1).
   //
   // TRIED A FEW TIMES, because two things move the page after this mounts:
   // Layout scrolls to the top on every route change, and the rows above the
@@ -85,10 +103,10 @@ export default function Settings() {
   // again until the row is actually in view, for up to a second.
   const { hash } = useLocation();
   useEffect(() => {
-    if (hash !== "#timezone") return;
+    if (!ANCHORS.includes(hash)) return;
     let tries = 0;
     const id = window.setInterval(() => {
-      const el = document.getElementById("timezone");
+      const el = document.getElementById(hash.slice(1));
       tries += 1;
       if (el) {
         const r = el.getBoundingClientRect();
@@ -174,6 +192,7 @@ export default function Settings() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const dark = useIsDark();
   const isIos = detectPlatform() === "ios";
   const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
 
@@ -198,7 +217,7 @@ export default function Settings() {
         {/* The board puts the colour theme under the Dark Mode row, in the
             text column: padding 4 0 14 50 (MO1.8), the five R20 themes. */}
         <div className="ps-[50px] pt-1 pb-[14px]">
-          <p className="text-[12px] font-semibold text-charcoal-faint mb-2.5">{t("Color theme")}</p>
+          <p className="text-[12px] leading-4 font-semibold text-charcoal-faint mb-2.5">{t("Color theme")}</p>
           <ColorThemePicker />
           {/* Not drawn: the save-error line in danger under the group (as
               MO1.8.3's Notifications); the choice stays applied. */}
@@ -247,13 +266,12 @@ export default function Settings() {
           concept). MO1.8 draws a switch on each row (BR-07); "Health
           Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
-        <SettingsSection label={t("Connected devices")}>
-          {/* MO1.8: the Apple Health and Whoop brand tiles (handover assets);
-              the board has no Health Connect mark, so Android shows the
-              Smartphone glyph on the standard lavender tile until one is
-              supplied (kept-list 49). */}
+        <SettingsSection id="devices" label={t("Connected devices")}>
+          {/* v6 (TK 4.6, decided: Apple Health / WHOOP later): no brand marks;
+              each row shows its neutral placeholder glyph on the standard
+              Settings tile (DevicePlaceholders.ts). */}
           <SettingsRow
-            {...(isIos ? { tile: <AppleHealthMark /> } : { icon: Smartphone })}
+            icon={DEVICE_PLACEHOLDER_ICON[isIos ? "apple-health" : "health-connect"]}
             title={isIos ? "Apple Health" : "Health Connect"}
             subtitle={
               deviceNote === "platform"
@@ -268,7 +286,7 @@ export default function Settings() {
             }}
           />
           <SettingsRow
-            tile={<WhoopMark />}
+            icon={DEVICE_PLACEHOLDER_ICON.whoop}
             title="Whoop"
             subtitle={deviceNote === "whoop" ? "Whoop sync isn't available yet" : undefined}
             toggle={{
@@ -288,12 +306,16 @@ export default function Settings() {
         />
       </SettingsSection>
 
-      {/* Not on the board; kept as account features (exception 1). */}
+      {/* MO1.8 draws Data & account (Storage, Time zone, Use device time
+          zone, Blocked members). Change password stays here, first (DECIDED),
+          so Security keeps one row and no divider. This section's glyphs take
+          #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
       <SettingsSection label="Data & account">
         {/* Task J. */}
-        <SettingsRow icon={KeyRound} title="Change password" onClick={() => setChangePasswordOpen(true)} />
+        <SettingsRow icon={KeyRound} iconTone="dark" title="Change password" onClick={() => setChangePasswordOpen(true)} />
         <StorageUsageRow />
-        {/* Task T: the profile's time zone, for every account (#timezone). */}
+        {/* Task T: the profile's time zone, for every account (#timezone),
+            and the "Use device time zone" switch row (MO1.8.13). */}
         <TimezoneSetting />
         <ForumBlocksSetting />
       </SettingsSection>
@@ -303,6 +325,7 @@ export default function Settings() {
           icon={Globe}
           title={t("Language")}
           value={<span lang={language}>{languageName}</span>}
+          valueTight
           onClick={() => navigate("/app/settings/language")}
         />
         <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
@@ -314,15 +337,15 @@ export default function Settings() {
         <SettingsRow icon={Star} title={t("Rate this app")} onClick={() => setRateAppOpen(true)} />
       </SettingsSection>
 
-      {/* The board draws it red (D21, C18), centred at the foot, still
-          behind the same 30-day confirm. MO1.8 / MO1.8.5.1 measured: 13 px
-          on a 19 pt line, set in a box only as wide as its longest word, so
-          it breaks after every word ("Delete" / "account"), 37 under the
-          last row. */}
+      {/* MO1.8 #79: red, centred at the foot, one line, 12.5 / 18.8 600,
+          padding 8 12, #B4372C (dark #F09A8E); 32 under the Rate row
+          (measured on MO1.8-full.png: row bottom 1808.4, button 1840.4).
+          Still behind the same 30-day confirm (K13). */}
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
-        className="tap block mx-auto mt-[37px] w-min text-center text-[13px] leading-[19px] font-semibold text-status-high"
+        className="tap block mx-auto mt-8 w-fit whitespace-nowrap px-3 py-2 text-center text-[12.5px] leading-[18.8px] font-semibold"
+        style={{ color: dark ? "rgb(var(--c-status-high))" : "#B4372C" }}
       >
         {t("Delete account")}
       </button>

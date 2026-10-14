@@ -92,11 +92,17 @@ export function resolveExerciseRef(ex: Exercise, lookup: ExerciseLookup): Exerci
  * alongside the one implementation of folder CRUD, so template folders and
  * routine folders cannot word the same refusal two different ways.
  */
+/** OURS (WO1 B-1, B3 PB-O-36): a routine's name rule. */
+export const ROUTINE_NAME_RULE = "A routine name is 1 to 60 characters.";
+
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "42501") return "You don't have permission to do that.";
   // 23503 is the foreign key: a folder or exercise that is not there.
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
+  // Database B3 (PB-O-36): routines.name is 1 to 60 trimmed; the screen caps
+  // and trims it already, so this is the server's backstop.
+  if (code === "23514" && (error.message ?? "").includes("routines_name_check")) return ROUTINE_NAME_RULE;
   if (code === "23514" || code === "22003") {
     return "One of those numbers is outside the range this can store.";
   }

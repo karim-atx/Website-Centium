@@ -1,5 +1,10 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { fileMetaOf } from "../storage/fileMeta";
+
+// B2 columns (file_*) and imaging_shares go through an untyped view of the
+// client: the generated database types predate B2.
+const db = supabase as unknown as SupabaseClient;
 import type { ImagingRecord } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 
@@ -74,7 +79,8 @@ export async function addImagingRecordRemote(
     filePath = upload.path;
   }
 
-  const { data, error } = await supabase
+  const meta = file && filePath ? await fileMetaOf(file) : null;
+  const { data, error } = await db
     .from("imaging_records")
     .insert({
       user_id: userId,
@@ -82,6 +88,7 @@ export async function addImagingRecordRemote(
       imaging_date: record.date,
       note: record.note ?? null,
       file_url: filePath ?? null,
+      ...(meta ?? {}),
     })
     .select("id")
     .single();
@@ -158,9 +165,9 @@ export type ImagingReadResult =
  * on every load would mint links nobody opens.
  */
 export async function getImagingRecords(userId: string): Promise<ImagingReadResult> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("imaging_records")
-    .select("id, imaging_type, imaging_date, note, file_url")
+    .select("id, imaging_type, imaging_date, note, file_url, file_name, file_type, file_pages, file_bytes")
     .eq("user_id", userId)
     .order("imaging_date", { ascending: false });
 
@@ -177,6 +184,102 @@ export async function getImagingRecords(userId: string): Promise<ImagingReadResu
       date: r.imaging_date,
       ...(r.note ? { note: r.note } : {}),
       ...(r.file_url ? { filePath: r.file_url } : {}),
+      fileName: r.file_name ?? null,
+      fileType: r.file_type ?? null,
+      filePages: r.file_pages ?? null,
+      fileBytes: r.file_bytes === null || r.file_bytes === undefined ? null : Number(r.file_bytes),
     })),
   };
+}
+
+/**
+ * HE1.9.b.3 Edit imaging: type, date, note and (Replace) the file, inside the
+ * UPDATE grant (imaging_type, imaging_date, note, file_url). A new file is
+ * uploaded first; once the row points at it the old object is removed (if
+ * the row update fails, the new object is removed instead).
+ */
+export async function updateImagingRecordRemote(
+  userId: string,
+  id: string,
+  patch: { type: string; date: string; note?: string },
+  replace?: { file: File; oldPath?: string }
+): Promise<ImagingWriteResult & { filePath?: string }> {
+  if (!patch.date || !/^\d{4}-\d{2}-\d{2}$/.test(patch.date)) {
+    return { ok: false, message: "Add the date of this scan or test before saving." };
+  }
+  let filePath: string | undefined;
+  if (replace) {
+    const upload = await uploadPrivateFile({ bucket: "medical-imaging", userId, file: replace.file });
+    if (!upload.ok) return { ok: false, message: upload.message };
+    filePath = upload.path;
+  }
+  const row: { imaging_type: string; imaging_date: string; note: string | null; file_url?: string; file_name?: string | null; file_type?: string; file_pages?: number | null; file_bytes?: number | null } = {
+    imaging_type: patch.type.trim(),
+    imaging_date: patch.date,
+    note: patch.note?.trim() ? patch.note.trim() : null,
+  };
+  if (filePath && replace) Object.assign(row, { file_url: filePath }, await fileMetaOf(replace.file));
+  const { data, error } = await db.from("imaging_records").update(row).eq("id", id).select("id");
+  if (error || !data || data.length === 0) {
+    if (error) console.error("[imaging] Could not update record:", error.message);
+    if (filePath) await deletePrivateFile("medical-imaging", filePath);
+    return { ok: false, message: "Couldn't save. Try again." };
+  }
+  if (filePath && replace?.oldPath) {
+    const cleanup = await deletePrivateFile("medical-imaging", replace.oldPath);
+    if (!cleanup.ok) console.error("[imaging] ORPHANED OBJECT after replace:", replace.oldPath);
+  }
+  return { ok: true, filePath };
+}
+
+// ---------------------------------------------------------------------------
+// B2 · per-file sharing (imaging_shares: record_id, professional_id,
+// shared_at). A professional sees a scan only while a share exists AND the
+// medical_history category is granted; inserting needs owning the record and
+// a live professional_clients row (RLS). Revoke = delete the share. The
+// professional is told by the B4 imaging_shared push (server side).
+
+export interface ImagingShare {
+  recordId: string;
+  professionalId: string;
+  sharedAt: string;
+}
+
+/** Every share of the signed-in user's records (RLS returns only their own). */
+export async function getImagingShares(recordIds: string[]): Promise<{ ok: true; shares: ImagingShare[] } | { ok: false; message: string }> {
+  if (recordIds.length === 0) return { ok: true, shares: [] };
+  const { data, error } = await db.from("imaging_shares").select("record_id, professional_id, shared_at").in("record_id", recordIds);
+  if (error) {
+    console.error("[imaging] Could not read shares:", error.message);
+    return { ok: false, message: "Couldn't load who can see this file." };
+  }
+  return {
+    ok: true,
+    shares: (data ?? []).map((s: { record_id: string; professional_id: string; shared_at: string }) => ({
+      recordId: s.record_id,
+      professionalId: s.professional_id,
+      sharedAt: s.shared_at,
+    })),
+  };
+}
+
+/** Shares one file with these professionals (shared_at defaults to now()). */
+export async function shareImagingRecord(recordId: string, professionalIds: string[]): Promise<ImagingWriteResult> {
+  if (professionalIds.length === 0) return { ok: true };
+  const { error } = await db.from("imaging_shares").insert(professionalIds.map((p) => ({ record_id: recordId, professional_id: p })));
+  if (error) {
+    console.error("[imaging] Could not share:", error.message);
+    return { ok: false, message: "Couldn't share. Try again." };
+  }
+  return { ok: true };
+}
+
+/** Stops sharing one file with one professional. */
+export async function unshareImagingRecord(recordId: string, professionalId: string): Promise<ImagingWriteResult> {
+  const { data, error } = await db.from("imaging_shares").delete().eq("record_id", recordId).eq("professional_id", professionalId).select("record_id");
+  if (error || !data || data.length === 0) {
+    if (error) console.error("[imaging] Could not stop sharing:", error.message);
+    return { ok: false, message: "Couldn't save. Try again." };
+  }
+  return { ok: true };
 }

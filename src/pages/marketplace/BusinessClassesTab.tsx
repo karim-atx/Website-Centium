@@ -10,6 +10,7 @@ import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
 import { QrPattern } from "../../components/marketplace/QrPattern";
 import { ClassRosterSheet } from "../../components/marketplace/ClassRosterSheet";
+import { range12 } from "../../utils/time12";
 
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
 const paymentOptions = ["Card", "Cash", "Whish Money"];
@@ -107,7 +108,7 @@ export default function BusinessClassesTab() {
                 <p className="text-sm font-semibold text-charcoal">{c.title}</p>
                 <p className="text-xs text-primary-dark font-medium">{c.classType}</p>
                 <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-                  <Clock size={11} /> {c.date} · {c.startTime}–{c.endTime}
+                  <Clock size={11} /> {c.date} · {range12(c.startTime, c.endTime)}
                 </p>
                 <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
                   <Users size={11} /> Max {c.maxCapacity}

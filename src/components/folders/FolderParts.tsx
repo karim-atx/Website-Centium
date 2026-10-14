@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronDown, ChevronRight, Folder, GripVertical, MoreVertical } from "lucide-react";
-import { DARK_SURFACE, headInk, headInkSoft, liftTo, themedFamily, type FolderFamily } from "../../data/folderColors";
+import { DARK_SURFACE, headInk, headInkSoft, liftTo, partBInk, themedFamily, type FolderFamily } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { folderColorOptions, swatchName } from "./folderList";
 
@@ -178,6 +178,12 @@ export const FolderHeader: React.FC<{
    * (decision 23). Off by default: the ink is picked by contrast (headInk).
    */
   drawnInk?: boolean;
+  /**
+   * The family is already in the current mode's shades (WO1 #9-#15: the v6
+   * Part B dark folder values, partBFamily), so it is used as given instead
+   * of being themed again. Off by default.
+   */
+  themed?: boolean;
 }> = ({
   folder,
   family: baseFamily,
@@ -195,18 +201,23 @@ export const FolderHeader: React.FC<{
   grip,
   colorEditor,
   drawnInk = false,
+  themed = false,
 }) => {
   const gripProps = grip;
   // Mobile v5.1 R3: the header shade for the current mode (dark: the hue at
   // 42% on the dark card). themedFamily only reads `play`, so a family the
   // caller already themed comes back unchanged.
   const dark = useIsDark();
-  const family = themedFamily(baseFamily, dark);
+  const family = themed ? baseFamily : themedFamily(baseFamily, dark);
   // Near-black on the light headers, white on the dark one (headInk), so
   // the name, count, chevron, ⋮ and grip all reach 4.5:1 on every colour;
   // or white throughout with `drawnInk` (the Routines tab).
-  const ink = drawnInk ? "#FFFFFF" : headInk(family);
-  const inkSoft = drawnInk ? "rgba(255,255,255,0.86)" : headInkSoft(family);
+  // Part B families (`themed`) in dark: the dark ink on the light fills
+  // (V6-02), white where white reads.
+  const ink = drawnInk ? (themed ? partBInk(family.head, dark) : "#FFFFFF") : headInk(family);
+  // WO1 #15: the count is #FFFFFF@86% in light and #FFFFFF in dark (Part B
+  // families, `themed`).
+  const inkSoft = drawnInk ? (dark && themed ? ink : "rgba(255,255,255,0.86)") : headInkSoft(family);
   return (
     <div
       data-drag-card
@@ -233,7 +244,7 @@ export const FolderHeader: React.FC<{
               className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
               style={{ background: family.tile }}
             >
-              <Folder size={16} style={{ color: "#FFFFFF" }} />
+              <Folder size={16} style={{ color: themed ? partBInk(family.tile, dark) : "#FFFFFF" }} />
             </span>
             <span className="flex-1 min-w-0">
               <span className="flex items-center gap-[7px]">

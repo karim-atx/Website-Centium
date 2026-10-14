@@ -59,16 +59,20 @@ function describe(error: PostgrestError): string {
  * THIS CALL AWARDS. my_achievements() evaluates first and reads second -- two
  * statements, because a data-modifying CTE's effects are invisible to the rest
  * of its own statement and an inline evaluation would report a just-earned
- * badge as unearned. `newlyEarned` is true only for rows THIS call inserted,
- * which is what the unlock celebration fires on and why it cannot fire twice
- * for the same badge.
+ * badge as unearned. `newlyEarned` is true only for rows THIS call inserted.
+ *
+ * SINCE B3 THE PILL FOLLOWS `notifiedAt`, NOT `newlyEarned` (HANDOVER_API.md
+ * "An unlock is shown once"): newly_earned is false for everything the
+ * nightly sweep or another device awarded, so those were never announced.
+ * notified_at is null until mark_achievements_notified() records the pill.
  */
 export async function getAchievements(): Promise<Result<Achievement[]>> {
   const { data, error } = await supabase.rpc("my_achievements");
   if (error) return { ok: false, message: describe(error) };
   return {
     ok: true,
-    value: (data ?? []).map((r) => ({
+    // notified_at is B3; the generated types are read from production.
+    value: ((data ?? []) as (NonNullable<typeof data>[number] & { notified_at?: string | null })[]).map((r) => ({
       key: r.key,
       category: r.category,
       title: r.title,
@@ -82,8 +86,25 @@ export async function getAchievements(): Promise<Result<Achievement[]>> {
       sortOrder: r.sort_order,
       earnedAt: r.earned_at,
       newlyEarned: r.newly_earned,
+      notifiedAt: r.notified_at ?? null,
     })),
   };
+}
+
+/**
+ * Records that these unlocks have been shown (B3 mark_achievements_notified).
+ *
+ * IDEMPOTENT ON THE SERVER: it only touches rows whose notified_at is null,
+ * ignores keys the caller never earned, and refuses more than 200 keys
+ * (ATXB1), so the keys go in batches. Fire and forget: a failure leaves the
+ * pill owed, and the worst case is that it shows once more.
+ */
+export async function markAchievementsNotified(keys: string[]): Promise<void> {
+  for (let i = 0; i < keys.length; i += 200) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
+    const { error } = await (supabase as any).rpc("mark_achievements_notified", { p_keys: keys.slice(i, i + 200) });
+    if (error) console.error("[achievements] Could not mark unlocks shown:", error.message);
+  }
 }
 
 /**

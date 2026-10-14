@@ -15,6 +15,7 @@ test("parentOf: a page's parent when there is no history to pop", () => {
   assert.equal(parentOf("/app/forum/courses/c1/lessons/l1"), "/app/forum/courses/c1");
   assert.equal(parentOf("/app/forum/courses/mine/c1"), "/app/forum/courses/mine");
   assert.equal(parentOf("/app/food/nutrient-summary"), "/app/food");
-  assert.equal(parentOf("/app/cycle"), "/app/profile");
+  assert.equal(parentOf("/app/cycle"), "/app/health");
+  assert.equal(parentOf("/app/contraception"), "/app/cycle");
   assert.equal(parentOf("/app/marketplace/gyms"), "/app/marketplace");
 });

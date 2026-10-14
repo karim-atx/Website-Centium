@@ -22,11 +22,14 @@ export interface StreakLeafProps {
   variant: "filled" | "outline";
   /** Outline stroke in px at the rendered size (outline only). */
   strokeWidth?: number;
+  /** The outline's inside (outline only). Default the card colour; "none" for a
+   *  leaf drawn on a coloured band (Home StreaksBar, v6 asset map). */
+  fill?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export const StreakLeaf: React.FC<StreakLeafProps> = ({ height, variant, strokeWidth = 1, className, style }) => {
+export const StreakLeaf: React.FC<StreakLeafProps> = ({ height, variant, strokeWidth = 1, fill = "rgb(var(--c-cream-card))", className, style }) => {
   const width = (height * VIEW_W) / VIEW_H;
   // The stroke is given in rendered px, so convert it to path units.
   const sw = (strokeWidth * VIEW_H) / height;
@@ -45,7 +48,7 @@ export const StreakLeaf: React.FC<StreakLeafProps> = ({ height, variant, strokeW
       ) : (
         <path
           d={STREAK_LEAF_PATH}
-          fill="rgb(var(--c-cream-card))"
+          fill={fill}
           stroke="currentColor"
           strokeWidth={sw}
           strokeLinecap="round"

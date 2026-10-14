@@ -5,8 +5,10 @@ import { JumpToToday } from "../ui/JumpToToday";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { DAY_LETTERS, monthLeadingBlanks } from "../../utils/week";
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+// Monday first (v6 X-13), from utils/week.
+const WEEKDAYS = DAY_LETTERS;
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands): the lavender chrome as
@@ -71,7 +73,19 @@ export const CalendarPickerSheet: React.FC<{
   confirmLabel?: string;
   /** Rendered above Done; a function receives the day currently picked (WO4.1's time wheel greys later times on today). */
   children?: React.ReactNode | ((pendingDate: string) => React.ReactNode);
-}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
+  /**
+   * v6 Part B (Health B HE1.6.1.a "Measured on", HE1.9.2.2a report date,
+   * HE1.8.1 / HE1.8.2 date fields): a centred white card 350 wide, r24, pad
+   * 18 (dark #1C1F28, no shadow), the title 17/25.5 800 left, the month bar
+   * 314 × 40 r16, days 32 r10 13.5/20.3 500, the selected day #A79AD5 800
+   * white (dark #A991FE / #0D0B1A), children under a 0.5px rule, and Cancel /
+   * Done side by side (46, r14). Implies `confirm`. Default "default" is the
+   * lavender drop-down above, unchanged.
+   */
+  variant?: "default" | "partB";
+  /** Earlier days greyed and unselectable (HE1.8.2: past days disabled); the previous-month arrow stops at it. */
+  minDate?: string;
+}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children, variant = "default", minDate }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const dark = useIsDark();
@@ -89,11 +103,34 @@ export const CalendarPickerSheet: React.FC<{
   const markerSet = markers ? new Set(markers) : null;
 
   if (!open) return null;
+  if (variant === "partB") {
+    return (
+      <PartBCalendar
+        onClose={onClose}
+        cursor={cursor}
+        setCursor={setCursor}
+        pending={pending}
+        setPending={setPending}
+        today={today}
+        title={title}
+        maxDate={maxDate}
+        minDate={minDate}
+        markerSet={markerSet}
+        confirmLabel={confirmLabel}
+        onDone={() => {
+          onSelect(pending);
+          onClose();
+        }}
+        dark={dark}
+      >
+        {typeof children === "function" ? children(pending) : children}
+      </PartBCalendar>
+    );
+  }
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
-  const startWeekday = firstOfMonth.getDay();
+  const startWeekday = monthLeadingBlanks(year, month);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells: (Date | null)[] = [
@@ -227,6 +264,141 @@ export const CalendarPickerSheet: React.FC<{
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/**
+ * The Part B calendar card (HE1.6.1.a #76-#93). Values are the table's; dark
+ * derivations recorded in the checklist: month bar #F6F4FE* → #303141,
+ * weekday letters / chevrons #5B3FE4* → #C3B3FB, a blocked day #575170.
+ * Scrim backdrop.dim rgba(36,31,27,0.4) in both modes (X-07).
+ */
+const PartBCalendar: React.FC<{
+  onClose: () => void;
+  cursor: Date;
+  setCursor: (d: Date) => void;
+  pending: string;
+  setPending: (iso: string) => void;
+  today: string;
+  title: string;
+  maxDate?: string;
+  minDate?: string;
+  markerSet: Set<string> | null;
+  confirmLabel: string;
+  onDone: () => void;
+  dark: boolean;
+  children?: React.ReactNode;
+}> = ({ onClose, cursor, setCursor, pending, setPending, today, title, maxDate, minDate, markerSet, confirmLabel, onDone, dark, children }) => {
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const blanks = monthLeadingBlanks(year, month);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = [
+    ...Array.from({ length: blanks }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
+  ];
+  const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const nextBlocked = !!maxDate && toIso(new Date(year, month + 1, 1)) > maxDate;
+  const prevBlocked = !!minDate && toIso(new Date(year, month, 0)) < minDate;
+  const accent = dark ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--thi-5b3fe4))";
+  const muted = dark ? "#575170" : "#CFCBD6";
+  const btn = { height: 46, borderRadius: 14, fontSize: textPx(14), lineHeight: "21px", fontWeight: 700 } as const;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+      <div className="absolute inset-0 animate-fade-in" style={{ background: "var(--backdrop-dim)" }} onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        data-variant="partB"
+        className="relative w-full bg-cream-card animate-popup-in max-h-[calc(100dvh-96px)] overflow-y-auto overscroll-contain"
+        style={{ maxWidth: 350, borderRadius: 24, padding: 18, boxShadow: dark ? "none" : "var(--shadow-sheet)" }}
+      >
+        <p style={{ margin: "0 0 12px", fontSize: textPx(17), lineHeight: "25.5px", fontWeight: 800, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>
+          {title}
+        </p>
+        <div className="flex items-center justify-between bg-th-f6f4fe dark:bg-th-303141" style={{ height: 40, borderRadius: 16, padding: "0 8px" }}>
+          <button
+            onClick={() => setCursor(new Date(year, month - 1, 1))}
+            disabled={prevBlocked}
+            className="tap relative flex items-center justify-center disabled:opacity-30 before:absolute before:-inset-[9px] before:content-['']"
+            style={{ width: 26, height: 26, color: accent }}
+            aria-label="Previous month"
+          >
+            <ChevronLeft size={16} strokeWidth={2.2} />
+          </button>
+          <p style={{ margin: 0, fontSize: textPx(15), lineHeight: "22.5px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
+          <button
+            onClick={() => setCursor(new Date(year, month + 1, 1))}
+            disabled={nextBlocked}
+            className="tap relative flex items-center justify-center disabled:opacity-30 before:absolute before:-inset-[9px] before:content-['']"
+            style={{ width: 26, height: 26, color: accent }}
+            aria-label="Next month"
+          >
+            <ChevronRight size={16} strokeWidth={2.2} />
+          </button>
+        </div>
+        <div className="grid grid-cols-7" style={{ gap: 2, marginTop: 6 }}>
+          {WEEKDAYS.map((w, i) => (
+            <div key={i} className="text-center" style={{ padding: "4px 0", fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 600, color: accent }}>
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7" style={{ columnGap: 2, rowGap: 4, marginTop: 2 }}>
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const iso = toIso(d);
+            const selected = iso === pending;
+            const blocked = (!!maxDate && iso > maxDate) || (!!minDate && iso < minDate);
+            return (
+              <div key={i} className="flex justify-center">
+                <button
+                  disabled={blocked}
+                  onClick={() => setPending(iso)}
+                  data-today={iso === today || undefined}
+                  aria-pressed={selected}
+                  className={`tap relative flex items-center justify-center ${selected ? "bg-seg-active" : ""}`}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    fontSize: textPx(13.5),
+                    lineHeight: "20.3px",
+                    fontWeight: selected ? 800 : 500,
+                    color: selected ? "rgb(var(--c-on-primary-fill))" : blocked ? muted : "rgb(var(--c-charcoal))",
+                  }}
+                >
+                  {d.getDate()}
+                  {markerSet?.has(iso) && (
+                    <span
+                      aria-hidden
+                      className="absolute left-1/2 -translate-x-1/2 rounded-full"
+                      style={{ bottom: 3, width: 4, height: 4, background: selected ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--th-ab9ed7))" }}
+                    />
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        {children && <div style={{ marginTop: 6, paddingTop: 6, borderTop: "0.5px solid var(--hair-08)" }}>{children}</div>}
+        <div className="flex" style={{ gap: 8, marginTop: 14 }}>
+          <button
+            onClick={onClose}
+            className="tap flex-1 min-w-0 flex items-center justify-center bg-cream-card"
+            style={{ ...btn, border: `0.5px solid ${dark ? "rgba(245,243,250,0.14)" : "rgba(36,31,27,0.14)"}`, color: "rgb(var(--c-charcoal-soft))" }}
+          >
+            Cancel
+          </button>
+          <button onClick={onDone} className="tap flex-1 min-w-0 flex items-center justify-center bg-fill-pinned" style={{ ...btn, color: "rgb(var(--c-on-primary-fill))" }}>
+            {confirmLabel}
+          </button>
         </div>
       </div>
     </div>,

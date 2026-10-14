@@ -260,7 +260,7 @@ export const ShareBiomarkerSheet: React.FC<{
   if (!marker && !isSummary) return null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Share Result">
+    <BottomSheet open={open} onClose={onClose} title="Share Result" chrome="partB">
       <div className="animate-fade-slide-up">
         <div className="rounded-3xl overflow-hidden shadow-lift mb-5">
           <canvas ref={canvasRef} className="w-full h-auto block" />

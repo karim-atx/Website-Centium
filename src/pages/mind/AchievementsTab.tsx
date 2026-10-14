@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { Trophy } from "lucide-react";
-import { Card } from "../../components/ui/Card";
+import { useSearchParams } from "react-router-dom";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { MindHeader } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useOnline } from "../../hooks/useOnline";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { AchievementDetailSheet } from "../../components/mind/AchievementDetailSheet";
-import { TIER_ICON, colourSet, tierHex } from "../../components/mind/achievementStyle";
+import { AchievementTile } from "../../components/mind/AchievementIcon";
+import { TIER_ICON, keyInk, tierCardColours, tierHex } from "../../components/mind/achievementStyle";
 import {
   toBadges,
   categoriesPresent,
@@ -16,102 +20,166 @@ import {
   tierReached,
   earnedCount,
   CATEGORY_LABEL,
+  CATEGORY_ORDER,
   type Badge,
   type AchievementCategory,
 } from "../../services/achievements";
 
-// The Achievements page, mobile v5.1 MO1.1.3 (/app/mind/achievements).
+// The Achievements page, v6 MO1.1.3 (/app/mind/achievements).
 //
-// EVERY NUMBER ON THIS SCREEN IS THE SERVER'S. The tier, the balance, the gap
-// to the next tier and each badge's progress come from my_points_summary() and
-// my_achievements(); the tier floors behind the rail come from point_tiers
-// (A9: the database's values, not the board's sample ones). Nothing is
-// derived, estimated or held as a second copy here.
+// EVERY NUMBER ON THIS SCREEN IS THE SERVER'S (K1, V6-76). The tier, the
+// balance, the gap to the next tier and each badge's progress come from
+// my_points_summary() and my_achievements(); the tier floors behind the rail
+// come from point_tiers (0 / 1,000 / 3,000 / 7,500 / 15,000 locally, not the
+// board's sample 0 / 1k / 2.5k / 5k / 10k). Nothing is derived or held as a
+// second copy here.
 //
-// OPENING THIS PAGE AWARDS. my_achievements() evaluates before it returns, so
-// simply arriving here is one of the moments an unlock can fire; the pill
-// itself is rendered globally in Layout, because an unlock earned on the Food
-// screen has to be celebrated on the Food screen.
+// OPENING THIS PAGE AWARDS (K2). my_achievements() evaluates before it
+// returns; the pill itself is rendered globally in Layout (K13).
 //
-// THE HERO TAKES THE CURRENT TIER'S COLOUR (A10). Badges keep their emoji
-// until the medallion set exists (A11), inside a round medallion; the
-// per-badge points colour and medallion tint come with that set's key map.
-// The badge cards are the frame's white cards with a 1 px charcoal 8% border
-// (decision 23, kept list 54; handover-complete pass). The recently-unlocked
-// card keeps its pre-redesign light hairline (decision 22).
+// A TWO-STEP FIXED AREA (S6). The header pins first (MindHeader, the shared
+// FixedHeader); the tier card and Recently unlocked scroll away under it; the
+// category tabs then pin under the header in their own sticky wrapper (#38).
+// The hairline sits under the header until the tabs pin, then under the tabs.
 
-// MO1.1.3 #3 "Recently unlocked": the handover's 10.5/700 label (decision 20;
-// tracking measured on the 2x frame at about 0.1em). The label existed before
-// the redesign, so it keeps its light colour (decisions 20 and 22).
-const sectionLabel = "text-[10.5px] font-bold tracking-[.1em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]";
+/** The 7% / 8% / 5% washes and hairlines go to 30% of ink under High contrast (O-7). */
+const hair = (hc: boolean, alpha: number) => (hc ? "var(--hair-08)" : `rgb(var(--c-charcoal) / ${alpha})`);
 
-/** A badge's emoji in a round medallion; greyed when locked. */
-function Medallion({ icon, earned, size }: { icon: string; earned: boolean; size: number }) {
-  return (
-    <span
-      className="rounded-full flex items-center justify-center shrink-0 bg-cream-card border border-charcoal/[0.08] dark:border-charcoal/[0.12]"
-      style={{ width: size, height: size }}
-    >
-      <span
-        className="leading-none"
-        // GREYED, NOT HIDDEN. A locked badge is something to aim at, so it
-        // shows its icon and its bar; the saturation is what says "not yet".
-        style={{
-          fontSize: Math.round(size * 0.5),
-          filter: earned ? "none" : "grayscale(1)",
-          opacity: earned ? 1 : 0.45,
-        }}
-      >
-        {icon}
-      </span>
-    </span>
-  );
-}
-
-/** MO1.1.3 #5–15: one badge card. */
-function BadgeTile({ badge, onOpen }: { badge: Badge; onOpen: () => void }) {
+/** MO1.1.3 #41-#52: one badge card. */
+function BadgeTile({ badge, onOpen, hc }: { badge: Badge; onOpen: () => void; hc: boolean }) {
   const earned = badge.earned !== null;
   const { display } = badge;
   return (
-    // MO1.1.3 #5–15: white, 1 px rgba(36,31,27,0.08), r16, padding
-    // 14 8 12, gap 8, 124 tall (116 on the last row: content height).
+    // #41: white, 0.5 px #241F1B@8% (X-09), r16, padding 14 8 12, gap 8.
     <button
       onClick={onOpen}
-      className="tap flex flex-col items-center gap-2 rounded-2xl px-2 pt-3.5 pb-3 text-center min-h-[116px] bg-cream-card border border-charcoal/[0.08]"
+      className="tap flex flex-col items-center gap-2 rounded-2xl px-2 pt-3.5 pb-3 text-center bg-cream-card border-[0.5px] border-hair-08"
     >
-      <Medallion icon={display.icon} earned={earned} size={44} />
+      {/* #42-#49: the medallion on its 44 r13 tile; locked = greyed icon on
+          the neutral locked tile, with the 14 lock pill at 29, 29. */}
+      <AchievementTile
+        achievementKey={display.key}
+        emoji={display.icon}
+        tile={44}
+        radius={13}
+        icon={38}
+        locked={!earned}
+        lockedTile
+        lock={{ size: 14, icon: 8, offset: 29 }}
+      />
       <span
-        className={`text-[11.5px] font-bold leading-[1.25] line-clamp-2 ${earned ? "text-charcoal" : "text-charcoal/50 dark:text-charcoal/60"}`}
+        className={clsx(
+          "text-[11.5px] font-bold leading-[14.4px] line-clamp-2",
+          earned || hc ? "text-charcoal" : "text-charcoal/50"
+        )}
       >
         {display.title}
+        {!earned && <span className="sr-only">, Locked</span>}
       </span>
 
       {/* THE BAR ONLY APPEARS WHERE THERE IS SOMETHING LEFT TO DO. A finished
-          badge shows what it was worth instead of a full bar. */}
+          badge shows what it was worth instead (K9: a ladder's banked sum). */}
       {badge.next ? (
-        <span className="w-full mt-auto">
-          <span className="block h-[3px] rounded-full bg-charcoal/[0.09] overflow-hidden">
+        <span className="w-full">
+          <span className="block h-[3px] rounded-full overflow-hidden" style={{ background: hair(hc, 0.08) }}>
             <span className="block h-full rounded-full bg-team-gold-deep" style={{ width: `${badge.progress * 100}%` }} />
           </span>
-          <span className="mt-1 block text-[9.5px] font-semibold tabular-nums text-charcoal-faint">
+          <span className="mt-[5px] block text-[9.5px] leading-[14.3px] font-semibold tabular-nums text-charcoal-faint">
             {Math.min(badge.rungs[0].currentValue, badge.next.threshold).toLocaleString()} /{" "}
             {badge.next.threshold.toLocaleString()}
           </span>
         </span>
       ) : (
-        <span className="mt-auto text-[10px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">
-          {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString()} pts` : "Earned"}
+        <span className="text-[11.5px] leading-[14.4px] font-bold text-charcoal line-clamp-2">
+          {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString()} pts` : "No points, just bragging rights"}
         </span>
       )}
     </button>
   );
 }
 
+/** O-2 / O-3: the banner under the fixed area. Cached content stays under it. */
+function Banner({ text, onRetry }: { text: string; onRetry?: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="mb-3 flex items-center gap-3 rounded-xl p-3 bg-[#FBE7E4] text-[#C0392B] dark:bg-[#3C2A30] dark:text-[#F09A8E]"
+    >
+      <p className="flex-1 min-w-0 text-[12px] font-semibold">{text}</p>
+      {onRetry && (
+        <button onClick={onRetry} className="tap shrink-0 -my-3 -mr-3 px-3 min-h-11 text-[12px] font-bold">
+          Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * #38 / S6: the step-2 sticky wrapper. It sticks 10 above the header's bottom
+ * (its 10 px of fill above the track mask content scrolling under it, the
+ * table's same-colour 9.86 border with m -10) and paints over the header's
+ * hairline; its own hairline fades in once it is pinned.
+ */
+function PinnedTabs({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const top = parseFloat(getComputedStyle(el).top) || 0;
+      setPinned(el.getBoundingClientRect().top <= top + 0.5);
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(check);
+    };
+    check();
+    document.addEventListener("scroll", schedule, { capture: true, passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      document.removeEventListener("scroll", schedule, { capture: true });
+      window.removeEventListener("resize", schedule);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+  return (
+    <div
+      ref={ref}
+      data-pinned={pinned ? "true" : "false"}
+      className="sticky z-[21] -mx-4 px-4 pb-3 pt-2.5 -mt-2.5 bg-cream"
+      style={{ top: "calc(var(--fixed-header-bottom, 134px) - 10px)" }}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 border-b border-hair-08 dark:border-hair-10 pointer-events-none"
+        style={{ opacity: pinned ? 1 : 0, transition: reduced ? "none" : "opacity 120ms ease" }}
+      />
+      {children}
+    </div>
+  );
+}
+
 export default function AchievementsTab() {
-  const { achievements, pointsSummary, pointTiers, achievementsLoading, achievementsError } = useApp();
+  const {
+    achievements,
+    pointsSummary,
+    pointTiers,
+    achievementsLoading,
+    achievementsError,
+    refreshAchievements,
+    accessibility,
+  } = useApp();
   const dark = useIsDark();
+  const online = useOnline();
+  const hc = !!accessibility.highContrast;
+  const reduced = useReducedMotion();
   const [category, setCategory] = useState<AchievementCategory | "all">("all");
-  const [openBadge, setOpenBadge] = useState<Badge | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
 
   // Memoised because `achievements ?? []` is a new array on every render, and
   // everything below it is derived.
@@ -121,96 +189,150 @@ export default function AchievementsTab() {
   const recent = useMemo(() => recentlyUnlocked(rows, 3), [rows]);
   const counts = earnedCount(rows);
   const shown = category === "all" ? badges : badges.filter((b) => b.category === category);
+  const openBadge = openId ? badges.find((b) => b.id === openId) ?? null : null;
+  /** The badge holding an achievement key (a rung of a ladder opens its ladder). */
+  const badgeOf = (key: string) => badges.find((b) => b.rungs.some((r) => r.key === key)) ?? null;
 
-  // MO1.1.3 Loading: skeleton blocks at the anatomy positions, fill
-  // surface.soft, each block's radius: the tier card (254, r22), the
-  // recently-unlocked card (192, r24), the strip (52, r16 0 0 16) and the
-  // badge cards (124, r16).
-  if (achievementsLoading && achievements === null) {
+  // MO1.1.3.1 O-2 / MO1.1.3.2 S1: `?badge=<key>` (the unlock pill) opens that
+  // badge's detail once the list has loaded, then leaves the URL clean.
+  const linked = achievements === null ? null : params.get("badge");
+  const [handled, setHandled] = useState<string | null>(null);
+  if (linked && linked !== handled) {
+    // Adjusting state while rendering (not in an effect): once per link.
+    setHandled(linked);
+    const b = badgeOf(linked);
+    if (b) setOpenId(b.id);
+  } else if (!params.get("badge") && handled !== null) {
+    setHandled(null);
+  }
+  useEffect(() => {
+    if (!linked) return;
+    const next = new URLSearchParams(params);
+    next.delete("badge");
+    setParams(next, { replace: true });
+  }, [linked, params, setParams]);
+
+  const tabItems = [
+    { key: "all", label: "All" },
+    ...(achievements === null ? CATEGORY_ORDER : categories).map((c) => ({ key: c, label: CATEGORY_LABEL[c] })),
+  ];
+  const tabs = (
+    <PinnedTabs>
+      <SegmentedTabs
+        scroll
+        className="-mr-4"
+        // #39-#40: a 52 track (pad 6), r16 0 0 16 running off the right
+        // edge; tabs 40 tall, padding 0 14, gap 5, r12, 12.5/700; active
+        // #A79AD5 / white (dark #A991FE / #0D0B1A, V6-02), idle #F5F4FE /
+        // #5B5349; dark track and idle #303141 (darkTone partB).
+        trackStyle={{ borderRadius: "16px 0 0 16px", gap: 5 }}
+        tabHeight={40}
+        scrollTabPadding="0 14px"
+        scrollMinWidth={0}
+        darkTone="partB"
+        idleInk="rgb(var(--c-charcoal-soft))"
+        items={tabItems}
+        activeKey={category}
+        onChange={(k) => setCategory(k as AchievementCategory | "all")}
+      />
+    </PinnedTabs>
+  );
+
+  const banner = !online ? (
+    <Banner text="You're offline. Showing your last saved achievements." />
+  ) : achievementsError ? (
+    <Banner text={achievementsError || "Couldn't load. Check your connection."} onRetry={refreshAchievements} />
+  ) : null;
+
+  // O-1 Loading: the header and the tabs at once, then three 96 tall r22
+  // blocks in surface.soft, pulsing 1.2 s (static under Reduce motion, X-32).
+  // achievements === null with no error is the first read still in flight
+  // (achievementsLoading alone is never raised by the context).
+  if (achievements === null && (achievementsLoading || !achievementsError)) {
     return (
       <div className="animate-fade-slide-up" aria-busy="true">
+        <MindHeader section="achievements" paddingBottom={20} />
+        {tabs}
+        {banner}
         <span className="sr-only" role="status">Loading your achievements…</span>
-        <div aria-hidden>
-          <div className="h-[254px] rounded-[22px] bg-cream-soft mb-[22px]" />
-          <div className="h-3 w-32 rounded bg-cream-soft mb-2 ml-1" />
-          <div className="h-[192px] rounded-3xl bg-cream-soft mb-[22px]" />
-          <div className="h-[52px] -mr-4 rounded-l-2xl bg-cream-soft mb-3" />
-          <div className="grid grid-cols-3 gap-2">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-[124px] rounded-2xl bg-cream-soft" />
-            ))}
-          </div>
+        <div aria-hidden className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
-  const tier = pointsSummary ? colourSet(tierHex(pointsSummary.tierName), dark) : null;
+  const tier = pointsSummary ? tierCardColours(tierHex(pointsSummary.tierName), dark) : null;
 
   return (
     <div className="animate-fade-slide-up">
-      {/* ---- MO1.1.3 #2: the tier card, in the current tier's colour ------- */}
+      <MindHeader section="achievements" paddingBottom={20} />
+      {/* ---- #6-#19: the tier card, in the current tier's colour ---------- */}
       {pointsSummary && tier && (
         <div
-          // MO1.1.3 #2, 254 tall on the 2x frame. Measured there: the count
-          // 3 pt under the tier label; "13 of 59" / "earned" bottom-aligned
-          // with the balance (their baselines 18 apart); tier names 3 pt under
-          // the discs; the rule 12 under the floors; and 12 pt under the
-          // rewards line (the spec's 16 assumes a tighter line height).
-          className="rounded-[22px] px-[18px] pt-[18px] pb-3 mb-[22px] border"
+          className="rounded-[22px] px-[18px] pt-[18px] pb-4 mb-[22px] border-[0.5px]"
           style={{ background: tier.fill, borderColor: tier.border }}
         >
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-extrabold tracking-[.16em] uppercase" style={{ color: tier.ink }}>
+              <p className="text-[10px] leading-[14px] font-extrabold tracking-[1.4px] uppercase" style={{ color: tier.ink }}>
                 {pointsSummary.tierName} tier
               </p>
-              <p className="mt-[3px] flex items-baseline gap-1.5">
-                <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
+              <p className="mt-1 flex items-baseline gap-[5px]">
+                <span className="text-[30px] font-extrabold leading-[30px] tracking-[-1.2px] text-charcoal tabular-nums">
                   {pointsSummary.balance.toLocaleString()}
                 </span>
-                <span className="text-[12px] font-semibold text-charcoal-muted">pts</span>
+                <span className="text-[12px] leading-[18px] font-semibold text-charcoal-faint">pts</span>
               </p>
             </div>
-            <div className="text-right">
-              <p className="tabular-nums leading-[17px]">
-                <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
-                <span className="text-[12px] font-semibold text-charcoal-muted"> of {counts.total}</span>
-              </p>
-              <p className="mt-0.5 text-[12px] font-semibold text-charcoal-muted">earned</p>
-            </div>
+            {/* Only once the list has loaded: a failed read is not "0 of 0". */}
+            {achievements !== null && (
+              <div className="text-right">
+                <p className="tabular-nums leading-[22px]">
+                  <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
+                  <span className="text-[12px] font-semibold text-charcoal-faint"> of {counts.total}</span>
+                </p>
+                <p className="text-[10.5px] leading-[14px] font-normal text-charcoal-faint">earned</p>
+              </div>
+            )}
           </div>
 
+          {/* #12 / K4: "N to Silver" (or "Highest tier") and "a / b". */}
           <div className="mt-4 flex items-baseline justify-between gap-3">
-            <p className="text-[12px] font-semibold text-charcoal">
+            <p className="text-[11.5px] leading-[17.3px] font-bold text-charcoal">
               {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
                 ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
                 : "Highest tier"}
             </p>
             {pointsSummary.nextTierMinPoints !== null && (
-              <p className="text-[11px] font-semibold text-charcoal-muted tabular-nums">
+              <p className="text-[11.5px] leading-[17.3px] font-normal text-charcoal-faint tabular-nums">
                 {pointsSummary.balance.toLocaleString()} / {pointsSummary.nextTierMinPoints.toLocaleString()}
               </p>
             )}
           </div>
-          <div className="mt-2 h-[6px] rounded-full overflow-hidden" style={{ background: tier.track }}>
+          {/* #13-#14 / K11: the bar, 0.7 s (none under Reduce motion). */}
+          <div className="mt-[7px] h-[6px] rounded-full overflow-hidden" style={{ background: tier.track }}>
             <div
               className="h-full rounded-full"
               style={{
                 background: tier.solid,
                 width: `${tierProgress(pointsSummary) * 100}%`,
-                transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)",
+                transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)",
               }}
             />
           </div>
 
-          {/* The tier rail, from point_tiers rather than a list in this file. */}
-          {/* MO1.1.3 #2 (measured on the 2x frame): a neutral 2 pt line,
-              charcoal 8% (234,230,227 on #FBF7F4), through the 31 pt discs'
-              centres, and a solid stub in the tier colour from the current
-              disc toward the next one, as far as the points have come. */}
+          {/* #15-#18 / K5: the tier rail, from point_tiers. A 1.5 line, #241F1B
+              8%, through the 31 discs' centres, and a stub in the tier colour
+              toward the next disc, as far as the points have come. */}
           <div className="relative flex mt-[18px]">
-            <span aria-hidden className="absolute left-[10%] right-[10%] top-[14.5px] h-[2px] bg-charcoal/[0.08]" />
+            <span
+              aria-hidden
+              className="absolute left-[10%] right-[10%] top-[14.75px] h-[1.5px]"
+              style={{ background: hair(hc, 0.08) }}
+            />
             {(() => {
               const i = pointTiers.findIndex((t) => t.name === pointsSummary.tierName);
               if (i < 0 || i >= pointTiers.length - 1) return null;
@@ -218,7 +340,7 @@ export default function AchievementsTab() {
               return (
                 <span
                   aria-hidden
-                  className="absolute top-[14.5px] h-[2px]"
+                  className="absolute top-[14.75px] h-[1.5px]"
                   style={{
                     left: `${step * (i + 0.5)}%`,
                     width: `${step * tierProgress(pointsSummary)}%`,
@@ -230,7 +352,7 @@ export default function AchievementsTab() {
             {pointTiers.map((t) => {
               const reached = tierReached(t, pointsSummary);
               const current = t.name === pointsSummary.tierName;
-              const own = colourSet(tierHex(t.name), dark);
+              const own = tierCardColours(tierHex(t.name), dark);
               const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
               return (
                 <div key={t.name} className="relative flex-1 flex flex-col items-center">
@@ -238,104 +360,86 @@ export default function AchievementsTab() {
                     className="relative w-[31px] h-[31px] rounded-full flex items-center justify-center border-[1.5px]"
                     style={{
                       background: current ? own.solid : "rgb(var(--c-cream-card))",
-                      borderColor: reached ? own.solid : own.border,
-                      boxShadow: current ? `0 0 0 4px ${own.track}` : undefined,
+                      borderColor: current || reached ? own.solid : own.border,
+                      boxShadow: current && own.halo ? `0 0 0 4px ${own.halo}` : undefined,
                     }}
                   >
                     <Icon size={14} strokeWidth={1.75} style={{ color: current ? own.onSolid : own.ink }} />
                   </span>
                   <span
-                    // Only the current tier's name is bold, in its colour (MO1.1.3).
-                    className={clsx("mt-[3px] text-[11px]", current ? "font-bold" : "font-normal")}
-                    style={{ color: current ? own.ink : "rgb(var(--c-charcoal-muted))" }}
+                    className={clsx("mt-[5px] text-[10px] leading-[12px]", current ? "font-extrabold" : "font-normal")}
+                    style={{ color: current ? own.ink : "rgb(var(--c-charcoal-faint))" }}
                   >
                     {t.name}
                   </span>
-                  <span className="text-[10px] text-charcoal-muted tabular-nums">{t.minPoints.toLocaleString()}</span>
+                  <span className="mt-[5px] text-[10px] leading-[12px] font-normal text-charcoal-faint tabular-nums">
+                    {t.minPoints.toLocaleString()}
+                  </span>
                 </div>
               );
             })}
           </div>
 
-          {/* SAID PLAINLY, BECAUSE IT IS TRUE AND THE ALTERNATIVE IS TO IMPLY
-              OTHERWISE. Points are earned and a tier is real; there is nothing
-              yet to spend them on (A13). */}
-          <p className="mt-3 pt-3 border-t text-[12px] text-charcoal-muted" style={{ borderColor: tier.border }}>
+          {/* #19: said plainly; there is nothing yet to spend points on (A13). */}
+          <p
+            className="mt-3.5 pt-3 border-t-[0.5px] text-[11px] leading-[15px] text-charcoal-faint"
+            style={{ borderColor: tier.rule }}
+          >
             Rewards for your points are coming soon.
           </p>
         </div>
       )}
 
-      {/* ---- MO1.1.3 #3: recently unlocked -------------------------------- */}
+      {/* ---- #20-#37: Recently unlocked (hidden when none, O-4) ------------- */}
       {recent.length > 0 && (
         <div className="mb-[22px]">
-          <p className={`mb-2 px-1 ${sectionLabel}`}>Recently unlocked</p>
-          {/* The dividers are inset to the text column, after the 40 pt
-              medallion (MO1.1.3 #3). */}
-          <Card padded={false} className="px-3.5">
-            {recent.map((a, i) => (
-              <div key={a.key} className="flex items-center gap-3">
-                <span className="flex py-3 shrink-0">
-                  <Medallion icon={a.icon} earned size={40} />
-                </span>
-                <div
-                  className={clsx(
-                    "min-w-0 flex-1 self-stretch flex items-center gap-3",
-                    i > 0 && "border-t border-charcoal/[0.06]"
-                  )}
+          <p className="mx-1 mb-2 text-[10.5px] leading-[14px] font-bold tracking-[1.3px] uppercase text-charcoal-faint">
+            Recently unlocked
+          </p>
+          {/* #21: r18, 0.5 px #241F1B@8% (X-09). Dividers inset to the text
+              column (#27: 1 px #241F1B@5%). */}
+          <div className="rounded-[18px] px-3.5 bg-cream-card border-[0.5px] border-hair-08">
+            {recent.map((a, i) => {
+              const badge = badgeOf(a.key);
+              return (
+                // S2: a row opens the detail of its badge.
+                <button
+                  key={a.key}
+                  onClick={() => badge && setOpenId(badge.id)}
+                  className="tap w-full flex items-center gap-3 text-left"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-bold text-charcoal truncate">{a.title}</p>
-                    <p className="text-[11.5px] text-charcoal-muted truncate">{a.description}</p>
-                  </div>
-                  {a.points > 0 && (
-                    <span className="text-[12px] font-extrabold text-team-gold-ink shrink-0 tabular-nums">
-                      +{a.points.toLocaleString()}
+                  <AchievementTile achievementKey={a.key} emoji={a.icon} tile={40} radius={12} icon={34} />
+                  <span
+                    className="min-w-0 flex-1 self-stretch flex items-center gap-3 py-3 border-t"
+                    style={{ borderTopColor: i > 0 ? hair(hc, 0.05) : "transparent" }}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] leading-[18px] font-bold text-charcoal line-clamp-2">{a.title}</span>
+                      <span className="block text-[10px] leading-[16px] text-charcoal-faint">{a.description}</span>
                     </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </Card>
+                    {/* #26 / #31: the key's ink; explorer rows say so instead of "+0". */}
+                    <span
+                      className="shrink-0 whitespace-nowrap [.larger-text_&]:whitespace-normal [.larger-text_&]:max-w-[150px] text-right text-[12px] leading-[18px] font-extrabold tabular-nums"
+                      style={{ color: keyInk(a.key, dark) }}
+                    >
+                      {a.points > 0 ? `+${a.points.toLocaleString()}` : "No points, just bragging rights"}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* ---- MO1.1.3 #4: the category strip (filters, A13) ---------------- */}
-      {categories.length > 0 && (
-        <SegmentedTabs
-          scroll
-          className="-mr-4 mb-3"
-          // MO1.1.3 #4 (2x frame): a 52 pt track, 40 pt tabs at their
-          // natural width (12 each side: "All" 40), 8 apart. Decision 23:
-          // the handover's colours, active #A79AD5 / white, idle #F5F4FE /
-          // #5B5349.
-          trackStyle={{ borderRadius: "16px 0 0 16px", gap: 8 }}
-          tabHeight={40}
-          scrollTabPadding="0 12px"
-          scrollMinWidth={0}
-          idleInk="rgb(var(--c-charcoal-soft))"
-          items={[{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: CATEGORY_LABEL[c] }))]}
-          activeKey={category}
-          onChange={(k) => setCategory(k as AchievementCategory | "all")}
-        />
-      )}
+      {/* ---- #38-#40: the category strip, step 2 of the fixed area -------- */}
+      {(categories.length > 0 || achievements === null) && tabs}
 
-      {/* MO1.1.3 Error: an inline line in danger under the affected element
-          (the badges it failed to load). A failed read says so: "no
-          achievements" and "the request failed" render identically, and only
-          one of them is true. */}
-      {achievementsError && (
-        <p role="alert" className="mb-3 text-[11.5px] leading-4 font-medium text-status-high">
-          {achievementsError}
-        </p>
-      )}
+      {banner}
 
-      {/* ---- MO1.1.3 #5–15: the badge grid -------------------------------- */}
+      {/* ---- #41-#52: the badge grid ----------------------------------------- */}
       {shown.length === 0 ? (
-        // MO1.1.3 Empty: Foundations › Empty state (56 primary.tint tile, 26
-        // thin-stroke icon in primary.accent, title 15/700, one line
-        // 12.5/500 text.muted, max width 260). Icon UNSPECIFIED: Trophy, as
-        // on the Mind tile.
+        // Zero rows only (O-4): Foundations › Empty state.
         !achievementsError && (
           <div className="flex flex-col items-center text-center py-8">
             <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
@@ -350,7 +454,7 @@ export default function AchievementsTab() {
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {shown.map((b) => (
-            <BadgeTile key={b.id} badge={b} onOpen={() => setOpenBadge(b)} />
+            <BadgeTile key={b.id} badge={b} hc={hc} onOpen={() => setOpenId(b.id)} />
           ))}
         </div>
       )}
@@ -358,7 +462,7 @@ export default function AchievementsTab() {
       {/* MO1.1.3.1: the badge that was tapped, as a centred popup. */}
       <AchievementDetailSheet
         open={openBadge !== null}
-        onClose={() => setOpenBadge(null)}
+        onClose={() => setOpenId(null)}
         badge={openBadge}
         nextLabel={openBadge ? nextRungLabel(openBadge) : null}
       />

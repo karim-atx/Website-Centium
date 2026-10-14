@@ -102,7 +102,7 @@ export function MembershipPass({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-bold text-charcoal truncate">{memberName}</span>
-            <span className="block text-[12px] text-charcoal-soft truncate">{planLine(membership.planName)}</span>
+            <span className="block text-[12px] text-charcoal-soft truncate">{membership.planName ? planLine(membership.planName) : "Membership"}</span>
           </span>
           <span className="shrink-0 text-end">
             <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">Valid</span>
@@ -119,7 +119,7 @@ export function MembershipPass({
           )}
           {method === "tap" && (
             <NativePanel
-              disc={<Nfc size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-dark" aria-hidden />}
+              disc={<Nfc size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-accent" aria-hidden />}
               title="Hold your phone near the reader"
               line="Tap entry works in the Centium app on your phone."
             />

@@ -3,6 +3,7 @@ import type { Tables, TablesInsert } from "../../../lib/supabase/database.types"
 import type { CalendarEvent } from "../../types";
 import { signedUrlFor, uploadPrivateFile } from "../storage";
 import { alertNeedsWrite, toEventAlert, type EventAlert } from "../../components/calendar/eventAlert";
+import type { ExceptionMap, OccurrenceOverride } from "../../components/calendar/occurrences";
 
 // The client's own calendar, and the invitations they have received.
 //
@@ -30,8 +31,12 @@ import { alertNeedsWrite, toEventAlert, type EventAlert } from "../../components
 // already cost this project two debugging sessions; insert and update are
 // written separately here.
 
-/** Exactly the columns `authenticated` may UPDATE. Verified against column_privileges. */
-type EditableRow = Pick<
+/**
+ * Exactly the columns `authenticated` may UPDATE that this screen writes.
+ * Verified against column_privileges. repeat_until is Database B3
+ * (20261116020000), newer than the generated types.
+ */
+type EditableRow = { repeat_until: string | null } & Pick<
   TablesInsert<"calendar_events">,
   | "title"
   | "event_date"
@@ -58,7 +63,16 @@ export interface CalendarInvite {
   /** calendar_event_invitees.id — what a response writes to. */
   id: string;
   status: InviteStatus;
+  /**
+   * The invitee's OWN reminder (Database B3, 20261116030000; PB-O-65):
+   * calendar_event_invitees.alert, default none, set only by the invitee and
+   * queued only once they have accepted.
+   */
+  alert: EventAlert;
 }
+
+/** calendar_events.source_kind (B3): what made the event, when a booking did. */
+export type EventSourceKind = "class_booking" | "hire" | "appointment";
 
 /** A calendar event as the client's screen needs it. */
 export interface ClientCalendarEvent extends CalendarEvent {
@@ -97,10 +111,26 @@ export interface ClientCalendarEvent extends CalendarEvent {
    * not shown or offered.
    */
   alert: EventAlert;
+  /** The last day a repeat runs (B3, PB-O-63); absent = no end. */
+  repeatUntil?: string;
+  /**
+   * Set when a booking made this event (B3, PB-O-62): the client cannot edit
+   * or delete it (ATXB3) and changes the booking instead. Insert-only on the
+   * server, so it can never be re-pointed.
+   */
+  sourceKind?: EventSourceKind;
+  sourceId?: string;
+  /**
+   * Set on an expanded occurrence of a repeating event (occurrences.ts):
+   * the series' own first date, while `date` is the day this one falls on.
+   */
+  seriesDate?: string;
+  /** This occurrence carries its own changes (calendar_event_exceptions.override). */
+  overridden?: boolean;
 }
 
 export type CalendarReadResult =
-  | { ok: true; events: ClientCalendarEvent[] }
+  | { ok: true; events: ClientCalendarEvent[]; exceptions: ExceptionMap }
   | { ok: false; message: string };
 
 export type CalendarWriteResult =
@@ -112,7 +142,7 @@ export type CalendarWriteResult =
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path, alert";
+  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path, alert, repeat_until, source_kind, source_id";
 
 type EventRow = Pick<
   Tables<"calendar_events">,
@@ -137,6 +167,10 @@ type EventRow = Pick<
   // where the column isn't yet; `public.calendar_alert`, never null (column
   // default 'none').
   alert: string | null;
+  // Database B3 (20261116020000), newer than the generated types.
+  repeat_until: string | null;
+  source_kind: string | null;
+  source_id: string | null;
 };
 
 /**
@@ -166,8 +200,22 @@ function toEvent(row: EventRow, userId: string, invite?: CalendarInvite): Client
     assignmentSourced: row.owner_id === userId && !row.created_by_client,
     attachmentPath: row.attachment_path ?? undefined,
     alert: toEventAlert(row.alert),
+    repeatUntil: row.repeat_until ?? undefined,
+    sourceKind:
+      row.source_kind === "class_booking" || row.source_kind === "hire" || row.source_kind === "appointment"
+        ? row.source_kind
+        : undefined,
+    sourceId: row.source_id ?? undefined,
     invite,
   };
+}
+
+/** What ATXB3 says: a booking made this event, so the booking is what changes. */
+export const BOOKING_EVENT_MESSAGE = "A booking added this event. To change or cancel it, change the booking.";
+
+/** A write's refusal as a sentence: ATXB3 (booking-made event) has its own. */
+function writeMessage(error: { code?: string } | null, fallback: string): string {
+  return error?.code === "ATXB3" ? BOOKING_EVENT_MESSAGE : fallback;
 }
 
 function statusOf(accepted: boolean | null, respondedAt: string | null): InviteStatus {
@@ -226,6 +274,7 @@ export async function getCalendar(userId: string): Promise<CalendarReadResult> {
                 id: string;
                 accepted: boolean | null;
                 responded_at: string | null;
+                alert: string | null;
                 calendar_events: EventRow | null;
               }[]
             | null;
@@ -237,7 +286,7 @@ export async function getCalendar(userId: string): Promise<CalendarReadResult> {
 
   const invited = await invitesClient
     .from("calendar_event_invitees")
-    .select(`id, accepted, responded_at, calendar_events (${COLUMNS})`)
+    .select(`id, accepted, responded_at, alert, calendar_events (${COLUMNS})`)
     .eq("invited_user_id", userId);
 
   if (invited.error) {
@@ -286,11 +335,43 @@ export async function getCalendar(userId: string): Promise<CalendarReadResult> {
       toEvent(row.calendar_events, userId, {
         id: row.id,
         status: statusOf(row.accepted, row.responded_at),
+        alert: toEventAlert(row.alert),
       })
     );
   }
 
-  return { ok: true, events };
+  // B3: the one-off changes to the caller's own repeating events. Owner-only
+  // by policy (calendar_event_exceptions_all_own), so an invitation shows its
+  // series as the owner first made it. A failed read draws every occurrence
+  // unchanged rather than blanking the calendar.
+  const exceptions: ExceptionMap = {};
+  const repeating = events.filter((e) => e.mine && !e.invite && e.repeat !== "none").map((e) => e.id);
+  if (repeating.length > 0) {
+    const x = await (supabase as unknown as {
+      from: (t: "calendar_event_exceptions") => {
+        select: (c: string) => {
+          in: (
+            col: string,
+            v: string[]
+          ) => PromiseLike<{
+            data:
+              | { calendar_event_id: string; occurrence_date: string; cancelled: boolean; override: OccurrenceOverride | null }[]
+              | null;
+            error: { message: string } | null;
+          }>;
+        };
+      };
+    })
+      .from("calendar_event_exceptions")
+      .select("calendar_event_id, occurrence_date, cancelled, override")
+      .in("calendar_event_id", repeating);
+    if (x.error) console.error("[calendar] Could not load changed occurrences:", x.error.message);
+    for (const r of x.data ?? []) {
+      (exceptions[r.calendar_event_id] ??= {})[r.occurrence_date] = { cancelled: r.cancelled, override: r.override };
+    }
+  }
+
+  return { ok: true, events, exceptions };
 }
 
 export interface CalendarEventDraft {
@@ -306,6 +387,8 @@ export interface CalendarEventDraft {
   color?: string;
   /** Omitted = leave as stored ('none' on a new row, the column default). */
   alert?: EventAlert;
+  /** The last day of a repeat (B3); ignored and cleared when it doesn't repeat. */
+  repeatUntil?: string | null;
 }
 
 /**
@@ -389,6 +472,9 @@ function toRow(draft: CalendarEventDraft): EditableRow {
     notes: draft.notes?.trim() || null,
     repeat: draft.repeat,
     color: draft.color ?? null,
+    // The CHECK refuses an end on a one-off, or one before the first date.
+    repeat_until:
+      draft.repeat !== "none" && draft.repeatUntil && draft.repeatUntil >= draft.date ? draft.repeatUntil : null,
   };
 }
 
@@ -398,7 +484,8 @@ export async function createEvent(
 ): Promise<CalendarWriteResult> {
   const { data, error } = await supabase
     .from("calendar_events")
-    .insert({ ...toRow(draft), owner_id: userId, created_by_client: true })
+    // repeat_until (B3) is newer than the generated Insert type.
+    .insert({ ...toRow(draft), owner_id: userId, created_by_client: true } as never)
     .select(COLUMNS)
     .single();
 
@@ -424,7 +511,7 @@ export async function updateEvent(
 ): Promise<CalendarWriteResult> {
   const { data, error } = await supabase
     .from("calendar_events")
-    .update(toRow(draft))
+    .update(toRow(draft) as never)
     .eq("id", eventId)
     .eq("owner_id", userId)
     .select(COLUMNS)
@@ -432,7 +519,7 @@ export async function updateEvent(
 
   if (error || !data) {
     console.error("[calendar] Could not update event:", error?.message);
-    return { ok: false, message: "Couldn't save your changes. Try again." };
+    return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
   }
   return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
@@ -449,7 +536,90 @@ export async function deleteEvent(
 
   if (error) {
     console.error("[calendar] Could not delete event:", error.message);
-    return { ok: false, message: "Couldn't delete that event. Try again." };
+    return { ok: false, message: writeMessage(error, "Couldn't delete that event. Try again.") };
+  }
+  return { ok: true };
+}
+
+/**
+ * "This and following" (B3, PB-O-64): the series stops on `lastDate`
+ * (calendar_events.repeat_until). One column, which the UPDATE grant holds.
+ */
+export async function endSeries(
+  userId: string,
+  eventId: string,
+  lastDate: string
+): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await (supabase.from("calendar_events") as unknown as {
+    update: (values: { repeat_until: string }) => {
+      eq: (
+        column: string,
+        value: string
+      ) => { eq: (column: string, value: string) => PromiseLike<{ error: { code?: string; message: string } | null }> };
+    };
+  })
+    .update({ repeat_until: lastDate })
+    .eq("id", eventId)
+    .eq("owner_id", userId);
+  if (error) {
+    console.error("[calendar] Could not end the series:", error.message);
+    return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
+  }
+  return { ok: true };
+}
+
+/**
+ * "This event" (B3, PB-O-64): one occurrence cancelled or changed, through
+ * calendar_event_exceptions. A row either cancels or overrides, never both,
+ * and the override carries only title, times, location, notes and all day
+ * (calendar_override_keys_ok). Upserted on its (event, date) key: the INSERT
+ * and UPDATE grants both cover every column of this table.
+ */
+export async function setOccurrence(
+  eventId: string,
+  occurrenceDate: string,
+  change: { cancelled: true } | { override: OccurrenceOverride }
+): Promise<{ ok: boolean; message?: string }> {
+  const row =
+    "cancelled" in change
+      ? { calendar_event_id: eventId, occurrence_date: occurrenceDate, cancelled: true, override: null }
+      : { calendar_event_id: eventId, occurrence_date: occurrenceDate, cancelled: false, override: change.override };
+  const { error } = await (supabase as unknown as {
+    from: (table: "calendar_event_exceptions") => {
+      upsert: (
+        values: typeof row,
+        options: { onConflict: string }
+      ) => PromiseLike<{ error: { code?: string; message: string } | null }>;
+    };
+  })
+    .from("calendar_event_exceptions")
+    .upsert(row, { onConflict: "calendar_event_id,occurrence_date" });
+  if (error) {
+    console.error("[calendar] Could not change one occurrence:", error.message);
+    return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
+  }
+  return { ok: true };
+}
+
+/**
+ * The invitee's own reminder (B3, PB-O-65). Only the invitee may set it: the
+ * UPDATE policy keys on invited_user_id and the grant covers `alert`. The
+ * sweep queues it only once they have accepted.
+ */
+export async function setInviteAlert(inviteId: string, alert: EventAlert): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await (supabase as unknown as {
+    from: (table: "calendar_event_invitees") => {
+      update: (values: { alert: EventAlert }) => {
+        eq: (column: string, value: string) => PromiseLike<{ error: { message: string } | null }>;
+      };
+    };
+  })
+    .from("calendar_event_invitees")
+    .update({ alert })
+    .eq("id", inviteId);
+  if (error) {
+    console.error("[calendar] Could not save your reminder:", error.message);
+    return { ok: false, message: "Couldn't save your reminder. Try again." };
   }
   return { ok: true };
 }

@@ -18,7 +18,7 @@ const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = 
 
 const muscleGroupLabel: Record<MuscleGroup, string> = {
   back: "Back",
-  bicep: "Bicep",
+  bicep: "Biceps",
   calves: "Calves",
   cardio: "Cardio",
   chest: "Chest",
@@ -30,7 +30,7 @@ const muscleGroupLabel: Record<MuscleGroup, string> = {
   other: "Other",
   quads: "Quads",
   shoulders: "Shoulders",
-  tricep: "Tricep",
+  tricep: "Triceps",
 };
 
 const classificationLabel: Record<ExerciseClassification, string> = {
@@ -425,6 +425,7 @@ export const ExerciseSettingsSheet: React.FC<{
         open={replaceOpen}
         onClose={() => setReplaceOpen(false)}
         onPick={handleReplace}
+        mode="replace"
         alreadyAdded={[]}
       />
     </>

@@ -1,7 +1,6 @@
 import React from "react";
 import { Check, CircleCheck } from "lucide-react";
-import { useApp } from "../../context/AppContext";
-import { ThemedMark } from "../ui/ThemedMark";
+import { CentiumMark } from "../icons/CentiumMark";
 import { cardDate, cardPriceLine, planButtonState, type MessageCard } from "../../services/messaging/cards";
 
 /**
@@ -39,7 +38,6 @@ export const ChatCard: React.FC<{
   /** Client side: open the MO1.2.1.5.1 checkout for this plan. */
   onChoose: (planId: string) => void;
 }> = ({ card, mine, senderName, createdAt, meta, hiredPlanIds, onChoose }) => {
-  const { colorTheme } = useApp();
   const title = card.kind === "plans_offer" ? (mine ? "Your plans" : `${senderName}'s plans`) : "Plan confirmed";
 
   return (
@@ -49,17 +47,10 @@ export const ChatCard: React.FC<{
       }`}
     >
       <div className="flex items-center gap-[7px] min-h-[18px]">
-        {colorTheme === "centium" ? (
-          <img
-            src="/centium-mark.png"
-            alt=""
-            aria-hidden="true"
-            className="shrink-0 object-contain"
-            style={{ width: (16 * 687) / 648, height: (16 * 713) / 648 }}
-          />
-        ) : (
-          <ThemedMark width={(16 * 687) / 648} height={(16 * 713) / 648} className="shrink-0" />
-        )}
+        {/* v6 asset map: the vector mark in the PNG's framing (same box), in
+            the theme's brand pair. */}
+        <CentiumMark height={(16 * 713) / 648} framing="png" />
+
         <span className="flex-1 min-w-0 truncate text-[11px] font-extrabold uppercase tracking-[0.12em] text-primary-deep-text">
           {title}
         </span>

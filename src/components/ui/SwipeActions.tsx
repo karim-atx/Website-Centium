@@ -5,7 +5,12 @@ export interface SwipeAction {
   key: string;
   label: string;
   icon: React.ReactNode;
-  onClick: () => void;
+  /** Called with the tile, so a caller can anchor a menu to it (MO1.7 Mute). */
+  onClick: (tile: HTMLElement) => void;
+  /** Accessible name when it differs from the visible label (MO1.7: "Pin chat with Rami"). */
+  ariaLabel?: string;
+  /** DARK-mode tile colours, when a frame draws its own (MO1.7 #22-#30). */
+  dark?: { fill: string; ink: string };
   /** Delete: #FCEDEC fill + #B4372C icon, and always the far-right tile. */
   destructive?: boolean;
   /**
@@ -29,10 +34,9 @@ const OPEN_EVENT = "swipe-actions:open";
  * tapping elsewhere or scrolling closes it; one open item at a time; a swipe
  * short of halfway snaps back. Used by WO3.1 and WO16 (`shrink`).
  *
- * Mobile v5.1 R3, dark mode (no light islands): delete is danger.tint
- * #3C2A30 with danger #FF6B5E (4.8:1); the other tiles keep their
- * translucent lavender tint and take primary.deep #B7ABDE for the icon
- * (#7D67D9 measured 2.7:1 on the tint over the dark card, #B7ABDE 5.6:1).
+ * Dark mode, v6 Part B (MO1.1.1 #22-#25, MO1.1.2 #14-#17): delete is
+ * danger.tint #3C2A30 with #F09A8E (status-high dark); the other tiles are
+ * #A991FE@18% (the dark primary) with a primary.accent #9A8CD6 icon.
  */
 export const SwipeActions: React.FC<{
   actions: SwipeAction[];
@@ -66,8 +70,19 @@ export const SwipeActions: React.FC<{
    * the row. Off when not given, so every other swipe row is unchanged.
    */
   onLongPress?: (row: HTMLElement) => void;
+  /** Tile corner radius (default 14; MO1.1.1 Habits draws 12). */
+  tileRadius?: number;
+  /** Gap between tiles (default 8; MO1.7 Messages draws 6). */
+  tileGap?: number;
+  /**
+   * The label under each tile's icon (MO1.7 #22-#30: icon 18, gap 3, label
+   * 10.5 / 15.8 700 in the tile's ink). Off by default: icon-only tiles.
+   */
+  showLabels?: boolean;
+  /** A tap on the row while its tiles are open closes them instead of acting (MO1.7 S1). Off by default. */
+  tapCloses?: boolean;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, keyboardLabel, onLongPress, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, keyboardLabel, onLongPress, tileRadius = 14, tileGap = TILE_GAP, showLabels, tapCloses, children }) => {
   const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -79,7 +94,7 @@ export const SwipeActions: React.FC<{
   // Delete last, whatever order the caller passed.
   const ordered = [...actions.filter((a) => !a.destructive), ...actions.filter((a) => a.destructive)];
   const tile = Math.min(tileMax, rowH);
-  const openWidth = ordered.length * (tile + TILE_GAP) + edgeInset;
+  const openWidth = ordered.length * (tile + tileGap) + edgeInset;
 
   useEffect(() => {
     const el = rowRef.current;
@@ -113,6 +128,7 @@ export const SwipeActions: React.FC<{
   // picks an axis (a swipe or a scroll) or by letting go.
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
+  const justDragged = useRef(false);
   const lastPointer = useRef("mouse");
   const clearLong = () => {
     if (longTimer.current !== null) window.clearTimeout(longTimer.current);
@@ -129,6 +145,7 @@ export const SwipeActions: React.FC<{
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
+    justDragged.current = false;
     longFired.current = false;
     lastPointer.current = e.pointerType;
     start.current = { x: e.clientX, y: e.clientY, base: offset, axis: null };
@@ -174,6 +191,7 @@ export const SwipeActions: React.FC<{
     const s = start.current;
     start.current = null;
     if (!s || s.axis !== "x") return;
+    justDragged.current = true;
     setDragging(false);
     // Short of halfway snaps back.
     setOffset((o) => {
@@ -192,7 +210,7 @@ export const SwipeActions: React.FC<{
         // is near the tile's inset otherwise shows as a sliver at the curve.
         // Hiding waits for the row's .22s slide back.
         style={{
-          gap: TILE_GAP,
+          gap: tileGap,
           width: openWidth,
           paddingRight: edgeInset,
           visibility: offset === 0 && !dragging ? "hidden" : "visible",
@@ -202,23 +220,28 @@ export const SwipeActions: React.FC<{
         {ordered.map((a) => (
           <button
             key={a.key}
-            aria-label={a.label}
+            aria-label={a.ariaLabel ?? a.label}
             title={a.label}
             tabIndex={offset === 0 ? -1 : 0}
-            onClick={() => {
+            onClick={(e) => {
               setOffset(0);
-              a.onClick();
+              a.onClick(e.currentTarget);
             }}
-            className="tap flex-none flex items-center justify-center"
+            className={`tap flex-none flex items-center justify-center${showLabels ? " flex-col gap-[3px]" : ""}`}
             style={{
               width: tile,
               height: tile,
-              borderRadius: 14,
-              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgb(var(--th-aea1dc) / 0.18)",
-              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "rgb(var(--thi-b7abde))" : "rgb(var(--thi-7d67d9))",
+              borderRadius: tileRadius,
+              background: dark && a.dark ? a.dark.fill : !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : dark ? "rgb(var(--c-primary) / 0.18)" : "rgb(var(--th-aea1dc) / 0.18)",
+              color: dark && a.dark ? a.dark.ink : !dark && a.light ? a.light.ink : a.destructive ? (dark ? "rgb(var(--c-status-high))" : "#B4372C") : dark ? "rgb(var(--c-primary-accent))" : "rgb(var(--thi-7d67d9))",
             }}
           >
             {a.icon}
+            {showLabels && (
+              <span aria-hidden className="text-[10.5px] leading-[15.8px] font-bold whitespace-nowrap">
+                {a.label}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -229,8 +252,19 @@ export const SwipeActions: React.FC<{
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClickCapture={
-          onLongPress
+          onLongPress || tapCloses
             ? (e) => {
+                // The click that ends a drag is not a tap.
+                if (justDragged.current) {
+                  justDragged.current = false;
+                  return;
+                }
+                if (tapCloses && offset !== 0) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setOffset(0);
+                  return;
+                }
                 // The tap that ends a long-press opened the menu; it must not
                 // also tick the habit or act on the entry.
                 if (!longFired.current) return;

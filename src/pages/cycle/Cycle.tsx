@@ -1,38 +1,36 @@
-import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
-import { useState } from "react";
-import { JumpToToday } from "../../components/ui/JumpToToday";
-import { Navigate, useNavigate } from "react-router-dom";
-import { Card } from "../../components/ui/Card";
-import { Toggle } from "../../components/ui/Toggle";
-import { Button } from "../../components/ui/Button";
-import { Chip } from "../../components/ui/Chip";
-import { BottomSheet } from "../../components/ui/BottomSheet";
+import React, { useEffect, useState } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Info, Plus } from "lucide-react";
+import { FixedHeader } from "../../components/ui/FixedHeader";
 import { SegmentedTabs, type SegmentedTabItem } from "../../components/ui/SegmentedTabs";
+import { PinnedSlot } from "../../components/ui/PinnedCta";
+import { CentredPopup } from "../../components/ui/CentredPopup";
+import { Toast } from "../../components/ui/Toast";
 import { useApp } from "../../context/AppContext";
 import { CycleRing, PhaseBar } from "../../components/cycle/CycleRing";
-import { PHASE_COLOR } from "../../services/cycle/guidance";
+import { CycleScrubber } from "../../components/cycle/CycleScrubber";
 import { HormoneGraph } from "../../components/cycle/HormoneGraph";
 import { LogDaySheet } from "../../components/cycle/LogDaySheet";
+import { CycleInsightsTab } from "../../components/cycle/CycleInsightsTab";
+import { CycleSettingsTab } from "../../components/cycle/CycleSettingsTab";
+import { CycleSharingPage } from "../../components/cycle/CycleSharingPage";
+import { TurnOffTrackingPopup } from "../../components/cycle/TurnOffTrackingPopup";
+import { CycleCard, CycleFooter, CycleTitleRow, PopupButtons, Skeleton, hair, type, useCycleMode } from "../../components/cycle/cycleUi";
+import { PregnancyOverview } from "../../components/pregnancy/PregnancyOverview";
+import { StartPregnancyPage } from "../../components/pregnancy/StartPregnancyPage";
+import { EndPregnancySheet } from "../../components/pregnancy/EndPregnancySheet";
 import { deleteAllCycleData } from "../../services/cycle";
-import { zoneLabel } from "../../services/timezone/logic";
-import {
-  CONDITIONS,
-  SETTINGS_LIMITS,
-  type Condition,
-  type CyclePhase,
-} from "../../services/cycle/types";
-import { cycleStats, hasEnoughForInsights, shiftDay, symptomGrid } from "../../services/cycle/insights";
+import { fetchMyGrants } from "../../services/consent";
+import type { CyclePhase } from "../../services/cycle/types";
+import { shiftDay } from "../../services/cycle/insights";
 import { daysBetween, ovulationDayFrom } from "../../services/cycle/hormones";
 import * as G from "../../services/cycle/guidance";
 import * as PG from "../../services/pregnancy/guidance";
-import { PregnancyOverview } from "../../components/pregnancy/PregnancyOverview";
-import { StartPregnancySheet } from "../../components/pregnancy/StartPregnancySheet";
-import { EndPregnancySheet } from "../../components/pregnancy/EndPregnancySheet";
-import { gestationOn } from "../../services/pregnancy";
-import { ChevronLeft, ChevronRight, Info, Plus, Trash2 } from "lucide-react";
-import { useBack } from "../../hooks/useBack";
+import { hasInAppHistory, useBack } from "../../hooks/useBack";
+import { heroPatternGenericUrl } from "../../utils/assetUrls";
 
-// The cycle tracker.
+// The cycle tracker (HE1.10 Cycle · HE1.10.a Insights · HE1.10.b Settings,
+// with HE1.10.b.1 and .b.3 as pages inside it and .b.4 / .b.5 as popups).
 //
 // THREE TABS, ONE PREDICTION. Overview, Insights and Settings all read the
 // same `my_cycle_prediction()` row and the same logs, so they cannot disagree
@@ -40,10 +38,16 @@ import { useBack } from "../../hooks/useBack";
 // arithmetic on this screen is backwards-looking (services/cycle/insights) or
 // decorative (services/cycle/hormones).
 //
-// EVERY SENTENCE COMES FROM services/cycle/guidance, imported as `G` so that
-// a reader can see at a glance that nothing on this page writes its own copy.
+// EVERY SENTENCE COMES FROM services/cycle/guidance, imported as `G`, so a
+// reader can see at a glance that nothing on this page writes its own copy.
+//
+// THE TAB AND THE SUB-PAGE ARE IN THE URL (?tab=, ?page=): a sub-page is a
+// history entry, so Back pops to Settings, and Contraception's Back falls
+// back to this Settings tab when there is nothing to pop (V6-79). The page's
+// own Back pops, or goes to Health (HE1).
 
 type Tab = "overview" | "insights" | "settings";
+const TABS: Tab[] = ["overview", "insights", "settings"];
 const tabsFor = (pregnant: boolean): SegmentedTabItem[] => [
   { key: "overview", label: pregnant ? "Pregnancy" : "Cycle" },
   { key: "insights", label: "Insights" },
@@ -56,10 +60,36 @@ const todayISO = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
+const monthShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+/** "4 to 10 Oct" or "28 Sep to 2 Oct": a range, always (the database gives one). */
+function shortRange(from: string, to: string): string {
+  const f = new Date(`${from}T00:00:00`);
+  const t = new Date(`${to}T00:00:00`);
+  if (from === to) return `${f.getDate()} ${monthShort(f)}`;
+  if (f.getMonth() === t.getMonth()) return `${f.getDate()} to ${t.getDate()} ${monthShort(t)}`;
+  return `${f.getDate()} ${monthShort(f)} to ${t.getDate()} ${monthShort(t)}`;
+}
+/** The same range with full month names, for the screen-reader sentence. */
+function longRange(from: string, to: string): string {
+  const f = new Date(`${from}T00:00:00`);
+  const t = new Date(`${to}T00:00:00`);
+  const m = (d: Date) => d.toLocaleDateString("en-GB", { month: "long" });
+  if (from === to) return `${f.getDate()} ${m(f)}`;
+  if (f.getMonth() === t.getMonth()) return `${f.getDate()} to ${t.getDate()} ${m(t)}`;
+  return `${f.getDate()} ${m(f)} to ${t.getDate()} ${m(t)}`;
+}
+/** "Thu 15 Oct". */
+const dayLabel = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${monthShort(d)}`;
+};
+
 export default function Cycle() {
   const navigate = useNavigate();
-  const back = useBack();
+  const back = useBack("/app/health");
+  const [params, setParams] = useSearchParams();
   const {
+    authUserId,
     cycleSettings,
     cycleSettingsLoaded,
     cycleLogs,
@@ -72,126 +102,379 @@ export default function Cycle() {
     cycleOffered,
     setCycleTracking,
     myTimezone,
+    contraceptionPlan,
+    recoverySensitive,
+    recoveryModePending,
+    colorTheme,
   } = useApp();
+  const { dark, hc } = useCycleMode();
 
-  const [tab, setTab] = useState<Tab>("overview");
+  const tabParam = params.get("tab") as Tab | null;
+  const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : "overview";
+  const page = params.get("page");
+
   const [offsetDays, setOffsetDays] = useState(0);
   const [logOpen, setLogOpen] = useState(false);
   const [logDate, setLogDate] = useState(todayISO());
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [startPregnancyOpen, setStartPregnancyOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [turnOffOpen, setTurnOffOpen] = useState(false);
   const [endPregnancyOpen, setEndPregnancyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [sharedWith, setSharedWith] = useState<number | null>(null);
 
   const today = todayISO();
   const prediction = cyclePrediction;
   const settings = cycleSettings;
+  // Recovery-sensitive mode hides the day count and the countdown (V6-18,
+  // HE1.10 States "Other"). Pending counts as on until the account's setting
+  // is known, so nothing flashes.
+  const recovery = recoverySensitive || recoveryModePending;
 
-  // DECLARED ABOVE EVERY EARLY RETURN, because the no-settings-row branch
-  // below calls it. A const arrow declared after a `return` sits in the
-  // temporal dead zone whenever that branch renders, and TypeScript does not
-  // catch it through a JSX callback: the button would throw on click rather
-  // than fail to compile.
-  const saveSettings = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]) => {
+  const setTab = (t: Tab) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (t === "overview") next.delete("tab");
+        else next.set("tab", t);
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
+  /** A sub-page is pushed, so Back pops to where it was opened from. */
+  const openPage = (pg: "start-pregnancy" | "sharing") =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("page", pg);
+      return next;
+    });
+  const closePage = () => {
+    if (hasInAppHistory()) navigate(-1);
+    else setParams({ tab: "settings" }, { replace: true });
+  };
+
+  // "Who can see your cycle phase" value: how many professionals see either
+  // cycle category. Read once per visit to Settings (same grants table).
+  useEffect(() => {
+    if (tab !== "settings" || !authUserId) return;
+    let live = true;
+    void fetchMyGrants(authUserId).then((r) => {
+      if (!live || r.status !== "ok") return;
+      const n = Object.values(r.grants).filter((g) => g.cycle_phase === true || g.pregnancy === true).length;
+      setSharedWith(n);
+    });
+    return () => {
+      live = false;
+    };
+  }, [tab, authUserId]);
+
+  const saveSettings = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]): Promise<boolean> => {
     setBusy(true);
-    setError(null);
     const result = await saveCycleSettingsAndReload(patch);
     setBusy(false);
-    if (!result.ok) setError(result.message ?? "Couldn't save that.");
+    // Save fails: the value reverts (nothing local was changed) and the
+    // shared-state toast says so (HE1.10.b O2).
+    if (!result.ok) setToast(result.message ?? "Couldn't save. Try again.");
+    return result.ok;
   };
-  // MO11: on/off goes through setCycleTracking, which records the opt-in
-  // for a profile that is not offered the section through sex.
-  const setTracking = async (on: boolean) => {
+  // MO11 / Task R: on/off goes through setCycleTracking (tracker_chosen_at).
+  const turnOn = async () => {
     setBusy(true);
-    setError(null);
-    const result = await setCycleTracking(on);
+    const result = await setCycleTracking(true);
     setBusy(false);
-    if (!result.ok) setError(result.message ?? "Couldn't save that.");
+    if (!result.ok) setToast(result.message ?? "Couldn't save. Try again.");
+  };
+  const onTrackerChange = (on: boolean) => {
+    if (on) void turnOn();
+    else setTurnOffOpen(true); // HE1.10.b.5 first; the switch moves only after Turn off.
   };
 
-  // SWITCHED OFF IS NOT THE SAME AS NOTHING LOGGED YET, and the difference
-  // decides which of the three "no prediction" screens this is.
-  // my_cycle_prediction() returns nothing for all of them.
-  const trackerOff = settings !== null && !settings.trackerEnabled;
+  const openLog = (date: string) => {
+    setLogDate(date);
+    setLogOpen(true);
+  };
 
   // MO11: not offered the section (a male profile that has not opted in):
   // the page is not reachable from the app, and a direct link goes to Health.
-  // Settings → Cycle tracking is where any profile turns it on.
-  // WAIT FOR THE SETTINGS FIRST: a male profile's opt-in (shownForAnySex)
-  // lives in them, so until they load "not offered" is unknown, not false —
-  // redirecting then bounced an opted-in user to Health on every refresh.
+  // WAIT FOR THE SETTINGS FIRST: until they load "not offered" is unknown.
   if (!cycleOffered) {
     if (!cycleSettingsLoaded) return null;
     return <Navigate to="/app/health" replace />;
   }
 
-  // --- no settings row at all ----------------------------------------------
-  //
-  // NEVER OPENED THE TRACKER, which for a female or other profile lasts about
-  // one render — the seeding effect in AppContext creates the row. It persists
-  // for a male profile, which gets no row created for it, and that is the case
-  // this branch is really for: a full-page setup card, because there is no row
-  // for a Settings tab to edit yet.
-  if (cycleSettingsLoaded && !settings && !pregnancy) {
+  // --- the sub-pages --------------------------------------------------------
+  if (page === "start-pregnancy") {
     return (
-      <div className="animate-fade-slide-up">
-        <BackRow onBack={back} />
-        <Card className="text-center py-8">
-          <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.TRACKER_OFF_TITLE}</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
-            {G.TRACKER_OFF_BODY}
-          </p>
-          {/* THE ONLY SWITCH THIS ACCOUNT CAN REACH. Writing the row is what
-              brings the tab bar — and Settings, and everything behind it —
-              into existence, so it cannot itself live in Settings. Without
-              this a male profile had no way to turn the tracker on at all,
-              which made "sex decides the default, never the availability" a
-              statement about intent rather than about the app. */}
-          <Button disabled={busy} onClick={() => void setTracking(true)}>
-            {G.TRACKER_OFF_CTA}
-          </Button>
-        </Card>
-        <button
-          onClick={() => setStartPregnancyOpen(true)}
-          className="tap w-full mt-2 py-2 text-[12px] font-semibold text-primary-dark"
-        >
-          {PG.START_TITLE}
-        </button>
-        <p className="mt-2 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
-        <HealthDisclaimer className="mt-2" />
-        <LogDaySheet
-          open={logOpen}
-          onClose={() => setLogOpen(false)}
-          date={logDate}
-          onSaved={reloadCycle}
-          onStartPregnancy={() => {
-            setLogOpen(false);
-            setStartPregnancyOpen(true);
+      <StartPregnancyPage
+        onBack={closePage}
+        onStarted={() => {
+          reloadPregnancy();
+          reloadCycle();
+          setParams({}, { replace: true });
+        }}
+      />
+    );
+  }
+  if (page === "sharing") return <CycleSharingPage onBack={closePage} />;
+
+  const header = (withTabs: boolean) => (
+    <FixedHeader paddingBottom={withTabs ? 14 : 10} fillClassName="bg-cream dark:bg-[#1C1F28]">
+      <CycleTitleRow title={G.PAGE_TITLE} onBack={back} />
+      {withTabs && (
+        <SegmentedTabs
+          className="mt-3"
+          items={tabsFor(pregnancy !== null)}
+          activeKey={tab}
+          onChange={(k) => setTab(k as Tab)}
+          size="compact"
+          darkTone="partB"
+          idleInk="rgb(var(--c-charcoal-soft))"
+        />
+      )}
+    </FixedHeader>
+  );
+
+  // The hero card (HE1.10 #8-#9): 358 × 180 r22 #F4F1FB (dark #2B2C3A, *
+  // derived; other themes the generated primary tint) with the static p6
+  // petal ring, drawn as a mask over the theme primary-deep so it themes.
+  const heroBg = dark ? "rgb(var(--th-2b2c3a))" : colorTheme === "centium" ? "#F4F1FB" : "rgb(var(--th-f3f1fc))";
+  const hero = (children: React.ReactNode, opts?: { pad?: string; label?: string; busy?: boolean }) => {
+    const url = heroPatternGenericUrl(6);
+    return (
+      <section
+        aria-label={opts?.label}
+        aria-busy={opts?.busy || undefined}
+        className="relative overflow-hidden"
+        data-cycle-hero=""
+        style={{ marginTop: 2, borderRadius: 22, minHeight: 180, padding: opts?.pad ?? "10px 0", background: heroBg }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          data-hero-pattern=""
+          style={{
+            background: "rgb(var(--c-primary-dark))",
+            opacity: hc ? 0.5 : 1,
+            WebkitMaskImage: `url(${url})`,
+            maskImage: `url(${url})`,
+            WebkitMaskSize: "cover",
+            maskSize: "cover",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
           }}
         />
-        <StartPregnancySheet
-          open={startPregnancyOpen}
-          onClose={() => setStartPregnancyOpen(false)}
-          onStarted={() => {
+        <div className="relative">{children}</div>
+      </section>
+    );
+  };
+
+  /** A centred card in the hero (OURS-cycle-empty-states #2, #3, #5). */
+  const heroMessage = (title: string, body: React.ReactNode, action?: React.ReactNode) =>
+    hero(
+      <div className="text-center flex flex-col items-center justify-center" style={{ minHeight: 160, padding: "0 24px" }}>
+        <p className="text-charcoal" style={type(15, 22.5, 700)}>
+          {title}
+        </p>
+        <div className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 4 })}>
+          {body}
+        </div>
+        {action}
+      </div>,
+      { pad: "20px 0" }
+    );
+
+  const startPregnancyLink = (
+    <button type="button" onClick={() => openPage("start-pregnancy")} className="tap w-full text-primary-dark" style={{ marginTop: 6, minHeight: 44, ...type(13, 19.5, 700) }}>
+      {PG.START_TITLE}
+    </button>
+  );
+
+  const pinnedCta = (primary: { label: string; onClick: () => void }, backToToday?: { active: boolean; onClick: () => void }) => (
+    <PinnedSlot>
+      <div className="flex" style={{ gap: 8 }}>
+        <button
+          type="button"
+          onClick={primary.onClick}
+          data-cta="log"
+          className="tap min-w-0 inline-flex items-center justify-center bg-fill-pinned text-on-primary-fill active:brightness-[0.92]"
+          style={{ flex: backToToday ? "201.1 1 0" : "1 1 0", height: 48, borderRadius: 14, gap: 8, ...type(14, 21, 700) }}
+        >
+          <Plus size={16} aria-hidden style={{ color: "rgb(var(--c-on-primary-fill))" }} />
+          <span className="truncate">{primary.label}</span>
+        </button>
+        {backToToday && (
+          // HE1.10 #49 / HE1.10.d #49: always shown; on today a paler,
+          // not-tappable fill (#F6F4FC / #B3A9DE; dark #262932 / #575170, *
+          // derived), away from today #EFECF9 with #7D6BB5 (dark #303141 /
+          // #C3B3FB). Animates back (the ring's own turn); static under
+          // Reduce motion.
+          <button
+            type="button"
+            onClick={backToToday.onClick}
+            disabled={!backToToday.active}
+            aria-disabled={!backToToday.active || undefined}
+            data-cta="today"
+            className="tap min-w-0 inline-flex items-center justify-center"
+            style={{
+              flex: "148.9 1 0",
+              height: 48,
+              borderRadius: 14,
+              ...type(14, 21, 700),
+              background: backToToday.active ? (dark ? "rgb(var(--th-303141))" : "rgb(var(--th-efecf9))") : dark ? "#262932" : "#F6F4FC",
+              color: backToToday.active ? "rgb(var(--c-primary-dark))" : dark ? "#575170" : "#B3A9DE",
+              cursor: backToToday.active ? undefined : "default",
+            }}
+          >
+            <span className="truncate">{G.BACK_TO_TODAY}</span>
+          </button>
+        )}
+      </div>
+    </PinnedSlot>
+  );
+
+  const sheets = (
+    <>
+      <LogDaySheet
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        date={logDate}
+        onSaved={reloadCycle}
+        onStartPregnancy={
+          pregnancy
+            ? undefined
+            : () => {
+                setLogOpen(false);
+                openPage("start-pregnancy");
+              }
+        }
+      />
+      {pregnancy && (
+        <EndPregnancySheet
+          open={endPregnancyOpen}
+          onClose={() => setEndPregnancyOpen(false)}
+          pregnancyId={pregnancy.id}
+          onEnded={() => {
             reloadPregnancy();
             reloadCycle();
           }}
         />
+      )}
+      <TurnOffTrackingPopup open={turnOffOpen} onClose={() => setTurnOffOpen(false)} onError={(m) => setToast(m)} />
+      {/* HE1.10.b.4: centred popup 350 r24 pad 20; DELETE_ALL_BODY verbatim
+          in a red-tint box (#FCEDEC, dark #3C2A30) with Info 16; Keep my
+          data / Delete everything (#C0392B). A failure keeps the popup open
+          with the line. After delete: the Cycle tab with the setup card. */}
+      <CentredPopup
+        open={confirmDelete}
+        onClose={() => {
+          if (!busy) {
+            setConfirmDelete(false);
+            setDeleteError(null);
+          }
+        }}
+        title={G.DELETE_ALL_TITLE}
+        geometry="partB"
+        align="start"
+      >
+        <div className="flex" style={{ marginTop: -4, gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? "#3C2A30" : "#FCEDEC" }}>
+          <Info size={16} aria-hidden className="shrink-0 text-status-high" style={{ marginTop: 1 }} />
+          <p className="text-charcoal" style={type(12.5, 18.8, 400)}>
+            {G.DELETE_ALL_BODY}
+          </p>
+        </div>
+        {deleteError && (
+          <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 10 })}>
+            {deleteError}
+          </p>
+        )}
+        <div style={{ marginTop: 16 }}>
+          <PopupButtons
+            cancel={G.DELETE_ALL_KEEP}
+            onCancel={() => {
+              setConfirmDelete(false);
+              setDeleteError(null);
+            }}
+            confirm={G.DELETE_ALL_CONFIRM}
+            destructive
+            busy={busy}
+            onConfirm={async () => {
+              setBusy(true);
+              setDeleteError(null);
+              const result = await deleteAllCycleData();
+              setBusy(false);
+              if (!result.ok) {
+                setDeleteError(G.DELETE_ALL_FAILED);
+                return;
+              }
+              setConfirmDelete(false);
+              reloadCycle();
+              reloadPregnancy();
+              setOffsetDays(0);
+              setTab("overview");
+            }}
+          />
+        </div>
+      </CentredPopup>
+      <Toast open={toast !== null} message={toast ?? ""} onExpire={() => setToast(null)} />
+    </>
+  );
+
+  // --- no settings row at all ----------------------------------------------
+  //
+  // NEVER OPENED THE TRACKER: a male profile that has not opted in (the
+  // seeding effect in AppContext creates the row for female and other). The
+  // one switch this account can reach is here, because writing the row is
+  // what brings the tabs into existence.
+  if (cycleSettingsLoaded && !settings && !pregnancy) {
+    return (
+      <div className="animate-fade-slide-up" style={{ paddingBottom: 96 }}>
+        {header(false)}
+        {heroMessage(
+          G.TRACKER_OFF_TITLE,
+          G.TRACKER_OFF_BODY,
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void turnOn()}
+            className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
+            style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
+          >
+            {G.TRACKER_OFF_CTA}
+          </button>
+        )}
+        {startPregnancyLink}
+        <CycleFooter />
+        {sheets}
       </div>
     );
   }
 
+  // --- loading (HE1.10 O1): header and tabs at once, the hero as a ring
+  // placeholder and chip skeletons.
   if (!settings) {
     return (
-      <div className="animate-fade-slide-up">
-        <BackRow onBack={back} />
-        <Card className="text-center py-8">
-          <p className="text-sm text-charcoal-faint">Loading…</p>
-        </Card>
+      <div style={{ paddingBottom: 96 }}>
+        {header(true)}
+        {hero(
+          <div className="flex items-center justify-center" style={{ height: 160 }}>
+            <span aria-hidden className="block rounded-full animate-skeleton-pulse" style={{ width: 127, height: 127, border: `8px solid ${dark ? "#242730" : "#F5F5F6"}` }} />
+          </div>,
+          { label: "Loading", busy: true }
+        )}
+        <div className="flex justify-center" style={{ gap: 6, marginTop: 8 }}>
+          <Skeleton width={70} height={24} radius={12} />
+          <Skeleton width={112} height={24} radius={12} />
+          <Skeleton width={100} height={24} radius={12} />
+        </div>
       </div>
     );
   }
+
+  const trackerOff = !settings.trackerEnabled;
 
   // --- the selected day -----------------------------------------------------
   const selectedDate = shiftDay(today, offsetDays);
@@ -199,17 +482,9 @@ export default function Cycle() {
   const currentDay = prediction?.cycleDay ?? 1;
   // The scrubber moves through the CYCLE, so day 1 + offset wraps at the
   // predicted length rather than running off the end of it.
-  const selectedDay = ((currentDay - 1 + offsetDays) % cycleLength + cycleLength) % cycleLength + 1;
-
-  const ovulationDay = ovulationDayFrom(
-    prediction?.cycleDay ?? null,
-    today,
-    prediction?.ovulationEstimate ?? null
-  );
-  const isNatural =
-    prediction !== null &&
-    prediction.phase !== "hormonal_contraception" &&
-    prediction.phase !== "pregnant";
+  const selectedDay = ((((currentDay - 1 + offsetDays) % cycleLength) + cycleLength) % cycleLength) + 1;
+  const ovulationDay = ovulationDayFrom(prediction?.cycleDay ?? null, today, prediction?.ovulationEstimate ?? null);
+  const isNatural = prediction !== null && prediction.phase !== "hormonal_contraception" && prediction.phase !== "pregnant";
 
   /** Which phase a given cycle day falls in, for colouring the ring. */
   const phaseOfDay = (day: number): CyclePhase => {
@@ -223,705 +498,255 @@ export default function Cycle() {
     if (day >= ovu - 1 && day <= ovu + 1) return "ovulatory";
     return day < ovu ? "follicular" : "luteal";
   };
-
   const selectedPhase = phaseOfDay(selectedDay);
+  const phaseName = G.PHASE_LABEL[selectedPhase];
 
-  // --- the headline ---------------------------------------------------------
-  let headline: string;
-  let subline: string | null = null;
-  if (!prediction) {
-    headline = "";
-  } else if (prediction.phase === "pregnant") {
-    headline = prediction.pregnancyWeek !== null ? `Week ${prediction.pregnancyWeek}` : "Pregnant";
-    subline = prediction.trimester !== null ? `Trimester ${prediction.trimester}` : null;
-  } else if (offsetDays !== 0) {
-    headline = `Day ${selectedDay}`;
-    subline = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  } else if (selectedPhase === "menstrual") {
-    headline = `Period · Day ${selectedDay}`;
-  } else if (prediction.nextPeriodStart) {
-    const days = daysBetween(today, prediction.nextPeriodStart);
-    headline = days <= 0 ? "Period due" : `Period in ${days} day${days === 1 ? "" : "s"}`;
-    subline = `Day ${selectedDay}`;
-  } else {
-    headline = `Day ${selectedDay}`;
+  // --- the centre text (repo headline rule, on three lines) ------------------
+  // Away from today: the date, "Day N", the phase. On a period day "Period ·
+  // Day N". Otherwise "Period in N days" and the day. Recovery-sensitive
+  // mode: no day count and no countdown, only the date and the phase.
+  let lines: [string, string, string] = ["", "", ""];
+  let spoken = "";
+  if (prediction) {
+    if (recovery) {
+      lines = [offsetDays === 0 ? "Today" : dayLabel(selectedDate), phaseName, ""];
+      spoken = `${phaseName} phase.`;
+    } else if (offsetDays !== 0) {
+      lines = [dayLabel(selectedDate), `Day ${selectedDay}`, phaseName];
+      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${dayLabel(selectedDate)}. ${phaseName} phase.`;
+    } else if (selectedPhase === "menstrual" && isNatural) {
+      lines = ["Period", `Day ${selectedDay}`, ""];
+      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. Period, day ${selectedDay}.`;
+    } else if (prediction.nextPeriodStart) {
+      const days = daysBetween(today, prediction.nextPeriodStart);
+      lines = days <= 0 ? ["Period", "due", `Day ${selectedDay}`] : ["Period in", `${days} day${days === 1 ? "" : "s"}`, `Day ${selectedDay}`];
+      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${days <= 0 ? "Period due" : `Period in ${days} day${days === 1 ? "" : "s"}`}. ${phaseName} phase.`;
+    } else {
+      lines = ["", `Day ${selectedDay}`, phaseName];
+      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${phaseName} phase.`;
+    }
+    if (prediction.nextPeriodFrom && prediction.nextPeriodTo)
+      spoken += ` Next period expected ${longRange(prediction.nextPeriodFrom, prediction.nextPeriodTo)}, an estimate.`;
   }
 
-  const stats = cycleStats(cycleLogs);
-  const grid = symptomGrid(cycleLogs, settings.lutealLength);
-  const enoughForInsights = hasEnoughForInsights(cycleLogs);
+  const relative = offsetDays === 0 ? "" : offsetDays > 0 ? `in ${offsetDays} day${offsetDays === 1 ? "" : "s"}` : `${-offsetDays} day${offsetDays === -1 ? "" : "s"} ago`;
+  const scrubLabel = recovery
+    ? offsetDays === 0
+      ? "Today"
+      : dayLabel(selectedDate)
+    : offsetDays === 0
+      ? `Today · Day ${selectedDay}`
+      : `Day ${selectedDay} · ${relative}`;
+  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  })}`;
 
-  return (
-    <div className="animate-fade-slide-up">
-      <BackRow onBack={back} />
-      <SegmentedTabs
-        items={tabsFor(pregnancy !== null)}
-        activeKey={tab}
-        onChange={(k) => setTab(k as Tab)}
-      />
+  const selectDay = (day: number) => {
+    let delta = day - selectedDay;
+    if (delta > cycleLength / 2) delta -= cycleLength;
+    if (delta < -cycleLength / 2) delta += cycleLength;
+    setOffsetDays(Math.max(-cycleLength, Math.min(cycleLength, offsetDays + delta)));
+  };
 
-      {error && (
-        <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-          {error}
-        </p>
-      )}
+  const chip = (label: React.ReactNode, kind: "phase" | "fertile" | "confidence") => (
+    <span
+      className="inline-flex items-center whitespace-nowrap rounded-full"
+      data-chip={kind}
+      style={{
+        height: 24,
+        padding: "0 10px",
+        ...type(11, 16.5, 700),
+        background: kind === "phase" ? "rgb(var(--c-primary) / 0.22)" : "rgb(var(--c-cream-soft))",
+        color: kind === "phase" ? "rgb(var(--c-primary-deep-text))" : kind === "fertile" ? "rgb(var(--c-charcoal-soft))" : "rgb(var(--c-charcoal-faint))",
+      }}
+    >
+      {label}
+    </span>
+  );
 
-      {/* ================= OVERVIEW ================= */}
-      {/* THE PREGNANCY VIEW REPLACES THE CYCLE VIEW, rather than sitting above
-          it. A ring predicting a period beside a pregnancy week count would be
-          two answers to one question — which is also why the database's
-          prediction reports 'pregnant' and nothing else. */}
-      {tab === "overview" && pregnancy && (
-        <PregnancyOverview
-          pregnancy={pregnancy}
-          onLogDay={() => {
-            setLogDate(today);
-            setLogOpen(true);
-          }}
-        />
-      )}
-
-      {/* NO PREDICTION YET, WITH THE TABS STILL THERE. This used to be a
-          page-wide takeover, which hid Settings — and with it the tracker
-          switch, the time zone and the way in to contraception — from anybody
-          who had not logged a period, and stranded anybody who switched the
-          tracker off with no route back to the switch. It is tab content now.
-          Three different cards, because "off", "after a loss" and "nothing
-          logged yet" are three different things to say. */}
-      {tab === "overview" && !pregnancy && !prediction && (
-        <div className="mt-4">
-          {!trackerOff ? (
-            <>
-              <Card className="text-center py-8">
-                <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.SETUP_TITLE}</p>
-                <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
-                  {G.SETUP_BODY}
-                </p>
-                <Button
-                  onClick={() => {
-                    setLogDate(today);
-                    setLogOpen(true);
-                  }}
-                >
-                  <Plus size={14} /> {G.SETUP_CTA}
-                </Button>
-              </Card>
-              <button
-                onClick={() => setStartPregnancyOpen(true)}
-                className="tap w-full mt-2 py-2 text-[12px] font-semibold text-primary-dark"
-              >
-                {PG.START_TITLE}
-              </button>
-              <p className="mt-2 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
-            </>
-          ) : lastEndedPregnancy?.outcome === "loss" ? (
-            <Card className="text-center py-7">
-              <p className="text-[15px] font-bold text-charcoal mb-1.5">{PG.LOSS_TITLE}</p>
-              <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2">
-                {PG.LOSS_BODY}
-              </p>
-              <p className="mt-2 text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
-                {PG.LOSS_SUPPORT}
-              </p>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => void setTracking(true)}
-              >
-                {PG.LOSS_RESUME}
-              </Button>
-            </Card>
-          ) : (
-            <Card className="text-center py-7">
-              <p className="text-[13px] font-bold text-charcoal mb-1.5">Cycle tracking is off</p>
-              <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
-                {G.TRACKER_OFF_KEEPS_DATA}
-              </p>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => void setTracking(true)}
-              >
-                Turn it back on
-              </Button>
-            </Card>
+  // ================= OVERVIEW =================
+  let overview: React.ReactNode = null;
+  if (tab === "overview") {
+    if (pregnancy) {
+      // K1: THE PREGNANCY VIEW REPLACES THE CYCLE VIEW, rather than sitting
+      // above it. A ring predicting a period beside a pregnancy week count
+      // would be two answers to one question.
+      overview = <PregnancyOverview pregnancy={pregnancy} onLogDay={() => openLog(today)} hero={hero} />;
+    } else if (!prediction) {
+      overview = (
+        <>
+          {trackerOff
+            ? lastEndedPregnancy?.outcome === "loss"
+              ? heroMessage(
+                  PG.LOSS_TITLE,
+                  <>
+                    <p>{PG.LOSS_BODY}</p>
+                    <p style={{ marginTop: 6 }}>{PG.LOSS_SUPPORT}</p>
+                  </>,
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void turnOn()}
+                    className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
+                    style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
+                  >
+                    {PG.LOSS_RESUME}
+                  </button>
+                )
+              : heroMessage(
+                  G.TRACKER_OFF_TITLE,
+                  G.TRACKER_OFF_KEEPS_DATA,
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void turnOn()}
+                    className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
+                    style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
+                  >
+                    {G.TURN_BACK_ON}
+                  </button>
+                )
+            : heroMessage(G.SETUP_TITLE, G.SETUP_BODY)}
+          {startPregnancyLink}
+          <CycleFooter />
+          {!trackerOff && pinnedCta({ label: G.LOG_THIS_DAY, onClick: () => openLog(today) })}
+        </>
+      );
+    } else {
+      overview = (
+        <>
+          {hero(
+            <CycleRing
+              cycleLength={cycleLength}
+              selectedDay={selectedDay}
+              phaseOfDay={phaseOfDay}
+              lines={lines}
+              hideNumber={recovery}
+              onSelectDay={selectDay}
+              ariaLabel={spoken}
+            />,
+            { label: "Cycle" }
           )}
-        </div>
-      )}
 
-      {tab === "overview" && !pregnancy && prediction && (
-        <div className="mt-4">
-          <CycleRing
-            cycleLength={cycleLength}
-            selectedDay={selectedDay}
-            phaseOfDay={phaseOfDay}
-            headline={headline}
-            subline={subline}
-          />
-
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 mb-1">
-            <span
-              className="text-[11px] font-bold rounded-full px-2.5 py-1"
-              style={{ color: PHASE_COLOR[selectedPhase], background: `${PHASE_COLOR[selectedPhase]}1F` }}
-            >
-              {G.PHASE_LABEL[selectedPhase]}
-            </span>
-            {/* The fertile window as a RANGE, because that is how the database
-                gives it — a single "fertile day" would be a precision the
-                estimate does not have. */}
-            {isNatural && prediction.fertileFrom && prediction.fertileTo && (
-              <span className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-cream-soft text-charcoal-soft">
-                Fertile {shortRange(prediction.fertileFrom, prediction.fertileTo)}
-              </span>
-            )}
-            {prediction.confidence && (
-              <span className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-cream-soft text-charcoal-faint">
-                {G.CONFIDENCE_LABEL[prediction.confidence]}
-              </span>
-            )}
+          <div className="flex flex-wrap items-center justify-center" style={{ gap: 6, marginTop: 8 }}>
+            {chip(phaseName, "phase")}
+            {/* The fertile window as a RANGE, labelled an estimate, and only
+                for a natural cycle (K5). */}
+            {isNatural &&
+              prediction.fertileFrom &&
+              prediction.fertileTo &&
+              chip(
+                <>
+                  Fertile {shortRange(prediction.fertileFrom, prediction.fertileTo)}
+                  <span className="sr-only">, estimate</span>
+                </>,
+                "fertile"
+              )}
+            {prediction.confidence && chip(G.CONFIDENCE_LABEL[prediction.confidence], "confidence")}
           </div>
 
-          <p className="text-[11px] text-charcoal-soft text-center leading-relaxed px-3 mb-1">
-            {G.PHASE_DESCRIPTION[selectedPhase]}
-          </p>
-          {prediction.confidence && (
-            <p className="text-[10.5px] text-charcoal-faint text-center mb-3">
-              {G.CONFIDENCE_WHY[prediction.confidence]}
-            </p>
+          {isNatural && (
+            <div style={{ marginTop: 14 }}>
+              <PhaseBar phases={G.PHASE_BAR} active={selectedPhase} />
+            </div>
           )}
 
-          {/* THE RANGE, NOT JUST THE DATE. next_period_from..to is what the
-              function actually predicts; printing only next_period_start would
-              drop the uncertainty it went to the trouble of computing. */}
-          {prediction.nextPeriodFrom && prediction.nextPeriodTo && (
-            <p className="text-[11px] text-charcoal-soft text-center mb-3">
-              Next period expected {shortRange(prediction.nextPeriodFrom, prediction.nextPeriodTo)}
-            </p>
-          )}
-
-          {isNatural && <PhaseBar phases={G.PHASE_BAR} active={selectedPhase} />}
-
-          {/* --- the scrubber --- */}
-          <div className="mt-4">
-            <input
-              type="range"
+          <div style={{ marginTop: isNatural ? 17 : 22 }}>
+            <CycleScrubber
               min={-cycleLength}
               max={cycleLength}
               value={offsetDays}
-              onChange={(e) => setOffsetDays(Number(e.target.value))}
-              aria-label="Move through the cycle"
-              className="w-full accent-primary"
+              onChange={setOffsetDays}
+              centreLabel={scrubLabel}
+              valueText={scrubValueText}
             />
-            <div className="flex items-center justify-between mt-1">
-              {/* Only away from today (JumpToToday): the scrubber back to 0. */}
-              {offsetDays !== 0 ? <JumpToToday onClick={() => setOffsetDays(0)} /> : <span />}
-              <button
-                onClick={() => {
-                  setLogDate(selectedDate);
-                  setLogOpen(true);
-                }}
-                className="tap text-[11px] font-semibold text-primary-dark"
-              >
-                Log this day
-              </button>
-            </div>
           </div>
 
-          {/* --- the hormone illustration --- */}
-          <Card className="mt-4">
+          {/* The hormone card (#29-#37). K5: hormonal contraception or a
+              pregnancy shows the repo sentence instead of curves. */}
+          <CycleCard padding="12px 14px" style={{ marginTop: 14 }}>
             {prediction.phase === "hormonal_contraception" ? (
-              <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
+              <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                 {G.HORMONE_HIDDEN_CONTRACEPTION}
               </p>
             ) : prediction.phase === "pregnant" ? (
-              <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
+              <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                 {G.HORMONE_HIDDEN_PREGNANT}
               </p>
             ) : ovulationDay !== null ? (
-              <HormoneGraph
-                cycleLength={cycleLength}
-                ovulationDay={ovulationDay}
-                selectedDay={selectedDay}
-              />
+              <HormoneGraph cycleLength={cycleLength} ovulationDay={ovulationDay} selectedDay={selectedDay} hideDayLabel={recovery} />
             ) : (
-              <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
+              <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                 {G.NO_PREDICTION}
               </p>
             )}
-          </Card>
+          </CycleCard>
 
-          <p className="mt-4 text-[10.5px] font-semibold text-charcoal-faint text-center">
-            {G.DISCLAIMER}
-          </p>
-          <p className="mt-1 text-[10px] leading-[1.45] text-charcoal-faint text-center px-2">
-            {G.DISCLAIMER_LONG}
-          </p>
-        </div>
-      )}
-
-      {/* ================= INSIGHTS ================= */}
-      {tab === "insights" && (
-        <div className="mt-4">
-          {!enoughForInsights ? (
-            <Card className="text-center py-7">
-              <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2">
-                {G.INSIGHTS_TOO_LITTLE}
+          {/* Below the fold (#38-#46): top hairline, pad 16 0 0. */}
+          <div style={{ marginTop: 22, paddingTop: 16, borderTop: `0.5px solid ${hair(dark, hc)}` }}>
+            <p className="text-center text-charcoal-soft" style={type(12, 18, 400, { padding: "0 8px" })}>
+              {G.PHASE_DESCRIPTION[selectedPhase]}
+            </p>
+            {prediction.confidence && (
+              <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 400, { marginTop: 4 })}>
+                {G.CONFIDENCE_WHY[prediction.confidence]}
               </p>
-            </Card>
-          ) : (
-            <>
-              <Card className="mb-3">
-                <p className="text-[11px] font-bold text-charcoal mb-2.5">Cycle length</p>
-                <div className="flex items-end gap-1.5 h-[70px]">
-                  {stats.history.map((c) => {
-                    const max = Math.max(...stats.history.map((h) => h.days));
-                    return (
-                      <div key={c.startDate} className="flex-1 flex flex-col items-center justify-end">
-                        <span className="text-[9.5px] font-bold text-charcoal tabular-nums mb-1">
-                          {c.days}
-                        </span>
-                        <div
-                          className="w-full rounded-t-[3px]"
-                          style={{ height: `${(c.days / max) * 48}px`, background: PHASE_COLOR.luteal }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-[10px] text-charcoal-faint text-center">
-                  Last {stats.history.length} cycle{stats.history.length === 1 ? "" : "s"}, in days
-                </p>
-              </Card>
+            )}
+            {/* THE RANGE, NOT JUST THE DATE: next_period_from..to is what the
+                function actually predicts. */}
+            {prediction.nextPeriodFrom && prediction.nextPeriodTo && (
+              <p className="text-center text-charcoal" style={type(12.5, 18.8, 700, { marginTop: 12 })}>
+                Next period expected {shortRange(prediction.nextPeriodFrom, prediction.nextPeriodTo)}
+              </p>
+            )}
+            <CycleFooter />
+          </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <Stat label="Avg cycle" value={stats.averageCycle} unit="days" />
-                <Stat label="Avg period" value={stats.averagePeriod} unit="days" />
-                <Stat label="Variation" value={stats.variationDays} unit="days" />
-              </div>
-
-              {prediction !== null && prediction.flags.length > 0 && (
-                <Card className="mb-3">
-                  <p className="text-[11px] font-bold text-charcoal mb-2">{G.FLAGS_HEADING}</p>
-                  <div className="space-y-2.5">
-                    {prediction.flags.map((f) => (
-                      <div key={f}>
-                        <p className="text-[12px] font-semibold text-charcoal">{G.FLAG_TITLE[f]}</p>
-                        <p className="text-[11px] text-charcoal-soft leading-snug">
-                          {G.FLAG_BODY[f]} {G.FLAG_ADVICE}
-                        </p>
-                        {G.FLAG_EXTRA[f] && (
-                          <p className="mt-1 text-[11px] text-charcoal-soft leading-snug">{G.FLAG_EXTRA[f]}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              <Card>
-                <p className="text-[11px] font-bold text-charcoal mb-2.5">Symptoms by phase</p>
-                {grid.symptoms.length === 0 ? (
-                  <p className="text-[11.5px] text-charcoal-soft leading-relaxed">
-                    {G.SYMPTOM_GRID_TOO_LITTLE}
-                  </p>
-                ) : (
-                  <div className="scroll-row">
-                    <table className="w-full text-[10.5px]" style={{ minWidth: 300 }}>
-                      <thead>
-                        <tr>
-                          <th className="text-left font-semibold text-charcoal-faint pb-1.5">Symptom</th>
-                          {G.PHASE_BAR.map((p) => (
-                            <th key={p} className="font-semibold text-charcoal-faint pb-1.5 px-1">
-                              {G.PHASE_LABEL[p]}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grid.symptoms.map((sym) => (
-                          <tr key={sym}>
-                            <td className="py-1 text-charcoal font-medium">{G.SYMPTOM_LABEL[sym]}</td>
-                            {G.PHASE_BAR.map((p) => {
-                              const n = grid.counts[sym]?.[p] ?? 0;
-                              return (
-                                <td key={p} className="py-1 px-1 text-center tabular-nums">
-                                  <span
-                                    className="inline-flex items-center justify-center w-6 h-6 rounded-md font-bold"
-                                    style={{
-                                      background: n > 0 ? `${PHASE_COLOR[p]}22` : "transparent",
-                                      color: n > 0 ? PHASE_COLOR[p] : "rgb(var(--c-charcoal-disabled))",
-                                    }}
-                                  >
-                                    {n || "·"}
-                                  </span>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-            </>
+          {pinnedCta(
+            { label: G.LOG_THIS_DAY, onClick: () => openLog(selectedDate) },
+            { active: offsetDays !== 0, onClick: () => setOffsetDays(0) }
           )}
-        </div>
-      )}
+        </>
+      );
+    }
+  }
 
-      {/* ================= SETTINGS ================= */}
+  const pinned = tab === "overview" && !pregnancy && !(trackerOff && !prediction);
+
+  return (
+    <div className="animate-fade-slide-up" style={{ paddingBottom: pinned ? 176 : 96 }} data-cycle-page="main">
+      {header(true)}
+
+      {overview}
+
+      {tab === "insights" && <CycleInsightsTab logs={cycleLogs} lutealLength={settings.lutealLength} prediction={prediction} />}
+
       {tab === "settings" && (
-        <div className="mt-4">
-          <Card className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[13px] font-bold text-charcoal">Cycle tracking</p>
-              <p className="text-[11px] text-charcoal-faint leading-snug">
-                {settings.trackerEnabled ? G.TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
-              </p>
-            </div>
-            <Toggle
-              checked={settings.trackerEnabled}
-              onChange={(on) => void setTracking(on)}
-              label="Cycle tracking"
-              disabled={busy}
-            />
-          </Card>
-
-          <Card className="mb-3">
-            <NumberRow
-              label="Typical cycle length"
-              unit="days"
-              value={settings.typicalCycleLength}
-              min={SETTINGS_LIMITS.cycleLength.min}
-              max={SETTINGS_LIMITS.cycleLength.max}
-              disabled={busy}
-              onChange={(v) => void saveSettings({ typicalCycleLength: v })}
-            />
-            <NumberRow
-              label="Typical period length"
-              unit="days"
-              value={settings.typicalPeriodLength}
-              min={SETTINGS_LIMITS.periodLength.min}
-              max={SETTINGS_LIMITS.periodLength.max}
-              disabled={busy}
-              onChange={(v) => void saveSettings({ typicalPeriodLength: v })}
-            />
-            <NumberRow
-              label="Luteal length"
-              unit="days"
-              value={settings.lutealLength}
-              min={SETTINGS_LIMITS.lutealLength.min}
-              max={SETTINGS_LIMITS.lutealLength.max}
-              disabled={busy}
-              onChange={(v) => void saveSettings({ lutealLength: v })}
-            />
-          </Card>
-
-          {/* --- pregnancy --- */}
-          <Card className="mb-3">
-            {pregnancy ? (
-              <>
-                <p className="text-[13px] font-bold text-charcoal">Pregnancy tracking</p>
-                {(() => {
-                  const g = gestationOn(today, pregnancy);
-                  return g ? (
-                    <p className="mt-0.5 text-[11px] text-charcoal-faint">
-                      Week {g.week} · day {g.day} · trimester {g.trimester}
-                    </p>
-                  ) : null;
-                })()}
-                <button
-                  onClick={() => setEndPregnancyOpen(true)}
-                  className="tap mt-2.5 text-[12px] font-semibold text-primary-dark"
-                >
-                  {PG.END_TITLE}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-[13px] font-bold text-charcoal">{PG.START_TITLE}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
-                  {PG.START_BODY}
-                </p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-2.5"
-                  onClick={() => setStartPregnancyOpen(true)}
-                >
-                  <Plus size={13} /> Start
-                </Button>
-              </>
-            )}
-          </Card>
-
-          {/* AFTER A LOSS, THE ONE THING THIS SCREEN OFFERS IS A WAY BACK.
-              Predictions are paused by tracker_enabled being false, which is
-              the switch at the top of this tab — this card says so in words
-              and turns it back on, so nobody has to work out that the general
-              "Cycle tracking" toggle is the thing standing between them and
-              their estimates. */}
-          {!pregnancy &&
-            lastEndedPregnancy?.outcome === "loss" &&
-            !settings.trackerEnabled && (
-              <Card className="mb-3">
-                <p className="text-[13px] font-bold text-charcoal">{PG.LOSS_TITLE}</p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-charcoal-soft">
-                  {PG.LOSS_BODY}
-                </p>
-                <p className="mt-1.5 text-[11.5px] leading-relaxed text-charcoal-soft">
-                  {PG.LOSS_SUPPORT}
-                </p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-2.5"
-                  disabled={busy}
-                  onClick={() => void setTracking(true)}
-                >
-                  {PG.LOSS_RESUME}
-                </Button>
-              </Card>
-            )}
-
-          {/* AFTER A BIRTH, predictions are already running again — this says
-              how rough they will be rather than offering a switch. */}
-          {!pregnancy &&
-            lastEndedPregnancy?.outcome === "birth" &&
-            lastEndedPregnancy.postpartumUntil !== null &&
-            lastEndedPregnancy.postpartumUntil >= today && (
-              <Card className="mb-3">
-                <p className="text-[13px] font-bold text-charcoal">{PG.POSTPARTUM_TITLE}</p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-charcoal-soft">
-                  {PG.POSTPARTUM_BODY}
-                </p>
-              </Card>
-            )}
-
-          {/* --- time zone ---
-              Task T: the zone lives on the profile now and is set in general
-              Settings, for every account; this is the way there. */}
-          <button onClick={() => navigate("/app/settings#timezone")} className="tap w-full mb-3 text-left">
-            <Card className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-bold text-charcoal">{G.TIMEZONE_TITLE}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
-                  {myTimezone?.timezone ? zoneLabel(myTimezone.timezone) : "Not set"} · Change it in Settings
-                </p>
-              </div>
-              <ChevronRight size={15} className="shrink-0 text-charcoal-faint" />
-            </Card>
-          </button>
-
-          {/* --- contraception --- */}
-          <button
-            onClick={() => navigate("/app/contraception")}
-            className="tap w-full mb-3"
-          >
-            <Card className="flex items-center justify-between gap-3">
-              <div className="min-w-0 text-left">
-                <p className="text-[13px] font-bold text-charcoal">Contraception</p>
-                <p className="text-[11px] text-charcoal-faint leading-snug">
-                  Set up a method, log it, and choose reminders.
-                </p>
-              </div>
-              <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
-            </Card>
-          </button>
-
-
-          <Card className="mb-3">
-            <p className="text-[11px] font-bold text-charcoal mb-2">Conditions</p>
-            <div className="flex flex-wrap gap-2">
-              {CONDITIONS.map((c) => {
-                const on = settings.conditions.includes(c);
-                return (
-                  <Chip
-                    key={c}
-                    active={on}
-                    onClick={() =>
-                      void saveSettings({
-                        conditions: on
-                          ? settings.conditions.filter((x) => x !== c)
-                          : ([...settings.conditions, c] as Condition[]),
-                      })
-                    }
-                  >
-                    {G.CONDITION_LABEL[c]}
-                  </Chip>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">{G.CONDITIONS_HELP}</p>
-          </Card>
-
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="tap w-full flex items-center justify-center gap-1.5 py-3 text-[12.5px] font-semibold text-status-high"
-          >
-            <Trash2 size={14} /> {G.DELETE_ALL_TITLE}
-          </button>
-        </div>
-      )}
-
-      <HealthDisclaimer className="mt-4 mb-2" />
-
-      <BottomSheet
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        title={G.DELETE_ALL_TITLE}
-      >
-        <div className="animate-fade-slide-up">
-          <div className="flex gap-2.5 rounded-2xl bg-status-high-bg px-3.5 py-3 mb-4">
-            <Info size={15} className="text-status-high shrink-0 mt-0.5" />
-            <p className="text-[12px] leading-[1.5] text-charcoal">{G.DELETE_ALL_BODY}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button fullWidth variant="secondary" onClick={() => setConfirmDelete(false)}>
-              Keep my data
-            </Button>
-            <Button
-              fullWidth
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                const result = await deleteAllCycleData();
-                setBusy(false);
-                setConfirmDelete(false);
-                if (!result.ok) {
-                  setError(result.message);
-                  return;
-                }
-                reloadCycle();
-                setTab("overview");
-                setOffsetDays(0);
-              }}
-            >
-              {G.DELETE_ALL_CONFIRM}
-            </Button>
-          </div>
-        </div>
-      </BottomSheet>
-
-      <LogDaySheet
-        open={logOpen}
-        onClose={() => setLogOpen(false)}
-        date={logDate}
-        onSaved={reloadCycle}
-        onStartPregnancy={
-          pregnancy
-            ? undefined
-            : () => {
-                setLogOpen(false);
-                setStartPregnancyOpen(true);
-              }
-        }
-      />
-
-      <StartPregnancySheet
-        open={startPregnancyOpen}
-        onClose={() => setStartPregnancyOpen(false)}
-        onStarted={() => {
-          reloadPregnancy();
-          reloadCycle();
-          setTab("overview");
-        }}
-      />
-
-      {pregnancy && (
-        <EndPregnancySheet
-          open={endPregnancyOpen}
-          onClose={() => setEndPregnancyOpen(false)}
-          pregnancyId={pregnancy.id}
-          onEnded={() => {
-            reloadPregnancy();
-            reloadCycle();
-          }}
+        <CycleSettingsTab
+          settings={settings}
+          busy={busy}
+          save={saveSettings}
+          onTrackerChange={onTrackerChange}
+          pregnancy={pregnancy}
+          lastEndedPregnancy={lastEndedPregnancy}
+          today={today}
+          method={contraceptionPlan?.method ?? null}
+          timezone={myTimezone?.timezone ?? null}
+          sharedWith={sharedWith}
+          onStartPregnancy={() => openPage("start-pregnancy")}
+          onEndPregnancy={() => setEndPregnancyOpen(true)}
+          onResume={() => void turnOn()}
+          onContraception={() => navigate("/app/contraception")}
+          onReminders={() => navigate("/app/settings/notifications")}
+          onTimezone={() => navigate("/app/settings#timezone")}
+          onSharing={() => openPage("sharing")}
+          onDeleteAll={() => setConfirmDelete(true)}
         />
       )}
 
+      {sheets}
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-
-function BackRow({ onBack }: { onBack: () => void }) {
-  return (
-    <button onClick={onBack} className="tap flex items-center gap-1 mb-2 text-[12px] font-semibold text-charcoal-soft">
-      <ChevronLeft size={15} /> Back
-    </button>
-  );
-}
-
-function Stat({ label, value, unit }: { label: string; value: number | null; unit: string }) {
-  return (
-    <div className="text-center bg-cream-soft rounded-xl py-2.5">
-      {/* A NULL IS A DASH, never a zero: a zero-day cycle is not a cycle. */}
-      <p className="text-[15px] font-bold text-charcoal tabular-nums">{value ?? "–"}</p>
-      <p className="text-[9.5px] text-charcoal-faint">
-        {label}
-        {value !== null && ` · ${unit}`}
-      </p>
-    </div>
-  );
-}
-
-function NumberRow({
-  label,
-  unit,
-  value,
-  min,
-  max,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  unit: string;
-  value: number;
-  min: number;
-  max: number;
-  disabled?: boolean;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <p className="text-[12.5px] text-charcoal">{label}</p>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={() => onChange(Math.max(min, value - 1))}
-          disabled={disabled || value <= min}
-          aria-label={`Decrease ${label}`}
-          className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal font-bold disabled:opacity-40"
-        >
-          −
-        </button>
-        <span className="text-[13px] font-bold text-charcoal tabular-nums w-12 text-center">
-          {value} {unit === "days" ? "d" : unit}
-        </span>
-        <button
-          onClick={() => onChange(Math.min(max, value + 1))}
-          disabled={disabled || value >= max}
-          aria-label={`Increase ${label}`}
-          className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal font-bold disabled:opacity-40"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** "26–28 Sep" or "28 Sep – 2 Oct" — a range, always. */
-function shortRange(from: string, to: string): string {
-  const f = new Date(`${from}T00:00:00`);
-  const t = new Date(`${to}T00:00:00`);
-  const day = (d: Date) => d.getDate();
-  const month = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
-  if (from === to) return `${day(f)} ${month(f)}`;
-  if (f.getMonth() === t.getMonth()) return `${day(f)}–${day(t)} ${month(t)}`;
-  return `${day(f)} ${month(f)} – ${day(t)} ${month(t)}`;
 }

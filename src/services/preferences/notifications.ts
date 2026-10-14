@@ -8,6 +8,7 @@
 // is not a value the screen shows.
 
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { time12 } from "../../utils/time12";
 
 export type NotificationPrefs = {
   /** "Allow notifications", the master (BR-12). Off: the server sends nothing. */
@@ -25,6 +26,8 @@ export type NotificationPrefs = {
   calendarEvents: boolean;
   memberships: boolean;
   referralRewards: boolean;
+  /** B4: pauses every health-check reminder without deleting them (MO1.8.3 #31-#36). */
+  healthChecks: boolean;
   quietHoursEnabled: boolean;
   /** "HH:MM", 24-hour, in the person's own timezone (profiles.timezone). */
   quietHoursFrom: string;
@@ -51,6 +54,7 @@ export const NOTIFICATION_COLUMNS = {
   calendarEvents: "notification_calendar_events",
   memberships: "notification_memberships",
   referralRewards: "notification_referral_rewards",
+  healthChecks: "notification_health_checks",
   quietHoursEnabled: "quiet_hours_enabled",
   quietHoursFrom: "quiet_hours_from",
   quietHoursTo: "quiet_hours_to",
@@ -146,9 +150,13 @@ export function inQuietWindow(local: string, from: string, to: string): boolean 
 /** What the window means, in words (the Quiet hours row's description). */
 export function describeQuietWindow(from: string, to: string): string {
   const span = wrapsMidnight(from, to)
-    ? `from ${from} until ${to} the next morning`
-    : `from ${from} until ${to}`;
-  return `Notifications that would arrive ${span}, your time, are not sent, and are not saved for later.`;
+    ? `from ${time12(from)} until ${time12(to)} the next morning`
+    : `from ${time12(from)} until ${time12(to)}`;
+  // B4 (HANDOVER_API.md "A notification can now be FIRED, HELD or DROPPED"):
+  // messages and updates are held and summarised at the end; reminders for a
+  // time the person chose still arrive; safety alerts always pass; our own
+  // nudges are skipped.
+  return `${span.charAt(0).toUpperCase()}${span.slice(1)}, your time, messages and updates wait and arrive together as one summary when quiet hours end. Reminders you set for a time still arrive, and so do safety alerts. Suggestions to log are skipped.`;
 }
 
 export const SAME_QUIET_TIME_MESSAGE = "Quiet hours can't start and end at the same time. Pick a different time.";

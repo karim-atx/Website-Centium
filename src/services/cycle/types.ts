@@ -111,6 +111,9 @@ export const SETTINGS_LIMITS = {
   lutealLength: { min: 7, max: 20 },
 } as const;
 
+/** cycle_settings.period_reminder_days CHECK (B2). */
+export const PERIOD_REMINDER_DAYS = { min: 1, max: 3 } as const;
+
 /** The bounds cycle_day_logs' CHECKs enforce. */
 export const LOG_LIMITS = {
   bbt: { min: 34, max: 40 },
@@ -152,6 +155,10 @@ export interface CycleSettings {
    * anybody. Neutral says there is a reminder; detailed says what for.
    */
   notificationDetail: NotificationDetail;
+  /** Database B2: remind before the next expected period (off by default; sender B4 kind period_due). */
+  periodReminder: boolean;
+  /** How many days before: 1–3 (CHECK). */
+  periodReminderDays: number;
   // No zone here: cycle_settings.timezone was dropped (20261008000000). The
   // one zone is profiles.timezone (AppContext's myTimezone).
 }

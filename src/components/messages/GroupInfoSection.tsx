@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { PERSON_ICON } from "../../utils/icons";
+import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { ClientPicker, type PickableClient } from "./ClientPicker";
 import {
   closeGroup,
@@ -109,7 +109,12 @@ export const GroupInfoSection: React.FC<{
               {m.avatarUrl ? (
                 <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <PERSON_ICON size={16} className="text-primary-dark" />
+                // v6 (V6-170, asset map): initials when a name exists, else the placeholder figure.
+                m.firstName?.trim() ? (
+                  <span className="text-[14px] font-bold text-primary-deep-text">{m.firstName.trim().charAt(0).toUpperCase()}</span>
+                ) : (
+                  <AvatarPlaceholder size={36} />
+                )
               )}
             </span>
             <span className="flex-1 min-w-0 text-sm font-semibold text-charcoal truncate">

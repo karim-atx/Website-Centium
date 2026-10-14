@@ -58,10 +58,16 @@ export interface CatalogExercise {
   isVerified: boolean;
   /** The disciplines this movement belongs to. See ExerciseTag. */
   tags: ExerciseTag[];
+  /**
+   * B3 exercises.aliases (PB-O-33): other names people search by ("bench",
+   * "rdl", "ohp"...). Read-only to clients, seeded on 64 of the catalogue's
+   * rows; empty when none.
+   */
+  aliases: string[];
 }
 
 const CATALOG_COLUMNS =
-  "id, name, category, classification, muscle_groups, secondary_muscle_groups, is_verified, tags";
+  "id, name, category, classification, muscle_groups, secondary_muscle_groups, is_verified, tags, aliases";
 // No is_verified here, and no owner_id: a user's own movement is never
 // verified — the table has no such column, precisely because the answer is
 // always the same — and owner_id is settled by the RLS policy, not by the
@@ -78,6 +84,7 @@ interface CatalogRow {
   secondary_muscle_groups: MuscleGroup[];
   is_verified: boolean;
   tags: string[] | null;
+  aliases?: string[] | null;
 }
 
 interface CustomRow {
@@ -102,6 +109,7 @@ const fromCatalog = (r: CatalogRow): CatalogExercise => ({
   // has no label for can be neither displayed nor filtered on, and the row
   // itself is untouched because nothing writes back what it did not read.
   tags: readTags(r.tags),
+  aliases: r.aliases ?? [],
 });
 
 const fromCustom = (r: CustomRow): CustomExerciseLibraryItem => ({
@@ -125,7 +133,34 @@ const fromCustom = (r: CustomRow): CustomExerciseLibraryItem => ({
 const categoryOf = (item: CustomExerciseLibraryItem): MuscleGroup | null =>
   item.muscleGroups?.[0] ?? null;
 
+/**
+ * PB-O-32: a custom exercise's rules, as the sheet says them
+ * (CreateCustomExerciseSheet customExerciseProblem) and as Database B3 now
+ * enforces them: name 2 to 60 trimmed, at least one main muscle group (both
+ * CHECKs, NOT VALID on old rows), no two of the owner's with the same name
+ * (ATXB2, case-insensitive, trimmed).
+ */
+export const CUSTOM_EXERCISE_COPY = {
+  duplicate: "You already have an exercise with this name.",
+  nameShort: "Use at least 2 characters.",
+  nameLong: "Use up to 60 characters.",
+  /** OURS: the database's name CHECK, which does not say which end failed. */
+  nameRange: "Use 2 to 60 characters.",
+  muscle: "Pick at least one main muscle group.",
+} as const;
+
+/** True for a sentence that states one of the rules above (shown as is, not as a generic failure). */
+export const isCustomExerciseRule = (message: string | undefined): boolean =>
+  !!message && (Object.values(CUSTOM_EXERCISE_COPY) as string[]).includes(message);
+
 function describe(error: PostgrestError): string {
+  const message = error.message ?? "";
+  // Database B3 (HANDOVER_API.md "Workouts"): ATXB2 is raised by the
+  // unique-name trigger under 23505; the two CHECKs come back as 23514 with
+  // the constraint's name in the message.
+  if (message.startsWith("ATXB2")) return CUSTOM_EXERCISE_COPY.duplicate;
+  if (error.code === "23514" && message.includes("custom_exercise_library_items_name_check")) return CUSTOM_EXERCISE_COPY.nameRange;
+  if (error.code === "23514" && message.includes("custom_exercise_library_items_muscle_groups_check")) return CUSTOM_EXERCISE_COPY.muscle;
   // 42501 is a privilege violation, not an expired session — see ../food.
   if (error.code === "42501") return "You don't have permission to do that.";
   if (isOffline(error)) return OFFLINE_MESSAGE;
@@ -186,7 +221,7 @@ export async function listExercises(): Promise<CatalogResult> {
     console.error("[exercises] Could not read the catalog:", error.message);
     return { ok: false, exercises: [], message: describe(error) };
   }
-  return { ok: true, exercises: (data ?? []).map((r) => fromCatalog(r as CatalogRow)) };
+  return { ok: true, exercises: (data ?? []).map((r) => fromCatalog(r as unknown as CatalogRow)) };
 }
 
 /**
@@ -293,6 +328,24 @@ export async function updateCustomExercise(
  * still local state", which stopped being true when routines, templates and
  * the workout log became rows.
  */
+/**
+ * How many of the caller's OWN routines use this custom exercise (B3
+ * custom_exercise_usage), so the delete is confirmed with the count rather
+ * than done silently. Counted on the server, so routines this device has not
+ * loaded are included. Null when the read failed (the caller falls back to
+ * what it has in memory).
+ */
+export async function customExerciseUsage(id: string): Promise<number | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
+  const { data, error } = await (supabase as any).rpc("custom_exercise_usage", { p_id: id });
+  if (error) {
+    console.error("[exercises] Could not count where the exercise is used:", error.message);
+    return null;
+  }
+  const n = Number(data);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function deleteCustomExercise(id: string): Promise<CustomExerciseWriteResult> {
   const { error } = await supabase.from("custom_exercise_library_items").delete().eq("id", id);
   if (error) {

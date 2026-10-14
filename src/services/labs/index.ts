@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { BloodMarker, ExtractedBiomarker, LabReport } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 import { todayLocal } from "../../utils/date";
@@ -171,6 +171,14 @@ export interface RecordPanelInput {
   })[];
   /** The lab report this came from, if it came from one. */
   file?: File;
+  /**
+   * HE1.9.2: the report was uploaded BEFORE the results were typed (upload
+   * first, record on Save). The object path it landed at; not uploaded again,
+   * and not deleted here on failure (the scan flow owns it until Save).
+   */
+  filePath?: string;
+  /** The date on the report (HE1.9.2.2a), yyyy-mm-dd. Default today. */
+  panelDate?: string;
 }
 
 /**
@@ -207,15 +215,17 @@ export async function recordPanel(
     return { ok: false, message: "Select at least one result to save." };
   }
 
-  let filePath: string | undefined;
-  if (input.file) {
+  let filePath: string | undefined = input.filePath;
+  if (input.file && !filePath) {
     const upload = await uploadPrivateFile({ bucket: "lab-reports", userId, file: input.file });
     if (!upload.ok) return { ok: false, message: upload.message };
     filePath = upload.path;
   }
 
   const cleanUpFile = async (why: string) => {
-    if (!filePath) return;
+    // A pre-uploaded file stays: the scan flow keeps it for a retry and
+    // deletes it itself on Discard.
+    if (!filePath || input.filePath) return;
     const removed = await deletePrivateFile("lab-reports", filePath);
     if (!removed.ok) {
       console.error("[labs] ORPHANED OBJECT after", why, "-", filePath);
@@ -226,7 +236,7 @@ export async function recordPanel(
     .from("blood_panels")
     .insert({
       user_id: userId,
-      panel_date: todayLocal(),
+      panel_date: input.panelDate ?? todayLocal(),
       source_image_url: filePath ?? null,
     })
     .select("id")
@@ -471,9 +481,10 @@ export type LabReportResult =
  * has nothing to open.
  */
 export async function getLabReports(userId: string): Promise<LabReportResult> {
-  const { data, error } = await supabase
+  // B2 columns (name, file_*) through the untyped view: the generated types predate B2.
+  const { data, error } = await (supabase as unknown as SupabaseClient)
     .from("blood_panels")
-    .select("id, panel_date, source_image_url")
+    .select("id, panel_date, source_image_url, name, file_name, file_type, file_pages, file_bytes")
     .eq("user_id", userId)
     .not("source_image_url", "is", null)
     .order("panel_date", { ascending: false });
@@ -489,21 +500,44 @@ export async function getLabReports(userId: string): Promise<LabReportResult> {
       id: p.id,
       date: p.panel_date,
       filePath: p.source_image_url!,
+      name: p.name ?? null,
+      fileName: p.file_name ?? null,
+      fileType: p.file_type ?? null,
+      filePages: p.file_pages ?? null,
+      fileBytes: p.file_bytes === null || p.file_bytes === undefined ? null : Number(p.file_bytes),
     })),
   };
 }
 
 export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult> {
-  const { data, error } = await supabase
-    .from("blood_panels")
-    .select("id, panel_date, blood_markers(id, name, marker_key, value, unit, range_low, range_high, status)")
-    .eq("user_id", userId)
-    .order("panel_date", { ascending: true });
+  const [panels, alone] = await Promise.all([
+    supabase
+      .from("blood_panels")
+      .select("id, panel_date, blood_markers(id, name, marker_key, value, unit, range_low, range_high, status)")
+      .eq("user_id", userId)
+      .order("panel_date", { ascending: true }),
+    // B2: a result typed in by hand stands alone (blood_panel_id null, result_date set).
+    (supabase as unknown as SupabaseClient)
+      .from("blood_markers")
+      .select("id, name, marker_key, value, unit, range_low, range_high, status, result_date")
+      .eq("user_id", userId)
+      .is("blood_panel_id", null),
+  ]);
 
+  const error = panels.error ?? alone.error;
   if (error) {
     console.error("[labs] Could not load lab results:", error.message);
     return { ok: false, message: "Could not load your lab results." };
   }
 
-  return { ok: true, markers: groupPanelsByMarkerName(data ?? [], await fetchLabCatalogue()) };
+  // Each standalone result joins the timeline as a one-result pseudo panel on
+  // its own date, so the grouping's oldest-first contract still holds.
+  const rows: PanelRow[] = [
+    ...(panels.data ?? []),
+    ...((alone.data ?? []) as (PanelRow["blood_markers"][number] & { result_date: string | null })[])
+      .filter((m) => !!m.result_date)
+      .map((m) => ({ panel_date: m.result_date!, blood_markers: [m] })),
+  ].sort((a, b) => (a.panel_date < b.panel_date ? -1 : a.panel_date > b.panel_date ? 1 : 0));
+  return { ok: true, markers: groupPanelsByMarkerName(rows, await fetchLabCatalogue()) };
 }
+

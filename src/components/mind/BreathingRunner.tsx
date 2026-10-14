@@ -2,19 +2,24 @@ import React, { useEffect, useRef, useState } from "react";
 import { Play, Square, RotateCcw } from "lucide-react";
 import clsx from "clsx";
 import { PinnedCta } from "../ui/PinnedCta";
+import { Toast } from "../ui/Toast";
 import { useApp } from "../../context/AppContext";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { logMeditationSession } from "../../services/meditation";
-import { formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
+import { breathingSaveRule, formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import type { BreathingPattern } from "../../data/mockMindContent";
 
-// The breathing runner, mobile v5.1 MO1.1.4 / MO1.1.4.3.
+// The breathing runner, v6 MO1.1.4 (layout table #11-#22) on the v5.1
+// MO1.1.4.3 motion board.
 //
 // PETALS, NOT AN ORB. Eight petals bloom to 1.18× on an inhale ("lavender
 // leads"), rest there on a hold (the glow settles in 0.4 s), fold to 0.82× on
 // an exhale ("colour drifts to teal"), and rest folded. The outer arc runs
-// over the WHOLE cycle and closes before it loops (it used to restart each
-// phase). Built in SVG from the motion spec; the reference GIF is not shipped
-// (A14). The app-wide reduced-motion rule zeroes the transitions.
+// over the WHOLE cycle and closes before it loops. Built in SVG (the table's
+// #11 "inline SVG"). Under Reduce motion (the in-app switch or the device
+// setting, S7) the petals do not scale and the glow is static; the phase
+// text, countdown, arc and rail still update (they are progress).
 
 // Design refinement §6.9c: the scale reached at the end of an inhale or
 // exhale. A hold sustains whichever came last instead of snapping back to 1.
@@ -26,40 +31,55 @@ const holdTargetScale = (pattern: BreathingPattern, phaseIdx: number) => {
   return 1;
 };
 
-const PHASE_COLOUR = (label: string) => (label === "Breathe in" ? "rgb(var(--th-7d6bb5))" : label === "Breathe out" ? "rgb(var(--th-a2c8c2))" : "rgb(var(--th-c8bfe9))");
+// Rail and arc colours per phase. Breathe in is primary-dark: #7D6BB5, dark
+// #C3B3FB (MO1.1.4 #16); Hold #C8BFE9 and Breathe out #A2C8C2 are kept from
+// the MO1.1.4.3 board (K3).
+const PHASE_COLOUR = (label: string) =>
+  label === "Breathe in" ? "rgb(var(--c-primary-dark))" : label === "Breathe out" ? "rgb(var(--th-a2c8c2))" : "rgb(var(--th-c8bfe9))";
 const SIZE = 270;
 const ARC_R = 128;
 const ARC_C = 2 * Math.PI * ARC_R;
 const PETALS = 8;
 
+/** MO1.1.4 S4 / O10 (ours): why a stopped run was not saved. */
+const NOTE_NEED_CYCLE = "Finish one full cycle to save a session.";
+const NOTE_TOO_SHORT = "Keep going a little longer to save a session.";
+const SAVE_FAILED = "Couldn't save. Try again.";
+
 export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) => {
   const { authUserId, refreshMeditationSummary, refreshAchievements } = useApp();
+  const reduced = useReducedMotion();
   const [running, setRunning] = useState(false);
-  /** What happened to the last session, shown under the rail. */
+  /** What happened to the last session, shown under "Cycle" (K4). */
   const [note, setNote] = useState<string | null>(null);
+  /** A failed save (O3, O4, K7): the shared error toast. */
+  const [toast, setToast] = useState<string | null>(null);
 
   // --- the session log -------------------------------------------------------
   //
   // ONE SESSION IS ONE START-TO-STOP RUN, timed by the wall clock rather than
-  // by counting ticks (a backgrounded tab throttles the interval, and the
+  // by counting ticks (K5: a backgrounded tab throttles the interval, and the
   // person is still breathing). It is written ONCE, when the run ends (the
   // table has no UPDATE), with the time actually spent.
   //
-  // HOW IT ENDS DECIDES `completed`. The runner has no set length, so Stop is
-  // the only way to finish one: Stop is completed. Anything else that ends a
-  // run part-way (Reset, switching pattern or tab, leaving the page) is an
-  // interruption: saved, because the minutes were real, but not completed,
-  // so it earns no badge credit. Under 10 seconds nothing is saved.
+  // WHAT IS SAVED (v6 MO1.1.4 S2-S5, V6-144): a run is saved only once it has
+  // at least one full cycle AND the table's 8 s floor (B3), always as completed.
+  // Stop, switching pattern or tab, and leaving the page (K6) all follow that
+  // rule; Reset discards the run and never saves. Anything shorter is not
+  // written at all.
   const sessionRef = useRef<{ startedAtMs: number; kind: string } | null>(null);
+  const cyclesRef = useRef(0);
   const live = useRef({ authUserId, refreshMeditationSummary, refreshAchievements });
 
-  const endSession = (completed: boolean, report: boolean) => {
+  /** Ends the open run. `report`: show the note (the runner is still on screen). */
+  const endSession = (report: boolean) => {
     const session = sessionRef.current;
     sessionRef.current = null;
     if (!session) return;
     const seconds = sessionSeconds(session.startedAtMs, Date.now());
-    if (seconds === null) {
-      if (report) setNote("Under 10 seconds, so this one wasn't saved.");
+    const rule = breathingSaveRule(cyclesRef.current, seconds);
+    if (rule !== "save" || seconds === null) {
+      if (report) setNote(rule === "short" ? NOTE_TOO_SHORT : NOTE_NEED_CYCLE);
       return;
     }
     const { authUserId: userId } = live.current;
@@ -69,13 +89,19 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
       startedAt: new Date(session.startedAtMs),
       durationSeconds: seconds,
       kind: session.kind,
-      completed,
+      completed: true,
+      // B3 (PB-O-21): the full cycles of this run.
+      cyclesCompleted: cyclesRef.current,
     }).then((r) => {
-      if (report) setNote(r.ok ? `Saved · ${formatMeditationTime(seconds)}` : r.message);
-      if (!r.ok) return;
+      if (!r.ok) {
+        // O3 / K7 keep their own text; anything else is the shared one.
+        setToast(r.message === OFFLINE_MESSAGE || r.message.startsWith("That's a lot") ? r.message : SAVE_FAILED);
+        return;
+      }
+      if (report) setNote(`Saved · ${formatMeditationTime(seconds)}`);
       void live.current.refreshMeditationSummary();
-      // A completed session can earn a meditation badge.
-      if (completed) live.current.refreshAchievements();
+      // A completed session can earn a meditation badge (K8).
+      live.current.refreshAchievements();
     });
   };
   const endRef = useRef(endSession);
@@ -85,8 +111,8 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
     live.current = { authUserId, refreshMeditationSummary, refreshAchievements };
     endRef.current = endSession;
   });
-  // Leaving the page (or switching its tab) unmounts the runner mid-run.
-  useEffect(() => () => endRef.current(false, false), []);
+  // Leaving the page (or switching its tab) unmounts the runner mid-run (K6).
+  useEffect(() => () => endRef.current(false), []);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [cycles, setCycles] = useState(0);
@@ -98,15 +124,21 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
   const phaseIdxRef = useRef(0);
   const elapsedRef = useRef(0);
 
-  useEffect(() => {
-    // Switching pattern mid-run ends that run, interrupted.
-    endRef.current(false, true);
+  const rewind = () => {
     setRunning(false);
     setPhaseIdx(0);
     setElapsedMs(0);
     setCycles(0);
+    cyclesRef.current = 0;
     phaseIdxRef.current = 0;
     elapsedRef.current = 0;
+  };
+
+  useEffect(() => {
+    // S3: switching pattern ends the run (saved under the same rule as Stop)
+    // and resets the cycle count.
+    endRef.current(true);
+    rewind();
   }, [pattern]);
 
   // §6.9c: tick on a 100ms interval accumulating elapsed ms within the
@@ -129,27 +161,27 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
       elapsedRef.current = 0;
       setPhaseIdx(nextIdx);
       setElapsedMs(0);
-      if (nextIdx === 0) setCycles((c) => c + 1);
+      if (nextIdx === 0) {
+        cyclesRef.current += 1;
+        setCycles(cyclesRef.current);
+      }
     }, 100);
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
     };
   }, [running, pattern]);
 
+  // S5: back to Breathe in, Cycle 0, WITHOUT saving (the run is discarded).
   const reset = () => {
-    endSession(false, true);
-    setRunning(false);
-    setPhaseIdx(0);
-    setElapsedMs(0);
-    setCycles(0);
-    phaseIdxRef.current = 0;
-    elapsedRef.current = 0;
+    sessionRef.current = null;
+    setNote(null);
+    rewind();
   };
 
   const toggle = () => {
     if (running) {
       setRunning(false);
-      endSession(true, true);
+      endSession(true);
     } else {
       sessionRef.current = { startedAtMs: Date.now(), kind: meditationKind(pattern.id) };
       setNote(null);
@@ -161,7 +193,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
   const isInhale = phase.label === "Breathe in";
   const isExhale = phase.label === "Breathe out";
   const isHold = phase.label === "Hold";
-  const scale = !running ? 1 : isInhale ? 1.18 : isExhale ? 0.82 : holdTargetScale(pattern, phaseIdx);
+  const scale = !running || reduced ? 1 : isInhale ? 1.18 : isExhale ? 0.82 : holdTargetScale(pattern, phaseIdx);
   const progress = Math.min(1, elapsedMs / (phase.seconds * 1000));
   const secondsLeft = running ? Math.max(1, Math.ceil(phase.seconds - elapsedMs / 1000)) : phase.seconds;
   const cycleMs = pattern.phases.reduce((s, p) => s + p.seconds * 1000, 0);
@@ -184,6 +216,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
 
   return (
     <div className="flex flex-col items-center">
+      {/* #11: the 270 graphic, 12 under the description. */}
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 -rotate-90" aria-hidden>
           {segments.map((s, i) => (
@@ -215,7 +248,8 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
         </svg>
 
         {/* The petals, on a soft radial glow (MO1.1.4.3: "glow settles in
-            0.4 s"): lavender, drifting to teal with the petals. */}
+            0.4 s"): lavender, drifting to teal with the petals. Static
+            (lavender, no fade) under Reduce motion. */}
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0" aria-hidden>
           <defs>
             <radialGradient id="breath-glow-lav">
@@ -232,20 +266,22 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
             cy={SIZE / 2}
             r={ARC_R - 4}
             fill="url(#breath-glow-lav)"
-            style={{ opacity: running && !teal ? 1 : 0, transition: "opacity 0.4s ease" }}
+            style={{ opacity: running && (reduced || !teal) ? 1 : 0, transition: reduced ? "none" : "opacity 0.4s ease" }}
           />
-          <circle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={ARC_R - 4}
-            fill="url(#breath-glow-teal)"
-            style={{ opacity: running && teal ? 1 : 0, transition: "opacity 0.4s ease" }}
-          />
+          {!reduced && (
+            <circle
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={ARC_R - 4}
+              fill="url(#breath-glow-teal)"
+              style={{ opacity: running && teal ? 1 : 0, transition: "opacity 0.4s ease" }}
+            />
+          )}
           <g
             style={{
               transformOrigin: "50% 50%",
               transform: `scale(${scale})`,
-              transition: `transform ${transition} cubic-bezier(.42,0,.58,1)`,
+              transition: reduced ? "none" : `transform ${transition} cubic-bezier(.42,0,.58,1)`,
             }}
           >
             {Array.from({ length: PETALS }, (_, i) => (
@@ -261,7 +297,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
                 transform={`rotate(${(360 / PETALS) * i} ${SIZE / 2} ${SIZE / 2})`}
                 style={{
                   fill: teal ? "rgb(var(--th-a2c8c2) / 0.30)" : "rgb(var(--th-aea1dc) / 0.24)",
-                  transition: `fill ${transition} ease`,
+                  transition: reduced ? "none" : `fill ${transition} ease`,
                 }}
               />
             ))}
@@ -270,40 +306,50 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
 
         {/* The centre disc: the phase and its countdown. */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-cream-card flex flex-col items-center justify-center shadow-soft">
-          {/* MO1.1.4 #5: 13.5/700 #7D6BB5, 35.3/800, 10.4/600 #8C8378. The
-              label is the theme's secondary (teal) on the exhale and while
-              resting folded (MO1.1.4.3). */}
+          {/* #12 13.5/16.2 700 #7D6BB5 / #C3B3FB; the secondary (teal) on the
+              exhale and while resting folded (K3). #13 35.3/37.1 800 ls -1.1
+              (Larger text 34, O6). #14 10.4/12.5 600. */}
           <p
             className={clsx(
-              "text-[13.5px] font-bold leading-tight",
+              "text-[13.5px] leading-[16.2px] font-bold",
               teal ? "text-team-teal-deep dark:text-team-teal-ink" : "text-primary-dark"
             )}
           >
             {phase.label}
           </p>
-          <p className="text-[35.3px] font-extrabold leading-none text-charcoal tabular-nums">{secondsLeft}</p>
-          <p className="text-[10.4px] font-semibold text-charcoal-muted">seconds</p>
+          <p
+            className="font-extrabold text-charcoal tabular-nums"
+            style={{
+              fontSize: "calc(35.3px - 0.65 * var(--text-boost, 0px))",
+              lineHeight: "calc(37.1px + var(--text-boost, 0px))",
+              letterSpacing: "-1.1px",
+            }}
+          >
+            {secondsLeft}
+          </p>
+          <p className="text-[10.4px] leading-[12.5px] font-semibold text-charcoal-muted">seconds</p>
         </div>
       </div>
 
-      {/* The phase rail, each segment as long as its phase, labelled.
-          MO1.1.4 #6: directly under the flower, padding 0 8px. */}
-      <div className="flex w-full gap-1 px-2">
+      {/* #15-#17: the phase rail, 4 under the flower, each segment as long as
+          its phase (82.5 per 4 s at 390), padding 0 8, gap 4. */}
+      <div className="mt-1 flex w-full gap-1 px-2">
         {pattern.phases.map((p, i) => (
           <div key={i} className="min-w-0" style={{ flex: p.seconds }}>
-            <div className="h-[5px] rounded-full bg-charcoal/[0.08] overflow-hidden">
+            <div className="h-1 rounded-full bg-charcoal/[0.07] [.high-contrast_&]:bg-charcoal/30 overflow-hidden">
               <div
                 className="h-full rounded-full"
                 style={{
                   width: i < phaseIdx && running ? "100%" : i === phaseIdx && running ? `${progress * 100}%` : "0%",
                   background: PHASE_COLOUR(p.label),
-                  transition: "width 0.1s linear, background 0.3s ease",
+                  transition: reduced ? "none" : "width 0.1s linear, background 0.3s ease",
                 }}
               />
             </div>
+            {/* Active 9.5/12 800 primary-dark (#17); idle 9.5/12 600 #8C8378 (K9). */}
             <p
               className={clsx(
-                "mt-1.5 text-center text-[9.5px] truncate",
+                "mt-[5px] text-center text-[9.5px] leading-[12px] truncate",
                 running && i === phaseIdx ? "font-extrabold text-primary-dark" : "font-semibold text-charcoal-muted"
               )}
             >
@@ -312,35 +358,42 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
           </div>
         ))}
       </div>
-      {/* MO1.1.4 #7: 10.5/500, 10 pt below the rail. */}
-      <p className="mt-2.5 text-[10.5px] font-medium text-charcoal-muted">Cycle {cycles}</p>
+      {/* #18: 10.5/15.8 500, 10 below the rail. */}
+      <p className="mt-2.5 text-[10.5px] leading-[15.8px] font-medium text-charcoal-muted">Cycle {cycles}</p>
       {note && (
         <p className="mt-2 text-[11px] font-semibold text-charcoal-soft text-center" role="status">
           {note}
         </p>
       )}
 
-      {/* MO1.1.4: Start / Stop filled, Reset to its right. */}
+      {/* #19-#22: Start / Stop filled, Reset to its right. */}
       <PinnedCta
-        // MO1.1.4 #8: the row is 44 tall, radius 12 (C-01 no longer applies).
+        // #19: the row is 44 tall, radius 12; 48 under Larger text (O6,
+        // derived: the same +4 step as the handover's 48 → 52).
         size="base"
         primary={{
           label: running ? "Stop" : "Start",
-          icon: running ? <Square size={14} /> : <Play size={14} />,
+          // #20: the icon is #FFFFFF in light AND dark (V6-144, literal).
+          icon: running ? <Square size={14} style={{ color: "#FFFFFF" }} /> : <Play size={14} style={{ color: "#FFFFFF" }} />,
           onClick: toggle,
-          // MO1.1.4 #8 (decision 23): filled #A198DF (--c-fill-cta),
-          // 13.5/700 white.
-          className: "!text-[13.5px] !bg-[rgb(var(--c-fill-cta))]",
+          // #19: filled #A198DF (--c-fill-cta) / dark #A991FE, 13.5/20.3 700,
+          // icon gap 8. High contrast: the primary fill #5B48B8 (O7).
+          className:
+            "!text-[13.5px] !leading-[20.3px] !gap-2 !bg-[rgb(var(--c-fill-cta))] [.high-contrast_&]:!bg-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
         }}
         trailing={{
           icon: <RotateCcw size={15} />,
           label: "Reset",
           onClick: reset,
           width: 44,
-          // 2x frame: #F0EEF9 (#AEA1DC at 18%) with a #7D67D9 icon (decision 23).
-          className: "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary-pale dark:!text-primary-deep-text",
+          // #21-#22: #AEA1DC@18% with #7D67D9; dark #A991FE@18% with #9A8CD6
+          // (primary at 18%, primary-accent). High contrast: #5B48B8 with
+          // white (O7).
+          className:
+            "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary/[0.18] [.high-contrast_&]:!bg-primary-fill [.high-contrast_&]:!text-on-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
         }}
       />
+      <Toast open={!!toast} message={toast ?? ""} tone="error" bottom={148} onExpire={() => setToast(null)} />
     </div>
   );
 };

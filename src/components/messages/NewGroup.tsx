@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { MessagesHeader } from "./MessagesHeader";
 import { ClientPicker, type PickableClient } from "./ClientPicker";
 import { createGroup, GROUP_NAME_MAX, inviteToGroup } from "../../services/messaging/groups";
 
@@ -132,16 +132,7 @@ export const NewGroup: React.FC<{
   );
 };
 
+/** v6 MO1.7 K12: the Messages title row (#2-#4) on New group and the broadcast editor. */
 export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={onBack}
-      aria-label="Back"
-      className="tap w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-charcoal"
-    >
-      <ChevronLeft size={20} />
-    </button>
-    <h1 className="text-[22px] font-extrabold text-charcoal">{title}</h1>
-  </div>
+  <MessagesHeader title={title} onBack={onBack} />
 );

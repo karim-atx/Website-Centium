@@ -19,7 +19,9 @@ const PARENTS: [RegExp, string][] = [
   [/^\/app\/forum\/courses\/(mine|[^/]+)$/, "/app/forum?tab=courses"],
   [/^\/app\/forum\/courses\/[^/]+\/lessons\/[^/]+$/, "__drop2"],
   [/^\/app\/forum\/(post\/[^/]+|new|nickname)$/, "/app/forum"],
-  [/^\/app\/(cycle|contraception)$/, "/app/profile"],
+  // V6-79: Cycle falls back to Health (HE1), Contraception to the Cycle page (HE1.10.b).
+  [/^\/app\/cycle$/, "/app/health"],
+  [/^\/app\/contraception$/, "/app/cycle"],
 ];
 
 /** The page a back button leads to when there is nothing to pop. */

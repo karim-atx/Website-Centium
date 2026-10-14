@@ -34,14 +34,15 @@ export const GroupInvitationView: React.FC<{
   const members = invitation.memberCount;
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-2.5 mb-3.5">
+      <div className="flex items-center gap-1.5 mb-3.5">
+        {/* v6 MO1.7 K12: the Messages back (#2 / #3), a 32 box with ChevronLeft 22 in the ink; 44 hit area. */}
         <button
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="tap w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-charcoal shrink-0"
+          className="tap relative w-8 h-8 -ml-2 rounded-full flex items-center justify-center text-charcoal shrink-0 before:absolute before:-inset-1.5 before:content-['']"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={22} aria-hidden />
         </button>
         <span className="flex flex-col min-w-0">
           <span className="text-[15px] font-bold text-charcoal truncate">{invitation.groupName}</span>

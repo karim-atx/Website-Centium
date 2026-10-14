@@ -147,6 +147,107 @@ export default {
           caution: "rgb(var(--c-status-caution) / <alpha-value>)",
           "caution-bg": "rgb(var(--c-status-caution-bg) / <alpha-value>)",
         },
+        // ---- v6 tokens (Part B + Business UI). Values in index.css. ----
+        // Filled controls drawn in their own lavender (V6-01): Part B pinned
+        // CTA and the segmented control. Ink: on-primary-fill.
+        fill: {
+          pinned: "rgb(var(--c-fill-pinned) / <alpha-value>)",
+        },
+        seg: {
+          track: "rgb(var(--c-seg-track) / <alpha-value>)",
+          active: "rgb(var(--c-seg-active) / <alpha-value>)",
+        },
+        "on-destructive": "rgb(var(--c-on-destructive) / <alpha-value>)",
+        range: {
+          out: "rgb(var(--c-range-out) / <alpha-value>)",
+          "out-bg": "rgb(var(--c-range-out-bg) / <alpha-value>)",
+          in: "rgb(var(--c-range-in) / <alpha-value>)",
+          "in-bg": "rgb(var(--c-range-in-bg) / <alpha-value>)",
+        },
+        destructive: {
+          icon: "rgb(var(--c-destructive-icon) / <alpha-value>)",
+          bg: "rgb(var(--c-destructive-bg) / <alpha-value>)",
+        },
+        // Health metric colours: fixed in every theme except weight (V6-60).
+        metric: Object.fromEntries(
+          ["water", "steps", "sleep", "calories", "heart-rate", "blood-pressure", "weight", "cycle"].map((m) => [
+            m,
+            Object.fromEntries(
+              ["main", "tint", "accent", "ink", "pattern"]
+                .concat(m === "sleep" ? ["night-hero", "stage-awake"] : m === "cycle" ? ["widget-ink"] : [])
+                .map((k) => [k, `rgb(var(--metric-${m}-${k}) / <alpha-value>)`])
+            ),
+          ])
+        ),
+        // Home widget tints and inks (Part B).
+        widget: Object.fromEntries(
+          ["steps", "weight", "sleep", "workout", "heart-rate", "habits", "journal", "meditation"].map((w) => [
+            w,
+            { tint: `rgb(var(--c-widget-${w}-tint) / <alpha-value>)`, ink: `rgb(var(--c-widget-${w}-ink) / <alpha-value>)` },
+          ])
+        ),
+        "widget-header-tile": "var(--widget-header-tile)",
+        pose: {
+          body: "rgb(var(--c-pose-body) / <alpha-value>)",
+          "far-limbs": "rgb(var(--c-pose-far-limbs) / <alpha-value>)",
+          "head-arms": "rgb(var(--c-pose-head-arms) / <alpha-value>)",
+          leaf: "rgb(var(--c-pose-leaf) / <alpha-value>)",
+        },
+        // Hairlines (X-09); 30% of ink under High contrast.
+        hair: {
+          "08": "var(--hair-08)",
+          10: "var(--hair-10)",
+          11: "var(--hair-11)",
+        },
+        // Business UI.
+        list: {
+          DEFAULT: "var(--list-bg)",
+          rule: "var(--list-rule)",
+        },
+        track: "rgb(var(--c-track) / <alpha-value>)",
+        desc: "rgb(var(--c-desc) / <alpha-value>)",
+        "teal-text": "rgb(var(--c-teal-text) / <alpha-value>)",
+        "row-tile": "rgb(var(--c-row-tile) / <alpha-value>)",
+        menu: {
+          border: "var(--menu-border)",
+          "row-on-border": "rgb(var(--c-menu-row-on-border) / <alpha-value>)",
+          check: "rgb(var(--c-menu-check) / <alpha-value>)",
+          backdrop: "var(--menu-backdrop)",
+        },
+        nav: {
+          bg: "var(--nav-bg)",
+          border: "var(--nav-border)",
+          idle: "rgb(var(--c-nav-idle) / <alpha-value>)",
+          "label-active": "rgb(var(--c-nav-label-active) / <alpha-value>)",
+        },
+        brand: {
+          c: "rgb(var(--c-brand-c) / <alpha-value>)",
+          leaf: "rgb(var(--c-brand-leaf) / <alpha-value>)",
+        },
+        "sheet-border-business": "var(--sheet-border-business)",
+        "wheel-band-business": "var(--wheel-band-business)",
+        type: {
+          classes: "rgb(var(--c-type-classes) / <alpha-value>)",
+          "classes-bg": "rgb(var(--c-type-classes-bg) / <alpha-value>)",
+          gym: "rgb(var(--c-type-gym) / <alpha-value>)",
+          "gym-bg": "rgb(var(--c-type-gym-bg) / <alpha-value>)",
+          store: "rgb(var(--c-type-store) / <alpha-value>)",
+          "store-bg": "rgb(var(--c-type-store-bg) / <alpha-value>)",
+        },
+        event: {
+          class: "rgb(var(--c-event-class) / <alpha-value>)",
+          event: "rgb(var(--c-event-event) / <alpha-value>)",
+        },
+        "star-business": "rgb(var(--c-star-business) / <alpha-value>)",
+        caution: {
+          text: "rgb(var(--c-caution-text) / <alpha-value>)",
+          strong: "rgb(var(--c-caution-strong) / <alpha-value>)",
+          deep: "rgb(var(--c-caution-deep) / <alpha-value>)",
+        },
+        "minute-hand": {
+          DEFAULT: "rgb(var(--c-minute-hand) / <alpha-value>)",
+          highlight: "rgb(var(--c-minute-hand-highlight) / <alpha-value>)",
+        },
         // Marketing-site-only premium refinement tokens (fixed values, not
         // theme-reactive — the marketing site is intentionally a light site
         // with dark accent bands, independent of the app's user-controlled
@@ -204,6 +305,9 @@ export default {
           "teal-ink": ink("team-teal-ink"),
           "teal-deep": ink("team-teal-deep"),
         },
+        // v6: theme-following text tokens read their ink twins too.
+        "teal-text": ink("teal-text"),
+        menu: { check: ink("menu-check") },
       },
       borderRadius: {
         "4xl": "2rem",
@@ -217,8 +321,24 @@ export default {
         // float (FAB, bottom sheets/modals) — in-page cards use a hairline
         // border instead. Theme-aware via the CSS var.
         fab: "var(--shadow-fab)",
+        // v6 Business UI shadows (index.css).
+        popup: "var(--shadow-popup)",
+        menu: "var(--shadow-menu)",
+        "card-selected": "var(--shadow-card-selected)",
+        "focus-ring": "var(--shadow-focus-ring)",
+        "primary-button": "var(--shadow-primary-button)",
+        navbar: "var(--shadow-navbar)",
+      },
+      backgroundImage: {
+        "approval-glow": "var(--gradient-approval-glow)",
       },
       keyframes: {
+        // Part B motion.skeletonPulse: 1.2 s, static under Reduce motion
+        // (index.css). Same frames as Tailwind's pulse.
+        "skeleton-pulse": {
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.5 },
+        },
         "fade-slide-up": {
           "0%": { opacity: 0, transform: "translateY(12px)" },
           "100%": { opacity: 1, transform: "translateY(0)" },
@@ -337,18 +457,6 @@ export default {
           "100%": { backgroundColor: "var(--settle-to, #EFECF8)" },
         },
         // §7.3: idle water-fill crests — alive without asking for attention.
-        // Iteration 6.2 widget library: the small Heart Rate widget's
-        // beating-heart glyph — a lub-dub double pulse, not a plain scale.
-        // Duration is set per-instance via style.animationDuration (60/bpm),
-        // so the beat always matches the real reading rather than a fixed
-        // rate.
-        "cent-heartbeat": {
-          "0%, 100%": { transform: "scale(1)" },
-          "14%": { transform: "scale(1.13)" },
-          "28%": { transform: "scale(1)" },
-          "42%": { transform: "scale(1.05)" },
-          "56%": { transform: "scale(1)" },
-        },
         "water-crest": {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
@@ -379,23 +487,11 @@ export default {
           "0%": { transform: "scale(0.85)", opacity: 0.5 },
           "100%": { transform: "scale(1.35)", opacity: 0 },
         },
-        "ekg-scroll": {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-300px)" },
-        },
         // QA 11.0: PR-set celebration confetti — each piece falls and
         // drifts sideways by its own per-piece CSS variable.
         "confetti-fall": {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
-        },
-        // Mobile v5.1 MO1.1.3.2: the unlock pill's one light sheen while it
-        // holds. Never runs under reduced motion (the pill is static). Moves
-        // a pill-wide layer whose stripe starts 56 px off the left edge, so
-        // 100% + 72 px carries it (and its skew) fully past the right one.
-        "unlock-sheen": {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(calc(100% + 72px))" },
         },
         // v2 Centium landing handoff: the reviews conveyor belt (duplicated
         // card list, translated exactly -50% of its own width minus the
@@ -445,6 +541,7 @@ export default {
         },
       },
       animation: {
+        "skeleton-pulse": "skeleton-pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "fade-slide-up": "fade-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
         "fade-in": "fade-in 0.3s ease both",
         "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1) both",
@@ -471,9 +568,6 @@ export default {
         "set-tick-ring": "set-tick-ring 0.55s cubic-bezier(0.22,1,0.36,1) both",
         "set-tick-check": "set-tick-check 0.34s cubic-bezier(0.22,1,0.36,1) 60ms both",
         "set-row-settle": "set-row-settle 0.55s ease-out both",
-        // Default duration matches the design's 62bpm example (60/62s); the
-        // Heart Rate widget overrides style.animationDuration to 60/bpm.
-        "cent-heartbeat": "cent-heartbeat 0.97s ease-in-out infinite",
         "water-crest": "water-crest 7s linear infinite",
         "water-crest-reverse": "water-crest-reverse 5s linear infinite",
         "water-crest-fast": "water-crest 2.1s linear infinite",
@@ -483,9 +577,7 @@ export default {
         "water-drip": "water-drip 1.4s ease-in infinite",
         "calorie-flame": "calorie-flame 1.6s ease-in-out infinite",
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
-        "ekg-scroll": "ekg-scroll 3s linear infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
-        "unlock-sheen": "unlock-sheen 1.4s ease-in-out 1 both",
         "mkt-belt": "mkt-belt 46s linear infinite",
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
         "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",

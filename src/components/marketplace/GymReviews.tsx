@@ -177,9 +177,9 @@ export function GymReviews({
 
       <div className="mt-3 flex flex-col gap-2.5">
         {reviews === null ? (
-          [0, 1].map((i) => <div key={i} aria-hidden className="h-[147px] rounded-[18px] bg-cream-soft animate-pulse" />)
+          [0, 1].map((i) => <div key={i} aria-hidden className="h-[147px] rounded-[18px] bg-cream-soft animate-skeleton-pulse" />)
         ) : reviews.length === 0 ? (
-          <p className="mt-6 mb-0 text-center text-[12.5px] text-charcoal-faint">No reviews yet. Be the first to write one.</p>
+          <p className="mt-6 mb-0 text-center text-[12.5px] text-charcoal-faint">No reviews yet.</p>
         ) : (
           reviews.map((r) => (
             // #9–12: r18, 1 px rgba(36,31,27,.08), padding 14 16; a 30
@@ -191,7 +191,7 @@ export function GymReviews({
               ) : (
                 <>
                   <div className="flex items-center gap-2.5">
-                    <span className="w-[30px] h-[30px] rounded-full bg-primary-pale flex items-center justify-center shrink-0 text-th-a79ad5 dark:text-primary-dark" aria-hidden>
+                    <span className="w-[30px] h-[30px] rounded-full bg-primary-pale flex items-center justify-center shrink-0 text-th-a79ad5 dark:text-primary-accent" aria-hidden>
                       <User size={17} strokeWidth={2} fill="currentColor" />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -216,7 +216,7 @@ export function GymReviews({
                       disabled={r.isMine}
                       aria-pressed={r.viewerFoundHelpful}
                       className={`tap inline-flex items-center gap-1.5 text-[11.5px] font-semibold disabled:opacity-60 ${
-                        r.viewerFoundHelpful ? "text-th-7d67d9 dark:text-primary-dark" : "text-charcoal-faint"
+                        r.viewerFoundHelpful ? "text-th-7d67d9 dark:text-primary-accent" : "text-charcoal-faint"
                       }`}
                     >
                       <ThumbsUp size={13} strokeWidth={1.75} aria-hidden className={r.viewerFoundHelpful ? "fill-current" : ""} />
@@ -229,7 +229,7 @@ export function GymReviews({
           ))
         )}
         {more && (
-          <button type="button" onClick={() => void load(reviews?.length ?? 0)} className="tap h-10 text-[13px] font-bold text-th-7d67d9 dark:text-primary-dark">
+          <button type="button" onClick={() => void load(reviews?.length ?? 0)} className="tap h-10 text-[13px] font-bold text-th-7d67d9 dark:text-primary-accent">
             Show more reviews
           </button>
         )}
@@ -244,7 +244,7 @@ export function GymReviews({
           icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
           onClick: () => setWriteOpen(true),
           disabled: reviews === null || (!!mine && mine.redacted),
-          className: "!bg-th-9a8cd6 !text-white dark:!bg-primary-fill dark:!text-on-primary-fill",
+          className: "!bg-fill-pinned !text-on-primary-fill",
         }}
       />
 
@@ -336,7 +336,7 @@ function ReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gymNa
         loading={busy}
         disabled={over || empty}
         onClick={() => void submit()}
-        className="!bg-th-9a8cd6 !text-white dark:!bg-primary-fill dark:!text-on-primary-fill"
+        className="!bg-fill-pinned !text-on-primary-fill"
       />
       {existing && (
         <button type="button" onClick={() => void remove()} disabled={busy} className="tap min-h-[44px] w-full text-xs font-semibold text-status-high">

@@ -5,130 +5,115 @@ import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { LEVEL_LABEL } from "../../services/achievements";
-import { colourSet, levelHex } from "./achievementStyle";
-import { ThemedC } from "../ui/ThemedMark";
-import { tintOn } from "../../data/folderColors";
+import { pillColours } from "./achievementStyle";
+import { AchievementIcon } from "./AchievementIcon";
 
-// The unlock moment, mobile v5.1 MO1.1.3.2: a pill at the top of whatever
-// page earned it. It replaces the bottom sheet with its confetti and "Nice".
+// The unlock moment, v6 MO1.1.3.2: a pill at the top of whatever page earned
+// it (K1: rendered in Layout, not in Mind).
 //
-// RENDERED IN Layout, NOT IN Mind. An achievement is earned wherever the thing
-// that earned it happened, and the celebration belongs on that screen.
+// ONE AT A TIME, IN ORDER (S4). The context holds a queue and this shows its
+// front; when one finishes it is dismissed and the next plays.
 //
-// ONE AT A TIME, IN ORDER. The context holds a queue and this shows its front;
-// when one finishes it is dismissed and the next plays (never stacked).
+// THE PAGE STAYS USABLE (S6): no backdrop, no dim; only the pill takes
+// pointer events. Tap opens that badge's detail (S1), a swipe up dismisses it
+// early (S2).
 //
-// THE PAGE STAYS USABLE: no backdrop, no dim; only the pill takes pointer
-// events. Tap opens Achievements; a swipe up dismisses it early.
+// MOTION B (S3, motion-specs.md:140; V6-142 replaces A's dot, logo and coin
+// flip): in from the top with a fade, 300 ms cubic-bezier(.22,1,.36,1); it
+// holds 4 s while one sheen sweeps; out upward with a fade, 200 ms ease-in.
+// Reduce motion: the same timing as an opacity fade only, no sheen.
 //
-// MOTION, the board's motion strip (frames/MO1.1.3.2__board.png). Every entry
-// step eases out on cubic-bezier(.22,1,.36,1); t0 is the first frame after the
-// dot has painted.
-//   0–600 ms     a 12 pt dot in the level colour grows into the 58 pt circle
-//   400–1000     the Centium logo (in its 48 pt ringed coin) appears in it
-//   1000–1300    a 180° rotateY coin flip to the achievement's icon
-//   1300–1800    the pill widens right to 318, the whole unit staying centred
-//   1800–2100    the details fade in
-//   2100–6000    it holds; one light sheen sweeps (2100–3500)
-//   6000–7000    "same steps in reverse with ease-in": details out (200),
-//                retract (300), flip back (300), shrink to the dot (200)
-// The board gives the reverse no durations ("Exit"); those four are the
-// app's own. With reduced motion (Foundations 2.6: 0 ms cross-fades, no flip
-// and no sheen) the full pill appears at once, holds 4 s, and goes at once.
+// SHOWN ONCE (S5): today the queue is fed by newly_earned from the same
+// my_achievements() call plus an in-memory set (AppContext). Unlocks awarded
+// by the 01:15 sweep or on another device get no pill until stage B3
+// (user_achievements.notified_at) is on the stack.
 
-const EASE = "cubic-bezier(.22,1,.36,1)";
+const ENTER_MS = 300;
+const HOLD_MS = 4000;
+const EXIT_MS = 200;
+const EASE_OUT = "cubic-bezier(.22,1,.36,1)";
 const EASE_IN = "cubic-bezier(.55,0,1,.45)";
-/** The collapsed circle: the pill's own height. */
-const CIRCLE = 58;
-const WIDE = 318;
-/** The dot it grows from: 12 pt on the motion strip. */
-const DOT_SCALE = 12 / 58;
-/** Reduced motion: how long the static pill stays (the board's "about 4 s"). */
-const REDUCED_HOLD = 4000;
-const END = 7000;
-
-type Phase = "dot" | "circle" | "logo" | "flip" | "wide" | "details" | "sheen" | "outDetails" | "outWide" | "outFlip" | "outCircle";
-
-const SCHEDULE: [number, Phase][] = [
-  [0, "circle"],
-  [400, "logo"],
-  [1000, "flip"],
-  [1300, "wide"],
-  [1800, "details"],
-  [2100, "sheen"],
-  [6000, "outDetails"],
-  [6200, "outWide"],
-  [6500, "outFlip"],
-  [6800, "outCircle"],
-];
-const ORDER: Phase[] = ["dot", "circle", "logo", "flip", "wide", "details", "sheen", "outDetails", "outWide", "outFlip", "outCircle"];
-const at = (p: Phase, q: Phase) => ORDER.indexOf(p) >= ORDER.indexOf(q);
+/** Start offset: from above the screen's top edge. */
+const FROM_Y = -90;
 
 export const AchievementUnlockToast: React.FC = () => {
   const { unlockQueue, dismissUnlock } = useApp();
+  // A FRESH PILL PER QUEUE ENTRY: keyed by its position in the run of pills,
+  // so the same badge queued twice (the dev helper) still restarts.
+  const [shown, setShown] = useState(0);
   const achievement = unlockQueue[0] ?? null;
   if (!achievement) return null;
-  // A FRESH PILL PER BADGE: keyed, so the next one in the queue starts its own
-  // run from the dot with fresh state.
-  return <Pill key={achievement.key} achievement={achievement} onDone={dismissUnlock} />;
+  return (
+    <Pill
+      key={`${shown}-${achievement.key}`}
+      achievement={achievement}
+      onDone={() => {
+        setShown((n) => n + 1);
+        dismissUnlock();
+      }}
+    />
+  );
 };
 
 type Unlocked = ReturnType<typeof useApp>["unlockQueue"][number];
+type Stage = "before" | "in" | "out";
 
 const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achievement, onDone }) => {
   const navigate = useNavigate();
   const dark = useIsDark();
-  const { colorTheme } = useApp();
   const reduced = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>("dot");
+  const [stage, setStage] = useState<Stage>("before");
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [flung, setFlung] = useState(false);
   const drag = useRef<{ y: number; moved: boolean } | null>(null);
+  const timers = useRef<number[]>([]);
+  const leaving = useRef(false);
   const dismissRef = useRef(onDone);
   useEffect(() => {
     dismissRef.current = onDone;
   });
 
+  const leave = () => {
+    if (leaving.current) return;
+    leaving.current = true;
+    timers.current.forEach((t) => window.clearTimeout(t));
+    setStage("out");
+    timers.current = [window.setTimeout(() => dismissRef.current(), EXIT_MS)];
+  };
+  const leaveRef = useRef(leave);
   useEffect(() => {
-    const timers: number[] = [];
-    let raf = 0;
-    if (reduced) {
-      timers.push(window.setTimeout(() => dismissRef.current(), REDUCED_HOLD));
-    } else {
-      // The clock starts once the dot is on screen (two frames), so the
-      // growth runs from t0 rather than from an unpainted mount.
+    leaveRef.current = leave;
+  });
+
+  useEffect(() => {
+    // Two frames so the "before" state paints and the entry transitions.
+    let raf = window.requestAnimationFrame(() => {
       raf = window.requestAnimationFrame(() => {
-        raf = window.requestAnimationFrame(() => {
-          for (const [ms, p] of SCHEDULE) timers.push(window.setTimeout(() => setPhase(p), ms));
-          timers.push(window.setTimeout(() => dismissRef.current(), END));
-        });
+        setStage("in");
+        timers.current.push(window.setTimeout(() => leaveRef.current(), ENTER_MS + HOLD_MS));
       });
-    }
+    });
+    const list = timers.current;
     return () => {
       window.cancelAnimationFrame(raf);
-      timers.forEach((t) => window.clearTimeout(t));
+      list.forEach((t) => window.clearTimeout(t));
     };
-  }, [reduced]);
+  }, []);
 
-  const set = colourSet(levelHex(achievement.level), dark);
-  // The chip and the coin's back face: #F3EDE9 on the 2x frame, the level's
-  // colour at 12% on the white pill (the hero's track is a deeper mix).
-  const tint = dark ? set.track : tintOn(levelHex(achievement.level), 0.12, "#FFFFFF");
-  // A one-off has no level; MO1.1.3.2 still draws the chip, so it reads as
-  // the first rung, Bronze (matching levelHex's fallback colour).
-  const level = LEVEL_LABEL[achievement.level ?? "bronze"];
-  // The dot it grows from: the motion strip's #B38E77 on its #F5F4F8 card,
-  // i.e. the level colour at 74%.
-  const dotFill = `${set.ink}BD`;
-  // The sheen: on the 2x frame its stripes peak at the level colour at 7% on
-  // the white pill. Dark is not drawn; there it stays a faint white.
-  const sheen = dark ? "rgba(255,255,255,0.10)" : `${levelHex(achievement.level)}12`;
+  // The sweep: 1.4 s across the pill (A's duration), starting once it is in.
+  const sweep = React.useCallback((el: HTMLSpanElement | null) => {
+    el?.animate([{ transform: "translateX(0)" }, { transform: "translateX(410px)" }], {
+      duration: 1400,
+      delay: ENTER_MS,
+      easing: "ease-in-out",
+      fill: "both",
+    });
+  }, []);
 
-  const finish = () => {
-    setFlung(true);
-    window.setTimeout(() => dismissRef.current(), 200);
-  };
+  const c = pillColours(achievement.level, dark);
+  // V6-142: a badge with no level shows no chip.
+  const level = achievement.level ? LEVEL_LABEL[achievement.level] : null;
+
   const onPointerDown = (e: React.PointerEvent) => {
     drag.current = { y: e.clientY, moved: false };
     setDragging(true);
@@ -146,34 +131,30 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
     setDragging(false);
     if (!d) return;
     if (!d.moved) {
-      // Tapping opens the Achievements page.
-      navigate("/app/mind/achievements");
-      finish();
+      // S1: this badge's detail (MO1.1.3.1) over Achievements.
+      navigate(`/app/mind/achievements?badge=${encodeURIComponent(achievement.key)}`);
+      leave();
     } else if (dragY < -24) {
-      finish(); // swipe up dismisses early
+      leave(); // S2: a swipe up dismisses early
     } else {
       setDragY(0);
     }
   };
 
-  // Geometry for the current phase.
-  const grown = reduced || (at(phase, "circle") && !at(phase, "outCircle"));
-  const wide = reduced || (at(phase, "wide") && !at(phase, "outWide"));
-  const flipped = reduced || (at(phase, "flip") && !at(phase, "outFlip"));
-  const showLogo = !reduced && at(phase, "logo") && !at(phase, "outCircle");
-  const details = reduced || (at(phase, "details") && !at(phase, "outDetails"));
-  const leaving = !reduced && at(phase, "outDetails");
-  // Entry steps ease out; the reverse eases in.
-  const step = (enterMs: number, exitMs: number) => (leaving ? `${exitMs}ms ${EASE_IN}` : `${enterMs}ms ${EASE}`);
+  const visible = stage === "in";
+  const offset = reduced ? 0 : stage === "in" ? 0 : FROM_Y;
+  const timing = stage === "out" ? `${EXIT_MS}ms ${EASE_IN}` : `${ENTER_MS}ms ${EASE_OUT}`;
 
   return createPortal(
     <div
       className="fixed left-1/2 z-[95] pointer-events-none"
-      style={{ top: "calc(env(safe-area-inset-top, 0px) + 17px)", transform: "translateX(-50%)" }}
+      // #54: 16 under the top (plus the safe area).
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)", transform: "translateX(-50%)" }}
       role="status"
       aria-live="polite"
     >
       <div
+        data-stage={stage}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -182,111 +163,66 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
           setDragging(false);
           setDragY(0);
         }}
-        className="pointer-events-auto relative overflow-hidden rounded-full border cursor-pointer select-none touch-none"
-        aria-label={`Achievement unlocked: ${achievement.title}. Open achievements`}
+        // #54: 318 × 58 (grows with Larger text, O-2), r9999, white with a
+        // 0.5 px border in the level colour at 55% and the shadow in light;
+        // #1C1F28, the dark ink at 55%, no shadow in dark.
+        className="pointer-events-auto relative overflow-hidden rounded-full border-[0.5px] bg-cream-card cursor-pointer select-none touch-none"
+        aria-label={`Achievement unlocked: ${achievement.title}. Open details`}
         style={{
-          width: wide ? `min(${WIDE}px, calc(100vw - 32px))` : CIRCLE,
-          height: CIRCLE,
-          marginLeft: "auto",
-          marginRight: "auto",
-          background: grown ? "rgb(var(--c-cream-card))" : dotFill,
-          borderColor: set.border.length === 9 ? `${set.border.slice(0, 7)}8C` : set.border, // 55%
-          boxShadow: "0 10px 28px rgba(36,31,27,0.16)",
-          opacity: flung ? 0 : 1,
-          transform: `translateY(${flung ? -80 : dragY}px) scale(${grown ? 1 : DOT_SCALE})`,
-          transition: reduced
-            ? "none"
-            : [
-                `width ${step(500, 300)}`,
-                `transform ${dragging ? "0ms" : step(600, 200)}`,
-                `background-color ${step(600, 200)}`,
-                "opacity 200ms ease",
-              ].join(", "),
+          width: `min(318px, calc(100vw - 32px))`,
+          minHeight: 58,
+          borderColor: c.border,
+          boxShadow: dark ? "none" : "0 10px 28px rgba(36,31,27,0.16)",
+          opacity: visible ? 1 : 0,
+          transform: `translateY(${offset + dragY}px)`,
+          transition: dragging ? "opacity 0ms" : `transform ${timing}, opacity ${timing}`,
         }}
       >
-        {/* The coin: 48 pt with a 1 pt ring in the level colour (2x frame),
-            centred in the circle; logo on the front, the icon on the back. */}
-        <span className="absolute top-1 left-1 w-12 h-12" style={{ perspective: 400 }}>
+        <span className="flex items-center min-h-[57px] pl-[5px] pr-5 py-[4.5px]">
+          {/* #56-#57: the 48 coin, 1 px ring in the level ink, the 40 medallion. */}
           <span
-            className="relative block w-full h-full"
-            style={{
-              transformStyle: "preserve-3d",
-              transform: `rotateY(${flipped ? 180 : 0}deg)`,
-              transition: reduced ? "none" : `transform ${step(300, 300)}`,
-            }}
+            className="shrink-0 w-12 h-12 rounded-full border flex items-center justify-center bg-cream-card"
+            style={{ borderColor: c.ink }}
           >
-            <span
-              className="absolute inset-0 rounded-full border flex items-center justify-center bg-cream-card"
-              style={{
-                borderColor: set.ink,
-                backfaceVisibility: "hidden",
-                opacity: showLogo ? 1 : 0,
-                transition: reduced ? "none" : `opacity ${step(600, 200)}`,
-              }}
-            >
-              {colorTheme === "centium" ? (
-                <img src="/centium-logo-c.png" alt="" className="w-6 h-auto" />
-              ) : (
-                <ThemedC width={24} height={(24 * 701) / 648} />
-              )}
-            </span>
-            <span
-              className="absolute inset-0 rounded-full border flex items-center justify-center bg-cream-card"
-              style={{ borderColor: set.ink, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-            >
-              {/* The 39 pt medallion inside the ring. */}
-              <span
-                className="w-[39px] h-[39px] rounded-full flex items-center justify-center text-[22px] leading-none"
-                style={{ background: tint }}
-              >
-                {achievement.icon}
-              </span>
-            </span>
+            <AchievementIcon achievementKey={achievement.key} emoji={achievement.icon} size={40} />
           </span>
-        </span>
-
-        {/* The details: text from 65 pt, the points ending 21 pt in (2x frame). */}
-        <span
-          className="absolute inset-y-0 left-[64px] right-5 flex items-center gap-3"
-          style={{ opacity: details ? 1 : 0, transition: reduced ? "none" : `opacity ${step(300, 200)}` }}
-        >
-          <span className="flex-1 min-w-0">
-            <span className="block text-[9px] font-extrabold tracking-[.16em] uppercase" style={{ color: set.ink }}>
+          {/* #58-#60: text from 64 in; #61: points 10 after it. */}
+          <span className="flex-1 min-w-0 ml-[11px] mr-2.5">
+            <span className="block text-[9px] leading-[12px] font-extrabold tracking-[1.3px] uppercase" style={{ color: c.ink }}>
               Achievement unlocked
             </span>
-            <span className="mt-0.5 flex items-center gap-1.5 min-w-0">
-              <span className="text-[15px] font-extrabold text-charcoal truncate">{achievement.title}</span>
+            <span className="mt-0.5 flex items-center gap-[7px] min-w-0">
+              <span className="text-[15px] leading-[20px] tracking-[-0.1px] font-extrabold text-charcoal truncate">
+                {achievement.title}
+              </span>
               {level && (
                 <span
-                  className="shrink-0 text-[10px] font-bold rounded-full px-1.5 py-[1px]"
-                  style={{ color: set.ink, background: tint }}
+                  className="shrink-0 text-[10px] leading-[14px] font-bold rounded-full px-[7px] py-px"
+                  style={{ color: c.ink, background: c.chip }}
                 >
                   {level}
                 </span>
               )}
             </span>
           </span>
-          {/* An explorer badge is worth zero and says nothing rather than "+0". */}
-          {achievement.points > 0 && (
-            <span className="shrink-0 text-[16px] font-extrabold tabular-nums" style={{ color: set.ink }}>
-              +{achievement.points.toLocaleString()}
-            </span>
-          )}
+          <span
+            className="shrink-0 text-[16px] leading-[20px] font-extrabold tabular-nums"
+            style={{ color: c.ink }}
+          >
+            {achievement.points > 0 ? `+${achievement.points.toLocaleString()}` : "No points"}
+          </span>
         </span>
 
-        {/* One light sheen while it holds, as on the mid-sheen 2x frame: two
-            stripes leaning forward 20.6° (18 pt and 19 pt wide, 4 pt apart,
-            41 pt in all), each peaking off-centre. It starts just off the
-            left edge and leaves past the right one. */}
-        {!reduced && at(phase, "sheen") && !leaving && (
+        {/* #55: one sheen while it holds, 81.3 × 96.9, the table's gradient
+            (stops after 30% truncated: symmetric, white 0.5 in the middle). */}
+        {!reduced && visible && (
           <span aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
-            <span className="absolute inset-0 animate-unlock-sheen">
+            <span ref={sweep} className="absolute inset-0">
               <span
-                className="absolute inset-y-0 w-[41px]"
+                className="absolute top-1/2 w-[81.3px] h-[96.9px] -translate-y-1/2"
                 style={{
-                  left: -56,
-                  transform: "skewX(-20.6deg)",
-                  background: `linear-gradient(90deg, transparent 0%, ${sheen} 27%, transparent 44%, transparent 54%, ${sheen} 72%, transparent 100%)`,
+                  left: -82,
+                  background: `linear-gradient(90deg, transparent 0%, ${c.sheen} 30%, ${c.sheenMid} 50%, ${c.sheen} 70%, transparent 100%)`,
                 }}
               />
             </span>

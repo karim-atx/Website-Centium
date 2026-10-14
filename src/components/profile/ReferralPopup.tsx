@@ -255,7 +255,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
                 // Loading (not drawn): a skeleton block at the code box's
                 // place, surface.soft at the box's radius.
                 <span
-                  className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft flex items-center justify-center text-[13px] text-charcoal-faint ${summaryError ? "" : "animate-pulse"}`}
+                  className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft flex items-center justify-center text-[13px] text-charcoal-faint ${summaryError ? "" : "animate-skeleton-pulse"}`}
                   aria-busy={!summaryError || undefined}
                 >
                   {summaryError ? "Unavailable" : ""}

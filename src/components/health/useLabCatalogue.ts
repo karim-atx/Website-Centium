@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { fetchLabCatalogue } from "../../services/labs/catalogue";
 import { isThresholdMarker, type CatalogueMarker } from "../../services/labs/catalogueLogic";
-import type { BloodMarker } from "../../types";
+
+/** Anything that names a result: a BloodMarker, a LabResult, a draft. */
+type MarkerLike = { markerKey?: string | null };
 
 /**
  * The standard marker list (read once per page load and cached), and what it
@@ -11,19 +13,26 @@ import type { BloodMarker } from "../../types";
  */
 export function useLabCatalogue() {
   const [catalogue, setCatalogue] = useState<CatalogueMarker[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void fetchLabCatalogue().then((c) => {
-      if (!cancelled) setCatalogue(c);
+      if (cancelled) return;
+      setCatalogue(c);
+      setLoaded(true);
     });
     return () => {
       cancelled = true;
     };
   }, []);
-  const entryFor = (m: BloodMarker) => (m.markerKey && catalogue ? catalogue.find((c) => c.key === m.markerKey) ?? null : null);
+  const entryFor = (m: MarkerLike) => (m.markerKey && catalogue ? catalogue.find((c) => c.key === m.markerKey) ?? null : null);
   return {
-    remarkFor: (m: BloodMarker) => entryFor(m)?.remark ?? null,
-    isThreshold: (m: BloodMarker) => {
+    catalogue,
+    /** True once the read finished (catalogue may still be null if it failed). */
+    loaded,
+    entryFor,
+    remarkFor: (m: MarkerLike) => entryFor(m)?.remark ?? null,
+    isThreshold: (m: MarkerLike) => {
       const e = entryFor(m);
       return e ? isThresholdMarker(e) : false;
     },

@@ -35,6 +35,8 @@ export interface EventDraft {
   url: string;
   /** The calendar_alert enum value; "none" = None. */
   alert: EventAlert;
+  /** The last day a repeat runs (calendar_events.repeat_until, B3); null = never ends. */
+  repeatUntil: string | null;
 }
 
 const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
@@ -150,6 +152,9 @@ export const EventComposeSheet: React.FC<{
   // The open menu's anchor; null when closed.
   const [repeatAnchor, setRepeatAnchor] = useState<HTMLElement | null>(null);
   const [alertAnchor, setAlertAnchor] = useState<HTMLElement | null>(null);
+  // OURS (MO1.6 B4, PB-O-63): when a repeat ends.
+  const [endsAnchor, setEndsAnchor] = useState<HTMLElement | null>(null);
+  const [endsDateOpen, setEndsDateOpen] = useState(false);
 
   // A new start keeps the event's length, so Ends never falls behind Starts.
   const setStart = (hhmm: string) =>
@@ -165,6 +170,7 @@ export const EventComposeSheet: React.FC<{
         setWheel(null);
         setRepeatAnchor(null);
         setAlertAnchor(null);
+        setEndsAnchor(null);
         onClose();
       }}
       title={editing ? "Edit Event" : "New Event"}
@@ -299,7 +305,8 @@ export const EventComposeSheet: React.FC<{
               options={REPEAT_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
               selected={draft.repeat}
               onSelect={(v) => {
-                setDraft((d) => ({ ...d, repeat: v }));
+                // A one-off has no end (the CHECK refuses one).
+                setDraft((d) => ({ ...d, repeat: v, repeatUntil: v === "none" ? null : d.repeatUntil }));
                 setRepeatAnchor(null);
               }}
             />
@@ -334,6 +341,43 @@ export const EventComposeSheet: React.FC<{
             />
           </div>
         </div>
+
+        {/* OURS (MO1.6 B4, PB-O-63; not drawn): when a repeat ends, only
+            while Repeat is set. The Repeat field's pattern: 12 / 600 label
+            over a 40 field with ChevronDown 14, the app dropdown with
+            "Never" and "On a date", the date from the shared date sheet
+            (nothing before the first date). */}
+        {draft.repeat !== "none" && (
+          <div className="min-w-0">
+            <span className={LABEL}>Ends</span>
+            <button
+              type="button"
+              onClick={(e) => setEndsAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              aria-expanded={!!endsAnchor}
+              aria-label={`Repeat ends, ${draft.repeatUntil ? new Date(`${draft.repeatUntil}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "never"}`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+            >
+              <span className="truncate tabular-nums">{draft.repeatUntil ? `On ${dateLabel(draft.repeatUntil)}` : "Never"}</span>
+              <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
+            </button>
+            <PopupMenu
+              open={!!endsAnchor}
+              onClose={() => setEndsAnchor(null)}
+              anchor={endsAnchor}
+              options={[
+                { value: "never", label: "Never" },
+                { value: "date", label: "On a date" },
+              ]}
+              selected={draft.repeatUntil ? "date" : "never"}
+              onSelect={(v) => {
+                setEndsAnchor(null);
+                if (v === "never") setDraft((d) => ({ ...d, repeatUntil: null }));
+                else setEndsDateOpen(true);
+              }}
+            />
+          </div>
+        )}
 
         <label className="block">
           <span className={LABEL}>Notes</span>
@@ -394,7 +438,17 @@ export const EventComposeSheet: React.FC<{
         title="Date"
         selectedDate={draft.date}
         today={todayIso}
-        onSelect={(day) => setDraft((d) => ({ ...d, date: day }))}
+        // A first date after the chosen end would be refused: the end goes.
+        onSelect={(day) => setDraft((d) => ({ ...d, date: day, repeatUntil: d.repeatUntil && d.repeatUntil < day ? null : d.repeatUntil }))}
+      />
+      <CalendarPickerSheet
+        open={endsDateOpen}
+        onClose={() => setEndsDateOpen(false)}
+        title="Repeat ends"
+        selectedDate={draft.repeatUntil ?? draft.date}
+        today={todayIso}
+        minDate={draft.date}
+        onSelect={(day) => setDraft((d) => ({ ...d, repeatUntil: day }))}
       />
     </BottomSheet>
   );

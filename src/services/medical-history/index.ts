@@ -80,7 +80,7 @@ export async function addSurgeryRemote(
   }
   const { data, error } = await supabase
     .from("surgeries")
-    .insert({ user_id: userId, name: surgery.name, surgery_date: surgery.date })
+    .insert({ user_id: userId, name: surgery.name, surgery_date: surgery.date, ...(surgery.datePrecision ? { date_precision: surgery.datePrecision } : {}) } as never)
     .select("id")
     .single();
 
@@ -293,7 +293,7 @@ export async function getMedicalHistory(userId: string): Promise<MedicalHistoryR
       .order("created_at", { ascending: true }),
     supabase
       .from("surgeries")
-      .select("id, name, surgery_date")
+      .select("id, name, surgery_date, date_precision" as "id, name, surgery_date")
       .eq("user_id", userId)
       .order("surgery_date", { ascending: false }),
     supabase
@@ -317,6 +317,7 @@ export async function getMedicalHistory(userId: string): Promise<MedicalHistoryR
         id: s.id,
         name: s.name,
         date: s.surgery_date,
+        datePrecision: (s as { date_precision?: "day" | "month" | "year" }).date_precision ?? "day",
       })),
       medications: (meds.data ?? []).map((m) => ({
         id: m.id,
@@ -329,4 +330,21 @@ export async function getMedicalHistory(userId: string): Promise<MedicalHistoryR
       })),
     },
   };
+}
+
+/** HE1.9.c swipe Edit on a surgery: name and date (UPDATE grant: name, surgery_date). */
+export async function updateSurgeryRemote(id: string, surgery: Omit<Surgery, "id">): Promise<MedicalWriteResult> {
+  if (!surgery.date || !/^\d{4}-\d{2}-\d{2}$/.test(surgery.date)) {
+    return { ok: false, message: "Add the date of this surgery before saving." };
+  }
+  const { data, error } = await supabase
+    .from("surgeries")
+    .update({ name: surgery.name, surgery_date: surgery.date, ...(surgery.datePrecision ? { date_precision: surgery.datePrecision } : {}) } as never)
+    .eq("id", id)
+    .select("id");
+  if (error || !data || data.length === 0) {
+    if (error) console.error("[medical-history] Could not update surgery:", error.message);
+    return { ok: false, message: "Couldn't save. Try again." };
+  }
+  return { ok: true };
 }

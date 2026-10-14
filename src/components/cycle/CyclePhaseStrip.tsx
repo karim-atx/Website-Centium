@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { PHASE_COLOR, PHASE_LABEL, PHASE_TRAINING_NOTE } from "../../services/cycle/guidance";
+import { PHASE_LABEL, PHASE_TRAINING_NOTE, phaseThemeColor } from "../../services/cycle/guidance";
 import * as PG from "../../services/pregnancy/guidance";
 import { gestationOn } from "../../services/pregnancy";
 import { PREGNANCY_COLOR } from "../pregnancy/PregnancyRing";
@@ -87,12 +87,13 @@ export const CyclePhaseStrip: React.FC = () => {
   }
 
   if (!strip) return null;
-  const color = PHASE_COLOR[strip.phase];
+  // V6-110: phase colours follow the theme (phaseThemeColor).
+  const color = phaseThemeColor(strip.phase);
 
   return (
     <div
       className="flex items-start gap-2.5 rounded-[14px] px-3.5 py-2.5 mb-3"
-      style={{ background: `${color}14` }}
+      style={{ background: phaseThemeColor(strip.phase, 0.08) }}
     >
       <span className="w-1 self-stretch rounded-full shrink-0" style={{ background: color }} />
       <div className="min-w-0">
@@ -124,12 +125,13 @@ export const CyclePhaseChip: React.FC = () => {
   }
 
   if (!strip) return null;
-  const color = PHASE_COLOR[strip.phase];
+  // V6-110: phase colours follow the theme (phaseThemeColor).
+  const color = phaseThemeColor(strip.phase);
 
   return (
     <span
       className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 h-[20px] text-[10px] font-bold whitespace-nowrap"
-      style={{ background: `${color}1F`, color }}
+      style={{ background: phaseThemeColor(strip.phase, 0.12), color }}
       title={strip.note}
     >
       {PHASE_LABEL[strip.phase]}

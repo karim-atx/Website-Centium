@@ -13,11 +13,21 @@ export interface MeditationSessionInput {
   startedAt: Date;
   durationSeconds: number;
   kind: string;
-  /** Ran until the user stopped it (true), or was interrupted (false).
-   *  ALWAYS SENT: the column has no default, on purpose. Only completed
-   *  sessions count towards the meditation badges; both count as minutes. */
+  /** ALWAYS SENT: the column has no default, on purpose. Only completed
+   *  sessions count towards the meditation badges; both count as minutes.
+   *  Since v6 (MO1.1.4 S2-S5, V6-144) the app writes only completed runs: a
+   *  breathing run with at least one full cycle, or a finished pose sequence;
+   *  anything shorter or unfinished is not written at all. */
   completed: boolean;
+  /** B3 (PB-O-21): full breathing cycles in the run (0 to 500). Breathing only. */
+  cyclesCompleted?: number;
+  /** B3 (PB-O-21): poses finished in a Stretching / Yoga sequence (0 to 500). */
+  posesCompleted?: number;
 }
+
+/** The table's CHECK: null, or a whole number 0 to 500. */
+const count = (n: number | undefined): number | null =>
+  n === undefined || !Number.isFinite(n) ? null : Math.max(0, Math.min(500, Math.floor(n)));
 
 export async function logMeditationSession(input: MeditationSessionInput): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
@@ -27,15 +37,19 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
       duration_seconds: input.durationSeconds,
       kind: input.kind,
       completed: input.completed,
-    });
+      // B3 columns, INSERT-granted; not in the production-generated types yet.
+      cycles_completed: count(input.cyclesCompleted),
+      poses_completed: count(input.posesCompleted),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     if (!error) return { ok: true };
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     // ATX02: 20 sessions an hour. Real use does not reach it.
     if (error.code === "ATX02") return { ok: false, message: "That's a lot of sessions in an hour. Try again a little later." };
     console.error("[meditation] Could not save a session:", error.code, error.message);
-    return { ok: false, message: "Couldn't save this session." };
+    return { ok: false, message: "Couldn't save. Try again." };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save this session." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save. Try again." };
   }
 }
 

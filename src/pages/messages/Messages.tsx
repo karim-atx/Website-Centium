@@ -1,49 +1,66 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, MessageCircle, Search, Star, Archive, Plus, Users, Megaphone, MessageSquarePlus } from "lucide-react";
-import { PageHeader } from "../../components/ui/PageHeader";
-import { Card } from "../../components/ui/Card";
-import { ThreadList, type ChatListItem } from "../../components/messages/ThreadList";
+import { AlertCircle, Archive, CheckCheck, Megaphone, MessageCircle, MessageSquarePlus, Plus, Search, Star, Users } from "lucide-react";
+import { ThreadList, type ChatListItem, type RowActions } from "../../components/messages/ThreadList";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { FixedHeader } from "../../components/ui/FixedHeader";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { Toast } from "../../components/ui/Toast";
 import { ClientPicker, type PickableClient } from "../../components/messages/ClientPicker";
 import { NewGroup } from "../../components/messages/NewGroup";
 import { BroadcastEditor } from "../../components/messages/BroadcastEditor";
 import { GroupInvitationView } from "../../components/messages/GroupInvitationView";
 import { ThreadView } from "../../components/messages/ThreadView";
+import { MessagesHeader } from "../../components/messages/MessagesHeader";
+import { DeleteConversationConfirm } from "../../components/messages/DeleteConversationConfirm";
+import { useListColors, type ListColors } from "../../components/messages/listColors";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { StarredMessages } from "../../components/messages/StarredMessages";
 import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
 import { ThreadLiveProvider } from "../../context/ThreadLiveContext";
+import { useUnread } from "../../context/UnreadContext";
 import { fetchThreads, migrateLegacyStars, startThread, threadForPush, type MessageThread } from "../../services/messaging";
-import { fetchGroupInvitations, fetchGroupMembers, type GroupInvitation } from "../../services/messaging/groups";
+import { fetchGroupInvitations, type GroupInvitation } from "../../services/messaging/groups";
 import { fetchBroadcastLists, fetchBroadcasts, type BroadcastList } from "../../services/messaging/broadcasts";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
 import {
+  CONVERSATION_DELETE_READY,
+  deleteConversationForMe,
   fetchLastMessageState,
   fetchThreadSettings,
   MIN_GLOBAL_QUERY,
+  mutePatch,
+  NO_SETTINGS,
+  saveThreadSettings,
   searchMessages,
+  type MuteChoice,
   type SearchHit,
   type ThreadSettings,
 } from "../../services/messaging/chatFeatures";
 
 /**
- * Messages, for every account type (phase 2A, screen 1).
+ * Messages, for every account type (phase 2A, screen 1; v6 MO1.7 / MO1.7.e).
  *
  * ONE ROUTE FOR BOTH SIDES: a thread is two profile ids and nothing about it is
  * role-specific, so a professional and a client read the same screen.
  *
- * THE LIST: search, All / Unread, pinned chats first, archived chats in their
- * own section, a mute icon, and a sent/read tick on your own last message.
- * Pin, mute and archive are the reader's own and change nothing for the other
- * person.
+ * THE LIST: search, All / Unread / Groups sub-tabs, pinned chats first,
+ * archived chats in their own view, a mute mark, and a sent/read tick on your
+ * own last message. Pin, mute and archive are the reader's own and change
+ * nothing for the other person. v6: the title, search and sub-tabs are one
+ * fixed area (FixedHeader); rows swipe left for Pin / Mute / Delete (for
+ * me, B3), and the row ⋮ menu adds Archive (decision D1: Archive and
+ * Delete both kept).
  *
  * PHASE 2B (screens 4 and 5): groups sit in the same list as direct chats,
  * invitations waiting for an answer sit at the top, and a professional's
  * broadcast lists appear as their own rows. The Groups and Broadcasts filters
  * narrow to those; Broadcasts is a professional's filter only, because a
  * client receives a broadcast as an ordinary message in their direct chat.
- * The "+" button (professionals) starts a chat, a group or a broadcast.
+ * The "+" button (professionals) starts a chat, a group or a broadcast. A
+ * business has no "new chat" yet: it may only message its own members or
+ * customers, which needs PB-O-43 (K13).
  *
  * SEARCH COVERS CHATS AND MESSAGES. Chats are matched here by name and latest
  * message; messages through the database's search (Database 20261002070000),
@@ -53,16 +70,22 @@ import {
  * THE LIST DOES NOT POLL. Only an open conversation does; the list re-reads on
  * returning from a thread, which is the moment it is actually stale.
  */
+
+type Filter = "all" | "unread" | "groups" | "broadcasts";
+const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
+
 export default function Messages() {
   const { authUserId, user, professionalClients } = useApp();
+  const unread = useUnread();
   const isProfessional = user.accountType === "professional";
+  const c = useListColors();
   // The professional's connected clients, for every picker in 2B. Only these
   // can be invited, added to a list or messaged first.
   const clients: PickableClient[] = useMemo(
     () =>
       professionalClients
-        .filter((c) => c.clientId)
-        .map((c) => ({ userId: c.clientId!, name: c.name, avatarUrl: c.avatarUrl ?? null })),
+        .filter((cl) => cl.clientId)
+        .map((cl) => ({ userId: cl.clientId!, name: cl.name, avatarUrl: cl.avatarUrl ?? null })),
     [professionalClients]
   );
   const location = useLocation();
@@ -80,13 +103,11 @@ export default function Messages() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "archived" | "starred" | "newGroup" | "broadcast" | "invitation">("list");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "unread" | "groups" | "broadcasts">("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [lists, setLists] = useState<BroadcastList[]>([]);
   /** The newest broadcast's "Sent to N" per list. */
   const [lastSent, setLastSent] = useState<Record<string, number>>({});
-  /** First names of group members by thread, for "Lina: …" previews. */
-  const [senderNames, setSenderNames] = useState<Record<string, Record<string, string>>>({});
   const [openList, setOpenList] = useState<BroadcastList | null>(null);
   const [openInvitation, setOpenInvitation] = useState<GroupInvitation | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -95,6 +116,33 @@ export default function Messages() {
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** O2 / O3: a write that failed, as a toast. */
+  const [toast, setToast] = useState<string | null>(null);
+  /** The conversation the delete confirm is open for (OURS-MO1.7-delete-confirm). */
+  const [deleteTarget, setDeleteTarget] = useState<MessageThread | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  /** Polite announcements ("Conversation deleted."). */
+  const [announce, setAnnounce] = useState("");
+  const canDelete = CONVERSATION_DELETE_READY;
+  /**
+   * O10: when the fixed area would take more than 40% of the screen (Larger
+   * text on a short screen), only the title row stays fixed and the search
+   * and sub-tabs scroll with the list.
+   */
+  const [splitHeader, setSplitHeader] = useState(false);
+  useLayoutEffect(() => {
+    const check = () => {
+      const head = document.getElementById("messages-fixed");
+      const block = document.getElementById("messages-search-block");
+      if (!head || !block) return;
+      const total = head.offsetHeight + (splitHeader ? block.offsetHeight + 12 : 0);
+      const next = total > window.innerHeight * 0.4;
+      if (next !== splitHeader) setSplitHeader(next);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  });
   // Batch E (E5): an open thread is in-page state, so the phone's back returns
   // to the conversation list instead of leaving Messages.
   const closeThread = () => {
@@ -129,11 +177,6 @@ export default function Messages() {
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
-      // Names for group previews; one small read per group.
-      const groups = result.threads.filter((t) => t.kind === "group");
-      void Promise.all(groups.map(async (g) => [g.id, await fetchGroupMembers(g.id)] as const)).then((rows) =>
-        setSenderNames(Object.fromEntries(rows.map(([id, ms]) => [id, Object.fromEntries(ms.map((m) => [m.userId, m.firstName]))])))
-      );
       if (thenOpenId) {
         const target = result.threads.find((t) => t.id === thenOpenId);
         if (target) {
@@ -222,7 +265,7 @@ export default function Messages() {
     setFocusId(h.messageId);
     setOpen(t);
   };
-  const { active, archived, unreadTotal } = useMemo(() => {
+  const { active, archived, activeTotal } = useMemo(() => {
     const matches = (t: MessageThread) =>
       !q || t.participantName.toLowerCase().includes(q) || (t.lastMessagePreview ?? "").toLowerCase().includes(q);
     const archivedSet = threads.filter((t) => settings[t.id]?.archivedAt);
@@ -234,7 +277,7 @@ export default function Messages() {
     return {
       active: activeSet.filter(matches).filter(byFilter),
       archived: archivedSet.filter(matches),
-      unreadTotal: activeSet.filter((t) => t.unreadCount > 0).length,
+      activeTotal: activeSet.length,
     };
   }, [threads, settings, q, filter]);
 
@@ -283,8 +326,80 @@ export default function Messages() {
     await load(r.threadId);
   };
 
-  // The conversation and Chat info carry their own headers (screens 2 and 6),
-  // so the page title is not repeated above them.
+  // O2 / O3: what a failed write says. The pin cap's own line stays (ATX38).
+  const failToast = (message: string) => {
+    const offline = (typeof navigator !== "undefined" && navigator.onLine === false) || message === OFFLINE_MESSAGE;
+    setToast(offline ? OFFLINE_TOAST : message.startsWith("You can pin") ? message : "Couldn't save. Try again.");
+  };
+
+  /** Pin, mute and archive from a row: shown at once, reverted if the write fails. */
+  const writeSettings = async (
+    t: MessageThread,
+    patch: Parameters<typeof saveThreadSettings>[2],
+    next: Partial<ThreadSettings>
+  ) => {
+    if (!authUserId) return;
+    const prev = settings[t.id];
+    setSettings((all) => ({ ...all, [t.id]: { ...(all[t.id] ?? NO_SETTINGS), ...next } }));
+    const r = await saveThreadSettings(t.id, authUserId, patch);
+    if (!r.ok) {
+      setSettings((all) => {
+        const copy = { ...all };
+        if (prev) copy[t.id] = prev;
+        else delete copy[t.id];
+        return copy;
+      });
+      failToast(r.message);
+      return;
+    }
+    setSettings(await fetchThreadSettings());
+  };
+
+  const rowActions: RowActions = {
+    pin: (t) => {
+      const at = settings[t.id]?.pinnedAt ? null : new Date().toISOString();
+      void writeSettings(t, { pinned_at: at }, { pinnedAt: at });
+    },
+    mute: (t, choice: MuteChoice) => {
+      const patch = mutePatch(choice);
+      void writeSettings(t, patch, { mutedAlways: !!patch.muted_always, mutedUntil: patch.muted_until ?? null });
+    },
+    archive: (t) => {
+      const at = settings[t.id]?.archivedAt ? null : new Date().toISOString();
+      void writeSettings(t, { archived_at: at }, { archivedAt: at });
+    },
+    ...(canDelete ? { delete: (t: MessageThread) => setDeleteTarget(t) } : null),
+  };
+
+  const confirmDelete = async () => {
+    const t = deleteTarget;
+    if (!t) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setDeleteTarget(null);
+      setToast(OFFLINE_TOAST);
+      return;
+    }
+    setDeleteBusy(true);
+    const r = await deleteConversationForMe(t.id);
+    setDeleteBusy(false);
+    setDeleteTarget(null);
+    if (!r.ok) {
+      setToast(r.message === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't delete. Try again.");
+      return;
+    }
+    setAnnounce("Conversation deleted.");
+    // Gone from the list at once; my_conversations() leaves it out from now on
+    // until a newer message arrives. The server dropped its pin and archive
+    // and kept its mute, so the settings are re-read, not guessed.
+    setThreads((all) => all.filter((x) => x.id !== t.id));
+    unread.refresh();
+    if (open?.id === t.id) {
+      setOpen(null);
+      setFocusId(null);
+    }
+    void load();
+  };
+
   // Typing and online status for the chats in the list and the open one; the
   // database decides who may see what (ThreadLiveContext). Person-to-person
   // chats only, and at most 30 channels.
@@ -292,9 +407,29 @@ export default function Messages() {
     .filter((t) => (t.kind === "peer" && t.participantId) || t.kind === "group")
     .slice(0, 30)
     .map((t) => t.id);
+  const overlays = (
+    <>
+      <DeleteConversationConfirm
+        thread={deleteTarget}
+        busy={deleteBusy}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
+      <Toast
+        open={!!toast}
+        message={toast ?? ""}
+        onExpire={() => setToast(null)}
+        icon={<AlertCircle size={16} style={{ color: "#F09A8E" }} aria-hidden />}
+      />
+      <p className="sr-only" aria-live="polite">
+        {announce}
+      </p>
+    </>
+  );
   const live = (node: React.ReactNode) => (
     <ThreadLiveProvider userId={authUserId} threadIds={liveIds}>
       {node}
+      {overlays}
     </ThreadLiveProvider>
   );
 
@@ -308,6 +443,7 @@ export default function Messages() {
           settings={settings[open.id]}
           onSettingsChanged={async () => setSettings(await fetchThreadSettings())}
           onBack={closeThread}
+          onDeleteConversation={canDelete ? () => setDeleteTarget(open) : undefined}
         />
       </div>
     );
@@ -359,7 +495,10 @@ export default function Messages() {
   if (view === "starred") {
     return live(
       <div>
-        <SubHeader title="Starred messages" onBack={() => setView("list")} />
+        {/* K11: the #2-#4 header pattern, "Starred messages". */}
+        <FixedHeader paddingBottom={12}>
+          <MessagesHeader title="Starred messages" onBack={() => setView("list")} />
+        </FixedHeader>
         <StarredMessages
           threads={threads}
           authUserId={authUserId}
@@ -375,129 +514,206 @@ export default function Messages() {
     );
   }
 
-  const chip = (on: boolean) =>
-    `tap h-[34px] rounded-full px-3.5 text-[13px] ${
-      on
-        ? "bg-primary-fill text-on-primary-fill font-bold"
-        : "bg-cream-card border border-charcoal/10 text-charcoal font-semibold"
-    }`;
+  const tabs = [
+    { key: "all", label: "All" },
+    // K4: no count on "Unread" (the frame draws none; the rows' badges say it).
+    { key: "unread", label: "Unread" },
+    { key: "groups", label: "Groups" },
+    ...(isProfessional ? [{ key: "broadcasts", label: "Broadcasts" }] : []),
+  ];
+  // #11: the active sub-tab is the theme secondary with white; dark keeps the
+  // literal #79A8A1 in Centium (V6-94). High contrast (O7): a teal that holds
+  // 4.5:1 with white (the teal text token light, #35655E dark).
+  const tealLight = c.hc
+    ? { activeFill: "rgb(var(--c-teal-text))", activeInk: "#FFFFFF", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" }
+    : undefined;
+  const tealDark = c.hc ? "#35655E" : c.colorTheme === "centium" ? "#79A8A1" : undefined;
+
+  // MO1.7.e: no conversation at all (archived ones aside: their row still
+  // shows above, D1); only after a successful load (O1, O2).
+  const noConversations =
+    !loading && !error && view === "list" && activeTotal === 0 && invitations.length === 0 && lists.length === 0;
+  const hasAnything = threads.length > 0 || invitations.length > 0 || lists.length > 0;
+  const listEmpty = !loading && !error && hasAnything && !noConversations && items.length === 0 && !searchingMessages;
+
+  const searchBlock = (
+    <div id="messages-search-block">
+        {/* #7-#9: the search field, 44 tall (V6-115). */}
+        <label
+          data-search-field=""
+          className="mt-[11px] flex items-center gap-2 h-11 rounded-[14px] px-3"
+          style={{ background: c.fieldFill, border: `0.5px solid ${c.fieldBorder}` }}
+        >
+          <Search size={16} className="shrink-0" style={{ color: c.muted }} aria-hidden />
+          <span className="sr-only">Search messages and chats</span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search messages"
+            className="flex-1 min-w-0 bg-transparent text-[13.5px] leading-[20.3px] font-normal text-charcoal placeholder:text-charcoal-muted focus:outline-none"
+          />
+        </label>
+
+        {/* #10-#12: FO3 sub-tabs; a professional's 4th tab scrolls (S10). */}
+        {view === "list" && (
+          <SegmentedTabs
+            className="mt-3"
+            variant="teal"
+            items={tabs}
+            activeKey={filter}
+            onChange={(k) => setFilter(k as Filter)}
+            scroll={isProfessional}
+            light={tealLight}
+            activeFillDark={tealDark}
+          />
+        )}
+    </div>
+  );
 
   return live(
     <div>
-      {view === "archived" ? (
-        <SubHeader title="Archived" onBack={() => setView("list")} />
-      ) : (
-        <div className="flex items-start justify-between gap-2">
-          <PageHeader title="Messages" showBack />
-          <button
-            type="button"
-            onClick={() => setView("starred")}
-            aria-label="Starred messages"
-            className="tap w-11 h-11 rounded-full border border-charcoal/10 bg-cream-card flex items-center justify-center shrink-0 text-primary-deep-text"
-          >
-            <Star size={18} />
-          </button>
-        </div>
-      )}
+      <FixedHeader paddingBottom={12} id="messages-fixed">
+        {view === "archived" ? (
+          <MessagesHeader title="Archived" onBack={() => setView("list")} />
+        ) : (
+          <MessagesHeader
+            title="Messages"
+            right={
+              // #5 / #6: 36 r11 tile, Star 18; a 44 hit area.
+              <button
+                type="button"
+                onClick={() => setView("starred")}
+                aria-label="Starred messages"
+                data-starred-button=""
+                className="tap relative w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']"
+                style={{ background: c.primaryTint, color: c.primaryInk }}
+              >
+                <Star size={18} aria-hidden />
+              </button>
+            }
+          />
+        )}
 
-      <label className="flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 mb-3">
-        <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
-        <span className="sr-only">Search messages and chats</span>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search messages and chats"
-          className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-        />
-      </label>
+        {!splitHeader && searchBlock}
+      </FixedHeader>
+      {splitHeader && searchBlock}
 
-      {view === "list" && (
-        <div className="flex gap-1.5 mb-2 scroll-row -mx-4 px-4 [scrollbar-width:none]" role="group" aria-label="Filter chats">
-          <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className={chip(filter === "all")}>
-            All
-          </button>
-          <button
-            type="button"
-            aria-pressed={filter === "unread"}
-            onClick={() => setFilter("unread")}
-            className={chip(filter === "unread")}
-          >
-            Unread{unreadTotal > 0 ? ` ${unreadTotal}` : ""}
-          </button>
-          <button type="button" aria-pressed={filter === "groups"} onClick={() => setFilter("groups")} className={chip(filter === "groups")}>
-            Groups
-          </button>
-          {isProfessional && (
-            <button
-              type="button"
-              aria-pressed={filter === "broadcasts"}
-              onClick={() => setFilter("broadcasts")}
-              className={chip(filter === "broadcasts")}
-            >
-              Broadcasts
-            </button>
-          )}
-        </div>
-      )}
-
-      {error && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-4">{error}</p>}
-
-      {!loading && threads.length === 0 && invitations.length === 0 && lists.length === 0 && !error && (
-        <Card className="text-center py-10">
-          <MessageCircle size={22} className="text-charcoal-faint mx-auto mb-2" />
-          <p className="text-sm text-charcoal-faint">No conversations yet.</p>
-          <p className="text-[11px] text-charcoal-faint mt-1 max-w-xs mx-auto">
-            Messages with the professionals and clients you work with appear here.
+      {/* O2: the first load failed. */}
+      {error && (
+        <div role="alert" className="flex flex-col items-center text-center py-8 gap-1">
+          <p className="text-[12.5px] leading-[18.8px] font-medium" style={{ color: c.dangerText }}>
+            {error === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't load messages."}
           </p>
-        </Card>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              void load();
+            }}
+            className="tap min-h-[44px] px-3 text-[12.5px] font-bold"
+            style={{ color: c.primaryInk }}
+          >
+            Retry
+          </button>
+        </div>
       )}
 
-      {searchingMessages && items.length > 0 && (
-        <h2 className="section-label text-charcoal-soft mt-1 mb-1">Chats</h2>
+      {/* O1: five skeleton rows while the list loads. */}
+      {loading && !error && <ListSkeleton c={c} />}
+
+      {/* K1: the Archived row, at the top of the list (scrolls away). */}
+      {view === "list" && !loading && archived.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setView("archived")}
+          data-archived-row=""
+          className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-left"
+          style={{ background: c.rowFill, borderBottom: `0.5px solid ${c.rowRule}` }}
+        >
+          <span className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: c.primaryTint }}>
+            <Archive size={20} style={{ color: c.primaryInk }} aria-hidden />
+          </span>
+          <span className="flex-1 min-w-0 text-[15px] leading-[22.5px] font-bold" style={{ color: c.ink }}>
+            Archived
+          </span>
+          <span className="text-[12px] leading-[18px] font-bold" style={{ color: c.primaryInk }}>
+            {archived.length}
+          </span>
+        </button>
       )}
 
-      {!loading && (threads.length > 0 || invitations.length > 0 || lists.length > 0) && items.length === 0 && !searchingMessages && (
-        <p className="text-sm text-charcoal-faint text-center py-8">
-          {q
-            ? "No chats match your search."
-            : view === "archived"
-              ? "No archived chats."
-              : filter === "unread"
-                ? "You're all caught up."
-                : filter === "groups"
-                  ? isProfessional
-                    ? "No groups yet. Tap + to start one."
-                    : "No groups yet. A professional can invite you to one."
-                  : filter === "broadcasts"
-                    ? "No broadcast lists yet. Tap + to send one."
-                    : "No chats here."}
-        </p>
+      {noConversations && (
+        <EmptyState
+          c={c}
+          icon={<MessageCircle size={26} aria-hidden />}
+          title="No conversations yet"
+          helper={
+            isProfessional
+              ? "Chats with your clients and groups show up here. Tap + to start one."
+              : user.accountType === "business"
+                ? "Chats with your members and customers show up here."
+                : "Chats with your professionals, gyms and groups show up here."
+          }
+          frame
+        />
       )}
 
-      <ThreadList
-        items={items}
-        settings={settings}
-        senderNames={senderNames}
-        onOpenInvitation={(inv) => {
-          setOpenInvitation(inv);
-          setView("invitation");
-        }}
-        onOpenBroadcast={(list) => {
-          setOpenList(list);
-          setView("broadcast");
-        }}
-        readState={readState}
-        delivered={delivered}
-        authUserId={authUserId}
-        onOpen={setOpen}
-      />
+      {searchingMessages && items.length > 0 && <SectionLabel c={c}>Chats</SectionLabel>}
+
+      {/* O4: the per-tab empties, in the MO1.7.e pattern. */}
+      {listEmpty &&
+        (q ? (
+          <EmptyState c={c} icon={<Search size={26} aria-hidden />} title="No chats match your search" />
+        ) : view === "archived" ? (
+          <EmptyState c={c} icon={<Archive size={26} aria-hidden />} title="No archived chats" />
+        ) : filter === "unread" ? (
+          <EmptyState c={c} icon={<CheckCheck size={26} aria-hidden />} title="You're all caught up" />
+        ) : filter === "groups" ? (
+          <EmptyState
+            c={c}
+            icon={<Users size={26} aria-hidden />}
+            title="No groups yet"
+            helper={isProfessional ? "Tap + to start one." : "A professional can invite you to one."}
+          />
+        ) : filter === "broadcasts" ? (
+          <EmptyState c={c} icon={<Megaphone size={26} aria-hidden />} title="No broadcast lists yet" helper="Tap + to send one." />
+        ) : (
+          <EmptyState c={c} icon={<MessageCircle size={26} aria-hidden />} title="No chats here" />
+        ))}
+
+      {!loading && (
+        <ThreadList
+          items={items}
+          settings={settings}
+          onOpenInvitation={(inv) => {
+            setOpenInvitation(inv);
+            setView("invitation");
+          }}
+          onOpenBroadcast={(list) => {
+            setOpenList(list);
+            setView("broadcast");
+          }}
+          readState={readState}
+          delivered={delivered}
+          authUserId={authUserId}
+          onOpen={setOpen}
+          actions={rowActions}
+        />
+      )}
 
       {searchingMessages && (
         <section className="mt-3" aria-label="Messages">
-          <h2 className="section-label text-charcoal-soft mb-1">Messages</h2>
-          {searchError && <p className="text-xs text-status-high py-2">{searchError}</p>}
+          <SectionLabel c={c}>Messages</SectionLabel>
+          {searchError && (
+            <p className="text-[12.5px] py-2" style={{ color: c.dangerText }}>
+              {searchError}
+            </p>
+          )}
           {!searching && !searchError && hits.length === 0 && (
-            <p className="text-sm text-charcoal-faint text-center py-6">No messages match "{term}".</p>
+            <p className="text-[13px] text-center py-6" style={{ color: c.inkSoft }}>
+              No messages match "{term}".
+            </p>
           )}
           <SearchResults
             hits={hits}
@@ -514,17 +730,8 @@ export default function Messages() {
         </section>
       )}
 
-      {view === "list" && archived.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setView("archived")}
-          className="tap w-full flex items-center gap-2 min-h-[48px] px-2 text-[13px] font-bold text-primary-deep-text"
-        >
-          <Archive size={15} /> Archived ({archived.length})
-        </button>
-      )}
-
-      {/* NEW CHAT, GROUP OR BROADCAST, from the design's corner button.
+      {/* NEW CHAT, GROUP OR BROADCAST (K5): the handover's FAB, 56 round on the
+          primary fill (#AEA1DC / #A991FE), Plus 22, shadow in light only.
           Professionals only: a client's chats start from a professional's
           profile, and clients cannot make groups or lists. */}
       {isProfessional && view === "list" && (
@@ -532,9 +739,10 @@ export default function Messages() {
           type="button"
           onClick={() => setNewOpen(true)}
           aria-label="New chat, group or broadcast"
-          className="tap fixed z-30 right-4 lg:right-8 bottom-[calc(env(safe-area-inset-bottom)+80px)] lg:bottom-8 w-14 h-14 rounded-[18px] bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-lg"
+          data-fab=""
+          className="tap fixed z-30 right-4 lg:right-8 bottom-[calc(env(safe-area-inset-bottom)+80px)] lg:bottom-8 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-fab dark:shadow-none"
         >
-          <Plus size={24} strokeWidth={2.4} />
+          <Plus size={22} aria-hidden />
         </button>
       )}
 
@@ -556,10 +764,17 @@ export default function Messages() {
               }}
               className="tap w-full flex items-center gap-3 px-1 min-h-[60px] text-left border-b border-charcoal/[0.06] last:border-b-0"
             >
-              <o.icon size={20} className="text-primary-deep-text shrink-0" aria-hidden />
+              {/* K5: the settings row pattern, a 36 r11 tile. */}
+              <span className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: c.primaryTint }}>
+                <o.icon size={18} style={{ color: c.primaryInk }} aria-hidden />
+              </span>
               <span>
-                <span className="block text-sm font-semibold text-charcoal">{o.label}</span>
-                <span className="block text-xs text-charcoal-soft">{o.sub}</span>
+                <span className="block text-[14px] leading-[19px] font-semibold" style={{ color: c.ink }}>
+                  {o.label}
+                </span>
+                <span className="block text-[12px] leading-[16px] font-normal" style={{ color: c.muted }}>
+                  {o.sub}
+                </span>
               </span>
             </button>
           ))}
@@ -582,16 +797,63 @@ export default function Messages() {
   );
 }
 
-const SubHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
-  <div className="flex items-center gap-1 mb-4">
-    <button
-      type="button"
-      onClick={onBack}
-      aria-label="Back"
-      className="tap w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-charcoal"
-    >
-      <ChevronLeft size={20} />
-    </button>
-    <h1 className="font-display text-xl font-bold text-charcoal">{title}</h1>
+/** S5: the search sections' labels, 10.5 / 14 700 ls 1.3 uppercase in the primary ink. */
+const SectionLabel: React.FC<{ c: ListColors; children: React.ReactNode }> = ({ c, children }) => (
+  <h2 className="mt-3 mb-1 px-1 text-[10.5px] leading-[14px] font-bold uppercase tracking-[1.3px]" style={{ color: c.primaryInk }}>
+    {children}
+  </h2>
+);
+
+/**
+ * MO1.7.e's empty state (#13-#16): a 56 r16 tile in the primary tint with a
+ * 26 glyph, the title 16 / 20.8 800, the helper 12.5 / 18.8 400 in 260, gap
+ * 10. `frame`: the whole-list empty, its tile 193 under the fixed area as
+ * drawn (tile top 353.7, fixed area end 160.8); the per-tab empties sit 40
+ * under the tabs.
+ */
+const EmptyState: React.FC<{ c: ListColors; icon: React.ReactNode; title: string; helper?: string; frame?: boolean }> = ({
+  c,
+  icon,
+  title,
+  helper,
+  frame,
+}) => (
+  <div
+    data-empty-state=""
+    className="flex flex-col items-center text-center gap-2.5"
+    style={{ paddingTop: frame ? 192.9 : 40, paddingBottom: 40 }}
+  >
+    <span className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: c.primaryTint, color: c.primaryInk }}>
+      {icon}
+    </span>
+    <p className="text-[16px] leading-[20.8px] font-extrabold" style={{ color: c.ink }}>
+      {title}
+    </p>
+    {helper && (
+      <p className="max-w-[260px] text-[12.5px] leading-[18.8px] font-normal" style={{ color: c.inkSoft }}>
+        {helper}
+      </p>
+    )}
+  </div>
+);
+
+/** O1: five 72 rows, a 48 circle and two bars (120 × 14, 220 × 12, r6), pulsing 1.2 s. */
+const ListSkeleton: React.FC<{ c: ListColors }> = ({ c }) => (
+  <div aria-busy="true">
+    <span className="sr-only">Loading messages</span>
+    {[0, 1, 2, 3, 4].map((i) => (
+      <div
+        key={i}
+        aria-hidden
+        className="flex items-center gap-3 px-1 py-3 min-h-[72px] animate-skeleton-pulse"
+        style={{ borderBottom: `0.5px solid ${c.rowRule}` }}
+      >
+        <span className="w-12 h-12 rounded-full shrink-0" style={{ background: c.skeleton }} />
+        <span className="flex flex-col gap-2">
+          <span className="block rounded-md" style={{ width: 120, height: 14, background: c.skeleton }} />
+          <span className="block rounded-md" style={{ width: 220, height: 12, background: c.skeleton }} />
+        </span>
+      </div>
+    ))}
   </div>
 );

@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ChevronLeft, MoreVertical } from "lucide-react";
+import { PopupMenu } from "../ui/PopupMenu";
+import { useBackCloses } from "../../hooks/useBackCloses";
+import { textPx, linePx } from "../../theme/textSize";
 import { BottomSheet } from "../ui/BottomSheet";
 import { signedUrlFor, type PrivateBucket } from "../../services/storage";
 import { FileWarning, Loader2 } from "lucide-react";
@@ -125,5 +130,215 @@ export const FileViewerSheet: React.FC<{
         )}
       </div>
     </BottomSheet>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// HE1.9.b.1 · the full-screen viewer for the client's own records (lab
+// reports and imaging). The sheet above stays for the other callers
+// (messages, professionals, certifications).
+//
+// Fixed dark surface #1B1820 in every theme, no navbar: back and ⋮ 40 r9999
+// #FFFFFF@14%, title 15/22.5 700 white ("{type} · {note}"), sub 11/16.5
+// #FFFFFF@66% ("{date} · PDF"), the page 342 wide r10 #FBFAF8 + 0.5px
+// #241F1B@8% + shadow. Signed at open, never stored (K1, TTL clamp 30-600 s
+// in services/storage). Pinch or double-tap zooms an image 1-4x. The
+// "Page 2 of 4" pill and dots wait for page metadata (BACKEND B2, PB-HB-24):
+// a PDF renders in the browser's own viewer, which pages itself.
+
+export interface ViewerMenuItem {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  onSelect: () => void;
+  destructive?: boolean;
+}
+
+export const FileViewerScreen: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  path?: string | null;
+  bucket?: PrivateBucket;
+  /** A file not uploaded yet (the scan flow): an object URL and its kind. */
+  local?: { url: string; kind: "image" | "pdf" } | null;
+  title: string;
+  subtitle?: string;
+  menu?: ViewerMenuItem[];
+}> = ({ open, onClose, path, bucket = "medical-imaging", local, title, subtitle, menu }) => {
+  useBackCloses(open, onClose);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [pinching, setPinching] = useState(false);
+  const menuRef = useRef<HTMLButtonElement | null>(null);
+  const pinch = useRef<{ d: number; s: number } | null>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+
+  useEffect(() => {
+    if (!open) return;
+    setScale(1);
+    if (local) {
+      setUrl(local.url);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    if (!path) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setUrl(null);
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setLoading(false);
+      setError("You're offline. Try again when you're connected.");
+      return;
+    }
+    void signedUrlFor(bucket, path).then((result) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (!result.ok || !result.url) {
+        setError("Couldn't open this file. Try again");
+        return;
+      }
+      setUrl(result.url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, path, bucket, local, attempt]);
+
+  if (!open) return null;
+  const kind: Kind = local ? local.kind : path ? kindFor(path) : "unsupported";
+  const white66 = "rgba(255,255,255,0.66)";
+  const btn: React.CSSProperties = { width: 40, height: 40, borderRadius: 9999, background: "rgba(255,255,255,0.14)" };
+
+  const dist = () => {
+    const [a, b] = [...pointers.current.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[46] flex justify-center" style={{ background: "#1B1820" }} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="relative w-full max-w-[430px] h-full flex flex-col" style={{ paddingTop: "calc(env(safe-area-inset-top) + 54px)" }}>
+        <div className="flex items-start shrink-0" style={{ padding: "0 12px", gap: 6 }}>
+          <button type="button" onClick={onClose} aria-label="Back" className="tap grid place-items-center shrink-0 relative before:absolute before:-inset-[2px] before:content-['']" style={btn}>
+            <ChevronLeft size={20} color="#FFFFFF" aria-hidden />
+          </button>
+          <div className="flex-1 min-w-0" style={{ paddingTop: 0.5 }}>
+            <p className="truncate" style={{ fontSize: textPx(15), lineHeight: linePx(22.5), fontWeight: 700, color: "#FFFFFF" }}>
+              {title}
+            </p>
+            {subtitle && (
+              <p className="truncate" style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: white66 }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {menu && menu.length > 0 ? (
+            <button
+              ref={menuRef}
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="More options"
+              aria-haspopup="menu"
+              className="tap grid place-items-center shrink-0 relative before:absolute before:-inset-[2px] before:content-['']"
+              style={btn}
+            >
+              <MoreVertical size={20} color="#FFFFFF" aria-hidden />
+            </button>
+          ) : (
+            <span style={{ width: 40 }} />
+          )}
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center" style={{ padding: "24px 24px 0" }}>
+          {loading && <Loader2 size={24} className="animate-spin" color="#FFFFFF" aria-label="Opening" />}
+          {!loading && error && (
+            <div className="flex flex-col items-center text-center" style={{ gap: 6, maxWidth: 280 }} role="alert">
+              <p style={{ fontSize: textPx(15), lineHeight: linePx(22.5), fontWeight: 700, color: "#FFFFFF" }}>{error}</p>
+              {!local && (
+                <p style={{ fontSize: textPx(12), lineHeight: linePx(18), color: white66 }}>
+                  The record is still here. Only the attached file couldn&rsquo;t be loaded.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => setAttempt((n) => n + 1)}
+                className="tap min-h-[44px] px-4"
+                style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: "rgb(var(--c-primary))" }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {!loading && !error && url && kind === "image" && (
+            <div
+              className="overflow-hidden w-full flex items-center justify-center"
+              style={{ maxWidth: 342, maxHeight: "min(470px, 62dvh)", borderRadius: 10, background: "#FBFAF8", boxShadow: "0 12px 30px rgba(0,0,0,0.25)", touchAction: scale > 1 ? "none" : "pan-y" }}
+              onDoubleClick={() => setScale((s) => (s > 1 ? 1 : 2))}
+              onPointerDown={(e) => {
+                pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pointers.current.size === 2) {
+                  pinch.current = { d: dist(), s: scale };
+                  setPinching(true);
+                }
+              }}
+              onPointerMove={(e) => {
+                if (!pointers.current.has(e.pointerId)) return;
+                pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pinch.current && pointers.current.size === 2 && pinch.current.d > 0) {
+                  setScale(Math.min(4, Math.max(1, (pinch.current.s * dist()) / pinch.current.d)));
+                }
+              }}
+              onPointerUp={(e) => {
+                pointers.current.delete(e.pointerId);
+                if (pointers.current.size < 2) {
+                  pinch.current = null;
+                  setPinching(false);
+                }
+              }}
+              onPointerCancel={(e) => pointers.current.delete(e.pointerId)}
+            >
+              <img
+                src={url}
+                alt={title}
+                onError={() => setError("Couldn't open this file. Try again")}
+                className="block w-full h-auto object-contain"
+                style={{ maxHeight: "min(470px, 62dvh)", transform: `scale(${scale})`, transition: pinching ? "none" : "transform .2s ease" }}
+              />
+            </div>
+          )}
+          {!loading && !error && url && kind === "pdf" && (
+            <iframe
+              title={title}
+              src={url}
+              className="w-full"
+              style={{ maxWidth: 342, height: "min(470px, 62dvh)", borderRadius: 10, background: "#FBFAF8", border: "0.5px solid rgba(36,31,27,0.08)" }}
+            />
+          )}
+        </div>
+        {!loading && !error && url && kind === "image" && (
+          <p className="text-center shrink-0" style={{ padding: "16px 0 calc(env(safe-area-inset-bottom) + 40px)", fontSize: textPx(11), lineHeight: linePx(16.5), color: white66 }}>
+            Pinch to zoom
+          </p>
+        )}
+      </div>
+      {menu && menu.length > 0 && (
+        <PopupMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchor={menuRef.current}
+          options={menu.map((m) => ({ value: m.key, label: m.label, icon: m.icon, destructive: m.destructive }))}
+          onSelect={(v) => menu.find((m) => m.key === v)?.onSelect()}
+          width={155}
+          align="right"
+          hairline
+          rowLineHeight={18}
+        />
+      )}
+    </div>,
+    document.body
   );
 };
