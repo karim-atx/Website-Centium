@@ -262,7 +262,7 @@ export function moneyDelta(cur: number, prev: number): string {
   return (d >= 0 ? "+" : "−") + money(Math.abs(d)).replace("−", "");
 }
 
-/** Recurring each month: active, paid, not-expired memberships of a month or longer, each price per month of its own period. */
+/** Recurring each month (upcoming renewals, MB-05, not counted until in force): active, paid, not-expired memberships of a month or longer, each price per month of its own period. */
 export function recurringMonthly(
   records: PaymentRecord[],
   today: string,
@@ -284,7 +284,7 @@ export function recurringMonthly(
   return s;
 }
 
-/** Active memberships today (not cancelled, not expired). */
+/** Active memberships today (not cancelled, not expired; an upcoming renewal, MB-05, is not in force yet). */
 export function activeMembers(records: PaymentRecord[], today: string): number {
   return records.filter(
     (r) =>
@@ -332,7 +332,9 @@ export function isOwed(
     r.status === "pending" &&
     r.amount !== null &&
     r.amount > 0 &&
-    (r.kind === "class" || r.membershipStatus === "active")
+    // B7 MB-05: a renewal arrives 'upcoming' and payment pending; it is money
+    // owed. Expired and cancelled memberships are not.
+    (r.kind === "class" || r.membershipStatus === "active" || r.membershipStatus === "upcoming")
   );
 }
 
@@ -378,16 +380,24 @@ export interface RenewalWeek {
   total: number;
 }
 
-/** Active memberships whose period ends in the next 30 days (today + 29). */
+/**
+ * Active memberships whose period ends in the next 30 days (today + 29).
+ * B7 MB-05: `due` is venue_renewals_due(gym, 30), the server's list. When it
+ * is given only its memberships count, and one ending at the period end
+ * (cancel_at_period_end) is left out: it will not renew.
+ */
 export function renewals(
   records: PaymentRecord[],
   today: string,
+  due: { membershipId: string; cancelAtPeriodEnd: boolean }[] | null = null,
 ): RenewalRow[] {
   const end = addDays(today, 29);
+  const ids = due ? new Set(due.filter((d) => !d.cancelAtPeriodEnd).map((d) => d.membershipId)) : null;
   return records
     .filter(
       (r) =>
         r.kind === "membership" &&
+        (!ids || ids.has(r.id)) &&
         r.membershipStatus === "active" &&
         r.expiresOn &&
         r.expiresOn >= today &&

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, ScanLine } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
-import { isoDay } from "../../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../../utils/time12";
 import { CheckInSheet } from "./CheckInSheet";
 import { EntriesTab } from "./EntriesTab";
@@ -52,7 +51,6 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
   const data = useFrontDesk();
   const [opened] = useState(() => new Date());
   const now = data.loadedAt ?? opened;
-  const today = isoDay(now);
   const [checkIn, setCheckIn] = useState<{ open: boolean; membershipId: string | null }>({ open: false, membershipId: null });
   const [scan, setScan] = useState(false);
 
@@ -84,7 +82,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
       )}
       <div role="tabpanel" id={`fd-panel-${tab}`} aria-labelledby={`fd-tab-${tab}`}>
         {tab === "entries" && <EntriesTab entries={data.entries} loading={data.loading} error={data.error} onRetry={data.reload} now={now} />}
-        {tab === "passes" && <PassesTab members={data.members} loading={data.loading} error={data.error} onRetry={data.reload} today={today} online={online} />}
+        {tab === "passes" && <PassesTab renewals={data.renewals} loading={data.loading} error={data.error} onRetry={data.reload} online={online} onChanged={data.reload} />}
         {tab === "memberships" && memberships}
       </div>
 

@@ -45,7 +45,12 @@ export type VerifyRow = {
   plan_name?: string | null;
 };
 
-export type ScanState = PassState | "unknown";
+/**
+ * "not_started" (B7 MB-05): verify_gym_pass reads pass_state 'valid' with
+ * valid = false for an UPCOMING renewal (paid, not in force yet); it returns no
+ * status, so this is the only way to tell.
+ */
+export type ScanState = PassState | "unknown" | "not_started";
 
 export interface PassCheck {
   valid: boolean;
@@ -62,7 +67,8 @@ export interface PassCheck {
 const STATES: ScanState[] = ["valid", "awaiting_payment", "expired", "cancelled", "refunded", "unknown"];
 
 export function toPassCheck(row: VerifyRow | null | undefined): PassCheck {
-  const state = (row?.pass_state && (STATES as string[]).includes(row.pass_state) ? row.pass_state : "unknown") as ScanState;
+  const read = (row?.pass_state && (STATES as string[]).includes(row.pass_state) ? row.pass_state : "unknown") as ScanState;
+  const state: ScanState = read === "valid" && row?.valid !== true ? "not_started" : read;
   return {
     valid: row?.valid === true && state === "valid",
     state,
@@ -159,6 +165,17 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         body: `${possessive(name)} membership was cancelled. They can buy a new one in the app.`,
         secondary: "done",
         secondaryLabel: "Done",
+      };
+    case "not_started":
+      return {
+        ...base,
+        kind: "not_started",
+        tone: "primary",
+        icon: "scan",
+        title: "Pass not active yet",
+        body: `This pass is for ${possessive(name)} next period, which hasn't started yet.`,
+        secondary: "check-in",
+        secondaryLabel: "Check someone in",
       };
     case "refunded":
       return {
@@ -299,53 +316,121 @@ export function hourShort(h: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Renewals (OP1-017 rows 7-11; formula HANDOVER 3.10: memberships ending in
-// the next 7 days). Read from venue_members() (A4), active and expired.
-
-export interface Renewal {
-  membershipId: string;
-  gymId: string;
-  firstName: string;
-  planName: string;
-  expiresOn: string;
-  /** Days from today: 0 = today, negative = already ended. */
-  days: number;
-  kind: "due" | "expired";
-}
+// Renewals (OP1-017 rows 7-11) — B7 MB-05: venue_renewals_due(gym, days), the
+// server's list of active memberships ending today to `days` ahead.
+// already_renewed hides Renew; cancel_at_period_end means "Ending, don't chase".
 
 export type FrontDeskMember = VenueMember & { gymId: string };
 
-/**
- * Due: active memberships ending today to `windowDays` ahead. Expired: ended
- * in the last 7 days (the Expired chip, sample "Expired yesterday"). Soonest
- * first, then the most recently expired.
- */
-export function renewals(members: FrontDeskMember[], today: string, windowDays = 7): Renewal[] {
-  const out: Renewal[] = [];
-  for (const m of members) {
-    if (!m.expiresOn || m.status === "cancelled" || m.passState === "refunded") continue;
-    const days = daysBetween(today, m.expiresOn);
-    // A membership's last day is expires_on itself: it is still due that day.
-    if (days >= 0 && days <= windowDays && m.status === "active") {
-      out.push({ membershipId: m.membershipId, gymId: m.gymId, firstName: m.firstName, planName: m.planName, expiresOn: m.expiresOn, days, kind: "due" });
-    } else if (days < 0 && days >= -7) {
-      out.push({ membershipId: m.membershipId, gymId: m.gymId, firstName: m.firstName, planName: m.planName, expiresOn: m.expiresOn, days, kind: "expired" });
-    }
-  }
-  return out.sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === "due" ? -1 : 1;
-    return a.kind === "due" ? a.days - b.days : b.days - a.days;
-  });
+export type RenewalDueRow = {
+  membership_id: string;
+  member_first_name: string | null;
+  member_is_minor: boolean | null;
+  plan_name: string | null;
+  expires_on: string;
+  days_left: number | string | null;
+  cancel_at_period_end: boolean | null;
+  payment_status: "pending" | "paid" | "refunded" | null;
+  already_renewed: boolean | null;
+  total_count: number | string | null;
+};
+
+export interface RenewalDue {
+  membershipId: string;
+  gymId: string;
+  firstName: string;
+  isMinor: boolean;
+  planName: string;
+  expiresOn: string;
+  /** 0 = ends today. */
+  daysLeft: number;
+  cancelAtPeriodEnd: boolean;
+  paymentStatus: "pending" | "paid" | "refunded" | null;
+  alreadyRenewed: boolean;
 }
 
-/** OP1-017 row 9 sub: "{plan} · renews in {n} days" / "Expired {when}". */
-export function renewalSub(r: Renewal): string {
-  const plan = r.planName || "Membership";
-  if (r.kind === "expired") {
-    const ago = -r.days;
-    return ago === 1 ? `${plan} · Expired yesterday` : `${plan} · Expired ${ago} days ago`;
+export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
+  const n = Number(r.days_left);
+  return {
+    membershipId: r.membership_id,
+    gymId,
+    firstName: r.member_first_name?.trim() || "Member",
+    isMinor: r.member_is_minor === true,
+    planName: r.plan_name?.trim() || "Membership",
+    expiresOn: r.expires_on,
+    daysLeft: Number.isFinite(n) ? n : 0,
+    cancelAtPeriodEnd: r.cancel_at_period_end === true,
+    paymentStatus: r.payment_status,
+    alreadyRenewed: r.already_renewed === true,
+  };
+}
+
+/** Who still needs doing first: not renewed and not ending, soonest first; then ending; then renewed. */
+export function sortRenewals(rows: RenewalDue[]): RenewalDue[] {
+  const rank = (r: RenewalDue) => (r.alreadyRenewed ? 2 : r.cancelAtPeriodEnd ? 1 : 0);
+  return [...rows].sort((a, b) => rank(a) - rank(b) || a.daysLeft - b.daysLeft || a.firstName.localeCompare(b.firstName));
+}
+
+/** The ones a desk should chase: not renewed and not ending at the period end. */
+export const toChase = (rows: RenewalDue[]): RenewalDue[] => rows.filter((r) => !r.alreadyRenewed && !r.cancelAtPeriodEnd);
+
+/** OP1-017 row 9 sub: "{plan} · renews in {n} days", or what has already been decided. */
+export function renewalSub(r: RenewalDue): string {
+  const plan = r.planName;
+  if (r.alreadyRenewed) return `${plan} · renewed, next period from ${dayMonthYear(r.expiresOn)}`;
+  if (r.cancelAtPeriodEnd) return `${plan} · ends ${dayMonthYear(r.expiresOn)}`;
+  if (r.daysLeft <= 0) return `${plan} · renews today`;
+  if (r.daysLeft === 1) return `${plan} · renews tomorrow`;
+  return `${plan} · renews in ${r.daysLeft} days`;
+}
+
+export type RenewalStatsRow = {
+  period_from: string;
+  period_to: string;
+  due: number | string | null;
+  renewed: number | string | null;
+  lapsed: number | string | null;
+  cancelled: number | string | null;
+  renewal_rate: number | string | null;
+};
+
+export interface RenewalStats {
+  from: string;
+  to: string;
+  due: number;
+  renewed: number;
+  lapsed: number;
+  cancelled: number;
+  /** Null when nothing was due: a rate over no rows is not a rate. */
+  rate: number | null;
+}
+
+export function toRenewalStats(r: RenewalStatsRow): RenewalStats {
+  const n = (v: number | string | null) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const rate = r.renewal_rate === null || r.renewal_rate === "" || !Number.isFinite(Number(r.renewal_rate)) ? null : Number(r.renewal_rate);
+  return { from: r.period_from, to: r.period_to, due: n(r.due), renewed: n(r.renewed), lapsed: n(r.lapsed), cancelled: n(r.cancelled), rate };
+}
+
+/** "84%", or "–" when nothing was due (never 0% or 100% over an empty period). */
+export function renewalRateLabel(s: Pick<RenewalStats, "rate"> | null): { value: string; note: string | null } {
+  if (!s || s.rate === null) return { value: "–", note: "No renewals were due" };
+  return { value: `${Math.round(s.rate * 100)}%`, note: null };
+}
+
+/** Copy for renew_gym_membership / end_gym_membership refusals (ATX codes, MB-05). */
+export function membershipActionMessage(code: string | undefined, action: "renew" | "end"): string {
+  switch (code) {
+    case "ATX10":
+      return action === "renew" ? "This membership has already been renewed." : "This membership has already ended.";
+    case "ATX25":
+      return action === "renew"
+        ? "This plan has been archived. Move the member to a current plan first."
+        : "This membership has no end date, so it can't end at the period end. End it now instead.";
+    case "ATX09":
+      return "You don't have permission to manage members.";
+    case "ATX08":
+      return "That membership couldn't be found.";
+    default:
+      return action === "renew" ? "Couldn't renew the membership. Try again." : "Couldn't end the membership. Try again.";
   }
-  if (r.days === 0) return `${plan} · renews today`;
-  if (r.days === 1) return `${plan} · renews tomorrow`;
-  return `${plan} · renews in ${r.days} days`;
 }

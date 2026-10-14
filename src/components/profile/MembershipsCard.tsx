@@ -17,8 +17,8 @@ import {
 } from "../../services/business-members";
 import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
-import { fetchMyGymMemberships, type GymMembership } from "../../services/venues";
-import { memberTag, validRange } from "../../services/venues/venueLogic";
+import { endMyGymMembership, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
@@ -46,8 +46,12 @@ import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash
 // "membership appears in Profile") are listed first, from
 // my_gym_memberships(), in the same row with the venue's tag (Member, or the
 // amber "Pay on your first visit" until the gym marks it paid). A row opens
-// the gym page, where the pass is. 4b has no member-side cancel, so these
-// rows don't swipe.
+// the gym page, where the pass is.
+//
+// B7 MB-05: the member may end their own venue membership (end_gym_membership,
+// either side). An active row has a ⋮ with "End membership": at the end of the
+// paid period by default (the pass keeps working until then), or today. An
+// upcoming renewal says "Starts {date}" (membershipTag) and grants nothing yet.
 
 const dateLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -62,6 +66,12 @@ export const MembershipsCard: React.FC = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ending, setEnding] = useState<Membership | null>(null);
   const [menuFor, setMenuFor] = useState<{ membership: Membership; anchor: HTMLElement } | null>(null);
+  const [gymMenu, setGymMenu] = useState<{ membership: GymMembership; anchor: HTMLElement } | null>(null);
+  const [gymEnding, setGymEnding] = useState<GymMembership | null>(null);
+  const [gymBusy, setGymBusy] = useState(false);
+  const [gymError, setGymError] = useState<string | null>(null);
+  /** Ended at the period end this session: my_gym_memberships() does not return cancel_at_period_end. */
+  const [endsOn, setEndsOn] = useState<Record<string, string>>({});
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -125,6 +135,23 @@ export const MembershipsCard: React.FC = () => {
     }
     setError(null);
     await load();
+  };
+
+  const endGym = async (atPeriodEnd: boolean) => {
+    const m = gymEnding;
+    if (!m || gymBusy) return;
+    setGymBusy(true);
+    setGymError(null);
+    const r = await endMyGymMembership(m.id, atPeriodEnd);
+    setGymBusy(false);
+    if (!r.ok) {
+      setGymError(r.message);
+      return;
+    }
+    setGymEnding(null);
+    if (r.value === "active" && m.expiresOn) setEndsOn((e) => ({ ...e, [m.id]: m.expiresOn as string }));
+    const gyms = await fetchMyGymMemberships();
+    if (gyms.ok) setGymMemberships(gyms.value);
   };
 
   const redeem = async () => {
@@ -210,13 +237,16 @@ export const MembershipsCard: React.FC = () => {
   );
 
   const gymRow = (m: GymMembership) => {
-    const tag = memberTag(m.passState);
+    const ends = endsOn[m.id];
+    const tag = ends ? { label: `Ends ${dayMonthYear(ends)}`, tone: "muted" as const } : membershipTag(m);
+    // Explicit per status (MB-05): only a running membership can be ended here.
+    const canEnd = m.status === "active" && !ends;
     return (
+      <div key={m.id} className={clsx("flex items-center gap-1 rounded-[18px] bg-primary-pale", m.status === "expired" || m.status === "cancelled" ? "opacity-60" : undefined)}>
       <button
-        key={m.id}
         type="button"
         onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(m.gymId)}`)}
-        className={clsx("tap w-full text-start flex items-center gap-3 rounded-[18px] bg-primary-pale p-4", m.status !== "active" && "opacity-60")}
+        className="tap flex-1 min-w-0 text-start flex items-center gap-3 p-4"
       >
         <span className="w-10 h-10 rounded-xl bg-cream-card flex items-center justify-center shrink-0" aria-hidden>
           <Dumbbell size={18} className="text-primary-dark" />
@@ -229,6 +259,19 @@ export const MembershipsCard: React.FC = () => {
         </span>
         <MemberTag label={tag.label} tone={tag.tone} />
       </button>
+      {canEnd && (
+        <button
+          type="button"
+          onClick={(e) => setGymMenu({ membership: m, anchor: e.currentTarget })}
+          aria-label={`Options for ${m.gymName}`}
+          aria-haspopup="menu"
+          aria-expanded={gymMenu?.membership.id === m.id}
+          className="tap w-8 h-11 me-2 rounded-lg flex items-center justify-center text-charcoal-soft shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
+        >
+          <MoreVertical size={16} aria-hidden />
+        </button>
+      )}
+      </div>
     );
   };
 
@@ -351,6 +394,61 @@ export const MembershipsCard: React.FC = () => {
           setEnding(m);
         }}
       />
+
+      <PopupMenu
+        open={!!gymMenu}
+        onClose={() => setGymMenu(null)}
+        anchor={gymMenu?.anchor ?? null}
+        width={200}
+        rowLineHeight={16}
+        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
+        onSelect={() => {
+          const m = gymMenu?.membership ?? null;
+          setGymMenu(null);
+          setGymError(null);
+          setGymEnding(m);
+        }}
+      />
+
+      <CentredPopup
+        open={!!gymEnding}
+        onClose={() => !gymBusy && setGymEnding(null)}
+        title="End your membership?"
+        icon={<LogOut size={22} />}
+        body={
+          gymEnding?.expiresOn
+            ? `Your pass keeps working until ${dayMonthYear(gymEnding.expiresOn)}, then your membership at ${gymEnding.gymName} ends. The gym can see that you ended it.`
+            : `Your membership at ${gymEnding?.gymName ?? "this gym"} ends today.`
+        }
+      >
+        {gymError && <p role="alert" className="mb-3 text-xs font-semibold text-status-high">{gymError}</p>}
+        {gymEnding?.expiresOn && (
+          <button
+            type="button"
+            onClick={() => void endGym(true)}
+            disabled={gymBusy}
+            className="tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"
+          >
+            {gymBusy ? "Ending…" : `End on ${dayMonthYear(gymEnding.expiresOn)}`}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => void endGym(false)}
+          disabled={gymBusy}
+          className={gymEnding?.expiresOn ? "tap mt-3 w-full text-center text-sm font-semibold text-status-high disabled:opacity-60" : "tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"}
+        >
+          {gymEnding?.expiresOn ? "End it today instead (your pass stops now)" : gymBusy ? "Ending…" : "End membership"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setGymEnding(null)}
+          disabled={gymBusy}
+          className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Keep membership
+        </button>
+      </CentredPopup>
 
       <CentredPopup
         open={!!ending}

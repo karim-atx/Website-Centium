@@ -74,7 +74,7 @@ export interface DashRaw {
   dismissed: boolean;
   /** Waitlist entries per class for today's classes (venue_class_roster). */
   waitlists: Record<string, number>;
-  /** Active memberships ending in the next 7 days (venue_members), null without a venue. */
+  /** Renewals to chase in the next 7 days (venue_renewals_due, B7 MB-05: not renewed, not ending), null without a venue. */
   renewalsDue: number | null;
   /** Reads that failed but did not stop the page (shown as pending, never as zero). */
   partial: string[];

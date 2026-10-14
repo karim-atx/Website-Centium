@@ -2,7 +2,9 @@ import { supabase } from "../../../lib/supabase/client";
 import { fetchMyTeam } from "../../services/business-team";
 import { fetchMyMembers } from "../../services/business-members";
 import { getCalendar } from "../../services/calendar";
-import { fetchClassRoster, fetchVenueMembers } from "../../services/venues/console";
+import { fetchClassRoster } from "../../services/venues/console";
+import { fetchRenewalsDue } from "../../services/front-desk";
+import { toChase } from "../../services/front-desk/frontDeskLogic";
 import { shiftDate, todayLocal } from "../../utils/date";
 import { startOfWeekISO } from "../../utils/week";
 import type { DashBusiness, DashClass, DashLoad, DashRaw } from "./dashboardTypes";
@@ -150,7 +152,8 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       fetchMyTeam(userId),
       getCalendar(userId),
       Promise.all(todayIds.map(async (id) => [id, await fetchClassRoster(id)] as const)),
-      gymId ? fetchVenueMembers(gymId, "active", 200, 0) : Promise.resolve(null),
+      // B7 MB-05: the server's renewals list (venue_renewals_due), not a client filter.
+      gymId ? fetchRenewalsDue(gymId, 7) : Promise.resolve(null),
       // B7: first names for the activity feed (the table read above has ids only).
       fetchMyMembers(bid, { limit: 200 }),
     ]);
@@ -182,8 +185,8 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
   let renewalsDue: number | null = null;
   if (venueMembers) {
     if (venueMembers.ok) {
-      const limit = shiftDate(today, 7);
-      renewalsDue = venueMembers.value.members.filter((m) => m.expiresOn && m.expiresOn >= today && m.expiresOn <= limit).length;
+      // Who still needs doing: already renewed and ending-at-period-end are not chased.
+      renewalsDue = toChase(venueMembers.value).length;
     } else partial.push("renewals");
   }
   const store = ok(storeRes, "store settings", partial, []);

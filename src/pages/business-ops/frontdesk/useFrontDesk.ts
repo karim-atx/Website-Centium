@@ -2,19 +2,22 @@ import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { fetchMyClasses } from "../../../services/business-classes";
 import {
+  fetchAllRenewalsDue,
   fetchFrontDeskMembers,
   fetchFrontDeskVenues,
   fetchTodayEntries,
   type EntriesResult,
   type FrontDeskVenue,
 } from "../../../services/front-desk";
-import type { FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
+import type { FrontDeskMember, RenewalDue } from "../../../services/front-desk/frontDeskLogic";
 
 export interface FrontDeskData {
   loading: boolean;
   error: string | null;
   venues: FrontDeskVenue[];
   members: FrontDeskMember[];
+  /** venue_renewals_due(gym, 30) across the venues (B7 MB-05). */
+  renewals: RenewalDue[];
   entries: EntriesResult | null;
   /** When the shown data was last read (the offline line). */
   loadedAt: Date | null;
@@ -38,6 +41,7 @@ export function useFrontDesk(): FrontDeskData {
     error: null,
     venues: [],
     members: [],
+    renewals: [],
     entries: null,
     loadedAt: null,
     runsClasses: false,
@@ -66,10 +70,11 @@ export function useFrontDesk(): FrontDeskData {
         setState((s) => ({ ...s, loading: false, error: v.message }));
         return;
       }
-      const m = await fetchFrontDeskMembers(v.value);
+      const [m, ren] = await Promise.all([fetchFrontDeskMembers(v.value), fetchAllRenewalsDue(v.value, 30)]);
       if (cancelled) return;
-      if (!m.ok) {
-        setState((s) => ({ ...s, loading: false, error: m.message, venues: v.value }));
+      if (!m.ok || !ren.ok) {
+        const message = !m.ok ? m.message : !ren.ok ? ren.message : "";
+        setState((s) => ({ ...s, loading: false, error: message, venues: v.value }));
         return;
       }
       setState((s) => ({
@@ -78,6 +83,7 @@ export function useFrontDesk(): FrontDeskData {
         error: null,
         venues: v.value,
         members: m.value,
+        renewals: ren.value,
         entries: e.ok ? e.value : null,
         loadedAt: new Date(),
       }));

@@ -49,7 +49,7 @@ export const RenewalsPage: React.FC = () => {
   const [menu, setMenu] = useState<string | null>(null);
 
   const ren = useMemo(
-    () => renewalsOf(data?.records ?? [], today),
+    () => renewalsOf(data?.records ?? [], today, data?.renewalsDue ?? null),
     [data, today],
   );
   const weeks = useMemo(() => renewalWeeks(ren, today), [ren, today]);

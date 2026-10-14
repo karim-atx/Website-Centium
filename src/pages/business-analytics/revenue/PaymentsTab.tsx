@@ -64,7 +64,7 @@ export const PaymentsTab: React.FC = () => {
   const owedT = sum(owed.map((o) => o.rec.amount ?? 0));
   const late = owed.filter((o) => o.overdue > 0);
   const oldest = late.reduce((m, o) => Math.max(m, o.overdue), 0);
-  const ren = useMemo(() => renewalsOf(records, today), [records, today]);
+  const ren = useMemo(() => renewalsOf(records, today, data?.renewalsDue ?? null), [records, today, data]);
   const weeks = useMemo(() => renewalWeeks(ren, today), [ren, today]);
   const showRenewals = kind !== "store";
 

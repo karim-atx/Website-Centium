@@ -1,59 +1,109 @@
-import React, { useMemo, useState } from "react";
-import { AlertCircle, RefreshCw, XCircle } from "lucide-react";
+import React, { useState } from "react";
+import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
-import { renewals, renewalSub, type FrontDeskMember, type Renewal } from "../../../services/front-desk/frontDeskLogic";
+import { useBizToast } from "../../../components/business-more/useBizToast";
+import { endGymMembership, renewMembership } from "../../../services/front-desk";
+import { renewalSub, type RenewalDue } from "../../../services/front-desk/frontDeskLogic";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, NumberBoxes, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
-// OP1-017 (Passes and renewals) and OP1-019 (End membership?). Renewals are
-// read from venue_members() (A4): active memberships ending in the next 7
-// days, and those that ended in the last 7. Remind (BU2-09 / BU2-19 member
-// messaging) and End at the end of the paid period (B9 · BU2-09) are not on
-// the stack: Remind is drawn and marked Soon, End opens its pop-up with the
-// action unavailable. Day pass sales are BU2-10: their boxes show "–".
+// OP1-017 (Passes and renewals) and OP1-019 (End membership?), on B7 MB-05:
+// - the list is venue_renewals_due(gym, 30): the tab shows the next 7 days,
+//   See all the next 30 (This week / Later);
+// - Renew = renew_gym_membership(id): the next period starts where this one
+//   ends and arrives payment pending (it shows in Money owed); hidden once
+//   already_renewed, and for a member ending at the period end ("Ending",
+//   don't chase);
+// - End = end_gym_membership(id, reason, at_period_end): at the end of the
+//   paid period by default, or now;
+// - Remind waits for member messaging (MB-02): drawn, marked Coming soon.
+// Day pass sales are BU2-10: their boxes show "–".
 
 const SOON = "Coming soon";
 
 export const PassesTab: React.FC<{
-  members: FrontDeskMember[];
+  renewals: RenewalDue[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  today: string;
   online: boolean;
-}> = ({ members, loading, error, onRetry, today, online }) => {
+  /** After a renew or an end: the lists reload. */
+  onChanged: () => void;
+}> = ({ renewals, loading, error, onRetry, online, onChanged }) => {
   const [seeAll, setSeeAll] = useState(false);
-  const [menuFor, setMenuFor] = useState<Renewal | null>(null);
-  const [ending, setEnding] = useState<Renewal | null>(null);
+  const [menuFor, setMenuFor] = useState<RenewalDue | null>(null);
+  const [ending, setEnding] = useState<RenewalDue | null>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const openMenu = (r: Renewal, el: HTMLElement) => {
+  const [busy, setBusy] = useState(false);
+  const [toast, showToast] = useBizToast();
+  const openMenu = (r: RenewalDue, el: HTMLElement) => {
     setAnchor(el.closest<HTMLElement>("[role=listitem]") ?? el);
     setMenuFor(r);
   };
-  const due = useMemo(() => renewals(members, today, 7), [members, today]);
-  const later = useMemo(() => renewals(members, today, 30).filter((r) => r.kind === "due" && r.days > 7), [members, today]);
+  const week = renewals.filter((r) => r.daysLeft <= 7);
+  const later = renewals.filter((r) => r.daysLeft > 7);
 
-  const row = (r: Renewal, i: number) => (
+  const renew = async (r: RenewalDue) => {
+    if (busy) return;
+    setBusy(true);
+    const res = await renewMembership(r.membershipId);
+    setBusy(false);
+    if (!res.ok) {
+      showToast(res.message);
+      return;
+    }
+    showToast(`${r.firstName}'s membership is renewed from ${dayMonthYear(r.expiresOn)}. Payment is due.`);
+    onChanged();
+  };
+
+  const row = (r: RenewalDue, i: number) => (
     <DeskRow
-        key={r.membershipId}
-        icon={r.kind === "expired" ? AlertCircle : RefreshCw}
-        title={r.firstName}
-        sub={renewalSub(r)}
-        first={i === 0}
-        ariaLabel={`${r.firstName}, ${renewalSub(r)}. Options`}
-        menuOpen={menuFor?.membershipId === r.membershipId}
-        onClick={(el) => openMenu(r, el)}
-        trailing={
-          r.kind === "expired" ? (
-            <StatusChip tone="high">Expired</StatusChip>
-          ) : (
-            // Drawn as a chip, but it is an action (OP1-017 row 10): a
-            // button with a 44 hit box. Reminders are B9: Soon.
-            <ChipButton tone="pale" label="Remind" ariaLabel={`Remind ${r.firstName} (coming soon)`} disabled onClick={(el) => openMenu(r, el)} />
-          )
-        }
+      key={r.membershipId}
+      icon={r.alreadyRenewed ? CheckCircle2 : r.cancelAtPeriodEnd ? XCircle : RefreshCw}
+      title={r.firstName}
+      sub={renewalSub(r)}
+      first={i === 0}
+      ariaLabel={`${r.firstName}, ${renewalSub(r)}. Options`}
+      menuOpen={menuFor?.membershipId === r.membershipId}
+      onClick={(el) => openMenu(r, el)}
+      trailing={
+        r.alreadyRenewed ? (
+          <StatusChip tone="good">Renewed</StatusChip>
+        ) : r.cancelAtPeriodEnd ? (
+          <StatusChip tone="warn">Ending</StatusChip>
+        ) : (
+          // Drawn as a chip, but it is an action (OP1-017 row 10): a button
+          // with a 44 hit box. Reminders wait for member messaging (MB-02).
+          <ChipButton tone="pale" label="Remind" ariaLabel={`Remind ${r.firstName} (coming soon)`} disabled onClick={(el) => openMenu(r, el)} />
+        )
+      }
+    />
+  );
+
+  const overlays = (
+    <>
+      <RenewalMenu
+        menuFor={menuFor}
+        anchor={anchor}
+        online={online}
+        onClose={() => setMenuFor(null)}
+        onRenew={(r) => void renew(r)}
+        onEnd={setEnding}
       />
+      <EndPopup
+        key={ending?.membershipId ?? "none"}
+        ending={ending}
+        online={online}
+        onClose={() => setEnding(null)}
+        onDone={(r, status) => {
+          setEnding(null);
+          showToast(status === "cancelled" ? `${r.firstName}'s membership has ended.` : `${r.firstName}'s membership ends on ${dayMonthYear(r.expiresOn)}.`);
+          onChanged();
+        }}
+      />
+      {toast}
+    </>
   );
 
   if (seeAll) {
@@ -62,11 +112,10 @@ export const PassesTab: React.FC<{
       <div className="flex flex-col">
         <DeskLabel action={{ label: "Back", onClick: () => setSeeAll(false), ariaLabel: "Back to passes and renewals" }}>Renewals in the next 30 days</DeskLabel>
         <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>This week</p>
-        {due.length ? <ListCard label="This week">{due.map(row)}</ListCard> : <ListLine>None due</ListLine>}
+        {week.length ? <ListCard label="This week">{week.map(row)}</ListCard> : <ListLine>None due</ListLine>}
         <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>Later</p>
         {later.length ? <ListCard label="Later">{later.map(row)}</ListCard> : <ListLine>None due</ListLine>}
-        <RenewalMenu menuFor={menuFor} anchor={anchor} onClose={() => setMenuFor(null)} onEnd={setEnding} />
-        <EndPopup ending={ending} online={online} onClose={() => setEnding(null)} />
+        {overlays}
       </div>
     );
   }
@@ -74,15 +123,15 @@ export const PassesTab: React.FC<{
   return (
     <div className="flex flex-col">
       <PassCard />
-      <DeskLabel action={due.length > 3 || later.length > 0 ? { label: "See all", onClick: () => setSeeAll(true), ariaLabel: "See all renewals" } : undefined}>Renewals due</DeskLabel>
-      {loading && members.length === 0 ? (
+      <DeskLabel action={week.length > 3 || later.length > 0 ? { label: "See all", onClick: () => setSeeAll(true), ariaLabel: "See all renewals" } : undefined}>Renewals due</DeskLabel>
+      {loading && renewals.length === 0 ? (
         <RowsSkeleton />
-      ) : error && members.length === 0 ? (
+      ) : error && renewals.length === 0 ? (
         <ErrorCard title="Couldn't load renewals" onRetry={onRetry} />
-      ) : due.length === 0 ? (
+      ) : week.length === 0 ? (
         <ListLine>None due</ListLine>
       ) : (
-        <ListCard label="Renewals due">{due.slice(0, 3).map(row)}</ListCard>
+        <ListCard label="Renewals due">{week.slice(0, 3).map(row)}</ListCard>
       )}
       <DeskLabel>Day passes this week</DeskLabel>
       {/* BU2-10: day pass sales are not recorded yet. "–" is the source's own no-value mark. */}
@@ -93,8 +142,7 @@ export const PassesTab: React.FC<{
           { label: "Joined after", value: "–" },
         ]}
       />
-      <RenewalMenu menuFor={menuFor} anchor={anchor} onClose={() => setMenuFor(null)} onEnd={setEnding} />
-      <EndPopup ending={ending} online={online} onClose={() => setEnding(null)} />
+      {overlays}
     </div>
   );
 };
@@ -136,49 +184,127 @@ const PassIllustration: React.FC = () => {
   );
 };
 
-/** S3: the row's menu. Both actions are B9; End opens its pop-up (OP1-019). */
-const RenewalMenu: React.FC<{ menuFor: Renewal | null; anchor: HTMLElement | null; onClose: () => void; onEnd: (r: Renewal) => void }> = ({ menuFor, anchor, onClose, onEnd }) => (
-  <PopupMenu
-    open={!!menuFor && !!anchor}
-    anchor={anchor}
-    onClose={onClose}
-    align="right"
-    options={[
-      { value: "remind", label: "Send a reminder", disabled: true, note: SOON },
-      { value: "end", label: "End membership", destructive: true },
-    ]}
-    onSelect={(v) => {
-      const r = menuFor;
-      onClose();
-      if (v === "end" && r) onEnd(r);
-    }}
-  />
-);
+/** S3: the row's menu. Renew is hidden once renewed or ending; Send a reminder waits for MB-02. */
+const RenewalMenu: React.FC<{
+  menuFor: RenewalDue | null;
+  anchor: HTMLElement | null;
+  online: boolean;
+  onClose: () => void;
+  onRenew: (r: RenewalDue) => void;
+  onEnd: (r: RenewalDue) => void;
+}> = ({ menuFor, anchor, online, onClose, onRenew, onEnd }) => {
+  const chase = !!menuFor && !menuFor.alreadyRenewed && !menuFor.cancelAtPeriodEnd;
+  const offline = online ? undefined : "You're offline";
+  return (
+    <PopupMenu
+      open={!!menuFor && !!anchor}
+      anchor={anchor}
+      onClose={onClose}
+      align="right"
+      options={[
+        ...(chase ? [{ value: "renew", label: "Renew", disabled: !online, note: offline }] : []),
+        ...(chase ? [{ value: "remind", label: "Send a reminder", disabled: true, note: SOON }] : []),
+        { value: "end", label: "End membership", destructive: true, disabled: !online, note: offline },
+      ]}
+      onSelect={(v) => {
+        const r = menuFor;
+        onClose();
+        if (!r) return;
+        if (v === "renew") onRenew(r);
+        if (v === "end") onEnd(r);
+      }}
+    />
+  );
+};
 
 /**
- * OP1-019: ending at the end of the paid period is B9 (gym_memberships has
- * cancelled_at only). The pop-up is drawn; its action is unavailable until
- * the stage lands.
+ * OP1-019: end_gym_membership. At the end of the paid period by default (the
+ * member keeps their pass until expires_on), or now; an optional reason
+ * (500 characters). The returned status says which happened. Keyed by the
+ * membership, so every opening starts from the default.
  */
-const EndPopup: React.FC<{ ending: Renewal | null; online: boolean; onClose: () => void }> = ({ ending, online, onClose }) => (
-  <ConfirmCard
-    open={!!ending}
-    layout="stacked"
-    frame="kit"
-    tone="destructive"
-    icon={<XCircle size={20} strokeWidth={2.2} />}
-    title={ending ? `End ${ending.firstName}’s membership?` : ""}
-    subtitle={`Their pass stops working at the end of the paid period. They're told by message.${online ? "" : " You're offline."}`}
-    confirmLabel="End membership"
-    cancelLabel="Keep it"
-    initialFocus="cancel"
-    confirmDisabled
-    extra={
-      <p className="text-[11.5px] font-bold leading-[16px] text-charcoal-faint" style={{ marginTop: 8 }}>
-        {ending?.expiresOn ? `Ending a membership is coming soon. It runs until ${dayMonthYear(ending.expiresOn)}.` : "Ending a membership is coming soon."}
-      </p>
+const EndPopup: React.FC<{
+  ending: RenewalDue | null;
+  online: boolean;
+  onClose: () => void;
+  onDone: (r: RenewalDue, status: string) => void;
+}> = ({ ending, online, onClose, onDone }) => {
+  const [now, setNow] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const until = ending ? dayMonthYear(ending.expiresOn) : "";
+  const run = async () => {
+    if (!ending || busy) return;
+    setBusy(true);
+    setError(null);
+    const r = await endGymMembership(ending.membershipId, !now, reason);
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.message);
+      return;
     }
-    onConfirm={onClose}
-    onCancel={onClose}
-  />
-);
+    onDone(ending, r.value);
+  };
+  const choice = (on: boolean, label: string, sub: string, pick: () => void) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={pick}
+      className={`tap w-full text-start rounded-[14px] border-[1.5px] border-solid ${on ? "border-primary bg-primary-pale" : "border-charcoal/[0.11] dark:border-charcoal/[0.08]"}`}
+      style={{ padding: "10px 12px", minHeight: 44 }}
+    >
+      <span className="block text-[13px] font-extrabold leading-[18px] text-charcoal">{label}</span>
+      <span className="block text-[11.5px] leading-[16px] text-charcoal-soft">{sub}</span>
+    </button>
+  );
+  return (
+    <ConfirmCard
+      open={!!ending}
+      layout="stacked"
+      frame="kit"
+      tone="destructive"
+      icon={<XCircle size={20} strokeWidth={2.2} />}
+      title={ending ? `End ${ending.firstName}’s membership?` : ""}
+      subtitle={now ? "Their pass stops working straight away." : `Their pass stops working at the end of the paid period, on ${until}.`}
+      confirmLabel={busy ? "Ending…" : "End membership"}
+      cancelLabel="Keep it"
+      initialFocus="cancel"
+      busy={busy}
+      confirmDisabled={!online}
+      extra={
+        <div className="text-start" style={{ marginTop: 12 }}>
+          <div role="radiogroup" aria-label="When it ends" className="flex flex-col" style={{ gap: 8 }}>
+            {choice(!now, "At the end of the paid period", `They keep their pass until ${until}.`, () => setNow(false))}
+            {choice(now, "Now", "Their pass stops working today.", () => setNow(true))}
+          </div>
+          <label htmlFor="fd-end-reason" className="block text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ margin: "12px 0 6px" }}>
+            Reason (optional)
+          </label>
+          <input
+            id="fd-end-reason"
+            value={reason}
+            maxLength={500}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="For your records"
+            className="w-full bg-cream-soft border-[1.5px] border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] focus:outline-none text-[13.5px] font-bold text-charcoal placeholder:font-medium placeholder:text-charcoal-faint"
+            style={{ height: 46, borderRadius: 14, padding: "0 12px" }}
+          />
+          {!online && (
+            <p role="status" className="text-[11.5px] font-bold leading-[16px] text-charcoal-faint" style={{ marginTop: 8 }}>
+              You're offline.
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-[11.5px] font-bold leading-[16px] text-status-high" style={{ marginTop: 8 }}>
+              {error}
+            </p>
+          )}
+        </div>
+      }
+      onConfirm={() => void run()}
+      onCancel={onClose}
+    />
+  );
+};

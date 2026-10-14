@@ -2,6 +2,8 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PaymentRecord, PayMethod, PayStatus, PlanLite } from "./model";
+import { fetchAllRenewalsDue } from "../front-desk";
+import type { RenewalDue } from "../front-desk/frontDeskLogic";
 
 export * from "./model";
 
@@ -76,6 +78,8 @@ export interface RevenueData {
   venues: { id: string; name: string }[];
   /** B8's ledger is on the server (business_payments answers). */
   ledger: boolean;
+  /** B7 MB-05: venue_renewals_due(gym, 30) across the venues. */
+  renewalsDue: RenewalDue[];
 }
 
 async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
@@ -229,6 +233,11 @@ export async function fetchRevenue(
     price: Number(x.price),
     billing: String(x.billing),
   }));
+  const due = await fetchAllRenewalsDue(
+    venues.map((x) => ({ gymId: x.gym_id, name: x.name })),
+    30,
+  );
+  if (!due.ok) return due;
   const ledger = await hasLedger();
   return {
     ok: true,
@@ -237,6 +246,7 @@ export async function fetchRevenue(
       plans,
       venues: venues.map((x) => ({ id: x.gym_id, name: x.name })),
       ledger,
+      renewalsDue: due.value,
     },
   };
 }

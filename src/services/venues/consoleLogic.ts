@@ -9,7 +9,7 @@
 
 import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
-import { memberTag, stage4Message, storagePath, type PassState } from "./venueLogic";
+import { dayMonthYear, memberTag, stage4Message, storagePath, type GymMembershipStatus, type PassState } from "./venueLogic";
 import type { HoursRow } from "./hours";
 
 // ---------------------------------------------------------------------------
@@ -157,7 +157,8 @@ export function money(n: number): string {
 // ---------------------------------------------------------------------------
 // venue_members()
 
-export type MembershipStatus = "active" | "expired" | "cancelled";
+/** B7 MB-05 adds 'upcoming': a renewal not in force yet. */
+export type MembershipStatus = GymMembershipStatus;
 export type PaymentStatus = "pending" | "paid" | "refunded";
 
 export interface VenueMember {
@@ -252,7 +253,20 @@ export const MEMBER_FILTERS: { value: MembershipStatus | null; label: string }[]
   { value: "active", label: "Active" },
   { value: "expired", label: "Expired" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "upcoming", label: "Upcoming" },
 ];
+
+/** A roster row's tag: an upcoming renewal says when it starts (MB-05), else the pass state. */
+export function venueMemberTag(m: { status: MembershipStatus; passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
+  switch (m.status) {
+    case "upcoming":
+      return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+    case "active":
+    case "expired":
+    case "cancelled":
+      return passStateTag(m.passState);
+  }
+}
 
 /** The pass state as the member sees it, worded for the desk. */
 export function passStateTag(state: PassState): { label: string; tone: "member" | "pending" | "muted" } {

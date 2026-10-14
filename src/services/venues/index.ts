@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import { hostedImageUrl, stage4Message, storagePath, type Billing, type PassState, type PlanLite } from "./venueLogic";
+import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
 import { isOffline } from "../network-error";
 import { readPassCache, writePassCache } from "./passCache";
@@ -69,7 +69,7 @@ export interface GymMembership {
   gymId: string;
   gymName: string;
   planName: string;
-  status: "active" | "expired" | "cancelled";
+  status: GymMembershipStatus;
   paymentMethod: string;
   paymentStatus: "pending" | "paid" | "refunded";
   priceAgreed: number;
@@ -228,7 +228,15 @@ export async function fetchVenue(id: string): Promise<Result<Venue | null>> {
 export async function fetchPlansFor(businessIds: string[]): Promise<Result<VenuePlan[]>> {
   const ids = [...new Set(businessIds)];
   if (ids.length === 0) return { ok: true, value: [] };
-  const { data, error } = await supabase.from("membership_plans").select("id, business_id, name, price, billing").in("business_id", ids);
+  // B7 MB-03: only plans on sale reach Explore. A paused plan is not sold
+  // (members keep it and renewals continue), a hidden one is off Explore, an
+  // archived one is gone; purchase_gym_membership does not refuse them yet.
+  const { data, error } = await supabase
+    .from("membership_plans")
+    .select("id, business_id, name, price, billing")
+    .in("business_id", ids)
+    .filter("status", "eq", "active")
+    .filter("visible_on_explore", "eq", true);
   if (error) {
     console.error("[venues] Could not read plans:", error.message);
     return fail(error, "Couldn't load memberships right now.");
@@ -281,6 +289,32 @@ export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> 
   }));
   if (uid) writePassCache(uid, value.filter((m) => m.status === "active"));
   return { ok: true, value };
+}
+
+/**
+ * B7 MB-05: the member ends their own venue membership (end_gym_membership;
+ * either side may). At the period end by default: the status stays 'active'
+ * and the pass works until expires_on; `now` cancels it today. Returns the
+ * resulting status.
+ */
+export async function endMyGymMembership(membershipId: string, atPeriodEnd: boolean): Promise<Result<GymMembershipStatus>> {
+  const { data, error } = await rpc<GymMembershipStatus>("end_gym_membership", {
+    p_membership_id: membershipId,
+    p_reason: null,
+    p_at_period_end: atPeriodEnd,
+  });
+  if (error || !data) {
+    if (error) console.error("[venues] Could not end the membership:", error.message);
+    if (error && isOffline(error)) return { ok: false, code: error.code, message: "You're offline. Try again when you're back online." };
+    const message =
+      error?.code === "ATX10"
+        ? "This membership has already ended."
+        : error?.code === "ATX25"
+          ? "This membership has no end date, so it can't end at the period end."
+          : "Couldn't end your membership. Try again.";
+    return { ok: false, code: error?.code, message };
+  }
+  return { ok: true, value: data };
 }
 
 /**

@@ -4,7 +4,21 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { fetchMyVenues, fetchVenueMembers } from "../venues/console";
 import { consoleMessage } from "../venues/consoleLogic";
 import type { Result } from "../venues";
-import { toPassCheck, type Entry, type FrontDeskMember, type PassCheck, type VerifyRow } from "./frontDeskLogic";
+import {
+  membershipActionMessage,
+  sortRenewals,
+  toPassCheck,
+  toRenewalDue,
+  toRenewalStats,
+  type Entry,
+  type FrontDeskMember,
+  type PassCheck,
+  type RenewalDue,
+  type RenewalDueRow,
+  type RenewalStats,
+  type RenewalStatsRow,
+  type VerifyRow,
+} from "./frontDeskLogic";
 
 // The gym Front desk (v6 Batch 4 · OP1-013…036, OURS-OP1-front-desk-scan).
 // Live today (HANDOVER_API stage 4b / A4): verify_gym_pass, mark_gym_membership_paid,
@@ -79,6 +93,66 @@ export async function markMembershipPaid(membershipId: string): Promise<Result<n
     return fail(error, "Couldn't mark it as paid. Try again.");
   }
   return { ok: true, value: null };
+}
+
+// ---------------------------------------------------------------------------
+// Renewals and ending (B7 MB-05, migration 20261121000000): venue_renewals_due,
+// venue_renewal_stats, renew_gym_membership, end_gym_membership. All four are
+// gated on business_can(business, 'members'); a reader returns no rows to
+// anybody else.
+
+export async function fetchRenewalsDue(gymId: string, days: number): Promise<Result<RenewalDue[]>> {
+  const { data, error } = await rpc<RenewalDueRow[]>("venue_renewals_due", { p_gym_id: gymId, p_days: days });
+  if (error) {
+    console.error("[front desk] Could not read renewals:", error.message);
+    return fail(error, "Couldn't load renewals.");
+  }
+  return { ok: true, value: (data ?? []).map((r) => toRenewalDue(r, gymId)) };
+}
+
+/** Every venue's renewals due within `days`, soonest first, already renewed last (the reader's order per venue). */
+export async function fetchAllRenewalsDue(venues: FrontDeskVenue[], days: number): Promise<Result<RenewalDue[]>> {
+  const out: RenewalDue[] = [];
+  for (const v of venues) {
+    const r = await fetchRenewalsDue(v.gymId, days);
+    if (!r.ok) return r;
+    out.push(...r.value);
+  }
+  return { ok: true, value: sortRenewals(out) };
+}
+
+export async function fetchRenewalStats(gymId: string, from: string, to: string): Promise<Result<RenewalStats | null>> {
+  const { data, error } = await rpc<RenewalStatsRow[] | RenewalStatsRow>("venue_renewal_stats", { p_gym_id: gymId, p_from: from, p_to: to });
+  if (error) {
+    console.error("[front desk] Could not read renewal stats:", error.message);
+    return fail(error, "Couldn't load renewals.");
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return { ok: true, value: row ? toRenewalStats(row) : null };
+}
+
+/** renew_gym_membership(id) → the new period's id. It starts where the old one ends and arrives payment pending. */
+export async function renewMembership(membershipId: string): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("renew_gym_membership", { p_membership_id: membershipId });
+  if (error || !data) {
+    if (error) console.error("[front desk] Could not renew:", error.message);
+    return { ok: false, code: error?.code, message: error && isOffline(error) ? OFFLINE_MESSAGE : membershipActionMessage(error?.code, "renew") };
+  }
+  return { ok: true, value: data };
+}
+
+/** end_gym_membership(id, reason, at_period_end) → the resulting status ('active' = ends on the date, 'cancelled' = ended now). */
+export async function endGymMembership(membershipId: string, atPeriodEnd: boolean, reason: string | null): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("end_gym_membership", {
+    p_membership_id: membershipId,
+    p_reason: reason?.trim() ? reason.trim() : null,
+    p_at_period_end: atPeriodEnd,
+  });
+  if (error || !data) {
+    if (error) console.error("[front desk] Could not end a membership:", error.message);
+    return { ok: false, code: error?.code, message: error && isOffline(error) ? OFFLINE_MESSAGE : membershipActionMessage(error?.code, "end") };
+  }
+  return { ok: true, value: data };
 }
 
 // ---------------------------------------------------------------------------

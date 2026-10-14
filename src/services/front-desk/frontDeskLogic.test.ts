@@ -7,32 +7,18 @@ import {
   entrySub,
   hourShort,
   normalizePassToken,
-  renewals,
+  membershipActionMessage,
+  renewalRateLabel,
   renewalSub,
+  sortRenewals,
+  toChase,
+  toRenewalDue,
+  toRenewalStats,
   scanResultView,
   toPassCheck,
   type Entry,
-  type FrontDeskMember,
+  type RenewalDueRow,
 } from "./frontDeskLogic";
-
-const member = (over: Partial<FrontDeskMember>): FrontDeskMember => ({
-  membershipId: "m1",
-  gymId: "g1",
-  firstName: "Mina",
-  isMinor: false,
-  planName: "Monthly",
-  status: "active",
-  paymentMethod: "cash",
-  paymentStatus: "paid",
-  priceAgreed: 100,
-  paidAt: null,
-  markedPaidBy: null,
-  startedOn: "2026-09-01",
-  expiresOn: "2026-10-20",
-  passState: "valid",
-  joinedAt: "2026-09-01T10:00:00Z",
-  ...over,
-});
 
 test("pass tokens: 32 hex, any case, trimmed; anything else refused", () => {
   assert.equal(normalizePassToken(" ED9B7FEC01069937F316FC421E7046D4\n"), "ed9b7fec01069937f316fc421e7046d4");
@@ -73,33 +59,43 @@ test("payment due offers Mark as paid; expired offers a day pass only when sold;
   assert.equal(unk.minor, false);
 });
 
-test("renewals: due within 7 days first (soonest), then expired within 7 days; cancelled and refunded left out", () => {
-  const list = renewals(
-    [
-      member({ membershipId: "a", expiresOn: "2026-10-20" }),
-      member({ membershipId: "b", expiresOn: "2026-10-15" }),
-      member({ membershipId: "c", expiresOn: "2026-10-30" }),
-      member({ membershipId: "d", expiresOn: "2026-10-08", status: "expired", passState: "expired" }),
-      member({ membershipId: "e", expiresOn: "2026-10-13", passState: "expired" }),
-      member({ membershipId: "f", expiresOn: "2026-10-16", status: "cancelled", passState: "cancelled" }),
-      member({ membershipId: "g", expiresOn: "2026-10-01", status: "expired" }),
-    ],
-    "2026-10-14"
-  );
-  assert.deepEqual(
-    list.map((r) => [r.membershipId, r.kind, r.days]),
-    [
-      ["b", "due", 1],
-      ["a", "due", 6],
-      ["e", "expired", -1],
-      ["d", "expired", -6],
-    ]
-  );
-  assert.equal(renewalSub(list[0]), "Monthly · renews tomorrow");
+test("renewals (MB-05): server rows map; to chase first, then ending, then renewed; subs say what was decided", () => {
+  const row = (id: string, days: number, over: Partial<RenewalDueRow> = {}): RenewalDueRow => ({
+    membership_id: id, member_first_name: "Mina", member_is_minor: false, plan_name: "Monthly", expires_on: "2026-10-20",
+    days_left: days, cancel_at_period_end: false, payment_status: "paid", already_renewed: false, total_count: 3, ...over,
+  });
+  const list = sortRenewals([
+    toRenewalDue(row("r", 1, { already_renewed: true }), "g"),
+    toRenewalDue(row("e", 2, { cancel_at_period_end: true }), "g"),
+    toRenewalDue(row("b", 6), "g"),
+    toRenewalDue(row("a", 0), "g"),
+  ]);
+  assert.deepEqual(list.map((r) => r.membershipId), ["a", "b", "e", "r"]);
+  assert.deepEqual(toChase(list).map((r) => r.membershipId), ["a", "b"]);
+  assert.equal(renewalSub(list[0]), "Monthly · renews today");
   assert.equal(renewalSub(list[1]), "Monthly · renews in 6 days");
-  assert.equal(renewalSub(list[2]), "Monthly · Expired yesterday");
-  assert.equal(renewalSub(list[3]), "Monthly · Expired 6 days ago");
-  assert.equal(renewals([member({ expiresOn: "2026-10-30" })], "2026-10-14", 30).length, 1);
+  assert.equal(renewalSub(list[2]), "Monthly · ends 20 Oct 2026");
+  assert.equal(renewalSub(list[3]), "Monthly · renewed, next period from 20 Oct 2026");
+  assert.equal(toRenewalDue(row("x", 1, { member_first_name: null, plan_name: null }), "g").planName, "Membership");
+});
+
+test("renewal rate: NULL is \"–\" with \"No renewals were due\", never 0% or 100%", () => {
+  const s = toRenewalStats({ period_from: "2026-09-14", period_to: "2026-10-14", due: 0, renewed: 0, lapsed: 0, cancelled: 0, renewal_rate: null });
+  assert.deepEqual(renewalRateLabel(s), { value: "–", note: "No renewals were due" });
+  assert.deepEqual(renewalRateLabel(toRenewalStats({ period_from: "a", period_to: "b", due: 4, renewed: 3, lapsed: 0, cancelled: 1, renewal_rate: "0.7500" })), { value: "75%", note: null });
+});
+
+test("renew / end refusals have copy (ATX10, ATX25, ATX09)", () => {
+  assert.equal(membershipActionMessage("ATX10", "renew"), "This membership has already been renewed.");
+  assert.equal(membershipActionMessage("ATX25", "renew"), "This plan has been archived. Move the member to a current plan first.");
+  assert.equal(membershipActionMessage("ATX10", "end"), "This membership has already ended.");
+  assert.equal(membershipActionMessage(undefined, "end"), "Couldn't end the membership. Try again.");
+});
+
+test("an upcoming renewal scanned at the door is not in force yet (valid false, pass_state valid)", () => {
+  const c = toPassCheck({ valid: false, pass_state: "valid", membership_id: "m", gym_id: "g", member_first_name: "Jo", member_is_minor: false, expires_on: "2026-12-01" });
+  assert.equal(c.state, "not_started");
+  assert.equal(scanResultView(c, { checkInsLive: false, sellsDayPass: false }).title, "Pass not active yet");
 });
 
 test("entries: today, in now (90 min, V6-29), denied; subs are 12-hour", () => {

@@ -5,6 +5,8 @@ import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { AnCard, AnEmptyCard, AnHeaderRow, AnHintBox, AnLead, AnNumberBoxes } from "./anKit";
 import type { MembersPageDef, MembersVocab } from "./membersModel";
 import type { MembersData } from "./useMembersData";
+import { useAnalytics } from "../analyticsContext";
+import { RenewalsCard } from "./RenewalsCard";
 
 // A Members section page (AN4-005 rows 10-17: back 44, crumb, the picker
 // title (AN4-046 / -047: one navigation pattern, the picker), "{i} of {n}",
@@ -36,6 +38,7 @@ export function MembersPage({
   empty?: boolean;
 }) {
   const navigate = useNavigate();
+  const { range } = useAnalytics();
   const [picker, setPicker] = useState<HTMLElement | null>(null);
   const i = pages.findIndex((p) => p.key === page.key);
   const codes = data.codes ?? [];
@@ -122,6 +125,8 @@ export function MembersPage({
           )}
         </AnCard>
       )}
+      {/* OURS-AN4-gym-variant row 17 (B7 MB-05): the gym Plans page's Renewals block. */}
+      {page.key === "plans" && vocab.label === "Members" && !empty && <RenewalsCard from={range.from} to={range.to} />}
     </div>
   );
 }

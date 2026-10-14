@@ -4,8 +4,7 @@ import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { PopupMenu } from "../ui/PopupMenu";
 import { initials } from "../professionals/typeColour";
 import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/console";
-import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, passStateTag, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
-import type { PassState } from "../../services/venues/venueLogic";
+import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
@@ -24,9 +23,9 @@ import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOf
 // waits for B7's business-to-member threads (V6-26): no message buttons
 // before B7 is on the stack.
 
-/** K8 tone for a pass state (Valid good, Awaiting payment caution, else soft). */
-function passPill(state: PassState): { tone: PillTone; label: string } {
-  const t = passStateTag(state);
+/** K8 tone for a member's tag (Valid good, Awaiting payment caution, else soft; an upcoming renewal "Starts {date}", MB-05). */
+function passPill(m: VenueMember): { tone: PillTone; label: string } {
+  const t = venueMemberTag(m);
   return { label: t.label, tone: t.tone === "member" ? "good" : t.tone === "pending" ? "caution" : "soft" };
 }
 
@@ -132,7 +131,7 @@ export function VenueMembersRoster({
       )}
       <div className={clsx(!fresh && current && "opacity-60")} aria-busy={!fresh}>
         {members.map((m) => {
-          const pill = passPill(m.passState);
+          const pill = passPill(m);
           const canPay = m.paymentStatus === "pending";
           return (
             <VDetailRow

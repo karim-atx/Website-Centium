@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bluetooth, DoorOpen, Nfc, QrCode, User } from "lucide-react";
 import { initials } from "../professionals/typeColour";
-import { memberTag, planLine, validRange } from "../../services/venues/venueLogic";
+import { membershipTag, planLine, validRange } from "../../services/venues/venueLogic";
 import type { GymMembership } from "../../services/venues";
 import { PassQr } from "./PassQr";
 import { MemberTag } from "./MemberTag";
@@ -49,7 +49,7 @@ export function MembershipPass({
     ...(membership.access.bluetooth ? [{ key: "bluetooth" as const, label: "Bluetooth", Icon: Bluetooth }] : []),
   ];
   const [method, setMethod] = useState<Method>(methods[0]?.key ?? "qr");
-  const tag = memberTag(membership.passState);
+  const tag = membershipTag(membership);
 
   return (
     <div className="flex flex-col items-center">
