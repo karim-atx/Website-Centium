@@ -24,7 +24,8 @@ export const BUSINESS_TOAST_MS = 3000;
  * (`action`, any label). Shape per drawing component through `shape`:
  * "ops" (OpsTabsV4, default) r16, shadow 0 10px 26px rgba(36,31,27,0.28),
  * check stroke 2.2; "market" (MA1) r14, shadow 0 12px 30px
- * rgba(36,31,27,0.28), stroke 2.4. Bottom 96 above the home indicator
+ * rgba(36,31,27,0.28), stroke 2.4, its Undo / action 800 (AN14-048). Bottom
+ * 96 above the home indicator
  * (20 above the navbar); `bottom` lifts it above a fixed CTA (150 in
  * OpsTabsV4, 152 in MA1). It slides up in 220 ms. The client toast is unchanged.
  * "more" (BizMoreV8, MO1B-019): r14, no shadow, gap 8, 12.5 / 700, a plain
@@ -88,8 +89,8 @@ export const Toast: React.FC<{
 
   if (!open) return null;
 
-  const actionButton = (label: string, onClick: () => void) => (
-    <button onClick={onClick} className="tap flex-none" style={{ color: "rgb(var(--thi-c3b3fb))", fontWeight: 700, minHeight: 32 }}>
+  const actionButton = (label: string, onClick: () => void, weight = 700) => (
+    <button onClick={onClick} className="tap flex-none" style={{ color: "rgb(var(--thi-c3b3fb))", fontWeight: weight, minHeight: 32 }}>
       {label}
     </button>
   );
@@ -133,7 +134,7 @@ export const Toast: React.FC<{
           />
         ))}
         <span className="flex-1 min-w-0 break-words">{message}</span>
-        {onUndo && actionButton("Undo", onUndo)}
+        {onUndo && actionButton("Undo", onUndo, market ? 800 : 700)}
         {action &&
           (listing ? (
             <button
@@ -145,7 +146,7 @@ export const Toast: React.FC<{
               {action.label}
             </button>
           ) : (
-            actionButton(action.label, action.onClick)
+            actionButton(action.label, action.onClick, market ? 800 : 700)
           ))}
       </div>,
       document.body

@@ -4,7 +4,16 @@ import {
   busiestDay,
   collected,
   dailySeries,
+  describePaymentRefusal,
   isOwed,
+  labelIsName,
+  markTarget,
+  owedFromRecords,
+  owedItemFromRow,
+  owedServerFilter,
+  remindersLine,
+  serverSentence,
+  type MoneyOwedRow,
   money,
   owed,
   pctDelta,
@@ -132,4 +141,105 @@ test("revenue: isOwed is pending with an agreed price above zero", () => {
   assert.equal(isOwed(rec({ status: "paid", amount: 15 })), false);
   assert.equal(isOwed(rec({ kind: "membership", status: "pending", amount: 30, membershipStatus: "cancelled" })), false);
   assert.equal(isOwed(rec({ kind: "membership", status: "pending", amount: 30, membershipStatus: "active" })), true);
+});
+
+// ---------- B8 RV-02: money_owed ----------
+
+const row = (o: Partial<MoneyOwedRow>): MoneyOwedRow => ({
+  payment_id: "p1",
+  source_kind: "membership",
+  source_id: "m1",
+  person_id: "u1",
+  member_number: 3,
+  label: "Member #0003",
+  is_minor: false,
+  gym_id: "g1",
+  venue_name: "Flex Gym",
+  price_type: "membership",
+  amount: "120.00",
+  method: "cash",
+  due_on: "2026-10-07",
+  days_overdue: 7,
+  reminders_sent: "2",
+  last_reminder_at: "2026-10-12T09:00:00Z",
+  total_count: "3",
+  ...o,
+});
+
+test("money owed: a masked label is never treated as a name", () => {
+  assert.equal(labelIsName("Member #0003", 3), false);
+  assert.equal(labelIsName("Member #0042", null), false);
+  assert.equal(labelIsName("Member", null), false);
+  assert.equal(labelIsName("Guest", null), false);
+  assert.equal(labelIsName("Max", 3), true);
+});
+
+test("money owed: maps a server row, keeping its label, overdue days and reminders", () => {
+  const recs = [rec({ key: "membership:m1", kind: "membership", id: "m1", item: "Monthly", startedOn: "2025-03-01" })];
+  const i = owedItemFromRow(row({}), recs);
+  assert.equal(i.key, "p1");
+  assert.equal(i.paymentId, "p1");
+  assert.equal(i.label, "Member #0003");
+  assert.equal(i.who, null);
+  assert.equal(i.amount, 120);
+  assert.equal(i.overdue, 7);
+  assert.equal(i.remindersSent, 2);
+  assert.equal(i.item, "Monthly");
+  assert.equal(i.startedOn, "2025-03-01");
+  // A shared name gives initials; a guest has no account and no name.
+  assert.equal(owedItemFromRow(row({ label: "Max" }), recs).who, "Max");
+  const guest = owedItemFromRow(row({ label: "Guest", person_id: null, member_number: null }), []);
+  assert.equal(guest.personId, null);
+  assert.equal(guest.who, null);
+  // No record for it: the price type's word.
+  assert.equal(owedItemFromRow(row({ source_kind: "class_pack", price_type: "class_pack" }), []).item, "Class pack");
+  assert.equal(owedItemFromRow(row({ days_overdue: 0 }), []).overdue, 0);
+});
+
+test("money owed: Item type as the server filter, and which kinds can be marked paid", () => {
+  assert.equal(owedServerFilter("all"), "all");
+  assert.equal(owedServerFilter("membership"), "memberships");
+  assert.equal(owedServerFilter("class"), "classes");
+  assert.deepEqual(markTarget({ sourceKind: "membership", sourceId: "m1" }), { kind: "membership", id: "m1" });
+  assert.deepEqual(markTarget({ sourceKind: "class_booking", sourceId: "b1" }), { kind: "class", id: "b1" });
+  assert.equal(markTarget({ sourceKind: "class_pack", sourceId: "k1" }), null);
+});
+
+test("money owed: before B8 the list comes from the records, filtered by item type", () => {
+  const rs = [
+    rec({ key: "a", kind: "class", status: "pending", amount: 20, dueOn: "2026-10-10" }),
+    rec({ key: "b", kind: "membership", status: "pending", amount: 95, dueOn: "2026-10-01", membershipStatus: "active" }),
+  ];
+  assert.deepEqual(owedFromRecords(rs, "2026-10-14", "amount", "all").map((i) => i.key), ["b", "a"]);
+  assert.deepEqual(owedFromRecords(rs, "2026-10-14", "amount", "class").map((i) => i.key), ["a"]);
+  const b = owedFromRecords(rs, "2026-10-14", "overdue", "membership")[0];
+  assert.equal(b.paymentId, null);
+  assert.equal(b.overdue, 13);
+});
+
+test("money owed: reminder and undo refusals in the app's words", () => {
+  assert.equal(
+    describePaymentRefusal({ code: "ATX08", message: "this payment has no account to remind" }, "remind"),
+    "They don't have a Centium account, so there's no one to message.",
+  );
+  assert.equal(describePaymentRefusal({ code: "ATX08", message: "no such payment" }, "remind"), "That payment isn't there any more.");
+  assert.equal(describePaymentRefusal({ code: "ATX96", message: "x" }, "remind"), "They've blocked messages from your business.");
+  assert.equal(
+    describePaymentRefusal({ code: "22023", message: "that payment is not marked paid (it is pending)" }, "unmark"),
+    "That payment is not marked paid (it is pending).",
+  );
+  assert.equal(
+    describePaymentRefusal({ code: "ATX02" }, "remind"),
+    "You've sent a lot of reminders in the last hour. Try again later.",
+  );
+  assert.equal(describePaymentRefusal({ code: "XX000" }, "remind"), "Couldn't send the reminder. Try again.");
+  assert.equal(describePaymentRefusal({ code: "XX000" }, "unmark"), "Couldn't undo that. Try again.");
+  assert.equal(serverSentence("", "Fallback."), "Fallback.");
+  assert.equal(serverSentence("done!", "x"), "Done!");
+});
+
+test("money owed: reminders sent reads none yet, or the count and the last day", () => {
+  assert.equal(remindersLine(0, null), "None yet");
+  assert.equal(remindersLine(2, "2026-10-12T09:00:00"), "2, last 12 Oct");
+  assert.equal(remindersLine(1, null), "1");
 });

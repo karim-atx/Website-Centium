@@ -1,19 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { ChevronRight, ChevronUp, HandCoins } from "lucide-react";
+import { ChevronRight, ChevronUp, HandCoins, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   collected,
   dddDMon,
   money,
-  owed as owedOf,
   paidCount,
   renewals as renewalsOf,
   renewalWeeks,
-  sortOwed,
   spanLabel,
   sum,
   today as todayIso,
-  type OwedRow,
+  type OwedItem,
 } from "../../../services/business-revenue";
 import { useAnalytics } from "../analyticsContext";
 import {
@@ -30,13 +28,16 @@ import {
 import { useRevenue } from "./revenueContext";
 import { owedChip, owedSub, REVENUE_BASE, WHISH_LIVE } from "./payModel";
 import { FailedHalf } from "./FailedPages";
+import { useMoneyOwed } from "./useMoneyOwed";
+import { useCanRemind, useSendReminder } from "./OwedPages";
 
 // AN14-019 / -024 / -027 / -028 / -030 / -032 / -034 (AnInsightsV3 sub
 // "payments"). Before Whish (OURS-AN14-pending-whish): the split card shows
 // Whish as "–" with a Soon chip and a cash-only bar; the Failed half card is
 // hidden (failed payments are online only, V6-44) so Money owed takes the
-// full width; the Follow up action needs business-to-member messages (B7)
-// and is not shown yet. Renewals: four-week bars in Monday weeks (V6, user
+// full width. Money owed reads money_owed (B8 RV-02) like the full list;
+// each owed row has Follow up (send_payment_reminder) where the payer has an
+// account and the viewer has the revenue permission. Renewals: four-week bars in Monday weeks (V6, user
 // rule), a fifth column only when the 30-day window reaches it.
 
 export const PaymentsTab: React.FC = () => {
@@ -57,18 +58,18 @@ export const PaymentsTab: React.FC = () => {
     records.filter((r) => r.method === "cash"),
     range,
   );
-  const owed = useMemo(
-    () => sortOwed(owedOf(records, today), "amount"),
-    [records, today],
-  );
-  const owedT = sum(owed.map((o) => o.rec.amount ?? 0));
+  const owedState = useMoneyOwed("amount", "all");
+  const owed = owedState.items;
+  const remind = useSendReminder(owedState.reload);
+  const canRemind = useCanRemind(owedState.live);
+  const owedT = sum(owed.map((o) => o.amount));
   const late = owed.filter((o) => o.overdue > 0);
   const oldest = late.reduce((m, o) => Math.max(m, o.overdue), 0);
   const ren = useMemo(() => renewalsOf(records, today, data?.renewalsDue ?? null), [records, today, data]);
   const weeks = useMemo(() => renewalWeeks(ren, today), [ren, today]);
   const showRenewals = kind !== "store";
 
-  if (loading && !data)
+  if ((loading && !data) || owedState.loading)
     return (
       <div role="status" aria-label="Loading">
         <SecLabel>How {vocab.people} pay</SecLabel>
@@ -85,8 +86,8 @@ export const PaymentsTab: React.FC = () => {
   const renN = ren.length;
   const renT = sum(ren.map((r) => r.rec.amount ?? 0));
   const thisWeek = weeks[0];
-  const openOwed = (o: OwedRow) =>
-    navigate(`${REVENUE_BASE}/payments/owed/${encodeURIComponent(o.rec.key)}`);
+  const openOwed = (o: OwedItem) =>
+    navigate(`${REVENUE_BASE}/payments/owed/${encodeURIComponent(o.key)}`);
 
   return (
     <div>
@@ -234,43 +235,86 @@ export const PaymentsTab: React.FC = () => {
           <RCard>
             {owed.map((o, i) => {
               const chip = owedChip(o);
+              const follow = canRemind(o);
+              // AnInsightsV3 row action: 32 tall r10 padding 0 10, 1px
+              // primary, 11.5/800 pDark, send 12/2.4 "Follow up". It sits
+              // over an invisible copy of itself inside the row button (a
+              // button can't hold a button).
+              const followUp = (
+                <>
+                  <Send size={12} strokeWidth={2.4} aria-hidden />
+                  Follow up
+                </>
+              );
+              const followCls =
+                "h-[32px] px-[10px] rounded-[10px] inline-flex items-center gap-[4px] text-[11.5px] font-extrabold whitespace-nowrap box-border";
               return (
-                <button
-                  key={o.rec.key}
-                  type="button"
-                  onClick={() => openOwed(o)}
-                  className="tap w-full grid items-center text-left px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
-                  style={{
-                    gridTemplateColumns: "34px minmax(0,1fr) auto",
-                    columnGap: 10,
-                    borderTop: i ? `1px solid ${v("divider")}` : "none",
-                  }}
+                <div
+                  key={o.key}
+                  className="relative"
+                  style={{ borderTop: i ? `1px solid ${v("divider")}` : "none" }}
                 >
-                  <Avatar who={o.rec.who} size={34} font={12} icon={16} />
-                  <span className="min-w-0">
-                    <span
-                      className="block text-[13px] font-extrabold leading-[17px] truncate"
-                      style={{ color: v("ink") }}
-                    >
-                      {whoOf(o.rec)}
+                  <button
+                    type="button"
+                    onClick={() => openOwed(o)}
+                    className="tap w-full grid items-center text-left px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
+                    style={{
+                      gridTemplateColumns: "34px minmax(0,1fr) auto",
+                      columnGap: 10,
+                    }}
+                  >
+                    <Avatar who={o.who} size={34} font={12} icon={16} />
+                    <span className="min-w-0">
+                      <span
+                        className="block text-[13px] font-extrabold leading-[17px] truncate"
+                        style={{ color: v("ink") }}
+                      >
+                        {o.label}
+                      </span>
+                      <span
+                        className="block text-[11px] leading-[15px] mt-[1px]"
+                        style={{ color: v("faint") }}
+                      >
+                        {owedSub(o)}
+                      </span>
                     </span>
-                    <span
-                      className="block text-[11px] leading-[15px] mt-[1px]"
-                      style={{ color: v("faint") }}
-                    >
-                      {owedSub(o.rec)}
+                    <span className="flex flex-col items-end gap-[4px]">
+                      <span
+                        className="text-[14px] font-extrabold whitespace-nowrap rv-num"
+                        style={{ color: v("ink") }}
+                      >
+                        {money(o.amount)}
+                      </span>
+                      <Pill tone={chip.late ? "warn" : "soft"}>{chip.short}</Pill>
+                      {follow && (
+                        <span
+                          aria-hidden
+                          className={followCls + " invisible"}
+                          style={{ border: "1px solid transparent" }}
+                        >
+                          {followUp}
+                        </span>
+                      )}
                     </span>
-                  </span>
-                  <span className="flex flex-col items-end gap-[4px]">
-                    <span
-                      className="text-[14px] font-extrabold whitespace-nowrap rv-num"
-                      style={{ color: v("ink") }}
+                  </button>
+                  {follow && (
+                    <button
+                      type="button"
+                      aria-label={`Follow up with ${o.label}`}
+                      onClick={() => remind.open(o)}
+                      className={
+                        followCls +
+                        " tap absolute right-[16px] bottom-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+                      }
+                      style={{
+                        border: `1px solid ${v("primary")}`,
+                        color: v("pdark"),
+                      }}
                     >
-                      {money(o.rec.amount ?? 0)}
-                    </span>
-                    <Pill tone={chip.late ? "warn" : "soft"}>{chip.short}</Pill>
-                  </span>
-                </button>
+                      {followUp}
+                    </button>
+                  )}
+                </div>
               );
             })}
             <button
@@ -465,6 +509,7 @@ export const PaymentsTab: React.FC = () => {
           </RCard>
         </>
       )}
+      {remind.ui}
     </div>
   );
 };

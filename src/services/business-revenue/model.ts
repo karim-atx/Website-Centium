@@ -7,8 +7,8 @@
 //
 // Today's records are the cash fields on gym_memberships and
 // business_class_bookings (price_agreed, payment_status, paid_at). B8's
-// business_payments ledger replaces this reader later; the shapes below are
-// the ledger's (source kind, method, status, amount, paid date, due date).
+// business_payments ledger replaces this reader screen by screen: Money owed
+// reads money_owed (B8 RV-02, below); the other readers are not shipped yet.
 
 import {
   addDays,
@@ -338,7 +338,12 @@ export function isOwed(
   );
 }
 
-/** Unpaid items with an agreed price: active memberships awaiting payment, unpaid class bookings. */
+/**
+ * Unpaid items with an agreed price: active memberships awaiting payment,
+ * unpaid class bookings. The Money owed screens use it only while money_owed
+ * is missing on the database (owedFromRecords); the Transactions detail uses
+ * it for one pending record.
+ */
 export function owed(records: PaymentRecord[], today: string): OwedRow[] {
   return records
     .filter(isOwed)
@@ -362,6 +367,241 @@ export function sortOwed(rows: OwedRow[], sort: OwedSort): OwedRow[] {
         b.overdue - a.overdue || (b.rec.amount ?? 0) - (a.rec.amount ?? 0),
     );
   return out;
+}
+
+// ---------- Money owed, the server's list (B8 RV-02: money_owed) ----------
+//
+// money_owed(business, sort, filter) is business-wide across venues, reads
+// the business_payments ledger, and decides three things the client must not
+// redo: the label (MASKED, "Member #0003" unless the person shared their
+// name, "Guest" for a desk guest with no account), the days overdue (in the
+// business's own timezone; due today is 0, not overdue), and the order. The
+// client-side owed() above is the reader used only while the function is
+// missing on the database (PGRST202 / 42883, the pending rule).
+
+export type OwedSourceKind =
+  | "membership"
+  | "class_booking"
+  | "day_pass"
+  | "class_pack"
+  | "order"
+  | "appointment";
+
+/** One money_owed row, as the server returns it. */
+export interface MoneyOwedRow {
+  payment_id: string;
+  source_kind: OwedSourceKind;
+  source_id: string;
+  person_id: string | null;
+  member_number: number | null;
+  label: string;
+  is_minor: boolean | null;
+  gym_id: string | null;
+  venue_name: string | null;
+  price_type: string;
+  amount: number | string;
+  method: PayMethod;
+  due_on: string | null;
+  days_overdue: number | null;
+  reminders_sent: number | string | null;
+  last_reminder_at: string | null;
+  total_count: number | string;
+}
+
+/** The screen's sort (the handover's menu: Largest amount, Most overdue); both are server sorts. */
+export type MoneyOwedSort = "overdue" | "amount" | "due" | "recent";
+export type MoneyOwedFilter =
+  | "all"
+  | "overdue"
+  | "upcoming"
+  | "memberships"
+  | "classes";
+/** The Item type group of the filter menu. */
+export type OwedItemFilter = "all" | "membership" | "class";
+
+/** The Item type choice, as money_owed's filter. */
+export const owedServerFilter = (f: OwedItemFilter): MoneyOwedFilter =>
+  f === "membership" ? "memberships" : f === "class" ? "classes" : "all";
+
+/** One owed item on the Money owed screens, from either reader. */
+export interface OwedItem {
+  /** Route key: the payment id (money_owed) or the record key (before B8). */
+  key: string;
+  /** business_payments.id; null before B8 (no Undo, no reminders). */
+  paymentId: string | null;
+  sourceKind: OwedSourceKind;
+  sourceId: string;
+  /** The payer; null for a desk guest with no account (nobody to remind). */
+  personId: string | null;
+  /** What the screen shows, exactly as the server labels the person. */
+  label: string;
+  /** The shared first name for the avatar's initials; null when masked. */
+  who: string | null;
+  isMinor: boolean;
+  amount: number;
+  method: PayMethod;
+  dueOn: string | null;
+  /** Days past due, the server's (0 = due today, negative = not due yet). */
+  overdue: number;
+  remindersSent: number;
+  lastReminderAt: string | null;
+  /** Plan name or class title. */
+  item: string;
+  /** A membership's start ("Member since"), when the revenue read has it. */
+  startedOn: string | null;
+}
+
+/**
+ * The server's label is a shared first name only when it is not one of the
+ * masked forms ("Member #0003", "Member", "Guest"). Used for the avatar only:
+ * initials of a name, the user-round glyph otherwise.
+ */
+export function labelIsName(label: string, memberNumber: number | null): boolean {
+  const l = label.trim();
+  if (!l || l === "Guest" || l === "Member") return false;
+  if (/^Member #\d+$/.test(l)) return false;
+  if (memberNumber !== null && l === `Member #${String(memberNumber).padStart(4, "0")}`)
+    return false;
+  return true;
+}
+
+const PRICE_TYPE_ITEM: Record<string, string> = {
+  membership: "Membership",
+  class_pack: "Class pack",
+  drop_in: "Drop-in",
+  day_pass: "Day pass",
+  intro_offer: "Intro offer",
+  intro_week: "Intro week",
+  product: "Product",
+  delivery: "Delivery",
+};
+
+/**
+ * The item a money_owed row is for: the plan name or class title the revenue
+ * read holds for that membership or booking, else the price type's word.
+ */
+export function owedItemFromRow(
+  row: MoneyOwedRow,
+  records: PaymentRecord[],
+): OwedItem {
+  const recKey =
+    row.source_kind === "membership"
+      ? `membership:${row.source_id}`
+      : row.source_kind === "class_booking"
+        ? `class:${row.source_id}`
+        : null;
+  const rec = recKey ? records.find((r) => r.key === recKey) : undefined;
+  const named = labelIsName(row.label, row.member_number);
+  return {
+    key: row.payment_id,
+    paymentId: row.payment_id,
+    sourceKind: row.source_kind,
+    sourceId: row.source_id,
+    personId: row.person_id,
+    label: row.label,
+    who: named ? row.label : null,
+    isMinor: !!row.is_minor,
+    amount: Number(row.amount),
+    method: row.method,
+    dueOn: row.due_on,
+    overdue: row.days_overdue ?? 0,
+    remindersSent: Number(row.reminders_sent ?? 0),
+    lastReminderAt: row.last_reminder_at,
+    item: rec?.item ?? PRICE_TYPE_ITEM[row.price_type] ?? "Payment",
+    startedOn: rec?.startedOn ?? null,
+  };
+}
+
+/** Before B8: an owed record (client-side overdue, first name or "Member"). */
+export function owedItemFromRecord(o: OwedRow): OwedItem {
+  const r = o.rec;
+  return {
+    key: r.key,
+    paymentId: null,
+    sourceKind: r.kind === "membership" ? "membership" : "class_booking",
+    sourceId: r.id,
+    personId: null,
+    label: r.who ?? "Member",
+    who: r.who,
+    isMinor: r.isMinor,
+    amount: r.amount ?? 0,
+    method: r.method,
+    dueOn: r.dueOn,
+    overdue: o.overdue,
+    remindersSent: 0,
+    lastReminderAt: null,
+    item: r.item,
+    startedOn: r.startedOn,
+  };
+}
+
+/** Before B8: the owed list from the revenue read, sorted and filtered here. */
+export function owedFromRecords(
+  records: PaymentRecord[],
+  today: string,
+  sort: OwedSort,
+  filter: OwedItemFilter,
+): OwedItem[] {
+  return sortOwed(
+    owed(records, today).filter((o) => filter === "all" || o.rec.kind === filter),
+    sort,
+  ).map(owedItemFromRecord);
+}
+
+/** "Reminders sent" (AN14-044 row 2): "None yet", or "2, last 12 Oct". */
+export function remindersLine(sent: number, lastAt: string | null): string {
+  if (sent <= 0) return "None yet";
+  return `${sent}${lastAt ? `, last ${dMon(dayOf(lastAt))}` : ""}`;
+}
+
+/** Which mark-paid function records this item; null when none exists for its kind. */
+export function markTarget(
+  i: Pick<OwedItem, "sourceKind" | "sourceId">,
+): { kind: PayKind; id: string } | null {
+  if (i.sourceKind === "membership") return { kind: "membership", id: i.sourceId };
+  if (i.sourceKind === "class_booking") return { kind: "class", id: i.sourceId };
+  return null;
+}
+
+/** A server refusal's text as a sentence ("That payment is not marked paid (it is pending)."). */
+export function serverSentence(message: string | undefined, fallback: string): string {
+  const m = (message ?? "").trim();
+  if (!m) return fallback;
+  const s = m[0].toUpperCase() + m.slice(1);
+  return /[.!?]$/.test(s) ? s : s + ".";
+}
+
+/**
+ * The words for a refusal from send_payment_reminder ("remind") or
+ * unmark_payment_paid ("unmark"). ATX08 is "no such payment" for both, and
+ * for a reminder also "the payer has no account" (a desk guest).
+ */
+export function describePaymentRefusal(
+  error: { code?: string; message?: string },
+  action: "remind" | "unmark",
+): string {
+  const msg = error.message ?? "";
+  switch (error.code ?? "") {
+    case "ATX08":
+      if (/no such payment/i.test(msg)) return "That payment isn't there any more.";
+      if (action === "remind") return "They don't have a Centium account, so there's no one to message.";
+      return serverSentence(msg, "Couldn't undo that. Try again.");
+    case "ATX96":
+      return "They've blocked messages from your business.";
+    case "ATX02":
+      return "You've sent a lot of reminders in the last hour. Try again later.";
+    case "ATX09":
+      return "You need the Revenue permission to do this.";
+    case "22023":
+      return serverSentence(
+        msg,
+        action === "remind" ? "Couldn't send the reminder. Try again." : "Couldn't undo that. Try again.",
+      );
+    default:
+      return action === "remind"
+        ? "Couldn't send the reminder. Try again."
+        : "Couldn't undo that. Try again.";
+  }
 }
 
 // ---------- Renewals (Monday weeks) ----------

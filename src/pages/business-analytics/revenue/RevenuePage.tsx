@@ -15,7 +15,7 @@ import { OverviewTab } from "./OverviewTab";
 import { StreamsTab } from "./StreamsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { TransactionsTab } from "./TransactionsTab";
-import { OwedListPage, PaymentDetailPage } from "./OwedPages";
+import { OwedDetailPage, OwedListPage, PaymentDetailPage } from "./OwedPages";
 import { RenewalDetailPage, RenewalsPage } from "./RenewalPages";
 import { FailedDetailPage, FailedListPage } from "./FailedPages";
 import { REVENUE_BASE } from "./payModel";
@@ -59,13 +59,13 @@ export default function RevenuePage() {
   // PaySeeAll pages (full pages with their own header).
   let page: React.ReactNode = null;
   if (parts[0] === "payments" && parts[1] === "owed")
-    page = parts[2] ? <PaymentDetailPage from="owed" recKey={decodeURIComponent(parts[2])} /> : <OwedListPage />;
+    page = parts[2] ? <OwedDetailPage itemKey={decodeURIComponent(parts[2])} /> : <OwedListPage />;
   else if (parts[0] === "payments" && parts[1] === "renewals")
     page = parts[2] ? <RenewalDetailPage recKey={decodeURIComponent(parts[2])} /> : <RenewalsPage />;
   else if (parts[0] === "payments" && parts[1] === "failed")
     page = parts[2] ? <FailedDetailPage recKey={decodeURIComponent(parts[2])} /> : <FailedListPage />;
   else if (parts[0] === "transactions" && parts[1])
-    page = <PaymentDetailPage from="transactions" recKey={decodeURIComponent(parts[1])} />;
+    page = <PaymentDetailPage recKey={decodeURIComponent(parts[1])} />;
   else if (parts.length > 1) return <Navigate to={REVENUE_BASE} replace />;
 
   const sub = parts[0] ?? "overview";

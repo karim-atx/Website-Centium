@@ -1,7 +1,17 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import type { PaymentRecord, PayMethod, PayStatus, PlanLite } from "./model";
+import {
+  describePaymentRefusal,
+  type MoneyOwedFilter,
+  type MoneyOwedRow,
+  type MoneyOwedSort,
+  type PayKind,
+  type PaymentRecord,
+  type PayMethod,
+  type PayStatus,
+  type PlanLite,
+} from "./model";
 import { fetchAllRenewalsDue } from "../front-desk";
 import type { RenewalDue } from "../front-desk/frontDeskLogic";
 
@@ -23,10 +33,14 @@ export * from "./model";
 //
 // B8 (business_payments, refunds, attempts, centium_charges) is probed once:
 // until the table exists (42P01 / PGRST205) the screens keep their pending
-// states (Whish "Soon", Failed hidden, no undo, no reminders).
+// states (Whish "Soon", Failed hidden). B8 RV-02 (money_owed,
+// unmark_payment_paid, send_payment_reminder) is decided by each call's own
+// answer: a missing function (PGRST202 / 42883) comes back `pending` and the
+// Money owed screens keep the client-side list, with no Undo and no reminders.
 
 export type Result<T> =
-  { ok: true; value: T } | { ok: false; message: string; code?: string };
+  | { ok: true; value: T }
+  | { ok: false; message: string; code?: string; pending?: boolean };
 
 type Res<T> = PromiseLike<{ data: T | null; error: PostgrestError | null }>;
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => Res<T>;
@@ -252,7 +266,10 @@ export async function fetchRevenue(
 }
 
 /** Mark Paid at the desk: the existing functions, nothing else (Stage 5). */
-export async function markPaid(rec: PaymentRecord): Promise<Result<true>> {
+export async function markPaid(rec: {
+  kind: PayKind;
+  id: string;
+}): Promise<Result<true>> {
   const { error } =
     rec.kind === "membership"
       ? await rpc<null>("mark_gym_membership_paid", { p_membership_id: rec.id })
@@ -269,4 +286,117 @@ export async function markPaid(rec: PaymentRecord): Promise<Result<true>> {
     };
   }
   return { ok: true, value: true };
+}
+
+// ---------- B8 RV-02: money owed, undo, reminders ----------
+
+/** The function is not on this database yet (the stage has not shipped there). */
+const isMissingFunction = (e: { code?: string }) =>
+  e.code === "PGRST202" || e.code === "42883";
+
+const OWED_FAIL = "Couldn't load money owed.";
+
+export interface MoneyOwedPage {
+  rows: MoneyOwedRow[];
+  total: number;
+  /** The caller lacks the revenue permission (ATX09): shown as an empty list. */
+  denied: boolean;
+}
+
+/**
+ * money_owed(business, sort, filter, limit, offset): business-wide, masked
+ * labels, server-side days overdue. Needs the revenue permission; without it
+ * the answer is an empty, `denied` page rather than an error.
+ */
+export async function fetchMoneyOwed(
+  businessId: string,
+  opts: {
+    sort?: MoneyOwedSort;
+    filter?: MoneyOwedFilter;
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<Result<MoneyOwedPage>> {
+  const { data, error } = await rpc<MoneyOwedRow[]>("money_owed", {
+    p_business_id: businessId,
+    p_sort: opts.sort ?? "overdue",
+    p_filter: opts.filter ?? "all",
+    p_limit: opts.limit ?? 50,
+    p_offset: opts.offset ?? 0,
+  });
+  if (error) {
+    if (isMissingFunction(error))
+      return { ok: false, pending: true, code: error.code, message: "" };
+    if (error.code === "ATX09")
+      return { ok: true, value: { rows: [], total: 0, denied: true } };
+    console.error("[revenue] Could not read money owed:", error.message);
+    return fail(error, OWED_FAIL);
+  }
+  const rows = data ?? [];
+  return {
+    ok: true,
+    value: { rows, total: Number(rows[0]?.total_count ?? 0), denied: false },
+  };
+}
+
+/** Every page of money_owed for one sort and filter (the screens sum the total). */
+export async function fetchAllMoneyOwed(
+  businessId: string,
+  sort: MoneyOwedSort,
+  filter: MoneyOwedFilter,
+): Promise<Result<MoneyOwedPage>> {
+  const rows: MoneyOwedRow[] = [];
+  for (let offset = 0; offset < 5000; offset += 200) {
+    const r = await fetchMoneyOwed(businessId, { sort, filter, limit: 200, offset });
+    if (!r.ok || r.value.denied) return r;
+    rows.push(...r.value.rows);
+    if (r.value.rows.length < 200 || rows.length >= r.value.total) break;
+  }
+  return { ok: true, value: { rows, total: rows.length, denied: false } };
+}
+
+/** Undo of Mark as paid (AN14-048): audited, needs revenue; 22023 when it is not paid. */
+export async function unmarkPaymentPaid(
+  paymentId: string,
+  note?: string | null,
+): Promise<Result<true>> {
+  const { error } = await rpc<string>("unmark_payment_paid", {
+    p_payment_id: paymentId,
+    p_note: note ?? null,
+  });
+  if (error) {
+    if (isMissingFunction(error))
+      return { ok: false, pending: true, code: error.code, message: "Undo isn't available yet." };
+    console.error("[revenue] Could not undo mark paid:", error.message);
+    return {
+      ok: false,
+      code: error.code,
+      message: isOffline(error) ? OFFLINE_MESSAGE : describePaymentRefusal(error, "unmark"),
+    };
+  }
+  return { ok: true, value: true };
+}
+
+/**
+ * Send reminder / Follow up (AN14-044 S2, AN14-049): the server sends a fixed
+ * payment_reminder card from the business into the member's thread and logs
+ * it (money_owed's reminders_sent). Returns the message id.
+ */
+export async function sendPaymentReminder(
+  paymentId: string,
+): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("send_payment_reminder", {
+    p_payment_id: paymentId,
+  });
+  if (error) {
+    if (isMissingFunction(error))
+      return { ok: false, pending: true, code: error.code, message: "Reminders aren't available yet." };
+    console.error("[revenue] Could not send a payment reminder:", error.message);
+    return {
+      ok: false,
+      code: error.code,
+      message: isOffline(error) ? OFFLINE_MESSAGE : describePaymentRefusal(error, "remind"),
+    };
+  }
+  return { ok: true, value: String(data) };
 }

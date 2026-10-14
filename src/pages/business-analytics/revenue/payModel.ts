@@ -1,8 +1,7 @@
 import {
   dddDMon,
   dMon,
-  type OwedRow,
-  type PaymentRecord,
+  type OwedItem,
 } from "../../../services/business-revenue";
 
 export const REVENUE_BASE = "/app/business/analytics/revenue";
@@ -21,7 +20,7 @@ export const AUTO_RETRIES = 2;
 export const MANUAL_RETRIES = 1;
 
 /** The chip on an owed row: "9 days overdue" (late, caution), "Due today", "Due Fri 16 Oct". */
-export function owedChip(o: OwedRow): {
+export function owedChip(o: Pick<OwedItem, "overdue" | "dueOn">): {
   short: string;
   long: string;
   late: boolean;
@@ -43,7 +42,7 @@ export function owedChip(o: OwedRow): {
       late: false,
       severe: false,
     };
-  const due = o.rec.dueOn ? dddDMon(o.rec.dueOn) : "";
+  const due = o.dueOn ? dddDMon(o.dueOn) : "";
   return {
     short: `Due ${due}`,
     long: `Due ${due}`,
@@ -53,10 +52,12 @@ export function owedChip(o: OwedRow): {
 }
 
 /** "Monthly · due 1 Oct, cash" / "Spin 45 · 2 Oct, cash" (AN14-024 row 3). */
-export function owedSub(r: PaymentRecord): string {
+export function owedSub(
+  r: Pick<OwedItem, "item" | "method" | "dueOn" | "sourceKind">,
+): string {
   const m = r.method === "whish" ? "Whish" : "cash";
   if (!r.dueOn) return `${r.item}, ${m}`;
-  return r.kind === "membership"
+  return r.sourceKind === "membership"
     ? `${r.item} · due ${dMon(r.dueOn)}, ${m}`
     : `${r.item} · ${dMon(r.dueOn)}, ${m}`;
 }
