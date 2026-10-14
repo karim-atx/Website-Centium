@@ -499,7 +499,7 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
     case "ATX03":
       return "You don't manage this venue.";
     case "42501":
-      return "Only the venue's owner can change this.";
+      return "You don't have access to change this. Ask the owner.";
     case "23514":
       return "That wasn't saved: each day must be closed, open 24 hours, or a from–to time.";
     case "23505":

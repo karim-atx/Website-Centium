@@ -295,7 +295,7 @@ test("replacedObject: only a valid path in the caller's own prefix, never the ne
 test("consoleMessage: the console's codes, then stage 4's, then the fallback", () => {
   assert.equal(consoleMessage("ATX03", "that venue is not yours", "x"), "You don't manage this venue.");
   assert.equal(consoleMessage("ATX08", "no such venue", "x"), "That venue or class couldn't be found.");
-  assert.equal(consoleMessage("42501", "", "x"), "Only the venue's owner can change this.");
+  assert.equal(consoleMessage("42501", "", "x"), "You don't have access to change this. Ask the owner.");
   assert.match(consoleMessage("23514", "", "x"), /closed, open 24 hours/);
   assert.equal(consoleMessage("ATX01", "", "x"), "Your session expired. Sign in again.");
   assert.equal(consoleMessage(undefined, "boom", "fallback"), "fallback");

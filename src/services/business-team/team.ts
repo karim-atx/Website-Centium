@@ -40,7 +40,6 @@ export { roleUsesSeat } from "./seats";
 interface EmployeeRow {
   id: string;
   professional_id: string;
-  pay_rate_per_class: number | string | null;
   invite_message: string | null;
   created_at: string;
   accepted_at: string | null;
@@ -96,16 +95,36 @@ async function professionsFor(businessId: string): Promise<Map<string, About>> {
   return out;
 }
 
+/**
+ * Pay per class by employment id. pay_rate_per_class is no longer readable on
+ * business_employees (column grant); employee_pay_rates() returns the whole team
+ * to the owner or a holder of revenue, and only the caller's own row to anyone
+ * else. A failed read leaves pay unknown rather than failing the team.
+ */
+async function payRatesFor(businessId: string): Promise<Map<string, number | null>> {
+  const out = new Map<string, number | null>();
+  const { data, error } = await db.rpc("employee_pay_rates", { p_business_id: businessId });
+  if (error) return out;
+  for (const r of (data ?? []) as { employment_id: string; pay_rate_per_class: number | string | null }[]) {
+    out.set(r.employment_id, r.pay_rate_per_class == null ? null : Number(r.pay_rate_per_class));
+  }
+  return out;
+}
+
 /** Everyone on the business's team, accepted and invited, earliest first. */
 export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]>> {
   const rows = await db
     .from("business_employees")
-    .select("id, professional_id, created_at, accepted_at, role, permissions, pay_rate_per_class, invite_message")
+    .select("id, professional_id, created_at, accepted_at, role, permissions, invite_message")
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
   const list = (rows.data ?? []) as EmployeeRow[];
-  const [names, about] = await Promise.all([namesFor(list.map((r) => r.professional_id)), professionsFor(businessId)]);
+  const [names, about, pay] = await Promise.all([
+    namesFor(list.map((r) => r.professional_id)),
+    professionsFor(businessId),
+    payRatesFor(businessId),
+  ]);
   return {
     ok: true,
     value: list.map((r) => ({
@@ -117,7 +136,9 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
       permissions: r.permissions ?? [],
       invitedAt: r.created_at,
       acceptedAt: r.accepted_at,
-      payRate: r.pay_rate_per_class == null ? null : Number(r.pay_rate_per_class),
+      // Only the owner / a holder of revenue sees everyone's pay; anyone else
+      // sees their own row (employee_pay_rates). Not visible = null here.
+      payRate: pay.get(r.id) ?? null,
       inviteMessage: r.invite_message,
       subtype: about.get(r.professional_id)?.subtype ?? null,
       otherDiscipline: about.get(r.professional_id)?.otherDiscipline ?? null,

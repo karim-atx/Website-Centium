@@ -572,8 +572,10 @@ export async function removeLocation(gymId: string): Promise<Result<null>> {
 /** The live per-venue cancellation window (gyms.default_cancellation_hours), for every venue at once. */
 export async function saveCancellationHours(gymIds: string[], hours: number): Promise<Result<null>> {
   if (gymIds.length === 0) return { ok: true, value: null };
-  const { error } = await db.from("gyms").update({ default_cancellation_hours: hours }).in("id", gymIds).select("id");
+  const { data, error } = await db.from("gyms").update({ default_cancellation_hours: hours }).in("id", gymIds).select("id");
   if (error) return fail(error, "Couldn't save. Try again.");
+  // An RLS-refused UPDATE raises nothing: it just changes no rows.
+  if (!data || data.length === 0) return { ok: false, code: "42501", message: "You don't have access to change this. Ask the owner." };
   return { ok: true, value: null };
 }
 
