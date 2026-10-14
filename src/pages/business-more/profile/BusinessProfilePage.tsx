@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import clsx from "clsx";
-import { Camera, Globe, IdCard, Loader2, Mail, MapPin, Pencil, Phone, Plus, Share2, Star, Tags, Text } from "lucide-react";
+import { AlertCircle, Camera, Globe, IdCard, Loader2, Mail, MapPin, Pencil, Phone, Plus, Share2, Star, Tags, Text } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
-import { BizLabel, BizRow, BizSection, LoadError, RowsSkeleton, SubHeader, OfflineLine, LIST_BG, BORDER } from "../../../components/business-more/kit";
+import { BizCard, BizLabel, BizRow, BizSection, LoadError, RowsSkeleton, SubHeader, OfflineLine, LIST_BG, BORDER } from "../../../components/business-more/kit";
+import { ConfirmCard } from "../../../components/ui/ConfirmCard";
+import { Toast } from "../../../components/ui/Toast";
+import { useOnline } from "../../../hooks/useOnline";
+import { useIsDark } from "../../../hooks/useIsDark";
 import { useBizToast } from "../../../components/business-more/useBizToast";
 import { copyText } from "../../../components/business-more/share";
 import { InstagramGlyph } from "../../../components/business-more/InstagramGlyph";
@@ -52,6 +56,18 @@ function todayLine(loc: BizLocation): string {
   return `Open today ${v}`;
 }
 
+// AN3-078 / AN3-084 pop-up bodies per type (Classes keeps the drawn sentence).
+const LISTING_ON_BODY = {
+  classes: "Clients nearby can find you, see your perk and book your classes.",
+  gym: "Clients nearby can find you, see your perk and join.",
+  store: "Customers nearby can find you, see your perk and order.",
+} as const;
+const LISTING_OFF_BODY = {
+  classes: "Existing members keep their bookings. New clients won't find you until you turn it back on.",
+  gym: "Existing members keep their passes. New members won't find you until you turn it back on.",
+  store: "Existing orders still go through. New customers won't find you until you turn it back on.",
+} as const;
+
 export default function BusinessProfilePage() {
   const navigate = useNavigate();
   const { authUserId, user, updateProfile, signOut } = useApp();
@@ -67,6 +83,18 @@ export default function BusinessProfilePage() {
   const [cardOpen, setCardOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [listingBusy, setListingBusy] = useState(false);
+  // AN3 listing flow (AN3-076 to AN3-090): the switch asks first, nothing is
+  // written until the pop-up's confirm; the toast offers the way back.
+  const [params] = useSearchParams();
+  const from = params.get("from") === "analytics" ? "Analytics" : params.get("from") === "dashboard" ? "Dashboard" : null;
+  const online = useOnline();
+  const dark = useIsDark();
+  const [listConfirm, setListConfirm] = useState<"on" | "off" | null>(null);
+  const [listToast, setListToast] = useState<{ n: number; message: string; error?: boolean } | null>(null);
+  // The highlight shows on arrival from a deep link while hidden, and goes
+  // for good once the listing is on (AN3-076 row 6, AN3-086 row 3).
+  const [hlArmed, setHlArmed] = useState(true);
+  const listingRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const pickFor = useRef<PhotoKind>("cover");
@@ -124,7 +152,7 @@ export default function BusinessProfilePage() {
     const k = pickFor.current;
     if (!authUserId || !business) return;
     setUploading(k);
-    const r = await uploadBusinessImage({ kind: k, uid: authUserId, businessId: business.id, file, previousPath: k === "logo" ? business.logoPath : business.coverPath });
+    const r = await uploadBusinessImage({ kind: k, uid: authUserId, ownerId: business.ownerId, businessId: business.id, file, previousPath: k === "logo" ? business.logoPath : business.coverPath });
     setUploading(null);
     if (!r.ok) {
       showToast("Couldn't upload the photo. Try again.");
@@ -137,7 +165,7 @@ export default function BusinessProfilePage() {
   const removePhoto = async (k: PhotoKind) => {
     if (!authUserId || !business) return;
     setUploading(k);
-    const r = await removeBusinessImage({ kind: k, uid: authUserId, businessId: business.id, previousPath: k === "logo" ? business.logoPath : business.coverPath });
+    const r = await removeBusinessImage({ kind: k, uid: authUserId, ownerId: business.ownerId, businessId: business.id, previousPath: k === "logo" ? business.logoPath : business.coverPath });
     setUploading(null);
     if (!r.ok) {
       showToast(r.message);
@@ -151,11 +179,29 @@ export default function BusinessProfilePage() {
     setListingBusy(true);
     const r = await saveBusiness(business.id, { active: on });
     setListingBusy(false);
+    setListConfirm(null);
     if (!r.ok) {
-      showToast(r.message);
+      setListToast((t) => ({ n: (t?.n ?? 0) + 1, message: "Couldn't change your listing. Try again.", error: true }));
       return;
     }
     setBusiness(r.value);
+    setListToast((t) => ({ n: (t?.n ?? 0) + 1, message: on ? "Your listing is live on Explore" : "Your listing is hidden" }));
+  };
+
+  const listed = !!business?.active;
+  if (listed && hlArmed) setHlArmed(false);
+  const highlight = !!from && !!business && !listed && hlArmed;
+  // Arrival from a deep link brings the card into view once (AN3-076 S4).
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (!highlight || scrolled.current) return;
+    scrolled.current = true;
+    listingRef.current?.scrollIntoView({ block: "center" });
+  }, [highlight]);
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(from === "Dashboard" ? "/app" : "/app/business/analytics/classes");
   };
 
   const handleSignOut = () => {
@@ -399,11 +445,13 @@ export default function BusinessProfilePage() {
         <BizRow icon={InstagramGlyph} title="Instagram" value={business?.instagram ? `@${business.instagram}` : undefined} onClick={() => openSheet("contact")} />
       </BizSection>
 
-      <BizSection label="Listing">
+      <BizLabel>Listing</BizLabel>
+      <div ref={listingRef}>
+      <BizCard className="relative">
         <BizRow
           title="Show on Explore"
           desc="Clients can find and book you"
-          toggle={{ checked: !!business?.active, onChange: (v) => void setListed(v), disabled: !business || listingBusy }}
+          toggle={{ checked: listed, onChange: (v) => setListConfirm(v ? "on" : "off"), disabled: !business || listingBusy || !online }}
         />
         <BizRow
           icon={IdCard}
@@ -419,7 +467,28 @@ export default function BusinessProfilePage() {
           }
           onClick={() => navigate("/app/business/more/business-id")}
         />
-      </BizSection>
+        {highlight && (
+          <span
+            className="absolute pointer-events-none uppercase"
+            style={{ top: -10, insetInlineEnd: 16, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", lineHeight: "14px", padding: "3px 8px", borderRadius: 999, background: "rgb(var(--c-primary))", color: "rgb(var(--c-on-primary-fill))" }}
+          >
+            {`From ${from}`}
+          </span>
+        )}
+        {/* AN3-076 row 6: a 1px primary-dark border and a 4px ring while highlighted (box-shadow 0.3s ease). */}
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            borderRadius: 18,
+            transition: "box-shadow 0.3s ease",
+            boxShadow: highlight
+              ? `inset 0 0 0 1px rgb(var(--c-primary-dark)), 0 0 0 4px ${dark ? "rgb(var(--c-primary) / 0.2)" : "rgb(var(--c-primary-dark) / 0.16)"}`
+              : "inset 0 0 0 1px transparent, 0 0 0 4px transparent",
+          }}
+        />
+      </BizCard>
+      </div>
 
       <button
         type="button"
@@ -473,6 +542,32 @@ export default function BusinessProfilePage() {
       )}
       <BusinessCard open={cardOpen} onClose={() => setCardOpen(false)} data={cardData} onToast={showToast} />
       {toast}
+      <ConfirmCard
+        open={listConfirm !== null}
+        layout="decision"
+        tone="primary"
+        title={listConfirm === "off" ? "Hide your business from Explore?" : "Show your business on Explore?"}
+        subtitle={(listConfirm === "off" ? LISTING_OFF_BODY : LISTING_ON_BODY)[kind]}
+        cancelLabel="Cancel"
+        confirmLabel={listConfirm === "off" ? "Hide" : "Turn on"}
+        busy={listingBusy}
+        onCancel={() => {
+          if (!listingBusy) setListConfirm(null);
+        }}
+        onConfirm={() => void setListed(listConfirm === "on")}
+      />
+      {listToast && (
+        <Toast
+          key={listToast.n}
+          open
+          variant="business"
+          shape="listing"
+          message={listToast.message}
+          icon={listToast.error ? <AlertCircle size={18} aria-hidden className="flex-none" /> : undefined}
+          action={!listToast.error && from ? { label: `Back to ${from}`, onClick: goBack } : undefined}
+          onExpire={() => setListToast(null)}
+        />
+      )}
     </div>
   );
 }

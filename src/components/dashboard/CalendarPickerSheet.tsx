@@ -214,7 +214,9 @@ export const CalendarPickerSheet: React.FC<{
                 if (!d) return <div key={i} />;
                 const iso = toIso(d);
                 const isSelected = iso === shown;
-                const isFuture = !!maxDate && iso > maxDate;
+                // v6 Batch 4 (AN3-018 row 10): minDate greys and blocks earlier
+                // days here too, as it already did in the Part B variant.
+                const isFuture = (!!maxDate && iso > maxDate) || (!!minDate && iso < minDate);
                 const marked = !!markerSet?.has(iso);
                 return (
                   <button

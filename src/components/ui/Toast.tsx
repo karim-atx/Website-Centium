@@ -29,6 +29,10 @@ export const BUSINESS_TOAST_MS = 3000;
  * OpsTabsV4, 152 in MA1). It slides up in 220 ms. The client toast is unchanged.
  * "more" (BizMoreV8, MO1B-019): r14, no shadow, gap 8, 12.5 / 700, a plain
  * check 15 / 2.6 (no circle) in the X-08 icon colour.
+ * "listing" (ClassFlowsV8, AN3-080 row 14): r16, shadow 0 10px 28px
+ * rgba(0,0,0,0.25), and the only business toast that inverts in dark
+ * (#F5F3FA with #121317 ink); circle-check 18 in currentColor; the action is
+ * 12/800 at opacity 0.85 in the toast ink, padding 2 4, r8.
  */
 export const Toast: React.FC<{
   open: boolean;
@@ -42,7 +46,7 @@ export const Toast: React.FC<{
   /** "client" (default, unchanged) or "business" (X-08). */
   variant?: "client" | "business";
   /** Business: which drawing component's shape. */
-  shape?: "ops" | "market" | "more";
+  shape?: "ops" | "market" | "more" | "listing";
   /** Business: distance from the bottom above the home indicator (default 96). */
   bottom?: number;
   /** A general action button (business; on the client toast too, after Undo). */
@@ -80,6 +84,8 @@ export const Toast: React.FC<{
   if (business) {
     const market = shape === "market";
     const more = shape === "more";
+    const listing = shape === "listing";
+    const ink = listing && dark ? "#121317" : "#FFFFFF";
     return createPortal(
       <div
         role="status"
@@ -89,11 +95,11 @@ export const Toast: React.FC<{
           right: "calc(var(--app-gutter) + 16px)",
           bottom: `calc(env(safe-area-inset-bottom) + ${bottom ?? 96}px)`,
           gap: more ? 8 : 10,
-          background: "#241F1B",
+          background: listing && dark ? "#F5F3FA" : "#241F1B",
           borderRadius: market || more ? 14 : 16,
           padding: "12px 14px",
-          boxShadow: more ? "none" : market ? "0 12px 30px rgba(36,31,27,0.28)" : "0 10px 26px rgba(36,31,27,0.28)",
-          color: "#FFFFFF",
+          boxShadow: listing ? "0 10px 28px rgba(0,0,0,0.25)" : more ? "none" : market ? "0 12px 30px rgba(36,31,27,0.28)" : "0 10px 26px rgba(36,31,27,0.28)",
+          color: ink,
           fontSize: textPx(more ? 12.5 : 13),
           lineHeight: linePx(18),
           fontWeight: 700,
@@ -109,12 +115,24 @@ export const Toast: React.FC<{
             strokeWidth={market ? 2.4 : 2.2}
             aria-hidden
             className="flex-none"
-            style={{ color: dark ? "#A2C8C2" : "#7FC79C" }}
+            style={{ color: listing ? "currentColor" : dark ? "#A2C8C2" : "#7FC79C" }}
           />
         ))}
         <span className="flex-1 min-w-0 break-words">{message}</span>
         {onUndo && actionButton("Undo", onUndo)}
-        {action && actionButton(action.label, action.onClick)}
+        {action &&
+          (listing ? (
+            <button
+              type="button"
+              onClick={action.onClick}
+              className="tap flex-none whitespace-nowrap [html.high-contrast_&]:!opacity-100"
+              style={{ color: ink, opacity: 0.85, fontSize: textPx(12), fontWeight: 800, padding: "2px 4px", borderRadius: 8 }}
+            >
+              {action.label}
+            </button>
+          ) : (
+            actionButton(action.label, action.onClick)
+          ))}
       </div>,
       document.body
     );

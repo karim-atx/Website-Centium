@@ -44,9 +44,16 @@ export interface BusinessClassRow {
   /** Formatted for display, empty when the column is null. */
   price: string;
   paymentType: string | null;
+  /** business_classes.cancellation_hours (null = the venue default, else 12). */
+  cancellationHours?: number | null;
 }
 
 export interface ClassDraft {
+  /**
+   * v6 AN3-068 S1: a client-made id, so a Retry after a lost response never
+   * makes a second class (a 23505 on the retry means the first one landed).
+   */
+  id?: string;
   title: string;
   classType: string;
   date: string;
@@ -59,12 +66,52 @@ export interface ClassDraft {
   paymentType?: string;
 }
 
+/** v6 V6-164: the six fixed class types (ClassFlowsV6 `typeOpts`). */
+export const CLASS_TYPES = ["HIIT", "Yoga", "Spin", "Strength", "Pilates", "Mobility"] as const;
+
+/** v6 AN3-036 … 040: capacity is 1 to 200 (the 200 cap is the form's until B9's CHECK). */
+export const CAPACITY_MIN = 1;
+export const CAPACITY_MAX = 200;
+
+export type ClassField = "name" | "date" | "times" | "capacity" | "price";
+
+/** The ClassFlowsV6 field messages (`er`), one per field. */
+export const CLASS_FIELD_MESSAGES = {
+  name: "Give the class a name.",
+  date: "Pick today or a later date.",
+  times: "The class can't end before it starts.",
+  capacityLow: "At least 1 spot.",
+  capacityHigh: "Maximum is 200 spots per class.",
+  price: "Use numbers only, e.g. 15 or 15.50.",
+} as const;
+
+/**
+ * Every field's problem at once (AN3-049 S1: validate all fields before any
+ * network call). `today` (YYYY-MM-DD) refuses a past date; omit it to skip
+ * that check (an edit of an existing row keeps its own date).
+ */
+export function validateClassDraft(draft: ClassDraft, today?: string): Partial<Record<ClassField, string>> {
+  const out: Partial<Record<ClassField, string>> = {};
+  if (!draft.title.trim()) out.name = CLASS_FIELD_MESSAGES.name;
+  if (today && draft.date < today) out.date = CLASS_FIELD_MESSAGES.date;
+  // A 0-minute class is not a class (AN3-064 row 6): equal times fail too,
+  // although the table's CHECK allows start = end.
+  if (draft.endTime <= draft.startTime) out.times = CLASS_FIELD_MESSAGES.times;
+  if (!Number.isFinite(draft.maxCapacity) || !Number.isInteger(draft.maxCapacity) || draft.maxCapacity < CAPACITY_MIN) {
+    out.capacity = CLASS_FIELD_MESSAGES.capacityLow;
+  } else if (draft.maxCapacity > CAPACITY_MAX) {
+    out.capacity = CLASS_FIELD_MESSAGES.capacityHigh;
+  }
+  if (!parsePrice(draft.price ?? "").ok) out.price = CLASS_FIELD_MESSAGES.price;
+  return out;
+}
+
 export type ClassesResult =
   | { ok: true; businessId: string | null; classes: BusinessClassRow[] }
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type";
+  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours";
 
 type Row = {
   id: string;
@@ -78,6 +125,7 @@ type Row = {
   notes: string | null;
   price: number | string | null;
   payment_type: string | null;
+  cancellation_hours?: number | null;
 };
 
 /**
@@ -116,6 +164,7 @@ const toClass = (r: Row): BusinessClassRow => ({
   notes: r.notes,
   price: formatPrice(r.price),
   paymentType: r.payment_type,
+  cancellationHours: r.cancellation_hours ?? null,
 });
 
 /**
@@ -129,16 +178,14 @@ const toClass = (r: Row): BusinessClassRow => ({
  */
 function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; message: string } {
   const title = draft.title.trim();
-  if (!title) return { ok: false, message: "Give the class a name." };
-  if (!Number.isFinite(draft.maxCapacity) || draft.maxCapacity < 1) {
-    return { ok: false, message: "Max capacity has to be at least 1." };
-  }
-  if (draft.startTime > draft.endTime) {
-    return { ok: false, message: "The class can't end before it starts." };
-  }
+  // v6: the ClassFlowsV6 strings; the first problem only here (the class
+  // sheet shows every field's own line from validateClassDraft first).
+  const problems = validateClassDraft(draft);
+  const first = problems.name ?? problems.times ?? problems.capacity ?? problems.price;
+  if (first) return { ok: false, message: first };
 
   const price = parsePrice(draft.price ?? "");
-  if (!price.ok) return { ok: false, message: "Enter the price as a number, for example 15 or $15." };
+  if (!price.ok) return { ok: false, message: CLASS_FIELD_MESSAGES.price };
 
   return {
     ok: true,
@@ -178,7 +225,7 @@ export async function fetchMyClasses(userId: string): Promise<ClassesResult> {
     console.error("[business-classes] Could not read classes:", error.message);
     return { ok: false, message: "Couldn't load your classes. Check your connection and try again." };
   }
-  return { ok: true, businessId: business.id, classes: (data ?? []).map((r) => toClass(r as Row)) };
+  return { ok: true, businessId: business.id, classes: (data ?? []).map((r) => toClass(r as unknown as Row)) };
 }
 
 /**
@@ -230,15 +277,194 @@ export async function createClass(
 
   const { data, error } = await supabase
     .from("business_classes")
-    .insert({ business_id: businessId, ...built.row })
+    .insert({ business_id: businessId, ...(draft.id ? { id: draft.id } : null), ...built.row })
     .select(COLUMNS)
     .single();
 
   if (error || !data) {
+    // A Retry whose first attempt had landed: the id already exists. Read it
+    // back and treat it as the success it was (AN3-068 S1).
+    if (error?.code === "23505" && draft.id) {
+      const again = await supabase.from("business_classes").select(COLUMNS).eq("id", draft.id).maybeSingle();
+      if (!again.error && again.data) return { ok: true, created: toClass(again.data as unknown as Row) };
+    }
     console.error("[business-classes] Could not create the class:", error?.message);
-    return { ok: false, message: "Couldn't save the class. Try again." };
+    return { ok: false, message: CLASS_SAVE_FAILED };
   }
-  return { ok: true, created: toClass(data as Row) };
+  return { ok: true, created: toClass(data as unknown as Row) };
+}
+
+/** AN3-068 row 1 (ClassFlowsV6 `sheet-fail`). */
+export const CLASS_SAVE_FAILED = "Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.";
+
+/**
+ * Changes one session (OURS-AN3 A9: the owner's UPDATE policy and grant cover
+ * every column written here). A capacity under the booked count is refused
+ * by business_classes_guard_capacity_reduction (ATX13); `code: "capacity"`
+ * lets the sheet show it as the capacity error.
+ */
+export async function updateClass(
+  classId: string,
+  draft: ClassDraft
+): Promise<{ ok: true; updated: BusinessClassRow } | { ok: false; message: string; code?: "capacity" | "permission" }> {
+  const built = toRow(draft);
+  if (!built.ok) return built;
+  const { data, error } = await supabase.from("business_classes").update(built.row).eq("id", classId).select(COLUMNS).maybeSingle();
+  if (error || !data) {
+    console.error("[business-classes] Could not update the class:", error?.message);
+    if (error?.code === "ATX13") return { ok: false, message: error.message, code: "capacity" };
+    if (!error && !data) return { ok: false, message: "Couldn't save your changes. Only the business owner can change classes right now.", code: "permission" };
+    return { ok: false, message: "Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept." };
+  }
+  return { ok: true, updated: toClass(data as unknown as Row) };
+}
+
+/**
+ * Names (or clears) who teaches one session: the Substitute sheet's Assign
+ * (OP1-089 to 093). Only professional_id is written; the guard trigger
+ * refuses anyone not on this business's team (ATX76).
+ */
+export async function assignInstructor(
+  classId: string,
+  professionalId: string | null
+): Promise<{ ok: true; updated: BusinessClassRow } | { ok: false; message: string }> {
+  const { data, error } = await supabase
+    .from("business_classes")
+    .update({ professional_id: professionalId })
+    .eq("id", classId)
+    .select(COLUMNS)
+    .maybeSingle();
+  if (error || !data) {
+    console.error("[business-classes] Could not assign the instructor:", error?.message);
+    return { ok: false, message: "Couldn't assign. Check your connection and try again." };
+  }
+  return { ok: true, updated: toClass(data as unknown as Row) };
+}
+
+/** One booking as the owner sees it (business_class_bookings_select_business_owner). */
+export interface ClassBookingLite {
+  classId: string;
+  createdAt: string;
+}
+
+/**
+ * The bookings on these classes: the counts every Schedule row, figure and
+ * fill bar uses (class_booked_count() per row would be one call per session).
+ */
+export async function fetchClassBookings(classIds: string[]): Promise<{ ok: true; bookings: ClassBookingLite[] } | { ok: false }> {
+  if (classIds.length === 0) return { ok: true, bookings: [] };
+  const out: ClassBookingLite[] = [];
+  // In chunks, so a long schedule never builds one enormous URL.
+  for (let i = 0; i < classIds.length; i += 150) {
+    const { data, error } = await supabase
+      .from("business_class_bookings")
+      .select("business_class_id, created_at")
+      .in("business_class_id", classIds.slice(i, i + 150));
+    if (error) {
+      console.error("[business-classes] Could not read bookings:", error.message);
+      return { ok: false };
+    }
+    for (const r of data ?? []) out.push({ classId: r.business_class_id as string, createdAt: r.created_at as string });
+  }
+  return { ok: true, bookings: out };
+}
+
+/** Someone who can be named on a class: an accepted member of this business's team. */
+export interface Instructor {
+  professionalId: string;
+  firstName: string;
+}
+
+/**
+ * The people a class can be run by. B0 consent: only an accepted employment
+ * (accepted_at set) counts; an invited professional is not on the team yet
+ * and the guard trigger would refuse them. First names from
+ * public_profile_summary, as services/business-team reads them.
+ */
+export async function fetchInstructors(businessId: string): Promise<{ ok: true; instructors: Instructor[] } | { ok: false }> {
+  const db = supabase as unknown as {
+    from: (t: "business_employees") => {
+      select: (c: string) => {
+        eq: (k: string, v: string) => {
+          not: (k: string, op: string, v: null) => PromiseLike<{ data: { professional_id: string }[] | null; error: { message: string } | null }>;
+        };
+      };
+    };
+  };
+  const rows = await db.from("business_employees").select("professional_id").eq("business_id", businessId).not("accepted_at", "is", null);
+  if (rows.error) {
+    console.error("[business-classes] Could not read the team:", rows.error.message);
+    return { ok: false };
+  }
+  const ids = (rows.data ?? []).map((r) => r.professional_id).filter(Boolean);
+  if (ids.length === 0) return { ok: true, instructors: [] };
+  const names = await supabase.from("public_profile_summary").select("id, first_name").in("id", ids);
+  if (names.error) {
+    console.error("[business-classes] Could not read team names:", names.error.message);
+    return { ok: false };
+  }
+  const byId = new Map((names.data ?? []).map((p) => [p.id as string, ((p.first_name as string | null) ?? "").trim()]));
+  return {
+    ok: true,
+    instructors: ids
+      .map((id) => ({ professionalId: id, firstName: byId.get(id) || "Unnamed" }))
+      .sort((a, b) => a.firstName.localeCompare(b.firstName)),
+  };
+}
+
+/** B6 instructor_availability (ISO weekday 1 = Monday) and instructor_unavailable_dates. */
+export interface AvailabilityData {
+  windows: { professionalId: string; weekday: number; startsAt: string; endsAt: string }[];
+  offDates: { professionalId: string; date: string }[];
+}
+
+/**
+ * Who said they can teach when (B6, readable by the owner through
+ * business_can(schedule)). Used to grey out busy instructors in the
+ * substitute picker until instructors_free_for() (B9) answers it server-side.
+ */
+export async function fetchInstructorAvailability(businessId: string): Promise<{ ok: true; value: AvailabilityData } | { ok: false }> {
+  type Q<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+  const db = supabase as unknown as {
+    from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => Q<Record<string, unknown>> } };
+  };
+  const [w, d] = await Promise.all([
+    db.from("instructor_availability").select("professional_id, weekday, starts_at, ends_at").eq("business_id", businessId),
+    db.from("instructor_unavailable_dates").select("professional_id, on_date").eq("business_id", businessId),
+  ]);
+  if (w.error || d.error) {
+    console.error("[business-classes] Could not read availability:", w.error?.message ?? d.error?.message);
+    return { ok: false };
+  }
+  return {
+    ok: true,
+    value: {
+      windows: (w.data ?? []).map((r) => ({
+        professionalId: String(r.professional_id),
+        weekday: Number(r.weekday),
+        startsAt: String(r.starts_at).slice(0, 5),
+        endsAt: String(r.ends_at).slice(0, 5),
+      })),
+      offDates: (d.data ?? []).map((r) => ({ professionalId: String(r.professional_id), date: String(r.on_date) })),
+    },
+  };
+}
+
+/**
+ * The venues' default late-cancel window (gyms.default_cancellation_hours),
+ * which every class without its own value uses (class_cancellation_hours():
+ * class, else venue, else 12). Read for the Class rules page.
+ */
+export async function fetchVenueCancellationDefault(businessId: string): Promise<number | null> {
+  const db = supabase as unknown as {
+    from: (t: "gyms") => {
+      select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: { default_cancellation_hours: number | null }[] | null; error: { message: string } | null }> };
+    };
+  };
+  const { data, error } = await db.from("gyms").select("default_cancellation_hours").eq("business_id", businessId);
+  if (error) return null;
+  const v = (data ?? []).map((r) => r.default_cancellation_hours).find((h) => h !== null && h !== undefined);
+  return v ?? null;
 }
 
 export async function deleteClass(classId: string): Promise<{ ok: boolean; message?: string }> {
