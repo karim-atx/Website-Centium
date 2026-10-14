@@ -82,7 +82,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
       )}
       <div role="tabpanel" id={`fd-panel-${tab}`} aria-labelledby={`fd-tab-${tab}`}>
         {tab === "entries" && <EntriesTab entries={data.entries} loading={data.loading} error={data.error} onRetry={data.reload} now={now} />}
-        {tab === "passes" && <PassesTab renewals={data.renewals} loading={data.loading} error={data.error} onRetry={data.reload} online={online} onChanged={data.reload} />}
+        {tab === "passes" && <PassesTab renewals={data.renewals} loading={data.loading} error={data.error} onRetry={data.reload} online={online} onChanged={data.reload} planTerms={data.planTerms} />}
         {tab === "memberships" && memberships}
       </div>
 

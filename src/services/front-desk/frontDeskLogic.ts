@@ -46,11 +46,14 @@ export type VerifyRow = {
 };
 
 /**
- * "not_started" (B7 MB-05): verify_gym_pass reads pass_state 'valid' with
- * valid = false for an UPCOMING renewal (paid, not in force yet); it returns no
- * status, so this is the only way to tell.
+ * What a scan can say. verify_gym_pass's pass_state is gym_pass_state()
+ * (20261121020000): 'upcoming' for a renewal not in force yet. 'unknown' with
+ * no membership is the foreign or made-up token the reader answers by design
+ * ("not recognised"); 'unknown' WITH a membership, or any value the app does
+ * not know, is the terminal state that should never appear: "unavailable",
+ * logged, never valid.
  */
-export type ScanState = PassState | "unknown" | "not_started";
+export type ScanState = Exclude<PassState, "unknown"> | "unknown" | "unavailable";
 
 export interface PassCheck {
   valid: boolean;
@@ -64,11 +67,22 @@ export interface PassCheck {
   planName: string | null;
 }
 
-const STATES: ScanState[] = ["valid", "awaiting_payment", "expired", "cancelled", "refunded", "unknown"];
+const KNOWN = ["valid", "awaiting_payment", "expired", "cancelled", "refunded", "upcoming"] as const;
 
 export function toPassCheck(row: VerifyRow | null | undefined): PassCheck {
-  const read = (row?.pass_state && (STATES as string[]).includes(row.pass_state) ? row.pass_state : "unknown") as ScanState;
-  const state: ScanState = read === "valid" && row?.valid !== true ? "not_started" : read;
+  const raw = row?.pass_state ?? "unknown";
+  let state: ScanState;
+  if (raw === "valid" && row?.valid !== true) {
+    // The two answers disagree: never show a pass as valid on a doubt.
+    console.error("[front desk] verify_gym_pass said pass_state 'valid' with valid = false; shown as unavailable.");
+    state = "unavailable";
+  } else if ((KNOWN as readonly string[]).includes(raw)) state = raw as ScanState;
+  else if (raw === "unknown" && !row?.membership_id) state = "unknown";
+  else {
+    console.error(`[front desk] verify_gym_pass returned pass_state '${raw}' for a membership; shown as unavailable.`);
+    state = "unavailable";
+  }
+  // Valid only when the reader says so AND the state is valid: never inferred.
   return {
     valid: row?.valid === true && state === "valid",
     state,
@@ -166,10 +180,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         secondary: "done",
         secondaryLabel: "Done",
       };
-    case "not_started":
+    case "upcoming":
       return {
         ...base,
-        kind: "not_started",
+        kind: "upcoming",
         tone: "primary",
         icon: "scan",
         title: "Pass not active yet",
@@ -188,7 +202,19 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         secondary: "done",
         secondaryLabel: "Done",
       };
-    default:
+    case "unavailable":
+      return {
+        ...base,
+        minor: false,
+        kind: "unavailable",
+        tone: "soft",
+        icon: "scan",
+        title: "Status unavailable",
+        body: "This pass's status couldn't be read. Check them in by name instead.",
+        secondary: "check-in",
+        secondaryLabel: "Check someone in",
+      };
+    case "unknown":
       return {
         ...base,
         minor: false,
@@ -426,6 +452,9 @@ export function membershipActionMessage(code: string | undefined, action: "renew
       return action === "renew"
         ? "This plan has been archived. Move the member to a current plan first."
         : "This membership has no end date, so it can't end at the period end. End it now instead.";
+    case "ATXC5":
+      // 20261121020000: renewing a membership set to end is refused.
+      return action === "renew" ? "This membership is set to end, so it can't be renewed." : "Couldn't end the membership. Try again.";
     case "ATX09":
       return "You don't have permission to manage members.";
     case "ATX08":

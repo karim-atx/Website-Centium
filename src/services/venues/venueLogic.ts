@@ -51,7 +51,19 @@ export function planSaving(plan: PlanLite, plans: PlanLite[]): number | null {
   return pct > 0 ? pct : null;
 }
 
-export type PassState = "valid" | "awaiting_payment" | "expired" | "cancelled" | "refunded";
+/**
+ * gym_pass_state() (migration 20261121020000, the one definition): 'upcoming'
+ * outranks 'awaiting_payment' (payment_status is beside it), and 'unknown' is
+ * a terminal state for a status nobody mapped. It should never appear; it is
+ * never treated as valid.
+ */
+export type PassState = "valid" | "awaiting_payment" | "expired" | "cancelled" | "refunded" | "upcoming" | "unknown";
+
+/** The neutral tag for a pass state the app cannot read; logged, never valid. */
+export function unavailableTag(context: string): { label: string; tone: "muted" } {
+  console.error(`[venues] pass_state 'unknown' reached the app (${context}); shown as unavailable.`);
+  return { label: "Status unavailable", tone: "muted" };
+}
 
 /**
  * The tag a membership wears (MO1.4.2 card, gym page header, the pass).
@@ -71,6 +83,10 @@ export function memberTag(state: PassState): { label: string; tone: "member" | "
       return { label: "Cancelled", tone: "muted" };
     case "refunded":
       return { label: "Refunded", tone: "muted" };
+    case "upcoming":
+      return { label: "Not started yet", tone: "muted" };
+    case "unknown":
+      return unavailableTag("memberTag");
   }
 }
 
@@ -81,19 +97,25 @@ export function memberTag(state: PassState): { label: string; tone: "member" | "
 export type GymMembershipStatus = "active" | "expired" | "cancelled" | "upcoming";
 
 /**
- * The tag for a whole membership row: an upcoming period says when it starts
- * (its pass_state can read "valid" or "awaiting_payment" while pass_valid is
- * false), everything else is the pass state's own tag.
+ * The tag for a whole membership row: an upcoming period says when it starts;
+ * everything else is the pass state's own tag (pass_state 'upcoming' since
+ * 20261121020000).
  */
-export function membershipTag(m: { status: GymMembershipStatus; passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
-  switch (m.status) {
-    case "upcoming":
-      return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
-    case "active":
-    case "expired":
-    case "cancelled":
-      return memberTag(m.passState);
-  }
+export function membershipTag(m: { passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
+  if (m.passState === "upcoming") return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+  return memberTag(m.passState);
+}
+
+/**
+ * A plan's commitment terms as information (MB-05 follow-up, item 5). They
+ * are NOT enforced: ending is never blocked by them (a contractual question
+ * with the user).
+ */
+export function commitmentLines(minimumTermMonths: number | null | undefined, noticeDays: number | null | undefined): string[] {
+  const out: string[] = [];
+  if (minimumTermMonths && minimumTermMonths > 0) out.push(`Minimum term: ${minimumTermMonths} ${minimumTermMonths === 1 ? "month" : "months"}`);
+  if (noticeDays && noticeDays > 0) out.push(noticeDays === 1 ? "1 day's notice" : `${noticeDays} days' notice`);
+  return out;
 }
 
 /**

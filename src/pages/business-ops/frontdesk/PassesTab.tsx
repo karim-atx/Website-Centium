@@ -30,7 +30,9 @@ export const PassesTab: React.FC<{
   online: boolean;
   /** After a renew or an end: the lists reload. */
   onChanged: () => void;
-}> = ({ renewals, loading, error, onRetry, online, onChanged }) => {
+  /** Plan commitment lines by plan name, information only (never blocks ending). */
+  planTerms?: Map<string, string[]>;
+}> = ({ renewals, loading, error, onRetry, online, onChanged, planTerms }) => {
   const [seeAll, setSeeAll] = useState(false);
   const [menuFor, setMenuFor] = useState<RenewalDue | null>(null);
   const [ending, setEnding] = useState<RenewalDue | null>(null);
@@ -94,6 +96,7 @@ export const PassesTab: React.FC<{
       <EndPopup
         key={ending?.membershipId ?? "none"}
         ending={ending}
+        terms={ending ? planTerms?.get(ending.planName) ?? null : null}
         online={online}
         onClose={() => setEnding(null)}
         onDone={(r, status) => {
@@ -225,10 +228,12 @@ const RenewalMenu: React.FC<{
  */
 const EndPopup: React.FC<{
   ending: RenewalDue | null;
+  /** "Minimum term: 3 months", "30 days' notice": shown, not enforced (MB-05 follow-up 5). */
+  terms: string[] | null;
   online: boolean;
   onClose: () => void;
   onDone: (r: RenewalDue, status: string) => void;
-}> = ({ ending, online, onClose, onDone }) => {
+}> = ({ ending, terms, online, onClose, onDone }) => {
   const [now, setNow] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -275,6 +280,11 @@ const EndPopup: React.FC<{
       confirmDisabled={!online}
       extra={
         <div className="text-start" style={{ marginTop: 12 }}>
+          {terms && terms.length > 0 && (
+            <p className="text-center text-[12px] font-bold leading-[17px] text-charcoal-soft" style={{ marginBottom: 10 }}>
+              Plan terms: {terms.join(" · ")}
+            </p>
+          )}
           <div role="radiogroup" aria-label="When it ends" className="flex flex-col" style={{ gap: 8 }}>
             {choice(!now, "At the end of the paid period", `They keep their pass until ${until}.`, () => setNow(false))}
             {choice(now, "Now", "Their pass stops working today.", () => setNow(true))}

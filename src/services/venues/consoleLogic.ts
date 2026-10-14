@@ -257,15 +257,11 @@ export const MEMBER_FILTERS: { value: MembershipStatus | null; label: string }[]
 ];
 
 /** A roster row's tag: an upcoming renewal says when it starts (MB-05), else the pass state. */
-export function venueMemberTag(m: { status: MembershipStatus; passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
-  switch (m.status) {
-    case "upcoming":
-      return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
-    case "active":
-    case "expired":
-    case "cancelled":
-      return passStateTag(m.passState);
-  }
+export function venueMemberTag(m: { passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
+  // pass_state 'upcoming' outranks 'awaiting_payment' (20261121020000); the
+  // roster's own payment line says whether it is paid.
+  if (m.passState === "upcoming") return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+  return passStateTag(m.passState);
 }
 
 /** The pass state as the member sees it, worded for the desk. */

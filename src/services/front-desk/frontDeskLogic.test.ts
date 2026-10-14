@@ -31,7 +31,7 @@ test("verify rows map to a pass check; an unknown state is unknown", () => {
   assert.equal(c.valid, true);
   assert.equal(c.firstName, "Jo");
   assert.equal(c.isMinor, true);
-  assert.equal(toPassCheck({ valid: false, pass_state: "weird", membership_id: null, gym_id: null, member_first_name: null, member_is_minor: null, expires_on: null }).state, "unknown");
+  assert.equal(toPassCheck({ valid: false, pass_state: "weird", membership_id: null, gym_id: null, member_first_name: null, member_is_minor: null, expires_on: null }).state, "unavailable");
   assert.equal(toPassCheck(null).state, "unknown");
 });
 
@@ -54,7 +54,7 @@ test("payment due offers Mark as paid; expired offers a day pass only when sold;
   assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: false }).secondaryLabel, "Done");
   assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: true }).secondaryLabel, "Sell a day pass");
   assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: false }).body, "Lina's pass ended on 8 Oct 2026. They can renew in the app.");
-  const unk = scanResultView(toPassCheck({ ...base, member_first_name: null, pass_state: "unknown" }), { checkInsLive: false, sellsDayPass: false });
+  const unk = scanResultView(toPassCheck({ ...base, membership_id: null, gym_id: null, member_first_name: null, pass_state: "unknown" }), { checkInsLive: false, sellsDayPass: false });
   assert.equal(unk.title, "Pass not recognised");
   assert.equal(unk.minor, false);
 });
@@ -89,12 +89,23 @@ test("renew / end refusals have copy (ATX10, ATX25, ATX09)", () => {
   assert.equal(membershipActionMessage("ATX10", "renew"), "This membership has already been renewed.");
   assert.equal(membershipActionMessage("ATX25", "renew"), "This plan has been archived. Move the member to a current plan first.");
   assert.equal(membershipActionMessage("ATX10", "end"), "This membership has already ended.");
+  assert.equal(membershipActionMessage("ATXC5", "renew"), "This membership is set to end, so it can't be renewed.");
   assert.equal(membershipActionMessage(undefined, "end"), "Couldn't end the membership. Try again.");
 });
 
-test("an upcoming renewal scanned at the door is not in force yet (valid false, pass_state valid)", () => {
-  const c = toPassCheck({ valid: false, pass_state: "valid", membership_id: "m", gym_id: "g", member_first_name: "Jo", member_is_minor: false, expires_on: "2026-12-01" });
-  assert.equal(c.state, "not_started");
+test("pass_state 'upcoming' is not in force; 'unknown' for a membership and valid/valid-false disagreements are unavailable, never valid", () => {
+  const row = { valid: false, membership_id: "m", gym_id: "g", member_first_name: "Jo", member_is_minor: false, expires_on: "2026-12-01" };
+  const err = console.error;
+  console.error = () => undefined;
+  assert.equal(toPassCheck({ ...row, pass_state: "unknown" }).state, "unavailable");
+  assert.equal(toPassCheck({ ...row, pass_state: "valid" }).state, "unavailable");
+  assert.equal(toPassCheck({ ...row, pass_state: "weird" }).state, "unavailable");
+  console.error = err;
+  assert.equal(toPassCheck({ ...row, membership_id: null, pass_state: "unknown" }).state, "unknown");
+  assert.equal(scanResultView(toPassCheck({ ...row, pass_state: "unknown", membership_id: "m" }), { checkInsLive: false, sellsDayPass: false }).title, "Status unavailable");
+  const c = toPassCheck({ ...row, pass_state: "upcoming" });
+  assert.equal(c.state, "upcoming");
+  assert.equal(c.valid, false);
   assert.equal(scanResultView(c, { checkInsLive: false, sellsDayPass: false }).title, "Pass not active yet");
 });
 

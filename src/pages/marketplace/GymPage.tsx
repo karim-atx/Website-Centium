@@ -47,7 +47,7 @@ import {
   type Venue,
   type VenuePlan,
 } from "../../services/venues";
-import { addDaysIso, currentMembership, memberTag, PERIOD, planSaving, sortPlans } from "../../services/venues/venueLogic";
+import { addDaysIso, commitmentLines, currentMembership, memberTag, PERIOD, planSaving, sortPlans } from "../../services/venues/venueLogic";
 import { hoursLines, isoWeekdayIn, openNowTag, type HoursRow } from "../../services/venues/hours";
 import {
   bookClass,
@@ -708,6 +708,10 @@ export function GymPage({ gymId }: { gymId: string }) {
                           <span aria-hidden className="w-[5px] h-[5px] rounded-full bg-th-7d67d9 dark:bg-primary-accent" />
                           Save {save}%
                         </span>
+                      )}
+                      {/* MB-05 follow-up 5: the plan's commitment, information only. */}
+                      {commitmentLines(p.minimumTermMonths, p.noticeDays).length > 0 && (
+                        <span className="mt-1.5 ms-7 block text-[12px] text-charcoal-faint">{commitmentLines(p.minimumTermMonths, p.noticeDays).join(" · ")}</span>
                       )}
                     </button>
                   );

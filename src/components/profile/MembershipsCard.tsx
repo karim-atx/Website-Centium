@@ -17,8 +17,8 @@ import {
 } from "../../services/business-members";
 import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
-import { endMyGymMembership, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
-import { dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
+import { endMyGymMembership, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
@@ -72,6 +72,19 @@ export const MembershipsCard: React.FC = () => {
   const [gymError, setGymError] = useState<string | null>(null);
   /** Ended at the period end this session: my_gym_memberships() does not return cancel_at_period_end. */
   const [endsOn, setEndsOn] = useState<Record<string, string>>({});
+  /** Each membership's plan terms, information only (never blocks ending). */
+  const [terms, setTerms] = useState<Map<string, string[]>>(new Map());
+  useEffect(() => {
+    if (gymMemberships.length === 0) return;
+    let cancelled = false;
+    void fetchMembershipTerms(gymMemberships).then((t) => {
+      if (cancelled) return;
+      setTerms(new Map([...t].map(([id, x]) => [id, commitmentLines(x.minimumTermMonths, x.noticeDays)] as const).filter(([, l]) => l.length > 0)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [gymMemberships]);
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -237,7 +250,10 @@ export const MembershipsCard: React.FC = () => {
   );
 
   const gymRow = (m: GymMembership) => {
-    const ends = endsOn[m.id];
+    // 20261121020000: my_gym_memberships() returns cancel_at_period_end, so
+    // "Ends {date}" survives a reload.
+    const ends = endsOn[m.id] ?? (m.cancelAtPeriodEnd && m.expiresOn ? m.expiresOn : undefined);
+    const lines = terms.get(m.id);
     const tag = ends ? { label: `Ends ${dayMonthYear(ends)}`, tone: "muted" as const } : membershipTag(m);
     // Explicit per status (MB-05): only a running membership can be ended here.
     const canEnd = m.status === "active" && !ends;
@@ -256,6 +272,7 @@ export const MembershipsCard: React.FC = () => {
           <span className="block text-xs text-charcoal-faint truncate">
             {m.planName} · {validRange(m.startedOn, m.expiresOn)}
           </span>
+          {lines && <span className="block text-[11.5px] text-charcoal-faint truncate">{lines.join(" · ")}</span>}
         </span>
         <MemberTag label={tag.label} tone={tag.tone} />
       </button>
@@ -421,6 +438,11 @@ export const MembershipsCard: React.FC = () => {
             : `Your membership at ${gymEnding?.gymName ?? "this gym"} ends today.`
         }
       >
+        {gymEnding && terms.get(gymEnding.id) && (
+          <p className="mb-3 text-center text-xs font-semibold text-charcoal-soft">
+            Your plan's terms: {terms.get(gymEnding.id)!.join(" · ")}.
+          </p>
+        )}
         {gymError && <p role="alert" className="mb-3 text-xs font-semibold text-status-high">{gymError}</p>}
         {gymEnding?.expiresOn && (
           <button

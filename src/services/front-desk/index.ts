@@ -3,6 +3,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { fetchMyVenues, fetchVenueMembers } from "../venues/console";
 import { consoleMessage } from "../venues/consoleLogic";
+import { commitmentLines } from "../venues/venueLogic";
 import type { Result } from "../venues";
 import {
   membershipActionMessage,
@@ -39,13 +40,37 @@ const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
 export interface FrontDeskVenue {
   gymId: string;
   name: string;
+  businessId?: string;
 }
 
 /** The business's venues (my_venues(): every venue the caller is an insider of). */
 export async function fetchFrontDeskVenues(): Promise<Result<FrontDeskVenue[]>> {
   const r = await fetchMyVenues();
   if (!r.ok) return r;
-  return { ok: true, value: r.value.map((v) => ({ gymId: v.gymId, name: v.name })) };
+  return { ok: true, value: r.value.map((v) => ({ gymId: v.gymId, name: v.name, businessId: v.businessId })) };
+}
+
+/**
+ * Each plan's commitment lines by plan name (minimum_term_months, notice_days),
+ * information only: not enforced, never blocks ending (MB-05 follow-up 5). A
+ * name two plans share is left out. Empty on a failed read.
+ */
+export async function fetchPlanTerms(venues: FrontDeskVenue[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  const ids = [...new Set(venues.map((v) => v.businessId).filter((b): b is string => !!b))];
+  if (ids.length === 0) return out;
+  type Loose = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null; error: PostgrestError | null }> } } };
+  const { data, error } = await (supabase as unknown as Loose).from("membership_plans").select("name, minimum_term_months, notice_days").in("business_id", ids);
+  if (error) return out;
+  const rows = (data ?? []) as { name: string; minimum_term_months: number | null; notice_days: number | null }[];
+  const seen = new Map<string, number>();
+  for (const r of rows) seen.set(r.name, (seen.get(r.name) ?? 0) + 1);
+  for (const r of rows) {
+    if (seen.get(r.name) !== 1) continue;
+    const lines = commitmentLines(r.minimum_term_months, r.notice_days);
+    if (lines.length) out.set(r.name, lines);
+  }
+  return out;
 }
 
 const PAGE = 200;

@@ -4,6 +4,7 @@ import { fetchMyClasses } from "../../../services/business-classes";
 import {
   fetchAllRenewalsDue,
   fetchFrontDeskMembers,
+  fetchPlanTerms,
   fetchFrontDeskVenues,
   fetchTodayEntries,
   type EntriesResult,
@@ -18,6 +19,8 @@ export interface FrontDeskData {
   members: FrontDeskMember[];
   /** venue_renewals_due(gym, 30) across the venues (B7 MB-05). */
   renewals: RenewalDue[];
+  /** Plan commitment lines by plan name (information only). */
+  planTerms: Map<string, string[]>;
   entries: EntriesResult | null;
   /** When the shown data was last read (the offline line). */
   loadedAt: Date | null;
@@ -42,6 +45,7 @@ export function useFrontDesk(): FrontDeskData {
     venues: [],
     members: [],
     renewals: [],
+    planTerms: new Map(),
     entries: null,
     loadedAt: null,
     runsClasses: false,
@@ -70,7 +74,7 @@ export function useFrontDesk(): FrontDeskData {
         setState((s) => ({ ...s, loading: false, error: v.message }));
         return;
       }
-      const [m, ren] = await Promise.all([fetchFrontDeskMembers(v.value), fetchAllRenewalsDue(v.value, 30)]);
+      const [m, ren, planTerms] = await Promise.all([fetchFrontDeskMembers(v.value), fetchAllRenewalsDue(v.value, 30), fetchPlanTerms(v.value)]);
       if (cancelled) return;
       if (!m.ok || !ren.ok) {
         const message = !m.ok ? m.message : !ren.ok ? ren.message : "";
@@ -84,6 +88,7 @@ export function useFrontDesk(): FrontDeskData {
         venues: v.value,
         members: m.value,
         renewals: ren.value,
+        planTerms,
         entries: e.ok ? e.value : null,
         loadedAt: new Date(),
       }));

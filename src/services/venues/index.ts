@@ -62,6 +62,9 @@ export interface Venue {
 
 export interface VenuePlan extends PlanLite {
   businessId: string;
+  /** Commitment terms, information only (not enforced): MB-05 follow-up 5. */
+  minimumTermMonths: number | null;
+  noticeDays: number | null;
 }
 
 export interface GymMembership {
@@ -82,6 +85,8 @@ export interface GymMembership {
   access: { qr: boolean; nfc: boolean; bluetooth: boolean };
   /** V6-30: set when this row is the device's offline copy (ISO time it was saved). */
   cachedAt?: string;
+  /** Set to end when the period runs out (end_gym_membership at period end): "Ends {date}". */
+  cancelAtPeriodEnd: boolean;
 }
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
@@ -121,6 +126,8 @@ type MembershipRow = {
   access_qr: boolean;
   access_nfc: boolean;
   access_bluetooth: boolean;
+  /** 20261121020000: appended last. Null-safe for an older stack. */
+  cancel_at_period_end?: boolean | null;
 };
 
 const VENUE_COLUMNS =
@@ -233,7 +240,7 @@ export async function fetchPlansFor(businessIds: string[]): Promise<Result<Venue
   // archived one is gone; purchase_gym_membership does not refuse them yet.
   const { data, error } = await supabase
     .from("membership_plans")
-    .select("id, business_id, name, price, billing")
+    .select("id, business_id, name, price, billing, minimum_term_months, notice_days")
     .in("business_id", ids)
     .filter("status", "eq", "active")
     .filter("visible_on_explore", "eq", true);
@@ -243,9 +250,12 @@ export async function fetchPlansFor(businessIds: string[]): Promise<Result<Venue
   }
   return {
     ok: true,
-    value: (data ?? []).map((p) => ({
+    // minimum_term_months / notice_days are newer than the generated types.
+    value: ((data ?? []) as unknown as { id: string; business_id: string; name: string; price: number | string; billing: string; minimum_term_months: number | null; notice_days: number | null }[]).map((p) => ({
       id: p.id,
       businessId: p.business_id,
+      minimumTermMonths: p.minimum_term_months ?? null,
+      noticeDays: p.notice_days ?? null,
       name: p.name,
       price: Number(p.price),
       billing: p.billing as Billing,
@@ -286,9 +296,39 @@ export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> 
     passValid: r.pass_valid,
     passState: r.pass_state,
     access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
+    cancelAtPeriodEnd: r.cancel_at_period_end === true,
   }));
   if (uid) writePassCache(uid, value.filter((m) => m.status === "active"));
   return { ok: true, value };
+}
+
+/**
+ * The commitment terms of each membership's plan (minimum_term_months,
+ * notice_days), as information only: they are not enforced (MB-05 follow-up
+ * 5, a contractual question). my_gym_memberships() names the plan, not its id,
+ * so plans are matched by name within the venue's business; a name two plans
+ * share is left out. Keyed by membership id; a read that fails yields nothing.
+ */
+export async function fetchMembershipTerms(memberships: GymMembership[]): Promise<Map<string, { minimumTermMonths: number | null; noticeDays: number | null }>> {
+  const out = new Map<string, { minimumTermMonths: number | null; noticeDays: number | null }>();
+  const gymIds = [...new Set(memberships.map((m) => m.gymId))];
+  if (gymIds.length === 0) return out;
+  type Loose = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null; error: PostgrestError | null }> } } };
+  const db = supabase as unknown as Loose;
+  const g = await db.from("gyms").select("id, business_id").in("id", gymIds);
+  if (g.error) return out;
+  const bizOf = new Map((g.data as { id: string; business_id: string | null }[]).map((r) => [r.id, r.business_id]));
+  const bizIds = [...new Set([...bizOf.values()].filter((b): b is string => !!b))];
+  if (bizIds.length === 0) return out;
+  const p = await db.from("membership_plans").select("business_id, name, minimum_term_months, notice_days").in("business_id", bizIds);
+  if (p.error) return out;
+  const rows = p.data as { business_id: string; name: string; minimum_term_months: number | null; notice_days: number | null }[];
+  for (const m of memberships) {
+    const biz = bizOf.get(m.gymId);
+    const same = rows.filter((r) => r.business_id === biz && r.name === m.planName);
+    if (same.length === 1) out.set(m.id, { minimumTermMonths: same[0].minimum_term_months, noticeDays: same[0].notice_days });
+  }
+  return out;
 }
 
 /**
