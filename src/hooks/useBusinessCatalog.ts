@@ -24,6 +24,7 @@ import {
   createPlan,
   deletePlan,
   fetchMyPlans,
+  setPlanVisible,
   updatePlan,
   type MembershipPlanRow,
   type PlanDraft,
@@ -254,6 +255,8 @@ export interface UseMembershipPlans extends CatalogBase {
   add: (draft: PlanDraft) => Promise<boolean>;
   edit: (planId: string, draft: PlanDraft) => Promise<boolean>;
   remove: (planId: string) => Promise<void>;
+  /** B7 MB-03 visible_on_explore (Marketplace › Day passes "Show on Explore", V6-87). */
+  setVisible: (planId: string, visible: boolean) => Promise<boolean>;
 }
 
 export function useMembershipPlans(): UseMembershipPlans {
@@ -305,5 +308,16 @@ export function useMembershipPlans(): UseMembershipPlans {
     setItems((prev) => prev.filter((p) => p.id !== planId));
   };
 
-  return { plans: items, businessId, loading, error, add, edit, remove };
+  const setVisible = async (planId: string, visible: boolean) => {
+    const result = await setPlanVisible(planId, visible);
+    if (!result.ok) {
+      setError(result.message);
+      return false;
+    }
+    setError(null);
+    setItems((prev) => prev.map((p) => (p.id === planId ? result.plan : p)));
+    return true;
+  };
+
+  return { plans: items, businessId, loading, error, add, edit, remove, setVisible };
 }

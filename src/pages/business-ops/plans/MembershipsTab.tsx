@@ -2,23 +2,29 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
-import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, KeyRound, Pause, Pencil, Play, Plus, Trash2, type LucideIcon } from "lucide-react";
+import { Archive as ArchiveIcon, ChevronDown, ChevronRight, Copy, Eye, EyeOff, KeyRound, Pause, Pencil, Play, Plus, type LucideIcon } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import type { MembershipPlanRow } from "../../../services/membership-plans";
+import { formatPrice } from "../../../utils/price";
 import {
   billingLabel,
+  classesLabel,
+  commitmentLabel,
+  daysLabel,
   figuresLine,
   GROUP_OF,
   isEarly,
   GROUP_ORDER,
+  joinAnd,
+  limitLabel,
   membersLine,
   planIcon,
   plansCount,
   priceLine,
 } from "./planModel";
 import { PlanSheet } from "./PlanSheet";
-import { PlansProvider, PlansToast, usePlansCtx } from "./PlansContext";
+import { PlansProvider, PlansToast, usePlansCtx, type PlanAction } from "./PlansContext";
 import { Bar, BORDER, DIVIDER, ErrorCard, FiguresCard, ICONS, StatusPill, useTones } from "./ui";
 
 // v6 Batch 4 · Front desk › Memberships: the plan list (OP1-022 / 033 / 036
@@ -39,7 +45,7 @@ export const MEMBERSHIPS_HOME = "/app/business/operations?tab=memberships";
 export const planRoute = (id: string) => `${PLANS_ROUTE}/${id}`;
 
 /** One action tile (OP1-096 row 6): min-h 52, r14, soft, icon 16 / 2.1, label 10.5/800, gap 3. */
-const ActionTile: React.FC<{
+export const ActionTile: React.FC<{
   icon: LucideIcon;
   label: string;
   aria: string;
@@ -78,55 +84,76 @@ const ActionTile: React.FC<{
 );
 
 /**
- * The plan action grid (OP1-096 row 6 / OP1-037 row 7): Edit · Pause · Hide ·
- * Duplicate · and Archive's slot. Pause, Hide and Duplicate need B7 (status,
- * visible on Explore, duplicate as hidden): drawn disabled with a note. The
- * last tile is today's delete with a confirm until B7 archive exists.
+ * The plan action grid (OP1-096 row 6 / OP1-037 row 7): Edit · Pause (Resume
+ * when paused) · Hide (Show when hidden) · Duplicate · Archive, on B7 status
+ * and visible_on_explore. "Duplicate" on both grids (D3).
  */
 export const PlanActions: React.FC<{
   plan: MembershipPlanRow;
   onEdit: () => void;
-  onDelete: () => void;
+  onAction: (action: PlanAction) => void;
   size?: "row" | "page";
   disabled?: boolean;
-}> = ({ plan, onEdit, onDelete, size = "row", disabled }) => {
-  const paused = plan.status === "paused";
-  const hidden = plan.status === "hidden";
+}> = ({ plan, onEdit, onAction, size = "row", disabled }) => {
+  const paused = plan.dbStatus === "paused";
+  const hidden = !plan.visibleOnExplore;
   return (
-    <>
-      <div className="grid" style={{ gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: size === "page" ? 6 : 4 }}>
-        <ActionTile size={size} icon={Pencil} label="Edit" aria={`Edit ${plan.name}`} onClick={onEdit} disabled={disabled} />
-        <ActionTile size={size} icon={paused ? Play : Pause} label={paused ? "Resume" : "Pause"} aria={`${paused ? "Resume" : "Pause"} ${plan.name}`} disabled />
-        <ActionTile size={size} icon={hidden ? Eye : EyeOff} label={hidden ? "Show" : "Hide"} aria={`${hidden ? "Show" : "Hide"} ${plan.name}`} disabled />
-        <ActionTile size={size} icon={Copy} label="Duplicate" aria={`Duplicate ${plan.name}`} disabled />
-        <ActionTile size={size} icon={Trash2} label="Delete" aria={`Delete ${plan.name}`} onClick={onDelete} danger disabled={disabled} />
-      </div>
-      <p className="text-[11px] leading-[15px] text-charcoal-faint" style={{ marginTop: 8 }}>
-        Pause, Hide and Duplicate are coming soon.
-      </p>
-    </>
+    <div className="grid" style={{ gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: size === "page" ? 6 : 4 }}>
+      <ActionTile size={size} icon={Pencil} label="Edit" aria={`Edit ${plan.name}`} onClick={onEdit} disabled={disabled} />
+      <ActionTile
+        size={size}
+        icon={paused ? Play : Pause}
+        label={paused ? "Resume" : "Pause"}
+        aria={`${paused ? "Resume" : "Pause"} ${plan.name}`}
+        onClick={() => onAction(paused ? "resume" : "pause")}
+        disabled={disabled}
+      />
+      <ActionTile
+        size={size}
+        icon={hidden ? Eye : EyeOff}
+        label={hidden ? "Show" : "Hide"}
+        aria={`${hidden ? "Show" : "Hide"} ${plan.name}`}
+        onClick={() => onAction(hidden ? "show" : "hide")}
+        disabled={disabled}
+      />
+      <ActionTile size={size} icon={Copy} label="Duplicate" aria={`Duplicate ${plan.name}`} onClick={() => onAction("duplicate")} disabled={disabled} />
+      <ActionTile size={size} icon={ArchiveIcon} label="Archive" aria={`Archive ${plan.name}`} onClick={() => onAction("archive")} danger disabled={disabled} />
+    </div>
   );
 };
 
 /** Open row details (OP1-096 row 3, logic 419): label 12 faint, value 12.5/700, rows pad 7 0, divider from the 2nd. */
-function detailsOf(plan: MembershipPlanRow, runsClasses: boolean): [string, string][] {
+export function detailsOf(plan: MembershipPlanRow, runsClasses: boolean, nameOf: (id: string) => string | null): [string, string][] {
+  const covers = plan.allowedClassTypes ? joinAnd(plan.allowedClassTypes) : runsClasses ? "All classes" : "Gym entry";
+  const pay: [string, string] = ["Payment type", plan.paymentType];
   if (plan.kind === "day_pass") {
+    return [["Billing", "Daily"], ["Covers", plan.allowedClassTypes ? covers : runsClasses ? "All classes that day" : "Gym entry"], pay];
+  }
+  if (plan.kind === "drop_in") return [["Price", `${plan.price} per class`], ["Covers", covers], pay];
+  if (plan.kind === "class_pack") {
     return [
-      ["Billing", "Daily"],
-      ["Covers", runsClasses ? "All classes that day" : "Gym entry"],
-      ["Payment type", plan.paymentType],
+      ["Sessions", plan.sessionsInPack ? String(plan.sessionsInPack) : "–"],
+      ["Valid for", plan.validForDays ? daysLabel(plan.validForDays) : "–"],
+      ["Covers", covers],
+      pay,
+      // OP1-096 row 5: a pack's value per class is price / sessions, shown at once.
+      ...(plan.sessionsInPack ? ([["Value per class", formatPrice(plan.priceValue / plan.sessionsInPack)]] as [string, string][]) : []),
     ];
+  }
+  if (plan.kind === "intro_offer") {
+    const target = plan.convertsToPlanId ? nameOf(plan.convertsToPlanId) : null;
+    return [["Length", plan.validForDays ? daysLabel(plan.validForDays) : "–"], ["Converts to", target ?? "Nothing"], pay];
   }
   return [
     ["Billing", billingLabel(plan.billing)],
-    ["Payment type", plan.paymentType],
+    pay,
     ...(runsClasses
       ? ([
-          ["Includes", "All classes"],
-          ["Limit", "Unlimited"],
+          ["Includes", classesLabel(plan.allowedClassTypes)],
+          ["Limit", limitLabel(plan.visitsPerPeriod, plan.billing)],
         ] as [string, string][])
       : []),
-    ["Commitment", "None, cancel anytime"],
+    ["Commitment", commitmentLabel(plan.minimumTermMonths, plan.noticeDays)],
   ];
 }
 
@@ -138,11 +165,12 @@ const PlanRow: React.FC<{
   count: number | null;
   runsClasses: boolean;
   onEdit: () => void;
-  onDelete: () => void;
+  onAction: (action: PlanAction) => void;
+  nameOf: (id: string) => string | null;
   onOpenPage: () => void;
   offline: boolean;
   rowRef?: (el: HTMLDivElement | null) => void;
-}> = ({ plan, first, open, onToggle, count, runsClasses, onEdit, onDelete, onOpenPage, offline, rowRef }) => {
+}> = ({ plan, first, open, onToggle, count, runsClasses, onEdit, onAction, nameOf, onOpenPage, offline, rowRef }) => {
   const reduced = useReducedMotion();
   const Icon = ICONS[planIcon(plan)];
   const panelId = `plan-panel-${plan.id}`;
@@ -197,14 +225,14 @@ const PlanRow: React.FC<{
       >
         <div className="overflow-hidden min-h-0">
           <div style={{ padding: "0 14px 14px 70px" }}>
-            {detailsOf(plan, runsClasses).map(([l, v], j) => (
+            {detailsOf(plan, runsClasses, nameOf).map(([l, v], j) => (
               <div key={l} className={clsx("flex items-baseline justify-between", j > 0 && clsx("border-t", DIVIDER))} style={{ gap: 10, padding: "7px 0" }}>
                 <span className="text-[12px] text-charcoal-faint whitespace-nowrap [html.larger-text_&]:whitespace-normal">{l}</span>
                 <span className="text-[12.5px] font-bold text-charcoal text-right">{v}</span>
               </div>
             ))}
             <div style={{ marginTop: 10, marginLeft: -56 }}>
-              <PlanActions plan={plan} onEdit={onEdit} onDelete={onDelete} disabled={offline} />
+              <PlanActions plan={plan} onEdit={onEdit} onAction={onAction} disabled={offline} />
             </div>
             <button
               type="button"
@@ -260,11 +288,14 @@ const EmptyCard: React.FC<{ guard: boolean }> = ({ guard }) => (
 /**
  * OURS (V6-156, OURS-OP1-plans-archived): archived plans in one collapsed group
  * at the end of the list, "Archived · {n}" (group label pattern), rows at
- * opacity 0.6 with Restore and Duplicate only. Archive is B7 (status column):
- * until then no plan is archived and the group does not show; both actions
- * are drawn disabled because they need the same column.
+ * opacity 0.6 with Restore and Duplicate (OP1-051 S1), plus Delete: the live
+ * delete kept for a plan nobody holds (the database refuses one with members).
  */
-const ArchivedGroup: React.FC<{ plans: MembershipPlanRow[] }> = ({ plans }) => {
+const ArchivedGroup: React.FC<{
+  plans: MembershipPlanRow[];
+  onAction: (action: PlanAction, plan: MembershipPlanRow) => void;
+  disabled?: boolean;
+}> = ({ plans, onAction, disabled }) => {
   const [open, setOpen] = useState(false);
   return (
     <section aria-label="Archived plans">
@@ -272,8 +303,8 @@ const ArchivedGroup: React.FC<{ plans: MembershipPlanRow[] }> = ({ plans }) => {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="tap w-full flex items-baseline justify-between"
-        style={{ margin: "22px 0 8px", padding: "0 4px", minHeight: 44 }}
+        className="tap w-full flex items-center justify-between"
+        style={{ margin: "14px 0 8px", padding: "0 4px", minHeight: 44 }}
       >
         <span className="text-[10.5px] font-extrabold uppercase text-charcoal-faint" style={{ letterSpacing: "0.08em" }}>
           Archived · {plans.length}
@@ -285,19 +316,34 @@ const ArchivedGroup: React.FC<{ plans: MembershipPlanRow[] }> = ({ plans }) => {
           {plans.map((p, i) => {
             const Icon = ICONS[planIcon(p)];
             return (
-              <div key={p.id} className={clsx("flex items-center", i > 0 && clsx("border-t", DIVIDER))} style={{ gap: 12, padding: "12px 14px", minHeight: 64 }}>
-                <span className="shrink-0 flex items-center justify-center bg-primary-pale text-primary-dark" style={{ width: 44, height: 44, borderRadius: 12, opacity: 0.6 }}>
-                  <Icon size={20} strokeWidth={1.9} aria-hidden />
-                </span>
-                <span className="flex-1 min-w-0" style={{ opacity: 0.6 }}>
-                  <span className="block text-[14px] font-extrabold leading-[18px] text-charcoal">{p.name}</span>
-                  <span className="block text-[12px] leading-[16px] text-charcoal-soft">{priceLine(p)}</span>
-                </span>
-                {["Restore", "Duplicate"].map((a) => (
-                  <button key={a} type="button" disabled aria-label={`${a} ${p.name}`} className="text-[12px] font-extrabold text-primary-dark disabled:opacity-45" style={{ minHeight: 44, padding: "0 6px" }}>
-                    {a}
-                  </button>
-                ))}
+              <div key={p.id} className={clsx(i > 0 && clsx("border-t", DIVIDER))} style={{ padding: "12px 14px 6px" }}>
+                <div className="flex items-center" style={{ gap: 12, opacity: 0.6 }}>
+                  <span className="shrink-0 flex items-center justify-center bg-primary-pale text-primary-dark" style={{ width: 44, height: 44, borderRadius: 12 }}>
+                    <Icon size={20} strokeWidth={1.9} aria-hidden />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[14px] font-extrabold leading-[18px] text-charcoal">{p.name}</span>
+                    <span className="block text-[12px] leading-[16px] text-charcoal-soft">{priceLine(p)}</span>
+                  </span>
+                </div>
+                <div className="flex justify-end" style={{ gap: 4 }}>
+                  {(["restore", "duplicate", "delete"] as const).map((a) => {
+                    const label = a === "restore" ? "Restore" : a === "duplicate" ? "Duplicate" : "Delete";
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => onAction(a, p)}
+                        aria-label={`${label} ${p.name}`}
+                        className={clsx("tap text-[12px] font-extrabold disabled:opacity-45", a === "delete" ? "text-status-high" : "text-primary-dark")}
+                        style={{ minHeight: 44, padding: "0 8px" }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
@@ -308,13 +354,13 @@ const ArchivedGroup: React.FC<{ plans: MembershipPlanRow[] }> = ({ plans }) => {
 };
 
 /** The page header when the list stands alone (title per tab, OP1-022 rows 2-3). */
-export const MembershipsHeader: React.FC = () => (
+export const MembershipsHeader: React.FC<{ classes?: boolean }> = ({ classes }) => (
   <div>
     <h1 className="text-[27px] font-extrabold leading-[34px] text-charcoal" style={{ letterSpacing: "-0.022em" }}>
-      Memberships
+      {classes ? "Plans" : "Memberships"}
     </h1>
     <p className="text-[13px] font-medium text-charcoal-faint" style={{ marginTop: 4 }}>
-      Membership plans clients can buy on Explore
+      {classes ? "Memberships, class packs and offers clients can buy on Explore" : "Membership plans clients can buy on Explore"}
     </p>
   </div>
 );
@@ -346,6 +392,7 @@ const MembershipsList: React.FC = () => {
   const { plans, loading, error, businessId, runsClasses, classTypes, membersOf, counts, totalMembers, membersLoaded, openId, setOpenId } = ctx;
   const live = plans.filter((p) => p.status !== "archived");
   const archived = plans.filter((p) => p.status === "archived");
+  const nameOf = (id: string) => plans.find((p) => p.id === id)?.name ?? null;
 
 
   const groups = GROUP_ORDER.map((g) => ({ title: g, items: live.filter((p) => GROUP_OF[p.kind] === g) })).filter((g) => g.items.length > 0);
@@ -369,7 +416,7 @@ const MembershipsList: React.FC = () => {
           <FiguresCard
             style={{ marginTop: 16 }}
             cells={[
-              { label: "Active plans", value: String(live.filter((p) => p.status === "active").length) },
+              { label: "Active plans", value: String(live.filter((p) => p.dbStatus === "active").length) },
               { label: "Members on plans", value: membersValue },
             ]}
             line={figuresLine(live, counts, isEarly(ctx.firstStarted, isoToday()))}
@@ -409,7 +456,8 @@ const MembershipsList: React.FC = () => {
                         runsClasses={runsClasses}
                         offline={!online}
                         onEdit={() => setSheet({ open: true, editing: p })}
-                        onDelete={() => ctx.requestDelete(p)}
+                        onAction={(a) => ctx.act(a, p)}
+                        nameOf={nameOf}
                         onOpenPage={() => navigate(planRoute(p.id))}
                         rowRef={(el) => {
                           if (el) rows.current.set(p.id, el);
@@ -422,7 +470,7 @@ const MembershipsList: React.FC = () => {
               </section>
             ))
           )}
-          {archived.length > 0 && <ArchivedGroup plans={archived} />}
+          {archived.length > 0 && <ArchivedGroup plans={archived} onAction={(a, p) => ctx.act(a, p)} disabled={!online} />}
         </>
       )}
       {/* Page bottom padding 176 (source padB) so the last row clears the CTA. */}
@@ -480,6 +528,8 @@ const MembershipsList: React.FC = () => {
         onClose={() => setSheet((s) => ({ ...s, open: false }))}
         runsClasses={runsClasses}
         classTypes={classTypes}
+        plans={plans}
+        offered={ctx.offered}
         memberCount={sheet.editing ? (membersOf(sheet.editing)?.length ?? null) : null}
         save={(draft) => (sheet.editing ? ctx.edit(sheet.editing.id, draft) : ctx.add(draft))}
         onSaved={(plan, isNew) => {

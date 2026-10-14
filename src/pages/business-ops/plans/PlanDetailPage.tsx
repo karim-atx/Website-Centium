@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import clsx from "clsx";
-import { CalendarDays, ChevronLeft, Gauge, QrCode, Repeat, Sun, UserCheck, type LucideIcon } from "lucide-react";
+import { ArrowRightLeft, Copy, RotateCcw, Trash2, CalendarClock, CalendarDays, ChevronLeft, Gauge, Hash, QrCode, Repeat, Sun, UserCheck, type LucideIcon } from "lucide-react";
 import { hasInAppHistory } from "../../../hooks/useBack";
 import { useOnline } from "../../../hooks/useOnline";
 import type { MembershipPlanRow, PlanMember } from "../../../services/membership-plans";
-import { initials, priceLine, renewsLabel, renewsSub, shortDate, statusLine } from "./planModel";
-import { MEMBERSHIPS_HOME, PlanActions } from "./MembershipsTab";
+import { classesLabel, commitmentLabel, daysLabel, initials, joinAnd, limitLabel, priceLine, renewsLabel, renewsSub, shortDate, statusLine } from "./planModel";
+import { ActionTile, MEMBERSHIPS_HOME, PlanActions } from "./MembershipsTab";
 import { PlanSheet } from "./PlanSheet";
 import { PlansToast, usePlansCtx } from "./PlansContext";
 import { Bar, BORDER, DIVIDER, ErrorCard, FiguresCard, StatusPill } from "./ui";
@@ -38,21 +38,43 @@ const Card: React.FC<{ title: string; sub?: string; children: React.ReactNode }>
   </section>
 );
 
-function coverRows(plan: MembershipPlanRow, runsClasses: boolean): { icon: LucideIcon; title: string; sub: string; value: string }[] {
-  // OURS O7 for the Day pass; Membership rows are the source's (logic 497).
-  if (plan.kind === "day_pass") {
+function coverRows(
+  plan: MembershipPlanRow,
+  runsClasses: boolean,
+  nameOf: (id: string) => string | null
+): { icon: LucideIcon; title: string; sub: string; value: string }[] {
+  // Membership rows are the source's (logic 497); the other types OURS O7.
+  const classes = plan.allowedClassTypes;
+  const covers = classes
+    ? { icon: CalendarDays, title: "Covers", sub: joinAnd(classes), value: classesLabel(classes) }
+    : runsClasses
+      ? { icon: CalendarDays, title: "Covers", sub: "Every class on your schedule", value: "All classes" }
+      : { icon: Sun, title: "Covers", sub: "Entry to the gym", value: "Gym entry" };
+  const anyone = { icon: UserCheck, title: "Who can buy", sub: "Anyone on Explore", value: "Anyone" };
+  if (plan.kind === "day_pass") return [{ ...covers, sub: classes ? covers.sub : runsClasses ? "Every class that day" : "One day at the gym" }, anyone];
+  if (plan.kind === "drop_in") return [{ ...covers, title: "Which classes" }, anyone];
+  if (plan.kind === "class_pack") {
     return [
-      runsClasses
-        ? { icon: CalendarDays, title: "Covers", sub: "Every class that day", value: "All classes" }
-        : { icon: Sun, title: "Covers", sub: "One day at the gym", value: "Gym entry" },
-      { icon: UserCheck, title: "Who can buy", sub: "Anyone on Explore", value: "Anyone" },
+      { icon: Hash, title: "Sessions", sub: "Classes in the pack", value: plan.sessionsInPack ? String(plan.sessionsInPack) : "–" },
+      { icon: CalendarClock, title: "Valid for", sub: "From the day it's bought", value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
+      covers,
+    ];
+  }
+  if (plan.kind === "intro_offer") {
+    const target = plan.convertsToPlanId ? nameOf(plan.convertsToPlanId) : null;
+    return [
+      { icon: CalendarClock, title: "Length", sub: "From the day it's bought", value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
+      { icon: ArrowRightLeft, title: "Converts to", sub: "Suggested when the offer ends", value: target ?? "Nothing" },
     ];
   }
   return [
-    ...(runsClasses ? [{ icon: CalendarDays, title: "Classes", sub: "Every class on your schedule", value: "All classes" }] : []),
-    { icon: UserCheck, title: "Who can buy", sub: "Anyone on Explore", value: "Anyone" },
-    ...(runsClasses ? [{ icon: Gauge, title: "Limit", sub: "How often a member can book", value: "Unlimited" }] : []),
+    ...(runsClasses ? [{ icon: CalendarDays, title: "Classes", sub: classes ? joinAnd(classes) : "Every class on your schedule", value: classesLabel(classes) }] : []),
+    anyone,
+    ...(runsClasses ? [{ icon: Gauge, title: "Limit", sub: "How often a member can book", value: limitLabel(plan.visitsPerPeriod, plan.billing) }] : []),
     { icon: Repeat, title: "Renews", sub: renewsSub(plan.billing), value: renewsLabel(plan.billing) },
+    ...(plan.minimumTermMonths || plan.noticeDays
+      ? [{ icon: CalendarClock, title: "Commitment", sub: "Minimum term and notice", value: commitmentLabel(plan.minimumTermMonths, plan.noticeDays) }]
+      : []),
   ];
 }
 
@@ -173,13 +195,22 @@ export default function PlanDetailPage() {
       </div>
 
       <div style={{ marginTop: 16 }}>
+        {plan.dbStatus === "archived" ? (
+          // OURS-OP1-plans-archived: an archived plan's page offers Restore, Duplicate and Delete.
+          <div className="grid" style={{ gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 6 }}>
+            <ActionTile size="page" icon={RotateCcw} label="Restore" aria={`Restore ${plan.name}`} onClick={() => ctx.act("restore", plan)} disabled={!online} />
+            <ActionTile size="page" icon={Copy} label="Duplicate" aria={`Duplicate ${plan.name}`} onClick={() => ctx.act("duplicate", plan)} disabled={!online} />
+            <ActionTile size="page" icon={Trash2} label="Delete" aria={`Delete ${plan.name}`} onClick={() => ctx.act("delete", plan, leave)} danger disabled={!online} />
+          </div>
+        ) : (
         <PlanActions
           size="page"
           plan={plan}
           disabled={!online}
           onEdit={() => setEditing(true)}
-          onDelete={() => ctx.requestDelete(plan, leave)}
+          onAction={(a) => ctx.act(a, plan, a === "archive" ? leave : undefined)}
         />
+        )}
       </div>
 
       <FiguresCard
@@ -192,7 +223,7 @@ export default function PlanDetailPage() {
       />
 
       <Card title="Who it covers">
-        {coverRows(plan, ctx.runsClasses).map((r, i) => (
+        {coverRows(plan, ctx.runsClasses, (id) => ctx.plans.find((p) => p.id === id)?.name ?? null).map((r, i) => (
           <CoverRow key={r.title} {...r} first={i === 0} />
         ))}
       </Card>
@@ -232,6 +263,8 @@ export default function PlanDetailPage() {
         onClose={() => setEditing(false)}
         runsClasses={ctx.runsClasses}
         classTypes={ctx.classTypes}
+        plans={ctx.plans}
+        offered={ctx.offered}
         memberCount={count}
         save={(draft) => ctx.edit(plan.id, draft)}
         onSaved={(p) => ctx.showToast(`${p.name} saved.`)}

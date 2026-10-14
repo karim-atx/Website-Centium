@@ -5,7 +5,8 @@
 import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
 
-export type Billing = "daily" | "monthly" | "annually";
+/** B7 MB-03 adds quarterly and semiannually to billing_period. */
+export type Billing = "daily" | "monthly" | "quarterly" | "semiannually" | "annually";
 
 export interface PlanLite {
   id: string;
@@ -15,7 +16,7 @@ export interface PlanLite {
 }
 
 /** The unit a plan's price is per: "$45/month". */
-export const PERIOD: Record<Billing, string> = { daily: "day", monthly: "month", annually: "year" };
+export const PERIOD: Record<Billing, string> = { daily: "day", monthly: "month", quarterly: "3 months", semiannually: "6 months", annually: "year" };
 
 /** Plans cheapest first, so the list and the default selection are stable. */
 export function sortPlans<T extends PlanLite>(plans: T[]): T[] {
@@ -70,6 +71,28 @@ export function memberTag(state: PassState): { label: string; tone: "member" | "
       return { label: "Cancelled", tone: "muted" };
     case "refunded":
       return { label: "Refunded", tone: "muted" };
+  }
+}
+
+/**
+ * B7 MB-05: a membership's lifecycle status. 'upcoming' is a renewal that is
+ * not in force yet (its pass grants nothing until the period before it ends).
+ */
+export type GymMembershipStatus = "active" | "expired" | "cancelled" | "upcoming";
+
+/**
+ * The tag for a whole membership row: an upcoming period says when it starts
+ * (its pass_state can read "valid" or "awaiting_payment" while pass_valid is
+ * false), everything else is the pass state's own tag.
+ */
+export function membershipTag(m: { status: GymMembershipStatus; passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
+  switch (m.status) {
+    case "upcoming":
+      return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+    case "active":
+    case "expired":
+    case "cancelled":
+      return memberTag(m.passState);
   }
 }
 

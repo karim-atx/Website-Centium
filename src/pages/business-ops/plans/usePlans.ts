@@ -4,11 +4,17 @@ import { fetchMyClasses } from "../../../services/business-classes";
 import {
   createPlan,
   deletePlan,
+  duplicatePlan,
+  fetchOfferedPlanTypes,
+  setPlanStatus,
+  setPlanVisible,
   fetchMembersByPlanName,
   fetchMyPlans,
   updatePlan,
   type MembershipPlanRow,
+  type PlanDbStatus,
   type PlanDraft,
+  type PlanKind,
   type PlanMember,
 } from "../../../services/membership-plans";
 import { sharedNames } from "./planModel";
@@ -23,6 +29,7 @@ let cache: {
   businessId: string | null;
   classTypes: string[] | null;
   members: Map<string, PlanMember[]> | null | undefined;
+  offered: PlanKind[] | null;
 } | null = null;
 
 export type WriteOutcome = { ok: true; plan: MembershipPlanRow } | { ok: false; message: string };
@@ -30,8 +37,9 @@ export type DeleteOutcome = { ok: true } | { ok: false; message: string; inUse?:
 
 /**
  * Everything the plan screens read (OP1-022 / 037 / 041): the business's
- * membership_plans rows, whether the gym runs classes (plan types follow the
- * business type, V6-47: Class pack, Drop-in, Includes and Limit only then),
+ * membership_plans rows, the plan types its business type is offered
+ * (plan_types_for_business_type, V6-47), whether it runs classes (Class pack,
+ * Drop-in, Includes and Limit only then),
  * its class types (the Includes menu), and the active members per plan from
  * the venue readers. A failed read keeps what is on screen.
  */
@@ -44,6 +52,7 @@ export function usePlans() {
   const [error, setError] = useState<string | null>(null);
   const [classTypes, setClassTypes] = useState<string[] | null>(warm?.classTypes ?? null);
   const [members, setMembers] = useState<Map<string, PlanMember[]> | null | undefined>(warm?.members);
+  const [offered, setOffered] = useState<PlanKind[] | null>(warm?.offered ?? null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -65,8 +74,10 @@ export function usePlans() {
       setBusinessId(r.businessId);
       setPlans(r.plans);
       if (r.businessId) {
-        const m = await fetchMembersByPlanName(r.businessId);
-        if (!cancelled) setMembers(m);
+        const [m, o] = await Promise.all([fetchMembersByPlanName(r.businessId), fetchOfferedPlanTypes(r.businessId)]);
+        if (cancelled) return;
+        setMembers(m);
+        setOffered(o.types);
       } else {
         setMembers(new Map());
       }
@@ -78,8 +89,8 @@ export function usePlans() {
 
   // Keep the session copy current with every change on screen.
   useEffect(() => {
-    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members };
-  }, [authUserId, loading, plans, businessId, classTypes, members]);
+    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members, offered };
+  }, [authUserId, loading, plans, businessId, classTypes, members, offered]);
 
   const reload = useCallback(() => {
     setLoading(true);
@@ -130,6 +141,22 @@ export function usePlans() {
     return { ok: true };
   };
 
+  const replace = (r: WriteOutcome): WriteOutcome => {
+    if (r.ok) setPlans((prev) => prev.map((p) => (p.id === r.plan.id ? r.plan : p)));
+    return r;
+  };
+  /** Pause / resume / archive / restore (B7 status). */
+  const setStatus = async (planId: string, status: PlanDbStatus) => replace(await setPlanStatus(planId, status));
+  /** Hide from Explore / show (B7 visible_on_explore). */
+  const setVisible = async (planId: string, visible: boolean) => replace(await setPlanVisible(planId, visible));
+  /** Duplicate as hidden (OP1-050). */
+  const duplicate = async (plan: MembershipPlanRow): Promise<WriteOutcome> => {
+    if (!businessId) return { ok: false, message: "Couldn't duplicate the plan. Try again." };
+    const r = await duplicatePlan(businessId, plan);
+    if (r.ok) setPlans((prev) => [...prev, r.plan]);
+    return r;
+  };
+
   /** The earliest start among active members (OP1-032 early data), or null. */
   const firstStarted = useMemo(() => {
     if (!members) return null;
@@ -150,6 +177,11 @@ export function usePlans() {
     add,
     edit,
     remove,
+    setStatus,
+    setVisible,
+    duplicate,
+    /** plan_types_for_business_type for this business (null: unknown, offer every type). */
+    offered,
     classTypes: classTypes ?? [],
     runsClasses,
     membersLoaded: members !== undefined,
