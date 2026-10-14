@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { cardAllows, cardDate, cardPriceLine, parseCard, planButtonState } from "./cards";
+import { cardAllows, cardDate, cardMoney, cardPriceLine, parseCard, planButtonState } from "./cards";
 
 const offer = {
   kind: "plans_offer",
@@ -87,4 +87,28 @@ test("the held plan is Selected and the others are disabled; nothing held, all C
   assert.equal(planButtonState("p1", new Set()), "choose");
   assert.equal(planButtonState("p1", new Set(["p1"])), "selected");
   assert.equal(planButtonState("p2", new Set(["p1"])), "disabled");
+});
+
+test("a payment reminder reads its snapshot; missing amount or due date falls back to the text", () => {
+  const payload = { payment_id: "p", amount: "95.00", currency: "usd", method: "cash", due_on: "2026-10-01", days_overdue: 9, source_kind: "membership", business_name: "Flex Gym" };
+  assert.deepEqual(parseCard({ kind: "payment_reminder", payload }), {
+    kind: "payment_reminder",
+    businessName: "Flex Gym",
+    amount: 95,
+    currency: "USD",
+    method: "cash",
+    dueOn: "2026-10-01",
+    sourceKind: "membership",
+  });
+  assert.equal(parseCard({ kind: "payment_reminder", payload: { ...payload, amount: null } }), null);
+  assert.equal(parseCard({ kind: "payment_reminder", payload: { ...payload, due_on: "soon" } }), null);
+  const card = parseCard({ kind: "payment_reminder", payload: { ...payload, business_name: "" } });
+  assert.equal(card?.kind === "payment_reminder" && card.businessName, "Your gym or studio");
+  assert.deepEqual(cardAllows(card!), { copy: false, forward: false, edit: false, unsend: false });
+});
+
+test("cardMoney: whole amounts without cents, an unknown currency still reads", () => {
+  assert.equal(cardMoney(95, "USD"), "$95");
+  assert.equal(cardMoney(12.5, "USD"), "$12.50");
+  assert.equal(cardMoney(95, "ZZZZ"), "95 ZZZZ");
 });

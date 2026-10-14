@@ -1,7 +1,7 @@
 import React from "react";
-import { Check, CircleCheck } from "lucide-react";
+import { Check, CircleCheck, Receipt } from "lucide-react";
 import { CentiumMark } from "../icons/CentiumMark";
-import { cardDate, cardPriceLine, planButtonState, type MessageCard } from "../../services/messaging/cards";
+import { cardDate, cardMoney, cardPriceLine, planButtonState, type MessageCard } from "../../services/messaging/cards";
 
 /**
  * The two A3 chat cards, drawn in place of their message's text bubble.
@@ -38,7 +38,7 @@ export const ChatCard: React.FC<{
   /** Client side: open the MO1.2.1.5.1 checkout for this plan. */
   onChoose: (planId: string) => void;
 }> = ({ card, mine, senderName, createdAt, meta, hiredPlanIds, onChoose }) => {
-  const title = card.kind === "plans_offer" ? (mine ? "Your plans" : `${senderName}'s plans`) : "Plan confirmed";
+  const title = card.kind === "plans_offer" ? (mine ? "Your plans" : `${senderName}'s plans`) : card.kind === "payment_reminder" ? "Payment reminder" : "Plan confirmed";
 
   return (
     <div
@@ -102,6 +102,23 @@ export const ChatCard: React.FC<{
               </div>
             );
           })}
+        </div>
+      ) : card.kind === "payment_reminder" ? (
+        // OURS (B8 RV-02): the member's view of a reminder, in the "Plan
+        // confirmed" card's row language (32 tile, 13.5/700 line, 11.5 meta).
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+            <Receipt size={16} strokeWidth={2.2} className="text-primary-dark" aria-hidden />
+          </span>
+          <span className="min-w-0 flex flex-col">
+            <span className="text-[13.5px] font-bold text-charcoal break-words">
+              {cardMoney(card.amount, card.currency)} owed to {card.businessName}
+            </span>
+            <span className="text-[11.5px] text-charcoal-faint">
+              Due {cardDate(card.dueOn)}
+              {card.method === "cash" ? ` · Pay at ${card.businessName}` : ""}
+            </span>
+          </span>
         </div>
       ) : (
         <div className="flex items-center gap-2.5">
