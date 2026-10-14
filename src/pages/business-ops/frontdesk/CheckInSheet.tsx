@@ -14,7 +14,8 @@ import { textPx } from "../../../theme/textSize";
 // 18 20 12, pinned footer 12 20 34, 46 r14 fields, 52 r16 Check in 14/700).
 // Writing the check-in is B10 (BU2-07): the sheet finds the member and their
 // pass now (venue_members), and the button stays unavailable with a note
-// until the stage lands. Search by member code needs B7 (BU2-20 / 22).
+// until the stage lands. Search by member number needs venue_members to
+// carry the number (B7 MB-01 shipped it on business_people only; asked).
 // Footer link (OURS-OP1-member-codes D9): a walk-in who is not a member yet
 // gets a member code from Analytics › Members › Member codes.
 

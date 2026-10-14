@@ -17,7 +17,8 @@ import {
 } from "../../services/business-members";
 import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
-import { endMyGymMembership, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { endMyGymMembership, fetchGymBusinessIds, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { NameSharingCard } from "./NameSharingCard";
 import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
@@ -85,6 +86,25 @@ export const MembershipsCard: React.FC = () => {
       cancelled = true;
     };
   }, [gymMemberships]);
+
+  /** Business id → the name to show on the Your name card (MB-01). */
+  const [gymBiz, setGymBiz] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (gymMemberships.length === 0) return;
+    let cancelled = false;
+    void fetchGymBusinessIds(gymMemberships.map((m) => m.gymId)).then((b) => {
+      if (!cancelled) setGymBiz(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [gymMemberships]);
+  const businessNames = new Map<string, string>();
+  for (const g of gymMemberships) {
+    const b = gymBiz.get(g.gymId);
+    if (b && !businessNames.has(b)) businessNames.set(b, g.gymName);
+  }
+  for (const m of memberships) if (m.businessName && !businessNames.has(m.businessId)) businessNames.set(m.businessId, m.businessName);
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -394,6 +414,8 @@ export const MembershipsCard: React.FC = () => {
           )}
         </div>
       )}
+
+      {loaded && <NameSharingCard names={businessNames} />}
 
       {/* D12 (restore round 2): End membership without a swipe, in
           Foundations' dropdown (the 36 pt rows of the Journal / Habits

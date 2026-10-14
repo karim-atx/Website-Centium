@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useBusiness } from "../../../components/business-more/useBusiness";
 import { useMembershipPlans } from "../../../hooks/useBusinessCatalog";
 import { useMyVenues } from "../../../hooks/useMyVenues";
-import { fetchMyMemberCodes, fetchMyMembers, type MemberCode, type Membership } from "../../../services/business-members";
+import { fetchBusinessPeople, fetchMyMemberCodes, fetchMyMembers, type MemberCode, type Membership } from "../../../services/business-members";
 
 // What the Members section can read today (the owner, and since B7 staff
 // holding 'members'): the business's memberships with first names
@@ -21,6 +21,12 @@ export interface MembersData {
   members: Membership[] | null;
   /** list_business_members total_count: every membership, however many are loaded. */
   memberTotal: number;
+  /**
+   * B7 MB-01: distinct active people (business_people 'active': an accepted,
+   * unended business_members row OR a live gym membership). Null while the
+   * reader is not on this database or could not be read (shown as "–").
+   */
+  activeTotal: number | null;
   /** Loads the next page of the roster (PAGE rows). */
   loadMoreMembers: () => void;
   loadingMore: boolean;
@@ -41,6 +47,7 @@ export function useMembersData(): MembersData {
   const businessId = business?.id ?? null;
   const [members, setMembers] = useState<Membership[] | null>(null);
   const [memberTotal, setMemberTotal] = useState(0);
+  const [activeTotal, setActiveTotal] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [codes, setCodesState] = useState<MemberCode[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +58,14 @@ export function useMembersData(): MembersData {
     if (!businessId) return;
     let cancelled = false;
     void (async () => {
-      const [roster, issued] = await Promise.all([fetchMyMembers(businessId, { limit: PAGE }), fetchMyMemberCodes(businessId)]);
+      const [roster, issued, active] = await Promise.all([
+        fetchMyMembers(businessId, { limit: PAGE }),
+        fetchMyMemberCodes(businessId),
+        fetchBusinessPeople(businessId, { segment: "active", limit: 1 }),
+      ]);
       if (cancelled) return;
       setLoading(false);
+      if (active.ok) setActiveTotal(active.total);
       if (!roster.ok) {
         setError(roster.message);
         return;
@@ -86,7 +98,7 @@ export function useMembersData(): MembersData {
     });
   }, [businessId, loadingMore, loaded, memberTotal]);
   const setCodes = useCallback((f: (c: MemberCode[]) => MemberCode[]) => setCodesState((c) => f(c ?? [])), []);
-  return { businessId, members, memberTotal, loadMoreMembers, loadingMore, codes, error, loading: businessId ? loading : bizLoading, reload, plans, venues, venuesLoading, setCodes };
+  return { businessId, members, memberTotal, activeTotal, loadMoreMembers, loadingMore, codes, error, loading: businessId ? loading : bizLoading, reload, plans, venues, venuesLoading, setCodes };
 }
 
 /** Roster page size (list_business_members p_limit). */

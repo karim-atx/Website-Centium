@@ -478,3 +478,110 @@ export async function endMembership(
   }
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// B7 MB-01: one people reader, member numbers, the member's own name switch
+// ---------------------------------------------------------------------------
+//
+// business_people() is the de-duplicated person list (business_members,
+// live gym memberships, class clients). `label` is the server's decision:
+// the first name when the person shared it with this business, otherwise
+// "Member #0042". RENDER THE LABEL; never build one from first_name.
+// Search matches a shared first name or the member number ("42", "0042",
+// "#42"); a masked name is never searchable, on purpose.
+
+export type PeopleSegment = "all" | "active" | "members" | "class_clients" | "customers" | "appointment_clients";
+
+export interface BusinessPerson {
+  personId: string;
+  label: string;
+  nameIsShared: boolean;
+  isMinor: boolean;
+  memberNumber: number | null;
+  isActive: boolean;
+  isMember: boolean;
+  isClassClient: boolean;
+  firstSeen: string | null;
+  lastSeen: string | null;
+}
+
+/** The function is missing (stage not on this database): the screens keep their pending state. */
+const isMissingFunction = (e: { code?: string }) => e.code === "PGRST202" || e.code === "42883";
+
+export async function fetchBusinessPeople(
+  businessId: string,
+  opts: { segment?: PeopleSegment; search?: string | null; limit?: number; offset?: number } = {}
+): Promise<{ ok: true; people: BusinessPerson[]; total: number } | { ok: false; pending: boolean; message: string }> {
+  const { data, error } = await rpc().rpc("business_people", {
+    p_business_id: businessId,
+    p_segment: opts.segment ?? "all",
+    p_search: opts.search?.trim() || null,
+    p_limit: opts.limit ?? 50,
+    p_offset: opts.offset ?? 0,
+  });
+  if (error) {
+    if (isMissingFunction(error)) return { ok: false, pending: true, message: "" };
+    console.error("[members] Could not read people:", error.message);
+    return { ok: false, pending: false, message: "Couldn't load your members. Try again." };
+  }
+  type Row = {
+    person_id: string; label: string; name_is_shared: boolean; is_minor: boolean; member_number: number | null;
+    is_active: boolean; is_member: boolean; is_class_client: boolean; first_seen: string | null; last_seen: string | null; total_count: number | string;
+  };
+  const rows = (data ?? []) as Row[];
+  return {
+    ok: true,
+    total: Number(rows[0]?.total_count ?? 0),
+    people: rows.map((r) => ({
+      personId: r.person_id,
+      label: r.label,
+      nameIsShared: !!r.name_is_shared,
+      isMinor: !!r.is_minor,
+      memberNumber: r.member_number,
+      isActive: !!r.is_active,
+      isMember: !!r.is_member,
+      isClassClient: !!r.is_class_client,
+      firstSeen: r.first_seen,
+      lastSeen: r.last_seen,
+    })),
+  };
+}
+
+/** How the member's own number reads, the same shape the server's label uses. */
+export const memberNumberLabel = (n: number) => `Member #${String(n).padStart(4, "0")}`;
+
+export interface MyNameSharing {
+  businessId: string;
+  memberNumber: number;
+  shared: boolean;
+}
+
+/**
+ * The member's side: every business that has numbered them, and whether they
+ * show it their first name. Own rows of business_person_numbers and
+ * profiles_shared_with_business (a revoked share keeps its row).
+ */
+export async function fetchMyNameSharing(userId: string): Promise<{ ok: true; rows: MyNameSharing[] } | { ok: false; pending: boolean }> {
+  const db = supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => Promise<{ data: unknown; error: { code?: string; message: string } | null }> } } };
+  const [nums, shares] = await Promise.all([
+    db.from("business_person_numbers").select("business_id, member_number").eq("person_id", userId),
+    db.from("profiles_shared_with_business").select("business_id, revoked_at").eq("profile_id", userId),
+  ]);
+  const err = nums.error ?? shares.error;
+  if (err) return { ok: false, pending: err.code === "42P01" || err.code === "PGRST205" };
+  const live = new Set(((shares.data ?? []) as { business_id: string; revoked_at: string | null }[]).filter((s) => !s.revoked_at).map((s) => s.business_id));
+  return {
+    ok: true,
+    rows: ((nums.data ?? []) as { business_id: string; member_number: number }[]).map((n) => ({ businessId: n.business_id, memberNumber: n.member_number, shared: live.has(n.business_id) })),
+  };
+}
+
+/** The member's own switch: show (or stop showing) their first name to one business. */
+export async function shareMyNameWithBusiness(businessId: string, share: boolean): Promise<{ ok: true; shared: boolean } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("share_my_profile_with_business", { p_business_id: businessId, p_share: share });
+  if (error) {
+    console.error("[members] Could not change name sharing:", error.message);
+    return { ok: false, message: describe(error, "Couldn't save that. Try again.") };
+  }
+  return { ok: true, shared: typeof data === "boolean" ? data : share };
+}

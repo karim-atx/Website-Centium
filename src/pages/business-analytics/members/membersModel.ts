@@ -6,10 +6,12 @@ import type { BizKind } from "../../../components/business-more/kind";
 //
 // WHAT IS LIVE AND WHAT WAITS. V6-51 defines a member as a distinct person
 // with an active business_members row OR an active gym_membership; that
-// de-duplicated count, the growth / first-90-day / engagement / at-risk
-// readers and the per-plan split are backend stage B7 (BU5-06 / BU5-07),
-// which is not on the local stack yet, so those values read "–" with a
-// coming line (never a guessed number). Visits and Not seen in 14 days wait
+// de-duplicated count is live (B7 MB-01 business_people, segment active:
+// Growth's "Active members" for gyms; class bookings alone do not make a
+// person active, so Classes keeps its coming value). The growth /
+// first-90-day / engagement / at-risk readers and the per-plan split wait
+// for their readers, so those values read "–" with a coming line (never a
+// guessed number). Visits and Not seen in 14 days wait
 // for check-ins (BU5-16). Store customers wait for orders (BU5-15). Live
 // today: the number of membership plans, member codes (create, copy, share,
 // redeemed share) and every venue's roster.
@@ -59,4 +61,9 @@ export function pagesOf(kind: BizKind): MembersPageDef[] {
     { key: "notseen", title: "Not seen in 14 days", boxes: ["Not seen in 14 days", "Longest away"], coming: CHECK_INS, waits: "check-ins" },
     { key: "plans", title: "Plans", boxes: ["Membership plans", "On the most popular plan"], coming: "Coming soon: how members split across your plans.", waits: "B7" },
   ];
+}
+
+/** Growth's "Active members" (gym and wellness) from B7 MB-01 business_people; null ("–") otherwise. */
+export function activeValue(page: MembersPageDef, vocab: MembersVocab, data: { activeTotal: number | null }): string | null {
+  return page.key === "growth" && vocab.label === "Members" && data.activeTotal !== null ? data.activeTotal.toLocaleString() : null;
 }

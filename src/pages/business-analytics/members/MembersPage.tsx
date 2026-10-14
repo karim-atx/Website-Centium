@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MailPlus, ScanLine, Ticket, Users } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { AnCard, AnEmptyCard, AnHeaderRow, AnHintBox, AnLead, AnNumberBoxes } from "./anKit";
-import type { MembersPageDef, MembersVocab } from "./membersModel";
+import { activeValue, type MembersPageDef, type MembersVocab } from "./membersModel";
 import type { MembersData } from "./useMembersData";
 import { useAnalytics } from "../analyticsContext";
 import { RenewalsCard } from "./RenewalsCard";
@@ -91,7 +91,7 @@ export function MembersPage({
         <AnCard label={page.title}>
           <AnNumberBoxes
             boxes={[
-              { label: page.boxes[0], value: page.key === "plans" ? plansCount.toLocaleString() : null },
+              { label: page.boxes[0], value: page.key === "plans" ? plansCount.toLocaleString() : activeValue(page, vocab, data) },
               { label: page.boxes[1], value: null },
             ]}
           />

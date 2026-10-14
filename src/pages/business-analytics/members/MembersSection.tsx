@@ -5,7 +5,7 @@ import { useOnline } from "../../../hooks/useOnline";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useAnalytics } from "../analyticsContext";
 import { AnCard, AnEmptyCard, AnHint, AnIndexRow, AnIndexSkeleton, AnStrip } from "./anKit";
-import { pagesOf, vocabOf } from "./membersModel";
+import { activeValue, pagesOf, vocabOf } from "./membersModel";
 import { liveCodes, useMembersData } from "./useMembersData";
 import { MembersPage } from "./MembersPage";
 import { MemberCodesPage } from "./MemberCodesPage";
@@ -48,12 +48,12 @@ export function MembersSection() {
     }
     setExport(`centium-${vocab.people}.csv`, [
       ["Section", "Value", "Note"],
-      ...pages.map((p) => [p.title, p.key === "plans" ? data.plans.length : null, p.coming]),
+      ...pages.map((p) => [p.title, p.key === "plans" ? data.plans.length : p.key === "growth" && vocab.label === "Members" ? data.activeTotal : null, p.coming]),
       ["Member codes waiting", waiting, null],
       ...(data.venues.length > 0 ? [["Active at your venues", activeAtVenues, null]] : []),
     ]);
     return () => setExport("", null);
-  }, [sub, kind, known, pages, data.plans.length, waiting, activeAtVenues, data.venues.length, vocab.people, setExport]);
+  }, [sub, kind, known, pages, data.plans.length, data.activeTotal, waiting, activeAtVenues, data.venues.length, vocab.people, setExport]);
 
   if (sub === "codes") return <MemberCodesPage data={data} vocab={vocab} />;
   if (sub === "venue") return <VenueMembersPage vocab={vocab} />;
@@ -95,7 +95,7 @@ export function MembersSection() {
               <AnIndexSkeleton rows={pages.length} />
             ) : (
               pages.map((p, i) => {
-                const value = p.key === "plans" ? data.plans.length.toLocaleString() : null;
+                const value = p.key === "plans" ? data.plans.length.toLocaleString() : activeValue(p, vocab, data);
                 return (
                   <AnIndexRow
                     key={p.key}

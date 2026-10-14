@@ -331,6 +331,18 @@ export async function fetchMembershipTerms(memberships: GymMembership[]): Promis
   return out;
 }
 
+/** Each venue's managing business (gyms.business_id); a read that fails yields nothing. */
+export async function fetchGymBusinessIds(gymIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(gymIds)];
+  if (ids.length === 0) return out;
+  type Loose = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: unknown[] | null; error: PostgrestError | null }> } } };
+  const g = await (supabase as unknown as Loose).from("gyms").select("id, business_id").in("id", ids);
+  if (g.error) return out;
+  for (const r of g.data as { id: string; business_id: string | null }[]) if (r.business_id) out.set(r.id, r.business_id);
+  return out;
+}
+
 /**
  * B7 MB-05: the member ends their own venue membership (end_gym_membership;
  * either side may). At the period end by default: the status stays 'active'
