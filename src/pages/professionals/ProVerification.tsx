@@ -4,7 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { fetchGoLiveStatus, fetchOwnerProgress, markOwnerItemDismissed } from "../../services/professional-onboarding";
 import { fetchMyCv, type Licence } from "../../services/professional-cv";
 import { fetchProLaneColumns } from "../../services/professional-onboarding";
-import { setPublicListing } from "../../services/professional-profile";
+import { NEEDS_VERIFICATION, setPublicListing } from "../../services/professional-profile";
 import { ProStatusScreen, type ProStatus } from "../onboarding/pro/ProStatusScreen";
 import { ProLicencePublish } from "../onboarding/pro/ProLicencePublish";
 import { GO_LIVE_ON_VERIFICATION, PRO_LABEL, initials, isRegulated, proKindOf } from "../onboarding/pro/proModel";
@@ -64,7 +64,9 @@ export default function ProVerification() {
       if (r.status === "ok") listedNow = r.listed;
       else if (r.status === "error") notListed = r.message;
       else if (r.status === "affiliated") notListed = "Your listing is handled by your business while you're affiliated.";
-      await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
+      else if (r.status === "needs_verification") notListed = NEEDS_VERIFICATION;
+      // ATXC6: the database doesn't count the check yet, so keep the item and list on a later visit.
+      if (r.status !== "needs_verification") await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
     }
     // Verified but switched off (or never switched on): don't claim clients can find them.
     if (verified && !notListed && lane.ok && !listedNow) notListed = "You're not on Explore right now. Turn it on in Choose who can find you.";

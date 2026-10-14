@@ -19960,6 +19960,23 @@ export type Database = {
           value: number
         }[]
       }
+      admin_pending_business_verifications: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          business_id: string
+          business_name: string
+          business_type: Database["public"]["Enums"]["business_type"]
+          file_paths: string[]
+          items: Json
+          owner_email: string
+          owner_first_name: string
+          status: Database["public"]["Enums"]["verification_status"]
+          submitted_at: string
+          total_count: number
+          verification_id: string
+          waiting_days: number
+        }[]
+      }
       admin_pending_licence_reviews: {
         Args: never
         Returns: {
@@ -22145,6 +22162,10 @@ export type Database = {
           position: number
           price: number
         }[]
+      }
+      professional_verification_is_current: {
+        Args: { p_professional_id: string }
+        Returns: boolean
       }
       professionals_in_area: {
         Args: {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { AttachDocument } from "../ui/AttachDocument";
-import { LicenceStatusBadge, RejectionNote } from "../cv/CvBadges";
+import { LicenceStatusBadge, REPLACE_RESETS_REVIEW, RejectionNote } from "../cv/CvBadges";
 import { useApp } from "../../context/AppContext";
 import {
   fetchCertificationPath,
@@ -78,6 +78,7 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
               {status.kind === "pending" && (
                 <p className="text-xs text-charcoal-soft">Our team checks it and clients see a Verified badge once it's approved.</p>
               )}
+              {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{REPLACE_RESETS_REVIEW}</p>}
             </div>
           ) : null
         ) : isLegacyLocal ? (

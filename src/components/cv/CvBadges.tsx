@@ -33,6 +33,14 @@ export const LicenceStatusBadge: React.FC<{ status: LicenceStatus }> = ({ status
   return null;
 };
 
+/**
+ * Under a verified document. Approval is of a FILE (Database, 14 Oct): a new
+ * upload is reviewed again and the badge goes until then. A listing that is
+ * already on keeps going; a new one waits for the check (ATXC6).
+ */
+export const REPLACE_RESETS_REVIEW =
+  "Replacing this file starts a new check, and the Verified badge comes off until it's approved. If you're on Explore, you stay listed.";
+
 /** The reviewer's reason, under a licence that was not approved. */
 export const RejectionNote: React.FC<{ reason: string }> = ({ reason }) => (
   <p className="text-[12.5px] leading-[1.4] rounded-[10px] px-2.5 py-2 bg-[#FDF1EF] text-[#9B2C22] dark:bg-status-high-bg dark:text-status-high">

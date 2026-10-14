@@ -205,6 +205,12 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
       setDobAsk({ retry: () => void toggleListing(true) });
       return;
     }
+    if (result.status === "needs_verification") {
+      // ATXC6: the database counts no current verified document (an expiry,
+      // or a re-upload since approval). Show the waiting state it implies.
+      setCheck((c) => (c?.kind === "verified" ? { kind: "none" } : c));
+      return;
+    }
     setError(result.message);
   };
 

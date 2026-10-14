@@ -264,10 +264,24 @@ export async function fetchLicenceStatus(userId: string, licence: Licence): Prom
  * Physiotherapist / Dietitian: the registration (the licence carrying a
  * credential id). Fitness / Other: the certificate (licence #1, the
  * certification_url mirror) or, without one, the first licence with a
- * document; any verified licence of theirs counts. The database does not
- * gate set_public_listing() on verification, so this is the app's rule.
+ * document; any verified licence of theirs counts.
+ *
+ * The database decides in the end: set_public_listing() refuses a new
+ * listing with ATXC6 unless professional_verification_is_current() is true
+ * (a verified unexpired licence, or an approved certificate whose approved
+ * file is still the one on the profile). Its answer overrides the row
+ * reading below, which cannot see expiry or the certificate path. Approval
+ * is of a FILE: a re-upload reads as pending again here.
  */
 export async function fetchGoLiveStatus(userId: string, regulated: boolean): Promise<Ok<{ licence: Licence | null; status: LicenceStatus }> | Fail> {
+  const [local, server] = await Promise.all([goLiveFromRows(userId, regulated), db.rpc("professional_verification_is_current", { p_professional_id: userId })]);
+  if (!local.ok || server.error || typeof server.data !== "boolean") return local;
+  if (server.data && local.status.kind !== "verified") return { ok: true, licence: local.licence, status: { kind: "verified" } };
+  if (!server.data && local.status.kind === "verified") return { ok: true, licence: local.licence, status: { kind: "none" } };
+  return local;
+}
+
+async function goLiveFromRows(userId: string, regulated: boolean): Promise<Ok<{ licence: Licence | null; status: LicenceStatus }> | Fail> {
   const cv = await fetchMyCv(userId);
   if (!cv.ok) return cv;
   const licences = cv.cv.licences;

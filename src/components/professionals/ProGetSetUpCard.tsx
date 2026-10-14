@@ -81,7 +81,8 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
     if (licence?.kind === "verified" && pendingLive && !pendingLive.dismissed) {
       const r = await setPublicListing(true);
       if (r.status === "ok") listed = r.listed;
-      await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
+      // ATXC6: the database doesn't count the check yet; keep the item so a later visit lists them.
+      if (r.status !== "needs_verification") await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
     }
     setData({
       plans: plans.ok ? plans.plans.length : 0,

@@ -6,7 +6,7 @@ import { Toggle } from "../ui/Toggle";
 import { MonthYearField } from "../ui/MonthYearField";
 import { AttachDocument } from "../ui/AttachDocument";
 import { ChipInput } from "../ui/ChipInput";
-import { LicenceStatusBadge, RejectionNote } from "./CvBadges";
+import { LicenceStatusBadge, REPLACE_RESETS_REVIEW, RejectionNote } from "./CvBadges";
 import { LicencePublishRow } from "./LicencePublish";
 import { PUBLISH_STRINGS } from "./licencePublishState";
 import {
@@ -537,6 +537,7 @@ export const LicenceSheet: React.FC<{
             <LicenceStatusBadge status={status} />
           </div>
           {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
+          {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{REPLACE_RESETS_REVIEW}</p>}
         </div>
       )}
 
