@@ -2,33 +2,55 @@ import { supabase } from "../../../lib/supabase/client";
 import type { Database } from "../../../lib/supabase/database.types";
 import { resolveMyBusinessId } from "../business-profile";
 import { formatPrice, parsePrice } from "../../utils/price";
+import { fetchMyVenues, fetchVenueMembers } from "../venues/console";
 
 // A business's membership plans: the real membership_plans rows.
 //
 // WHAT THIS REPLACES. `businessListing.membershipPlans` was an array inside a
 // usePersistentState object, SEEDED WITH TWO FAKE PLANS — "Monthly Membership
 // $45" and "Day Pass $8" — that every business account has been showing since
-// onboarding without anyone having created them. BusinessGymTab let an owner
+// onboarding without anyone having created them. The old Gym tab let an owner
 // list, add, edit and delete them; none of it left the device, so the plans a
 // gym actually sells and the plans Explore could read had never been the same
 // thing.
 //
 // THE ONLY ONE OF THE FOUR CATALOG TABLES WITH A REAL EDIT PATH. Classes,
 // offerings and discounts are create-and-delete on every screen that touches
-// them today; BusinessGymTab has a genuine "Edit Plan" sheet, so this service
+// them today; the plan sheet (pages/business-ops/plans) edits, so this service
 // is the only one that needs updatePlan. The UPDATE grant covers exactly
 // name, price, billing and payment_type — id, business_id, created_at and
 // updated_at are not in it, and are never in a payload here.
 
 export type MembershipBilling = Database["public"]["Enums"]["billing_period"];
 
+/**
+ * v6 plan types (OP1-042 / BU2-11). Until B7 adds a plan type column the type
+ * is read from today's columns: billing "daily" is a Day pass, anything else a
+ * Membership. Class pack, Intro offer and Drop-in need B7.
+ */
+export type PlanKind = "membership" | "day_pass" | "class_pack" | "intro_offer" | "drop_in";
+
+/**
+ * v6 plan status (OP1-037 row 4). Every row is "active" until B7 adds the
+ * status column (pause, hide, archive).
+ */
+export type PlanStatus = "active" | "paused" | "hidden" | "archived";
+
 export interface MembershipPlanRow {
   id: string;
   name: string;
   /** Formatted for display ("$45"); the column is numeric. */
   price: string;
+  /** The stored number, for the editor. */
+  priceValue: number;
   billing: MembershipBilling;
+  /**
+   * The payment type as shown. V6-46: rows that say "Card" (or nothing) read
+   * as "Cash" (BR-04: Whish or cash only).
+   */
   paymentType: string;
+  kind: PlanKind;
+  status: PlanStatus;
 }
 
 export interface PlanDraft {
@@ -67,19 +89,31 @@ type WriteRow = {
   payment_type: string | null;
 };
 
+/** V6-46: "Card" and empty payment types read (and save) as Cash. */
+export function normalisePaymentType(value: string | null | undefined): string {
+  const v = (value ?? "").trim();
+  if (!v || /^card$/i.test(v)) return "Cash";
+  return v;
+}
+
+export const planKindOf = (billing: MembershipBilling): PlanKind => (billing === "daily" ? "day_pass" : "membership");
+
 const toPlan = (r: Row): MembershipPlanRow => ({
   id: r.id,
   name: r.name,
   price: formatPrice(r.price),
+  priceValue: Number(r.price) || 0,
   billing: r.billing,
-  paymentType: r.payment_type ?? "Card",
+  paymentType: normalisePaymentType(r.payment_type),
+  kind: planKindOf(r.billing),
+  status: "active",
 });
 
 /**
  * The content columns, or a message saying why the draft cannot be written.
  *
  * PRICE IS NOT NULLABLE HERE, unlike the other three tables: the column is
- * NOT NULL with a `>= 0` check, and BusinessGymTab already refuses to save a
+ * NOT NULL with a `>= 0` check, and the plan sheet already refuses to save a
  * plan without one. An unparseable price is refused with something an owner
  * can act on instead of being coerced to zero — a plan silently priced at
  * nothing is worse than a plan that would not save.
@@ -95,7 +129,7 @@ function toRow(draft: PlanDraft): { ok: true; row: WriteRow } | { ok: false; mes
 
   return {
     ok: true,
-    row: { name, price: price.value, billing: draft.billing, payment_type: draft.paymentType },
+    row: { name, price: price.value, billing: draft.billing, payment_type: normalisePaymentType(draft.paymentType) },
   };
 }
 
@@ -163,11 +197,56 @@ export async function updatePlan(planId: string, draft: PlanDraft): Promise<Writ
   return { ok: true, plan: toPlan(data as Row) };
 }
 
-export async function deletePlan(planId: string): Promise<{ ok: boolean; message?: string }> {
+/**
+ * Deletes a plan. gym_memberships.plan_id is ON DELETE RESTRICT, so a plan
+ * somebody has bought cannot be deleted: that refusal (23503) comes back as
+ * `inUse` so the screen can say why. Archive (B7) replaces delete once the
+ * status column exists.
+ */
+export async function deletePlan(planId: string): Promise<{ ok: boolean; message?: string; inUse?: boolean }> {
   const { error } = await supabase.from("membership_plans").delete().eq("id", planId);
   if (error) {
     console.error("[membership-plans] Could not delete the plan:", error.message);
+    if (error.code === "23503") {
+      return { ok: false, inUse: true, message: "People have bought this plan, so it can't be deleted." };
+    }
     return { ok: false, message: "Couldn't delete the plan. Try again." };
   }
   return { ok: true };
+}
+
+/** One active member of a plan, as the venue readers return them (first name only). */
+export interface PlanMember {
+  membershipId: string;
+  firstName: string;
+  isMinor: boolean;
+  startedOn: string;
+  expiresOn: string | null;
+}
+
+/**
+ * Active members per plan name across the business's venues (my_venues and
+ * venue_members, the venue console readers; insiders only). venue_members
+ * names the plan, not its id, so plans are matched by name; a name two plans
+ * share is ambiguous and left out by the caller. Null when no venue could be
+ * read (the figures then show "–"). Per-plan figures by id, bookings and
+ * deltas are BU2-12 (B7).
+ */
+export async function fetchMembersByPlanName(businessId: string): Promise<Map<string, PlanMember[]> | null> {
+  const venues = await fetchMyVenues();
+  if (!venues.ok) return null;
+  const ids = venues.value.filter((v) => v.businessId === businessId).map((v) => v.gymId);
+  const pages = await Promise.all(ids.map((id) => fetchVenueMembers(id, "active", 200, 0)));
+  const byName = new Map<string, PlanMember[]>();
+  let read = ids.length === 0;
+  for (const page of pages) {
+    if (!page.ok) continue;
+    read = true;
+    for (const m of page.value.members) {
+      const list = byName.get(m.planName) ?? [];
+      list.push({ membershipId: m.membershipId, firstName: m.firstName, isMinor: m.isMinor, startedOn: m.startedOn, expiresOn: m.expiresOn });
+      byName.set(m.planName, list);
+    }
+  }
+  return read ? byName : null;
 }
