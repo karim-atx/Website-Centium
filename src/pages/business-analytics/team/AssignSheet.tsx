@@ -4,13 +4,14 @@ import { useOnline } from "../../../hooks/useOnline";
 import { range12, time12 } from "../../../utils/time12";
 import { availabilityFor, overlaps } from "./model";
 import { Avatar, Buttons, ErrLine, LeadRow, RowsCard, Sheet, Strip } from "./parts";
-import { assignInstructor, loadClasses, type ClassRow, type TeamPerson } from "./teamData";
+import { assignInstructor, loadClasses, loadOffOn, type ClassRow, type TeamPerson } from "./teamData";
 import { dayDate, weekday } from "./fmt";
 import type { Vocab } from "./vocab";
 
 // AN5-024 (option list), AN5-026 (selected), AN5-027 (confirm), AN5-029
 // (cancel: closes, nothing saved), AN5-030 (nobody free), AN5-035 (Fix 3a
-// reassign: saves straight away), OURS availability A2, A6, A9, A10, A11.
+// reassign: saves straight away), OURS availability A1 (off that day, from
+// B6 instructor_unavailable_dates), A2, A6, A9, A10, A11.
 //
 // Saving writes business_classes.professional_id (owner UPDATE grant) after a
 // fresh read of that day's sessions, so a person booked meanwhile is refused
@@ -51,6 +52,7 @@ export function AssignSheet({
   const [busy, setBusy] = useState(false);
   const [justBooked, setJustBooked] = useState<string | null>(null);
   const [extraBusy, setExtraBusy] = useState<ClassRow[]>([]);
+  const [offRead, setOffRead] = useState<{ date: string; ids: ReadonlySet<string> } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -61,15 +63,28 @@ export function AssignSheet({
     setExtraBusy([]);
   }, [open, session?.id]);
 
+  // A1: who is off that day. The list shows at once; off rows join when read.
+  const sessionDate = session?.date ?? null;
+  useEffect(() => {
+    if (!open || !businessId || !sessionDate) return;
+    let cancelled = false;
+    void loadOffOn(businessId, sessionDate).then((ids) => !cancelled && setOffRead({ date: sessionDate, ids }));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, businessId, sessionDate]);
+
+  const offToday = useMemo<ReadonlySet<string>>(() => (offRead && offRead.date === sessionDate ? offRead.ids : new Set()), [offRead, sessionDate]);
   const rows = useMemo(
-    () => (session ? availabilityFor(session, people, [...classes, ...extraBusy], mode === "reassign" ? session.professionalId : null) : []),
-    [session, people, classes, extraBusy, mode]
+    () => (session ? availabilityFor(session, people, [...classes, ...extraBusy], mode === "reassign" ? session.professionalId : null, offToday) : []),
+    [session, people, classes, extraBusy, mode, offToday]
   );
   const pending = people.filter((p) => !p.acceptedAt);
   if (!session) return null;
 
   const at = time12(session.start);
-  const free = rows.filter((r) => !r.busyWith);
+  const free = rows.filter((r) => !r.busyWith && !r.off);
+  const anyOff = rows.some((r) => r.off);
   const chosen = people.find((p) => p.id === pick) ?? null;
   const accepted = people.filter((p) => p.acceptedAt && (mode === "assign" || p.id !== session.professionalId));
   const when = `${dayDate(session.date)}, ${range12(session.start, session.end)}`;
@@ -152,13 +167,19 @@ export function AssignSheet({
     return (
       <Sheet open={open} onClose={onClose} title={reassign ? `Nobody else is free at ${at}` : `No ${vocab.plural} are free at ${at}`}>
         <LeadRow icon={UserX} tone="high">
-          {reassign ? "Everyone else on your team is teaching at that time." : "Everyone on your team is teaching at that time."}
+          {reassign
+            ? anyOff
+              ? "Everyone else on your team is teaching or off at that time."
+              : "Everyone else on your team is teaching at that time."
+            : anyOff
+              ? "Everyone on your team is teaching or off at that time."
+              : "Everyone on your team is teaching at that time."}
         </LeadRow>
         {!reassign && (
           <RowsCard
             rows={[
               { l: "Class", v: `${session.title}, ${weekday(session.date)} ${at}` },
-              { l: "Your team", v: accepted.length === 1 ? `1 ${vocab.singular}, busy` : `${accepted.length} ${vocab.plural}, all busy` },
+              { l: "Your team", v: accepted.length === 1 ? `1 ${vocab.singular}, ${anyOff ? "not free" : "busy"}` : `${accepted.length} ${vocab.plural}, ${anyOff ? "none free" : "all busy"}` },
             ]}
           />
         )}
@@ -180,9 +201,9 @@ export function AssignSheet({
       </p>
       <div className="an5-optlist" role="listbox" aria-label={`Available ${vocab.plural}`}>
         <p className="an5-optlist-l">Available at {at}</p>
-        {rows.map(({ person, busyWith }) => {
+        {rows.map(({ person, busyWith, off }) => {
           const selected = pick === person.id;
-          const disabled = !!busyWith || !online;
+          const disabled = !!busyWith || off || !online;
           return (
             <button
               key={person.id}
@@ -199,7 +220,11 @@ export function AssignSheet({
               <span className="min-w-0">
                 <span className="an5-opt-n block">{person.name}</span>
                 <span className={`an5-opt-s block${busyWith ? " is-busy" : ""}`}>
-                  {busyWith ? `Already teaching ${busyWith.title} at ${time12(busyWith.start)}` : `Free ${weekday(session.date)} ${range12(session.start, session.end)}`}
+                  {busyWith
+                    ? `Already teaching ${busyWith.title} at ${time12(busyWith.start)}`
+                    : off
+                      ? `Off on ${dayDate(session.date)}`
+                      : `Free ${weekday(session.date)} ${range12(session.start, session.end)}`}
                 </span>
               </span>
               <span className="an5-opt-check">{selected && <Check size={16} strokeWidth={2.6} aria-hidden />}</span>

@@ -1,7 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import type { StoreOrder } from "../../../services/store/orders";
-import type { Product } from "../../../services/store/products";
+import type { Product, StoreOrder } from "../../../services/store/types";
 import { presetRange } from "../analyticsRange.ts";
 import {
   detailLead,

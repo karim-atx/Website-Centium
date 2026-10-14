@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchVenueDashboard } from "../../services/venues/console";
+import { canSeeVenueMoney, fetchMyVenues, fetchVenueDashboard } from "../../services/venues/console";
 import { money, type VenueDashboard } from "../../services/venues/consoleLogic";
 import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 
@@ -14,11 +14,31 @@ import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 // that, with the not-revenue note as that card's line. The week and month are
 // the venue's own (computed in gyms.timezone). "–" only while loading; a real
 // 0 shows "0".
+//
+// WHO SEES THE MONEY CARD (OURS-OP1-venue-figures rows 12-13): B6 roles.
+// business_can(business, 'revenue'): the owner always, an accepted employee
+// only with the revenue permission ("See Revenue"). Until the answer is in,
+// the card is left out rather than shown to the wrong person.
 
 export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: string; timezone: string; refreshKey?: number }) {
   const [data, setData] = useState<{ gymId: string; value: VenueDashboard | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [moneyGate, setMoney] = useState<{ gymId: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const v = await fetchMyVenues();
+      const businessId = v.ok ? v.value.find((x) => x.gymId === gymId)?.businessId : undefined;
+      const ok = businessId ? await canSeeVenueMoney(businessId) : false;
+      if (!cancelled) setMoney({ gymId, ok });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gymId, refreshKey]);
+  const showMoney = moneyGate?.gymId === gymId && moneyGate.ok;
 
   useEffect(() => {
     let cancelled = false;
@@ -62,13 +82,13 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
                 : null
             }
           />
-          <VNumberCard
+          {showMoney && <VNumberCard
             boxes={[
               { label: "Agreed, not yet paid", value: d ? money(d.amountAwaitingPayment) : null },
               { label: "Marked paid this month", value: d ? money(d.amountMarkedPaidThisMonth) : null },
             ]}
             line="Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid."
-          />
+          />}
           <VNumberCard
             boxes={[
               { label: "Classes this week", value: n(d?.classesThisWeek) },

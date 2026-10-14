@@ -1,7 +1,7 @@
 import { useState } from "react";
 import clsx from "clsx";
-import { ChevronDown, ChevronUp, Globe, Mail, Pencil, Phone, RefreshCcw } from "lucide-react";
-import { BizButton, BizDropdown, BizField, BizFieldButton, BizSheet, BizConfirm, FieldLabel, BORDER } from "../../../components/business-more/kit";
+import { ChevronDown, ChevronUp, Globe, Loader2, Mail, MapPin, Pencil, Phone, RefreshCcw } from "lucide-react";
+import { BizButton, BizButtonSoft, BizDropdown, BizField, BizFieldButton, BizSheet, BizConfirm, FieldLabel, BORDER } from "../../../components/business-more/kit";
 import { InstagramGlyph } from "../../../components/business-more/InstagramGlyph";
 import { BUSINESS_TYPE_OPTIONS, CATEGORY_KEYS, CATEGORY_LABEL, MAX_CATEGORIES, typeLabel, type BizKind } from "../../../components/business-more/kind";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -335,6 +335,95 @@ export function ContactSheet({
       />
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton label="Save" onClick={() => void save()} disabled={!dirty} busy={busy} />
+    </BizSheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Area (OURS, NOTHING_LOST LOST 4): business_profiles.location, the free-text
+// area shown next to the name on the storefront, the Explore seller line and
+// this page's type line. Venues (Locations and hours) carry their own address;
+// this stays the business-wide line, so a store or wellness business with no
+// venue still has one. Main edited it on the old listing form.
+
+const AREA_MAX = 60;
+
+export function AreaSheet({ open, onClose, area, onSave }: { open: boolean; onClose: () => void; area: string; onSave: Save }) {
+  const [draft, setDraft] = useState(area);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = draft.trim() !== area.trim();
+  return (
+    <BizSheet open={open} onClose={onClose} title="Area" lead="The neighbourhood or city clients see next to your business name.">
+      <BizField id="biz-area" label="Area" value={draft} onChange={setDraft} icon={MapPin} placeholder="Hamra, Beirut" maxLength={AREA_MAX} autoComplete="address-level2" />
+      {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
+      <BizButton
+        label="Save"
+        disabled={!dirty}
+        busy={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          const failed = await onSave({ location: draft });
+          setBusy(false);
+          if (failed) setError(failed);
+        }}
+      />
+    </BizSheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Your photo (OURS, NOTHING_LOST LOST 5): the owner's own picture
+// (profiles.avatar_url), which team chats and direct messages show. The page
+// owns the upload (services/avatar, the same path as the personal Profile);
+// this sheet is the preview and the three choices.
+
+export function YourPhotoSheet({
+  open,
+  onClose,
+  avatarUrl,
+  initials,
+  busy,
+  error,
+  onCamera,
+  onLibrary,
+  onRemove,
+}: {
+  open: boolean;
+  onClose: () => void;
+  avatarUrl: string | null;
+  initials: string;
+  busy: boolean;
+  error: string | null;
+  onCamera: () => void;
+  onLibrary: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <BizSheet open={open} onClose={onClose} title="Your photo" lead="Your own picture, separate from the business logo. Your team and the people you message see it.">
+      <div className="flex justify-center" style={{ marginBottom: 14 }}>
+        <span
+          className="relative flex items-center justify-center overflow-hidden rounded-full bg-th-8e7fd0 text-white text-[28px] font-extrabold"
+          style={{ width: 88, height: 88 }}
+          aria-busy={busy || undefined}
+        >
+          {avatarUrl ? <img src={avatarUrl} alt="Your photo" className="w-full h-full object-cover" /> : <span aria-hidden>{initials}</span>}
+          {busy && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <Loader2 size={24} className="animate-spin text-white" aria-label="Saving" />
+            </span>
+          )}
+        </span>
+      </div>
+      {error && (
+        <p role="alert" className="text-[12px] font-bold text-status-high" style={{ marginBottom: 6 }}>
+          {error}
+        </p>
+      )}
+      <BizButton label="Choose from library" onClick={onLibrary} busy={busy} />
+      <BizButtonSoft label="Take a photo" onClick={onCamera} disabled={busy} />
+      {avatarUrl && <BizButtonSoft label="Remove photo" tone="high" onClick={onRemove} disabled={busy} />}
     </BizSheet>
   );
 }

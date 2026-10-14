@@ -22,6 +22,8 @@ export interface BizFooter {
   link?: { label: string; onClick: () => void };
   /** Faded (the approval animation before it settles). */
   opacity?: number;
+  /** Above the button (after the error slot): e.g. the health disclaimer on Review. */
+  note?: React.ReactNode;
 }
 
 export const BizFooterBar: React.FC<{ footer: BizFooter }> = ({ footer }) => (
@@ -35,7 +37,9 @@ export const BizFooterBar: React.FC<{ footer: BizFooter }> = ({ footer }) => (
       style: footer.opacity !== undefined ? { opacity: footer.opacity, transition: "opacity 350ms" } : undefined,
     }}
     link={footer.link ? { node: footer.link.label, onClick: footer.link.onClick, variant: "lane" } : undefined}
-  />
+  >
+    {footer.note}
+  </ObFooter>
 );
 
 export interface BizFrameProps {

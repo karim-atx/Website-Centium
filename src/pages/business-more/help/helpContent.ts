@@ -8,8 +8,8 @@ import type { BizKind } from "../../../components/business-more/kind";
 // the app: it works offline and is searched on the device.
 //
 // HIDDEN UNTIL THEIR FEATURE SHIPS (an article must only describe screens
-// that exist): Failed payments and Invoices and receipts (Whish, BU6-19),
-// Roles and permissions (V6-84), Approve professionals (join requests, B6).
+// that exist): Failed payments and Invoices and receipts (Whish and receipts,
+// B8). Roles and permissions and Approve professionals are live (B6).
 
 export interface HelpArticle {
   id: string;
@@ -51,7 +51,7 @@ export function helpTopics(kind: BizKind): HelpTopic[] {
           a("invite-team", "Invite your team", [
             "Open More, then Business ID, and tap Share.",
             "The professional enters your ID in their app.",
-            "Each person on your team uses a seat.",
+            "Open More, then Join requests, and tap Approve. Instructors and personal trainers each use a seat.",
           ]),
         a("get-listed", "Get listed on the marketplace", [
           store ? "Open Products, then Listing." : "Open Marketplace, then Listing.",
@@ -166,6 +166,16 @@ export function helpTopics(kind: BizKind): HelpTopic[] {
           "Your business ID is a short code professionals use to ask to join.",
           "Find it in More, then Business Profile, under Listing.",
           "Tap Copy or Share.",
+        ]),
+        a("roles", "Roles and permissions", [
+          "Open More, then Roles and permissions, and tap a person.",
+          "Pick their role: Instructor, Personal trainer, Front desk, Manager or Staff.",
+          "Under What they can do, turn each permission on or off. Revenue is never on by default: only you can give it.",
+        ]),
+        a("approve", "Approve professionals", [
+          "Open More, then Join requests.",
+          "Check their details, then tap Approve or Deny.",
+          "They join your team once they accept. Instructors and personal trainers use a free seat.",
         ]),
       ],
     },

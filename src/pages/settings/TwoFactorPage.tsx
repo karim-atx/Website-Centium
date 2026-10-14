@@ -15,6 +15,7 @@ import { useApp } from "../../context/AppContext";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, unenrollFactor, verifyTotp } from "../../services/mfa";
 import { BusinessGenerateConfirm, BusinessRecoveryCodesView, BusinessTwoFactorView } from "../business-more/BusinessTwoFactorViews";
+import { formatShortDate } from "../../utils/date";
 
 // MO1.8.4 / MO1.8.4.3 Two-factor authentication, as a page (R18; it was a
 // sheet). A toggle row, then two widgets 16 apart: Authenticator app (greyed
@@ -39,7 +40,7 @@ import { BusinessGenerateConfirm, BusinessRecoveryCodesView, BusinessTwoFactorVi
 // TURNING IT ON OPENS THE SET-UP PAGE; backing out of it leaves this off.
 
 const addedLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
 const fade = "transition duration-300 motion-reduce:transition-none";
 

@@ -66,8 +66,8 @@ const ok = <T>(r: { data: T | null; error: Err }, what: string, partial: string[
 export async function loadDashboard(userId: string, gymId: string | null): Promise<DashLoad> {
   const partial: string[] = [];
   const bizRes = await db
-    .from<{ id: string; business_name: string; business_type: string; active: boolean; perk: string | null }>("business_profiles")
-    .select("id, business_name, business_type, active, perk")
+    .from<{ id: string; business_name: string; business_type: string; active: boolean }>("business_profiles")
+    .select("id, business_name, business_type, active")
     .eq("profile_id", userId)
     .maybeSingle();
   if (bizRes.error) {
@@ -75,7 +75,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
     return { ok: false, message: "Couldn't load your dashboard." };
   }
   const b = bizRes.data;
-  const business: DashBusiness | null = b ? { id: b.id, name: b.business_name, type: b.business_type, active: !!b.active, perk: b.perk } : null;
+  const business: DashBusiness | null = b ? { id: b.id, name: b.business_name, type: b.business_type, active: !!b.active } : null;
   const empty: DashRaw = {
     business,
     classes: [],
@@ -206,26 +206,6 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       partial,
     },
   };
-}
-
-/** business_profiles.active: the Explore listing switch (owner's UPDATE grant). */
-export async function saveListingActive(businessId: string, active: boolean): Promise<{ ok: boolean; message?: string }> {
-  const { error } = await db.from("business_profiles").update({ active }).eq("id", businessId);
-  if (error) {
-    console.error("[dashboard] Could not change the listing:", error.message);
-    return { ok: false, message: "Couldn't change your listing. Try again." };
-  }
-  return { ok: true };
-}
-
-/** business_profiles.perk: the perk on the Explore listing (V6-88: moves to MA1 Offers). */
-export async function saveListingPerk(businessId: string, perk: string): Promise<{ ok: boolean; message?: string }> {
-  const { error } = await db.from("business_profiles").update({ perk: perk.trim() || null }).eq("id", businessId);
-  if (error) {
-    console.error("[dashboard] Could not save the perk:", error.message);
-    return { ok: false, message: "Couldn't save the perk. Try again." };
-  }
-  return { ok: true };
 }
 
 /** Hides the setup card for this business (onboarding_progress.dismissed_at, B5). */

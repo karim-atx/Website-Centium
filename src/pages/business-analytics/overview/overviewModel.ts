@@ -1,11 +1,13 @@
 // AN1 Overview · the pure model: headline numbers, today's day-clock items,
 // the insight cards and the Client outcomes aggregates, all from rows the
 // owner can already read (no mock figures, HANDOVER §1). Readers that do not
-// exist yet (B8 payments, B10 check-ins, B7 consent, B15 aggregate readers)
+// exist yet (B10 check-ins, B7 consent, B15 aggregate readers; Revenue reads
+// the recorded payments through services/business-revenue, as its page does)
 // leave their figure as null: the screen shows the drawn "–" / empty state.
 
 import type { ClockItem } from "./clockModel";
 import { f12, hoursOf } from "./clockModel";
+import { collected, firstPaidDay, isOwed, money, pctDelta, undatedPaid, type PaymentRecord } from "../../../services/business-revenue/model";
 
 export type OverviewKind = "classes" | "gym" | "store";
 
@@ -24,6 +26,8 @@ export interface OvBooking {
   createdAt: string;
   /** venue_payment_status: pending / paid / refunded (null: no payment taken). */
   paymentStatus: string | null;
+  /** price_agreed (null: no price agreed, so nothing is owed). */
+  priceAgreed: number | null;
 }
 export interface OvMember {
   accepted: boolean | null;
@@ -45,7 +49,7 @@ export interface OvReviews {
   inRange: number | null;
 }
 export interface OvRaw {
-  business: { id: string; type: string; active: boolean; perk: string | null; createdAt: string } | null;
+  business: { id: string; type: string; active: boolean; createdAt: string } | null;
   classes: OvClass[];
   /** Any class ever (a new business has none: AN1-061). */
   anyClass: boolean;
@@ -235,7 +239,33 @@ export interface Insight {
   up: boolean;
 }
 
-export function insights(raw: OvRaw): Insight[] {
+/**
+ * The Revenue card reads what the Revenue page reads (fetchRevenue: recorded
+ * payments only, V6-43) and sums them with the same functions, so the card
+ * and the page it opens agree. Null records: not loaded, the drawn "–".
+ */
+export interface RevenueIn {
+  records: PaymentRecord[] | null;
+  range: Range;
+  today: string;
+}
+
+export function revenueInsight(rev: RevenueIn | null): Insight {
+  const none: Insight = { key: "revenue", value: "–", delta: "", sub: "No transactions yet.", up: false };
+  if (!rev || !rev.records) return none;
+  const { records, range, today } = rev;
+  // As Revenue › Overview: nothing recorded until a paid record exists.
+  if (!records.some((r) => r.status === "paid" && r.amount !== null)) return none;
+  const tot = collected(records, range);
+  const first = firstPaidDay(records);
+  const early = !!first && daysBetween(first, today) < 28;
+  const d = range.compare && !early ? pctDelta(tot, collected(records, previousRange(range))) : null;
+  const und = undatedPaid(records);
+  const sub = und.n > 0 ? `Collected this period. ${money(und.amount)} not counted yet.` : "Collected this period";
+  return { key: "revenue", value: money(tot), delta: d ?? "", sub, up: !!d && d.startsWith("+") };
+}
+
+export function insights(raw: OvRaw, rev: RevenueIn | null = null): Insight[] {
   const r = raw.reviews;
   const rep: Insight =
     r && r.total > 0
@@ -247,9 +277,7 @@ export function insights(raw: OvRaw): Insight[] {
           up: false,
         }
       : { key: "reputation", value: "–", delta: "", sub: "No reviews yet. Reviews arrive after members book.", up: false };
-  // Revenue needs the payments ledger (B8, RV-01): the drawn empty state until it exists.
-  const rev: Insight = { key: "revenue", value: "–", delta: "", sub: "No transactions yet.", up: false };
-  return [rep, rev];
+  return [rep, revenueInsight(rev)];
 }
 
 // ---- Client outcomes (OURS-AN1-client-outcomes) -----------------------------------------
@@ -289,7 +317,12 @@ export function outcomes(raw: OvRaw, range: Range, today: string): OutcomesModel
     if (!prevD || d > prevD) last.set(b.clientId, d);
   }
   const lapsed = [...last.entries()].filter(([, d]) => d < cutoff).map(([id]) => id);
-  const owed = new Set(raw.bookings.filter((b) => b.paymentStatus === "pending").map((b) => b.clientId));
+  // Revenue's own rule (isOwed): pending and an agreed price above zero.
+  const owed = new Set(
+    raw.bookings
+      .filter((b) => isOwed({ kind: "class", status: b.paymentStatus as PaymentRecord["status"], amount: b.priceAgreed, membershipStatus: null }))
+      .map((b) => b.clientId),
+  );
   const ids = [...new Set([...(enough ? lapsed : []), ...owed])];
   const review = ids
     .map((id) => {

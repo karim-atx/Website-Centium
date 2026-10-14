@@ -466,15 +466,16 @@ export async function removeVerificationFile(path: string | null, verificationId
 
 
 /**
- * Submit for review: record the Terms / Privacy acceptance (a new row per
+ * Submit for review: record the Terms / Privacy / health disclaimer acceptance (a new row per
  * version; SELECT and INSERT only), publish the documents, and open the one
  * pending verification with the uploaded files. Re-submitting while one is
  * pending keeps the existing one (unique pending index).
  */
 export async function submitForReview(uid: string, businessId: string, d: BusinessLaneDraft): Promise<Res<null>> {
-  // The Business Terms and Privacy Policy accepted on Review (B5
-  // legal_acceptances, the shell's service and LEGAL_VERSION).
-  const legal = await recordLegalAcceptances(uid, ["terms", "privacy"]);
+  // The Business Terms and Privacy Policy accepted on Review, and the health
+  // disclaimer shown above Submit for review (B5 legal_acceptances, the
+  // shell's service and LEGAL_VERSION; the same three the professional lane records).
+  const legal = await recordLegalAcceptances(uid, ["terms", "privacy", "health_disclaimer"]);
   if (!legal.ok) return legal.offline ? { ok: false, offline: true, message: OFFLINE_MESSAGE } : { ok: false, message: "Couldn't submit. Check your connection and try again." };
   const drafts = await savePolicyDrafts(businessId, d);
   if (!drafts.ok) return drafts;

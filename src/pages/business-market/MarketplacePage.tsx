@@ -4,7 +4,7 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
 import { MarketProvider, useMarket } from "./MarketContext";
-import { lh, px } from "./kit";
+import { lh, MBlock, px } from "./kit";
 import { ListingTab } from "./ListingTab";
 import { SpotsTab } from "./SpotsTab";
 import { DayPassesTab } from "./DayPassesTab";
@@ -43,6 +43,34 @@ function MarketplaceBody() {
   const tab: MarketTab = raw && KEYS.includes(raw) ? raw : "listing";
 
   if (kindKnown && kind === "store") return <Navigate to={`/app/business/products${raw === "perf" ? "?tab=performance" : raw === "promo" ? "?tab=promotions" : "?tab=listing"}`} replace />;
+
+  // The subtitle, the second tab and every tab's wording are per type. Until
+  // the lane is known (kind is only bizKindOf's "store" fallback) the header
+  // holds them as skeletons; if the read settles with no row and no type,
+  // the page is the Listing tab's own state (the profile gate, or the error
+  // card) under the bare title, since nothing else exists without a row.
+  if (!kindKnown) {
+    const title = <h1 style={{ fontSize: px(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: lh(34), color: c.ink }}>Marketplace</h1>;
+    if (m.loading) {
+      return (
+        <div data-market style={{ color: c.ink, marginTop: -4 }} aria-busy="true" aria-label="Loading your marketplace">
+          {title}
+          <MBlock c={c} h={14} r={7} style={{ width: "62%", marginTop: 8.5 }} />
+          <MBlock c={c} h={40} r={12} style={{ margin: "18px 0 18px" }} />
+          <MBlock c={c} h={105.5} style={{ marginBottom: 12 }} />
+          <MBlock c={c} h={352} />
+        </div>
+      );
+    }
+    return (
+      <div data-market style={{ color: c.ink, marginTop: -4 }}>
+        {title}
+        <div style={{ marginTop: 18 }}>
+          <ListingTab />
+        </div>
+      </div>
+    );
+  }
 
   const items = [
     { key: "listing", label: "Listing" },

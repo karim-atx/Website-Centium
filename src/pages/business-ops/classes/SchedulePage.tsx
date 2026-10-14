@@ -450,6 +450,8 @@ function NeedsAttention({
   const count = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
   const [tip, setTip] = useState<number | null>(null);
   const press = useRef<number | null>(null);
+  // OP1-144 S1: a release after a long-press shows the tooltip only; it never opens the chat.
+  const longPressed = useRef(false);
   useEffect(() => {
     if (tip === null) return;
     const hide = () => setTip(null);
@@ -533,9 +535,19 @@ function NeedsAttention({
                       title={msgAria}
                       disabled={!instructorMsg}
                       aria-disabled={!instructorMsg || undefined}
-                      onClick={() => instructorMsg && s.professionalId && onMessageInstructor(s.professionalId)}
+                      onClick={() => {
+                        if (longPressed.current) {
+                          longPressed.current = false;
+                          return;
+                        }
+                        if (instructorMsg && s.professionalId) onMessageInstructor(s.professionalId);
+                      }}
                       onPointerDown={() => {
-                        press.current = window.setTimeout(() => setTip(idx), 500);
+                        longPressed.current = false;
+                        press.current = window.setTimeout(() => {
+                          longPressed.current = true;
+                          setTip(idx);
+                        }, 500);
                       }}
                       onPointerUp={() => {
                         if (press.current) window.clearTimeout(press.current);

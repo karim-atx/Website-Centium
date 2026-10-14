@@ -1,4 +1,4 @@
-import type { BusinessRole } from "./team";
+import type { BusinessRole } from "./types";
 
 // Pure (no client import), so pages and tests can use it without Supabase.
 /**

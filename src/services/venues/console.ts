@@ -108,6 +108,22 @@ export async function fetchVenueMembers(
   return { ok: true, value: { members: rows.map(toVenueMember), total: totalOf(rows) } };
 }
 
+/**
+ * Whether the caller may see this venue's money figures: business_can(
+ * business, 'revenue') (B6). The owner always may; an accepted employee only
+ * with the revenue permission (OpsTabsV4 "See Revenue"). A failed read
+ * answers false (the figures stay hidden rather than shown to the wrong
+ * person); the owner's console checks again on the next open.
+ */
+export async function canSeeVenueMoney(businessId: string): Promise<boolean> {
+  const { data, error } = await rpc<boolean>("business_can", { p_business_id: businessId, p_permission: "revenue" });
+  if (error) {
+    console.error("[venue console] Could not check the revenue permission:", error.message);
+    return false;
+  }
+  return data === true;
+}
+
 export async function fetchClassRoster(classId: string): Promise<Result<RosterEntry[]>> {
   const { data, error } = await rpc<RosterRow[]>("venue_class_roster", { p_class_id: classId });
   if (error) {

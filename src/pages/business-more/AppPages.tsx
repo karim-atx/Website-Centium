@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BellRing, EyeOff, Eye, FileCheck, FileText, KeyRound, Laptop, LifeBuoy, LogOut, RotateCcw, Smartphone, Trash2 } from "lucide-react";
-import { BizButton, BizConfirm, BizNote, BizPage, BizRow, BizSection, LoadError } from "../../components/business-more/kit";
+import { BizButton, BizConfirm, BizLabel, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
@@ -9,42 +9,104 @@ import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet"
 import { getMfaStatus } from "../../services/mfa";
 import { getRecoveryStatus } from "../../services/recoveryCodes";
 import { setBusinessPaused, signOutOtherSessions } from "../../services/business-more";
+import { formatShortDate } from "../../utils/date";
+import { useApp } from "../../context/AppContext";
+import { useOnline } from "../../hooks/useOnline";
+import { fetchBusinessFamilies, setBusinessFamily, type BusinessFamily, type BusinessFamilyPrefs } from "../../services/business-more/notifications";
 
 // OURS-MO1B-notifications, -export, -security, -deactivate, -business-terms
 // (BizMoreV8 screen="notifications" / "export" / "security" / "account").
 
 // ---------------------------------------------------------------------------
-// Notifications (business families: BACKEND BU6-20). How you're told, and
-// quiet hours, stay the live Notifications page (KEEP-RESTYLE).
+// Notifications: the six business families (Database B4, app_preferences
+// notification_business_*). The server reads them by family, not by kind, so
+// each section is one switch for its family (the source's per-event switches
+// would each have to share one column). Flagged reviews stay always on for
+// safety. How you're told, and quiet hours, stay the live Notifications page
+// (KEEP-RESTYLE).
 
 export function BusinessNotificationsPage() {
   const navigate = useNavigate();
-  const { kind } = useBusiness();
-  const off = { checked: false, onChange: () => undefined, disabled: true };
+  const { authUserId } = useApp();
+  const { kind, laneSettled } = useBusiness();
+  const online = useOnline();
+  const [toast, showToast] = useBizToast();
+  const [prefs, setPrefs] = useState<BusinessFamilyPrefs | null>(null);
+  const [error, setError] = useState(false);
+  const [saving, setSaving] = useState<BusinessFamily | null>(null);
+  const [tick, setTick] = useState(0);
   const store = kind === "store";
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBusinessFamilies().then((r) => {
+      if (cancelled) return;
+      if (r.ok) setPrefs(r.value);
+      else setError(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tick]);
+
+  const flip = (family: BusinessFamily) => async (next: boolean) => {
+    if (!authUserId || !prefs || saving) return;
+    const before = prefs;
+    setPrefs({ ...prefs, [family]: next });
+    setSaving(family);
+    const r = await setBusinessFamily(authUserId, family, next);
+    setSaving(null);
+    if (r.ok) setPrefs(r.value);
+    else {
+      setPrefs(before);
+      showToast(r.message);
+    }
+  };
+  const sw = (family: BusinessFamily, label: string) =>
+    prefs ? { checked: prefs[family], onChange: flip(family), disabled: !online || saving !== null, label } : undefined;
+
   return (
     <BizPage title="Notifications" sub="Choose what you're told about, and how.">
-      <BizSection label={store ? "Orders" : "Bookings"}>
-        <BizRow title={store ? "New orders" : "New bookings"} toggle={off} dim />
-        <BizRow title={store ? "Returns" : "Cancellations"} toggle={off} dim />
-        {!store && <BizRow title="Classes under 40% booked" desc="48 hours before they start" toggle={off} dim />}
-      </BizSection>
-      {!store && (
-        <BizSection label="Team">
-          <BizRow title="Join requests" toggle={off} dim />
-          <BizRow title="Substitute requests" toggle={off} dim />
-        </BizSection>
+      {error && (
+        <LoadError
+          onRetry={() => {
+            setError(false);
+            setTick((t) => t + 1);
+          }}
+        />
       )}
-      <BizSection label="Payments">
-        <BizRow title="Money owed" desc="Weekly summary" toggle={off} dim />
-      </BizSection>
-      <BizSection label="Reputation" footer="Choosing these one by one is coming soon.">
-        <BizRow title="New reviews" toggle={off} dim />
-        <BizRow title="Flagged reviews" desc="Always on for safety" toggle={{ checked: true, onChange: () => undefined, disabled: true }} dim />
-      </BizSection>
+      {/* The sections differ per lane: held on the skeleton until it is known. */}
+      {!error && (!prefs || !laneSettled) && <RowsSkeleton rows={5} label="Loading notifications" />}
+      {prefs && laneSettled && (
+        <>
+          <BizSection label={store ? "Orders" : "Bookings"}>
+            {store ? (
+              <BizRow title="Orders" desc="New orders and returns" toggle={sw("orders", "Orders")} />
+            ) : (
+              <>
+                <BizRow title="Bookings" desc="New bookings, cancellations and classes under 40% booked" toggle={sw("bookings", "Bookings")} />
+                <BizRow title="Members" desc="New members and renewals" toggle={sw("members", "Members")} />
+              </>
+            )}
+          </BizSection>
+          {!store && (
+            <BizSection label="Team">
+              <BizRow title="Team" desc="Join requests and substitute requests" toggle={sw("team", "Team")} />
+            </BizSection>
+          )}
+          <BizSection label="Payments">
+            <BizRow title="Payments" desc="Money owed, weekly summary" toggle={sw("payments", "Payments")} />
+          </BizSection>
+          <BizSection label="Reputation">
+            <BizRow title="New reviews" toggle={sw("reviews", "New reviews")} />
+            <BizRow title="Flagged reviews" desc="Always on for safety" toggle={{ checked: true, onChange: () => undefined, disabled: true }} dim />
+          </BizSection>
+        </>
+      )}
       <BizSection label="How you're told">
         <BizRow icon={BellRing} title="Push, email and quiet hours" desc="Allow notifications on this device" onClick={() => navigate("/app/settings/notifications")} />
       </BizSection>
+      {toast}
     </BizPage>
   );
 }
@@ -53,7 +115,7 @@ export function BusinessNotificationsPage() {
 // Export reports (BACKEND BU6-21: no export readers yet)
 
 export function ExportPage() {
-  const { kind } = useBusiness();
+  const { kind, laneSettled } = useBusiness();
   const store = kind === "store";
   const reports = store
     ? [
@@ -71,11 +133,19 @@ export function ExportPage() {
   const [format, setFormat] = useState(0);
   return (
     <BizPage title="Export reports" sub="Download a spreadsheet of your data.">
-      <BizSection label="Report">
-        {reports.map(([t, d], i) => (
-          <BizRow key={t} title={t} desc={d} radio={{ selected: report === i }} onClick={() => setReport(i)} />
-        ))}
-      </BizSection>
+      {laneSettled ? (
+        <BizSection label="Report">
+          {reports.map(([t, d], i) => (
+            <BizRow key={t} title={t} desc={d} radio={{ selected: report === i }} onClick={() => setReport(i)} />
+          ))}
+        </BizSection>
+      ) : (
+        // The reports differ per lane: held on the skeleton until it is known.
+        <>
+          <BizLabel>Report</BizLabel>
+          <RowsSkeleton rows={3} label="Loading reports" />
+        </>
+      )}
       <BizSection label="Range">
         {["Last 30 days", "This year", "Custom range"].map((t, i) => (
           <BizRow key={t} title={t} radio={{ selected: range === i }} onClick={() => setRange(i)} />
@@ -183,7 +253,7 @@ export function SecurityPage() {
 // Deactivate or delete (V6-35: Deactivate + the reversible 30-day deletion;
 // no typed-DELETE immediate deletion)
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
 export function DeactivatePage() {
   const { business, setBusiness, error, reload } = useBusiness();
@@ -263,13 +333,15 @@ export function DeactivatePage() {
 
 export function BusinessTermsPage() {
   const navigate = useNavigate();
-  const { kind, business } = useBusiness();
+  const { kind: lane, kindKnown, business } = useBusiness();
+  // Per-type rows only once the lane is known (bizKindOf falls back to "store").
+  const kind = kindKnown ? lane : null;
   const wellness = business?.type === "wellness_service";
   return (
     <BizPage title="Business terms and waivers">
       <BizSection>
         <BizRow icon={FileText} title="Centium business terms" desc="The terms for business accounts" onClick={() => navigate("/app/settings/terms#business")} />
-        {kind !== "store" && <BizRow icon={FileCheck} title="Your liability waiver" onClick={() => navigate("/app/business/more/policy/waiver")} />}
+        {kind && kind !== "store" && <BizRow icon={FileCheck} title="Your liability waiver" onClick={() => navigate("/app/business/more/policy/waiver")} />}
         {kind === "classes" && <BizRow icon={FileText} title="Your class terms" onClick={() => navigate("/app/business/more/policy/class_terms")} />}
         {kind === "gym" && <BizRow icon={FileText} title="Your house rules" onClick={() => navigate("/app/business/more/policy/house_rules")} />}
         {kind === "store" && <BizRow icon={RotateCcw} title="Your returns policy" onClick={() => navigate("/app/business/more/store-policies")} />}

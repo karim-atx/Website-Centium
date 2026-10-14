@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, Minus, Plus, Repeat, RotateCw, WifiOff } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
@@ -40,6 +40,19 @@ const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 const FIELD_ORDER: ClassField[] = ["name", "date", "times", "capacity", "price"];
 const FIELD_WORD: Record<ClassField, string> = { name: "name", date: "date", times: "times", capacity: "capacity", price: "price" };
+
+/**
+ * How much bigger the sheet's 14 px field text is drawn than its spec: the
+ * Larger text boost (+2 px) times any browser / system text scaling of the
+ * root font (16 px at 1x).
+ */
+function textScale(): number {
+  if (typeof window === "undefined") return 1;
+  const root = getComputedStyle(document.documentElement);
+  const boost = parseFloat(root.getPropertyValue("--text-boost")) || 0;
+  const rootScale = (parseFloat(root.fontSize) || 16) / 16;
+  return ((14 + boost) / 14) * rootScale;
+}
 
 type Banner = { kind: "fields" | "fail" | "offline" | "permission"; text: string } | null;
 
@@ -110,6 +123,8 @@ function SheetBody({
   const [conflict, setConflict] = useState<SessionLite[] | null>(null);
   const [capFocus, setCapFocus] = useState<"focus" | "typing" | null>(null);
   const [lastValidCap, setLastValidCap] = useState(initial.capacity);
+  // OP1-147 A1: above 1.3x text the type / name row stacks to one column.
+  const [stackTypeRow] = useState(() => textScale() > 1.3);
   // The client id for this sheet's insert: a Retry re-sends the same one (AN3-068 S1).
   const clientId = useMemo(() => (mode === "create" ? crypto.randomUUID() : undefined), [mode]);
 
@@ -282,6 +297,41 @@ function SheetBody({
     setLastValidCap(String(next));
     update({ capacity: String(next) });
   };
+  // AN3-036 O2 (OURS): holding − or + repeats the step, after 400 ms then every
+  // 100 ms, until release. The release after a repeat adds no extra step.
+  const stepRef = useRef(stepCap);
+  useEffect(() => {
+    stepRef.current = stepCap;
+  });
+  const repeat = useRef<{ wait: number; tick: number; fired: boolean; release: AbortController } | null>(null);
+  const stopRepeat = useCallback(() => {
+    const r = repeat.current;
+    if (!r) return;
+    window.clearTimeout(r.wait);
+    window.clearInterval(r.tick);
+    r.release.abort();
+  }, []);
+  useEffect(() => stopRepeat, [stopRepeat]);
+  const startRepeat = (d: number) => {
+    stopRepeat();
+    const r = { wait: 0, tick: 0, fired: false, release: new AbortController() };
+    r.wait = window.setTimeout(() => {
+      r.tick = window.setInterval(() => {
+        r.fired = true;
+        stepRef.current(d);
+      }, 100);
+    }, 400);
+    repeat.current = r;
+    window.addEventListener("pointerup", stopRepeat, { signal: r.release.signal });
+    window.addEventListener("pointercancel", stopRepeat, { signal: r.release.signal });
+  };
+  const stepClick = (d: number) => {
+    if (repeat.current?.fired) {
+      repeat.current = null;
+      return;
+    }
+    stepCap(d);
+  };
 
   const fieldBox = (err: boolean, extra?: React.CSSProperties): React.CSSProperties => ({
     height: 40,
@@ -432,7 +482,7 @@ function SheetBody({
         <div ref={setBodyEl} role="form" aria-label={mode === "edit" ? "Edit class" : "New Class"} className="flex flex-col" style={{ gap: 16, pointerEvents: saving ? "none" : undefined }}>
           {/* Type + name (AN3-010 rows 10-12) */}
           <div ref={(el) => void (fieldRefs.current.name = el)} style={{ scrollMarginTop: 20 }}>
-            <div className="grid" style={{ gridTemplateColumns: "var(--class-type-col, 118px) minmax(0,1fr)", gap: 10 }}>
+            <div className="grid" style={{ gridTemplateColumns: stackTypeRow ? "minmax(0,1fr)" : "118px minmax(0,1fr)", gap: 10 }}>
               <div className="min-w-0">
                 {label("Class type")}
                 <button
@@ -533,7 +583,8 @@ function SheetBody({
                   aria-label="Fewer spots"
                   disabled={capNum !== null && capNum <= capFloor}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => stepCap(-1)}
+                  onPointerDown={() => startRepeat(-1)}
+                  onClick={() => stepClick(-1)}
                   className="tap h-full flex items-center justify-center disabled:opacity-30"
                   style={{ color: c.pDark }}
                 >
@@ -568,7 +619,8 @@ function SheetBody({
                   aria-label="More spots"
                   disabled={capNum !== null && capNum >= CAPACITY_MAX}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => stepCap(1)}
+                  onPointerDown={() => startRepeat(1)}
+                  onClick={() => stepClick(1)}
                   className="tap h-full flex items-center justify-center disabled:opacity-30"
                   style={{ color: c.pDark }}
                 >
@@ -609,7 +661,6 @@ function SheetBody({
             <button
               ref={setRunEl}
               type="button"
-              disabled={!instructorsLoaded}
               aria-haspopup="menu"
               aria-expanded={runOpen}
               aria-label={runName ? `Run by, ${runName}` : "Run by, not chosen"}
@@ -625,7 +676,7 @@ function SheetBody({
               </span>
               <ChevronDown size={14} style={{ color: c.faint }} className="shrink-0" />
             </button>
-            {runOpen && instructors.length === 0 && (
+            {runOpen && instructorsLoaded && instructors.length === 0 && (
               <>
                 <div className="fixed inset-0 z-[5]" onClick={() => setRunOpen(false)} aria-hidden />
                 <div
@@ -704,11 +755,24 @@ function SheetBody({
         width={182}
       />
       <PopupMenu
-        open={runOpen && instructors.length > 0}
+        open={runOpen && (instructors.length > 0 || !instructorsLoaded)}
         onClose={() => setRunOpen(false)}
         anchor={runEl}
         matchWidth={runGroupEl}
         options={runOptions}
+        emptyNote={
+          // AN3-022 O1: while the team loads, 2 skeleton rows (24 circle + 80×10 bar).
+          !instructorsLoaded ? (
+            <div aria-busy="true" aria-label="Loading your team">
+              {[0, 1].map((i) => (
+                <div key={i} className="flex items-center" style={{ gap: 9, padding: "9px 10px", marginTop: i ? 6 : 0 }}>
+                  <span aria-hidden style={{ width: 24, height: 24, borderRadius: 999, background: c.soft }} />
+                  <span aria-hidden style={{ width: 80, height: 10, borderRadius: 999, background: c.soft }} />
+                </div>
+              ))}
+            </div>
+          ) : undefined
+        }
         selected={form.professionalId || null}
         clampTo={bodyEl?.parentElement ?? null}
         onSelect={(v) => {
@@ -726,6 +790,7 @@ function SheetBody({
         today={today}
         minDate={mode === "create" ? today : undefined}
         title="Date"
+        dayInk="ink"
         onSelect={(d) => {
           update({ date: d });
           setDateOpen(false);

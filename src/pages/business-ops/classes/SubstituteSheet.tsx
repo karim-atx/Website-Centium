@@ -111,6 +111,8 @@ export function SubstituteSheet({
     icon: <Avatar c={c} name={r.i.firstName} size={28} />,
   }));
 
+  // OP1-090 O2: everyone busy → one line under the heading instead of the rows.
+  const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
   const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
   const chosen = pick ? nameOf(pick) : "";
 
@@ -221,6 +223,13 @@ export function SubstituteSheet({
           setMenuOpen(false);
         }}
         heading={`Free at ${time12(session.startTime)}`}
+        emptyNote={
+          nobodyFree ? (
+            <p style={{ margin: "0 4px 4px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
+              Nobody is free at {time12(session.startTime)}. Message your team or cancel the session.
+            </p>
+          ) : undefined
+        }
         variant="field"
         backdrop={false}
       />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import clsx from "clsx";
-import { AlertCircle, Camera, Globe, IdCard, Loader2, Mail, MapPin, Pencil, Phone, Plus, Share2, Star, Tags, Text } from "lucide-react";
+import { AlertCircle, Camera, Globe, IdCard, Loader2, Mail, MapPin, MapPinned, Pencil, Phone, Plus, Share2, Star, Tags, Text, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { BizCard, BizLabel, BizRow, BizSection, LoadError, RowsSkeleton, SubHeader, OfflineLine, LIST_BG, BORDER } from "../../../components/business-more/kit";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
@@ -23,9 +23,10 @@ import {
   type BusinessPatch,
 } from "../../../services/business-more";
 import { saveMyBusinessProfile } from "../../../services/business-profile";
+import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../../services/avatar";
 import { fetchReviewSummary } from "../../../services/venues";
 import { dayValue, isoWeekdayIn, NOT_PUBLISHED } from "../../../services/venues/hours";
-import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet } from "./ProfileSheets";
+import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet } from "./ProfileSheets";
 import { BusinessCard, type CardData } from "./BusinessCard";
 
 // MO1B-011 / -013 / -025 · Business Profile (BizMoreV8 screen="profile", hero
@@ -40,12 +41,16 @@ import { BusinessCard, type CardData } from "./BusinessCard";
 // 9.0) · branch type becomes the location's name (Locations and hours) ·
 // the Explore preview becomes the business card (MO1B-026) · Cycle tracking
 // moves to Settings › Data & account (V6-125) · Sign Out at the end · the
-// venue console stays the photo / hours editor (MO1B-011 K2).
+// venue console stays the photo / hours editor (MO1B-011 K2) · the old
+// form's free-text Location is About › Area (business_profiles.location;
+// the storefront, the Explore seller line and the listing strength read it)
+// · the old form's personal picture is You › Your photo (profiles.avatar_url,
+// shown in team and direct chats).
 
 const stripes = "repeating-linear-gradient(135deg, rgb(var(--c-primary-pale)) 0 10px, var(--biz-list) 10px 20px)";
 
 type PhotoKind = "cover" | "logo";
-type SheetKind = "hero" | "bio" | "cats" | "contact" | null;
+type SheetKind = "hero" | "bio" | "cats" | "area" | "contact" | "photo" | null;
 
 function todayLine(loc: BizLocation): string {
   const today = isoWeekdayIn(loc.timezone);
@@ -71,7 +76,7 @@ const LISTING_OFF_BODY = {
 export default function BusinessProfilePage() {
   const navigate = useNavigate();
   const { authUserId, user, updateProfile, signOut } = useApp();
-  const { business, kind, loading, error, reload, setBusiness } = useBusiness();
+  const { business, kind, kindKnown, loading, error, reload, setBusiness } = useBusiness();
   const [toast, showToast] = useBizToast();
 
   const [locations, setLocations] = useState<BizLocation[] | null>(null);
@@ -174,6 +179,42 @@ export default function BusinessProfilePage() {
     setBusiness({ ...business, ...(k === "logo" ? { logoPath: null, logoUrl: null } : { coverPath: null, coverUrl: null }) });
   };
 
+  // Your photo (LOST 5): the owner's own avatar, the same upload and remove
+  // as the personal Profile (services/avatar). Local state follows the URL
+  // the server gave back, never an optimistic guess.
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarCameraRef = useRef<HTMLInputElement>(null);
+  const avatarLibraryRef = useRef<HTMLInputElement>(null);
+  const onAvatarFile = async (file: File) => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const r = await uploadAvatar(authUserId, file, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!r.ok) {
+      setAvatarError(r.message);
+      return;
+    }
+    updateProfile({ avatarUrl: r.url });
+    setSheet(null);
+    showToast("Your photo was updated.");
+  };
+  const onAvatarRemove = async () => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const r = await removeAvatar(authUserId, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!r.ok) {
+      setAvatarError(r.message ?? "Couldn't remove your picture.");
+      return;
+    }
+    updateProfile({ avatarUrl: undefined });
+    setSheet(null);
+    showToast("Your photo was removed.");
+  };
+
   const setListed = async (on: boolean) => {
     if (!business || listingBusy) return;
     setListingBusy(true);
@@ -216,6 +257,7 @@ export default function BusinessProfilePage() {
 
   const name = business?.name ?? user.businessName ?? "Your business";
   const initials = initialsOf(name);
+  const ownInitials = initialsOf(user.firstName || "You");
   const place = business?.location?.trim() || locations?.[0]?.name || null;
   const typeLine = [typeLabel(business?.type ?? user.businessType), place].filter(Boolean).join(" · ");
   const showRating = !!rating && rating.total >= 3;
@@ -421,9 +463,10 @@ export default function BusinessProfilePage() {
           desc={business && business.categories.length > 0 ? business.categories.map((c) => CATEGORY_LABEL[c] ?? c).join(", ") : "Pick up to 5"}
           onClick={() => openSheet("cats")}
         />
+        <BizRow icon={MapPinned} title="Area" desc={business?.location?.trim() || "Shown next to your name on Explore"} onClick={() => openSheet("area")} />
       </BizSection>
 
-      <BizSection label={kind === "store" ? "Pickup and opening hours" : "Locations and hours"}>
+      <BizSection label={kindKnown && kind === "store" ? "Pickup and opening hours" : "Locations and hours"}>
         {locations === null ? null : (
           locations.map((loc) => (
             <BizRow
@@ -490,6 +533,23 @@ export default function BusinessProfilePage() {
       </BizCard>
       </div>
 
+      <BizSection label="You">
+        <BizRow
+          icon={UserRound}
+          title="Your photo"
+          desc="Shown to your team and in direct messages"
+          trailing={
+            <span aria-hidden className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-full bg-th-8e7fd0 text-white text-[11px] font-extrabold" style={{ width: 32, height: 32 }}>
+              {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : ownInitials}
+            </span>
+          }
+          onClick={() => {
+            setAvatarError(null);
+            openSheet("photo");
+          }}
+        />
+      </BizSection>
+
       <button
         type="button"
         onClick={handleSignOut}
@@ -528,6 +588,46 @@ export default function BusinessProfilePage() {
       )}
       {sheet === "bio" && <BioSheet key={sheetKey} open onClose={() => setSheet(null)} bio={business?.bio ?? ""} onSave={save} />}
       {sheet === "cats" && <CategoriesSheet key={sheetKey} open onClose={() => setSheet(null)} kind={kind} categories={business?.categories ?? []} onSave={save} />}
+      {sheet === "area" && <AreaSheet key={sheetKey} open onClose={() => setSheet(null)} area={business?.location ?? ""} onSave={save} />}
+      {sheet === "photo" && (
+        <YourPhotoSheet
+          key={sheetKey}
+          open
+          onClose={() => {
+            if (!avatarBusy) setSheet(null);
+          }}
+          avatarUrl={user.avatarUrl ?? null}
+          initials={ownInitials}
+          busy={avatarBusy}
+          error={avatarError}
+          onCamera={() => avatarCameraRef.current?.click()}
+          onLibrary={() => avatarLibraryRef.current?.click()}
+          onRemove={() => void onAvatarRemove()}
+        />
+      )}
+      <input
+        ref={avatarCameraRef}
+        type="file"
+        accept={AVATAR_ACCEPT}
+        capture="user"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void onAvatarFile(f);
+        }}
+      />
+      <input
+        ref={avatarLibraryRef}
+        type="file"
+        accept={AVATAR_ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void onAvatarFile(f);
+        }}
+      />
       {sheet === "contact" && (
         <ContactSheet
           key={sheetKey}

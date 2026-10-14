@@ -17,6 +17,9 @@ import {
   type LocationDraft,
 } from "../../services/business-more";
 import { hoursLines, isoWeekdayIn } from "../../services/venues/hours";
+import { fetchHoursTable } from "../../services/venues/console";
+import type { GymHoursTableRow } from "../../services/venues/consoleLogic";
+import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
 import { AREAS } from "../../services/geo/areas";
 import type { Coords } from "../../services/geo/distance";
 
@@ -26,7 +29,8 @@ const NearbyMap = lazy(() => import("../../components/professionals/NearbyMap"))
 // screen="locations" / "hours"). Each location is a venue row (gyms; B5 lets
 // stores and wellness have one): its address, pin, phone and the opening
 // hours, with the venue console (V6-54: Business Profile › Locations and
-// hours for owners) as the detailed editor for hours, members and photos.
+// hours for owners; never for stores, which edit hours here) as the detailed
+// editor for hours, members and photos.
 //
 // THE PIN IS REQUIRED for a new location: gyms.lat / lng are NOT NULL and
 // drive Explore's map. There is no geocoding service yet (BU6-14), so the
@@ -41,7 +45,7 @@ const emptyDraft: LocationDraft = { name: "", address: "", lat: null, lng: null,
 export default function LocationsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { business, kind } = useBusiness();
+  const { business, kind, kindKnown, loading: bizLoading, error: bizError } = useBusiness();
   const [toast, showToast] = useBizToast();
   const [locations, setLocations] = useState<BizLocation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,25 +84,52 @@ export default function LocationsPage() {
     navigate("/app/business/venue");
   };
 
-  const store = kind === "store";
+  // Neutral wording until the lane is known (useBusiness falls back to "store").
+  const store = kindKnown && kind === "store";
+  // V6-54: the venue console is never for stores (Wellness Service is a store
+  // lane here, bizKindOf). A store edits its hours in place, with the same
+  // hours sheet the console and Products › Listing use.
+  const [storeHours, setStoreHours] = useState<{ loc: BizLocation; rows: GymHoursTableRow[] } | null>(null);
+  const openHours = async (loc: BizLocation) => {
+    if (!store) {
+      openConsole(loc.id);
+      return;
+    }
+    const r = await fetchHoursTable(loc.id);
+    if (!r.ok) {
+      showToast(r.message);
+      return;
+    }
+    setStoreHours({ loc, rows: r.value });
+  };
   const title = store ? "Pickup and opening hours" : "Locations and hours";
 
   return (
     <BizPage title={title} sub="Clients see these on your listing.">
-      {error && <LoadError onRetry={reload} />}
-      {!locations && !error && <RowsSkeleton rows={3} />}
+      {/* No business_profiles row yet: locations are saved under it, so the
+          owner saves the profile first (the same gate as Listing and Offers). */}
+      {!bizLoading && !bizError && !business ? (
+        <BizSection>
+          <BizRow icon={MapPin} title="Save your business profile first" desc="Locations are saved under it." value="Set up" onClick={() => navigate("/app/business/profile")} />
+        </BizSection>
+      ) : (
+        <>
+          {error && <LoadError onRetry={reload} />}
+          {!locations && !error && <RowsSkeleton rows={3} />}
+        </>
+      )}
       {locations?.map((loc) => {
         const lines = hoursLines(loc.hours, isoWeekdayIn(loc.timezone));
         return (
           <BizSection key={loc.id} label={`${business?.name ?? "Your business"} · ${loc.name}`}>
             <BizRow icon={MapPin} title={loc.address} desc="Pinned on the map" value="Edit" onClick={() => setParams({ edit: loc.id }, { replace: true })} />
             {lines.length > 0 ? (
-              lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={() => openConsole(loc.id)} />)
+              lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={() => void openHours(loc)} />)
             ) : (
-              <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value="Add" onClick={() => openConsole(loc.id)} />
+              <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value="Add" onClick={() => void openHours(loc)} />
             )}
-            {/* V6-54: the venue console, for owners, from here. */}
-            <BizRow icon={Store} title="Venue console" desc="Members, classes, hours & photos" onClick={() => openConsole(loc.id)} />
+            {/* V6-54: the venue console, for owners, from here; never for stores. */}
+            {!store && <BizRow icon={Store} title="Venue console" desc="Members, classes, hours & photos" onClick={() => openConsole(loc.id)} />}
           </BizSection>
         );
       })}
@@ -114,7 +145,7 @@ export default function LocationsPage() {
           mode="edit"
           location={editing}
           onClose={closeSheet}
-          onOpenHours={() => openConsole(editing.id)}
+          onOpenHours={() => void openHours(editing)}
           onSave={async (d) => {
             const r = await updateLocation(editing.id, d, editing.phones);
             if (!r.ok) return r.message;
@@ -150,6 +181,20 @@ export default function LocationsPage() {
             return null;
           }}
           onToast={showToast}
+        />
+      )}
+      {storeHours && (
+        <VenueHoursSheet
+          open
+          onClose={() => setStoreHours(null)}
+          gymId={storeHours.loc.id}
+          timezone={storeHours.loc.timezone}
+          rows={storeHours.rows}
+          onSaved={() => {
+            setStoreHours(null);
+            reload();
+            showToast("Opening hours updated.");
+          }}
         />
       )}
       {toast}

@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import type { ClassSession, TeamPerson } from "../../services/business-team/team";
+import type { ClassSession, TeamPerson } from "../../services/business-team/types";
 import { professionLabel } from "../../services/business-team/seats";
 import { clashOf, initials, noSeatPeople, roleAndProfession, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
 

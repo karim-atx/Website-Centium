@@ -3,6 +3,7 @@
 // node --test can load it.
 
 import { formatPrice } from "../../utils/price";
+import { formatShortDate } from "../../utils/date";
 
 export type Billing = "daily" | "monthly" | "annually";
 
@@ -84,7 +85,7 @@ export function currentMembership<T extends { gymId: string; status: string }>(r
 /** "1 Oct 2026" from a `date` column (no timezone shift). */
 export function dayMonthYear(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  const mon = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  const mon = formatShortDate(new Date(Date.UTC(y, m - 1, d)), { month: "short", timeZone: "UTC" });
   return `${d} ${mon} ${y}`;
 }
 

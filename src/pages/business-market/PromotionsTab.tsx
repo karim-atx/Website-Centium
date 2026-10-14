@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Award, BadgePercent, Ellipsis, Megaphone, Percent, Plus, Trash2 } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { initialsOf } from "../../components/business-more/kind";
@@ -35,6 +35,7 @@ export function PromotionsTab() {
   const m = useMarket();
   const { c, v, kind, business } = m;
   const online = useOnline();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const promoteParam = params.get("promote");
   const [toast, showToast] = useMarketToast();
@@ -84,6 +85,8 @@ export function PromotionsTab() {
       : [];
   const hasSomething = items.length > 0;
   const price = m.featurePrice ? priceLabel(m.featurePrice) : null;
+  /** The read answered and there is no business row (not loading, not an error). */
+  const noRow = !business && !m.loading && !m.error;
   const sheetOpen = !!create || !!offerSheet || !!feature || !!pay || !!removeRow;
 
   const flash = (id: string) => {
@@ -127,7 +130,18 @@ export function PromotionsTab() {
       <MLabel c={c} margin="0 0 8px">
         Offers on your listing
       </MLabel>
-      {offers.length === 0 ? (
+      {noRow ? (
+        // No business_profiles row: offers attach to it (main's discounts gate, NOTHING_LOST LOST 3).
+        <MEmpty
+          c={c}
+          icon={BadgePercent}
+          title="No offers yet"
+          body="Save your business profile first to start adding offers."
+          pad="22px 20px"
+          bodyLh={18}
+          action={{ label: "Set up business profile", onClick: () => navigate("/app/business/profile") }}
+        />
+      ) : offers.length === 0 ? (
         <MEmpty c={c} icon={BadgePercent} title="No offers yet" body={v.offersEmpty} pad="22px 20px" bodyLh={18} />
       ) : (
         offers.map((o) => (

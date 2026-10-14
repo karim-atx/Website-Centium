@@ -37,6 +37,7 @@ import {
   type StoreSettings,
 } from "../../services/business-more";
 import { composeReturns, DELIVERY_TIMES, dollars, parseReturns, RETURN_WINDOWS, type ReturnCondition, type ReturnWindow } from "./storePolicyText";
+import { formatShortDate } from "../../utils/date";
 
 // MO1B-001 / -003 / -005 and OURS-MO1B-booking-policies, -waiver-editor,
 // -store-policies-edit. One sub-page row for all of them (V6-109: BizMoreV8's
@@ -50,7 +51,7 @@ import { composeReturns, DELIVERY_TIMES, dollars, parseReturns, RETURN_WINDOWS, 
 // class reminders have no columns yet; their rows are shown, dimmed, with
 // "Coming soon" and do nothing. No sample values ($5, 14 days, 5 people) ship.
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
 const DOC_TITLE: Record<PolicyKind, string> = {
   waiver: "Liability waiver",
@@ -124,12 +125,12 @@ function useLocations(bizId: string | null) {
 
 export function BookingPoliciesPage() {
   const navigate = useNavigate();
-  const { business, kind } = useBusiness();
+  const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
   const gym = kind === "gym";
   const hours = locs?.[0]?.cancellationHours ?? null;
   return (
-    <BizPage title={gym ? "Entry rules" : "Booking policies"}>
+    <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"}>
       {error && <LoadError message="Couldn't load your policies." onRetry={reload} />}
       {!locs && !error ? (
         <RowsSkeleton rows={3} label="Loading your policies" />
@@ -167,7 +168,7 @@ const WINDOWS = [12, 24, 2];
 export function BookingPoliciesEditor() {
   const navigate = useNavigate();
   const { search } = useLocation();
-  const { business, kind } = useBusiness();
+  const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
   const [toast, showToast] = useBizToast();
   const [busy, setBusy] = useState(false);
@@ -199,7 +200,7 @@ export function BookingPoliciesEditor() {
 
   const soon = "Coming soon";
   return (
-    <BizPage title={gym ? "Entry rules" : "Booking policies"} sub="Applied to every class unless a class type overrides it.">
+    <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"} sub="Applied to every class unless a class type overrides it.">
       {error && <LoadError message="Couldn't load your policies." onRetry={reload} />}
       {!locs && !error && <RowsSkeleton rows={4} label="Loading your policies" />}
       {locs && (

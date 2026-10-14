@@ -5,6 +5,7 @@ import { BizButton, BizCard, BizConfirm, BizLabel, BizPopup, BizRow, PopButton, 
 import { CodeBoxes, CODE_LENGTH } from "../../components/ui/CodeBoxes";
 import { useIsDark } from "../../hooks/useIsDark";
 import { RECOVERY_CODES_FILENAME, recoveryCodesClipboard, recoveryCodesFile } from "../../components/security/recoveryCodesText";
+import { formatShortDate } from "../../utils/date";
 
 // MO1B-035 to -044 · the business two-factor screens (BizMoreV8 screen="twofa"
 // / "twofaSetup" / "recovery", lines 210 to 223). Presentation only: the
@@ -14,7 +15,7 @@ import { RECOVERY_CODES_FILENAME, recoveryCodesClipboard, recoveryCodesFile } fr
 // / #293339, ink #3E6B67 / #B2D4CF, tile #E4F0EE / rgba(162,200,194,0.1),
 // buttons 1px #6F9993 / #4F8F8A with #2F5F58 / #B2D4CF.
 
-const addedLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const addedLabel = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
 function TealCard({
   label,

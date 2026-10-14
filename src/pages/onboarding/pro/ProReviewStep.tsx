@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ObStep, ObFooter } from "../shell/ObShell";
 import { ObSectionLabel, ObTerms } from "../shell/ObBlocks";
 import { useOnboardingFlow, OB_STRINGS } from "../shell/flow";
+import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import { useApp } from "../../../context/AppContext";
 import { useMyCv } from "../../../components/cv/useMyCv";
 import { FORMATS, PRO_LABEL, isRegulated, initials, workSummary } from "./proModel";
@@ -33,6 +34,9 @@ function backgroundLine(cv: ReturnType<typeof useMyCv>["cv"]): string {
  * The Terms checkbox is required and recorded (B5 legal_acceptances).
  * Fitness / Other: "Go live". Physiotherapist / Dietitian: "Submit for
  * verification" (the licence check runs in the existing review queue).
+ * KEEP-SAFETY: the health disclaimer sits above the submit button, so the
+ * health_disclaimer acceptance recorded on submit (ProLane) is for text the
+ * person has seen (same placement as the client's You're all set).
  */
 export const ProReviewStep: React.FC<
   ProStepProps & { onSubmit: () => Promise<{ ok: true } | { ok: false; message: string }> }
@@ -92,7 +96,9 @@ export const ProReviewStep: React.FC<
             onClick: () => void submit(),
             disabled: busy || offline || !!termsError,
           }}
-        />
+        >
+          <HealthDisclaimer className="mx-auto max-w-[310px] mb-3" />
+        </ObFooter>
       }
     >
       <SummaryCard n={1} heading="About you" lines={[`${name} · ${label}`]} onAction={() => goTo("about")} />

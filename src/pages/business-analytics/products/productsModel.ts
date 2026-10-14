@@ -1,5 +1,4 @@
-import type { StoreOrder } from "../../../services/store/orders";
-import type { Product } from "../../../services/store/products";
+import type { Product, StoreOrder } from "../../../services/store/types";
 import {
   addDays,
   dateOf,

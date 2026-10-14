@@ -9,8 +9,9 @@ import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { linePx, textPx } from "../../../theme/textSize";
 import { ErrorRow } from "../../../components/business-dashboard/parts";
 import { ListingSheet } from "../../../components/business-dashboard/HeaderParts";
-import { saveListingActive, saveListingPerk } from "../../../components/business-dashboard/dashboardData";
+import { saveListingActive } from "../../../services/business-market";
 import { useAnalytics } from "../analyticsContext";
+import { useRevenueData } from "../revenue/useRevenueData";
 import { loadOverview } from "./overviewData";
 import { dayItems, emptyNextLine, headline, headlineSize, insights, isoDay, overviewCsv, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
@@ -79,23 +80,36 @@ export function OverviewSection() {
     const id = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(id);
   }, [profileReady, authUserId, load]);
-  usePoll(() => void load(), POLL_MS, !!raw && online);
+  // The Revenue card reads what Revenue › Overview reads (M1): one reader, same sums.
+  const rev = useRevenueData();
+  const reloadRev = rev.reload;
+  usePoll(
+    () => {
+      void load();
+      reloadRev();
+    },
+    POLL_MS,
+    !!raw && online,
+  );
 
   // A new range reloads with the skeleton (OURS-AN1-custom-range-sheet #8).
   const loading = !raw || loadedFor !== rangeKey;
   const cells = useMemo(() => (raw ? headline(kind, raw, range, today) : null), [raw, kind, range, today]);
-  const ins = useMemo(() => (raw ? insights(raw) : null), [raw]);
+  const revRecords = rev.data?.records ?? null;
+  const ins = useMemo(() => (raw ? insights(raw, { records: revRecords, range, today }) : null), [raw, revRecords, range, today]);
+  const revLoading = rev.loading && !rev.data;
+  const revCard = loading || revLoading ? null : rev.error && !rev.data ? { value: "–", delta: "", sub: rev.error, up: false } : (ins?.[1] ?? null);
   const items = useMemo(() => (raw ? dayItems(kind, raw, today) : []), [raw, kind, today]);
   const isEmpty = kind !== "store" && !!raw && !raw.anyClass;
 
   useEffect(() => {
-    if (!cells || !ins || loading) {
+    if (!cells || !ins || loading || revLoading) {
       setExport("", null);
       return;
     }
     setExport("centium-analytics-overview.csv", overviewCsv(cells, ins));
     return () => setExport("", null);
-  }, [cells, ins, loading, setExport]);
+  }, [cells, ins, loading, revLoading, setExport]);
 
   const mins = updatedAt === null ? null : Math.floor((now.getTime() - updatedAt) / 60_000);
   const updated = mins === null ? "" : mins < 1 ? "Updated just now" : `Updated ${mins} min ago`;
@@ -103,7 +117,16 @@ export function OverviewSection() {
 
   return (
     <div data-an1-overview>
-      {error && <ErrorRow c={c} text={error} onRetry={() => void load()} />}
+      {error && (
+        <ErrorRow
+          c={c}
+          text={error}
+          onRetry={() => {
+            void load();
+            reloadRev();
+          }}
+        />
+      )}
 
       <Label c={c} text="Headline numbers" />
       <div
@@ -192,7 +215,7 @@ export function OverviewSection() {
           Icon={Wallet}
           col={c.pDark}
           title="Revenue"
-          data={loading ? null : (ins?.[1] ?? null)}
+          data={revCard}
           onOpen={can("revenue") ? () => navigate("/app/business/analytics/revenue") : undefined}
         />
         {kind !== "store" && (
@@ -214,17 +237,10 @@ export function OverviewSection() {
           open={listingOpen}
           onClose={() => setListingOpen(false)}
           active={raw.business.active}
-          perk={raw.business.perk ?? ""}
           onToggle={async (v) => {
             const r = await saveListingActive(raw.business!.id, v);
             if (!r.ok) return r.message ?? "Couldn't change your listing. Try again.";
             setRaw((cur) => (cur?.business ? { ...cur, business: { ...cur.business, active: v } } : cur));
-            return null;
-          }}
-          onSavePerk={async (v) => {
-            const r = await saveListingPerk(raw.business!.id, v);
-            if (!r.ok) return r.message ?? "Couldn't save the perk. Try again.";
-            setRaw((cur) => (cur?.business ? { ...cur, business: { ...cur.business, perk: v.trim() || null } } : cur));
             return null;
           }}
         />

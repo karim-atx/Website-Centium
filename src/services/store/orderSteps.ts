@@ -1,4 +1,4 @@
-import type { OrderStatus, ReturnStatus, StoreOrder, StoreReturn } from "./orders";
+import type { OrderStatus, ReturnStatus, StoreOrder, StoreReturn } from "./types";
 
 // The fulfilment and return step models (OURS-OP1-store-order-steps,
 // OURS-OP1-store-return-detail). Pure, so the screens and the tests share it.

@@ -1,4 +1,4 @@
-import type { ClassRow, TeamPerson } from "./teamData";
+import type { ClassRow, TeamPerson } from "./teamTypes";
 
 // AN5 Team analytics: pure numbers from real rows (no samples). Thresholds
 // from the handover: TARGET 70 % (AnTeamV6 l.381), fill shown from 3 sessions
@@ -142,23 +142,28 @@ export function coverageIssues(classes: ClassRow[], teamIds: Set<string>, today:
 export const overlaps = (s1: string, e1: string, s2: string, e2: string): boolean =>
   minutesOf(s1) < minutesOf(e2) && minutesOf(s2) < minutesOf(e1);
 
-/** Who is free for one session (AN5-024 rows 9-11, 13): free first, then busy; team order inside each. */
+/**
+ * Who is free for one session (AN5-024 rows 9-11, 13; OURS availability A1):
+ * free first, then busy, then off that day (instructor_unavailable_dates, B6);
+ * team order inside each. Someone both busy and off counts as busy.
+ */
 export function availabilityFor(
   session: ClassRow,
   people: TeamPerson[],
   classes: ClassRow[],
-  exclude?: string | null
-): { person: TeamPerson; busyWith: ClassRow | null }[] {
+  exclude?: string | null,
+  offToday: ReadonlySet<string> = new Set()
+): { person: TeamPerson; busyWith: ClassRow | null; off: boolean }[] {
   const rows = people
     .filter((p) => p.acceptedAt && p.id !== exclude)
-    .map((person) => ({
-      person,
-      busyWith:
+    .map((person) => {
+      const busyWith =
         classes.find(
           (c) => c.id !== session.id && c.professionalId === person.id && c.date === session.date && overlaps(c.start, c.end, session.start, session.end)
-        ) ?? null,
-    }));
-  return [...rows.filter((r) => !r.busyWith), ...rows.filter((r) => r.busyWith)];
+        ) ?? null;
+      return { person, busyWith, off: !busyWith && offToday.has(person.id) };
+    });
+  return [...rows.filter((r) => !r.busyWith && !r.off), ...rows.filter((r) => r.busyWith), ...rows.filter((r) => r.off)];
 }
 
 /** Initials from the shown name (AN5-024 row 7: never the sample's). */

@@ -25,6 +25,8 @@ const member = (over: Partial<FrontDeskMember>): FrontDeskMember => ({
   paymentMethod: "cash",
   paymentStatus: "paid",
   priceAgreed: 100,
+  paidAt: null,
+  markedPaidBy: null,
   startedOn: "2026-09-01",
   expiresOn: "2026-10-20",
   passState: "valid",

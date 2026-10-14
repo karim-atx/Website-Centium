@@ -5,12 +5,12 @@ import { updateProfileFromOnboarding } from "../../../services/profile";
 import { recordLegalAcceptances } from "../../../services/legal/acceptances";
 import { setMapArea, setPublicListing } from "../../../services/professional-profile";
 import { fetchMyCv } from "../../../services/professional-cv";
-import { logOtherDiscipline, markOwnerItemDone, professionalLaneSchema, saveProLaneColumns } from "../../../services/professional-onboarding";
+import { requestToJoin } from "../../../services/business-team/employment";
+import { logOtherDiscipline, markOwnerItemDone, saveProLaneColumns } from "../../../services/professional-onboarding";
 import { OFFLINE_MESSAGE } from "../../../services/network-error";
 import { ageFromDateOfBirth } from "../../../utils/date";
 import type { ActivityLevel, Goal, ProfessionalSubtype, TrackPreference } from "../../../types";
 import {
-  CLOSEST_GROUP_LEGACY,
   placesForDb,
   WORK_MODE_TO_DB,
   emptyProDraft,
@@ -112,25 +112,39 @@ export function ProLane<D extends DraftLike>({
   const submit = async (): Promise<{ ok: true } | { ok: false; message: string }> => {
     if (!authUserId) return { ok: false, message: "You're signed out. Go back and sign in again to finish." };
     const fail = "Couldn't finish setting up your account. Try again.";
+    // Terms and Privacy from the Review checkbox; the health disclaimer is
+    // shown above the Review step's submit button (ProReviewStep).
     const legal = await recordLegalAcceptances(authUserId, ["terms", "privacy", "health_disclaimer"]);
     if (!legal.ok) return { ok: false, message: legal.offline ? OFFLINE_MESSAGE : fail };
 
     const other = kind === "other";
-    const v2 = (await professionalLaneSchema()) === "v2";
     // A radius only where home visits can happen (not online only, not at a business).
     const homeVisitKm = pro.workMode !== "online" && pro.workMode !== "business" ? pro.homeVisitKm : null;
     const cols = await saveProLaneColumns(authUserId, {
       other_discipline: other && pro.whatYouDo.trim().length >= 2 ? pro.whatYouDo.trim().slice(0, 40) : null,
-      closest_group: other && pro.closestGroup ? (v2 ? pro.closestGroup : CLOSEST_GROUP_LEGACY[pro.closestGroup]) : null,
+      closest_group: other && pro.closestGroup ? pro.closestGroup : null,
       work_mode: pro.workMode ? WORK_MODE_TO_DB[pro.workMode] : null,
       home_visit_km: homeVisitKm,
       specialties: pro.specialties,
       session_formats: formatsForDb(pro.formats),
       session_lengths: lengthsForDb(pro.lengths),
-      ...(v2 ? { session_places: placesForDb(pro.formats, homeVisitKm) } : null),
+      session_places: placesForDb(pro.formats, homeVisitKm),
     });
     if (!cols.ok) return cols;
     if (other && pro.whatYouDo.trim()) void logOtherDiscipline(authUserId, pro.whatYouDo);
+
+    // "At a business": the join request (Database B6 request_to_join_business).
+    // The business approves it and they still accept the employment. Sent
+    // before the profile is finished so a wrong ID can be fixed on Review;
+    // asking twice returns the same request.
+    const code = pro.workMode === "business" ? pro.businessCode.trim() : "";
+    if (code) {
+      const joined = await requestToJoin(code);
+      if (!joined.ok) {
+        const notFound = joined.message === "No business found for that ID.";
+        return { ok: false, message: notFound ? "No business found for that ID. Check it in Where you work." : joined.message };
+      }
+    }
 
     const subtype: ProfessionalSubtype = draft.professionalSubtype ?? "other";
     const resolved = {

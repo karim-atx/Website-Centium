@@ -13,7 +13,8 @@ import { localDayOf } from "../../utils/date";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { dashPalette } from "../../components/business-dashboard/palette";
 import { GaugeCluster, type ClusterControl, type ClusterGauge } from "../../components/business-dashboard/GaugeCluster";
-import { dismissSetup, loadDashboard, saveListingActive, type DashRaw } from "../../components/business-dashboard/dashboardData";
+import { dismissSetup, loadDashboard, type DashRaw } from "../../components/business-dashboard/dashboardData";
+import { saveListingActive } from "../../services/business-market";
 import {
   activityEvents,
   attentionItems,

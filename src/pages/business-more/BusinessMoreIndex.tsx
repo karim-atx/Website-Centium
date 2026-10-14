@@ -44,6 +44,8 @@ import {
   type ChecklistItem,
 } from "../../services/business-more";
 import { returnsSummary } from "./storePolicyText";
+import { formatShortDate } from "../../utils/date";
+import { fetchJoinRequests } from "../../services/business-team/team";
 
 // MO1B-007 / -009 / -010 · the business More (BizMoreV8 screen="index",
 // template lines 24 to 26, rows 168 to 175). The client More format with
@@ -66,7 +68,7 @@ const PLACEHOLDER = (
   <span aria-hidden className="inline-block align-middle bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16]" style={{ width: 40, height: 10, borderRadius: 5 }} />
 );
 
-const fmtRenew = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmtRenew = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 export default function BusinessMoreIndex() {
   const navigate = useNavigate();
@@ -81,6 +83,7 @@ export default function BusinessMoreIndex() {
   const [returnsLine, setReturnsLine] = useState<string | null | undefined>(undefined);
   const [checklist, setChecklist] = useState<ChecklistItem[] | null>(null);
   const [renews, setRenews] = useState<string | null>(null);
+  const [joinCount, setJoinCount] = useState(0);
 
   const bizId = business?.id ?? null;
   useEffect(() => {
@@ -94,6 +97,10 @@ export default function BusinessMoreIndex() {
     });
     void fetchStoreSettings(bizId).then((r) => {
       if (!cancelled) setReturnsLine(r.ok ? returnsSummary(r.value) : null);
+    });
+    // B6 business_join_requests (members permission): the waiting count for the badge.
+    void fetchJoinRequests(bizId).then((r) => {
+      if (!cancelled && r.ok) setJoinCount(r.value.length);
     });
     void fetchSetupChecklist(bizId).then((r) => {
       if (!cancelled && r.ok) setChecklist(r.value);
@@ -189,7 +196,7 @@ export default function BusinessMoreIndex() {
             {kind !== "store" && (
               <>
                 <BizRow well="index" icon={ShieldCheck} title="Roles and permissions" desc="Who can see and change what" onClick={sub("roles")} />
-                <BizRow well="index" icon={UserPlus} title="Join requests" desc="Professionals who used your ID" onClick={sub("join-requests")} />
+                <BizRow well="index" icon={UserPlus} title="Join requests" desc="Professionals who used your ID" badge={joinCount > 0 ? joinCount : undefined} onClick={sub("join-requests")} />
               </>
             )}
             <BizRow

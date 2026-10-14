@@ -23,7 +23,20 @@ export interface WheelColumn<V extends string | number = string> {
 }
 
 const ROW = 36;
-const VISIBLE = 5; // selected row plus two neighbours either side
+const VISIBLE = 5;
+
+/**
+ * BU AN3-020 O5: Reduce motion (the in-app switch puts `reduce-motion` on
+ * <html>; or the device setting) jumps straight to the row instead of the
+ * smooth scroll. Read at call time so it needs no app context.
+ */
+function wheelBehavior(): ScrollBehavior {
+  if (typeof document === "undefined") return "auto";
+  const reduce =
+    document.documentElement.classList.contains("reduce-motion") ||
+    (typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  return reduce ? "auto" : "smooth";
+} // selected row plus two neighbours either side
 
 /**
  * The shared iOS-style wheel picker, handover 2026-09-29 02 "Wheel picker":
@@ -149,7 +162,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
         const back = column.options.slice(0, i).map((o) => !o.disabled).lastIndexOf(true);
         i = back >= 0 ? back : column.options.findIndex((o) => !o.disabled);
         if (i < 0) return;
-        el.scrollTo({ top: i * ROW, behavior: "smooth" });
+        el.scrollTo({ top: i * ROW, behavior: wheelBehavior() });
       }
       const next = column.options[i];
       if (next && next.value !== column.value) column.onChange(next.value);
@@ -179,7 +192,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
               aria-disabled={opt.disabled || undefined}
               onClick={() => {
                 if (opt.disabled) return;
-                ref.current?.scrollTo({ top: i * ROW, behavior: "smooth" });
+                ref.current?.scrollTo({ top: i * ROW, behavior: wheelBehavior() });
                 column.onChange(opt.value);
               }}
               className="w-full flex items-center justify-center whitespace-nowrap"
@@ -214,7 +227,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
             aria-disabled={opt.disabled || undefined}
             onClick={() => {
               if (opt.disabled) return;
-              ref.current?.scrollTo({ top: i * ROW, behavior: "smooth" });
+              ref.current?.scrollTo({ top: i * ROW, behavior: wheelBehavior() });
               column.onChange(opt.value);
             }}
             className="w-full flex items-center justify-center whitespace-nowrap"

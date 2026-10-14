@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { availabilityFor, coverageIssues, initialsOf, teamStats } from "./model";
-import type { ClassRow, TeamPerson } from "./teamData";
+import type { ClassRow, TeamPerson } from "./teamTypes";
 
 const person = (id: string, seat: number, accepted = true): TeamPerson => ({
   id,
@@ -58,6 +58,20 @@ test("availability: free first, busy after, pending invites and the excluded per
     ]
   );
   assert.deepEqual(availabilityFor(session, people, [session], "b").map((r) => r.person.id), ["a"]);
+});
+
+test("availability: someone off that day sorts after busy, and busy wins over off", () => {
+  const people = [person("a", 1), person("b", 2), person("d", 4)];
+  const session = cls("s", "2026-10-17", "11:00", "12:00", null);
+  const rows = availabilityFor(session, people, [session, cls("x", "2026-10-17", "11:30", "12:30", "a")], null, new Set(["b", "a"]));
+  assert.deepEqual(
+    rows.map((r) => [r.person.id, !!r.busyWith, r.off]),
+    [
+      ["d", false, false],
+      ["a", true, false],
+      ["b", false, true],
+    ]
+  );
 });
 
 test("team stats: fill from 3 sessions, deltas from the previous period, future sessions not taught", () => {

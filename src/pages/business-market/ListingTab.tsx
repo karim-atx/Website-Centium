@@ -5,7 +5,8 @@ import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
 import { saveCategories } from "../../services/business-market";
 import { CATEGORY_LABEL } from "../../components/business-more/kind";
 import { useMarket } from "./MarketContext";
-import { MBlock, MError, useMarketToast } from "./kit";
+import { Store } from "lucide-react";
+import { MBlock, MEmpty, MError, useMarketToast } from "./kit";
 import { CategoriesCard, PhotosCard, RatingCard, StrengthCard, YourCard, type CardModel } from "./listingParts";
 import { hoursSummary, notEnded, strengthItems, strengthPct, type StrengthItem } from "./model";
 import { useListingSwitch } from "./useListingSwitch";
@@ -64,13 +65,27 @@ export function ListingTab() {
   );
 
   if (m.error && !business) return <MError c={c} onRetry={m.reload} />;
-  if (m.loading || !business) {
+  if (m.loading) {
     return (
       <div aria-busy="true" aria-label="Loading your listing">
         <MBlock c={c} h={105.5} style={{ marginBottom: 12 }} />
         <MBlock c={c} h={352} />
         <MBlock c={c} h={144.5} style={{ marginTop: 12 }} />
       </div>
+    );
+  }
+  if (!business) {
+    // The read answered with no business_profiles row: listings (and
+    // offerings, products) are published under it, so the owner saves the
+    // profile first (main's BusinessMarketplaceTab gate, NOTHING_LOST LOST 2).
+    return (
+      <MEmpty
+        c={c}
+        icon={Store}
+        title="Save your business profile first"
+        body="Listings are published under it."
+        action={{ label: "Set up business profile", onClick: () => navigate("/app/business/profile") }}
+      />
     );
   }
 

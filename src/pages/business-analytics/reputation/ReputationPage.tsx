@@ -23,6 +23,7 @@ import {
   type ScrubChartConfig,
 } from "../../../components/charts/ScrubChart";
 import { useBusiness } from "../../../components/business-more/useBusiness";
+import { useAnalytics as useShellAnalytics } from "../analyticsContext";
 import type { BizKind } from "../../../components/business-more/kind";
 import { useOnline } from "../../../hooks/useOnline";
 import { clock12 } from "../../../utils/time12";
@@ -175,7 +176,10 @@ function useReputation(businessId: string | null) {
 export default function ReputationPage() {
   const navigate = useNavigate();
   const online = useOnline();
-  const { business, kind, error: bizError, reload: reloadBiz } = useBusiness();
+  const { business, error: bizError, reload: reloadBiz } = useBusiness();
+  // The lane from the shell (it waits for the business row before mounting
+  // this page); this hook's own fresh read would name "store" until it lands.
+  const { kind } = useShellAnalytics();
   const vocab = vocabOf(kind);
   const [range, setRange] = useState<AnalyticsRange>(() => presetRange("4w"));
   const [customOpen, setCustomOpen] = useState(false);

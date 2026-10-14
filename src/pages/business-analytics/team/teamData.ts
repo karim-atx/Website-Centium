@@ -7,8 +7,9 @@ import {
   fetchSessions,
   fetchTeam,
   inviteEmployee as inviteViaTeam,
-  type BusinessRole,
+  type BusinessRole as ServiceRole,
 } from "../../../services/business-team/team";
+import type { BusinessRole, ClassRow, SeatInfo, TeamData, TeamPerson } from "./teamTypes";
 import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../../services/business-classes";
 
 // AN5 Team analytics: an adapter over the shared services this batch's Team
@@ -28,48 +29,13 @@ import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 columns, not in the production-generated types
 const db = supabase as any;
 
-export type { BusinessRole };
+export type { BusinessRole, ClassRow, SeatInfo, TeamData, TeamPerson };
 
-export interface TeamPerson {
-  id: string;
-  name: string;
-  role: BusinessRole;
-  acceptedAt: string | null;
-  createdAt: string;
-  payRate: number | null;
-  /** The server's seat answer (employee_credentials.uses_seat), null for an invitation. */
-  usesSeat: boolean | null;
-  /** Seat order: accepted first (by acceptance), then pending invites. Drives the avatar colour. */
-  seat: number;
-}
-
-export interface SeatInfo {
-  /** Included seats + blocks × seats per block; 0 with no active plan. */
-  capacity: number;
-  planActive: boolean;
-  blocks: number;
-  perBlock: number;
-  /** Seat block monthly price from subscription_tiers (never hard-coded); null when unset. */
-  blockPrice: number | null;
-}
-
-export interface TeamData {
-  people: TeamPerson[];
-  seats: SeatInfo;
-  requests: number;
-}
-
-export interface ClassRow {
-  id: string;
-  title: string;
-  classType: string;
-  date: string;
-  start: string;
-  end: string;
-  capacity: number;
-  professionalId: string | null;
-  booked: number;
-}
+// The pure shapes live in teamTypes.ts (no runtime imports, for the node test
+// project); this fails to compile if its role union drifts from the service's.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const ROLE_UNION_MATCHES: Same<BusinessRole, ServiceRole> = true;
+void ROLE_UNION_MATCHES;
 
 export type Res<T> = { ok: true; value: T } | { ok: false; offline: boolean };
 
@@ -163,6 +129,21 @@ export async function firstTaughtDay(businessId: string, today: string): Promise
     return { ok: true, value: ((r.data ?? []) as { event_date: string }[])[0]?.event_date ?? null };
   } catch (e) {
     return { ok: false, offline: isOffline(e) };
+  }
+}
+
+/**
+ * Who on the team is off on one date (OURS availability A1): Database B6
+ * instructor_unavailable_dates, readable by anyone with the schedule
+ * permission. A failed read hides the state (never guessed).
+ */
+export async function loadOffOn(businessId: string, date: string): Promise<Set<string>> {
+  try {
+    const r = await db.from("instructor_unavailable_dates").select("professional_id").eq("business_id", businessId).eq("on_date", date);
+    if (r.error) return new Set();
+    return new Set(((r.data ?? []) as { professional_id: string }[]).map((x) => x.professional_id));
+  } catch {
+    return new Set();
   }
 }
 

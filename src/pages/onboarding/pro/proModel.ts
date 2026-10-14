@@ -215,17 +215,6 @@ export const CLOSEST_GROUPS: { value: ClosestGroup; label: string }[] = [
   { value: "nutrition", label: "Nutrition" },
   { value: "other", label: "Other" },
 ];
-/**
- * Before 20261120020000 closest_group was a professional_subtype: the stack
- * without that migration gets the nearest subtype instead (Clinical had none:
- * `doctor`, never treated as regulated).
- */
-export const CLOSEST_GROUP_LEGACY: Record<ClosestGroup, "trainer" | "doctor" | "dietitian" | "other"> = {
-  fitness: "trainer",
-  clinical: "doctor",
-  nutrition: "dietitian",
-  other: "other",
-};
 export const WHAT_YOU_DO_MAX = 40;
 
 /** The "What do you do?" error, or null. Empty is allowed (Optional). */
@@ -252,7 +241,7 @@ export interface ProLaneDraft {
   /** Other only: closest_group. */
   closestGroup: ClosestGroup | null;
   workMode: WorkMode | null;
-  /** "At a business": the business ID typed (join requests are Database stage B6). */
+  /** "At a business": the business ID typed, sent as a join request on submit (Database B6). */
   businessCode: string;
   area: ProArea | null;
   /** Physiotherapist "Home visits cover"; null = none. */

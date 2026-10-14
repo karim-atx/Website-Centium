@@ -22,6 +22,7 @@ import {
 import { cancellationLine, isLateCancellation } from "../../services/venues/venueLogic";
 import { CLASS_HERO, CompactHeader, DetailHero, DetailLabel, DirectionsMenu, MapCard, useCompactHeader } from "./venueParts";
 import { range12, time12 } from "../../utils/time12";
+import { formatShortDate } from "../../utils/date";
 
 // MO1.4.4 Class page (v6 Part B), with its states MO1.4.4.1 (booking popup),
 // .2 (booking confirmed), .3 (booked), .4 (full) and .5 (waitlist), opened by
@@ -60,7 +61,7 @@ import { range12, time12 } from "../../utils/time12";
 function dayMonth(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  const mon = d.toLocaleDateString("en-GB", { month: "short" });
+  const mon = formatShortDate(d, { month: "short" });
   return `${wd} ${d.getDate()} ${mon}`;
 }
 

@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildClock, f12, type ClockColours, type ClockInput, type ClockItem } from "./clockModel.ts";
-import { headline, headlineSize, outcomes, type OvRaw } from "./overviewModel.ts";
+import { headline, headlineSize, insights, outcomes, revenueInsight, type OvRaw } from "./overviewModel.ts";
+import { owed, type PaymentRecord } from "../../../services/business-revenue/model.ts";
 
 const C: ClockColours = {
   dark: false,
@@ -140,7 +141,7 @@ test("headline size formula (AN1-034 #9b)", () => {
 });
 
 const raw = (over: Partial<OvRaw>): OvRaw => ({
-  business: { id: "b", type: "gym", active: true, perk: null, createdAt: "2026-01-01T00:00:00Z" },
+  business: { id: "b", type: "gym", active: true, createdAt: "2026-01-01T00:00:00Z" },
   classes: [],
   anyClass: false,
   nextClass: null,
@@ -174,8 +175,8 @@ test("fill rate, booked spots and net members from rows", () => {
     { id: "k0", title: "Spin", date: "2026-09-01", start: "18:00", end: "19:00", cap: 10, professionalId: null },
   ];
   const bookings = [
-    ...Array.from({ length: 8 }, (_, i) => ({ classId: "k1", clientId: `c${i}`, createdAt: "2026-09-30T10:00:00Z", paymentStatus: null })),
-    ...Array.from({ length: 4 }, (_, i) => ({ classId: "k0", clientId: `c${i}`, createdAt: "2026-08-30T10:00:00Z", paymentStatus: null })),
+    ...Array.from({ length: 8 }, (_, i) => ({ classId: "k1", clientId: `c${i}`, createdAt: "2026-09-30T10:00:00Z", paymentStatus: null, priceAgreed: null })),
+    ...Array.from({ length: 4 }, (_, i) => ({ classId: "k0", clientId: `c${i}`, createdAt: "2026-08-30T10:00:00Z", paymentStatus: null, priceAgreed: null })),
   ];
   const members = [
     { accepted: true, invitedAt: "2026-08-01T10:00:00Z", respondedAt: "2026-08-01T10:00:00Z", endedAt: null },
@@ -198,8 +199,11 @@ test("client outcomes: 21-day rule and payment owed, masked", () => {
     { id: "new", title: "Spin", date: "2026-10-10", start: "18:00", end: "19:00", cap: 10, professionalId: null },
   ];
   const bookings = [
-    { classId: "old", clientId: "aaaa1111-0000", createdAt: "x", paymentStatus: null },
-    { classId: "new", clientId: "bbbb2222-0000", createdAt: "x", paymentStatus: "pending" },
+    { classId: "old", clientId: "aaaa1111-0000", createdAt: "x", paymentStatus: null, priceAgreed: null },
+    { classId: "new", clientId: "bbbb2222-0000", createdAt: "x", paymentStatus: "pending", priceAgreed: 15 },
+    // M4: pending with no price agreed (or a free class) is not money owed, as Revenue says.
+    { classId: "new", clientId: "cccc3333-0000", createdAt: "x", paymentStatus: "pending", priceAgreed: null },
+    { classId: "new", clientId: "dddd4444-0000", createdAt: "x", paymentStatus: "pending", priceAgreed: 0 },
   ];
   const m = outcomes(raw({ classes, bookings, firstClassDate: "2026-09-01", anyClass: true }), { from: "2026-09-17", to: "2026-10-14", compare: true }, "2026-10-14");
   assert.equal(m.needCheckIn, 1);
@@ -210,4 +214,46 @@ test("client outcomes: 21-day rule and payment owed, masked", () => {
       ["Client #AAAA", "No booking in 21 days", "Check in"],
     ],
   );
+});
+
+test("client outcomes and Revenue agree on money owed (M4)", () => {
+  const classes = [{ id: "k", title: "Flow", date: "2026-10-10", start: "18:00", end: "19:00", cap: 10, professionalId: null }];
+  const bookings = [
+    { classId: "k", clientId: "aaaa0000-1", createdAt: "x", paymentStatus: "pending", priceAgreed: null },
+    { classId: "k", clientId: "bbbb0000-1", createdAt: "x", paymentStatus: "pending", priceAgreed: 0 },
+    { classId: "k", clientId: "cccc0000-1", createdAt: "x", paymentStatus: "paid", priceAgreed: 15 },
+  ];
+  const m = outcomes(raw({ classes, bookings, firstClassDate: "2026-10-10", anyClass: true }), { from: "2026-10-01", to: "2026-10-14", compare: true }, "2026-10-14");
+  assert.deepEqual(m.review, []);
+  const recs = bookings.map((b, i): PaymentRecord => ({
+    key: `class:${i}`, kind: "class", id: String(i), gymId: null, amount: b.priceAgreed, status: b.paymentStatus as PaymentRecord["status"], method: "cash",
+    paidAt: null, paidUndated: false, createdAt: "x", dueOn: "2026-10-10", who: null, isMinor: false, item: "Flow", membershipStatus: null, startedOn: null, expiresOn: null,
+  }));
+  assert.equal(owed(recs, "2026-10-14").length, 0);
+});
+
+const pay = (o: Partial<PaymentRecord>): PaymentRecord => ({
+  key: `class:${Math.random()}`, kind: "class", id: "x", gymId: null, amount: 20, status: "paid", method: "cash", paidAt: null, paidUndated: false,
+  createdAt: "2026-09-01T09:00:00", dueOn: null, who: null, isMinor: false, item: "Spin", membershipStatus: null, startedOn: null, expiresOn: null, ...o,
+});
+
+test("revenue insight reads recorded payments like the Revenue page (M1)", () => {
+  const range = { from: "2026-09-17", to: "2026-10-14", compare: true };
+  const today = "2026-10-14";
+  // Nothing loaded / nothing paid: the drawn empty state.
+  assert.equal(revenueInsight(null).sub, "No transactions yet.");
+  assert.deepEqual(insights(raw({}), { records: [pay({ status: "pending", amount: 15 })], range, today })[1], { key: "revenue", value: "–", delta: "", sub: "No transactions yet.", up: false });
+  // Paid in range and in the period before (first payment over 4 weeks ago): total and delta.
+  const recs = [
+    pay({ amount: 30, paidAt: "2026-10-02T10:00:00" }),
+    pay({ amount: 20, paidAt: "2026-10-12T10:00:00" }),
+    pay({ amount: 40, paidAt: "2026-08-25T10:00:00" }),
+    pay({ amount: 99, status: "pending" }),
+  ];
+  assert.deepEqual(revenueInsight({ records: recs, range, today }), { key: "revenue", value: "$50", delta: "+25%", sub: "Collected this period", up: true });
+  // A membership marked paid without a readable date: $0 in the period, named as not counted yet.
+  const und = [pay({ kind: "membership", amount: 45, paidUndated: true, membershipStatus: "active" })];
+  assert.deepEqual(revenueInsight({ records: und, range, today }), { key: "revenue", value: "$0", delta: "", sub: "Collected this period. $45 not counted yet.", up: false });
+  // Early (first payment under 4 weeks ago): no delta, as the Revenue page.
+  assert.equal(revenueInsight({ records: [pay({ amount: 10, paidAt: "2026-10-01T10:00:00" })], range, today }).delta, "");
 });

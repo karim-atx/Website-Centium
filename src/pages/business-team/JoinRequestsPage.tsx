@@ -6,7 +6,7 @@ import { copyText } from "../../components/business-more/share";
 import { respondJoinRequest, type JoinRequest } from "../../services/business-team/team";
 import { Avatar, BackRow, Notice, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { SeatsFullSheet } from "./TeamSheets";
-import { TEAM_TITLE, requestedWhen, seatCounts } from "./teamLogic";
+import { requestedWhen, seatCounts, teamTitle } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-123 / 124 (requests), 126 (deny confirm), 127 (approve with no free
@@ -48,7 +48,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
 
   return (
     <TeamScope detail>
-      <BackRow label={TEAM_TITLE[kind]} onBack={() => navigate("/app/business/employees")} />
+      <BackRow label={teamTitle(kind, data.kindKnown)} onBack={() => navigate("/app/business/employees")} />
       <div className="tm-dhead">
         <span className="tm-dav tile" aria-hidden>
           <Inbox size={26} strokeWidth={1.8} />

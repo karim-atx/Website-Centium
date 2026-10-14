@@ -17,8 +17,8 @@ import { ROLE_ICON, ROLE_LABEL, rolesFor, type Vocab } from "./vocab";
 // - the live "found: Taylor H." chip (row 13.1): invite_employee answers only
 //   on send, there is no lookup function, so a miss shows after Send;
 // The Message field (rows 13-14) is back: invite_employee stores it as
-// invite_message (B6 follow-up) and the professional sees it with the
-// invitation. Seats count instructors and trainers only (role_uses_seat).
+// invite_message (B6 follow-up, 500 max; the frame caps it at 300 with the
+// AN5-015 O1 counter) and the professional sees it with the invitation. Seats count instructors and trainers only (role_uses_seat).
 
 type Step = "form" | "sent" | "failed";
 
@@ -198,8 +198,14 @@ export function InviteSheet({
             placeholder="Add a note (optional)"
             value={message}
             disabled={busy}
+            aria-describedby={message.length > 0 ? "an5-invite-count" : undefined}
             onChange={(e) => setMessage(e.target.value)}
           />
+          {message.length > 0 && (
+            <p id="an5-invite-count" className="an5-counter">
+              {message.length}/300
+            </p>
+          )}
         </div>
 
         <div className="an5-seatnote">

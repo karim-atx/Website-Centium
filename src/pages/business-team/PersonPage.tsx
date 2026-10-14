@@ -14,7 +14,7 @@ import { AvailabilityCard } from "./AvailabilityCard";
 import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
 import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
-import { ROLE_LABEL, TEAM_TITLE, roleAndProfession, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
+import { ROLE_LABEL, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-061 / 130 (person page), 063 / 132 (credentials), 064 (remove
@@ -84,7 +84,7 @@ export function PersonPage({ data }: { data: TeamData }) {
   if (!person) {
     return (
       <TeamScope detail>
-        <BackRow label={TEAM_TITLE[kind]} onBack={back} />
+        <BackRow label={teamTitle(kind, data.kindKnown)} onBack={back} />
         {error && <Notice message={error} onRetry={data.reload} />}
         {!error && people && (
           <div className="tm-rq-card">
@@ -140,7 +140,7 @@ export function PersonPage({ data }: { data: TeamData }) {
 
   return (
     <TeamScope detail>
-      <BackRow label={TEAM_TITLE[kind]} onBack={back} />
+      <BackRow label={teamTitle(kind, data.kindKnown)} onBack={back} />
       {offline && <Notice message="You're offline." />}
       <div className="tm-dhead">
         <Avatar name={name} url={accepted ? person.avatarUrl : null} className={accepted ? "tm-dav" : "tm-dav invited"} />

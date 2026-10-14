@@ -17,7 +17,7 @@ const GROUP_ICONS = { fitness: Dumbbell, clinical: Stethoscope, nutrition: Apple
  * fields OURS-other-professional-fields). Name, date of birth (16+, locked once
  * saved), and for an Other professional "What do you do?" and "Closest group".
  * Kept from the live step: the reserved-name check and the date-of-birth rule
- * and lock note (DobField). The certificate moved to Credentials.
+ * and lock note (the old DobField's copy). The certificate moved to Credentials.
  */
 export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, pro, setPro, onNext, onBack }) => {
   const flow = useOnboardingFlow();
@@ -112,7 +112,7 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
           </button>
         }
         error={dobError}
-        // KEEP-SAFETY (DobField): the lock note shows until a date is chosen.
+        // KEEP-SAFETY (the old DobField's lock note): the lock note shows until a date is chosen.
         help={age !== undefined ? `${age} years old` : "Required. It can't be changed later without contacting support."}
       />
       {isOther && (

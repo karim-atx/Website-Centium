@@ -5,10 +5,13 @@ import { ObSectionLabel, ObTerms } from "../shell";
 import { areaOf, bizStepNames, coverLabel, hoursSummary, initials, laneTypeLabel, listingLine, listingTags, TERMS_ERROR } from "./lanes";
 import { docsFor } from "./draft";
 import { imageUrl } from "../../../services/business-onboarding";
+import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import type { LaneStepProps } from "./laneTypes";
 
 // OB-234 / 268 / 296 (+ 236 / 270 / 298 listing preview, 237 terms not
-// accepted): Step 6 · Review and submit.
+// accepted): Step 6 · Review and submit. KEEP-SAFETY: the health disclaimer
+// sits above Submit for review, so the acceptance recorded on submit
+// (submitForReview) is for text the person has seen.
 
 export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onContinue, onBack, save, goTo, online }) => {
   const lane = biz.lane ?? "gym";
@@ -71,6 +74,7 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
         busy: save.busy,
         error: !online ? "Connect to the internet to submit." : save.error ?? undefined,
         errorTone: !online ? "info" : "error",
+        note: <HealthDisclaimer className="mx-auto max-w-[310px] mb-3" />,
       }}
     >
       <BizSummary n={1} title={names.business} lines={[`${biz.name} · ${typeL}`, biz.phone]} onAction={() => goTo("bizBusiness")} />

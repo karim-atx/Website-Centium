@@ -79,6 +79,13 @@ import "./an11.css";
 
 const BASE = "/app/business/analytics/products";
 
+// M2 (SAFETY_AND_MONEY): "Sales" and "Revenue" here are order value (every
+// placed, not-cancelled store_orders line, paid or not; AN11 / BU6-03 feed
+// them from orders), not recorded payments. The drawn words stay; this line
+// says what they count (OURS).
+const ORDER_VALUE_NOTE =
+  "Sales here are the value of orders placed and not cancelled, paid or not.";
+
 interface DiscountRow {
   id: string;
   label: string;
@@ -519,6 +526,7 @@ const IndexView: React.FC<{
           <p className="pa-numl">Sales this period</p>
         </div>
         <p className="pa-lead">{lead}</p>
+        <p className="pa-ordernote">{ORDER_VALUE_NOTE}</p>
       </section>
 
       <section className="pa-card pa-hero" aria-label="What's selling?">
@@ -1105,6 +1113,9 @@ const ProductDetail: React.FC<{
           {known
             ? detailLead(p.visible, s)
             : "Sales show here once orders are on Centium."}
+        </p>
+        <p className="pa-ordernote" style={{ padding: "0 16px 12px" }}>
+          {ORDER_VALUE_NOTE}
         </p>
       </section>
 

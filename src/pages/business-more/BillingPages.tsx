@@ -6,6 +6,7 @@ import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { fetchPlanRenewal } from "../../services/business-more";
 import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
+import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -19,7 +20,7 @@ import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/
 // here shows a sample amount, and no money that isn't recorded.
 
 const money = (n: number) => `$${n.toFixed(2)}`;
-const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 const ComingCard = ({ icon: Icon, title, body }: { icon: typeof Landmark; title: string; body: string }) => (
   <div className={`${LIST_BG} flex flex-col items-center text-center`} style={{ borderRadius: 18, padding: "24px 16px", marginBottom: 13 }}>

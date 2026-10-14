@@ -5,7 +5,6 @@ import {
   emptyProDraft,
   formatsForDb,
   placesForDb,
-  CLOSEST_GROUP_LEGACY,
   CLOSEST_GROUPS,
   lengthsForDb,
   proChipLabel,
@@ -89,5 +88,4 @@ test("places go to session_places, and Home visits only with a radius", () => {
 
 test("Closest group offers the four professional_group values", () => {
   assert.deepEqual(CLOSEST_GROUPS.map((g) => g.value), ["fitness", "clinical", "nutrition", "other"]);
-  assert.equal(CLOSEST_GROUP_LEGACY.clinical, "doctor");
 });

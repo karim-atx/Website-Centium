@@ -4,7 +4,7 @@ import { dateKicker, gaugeModels, greeting, kindOf, maskedMember, setupSteps, sh
 import type { DashRaw } from "./dashboardTypes";
 
 const raw = (over: Partial<DashRaw> = {}): DashRaw => ({
-  business: { id: "b", name: "Studio", type: "gym", active: true, perk: null },
+  business: { id: "b", name: "Studio", type: "gym", active: true },
   classes: [],
   bookings: [],
   members: [],

@@ -32,7 +32,7 @@ function describe(error: PostgrestError | null, fallback: string): string {
 
 export interface ProLaneColumns {
   other_discipline?: string | null;
-  /** professional_group (fitness / clinical / nutrition / other) since 20261120020000; a professional_subtype before it. */
+  /** professional_group (fitness / clinical / nutrition / other), Database 20261120020000. */
   closest_group?: string | null;
   work_mode?: "in_person" | "online" | "both" | null;
   home_visit_km?: number | null;
@@ -103,28 +103,6 @@ export async function ensureProProfileRow(userId: string): Promise<Ok | Fail> {
   const ins = await db.from("professional_profiles").insert({ profile_id: userId, ...(mirror ? { certification_url: mirror } : null) });
   if (ins.error && ins.error.code !== "23505") return { ok: false, message: describe(ins.error, "Couldn't load your details. Try again.") };
   return { ok: true };
-}
-
-/**
- * Whether the stack has Database 20261120020000 (closest_group as
- * professional_group, session_places). Asked once per session: until the
- * migration is applied the lane writes the B5 shapes (closest_group as the
- * nearest subtype, places kept in the draft only).
- */
-let schema: Promise<"v2" | "v1"> | null = null;
-export function professionalLaneSchema(): Promise<"v2" | "v1"> {
-  if (!schema) {
-    schema = (async () => {
-      const { error } = await db.from("professional_profiles").select("session_places").limit(0);
-      if (error && (error.code === "42703" || /session_places/.test(error.message ?? ""))) return "v1";
-      if (error) {
-        schema = null; // a network failure: ask again next time
-        return "v1";
-      }
-      return "v2";
-    })();
-  }
-  return schema;
 }
 
 /** The caller's own lane columns, for resuming on another device. */

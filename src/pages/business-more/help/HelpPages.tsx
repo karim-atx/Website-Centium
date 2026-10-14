@@ -17,7 +17,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { BizCard, BizLabel, BizPage, BizRow, BizSection, SearchBox } from "../../../components/business-more/kit";
+import { BizCard, BizLabel, BizPage, BizRow, BizSection, RowsSkeleton, SearchBox } from "../../../components/business-more/kit";
 import { useBizToast } from "../../../components/business-more/useBizToast";
 import { useBusiness } from "../../../components/business-more/useBusiness";
 import { ContactUsPopup } from "../../../components/profile/ContactUsPopup";
@@ -57,7 +57,7 @@ function useContact() {
 
 export function HelpCentrePage() {
   const navigate = useNavigate();
-  const { kind } = useBusiness();
+  const { kind, laneSettled } = useBusiness();
   const topics = helpTopics(kind);
   const [q, setQ] = useState("");
   const results = searchHelp(topics, q);
@@ -66,7 +66,13 @@ export function HelpCentrePage() {
   return (
     <BizPage title="Help centre" sub={q ? undefined : "Guides for running your business on Centium."} offline={false}>
       <SearchBox value={q} onChange={setQ} onClear={() => setQ("")} placeholder="Search help articles" label="Search help articles" icon={Search} />
-      {q.trim() ? (
+      {!laneSettled ? (
+        // The topics differ per lane: held on the skeleton until it is known.
+        <>
+          <BizLabel>Topics</BizLabel>
+          <RowsSkeleton rows={5} label="Loading help topics" />
+        </>
+      ) : q.trim() ? (
         results.length > 0 ? (
           <BizSection label={`${results.length} ${results.length === 1 ? "result" : "results"}`}>
             {results.map(({ topic, article }) => (
@@ -112,11 +118,21 @@ export function HelpCentrePage() {
   );
 }
 
+/** A topic or article opened directly: its text is per lane, so it waits for the lane. */
+function HelpLoading() {
+  return (
+    <BizPage title="Help centre" offline={false}>
+      <RowsSkeleton rows={4} label="Loading help" />
+    </BizPage>
+  );
+}
+
 export function HelpTopicPage() {
   const navigate = useNavigate();
   const { topic: topicId } = useParams();
-  const { kind } = useBusiness();
+  const { kind, laneSettled } = useBusiness();
   const topic = helpTopics(kind).find((t) => t.id === topicId);
+  if (!laneSettled) return <HelpLoading />;
   if (!topic) return <HelpCentrePage />;
   return (
     <BizPage title={topic.title} sub={`${topic.articles.length} ${topic.articles.length === 1 ? "article" : "articles"}`} offline={false}>
@@ -131,11 +147,12 @@ export function HelpTopicPage() {
 
 export function HelpArticlePage() {
   const { topic: topicId, article: articleId } = useParams();
-  const { kind } = useBusiness();
+  const { kind, laneSettled } = useBusiness();
   const topic = helpTopics(kind).find((t) => t.id === topicId);
   const article = topic?.articles.find((x) => x.id === articleId);
   const [answered, setAnswered] = useState(false);
   const { openContact, node } = useContact();
+  if (!laneSettled) return <HelpLoading />;
   if (!topic || !article) return <HelpCentrePage />;
   return (
     <BizPage title={article.title} sub={`${topic.title} · ${readMinutes(article)} min read`} offline={false}>

@@ -276,6 +276,8 @@ export const ReviewComposer: React.FC<{
         subtitle="You'll lose what you've written."
         confirmLabel="Discard"
         cancelLabel="Keep editing"
+        // AN13-028 row 5: Discard #C0392B with white in both modes.
+        confirmStyle={{ background: "#C0392B", color: "#FFFFFF" }}
         onCancel={() => {
           setDiscard(false);
           // AN13-030: back to the text, caret at the end.

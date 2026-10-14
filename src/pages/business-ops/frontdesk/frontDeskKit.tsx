@@ -41,15 +41,15 @@ export const DeskHeader: React.FC<{ kicker: string; title: string; sub?: string;
   </div>
 );
 
-/** OURS-scan E1: 40 round, no fill, 20 glyph inkSoft, 44 hit box. */
-export const HeaderIconButton: React.FC<{ icon: LucideIcon; label: string; onClick: () => void }> = ({ icon: Icon, label, onClick }) => (
+/** OURS-scan E1: 40 round, no fill, 20 glyph inkSoft, 44 hit box. `edge` pulls the last one to the margin. */
+export const HeaderIconButton: React.FC<{ icon: LucideIcon; label: string; onClick: () => void; edge?: boolean }> = ({ icon: Icon, label, onClick, edge = true }) => (
   <button
     type="button"
     onClick={onClick}
     aria-label={label}
     title={label}
     className="tap shrink-0 flex items-center justify-center rounded-full text-charcoal-soft"
-    style={{ width: 40, height: 40, marginInlineEnd: -8, marginTop: 6 }}
+    style={{ width: 40, height: 40, marginInlineEnd: edge ? -8 : 0, marginTop: 6 }}
   >
     <Icon size={20} aria-hidden />
   </button>

@@ -25,69 +25,8 @@ import { db, loadFail, num, str, writeFail, type Load, type Write } from "./back
 // cleared 90 days after completion (V6-38): a null address on an old order
 // is expected, not an error.
 
-export type OrderStatus = "placed" | "packed" | "out_for_delivery" | "ready_for_pickup" | "completed" | "cancelled" | "returned";
-export type Fulfilment = "delivery" | "pickup";
-export type PayMethod = "cash" | "whish";
-
-export interface OrderItem {
-  id: string;
-  offeringId: string | null;
-  name: string;
-  variant: string | null;
-  qty: number;
-  unitPrice: number;
-  lineTotal: number;
-}
-
-export interface StoreOrder {
-  id: string;
-  businessId: string;
-  number: number;
-  customerId: string | null;
-  customerName: string | null;
-  customerPhone: string | null;
-  fulfilment: Fulfilment;
-  deliveryAddress: string | null;
-  deliveryFee: number;
-  subtotal: number;
-  total: number;
-  paymentMethod: PayMethod;
-  paidAt: string | null;
-  status: OrderStatus;
-  placedAt: string;
-  packedAt: string | null;
-  outAt: string | null;
-  readyAt: string | null;
-  completedAt: string | null;
-  cancelledAt: string | null;
-  refundAmount: number | null;
-  refundMethod: PayMethod | null;
-  refundedAt: string | null;
-  items: OrderItem[];
-  /** Store name, on the customer's own reads. */
-  storeName: string | null;
-}
-
-export type ReturnStatus = "requested" | "approved" | "received" | "refunded" | "rejected";
-
-export interface StoreReturn {
-  id: string;
-  orderId: string;
-  orderNumber: number | null;
-  orderPlacedAt: string | null;
-  customerName: string | null;
-  reason: string;
-  note: string | null;
-  status: ReturnStatus;
-  paymentMethod: PayMethod;
-  refundAmount: number;
-  requestedAt: string;
-  approvedAt: string | null;
-  receivedAt: string | null;
-  refundedAt: string | null;
-  rejectedAt: string | null;
-  items: { name: string; variant: string | null; qty: number; amount: number }[];
-}
+import type { Fulfilment, OrderStatus, ReturnStatus, StoreOrder, StoreReturn } from "./types";
+export type { Fulfilment, OrderItem, OrderStatus, PayMethod, ReturnStatus, StoreOrder, StoreReturn } from "./types";
 
 /** V6-158: the return reasons, our short list (recorded as OURS). */
 export const RETURN_REASONS = ["Unopened", "Damaged", "Wrong item", "Changed my mind"] as const;

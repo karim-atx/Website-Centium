@@ -359,10 +359,6 @@ export function ListingSheet({
   onClose: () => void;
   active: boolean;
   onToggle: (v: boolean) => Promise<string | null>;
-  /** @deprecated V6-88: the perk is edited in Marketplace › Promotions only. Ignored; kept so callers still compile. */
-  perk?: string;
-  /** @deprecated V6-88 (see perk). Ignored. */
-  onSavePerk?: (v: string) => Promise<string | null>;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [wasOpen, setWasOpen] = useState(open);

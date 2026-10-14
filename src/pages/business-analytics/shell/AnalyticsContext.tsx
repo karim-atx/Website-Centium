@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useAnalytics as useShell } from "../analyticsContext";
 import type { AnalyticsRange } from "../analyticsRange";
+import type { BizKind } from "../../../components/business-more/kind";
 
 // The Analytics shell is AnalyticsShell.tsx (routed at
 // /app/business/analytics/:section, context in analyticsContext.ts). This is
@@ -16,10 +17,12 @@ export interface ExportRows {
 export interface AnalyticsState {
   range: AnalyticsRange;
   setExport: (e: ExportRows | null) => void;
+  /** The lane, known before any section mounts (the shell waits for the business row). */
+  kind: BizKind;
 }
 
 export function useAnalytics(): AnalyticsState {
-  const { range, setExport: set } = useShell();
+  const { range, kind, setExport: set } = useShell();
   const setExport = useCallback((e: ExportRows | null) => set(e?.filename ?? "", e ? e.rows : null), [set]);
-  return useMemo(() => ({ range, setExport }), [range, setExport]);
+  return useMemo(() => ({ range, kind, setExport }), [range, kind, setExport]);
 }

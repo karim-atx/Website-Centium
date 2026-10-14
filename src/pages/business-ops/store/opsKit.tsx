@@ -512,7 +512,9 @@ export const KitFieldButton: React.FC<{
   disabled?: boolean;
   note?: React.ReactNode;
   expanded?: boolean;
-}> = ({ id, label, value, placeholder, icon: Icon, onClick, error, disabled, note, expanded }) => (
+  /** What the field opens: a menu (default) or a dialog (calendar card, time wheel). */
+  popup?: "listbox" | "dialog";
+}> = ({ id, label, value, placeholder, icon: Icon, onClick, error, disabled, note, expanded, popup = "listbox" }) => (
   <div style={{ marginBottom: 12 }}>
     <p id={`${id}-l`} className="text-[12px] font-bold text-charcoal-soft" style={{ marginBottom: 6 }}>
       {label}
@@ -521,7 +523,7 @@ export const KitFieldButton: React.FC<{
       id={id}
       type="button"
       aria-labelledby={`${id}-l ${id}`}
-      aria-haspopup={onClick ? "listbox" : undefined}
+      aria-haspopup={onClick ? popup : undefined}
       aria-expanded={expanded}
       disabled={disabled || !onClick}
       onClick={(e) => onClick?.(e.currentTarget)}

@@ -60,6 +60,7 @@ import {
 import { formatPrice } from "../../utils/price";
 import { CompactHeader, DetailHero, DetailLabel, DirectionsMenu, GYM_HERO, LOGO_SHADOW, MapCard, useCompactHeader } from "./venueParts";
 import { time12Split } from "../../utils/time12";
+import { formatShortDate } from "../../utils/date";
 
 // MO1.4.2.1 Gym page (v6 Part B: MO1.4.2.1 and MO1.4.2.1.s), with its tabs
 // (About, Classes OURS-gym-classes-tab, Memberships MO1.4.2.2, Reviews
@@ -110,7 +111,7 @@ const dayLabel = (iso: string, today: string) => {
   if (iso === today) return "Today";
   if (iso === addDaysIso(today, 1)) return "Tomorrow";
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
+  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
 };
 
 /** "HH:MM" now, for dropping a class that has already started today (book_class() refuses it, ATX86). */
@@ -654,7 +655,7 @@ export function GymPage({ gymId }: { gymId: string }) {
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-bold text-charcoal truncate">{mine.planName || "Membership"}</span>
                 <span className="block text-[11.5px] text-charcoal-faint tabular-nums">
-                  {formatPrice(mine.priceAgreed) || "$0"} · {mine.expiresOn ? `until ${new Date(`${mine.expiresOn}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "no end date"}
+                  {formatPrice(mine.priceAgreed) || "$0"} · {mine.expiresOn ? `until ${formatShortDate(new Date(`${mine.expiresOn}T00:00:00`), { day: "numeric", month: "short", year: "numeric" })}` : "no end date"}
                 </span>
               </span>
               {tag && <MemberTag label={tag.label} tone={tag.tone} />}

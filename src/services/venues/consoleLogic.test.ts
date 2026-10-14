@@ -10,6 +10,7 @@ import {
   logoObjectPath,
   money,
   pageLine,
+  paidLine,
   passStateTag,
   pickVenue,
   replacedObject,
@@ -113,6 +114,8 @@ const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   payment_method: "cash",
   payment_status: "pending",
   price_agreed: "120",
+  paid_at: null,
+  marked_paid_by: null,
   started_on: "2026-10-01",
   expires_on: "2026-11-01",
   pass_state: "awaiting_payment",
@@ -128,7 +131,9 @@ test("toVenueMember: carries a first name and a minor flag, nothing more", () =>
     "firstName",
     "isMinor",
     "joinedAt",
+    "markedPaidBy",
     "membershipId",
+    "paidAt",
     "passState",
     "paymentMethod",
     "paymentStatus",
@@ -294,4 +299,16 @@ test("consoleMessage: the console's codes, then stage 4's, then the fallback", (
   assert.match(consoleMessage("23514", "", "x"), /closed, open 24 hours/);
   assert.equal(consoleMessage("ATX01", "", "x"), "Your session expired. Sign in again.");
   assert.equal(consoleMessage(undefined, "boom", "fallback"), "fallback");
+});
+
+test("paidLine: 'Paid {d Mon}' on the local day, only for a recorded payment", () => {
+  const at = new Date(2026, 9, 3, 18, 30).toISOString();
+  assert.equal(paidLine({ paidAt: at, paymentStatus: "paid" }), "Paid 3 Oct");
+  assert.equal(paidLine({ paidAt: new Date(2026, 8, 27, 9).toISOString(), paymentStatus: "paid" }), "Paid 27 Sep");
+  assert.equal(paidLine({ paidAt: null, paymentStatus: "paid" }), null);
+  assert.equal(paidLine({ paidAt: at, paymentStatus: "refunded" }), null);
+  assert.equal(paidLine({ paidAt: null, paymentStatus: "pending" }), null);
+  const m = toVenueMember(memberRow({ payment_status: "paid", paid_at: at, marked_paid_by: "u1" }));
+  assert.equal(m.paidAt, at);
+  assert.equal(m.markedPaidBy, "u1");
 });

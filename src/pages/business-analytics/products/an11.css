@@ -1035,3 +1035,13 @@ html.larger-text .pa-dact {
   outline: none;
   box-shadow: var(--an-ring);
 }
+
+/* M2 note under the lead (OURS): what "Sales" counts. */
+.pa-ordernote {
+  padding: 0 20px 12px;
+  margin-top: -4px;
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--an-ink-soft);
+  text-wrap: pretty;
+}

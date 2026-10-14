@@ -4,6 +4,7 @@ import {
   busiestDay,
   collected,
   dailySeries,
+  isOwed,
   money,
   owed,
   pctDelta,
@@ -122,4 +123,13 @@ test("revenue: lists transactions newest first", () => {
       ["x", "Paid"],
     ]
   );
+});
+
+test("revenue: isOwed is pending with an agreed price above zero", () => {
+  assert.equal(isOwed(rec({ status: "pending", amount: 15 })), true);
+  assert.equal(isOwed(rec({ status: "pending", amount: null })), false);
+  assert.equal(isOwed(rec({ status: "pending", amount: 0 })), false);
+  assert.equal(isOwed(rec({ status: "paid", amount: 15 })), false);
+  assert.equal(isOwed(rec({ kind: "membership", status: "pending", amount: 30, membershipStatus: "cancelled" })), false);
+  assert.equal(isOwed(rec({ kind: "membership", status: "pending", amount: 30, membershipStatus: "active" })), true);
 });

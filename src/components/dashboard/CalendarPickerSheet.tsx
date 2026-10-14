@@ -85,7 +85,14 @@ export const CalendarPickerSheet: React.FC<{
   variant?: "default" | "partB";
   /** Earlier days greyed and unselectable (HE1.8.2: past days disabled); the previous-month arrow stops at it. */
   minDate?: string;
-}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children, variant = "default", minDate }) => {
+  /**
+   * Light day-number ink of the default variant. "black" (default) is the
+   * Part B calendar's #000000 (calendar-handover rows 18-19); "ink" is the
+   * page ink #241F1B (BU AN3-018 row 7, the New class Date card). Dark is
+   * charcoal (#F5F3FA) either way.
+   */
+  dayInk?: "black" | "ink";
+}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children, variant = "default", minDate, dayInk = "black" }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const dark = useIsDark();
@@ -237,7 +244,7 @@ export const CalendarPickerSheet: React.FC<{
                       fontSize: textPx(15),
                       fontWeight: isSelected ? 600 : 500,
                       background: isSelected ? "rgb(var(--c-fill-day))" : "transparent",
-                      color: isSelected ? "rgb(var(--c-on-primary-fill))" : isFuture ? cal("future") : cal("day"),
+                      color: isSelected ? "rgb(var(--c-on-primary-fill))" : isFuture ? cal("future") : dayInk === "ink" ? "rgb(var(--c-charcoal))" : cal("day"),
                     }}
                   >
                     {d.getDate()}

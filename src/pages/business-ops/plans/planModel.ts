@@ -1,4 +1,4 @@
-import type { MembershipBilling, MembershipPlanRow, PlanKind, PlanStatus } from "../../../services/membership-plans";
+import type { MembershipBilling, MembershipPlanRow, PlanKind, PlanStatus } from "../../../services/membership-plans/types";
 
 // v6 Batch 4 · Plans (OP1-037…052, 096…111, 157…178). The words and the
 // derived values the plan list, the plan page and the plan sheet share, kept
@@ -93,7 +93,7 @@ export function statusLine(status: PlanStatus): string {
  * The figures line (OP1-022 row 9, logic 461): only sentences the data
  * supports. No plans: the source's empty line. Plans but no members yet: OURS.
  */
-export function figuresLine(plans: Pick<MembershipPlanRow, "name" | "status">[], counts: Map<string, number> | null): string {
+export function figuresLine(plans: Pick<MembershipPlanRow, "name" | "status">[], counts: Map<string, number> | null, early = false): string {
   if (plans.length === 0) return "Add your first plan to start selling memberships.";
   const parts: string[] = [];
   if (counts) {
@@ -103,11 +103,26 @@ export function figuresLine(plans: Pick<MembershipPlanRow, "name" | "status">[],
       const n = counts.get(p.name) ?? 0;
       if (n > 0 && (!best || n > best.n)) best = { name: p.name, n };
     }
-    if (best && total > 0) parts.push(`${best.name} is the most popular plan: ${best.n} of ${total} members.`);
+    // OP1-032 row 2: early data says so instead of naming a most popular plan.
+    // The source's second sentence ("Value per class shows after 2 weeks of
+    // bookings.") waits for the value-per-class figure (B15).
+    if (early && total > 0) parts.push("Your first members joined this month.");
+    else if (best && total > 0) parts.push(`${best.name} is the most popular plan: ${best.n} of ${total} members.`);
     else parts.push("Members show here once someone buys a plan on Explore.");
   }
   for (const p of plans) if (p.status === "paused") parts.push(`${p.name} is paused.`);
   return parts.join(" ");
+}
+
+/**
+ * Early data (OP1-032; HANDOVER 3.10 hides deltas under 14 days): the first
+ * active membership started under 14 days ago, in this calendar month (the
+ * line says "this month"). Dates are ISO days.
+ */
+export function isEarly(firstStarted: string | null, today: string): boolean {
+  if (!firstStarted) return false;
+  const days = Math.round((Date.parse(today) - Date.parse(firstStarted.slice(0, 10))) / 86400000);
+  return days >= 0 && days < 14 && firstStarted.slice(0, 7) === today.slice(0, 7);
 }
 
 /** "a" / "an" before a lower-case type name (OP1-107 template). */

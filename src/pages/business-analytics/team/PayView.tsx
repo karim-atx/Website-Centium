@@ -12,6 +12,8 @@ import type { Vocab } from "./vocab";
 // "No pay data yet" state (row 11). Revenue per class needs recorded booking payments (B8), so
 // the revenue-vs-pay block is not shown until then.
 
+const PAY_ESTIMATE_NOTE = "An estimate from each instructor's agreed rate, not payouts you recorded.";
+
 export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vocab: Vocab; onBack: () => void; onCard: (id: string) => void }) {
   const [all, setAll] = useState(false);
   const rows = (state.stats?.perPerson ?? [])
@@ -116,6 +118,12 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
         )}
       </QuestionCard>
       {!noPay && <p className="an5-foot">Based on classes taught in this period.</p>}
+      {/* M3 (OURS-AN5 O6): "Total pay" is rate × classes, not payroll records. */}
+      {!noPay && (
+        <p className="an5-foot" data-pay-estimate style={{ marginTop: 4 }}>
+          {PAY_ESTIMATE_NOTE}
+        </p>
+      )}
     </div>
   );
 }

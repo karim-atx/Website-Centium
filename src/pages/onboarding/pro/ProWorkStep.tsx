@@ -34,8 +34,8 @@ const BEIRUT = { lat: 33.89, lng: 35.5 };
 /**
  * Step 2 · Where you work (OB-141, OB-143, OB-165, OB-167, OB-168, OB-198,
  * OB-200). Work mode (professional_work_mode: Independent and At a business
- * are both in person), the business ID when at a business (join requests are
- * Database stage B6: the field is kept in the draft and explained), the area
+ * are both in person), the business ID when at a business (sent as a join
+ * request on submit, Database B6 request_to_join_business), the area
  * clients see (an approximate area, never an address: the app's area list or
  * a pin, stored to about 1 km and shown only once the profile is listed), and
  * a Physiotherapist's home-visit radius.
@@ -138,8 +138,8 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
           autoCapitalize="characters"
           autoComplete="off"
           error={codeError}
-          // BACKEND B6 (join requests): nothing can be sent to the business yet.
-          help="Joining a business with its ID opens soon. Until then, the business can add you from its Team."
+          // Sent on submit (ProLane: request_to_join_business).
+          help="We send your request when you submit. You join once the business approves it and you accept."
         />
       )}
       {showArea && (

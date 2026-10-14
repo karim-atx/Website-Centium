@@ -8,6 +8,7 @@
 // readers return, so a surname, email or birth date has nowhere to go.
 
 import { formatPrice } from "../../utils/price";
+import { formatShortDate } from "../../utils/date";
 import { memberTag, stage4Message, storagePath, type PassState } from "./venueLogic";
 import type { HoursRow } from "./hours";
 
@@ -169,6 +170,13 @@ export interface VenueMember {
   paymentMethod: string;
   paymentStatus: PaymentStatus;
   priceAgreed: number;
+  /**
+   * When the payment was recorded (venue_members, 20261120080000). Shown as
+   * "Paid {d Mon}"; never summed into Revenue, which waits for B8's ledger.
+   */
+  paidAt: string | null;
+  /** Who recorded it: a profile id, not a name. Carried, not shown. */
+  markedPaidBy: string | null;
   startedOn: string;
   expiresOn: string | null;
   /** The same derived state my_gym_memberships() shows the member. */
@@ -185,6 +193,8 @@ export type VenueMemberRow = {
   payment_method: string;
   payment_status: PaymentStatus;
   price_agreed: number | string | null;
+  paid_at: string | null;
+  marked_paid_by: string | null;
   started_on: string;
   expires_on: string | null;
   pass_state: PassState;
@@ -202,11 +212,24 @@ export function toVenueMember(r: VenueMemberRow): VenueMember {
     paymentMethod: r.payment_method,
     paymentStatus: r.payment_status,
     priceAgreed: int(r.price_agreed),
+    paidAt: r.paid_at ?? null,
+    markedPaidBy: r.marked_paid_by ?? null,
     startedOn: r.started_on,
     expiresOn: r.expires_on,
     passState: r.pass_state,
     joinedAt: r.joined_at,
   };
+}
+
+/**
+ * "Paid 3 Oct", on the desk's own calendar day; null while unpaid, refunded,
+ * or paid before paid_at was recorded.
+ */
+export function paidLine(m: Pick<VenueMember, "paidAt" | "paymentStatus">): string | null {
+  if (!m.paidAt || m.paymentStatus !== "paid") return null;
+  const d = new Date(m.paidAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Paid ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
 }
 
 /** total_count rides on every row; an empty page has none, so it is 0 then. */

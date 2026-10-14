@@ -1,4 +1,4 @@
-import type { BizReview, ReviewReply } from "../../../services/reputation";
+import type { BizReview, ReviewReply } from "../../../services/reputation/types";
 import {
   addDays,
   dateOf,

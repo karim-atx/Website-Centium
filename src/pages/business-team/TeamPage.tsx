@@ -7,7 +7,7 @@ import { fetchBooked, type ClassSession, type TeamPerson } from "../../services/
 import { Avatar, Notice, TeamCta, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { InviteSheet, SeatsFullSheet } from "./TeamSheets";
 import {
-  TEAM_TITLE,
+  teamTitle,
   firstWord,
   isAccepted,
   previewLine,
@@ -94,8 +94,9 @@ export function TeamPage({ data }: { data: TeamData }) {
 
   return (
     <TeamScope>
-      <h1 className="tm-title">{TEAM_TITLE[kind]}</h1>
-      <p className="tm-subtitle">{teamSubtitle(kind)}</p>
+      <h1 className="tm-title">{teamTitle(kind, data.kindKnown)}</h1>
+      {/* Held blank (same height) until the lane is known. */}
+      <p className="tm-subtitle">{data.kindKnown ? teamSubtitle(kind) : " "}</p>
 
       {offline ? (
         <Notice message="You're offline. Showing your last saved team." />

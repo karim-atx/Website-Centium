@@ -1,4 +1,3 @@
-import type { Database } from "../../../lib/supabase/database.types";
 import { db, isMissingColumn, loadFail, num, str, writeFail, type Load, type Write } from "./backend";
 
 // Store products on business_offerings (V6-50: the model the app already
@@ -17,23 +16,8 @@ import { db, isMissingColumn, loadFail, num, str, writeFail, type Load, type Wri
 /** B11 stock / visibility / category / photo writes are wired (flip with B11). */
 export const STOCK_WRITES = false;
 
-export type OfferingCategory = Database["public"]["Enums"]["offering_category"];
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number | null;
-  description: string;
-  /** Marketplace category (business_offerings.category, the Explore enum). */
-  marketCategory: OfferingCategory;
-  /** B11: null = not tracked, or the column is not there yet. */
-  stock: number | null;
-  /** B11: false = hidden from the store. Defaults to true before B11. */
-  visible: boolean;
-  /** B11 product category name, or null ("Other"). */
-  category: string | null;
-  imagePath: string | null;
-}
+import type { OfferingCategory, Product } from "./types";
+export type { OfferingCategory, Product } from "./types";
 
 export interface ProductsLoad {
   products: Product[];

@@ -136,6 +136,8 @@ export interface BusinessPatch {
   name?: string;
   type?: BusinessTypeValue;
   bio?: string | null;
+  /** The free-text area shown next to the name (storefront, Explore seller line, listing strength). */
+  location?: string | null;
   publicPhone?: string | null;
   publicEmail?: string | null;
   publicWebsite?: string | null;
@@ -155,6 +157,7 @@ export function businessPatchRow(patch: BusinessPatch): Record<string, unknown> 
   if ("name" in patch && patch.name !== undefined) row.business_name = patch.name.trim();
   if ("type" in patch && patch.type !== undefined) row.business_type = patch.type;
   if ("bio" in patch) row.bio = clean(patch.bio);
+  if ("location" in patch) row.location = clean(patch.location);
   if ("publicPhone" in patch) row.public_phone = clean(patch.publicPhone);
   if ("publicEmail" in patch) row.public_email = clean(patch.publicEmail);
   if ("publicWebsite" in patch) row.public_website = clean(patch.publicWebsite);

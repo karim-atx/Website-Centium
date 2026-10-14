@@ -13,6 +13,16 @@ import { GroupInvitationView } from "../../components/messages/GroupInvitationVi
 import { ThreadView } from "../../components/messages/ThreadView";
 import { MessagesHeader } from "../../components/messages/MessagesHeader";
 import { DeleteConversationConfirm } from "../../components/messages/DeleteConversationConfirm";
+import {
+  BizEmptyCard,
+  BizListError,
+  BizListHeader,
+  BizListSkeleton,
+  BizNewMessageSheet,
+  BizOfflineBanner,
+} from "../../components/messages/BusinessList";
+import { Chip } from "../../components/ui/Chip";
+import { useOnline } from "../../hooks/useOnline";
 import { useListColors, type ListColors } from "../../components/messages/listColors";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { StarredMessages } from "../../components/messages/StarredMessages";
@@ -78,6 +88,10 @@ export default function Messages() {
   const { authUserId, user, professionalClients } = useApp();
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
+  /** OP1-190: a business reads the list in ClientChatV2's language (BusinessList.tsx). */
+  const biz = user.accountType === "business";
+  const online = useOnline();
+  const [bizNewOpen, setBizNewOpen] = useState(false);
   const c = useListColors();
   // The professional's connected clients, for every picker in 2B. Only these
   // can be invited, added to a list or messaged first.
@@ -220,6 +234,16 @@ export default function Messages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId]);
 
+  // OP1-190 O3: back online, the business list re-reads what the offline
+  // line said was saved.
+  const wasOnline = useRef(online);
+  useEffect(() => {
+    const back = online && !wasOnline.current;
+    wasOnline.current = online;
+    if (back && biz && authUserId) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
+
   const q = query.trim().toLowerCase();
   const term = query.trim();
   const searchingMessages = term.length >= MIN_GLOBAL_QUERY && view !== "starred";
@@ -323,6 +347,7 @@ export default function Messages() {
     setNewChatBusy(false);
     if (!r.ok) return setNewChatError(r.message);
     setNewChatOpen(false);
+    setBizNewOpen(false);
     await load(r.threadId);
   };
 
@@ -495,10 +520,17 @@ export default function Messages() {
   if (view === "starred") {
     return live(
       <div>
-        {/* K11: the #2-#4 header pattern, "Starred messages". */}
-        <FixedHeader paddingBottom={12}>
-          <MessagesHeader title="Starred messages" onBack={() => setView("list")} />
-        </FixedHeader>
+        {/* K11: the #2-#4 header pattern, "Starred messages" (business: the
+            OP1-190 title row with the chat's back, K2). */}
+        {biz ? (
+          <div className="-mt-2">
+            <BizListHeader title="Starred messages" onBack={() => setView("list")} />
+          </div>
+        ) : (
+          <FixedHeader paddingBottom={12}>
+            <MessagesHeader title="Starred messages" onBack={() => setView("list")} />
+          </FixedHeader>
+        )}
         <StarredMessages
           threads={threads}
           authUserId={authUserId}
@@ -549,7 +581,7 @@ export default function Messages() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={user.accountType === "business" ? "Search" : "Search messages"}
+            placeholder="Search messages"
             className="flex-1 min-w-0 bg-transparent text-[13.5px] leading-[20.3px] font-normal text-charcoal placeholder:text-charcoal-muted focus:outline-none"
           />
         </label>
@@ -569,6 +601,175 @@ export default function Messages() {
         )}
     </div>
   );
+
+  // Messages found by the database's search, under the chats (both lists).
+  const hitsSection = searchingMessages && (
+    <section className="mt-3" aria-label="Messages">
+      <SectionLabel c={c}>Messages</SectionLabel>
+      {searchError && (
+        <p className="text-[12.5px] py-2" style={{ color: c.dangerText }}>
+          {searchError}
+        </p>
+      )}
+      {!searching && !searchError && hits.length === 0 && (
+        <p className="text-[13px] text-center py-6" style={{ color: c.inkSoft }}>
+          No messages match "{term}".
+        </p>
+      )}
+      <SearchResults
+        hits={hits}
+        query={term}
+        titleFor={(h) => {
+          const name = threads.find((t) => t.id === h.threadId)?.participantName ?? "Conversation";
+          return h.senderId === authUserId ? `You → ${name}` : name;
+        }}
+        onOpen={openHit}
+        hasMore={hitsMore}
+        loadingMore={searching}
+        onMore={() => void moreHits()}
+      />
+    </section>
+  );
+
+  const threadList = (
+    <ThreadList
+      items={items}
+      settings={settings}
+      onOpenInvitation={(inv) => {
+        setOpenInvitation(inv);
+        setView("invitation");
+      }}
+      onOpenBroadcast={(list) => {
+        setOpenList(list);
+        setView("broadcast");
+      }}
+      readState={readState}
+      delivered={delivered}
+      authUserId={authUserId}
+      onOpen={setOpen}
+      actions={rowActions}
+      business={biz}
+    />
+  );
+
+  // OP1-190: the business list (ClientChatV2 state="list", template 22-37).
+  // Everything scrolls together as drawn (no fixed area); the page's 16 top
+  // (the shell gives 24). Filters, Starred and Archived, search across
+  // messages, swipe and the ⋮ menu are the live features kept (K1, K2, S3).
+  if (biz) {
+    // O3: offline over chats already loaded keeps them, with one line; a
+    // first load that failed (or failed online) is O2.
+    const showOffline = !online && threads.length > 0;
+    const showError = !!error && !showOffline;
+    return live(
+      <div className="-mt-2" data-biz-messages="">
+        {view === "archived" ? (
+          <BizListHeader title="Archived" onBack={() => setView("list")} />
+        ) : (
+          <BizListHeader
+            title="Messages"
+            onNew={() => {
+              setNewChatError(null);
+              setBizNewOpen(true);
+            }}
+          />
+        )}
+
+        {/* Row 3: h44 r14 card, 1px border, padding 0 12, gap 8, search 16 faint, "Search" 14 faint; 6 under. */}
+        <label data-search-field="" className="flex items-center gap-2 h-11 rounded-[14px] px-3 mb-1.5 bg-cream-card border border-charcoal/[0.08]">
+          <Search size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
+          <span className="sr-only">Search messages and chats</span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            className="flex-1 min-w-0 bg-transparent text-[14px] text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+          />
+        </label>
+
+        {/* K1: the filters in the handover chip style. */}
+        {view === "list" && (
+          <div data-biz-filters="" className="scroll-row no-scrollbar flex gap-2 py-1.5">
+            {tabs.map((tab) => (
+              <Chip key={tab.key} active={filter === tab.key} aria-pressed={filter === tab.key} onClick={() => setFilter(tab.key as Filter)}>
+                {tab.label}
+              </Chip>
+            ))}
+          </div>
+        )}
+
+        {showOffline && <BizOfflineBanner />}
+        {showError && (
+          <BizListError
+            onRetry={() => {
+              setLoading(true);
+              setError(null);
+              void load();
+            }}
+          />
+        )}
+        {loading && !error && <BizListSkeleton />}
+
+        {/* O4: no conversation yet. */}
+        {noConversations && <BizEmptyCard title="No messages yet" helper="Messages with your team and members show here." />}
+
+        {searchingMessages && items.length > 0 && <SectionLabel c={c}>Chats</SectionLabel>}
+
+        {listEmpty &&
+          (q ? (
+            <BizEmptyCard icon={<Search size={22} aria-hidden />} title="No chats match your search" />
+          ) : view === "archived" ? (
+            <BizEmptyCard icon={<Archive size={22} aria-hidden />} title="No archived chats" />
+          ) : filter === "unread" ? (
+            <BizEmptyCard icon={<CheckCheck size={22} aria-hidden />} title="You're all caught up" />
+          ) : filter === "groups" ? (
+            <BizEmptyCard icon={<Users size={22} aria-hidden />} title="No groups yet" />
+          ) : (
+            <BizEmptyCard title="No chats here" />
+          ))}
+
+        {!loading && threadList}
+
+        {hitsSection}
+
+        {/* K2: Starred and Archived as links under the list. */}
+        {view === "list" && !loading && (
+          <div data-biz-links="" className="flex flex-wrap gap-x-5 mt-2">
+            <button
+              type="button"
+              onClick={() => setView("starred")}
+              data-starred-button=""
+              className="tap min-h-[44px] flex items-center gap-1.5 text-[13px] font-bold text-primary-dark"
+            >
+              <Star size={15} strokeWidth={2} aria-hidden />
+              Starred messages
+            </button>
+            {archived.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setView("archived")}
+                data-archived-row=""
+                className="tap min-h-[44px] flex items-center gap-1.5 text-[13px] font-bold text-primary-dark"
+              >
+                <Archive size={15} strokeWidth={2} aria-hidden />
+                Archived · {archived.length}
+              </button>
+            )}
+          </div>
+        )}
+
+        <BizNewMessageSheet
+          open={bizNewOpen}
+          onClose={() => setBizNewOpen(false)}
+          busy={newChatBusy}
+          error={newChatError}
+          onPick={(id) => {
+            if (!newChatBusy) void startChatWith(id);
+          }}
+        />
+      </div>
+    );
+  }
 
   return live(
     <div>
@@ -647,13 +848,11 @@ export default function Messages() {
         <EmptyState
           c={c}
           icon={<MessageCircle size={26} aria-hidden />}
-          title={user.accountType === "business" ? "No messages yet" : "No conversations yet"}
+          title="No conversations yet"
           helper={
             isProfessional
               ? "Chats with your clients and groups show up here. Tap + to start one."
-              : user.accountType === "business"
-                ? "Messages with your team and members show here."
-                : "Chats with your professionals, gyms and groups show up here."
+              : "Chats with your professionals, gyms and groups show up here."
           }
           frame
         />
@@ -682,53 +881,9 @@ export default function Messages() {
           <EmptyState c={c} icon={<MessageCircle size={26} aria-hidden />} title="No chats here" />
         ))}
 
-      {!loading && (
-        <ThreadList
-          items={items}
-          settings={settings}
-          onOpenInvitation={(inv) => {
-            setOpenInvitation(inv);
-            setView("invitation");
-          }}
-          onOpenBroadcast={(list) => {
-            setOpenList(list);
-            setView("broadcast");
-          }}
-          readState={readState}
-          delivered={delivered}
-          authUserId={authUserId}
-          onOpen={setOpen}
-          actions={rowActions}
-        />
-      )}
+      {!loading && threadList}
 
-      {searchingMessages && (
-        <section className="mt-3" aria-label="Messages">
-          <SectionLabel c={c}>Messages</SectionLabel>
-          {searchError && (
-            <p className="text-[12.5px] py-2" style={{ color: c.dangerText }}>
-              {searchError}
-            </p>
-          )}
-          {!searching && !searchError && hits.length === 0 && (
-            <p className="text-[13px] text-center py-6" style={{ color: c.inkSoft }}>
-              No messages match "{term}".
-            </p>
-          )}
-          <SearchResults
-            hits={hits}
-            query={term}
-            titleFor={(h) => {
-              const name = threads.find((t) => t.id === h.threadId)?.participantName ?? "Conversation";
-              return h.senderId === authUserId ? `You → ${name}` : name;
-            }}
-            onOpen={openHit}
-            hasMore={hitsMore}
-            loadingMore={searching}
-            onMore={() => void moreHits()}
-          />
-        </section>
-      )}
+      {hitsSection}
 
       {/* NEW CHAT, GROUP OR BROADCAST (K5): the handover's FAB, 56 round on the
           primary fill (#AEA1DC / #A991FE), Plus 22, shadow in light only.

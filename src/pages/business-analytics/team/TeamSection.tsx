@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useBusiness } from "../../../components/business-more/useBusiness";
 import { useAnalytics } from "../shell/AnalyticsContext";
 import { AssignSheet } from "./AssignSheet";
 import { CoverageView, issueRows } from "./CoverageView";
@@ -38,9 +37,8 @@ type View =
 const FROM_TITLE = { performance: "Instructor performance", repeat: "Return rate", load: "Teaching load", ratings: "Ratings", pay: "Pay", index: "Team" } as const;
 
 export default function TeamSection() {
-  const { range, setExport } = useAnalytics();
+  const { range, kind, setExport } = useAnalytics();
   const navigate = useNavigate();
-  const { kind } = useBusiness();
   const vocab = vocabFor(kind);
   const state = useTeam(range);
   const [view, setView] = useState<View>({ k: "index" });

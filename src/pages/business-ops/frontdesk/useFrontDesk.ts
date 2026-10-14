@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../../context/AppContext";
+import { fetchMyClasses } from "../../../services/business-classes";
 import {
   fetchFrontDeskMembers,
   fetchFrontDeskVenues,
@@ -17,6 +18,11 @@ export interface FrontDeskData {
   entries: EntriesResult | null;
   /** When the shown data was last read (the offline line). */
   loadedAt: Date | null;
+  /**
+   * The gym runs classes (it has business_classes rows): the header offers
+   * its Schedule. The same rule the plan screens use (usePlans, V6-47).
+   */
+  runsClasses: boolean;
   reload: () => void;
 }
 
@@ -34,8 +40,21 @@ export function useFrontDesk(): FrontDeskData {
     members: [],
     entries: null,
     loadedAt: null,
+    runsClasses: false,
   });
   const [tick, setTick] = useState(0);
+
+  // Read once per account: a failed read leaves the Schedule link out.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void fetchMyClasses(authUserId).then((r) => {
+      if (!cancelled && r.ok) setState((s) => ({ ...s, runsClasses: r.classes.length > 0 }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady]);
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
@@ -53,14 +72,15 @@ export function useFrontDesk(): FrontDeskData {
         setState((s) => ({ ...s, loading: false, error: m.message, venues: v.value }));
         return;
       }
-      setState({
+      setState((s) => ({
+        ...s,
         loading: false,
         error: null,
         venues: v.value,
         members: m.value,
         entries: e.ok ? e.value : null,
         loadedAt: new Date(),
-      });
+      }));
     })();
     return () => {
       cancelled = true;

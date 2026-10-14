@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   figuresLine,
   initials,
+  isEarly,
   membersLine,
   payWith,
   planIcon,
@@ -73,4 +74,14 @@ test("small helpers", () => {
   assert.equal(initials("Taylor"), "T");
   assert.equal(initials("Mary Ann"), "MA");
   assert.deepEqual([...sharedNames([{ name: "A" }, { name: "B" }, { name: "A" }])], ["A"]);
+});
+
+test("early data: first members under 14 days ago, this month", () => {
+  assert.equal(isEarly("2026-10-05", "2026-10-14"), true);
+  assert.equal(isEarly("2026-09-30", "2026-10-02"), false);
+  assert.equal(isEarly("2026-10-01", "2026-10-20"), false);
+  assert.equal(isEarly(null, "2026-10-14"), false);
+  const plans = [{ name: "Monthly", status: "active" as const }];
+  assert.equal(figuresLine(plans, new Map([["Monthly", 3]]), true), "Your first members joined this month.");
+  assert.equal(figuresLine(plans, new Map([["Monthly", 0]]), true), "Members show here once someone buys a plan on Explore.");
 });

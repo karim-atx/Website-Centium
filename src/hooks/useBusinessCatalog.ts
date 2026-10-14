@@ -48,7 +48,8 @@ import {
 //                cross-business read used by the client's Explore.
 //   discounts    create + delete. One content column. Nothing else.
 //   plans        create + UPDATE + delete — the only one of the four with a
-//                real edit path in the UI (BusinessGymTab's "Edit Plan").
+//                real edit path in the UI (Front desk › Memberships edits
+//                through services/membership-plans, see plans/usePlans.ts).
 // Checked against each screen rather than inferred from the shared schema
 // shape: three of the four offer no edit at all, so no updateX is built for
 // them even though the grant would allow one.

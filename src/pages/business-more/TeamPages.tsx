@@ -11,6 +11,7 @@ import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ROLE_LABEL, roleAndProfession } from "../business-team/teamLogic";
+import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -26,10 +27,10 @@ import { ROLE_LABEL, roleAndProfession } from "../business-team/teamLogic";
 //   email request until B8 records a Centium charge (V6-41).
 // - Business ID: the B5 code, plus the waiting join requests (B6).
 
-const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 function useTeam() {
-  const { business, kind, loading: bizLoading } = useBusiness();
+  const { business, loading: bizLoading } = useBusiness();
   const [rows, setRows] = useState<TeamPerson[] | null>(null);
   const [capacity, setCapacity] = useState<SeatCapacity | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ function useTeam() {
     };
   }, [bizId, tick]);
   const reload = useCallback(() => setTick((t) => t + 1), []);
-  return { business, kind, rows, capacity, error, reload, noBusiness: !bizLoading && !business };
+  return { business, rows, capacity, error, reload, noBusiness: !bizLoading && !business };
 }
 
 const NoTeamYet = ({ onShare }: { onShare: () => void }) => (

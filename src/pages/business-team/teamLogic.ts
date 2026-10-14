@@ -1,5 +1,5 @@
 import type { BizKind } from "../../components/business-more/kind";
-import type { BusinessRole, ClassSession, TeamPerson } from "../../services/business-team/team";
+import type { BusinessRole, ClassSession, TeamPerson } from "../../services/business-team/types";
 import { personUsesSeat, professionLabel } from "../../services/business-team/seats";
 import { range12 } from "../../utils/time12";
 import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
@@ -11,6 +11,9 @@ import { localDayOf, shiftDate } from "../../utils/date";
 
 /** Page title per type (COPY "Team and access": Instructors / Team / Staff). */
 export const TEAM_TITLE: Record<BizKind, string> = { classes: "Instructors", gym: "Team", store: "Staff" };
+
+/** The title, neutral ("Team") until the lane is known (useBusiness falls back to "store"). */
+export const teamTitle = (kind: BizKind, known: boolean): string => (known ? TEAM_TITLE[kind] : "Team");
 
 /** Subtitle (source line 462). */
 export const teamSubtitle = (kind: BizKind) =>

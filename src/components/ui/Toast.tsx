@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, Check, CircleCheck } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
@@ -67,11 +67,24 @@ export const Toast: React.FC<{
   const expire = useRef(onExpire);
   expire.current = onExpire;
 
+  // BU AN3-053 O2 (WCAG 2.2.1): the timer pauses while the toast has keyboard
+  // focus or a mouse over it, and restarts at the full hold on leave.
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused;
   useEffect(() => {
-    if (!open) return;
+    if (!open || paused) return;
     const id = window.setTimeout(() => expire.current?.(), hold);
     return () => window.clearTimeout(id);
-  }, [open, message, hold]);
+  }, [open, message, hold, paused]);
+  const pauseProps = {
+    onPointerEnter: (e: React.PointerEvent) => e.pointerType === "mouse" && setHovered(true),
+    onPointerLeave: () => setHovered(false),
+    onFocus: () => setFocused(true),
+    onBlur: (e: React.FocusEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+    },
+  };
 
   if (!open) return null;
 
@@ -89,6 +102,7 @@ export const Toast: React.FC<{
     return createPortal(
       <div
         role="status"
+        {...pauseProps}
         className="fixed z-[75] flex items-center"
         style={{
           left: "calc(var(--app-gutter) + 16px)",
@@ -141,6 +155,7 @@ export const Toast: React.FC<{
   return createPortal(
     <div
       role="status"
+      {...pauseProps}
       className="fixed z-[75] flex items-center animate-fade-slide-up"
       style={{
         left: "calc(var(--app-gutter) + 16px)",

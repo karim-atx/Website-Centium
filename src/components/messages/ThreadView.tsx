@@ -80,6 +80,9 @@ import {
   type MessageThread,
   type Pin as ThreadPin,
 } from "../../services/messaging";
+import { formatShortDate } from "../../utils/date";
+import { BizAvatar } from "./BusinessList";
+import { bizAvatarKind } from "./bizAvatar";
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
@@ -249,6 +252,8 @@ export const ThreadView: React.FC<{
   // the mic / send swap). Client and professional chats are unchanged
   // (MO1.2.1.3 keeps its own measured look).
   const cv2 = user.accountType === "business";
+  // OP1-190 / AN14-058: in the business chat a member is masked and support is the life-buoy (BusinessList BizAvatar).
+  const cv2Icon = cv2 && (bizAvatarKind(thread) === "member" || bizAvatarKind(thread) === "support");
   // Plus --active-bar (the minimised-workout bar's height + gap, Layout; 0
   // without one), so the composer clears that bar as the page padding does.
   const footerBottom = clientBar
@@ -1377,6 +1382,9 @@ export const ThreadView: React.FC<{
             <span className="w-10 h-10 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center shrink-0">
               <Users size={19} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
             </span>
+          ) : cv2Icon ? (
+            // OP1-180 row 4 "or icon 18" / AN14-058 row 1: a member masked (user-round on maskBg), support the life-buoy.
+            <BizAvatar thread={thread} size={40} />
           ) : (
           <span className={`w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold ${cv2 ? "text-[14px] text-primary-dark" : "text-primary-deep-text"}`}>
             {thread.participantAvatarUrl ? (
@@ -1559,9 +1567,13 @@ export const ThreadView: React.FC<{
         {loaded && messages.length === 0 && cv2 && !departed && !isGroup && (
           // OP1-180 row 8 / AN4-051 row 5: the new-chat block, its line by who the chat is with.
           <div className="flex flex-col items-center text-center px-6 py-8">
+            {cv2Icon ? (
+              <BizAvatar thread={thread} size={64} />
+            ) : (
             <span className="w-16 h-16 rounded-full bg-primary-pale text-primary-dark flex items-center justify-center overflow-hidden text-[20px] font-extrabold">
               {thread.participantAvatarUrl ? <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" /> : threadInitials(thread)}
             </span>
+            )}
             <p className="text-[15px] font-extrabold text-charcoal mt-2.5">{groupName}</p>
             <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-1">
               {thread.kind === "official_support"
@@ -2248,7 +2260,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm font-semibold text-charcoal">{label}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
-                    ? `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`
+                    ? `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`
                     : "–"}
                 </span>
               </div>
@@ -2394,7 +2406,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     };
   }, [messageId]);
   const when = (at: string) =>
-    `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`;
+    `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`;
   const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
   return (
     <>

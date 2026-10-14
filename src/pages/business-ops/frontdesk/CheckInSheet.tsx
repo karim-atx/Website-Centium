@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, Search } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { CHECK_INS_LIVE } from "../../../services/front-desk";
 import type { FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
+import { paidLine } from "../../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { textPx } from "../../../theme/textSize";
 
@@ -13,6 +15,8 @@ import { textPx } from "../../../theme/textSize";
 // Writing the check-in is B10 (BU2-07): the sheet finds the member and their
 // pass now (venue_members), and the button stays unavailable with a note
 // until the stage lands. Search by member code needs B7 (BU2-20 / 22).
+// Footer link (OURS-OP1-member-codes D9): a walk-in who is not a member yet
+// gets a member code from Analytics › Members › Member codes.
 
 const FIELD = "w-full flex items-center bg-cream-soft border-[1.5px] border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08]";
 
@@ -30,6 +34,7 @@ export const CheckInSheet: React.FC<{
   const [pass, setPass] = useState<string | null>(null);
   const [passMenu, setPassMenu] = useState(false);
   const [passEl, setPassEl] = useState<HTMLButtonElement | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +56,8 @@ export const CheckInSheet: React.FC<{
 
   const passValid = picked?.passState === "valid";
   const passLabel = (m: FrontDeskMember) => (m.expiresOn ? `${m.planName || "Membership"} · until ${dayMonthYear(m.expiresOn)}` : m.planName || "Membership");
+  /** Search result sub: the pass, then "Paid {d Mon}" when a payment is recorded. */
+  const resultSub = (m: FrontDeskMember) => [passLabel(m), paidLine(m)].filter(Boolean).join(" · ");
   const refused = !!picked && !!pass && !passValid;
 
   const disabled = !CHECK_INS_LIVE || !online || !picked || !pass || !passValid;
@@ -78,6 +85,17 @@ export const CheckInSheet: React.FC<{
             style={{ height: 52, borderRadius: 16, fontSize: textPx(14), fontWeight: 700 }}
           >
             {label}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate("/app/business/analytics/members/codes?create=1");
+            }}
+            className="tap w-full flex items-center justify-center text-center text-[12.5px] font-extrabold text-primary-dark"
+            style={{ minHeight: 44, marginTop: 4 }}
+          >
+            Not a member yet? Create a code
           </button>
         </div>
       }
@@ -124,7 +142,7 @@ export const CheckInSheet: React.FC<{
                   style={{ minHeight: 44, padding: "6px 10px" }}
                 >
                   <span className="block text-[13px] font-bold leading-[18px] text-charcoal">{m.firstName}</span>
-                  <span className="block text-[11px] leading-[15px] text-charcoal-faint">{passLabel(m)}</span>
+                  <span className="block text-[11px] leading-[15px] text-charcoal-faint">{resultSub(m)}</span>
                 </button>
               ))
             )}

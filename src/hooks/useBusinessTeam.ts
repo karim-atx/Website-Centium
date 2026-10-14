@@ -11,9 +11,9 @@ import { fetchMyTeam, type TeamMember } from "../services/business-team";
 // profileReady returns nothing and looks exactly like an empty team.
 //
 // WHAT EACH CALLER ACTUALLY NEEDS, checked rather than assumed:
-//   BusinessAnalyticsTab  the count, nothing else
-//   BusinessClassesTab    id + name, for the "Run by" picker
-//   BusinessCalendarTab   id + name, for the same picker and a lookup
+//   BusinessCalendarTab   id + name, for the "Run by" picker and a lookup
+//   Subscription          the people, for the seat plan copy
+// (The v6 Team, Schedule and Analytics screens read services/business-team.)
 // None reads the subtype, which is just as well: a business cannot get it —
 // see the note in services/business-team.
 

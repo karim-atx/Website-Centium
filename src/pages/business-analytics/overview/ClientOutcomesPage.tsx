@@ -26,7 +26,14 @@ import { anPalette, type AnPalette } from "./palette";
 // reader), so they show "–". Clients are masked ("Client #code") until the
 // profile-sharing consent exists (B7). Safety wording kept verbatim.
 
-const SAFETY = "Flags are based on visible signals (attendance, bookings, payments), not a diagnosis or a black-box score.";
+export const SAFETY = "Flags are based on visible signals (attendance, bookings, payments), not a diagnosis or a black-box score.";
+/**
+ * KEEP-SAFETY, verbatim from the old Analytics' "Physio outcome worsening"
+ * action (main BusinessAnalyticsTab.tsx:59; AN1-034 K1, OURS rule 4 / row
+ * 10, SW-37). Shown in the safety tip on this page, where a business acts on
+ * a client who needs review; the B7 Treatment outcomes row reuses it.
+ */
+export const CLINICIAN_REVIEW = "Flag for clinician review; avoid automatic diagnosis or treatment advice.";
 const BUCKETS = ["0-24%", "25-49%", "50-74%", "75-100%"];
 
 export function ClientOutcomesPage() {
@@ -99,7 +106,7 @@ export function ClientOutcomesPage() {
           <KitList c={c} rows={shown.map((r) => ({ key: r.id, Icon: User, title: r.label, detail: r.detail, pill: r.pill }))} />
         </>
       )}
-      <KitTip c={c} text={SAFETY} />
+      <KitTip c={c} text={`${SAFETY} ${CLINICIAN_REVIEW}`} />
     </div>
   );
 }

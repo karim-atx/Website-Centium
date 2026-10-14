@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
 import { SubHeader } from "../../components/business-more/kit";
-import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -68,9 +67,8 @@ const blankDraft = (date: string) => ({
 // the two-features-in-one-costume problem the assignment note had.
 //
 // CATALOG PHASE (2026-09): the classes half is real now too. It reads and
-// writes business_classes through the same hook BusinessClassesTab uses, so
-// the two screens are two views of one table rather than two views of one
-// localStorage array.
+// writes business_classes through useBusinessClasses (also Marketplace), so
+// every screen is a view of one table rather than of one localStorage array.
 //
 // THE CLIENT PICKER IS GONE, and the reason is structural rather than a
 // decision about this screen. "Add single or multiple clients at once" wrote
@@ -202,8 +200,6 @@ export default function BusinessCalendarTab() {
           <Plus size={18} />
         </button>
       </div>
-      <BusinessPrototypeNotice />
-
       <div className="flex items-center gap-2 mb-4">
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit">
         {(["year", "month", "week", "day"] as View[]).map((v) => (

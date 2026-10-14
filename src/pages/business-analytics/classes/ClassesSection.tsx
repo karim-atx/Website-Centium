@@ -49,12 +49,14 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 const fmtAvg = (n: number) => (n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
 
 export default function ClassesSection() {
-  const { range, setExport } = useAnalytics();
+  // The lane from the shell (known before this mounts), not this hook's own
+  // fresh read, whose fallback names "store" until the row arrives.
+  const { range, kind, setExport } = useAnalytics();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const online = useOnline();
   const reduced = useReducedMotion();
-  const { business, kind, loading: bizLoading, error: bizError } = useBusiness();
+  const { business, loading: bizLoading, error: bizError } = useBusiness();
   const people = kind === "gym" ? "members" : "clients";
 
   const [data, setData] = useState<Raw>({ status: "loading" });

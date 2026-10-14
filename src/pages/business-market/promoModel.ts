@@ -1,7 +1,7 @@
 import type { BizKind } from "../../components/business-more/kind";
-import type { BusinessClassRow } from "../../services/business-classes";
-import type { MembershipPlanRow } from "../../services/membership-plans";
-import type { Offering } from "../../services/business-offerings";
+import type { BusinessClassRow } from "../../services/business-classes/types";
+import type { MembershipPlanRow } from "../../services/membership-plans/types";
+import type { Offering } from "../../services/business-offerings/types";
 import { dowTime, notEnded } from "./model";
 
 // Create promotion (MA1-099 to 104, OURS-MA1-promotion-type-menu,

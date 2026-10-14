@@ -91,9 +91,10 @@ export const ConfirmCard: React.FC<{
   /** Stacked (v6 Batch 4, BizTypeKit pops OP1-004): the title's line height when a frame draws other than 22 (17 × 1.5 = 25.5). */
   titleLineHeight?: number;
   /**
-   * Stacked / decision (v6 Batch 4, Classes): the confirm button's own fill
-   * and ink when a frame draws other than the tone (OP1-086 O1: #C0392B with
-   * white in dark too; AN3-070: dark #E0786A with #0D0B1A). Unset: unchanged.
+   * Every layout (v6 Batch 4, Classes; row since the Release 2 gate): the
+   * confirm button's own fill and ink when a frame draws other than the tone
+   * (OP1-086 O1: #C0392B with white in dark too; AN3-070: dark #E0786A with
+   * #0D0B1A; AN13-028 Discard #C0392B / white in both modes). Unset: unchanged.
    */
   confirmStyle?: React.CSSProperties;
 }> = ({
@@ -145,6 +146,10 @@ export const ConfirmCard: React.FC<{
   const ink = "rgb(var(--c-charcoal))";
   const inkSoft = "rgb(var(--c-charcoal-soft))";
   const outline = dark ? "rgba(245,243,250,0.08)" : "rgba(36,31,27,0.11)";
+  // AN3-066 O7: under High contrast the decision layout's outlined safe action
+  // takes a faint-ink border (#8C8378; dark #B8B3C7, the OpsTabsV4 dark faint).
+  const hc = typeof document !== "undefined" && document.documentElement.classList.contains("high-contrast");
+  const decisionOutline = hc ? (dark ? "#B8B3C7" : "#8C8378") : outline;
   const destructive = tone === "destructive";
 
   if (layout === "row") {
@@ -185,7 +190,7 @@ export const ConfirmCard: React.FC<{
               onClick={onConfirm}
               disabled={busy}
               className="tap flex-1 disabled:opacity-60"
-              style={{ height: 44, borderRadius: 12, background: "rgb(var(--c-status-high))", color: "rgb(var(--c-on-destructive))", fontSize: textPx(14), fontWeight: 700 }}
+              style={{ height: 44, borderRadius: 12, background: "rgb(var(--c-status-high))", color: "rgb(var(--c-on-destructive))", fontSize: textPx(14), fontWeight: 700, ...confirmOverride }}
             >
               {confirmLabel}
             </button>
@@ -269,7 +274,7 @@ export const ConfirmCard: React.FC<{
               ref={firstRef}
               onClick={onCancel}
               className="tap min-w-0 focus:outline-none focus-visible:shadow-[0_0_0_3px_#7D6BB5] dark:focus-visible:shadow-[0_0_0_3px_#C3B3FB]"
-              style={{ minHeight: 46, borderRadius: 14, border: `1px solid ${outline}`, background: "transparent", color: inkSoft, fontSize: textPx(14), fontWeight: 700, padding: "0 10px" }}
+              style={{ minHeight: 46, borderRadius: 14, border: `1px solid ${decisionOutline}`, background: "transparent", color: inkSoft, fontSize: textPx(14), fontWeight: 700, padding: "0 10px" }}
             >
               {cancelLabel}
             </button>

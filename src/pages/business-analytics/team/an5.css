@@ -275,7 +275,8 @@ html.high-contrast .an5-tile { border-color: var(--an-border) !important; }
 .an5-field-val { flex: 1; text-align: start; font-size: 14px; font-weight: 600; color: var(--an-ink); }
 .an5-textarea { width: 100%; min-height: 76px; border-radius: 14px; background: var(--an-soft); border: 1px solid var(--an-border); padding: 12px 14px; font-size: 13.5px; line-height: 19px; color: var(--an-ink); resize: none; outline: none; box-sizing: border-box; }
 .an5-textarea:focus { border-color: var(--an-fill); }
-.an5-counter { text-align: end; font-size: 10.5px; color: var(--an-faint); margin-top: 4px; font-variant-numeric: tabular-nums; }
+/* AN5-015 O1: the note counter while typing (pattern: AN5-063 reply counter, 6 below the field: the inline textarea already leaves 6). */
+.an5-counter { font-size: 10.5px; line-height: 14px; color: var(--an-faint); text-align: end; margin-top: 0; font-variant-numeric: tabular-nums; }
 .an5-err { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; line-height: 16px; color: var(--an-high); }
 .an5-seatnote { margin-top: 14px; border-radius: 14px; background: var(--an-soft); padding: 10px 12px; display: flex; align-items: center; gap: 10px; font-size: 11.5px; line-height: 16px; color: var(--an-ink-soft); }
 .an5-seatnote > svg { color: var(--an-pdark); flex-shrink: 0; }

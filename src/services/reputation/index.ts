@@ -7,6 +7,8 @@ import {
   type Write,
 } from "../store/backend";
 import { isOffline } from "../network-error";
+import type { BizReview, ReviewReply } from "./types";
+export type { BizReview, ReviewReply } from "./types";
 
 // v6 Batch 5 · AN13 Reputation: a business's reviews, replies and flags.
 //
@@ -35,19 +37,6 @@ import { isOffline } from "../network-error";
 //   message_gym_reviewer(p_review_id, p_body) → thread id (B7 / BU6-06: only
 //     the business's own members or customers; may_message says which, X-28)
 
-export interface BizReview {
-  id: string;
-  gymId: string;
-  gymName: string;
-  /** Null when redacted. */
-  rating: number | null;
-  body: string | null;
-  /** A first name; null for a minor, a hidden name, or a redacted review. */
-  authorName: string | null;
-  authorIsMember: boolean;
-  createdAt: string;
-  redacted: boolean;
-}
 
 export interface BizReviews {
   venues: { id: string; name: string }[];
@@ -112,13 +101,6 @@ export async function fetchBusinessReviews(
 // ---------------------------------------------------------------------------
 // B14 replies
 
-export interface ReviewReply {
-  id: string;
-  reviewId: string;
-  body: string;
-  createdAt: string;
-  editedAt: string | null;
-}
 
 /** The business's replies to these reviews; pending until B14. */
 export async function fetchReplies(

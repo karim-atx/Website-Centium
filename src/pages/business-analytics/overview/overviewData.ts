@@ -35,7 +35,7 @@ const fail = (what: string, e: Err): OverviewLoad => {
  * check-in rule) and today (the dial).
  */
 export async function loadOverview(userId: string, range: Range, today: string): Promise<OverviewLoad> {
-  const biz = await db.from("business_profiles").select("id, business_type, active, perk, created_at").eq("profile_id", userId).maybeSingle();
+  const biz = await db.from("business_profiles").select("id, business_type, active, created_at").eq("profile_id", userId).maybeSingle();
   if (biz.error) return fail("the business", biz.error);
   const empty: OvRaw = {
     business: null,
@@ -51,7 +51,7 @@ export async function loadOverview(userId: string, range: Range, today: string):
     eventsToday: [],
     reviews: null,
   };
-  const b = biz.data as { id: string; business_type: string; active: boolean; perk: string | null; created_at: string } | null;
+  const b = biz.data as { id: string; business_type: string; active: boolean; created_at: string } | null;
   if (!b) return { ok: true, raw: empty };
   const bid = b.id;
 
@@ -80,7 +80,7 @@ export async function loadOverview(userId: string, range: Range, today: string):
       .limit(1),
     db
       .from("business_class_bookings")
-      .select("business_class_id, client_id, created_at, payment_status, business_classes!inner(business_id, event_date)")
+      .select("business_class_id, client_id, created_at, payment_status, price_agreed, business_classes!inner(business_id, event_date)")
       .eq("business_classes.business_id", bid)
       .gte("business_classes.event_date", lo)
       .lte("business_classes.event_date", hi)
@@ -167,13 +167,13 @@ export async function loadOverview(userId: string, range: Range, today: string):
   return {
     ok: true,
     raw: {
-      business: { id: bid, type: b.business_type, active: !!b.active, perk: b.perk, createdAt: b.created_at },
+      business: { id: bid, type: b.business_type, active: !!b.active, createdAt: b.created_at },
       classes: ((classes.data ?? []) as ClassRow[]).map(toClass),
       anyClass: !!firstDate,
       nextClass: ((next.data ?? []) as ClassRow[]).map(toClass)[0] ?? null,
       firstClassDate: firstDate,
-      bookings: ((bookings.data ?? []) as { business_class_id: string; client_id: string; created_at: string; payment_status: string | null }[]).map(
-        (r): OvBooking => ({ classId: r.business_class_id, clientId: r.client_id, createdAt: r.created_at, paymentStatus: r.payment_status })
+      bookings: ((bookings.data ?? []) as { business_class_id: string; client_id: string; created_at: string; payment_status: string | null; price_agreed: number | string | null }[]).map(
+        (r): OvBooking => ({ classId: r.business_class_id, clientId: r.client_id, createdAt: r.created_at, paymentStatus: r.payment_status, priceAgreed: r.price_agreed === null || r.price_agreed === "" ? null : Number(r.price_agreed) })
       ),
       members: ((members.data ?? []) as { accepted: boolean | null; invited_at: string; responded_at: string | null; ended_at: string | null }[]).map((m) => ({
         accepted: m.accepted,

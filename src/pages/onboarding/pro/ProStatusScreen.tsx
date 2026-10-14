@@ -8,6 +8,7 @@ import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { time12 } from "../../../utils/time12";
 import { STATUS_PENDING_VIS, STATUS_REJECTED_VIS, statusFanVis } from "./proVisuals";
 import { ProfilePreview, SummaryCard, Timeline } from "./parts";
+import { formatShortDate } from "../../../utils/date";
 
 export type ProStatus = "pending" | "live" | "verified" | "rejected";
 
@@ -102,7 +103,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
             {
               title: "Submitted",
               desc: submittedAt
-                ? `${isToday(submittedAt) ? "Today" : submittedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${time12(hhmm(submittedAt))}`
+                ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" }, undefined)}, ${time12(hhmm(submittedAt))}`
                 : "Sent for review",
               value: submittedAt && isToday(submittedAt) ? "Today" : "",
               state: "done",

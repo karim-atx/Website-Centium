@@ -130,6 +130,14 @@ export function usePlans() {
     return { ok: true };
   };
 
+  /** The earliest start among active members (OP1-032 early data), or null. */
+  const firstStarted = useMemo(() => {
+    if (!members) return null;
+    let min: string | null = null;
+    for (const list of members.values()) for (const m of list) if (m.startedOn && (!min || m.startedOn < min)) min = m.startedOn;
+    return min;
+  }, [members]);
+
   const runsClasses = (classTypes?.length ?? 0) > 0;
   const totalMembers = counts ? [...counts.values()].reduce((a, b) => a + b, 0) : null;
 
@@ -148,6 +156,7 @@ export function usePlans() {
     membersOf,
     counts,
     totalMembers,
+    firstStarted,
   };
 }
 

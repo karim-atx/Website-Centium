@@ -10,6 +10,7 @@ import {
   billingLabel,
   figuresLine,
   GROUP_OF,
+  isEarly,
   GROUP_ORDER,
   membersLine,
   planIcon,
@@ -25,6 +26,12 @@ import { Bar, BORDER, DIVIDER, ErrorCard, FiguresCard, ICONS, StatusPill, useTon
 // toast), from OpsTabsV4 template 21-83 and logic 417-426 / 461 / 482-484.
 // Replaces BusinessGymTab (HANDOVER §5): edit and delete move into the open
 // row's action grid; the per-plan QrPattern is dropped (OP1-037 K2).
+
+/** Today as an ISO day on the device clock. */
+const isoToday = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export const PLANS_ROUTE = "/app/business/gym";
 /** Where the plan list lives for a gym: Front desk › Memberships (V6-54). */
@@ -365,7 +372,7 @@ const MembershipsList: React.FC = () => {
               { label: "Active plans", value: String(live.filter((p) => p.status === "active").length) },
               { label: "Members on plans", value: membersValue },
             ]}
-            line={figuresLine(live, counts)}
+            line={figuresLine(live, counts, isEarly(ctx.firstStarted, isoToday()))}
           />
           {!online && (
             <p role="status" className="text-[11.5px] text-charcoal-faint" style={{ marginTop: 8 }}>

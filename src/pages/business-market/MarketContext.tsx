@@ -178,7 +178,11 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   const value: MarketData = {
     c,
     kind,
-    kindKnown: !!biz.business || !!forceKind,
+    // Known from the forced lane, the row, the navbar's row-based answer, or
+    // (no row yet) the onboarding type `kind` already falls back to. Until
+    // then `kind` is bizKindOf's "store" fallback and pages hold their
+    // per-type wording.
+    kindKnown: !!forceKind || !!biz.business || !!navKind || biz.kindKnown,
     v: vocabOf(kind),
     business: biz.business,
     setBusiness: biz.setBusiness,

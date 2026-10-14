@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Calendar, ChevronDown, Clock, Search } from "lucide-react";
+import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
+import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { bookAppointment, fetchFreeSlots, fetchKnownClients, type Service, type Slot } from "../../../services/appointments";
 import { dayTitle, isoDate } from "../../../services/store/format";
 import { clock12 } from "../../../utils/time12";
@@ -8,11 +10,12 @@ import { useOnline } from "../../../hooks/useOnline";
 import { KitField, KitFieldButton, OpsSheet } from "../store/opsKit";
 
 // OURS-OP1-appointments-detail rows 15-22 · Add appointment (OP1-010 sheet).
-// Day: the next 14 days, Monday-first names; Time: that service's free
-// slots that day (12-hour). Client: the business's own clients (people who
+// Day (row 18): the shared calendar card (CalendarPickerSheet, Monday first,
+// no day before today). Time (row 19): a time wheel in a floating card under
+// the field (WheelPicker, business band), one row per free slot of that
+// service that day, 12-hour; a booking can only start at a free slot
+// (appointment_free_slots). Client: the business's own clients (people who
 // booked before). Walk-ins without an account are not supported (V6-158).
-
-const DAYS = 14;
 
 export function AddAppointmentSheet({
   open,
@@ -37,7 +40,10 @@ export function AddAppointmentSheet({
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [query, setQuery] = useState("");
   const [client, setClient] = useState<{ id: string; name: string } | null>(null);
-  const [menu, setMenu] = useState<null | { kind: "service" | "day" | "time"; el: HTMLElement }>(null);
+  const [menu, setMenu] = useState<null | { kind: "service"; el: HTMLElement }>(null);
+  const [dayOpen, setDayOpen] = useState(false);
+  /** The open time wheel: the field it hangs under. */
+  const [wheel, setWheel] = useState<HTMLButtonElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [timeError, setTimeError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +57,8 @@ export function AddAppointmentSheet({
     setQuery("");
     setError(null);
     setTimeError(null);
+    setDayOpen(false);
+    setWheel(null);
     void fetchKnownClients(businessId).then((r) => setClients(r.status === "ok" ? r.value : []));
   }, [open, prefill, services, businessId]);
 
@@ -70,18 +78,19 @@ export function AddAppointmentSheet({
     };
   }, [open, businessId, serviceId, date]);
 
-  const days = useMemo(() => {
-    const out: { value: string; label: string }[] = [];
-    const now = new Date();
-    for (let i = 0; i < DAYS; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-      out.push({ value: isoDate(d), label: dayTitle(d) });
-    }
-    return out;
-  }, []);
-
+  // The card hangs below the field inside the sheet body: bring it into view as it opens.
+  const revealCard = useCallback((el: HTMLDivElement | null) => el?.scrollIntoView({ block: "nearest" }), []);
+  const today = isoDate(new Date());
   const service = services.find((s) => s.id === serviceId) ?? null;
-  const dayLabel = days.find((d) => d.value === date)?.label ?? date;
+  const dayLabel = dayTitle(new Date(`${date}T00:00:00`));
+  const canPickTime = !!serviceId && !!slots && slots.length > 0;
+  const openWheel = (el: HTMLButtonElement) => {
+    if (wheel) return setWheel(null);
+    // A wheel always shows a value: the first free slot until one is turned to.
+    if (!startsAt || !slots?.some((x) => x.startsAt === startsAt)) setStartsAt(slots?.[0]?.startsAt ?? null);
+    setTimeError(null);
+    setWheel(el);
+  };
   const matches = query.trim() ? clients.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase()) || c.id.replace(/-/g, "").toLowerCase().startsWith(query.trim().toLowerCase().replace(/^#/, ""))) : [];
 
   const save = async () => {
@@ -113,17 +122,54 @@ export function AddAppointmentSheet({
           note={services.length === 0 ? "Add a service first, under More." : undefined}
           disabled={services.length === 0}
         />
-        <KitFieldButton id="appt-day" label="Day" value={dayLabel} placeholder="Choose a day" icon={Calendar} expanded={menu?.kind === "day"} onClick={(el) => setMenu({ kind: "day", el })} />
-        <KitFieldButton
-          id="appt-time"
-          label="Time"
-          value={startsAt ? clock12(startsAt) : null}
-          placeholder={!serviceId ? "Choose a service first" : slots && slots.length === 0 ? "No free slots this day" : "Choose a time"}
-          icon={Clock}
-          expanded={menu?.kind === "time"}
-          onClick={serviceId && slots && slots.length > 0 ? (el) => setMenu({ kind: "time", el }) : undefined}
-          error={timeError}
-        />
+        <KitFieldButton id="appt-day" label="Day" value={dayLabel} placeholder="Choose a day" icon={Calendar} popup="dialog" expanded={dayOpen} onClick={() => setDayOpen(true)} />
+        <div className="relative">
+          <KitFieldButton
+            id="appt-time"
+            label="Time"
+            value={startsAt ? clock12(startsAt) : null}
+            placeholder={!serviceId ? "Choose a service first" : slots && slots.length === 0 ? "No free slots this day" : "Choose a time"}
+            icon={Clock}
+            popup="dialog"
+            expanded={!!wheel}
+            onClick={canPickTime ? openWheel : undefined}
+            error={timeError}
+          />
+          {wheel && canPickTime && startsAt && (
+            <>
+              <div className="fixed inset-0 z-[5]" onClick={() => setWheel(null)} aria-hidden />
+              <div
+                ref={revealCard}
+                role="dialog"
+                aria-label="Time"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" || e.key === "Enter") {
+                    e.stopPropagation();
+                    setWheel(null);
+                    wheel.focus();
+                  }
+                }}
+                className="absolute left-0 right-0 z-[6] bg-cream-card border border-solid border-th-aea1dc/50 dark:border-th-a991fe/50"
+                style={{ top: wheel.offsetTop + wheel.offsetHeight + 6, borderRadius: 16, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 6 }}
+              >
+                <WheelPicker
+                  band="business"
+                  columns={[
+                    {
+                      label: "Time",
+                      value: startsAt,
+                      options: (slots ?? []).map((x) => ({ value: x.startsAt, label: clock12(x.startsAt) })),
+                      onChange: (v) => {
+                        setStartsAt(String(v));
+                        setTimeError(null);
+                      },
+                    },
+                  ]}
+                />
+              </div>
+            </>
+          )}
+        </div>
         <KitField
           id="appt-client"
           label="Client"
@@ -171,30 +217,20 @@ export function AddAppointmentSheet({
           setTimeError(null);
         }}
       />
-      <PopupMenu
-        open={menu?.kind === "day"}
-        onClose={() => setMenu(null)}
-        anchor={menu?.el ?? null}
-        matchWidth={menu?.el ?? null}
-        variant="field"
-        options={days}
-        selected={date}
-        onSelect={(v) => {
-          setDate(v);
+      <CalendarPickerSheet
+        open={dayOpen}
+        onClose={() => setDayOpen(false)}
+        selectedDate={date}
+        today={today}
+        minDate={today}
+        title="Day"
+        dayInk="ink"
+        onSelect={(d) => {
+          setDayOpen(false);
+          if (d === date) return;
+          setDate(d);
           setStartsAt(null);
-        }}
-      />
-      <PopupMenu
-        open={menu?.kind === "time"}
-        onClose={() => setMenu(null)}
-        anchor={menu?.el ?? null}
-        matchWidth={menu?.el ?? null}
-        variant="field"
-        options={(slots ?? []).map((s) => ({ value: s.startsAt, label: clock12(s.startsAt) }))}
-        selected={startsAt}
-        onSelect={(v) => {
-          setStartsAt(v);
-          setTimeError(null);
+          setWheel(null);
         }}
       />
     </>

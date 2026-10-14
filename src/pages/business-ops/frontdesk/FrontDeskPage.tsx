@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { ScanLine } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CalendarDays, ScanLine } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
 import { isoDay } from "../../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../../utils/time12";
@@ -16,7 +16,9 @@ import { useFrontDesk } from "./useFrontDesk";
 // OP1-013 / 015 / 016 / 017 / 019 and OURS-OP1-front-desk-scan; the
 // Memberships tab is the plan list (OP1-022, built under business-ops/plans
 // and handed in as `memberships`). The chosen tab lives in ?tab= so Back
-// returns to it (OP1-013 S1).
+// returns to it (OP1-013 S1). A gym that runs classes (it has class rows)
+// gets a "Class schedule" button beside Scan: the Schedule at
+// /app/business/classes is otherwise reachable only by URL for a gym (OURS).
 
 export type DeskTab = "entries" | "passes" | "memberships";
 const TABS: { key: DeskTab; label: string }[] = [
@@ -45,6 +47,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
       { replace: true }
     );
 
+  const navigate = useNavigate();
   const online = useOnline();
   const data = useFrontDesk();
   const [opened] = useState(() => new Date());
@@ -66,7 +69,12 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
         kicker="Front desk"
         title={TITLE[tab]}
         sub={tab === "memberships" ? "Membership plans clients can buy on Explore" : undefined}
-        action={<HeaderIconButton icon={ScanLine} label="Scan a pass" onClick={() => setScan(true)} />}
+        action={
+          <div className="flex shrink-0" style={{ gap: 4 }}>
+            {data.runsClasses && <HeaderIconButton icon={CalendarDays} label="Class schedule" edge={false} onClick={() => navigate("/app/business/classes")} />}
+            <HeaderIconButton icon={ScanLine} label="Scan a pass" onClick={() => setScan(true)} />
+          </div>
+        }
       />
       <TextTabs tabs={TABS} value={tab} onChange={setTab} label="Front desk" />
       {offlineLine && (

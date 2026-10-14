@@ -9,6 +9,12 @@ export interface UseBusiness {
   kind: BizKind;
   /** False until the lane is known (the row has loaded, or onboarding chose a type). */
   kindKnown: boolean;
+  /**
+   * True once the lane is known or the read has settled without one. Until
+   * then `kind` is only bizKindOf's "store" fallback: pages hold per-type
+   * wording and per-type rows (a skeleton or neutral copy) while this is false.
+   */
+  laneSettled: boolean;
   loading: boolean;
   error: string | null;
   reload: () => void;
@@ -52,5 +58,6 @@ export function useBusiness(): UseBusiness {
   }, []);
 
   const type = business?.type ?? user.businessType;
-  return { business, kind: bizKindOf(type), kindKnown: !!business || (!loading && !!user.businessType), loading, error, reload, setBusiness };
+  const kindKnown = !!business || (!loading && !!user.businessType);
+  return { business, kind: bizKindOf(type), kindKnown, laneSettled: kindKnown || !loading, loading, error, reload, setBusiness };
 }

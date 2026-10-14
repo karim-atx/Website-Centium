@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import type { BizReview, ReviewReply } from "../../../services/reputation";
+import type { BizReview, ReviewReply } from "../../../services/reputation/types";
 import { presetRange } from "../analyticsRange.ts";
 import {
   ago,

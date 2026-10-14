@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { nextAction, orderChip, orderSteps, returnAction, returnChip, returnSteps, stepToast } from "./orderSteps.ts";
-import type { StoreOrder, StoreReturn } from "./orders.ts";
+import type { StoreOrder, StoreReturn } from "./types.ts";
 
 const order = (over: Partial<StoreOrder>): StoreOrder => ({
   id: "o1",

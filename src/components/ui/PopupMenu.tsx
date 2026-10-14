@@ -115,6 +115,11 @@ interface PopupMenuProps<V extends string> {
    * default, so every other menu is unchanged.
    */
   hairline?: boolean;
+  /**
+   * A plain line drawn under the heading in place of the options (BU OP1-090
+   * O2 "Nobody is free at …"); the caller styles it. Off by default.
+   */
+  emptyNote?: React.ReactNode;
 }
 
 /**
@@ -170,6 +175,7 @@ export function PopupMenu<V extends string>({
   doneLabel = "Done",
   keepOpen,
   hairline,
+  emptyNote,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
@@ -271,7 +277,8 @@ export function PopupMenu<V extends string>({
         }
       >
         {heading && <p style={{ margin: "2px 4px 8px", ...capsStyle }}>{heading}</p>}
-        {options.map((opt, i) => {
+        {emptyNote}
+        {!emptyNote && options.map((opt, i) => {
           const on = isOn(opt.value);
           const filled = on && variant === "filled";
           const groupStart = !!opt.group && opt.group !== options[i - 1]?.group;

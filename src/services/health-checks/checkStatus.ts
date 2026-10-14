@@ -1,4 +1,5 @@
 import type { ScreeningRow } from "./screening";
+import { formatShortDate } from "../../utils/date";
 
 /**
  * HE1.8 row status, Last and Next (PB-HB-01): worked out on the device from
@@ -64,13 +65,13 @@ function addMonths(iso: string, months: number): Date {
 }
 
 function monthYear(d: Date): string {
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  return formatShortDate(d, { month: "short", year: "numeric" });
 }
 
 /** "5 Oct 2026" */
 export function shortDate(iso: string): string {
   const d = new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return formatShortDate(d, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export type CheckState = {

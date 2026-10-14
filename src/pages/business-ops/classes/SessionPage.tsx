@@ -10,7 +10,7 @@ import { useOps } from "./opsTheme";
 import { BackRow, Bone, ErrorCard, FiguresCard, OpsCard, Tag } from "./parts";
 import { useSessionActions } from "./SessionActions";
 import { useSchedule } from "./useSchedule";
-import { addDays, dayHeading, initialOf, isEnded, shortDate, todayIso } from "./scheduleModel";
+import { addDays, dayHeading, dayWords, initialOf, isEnded, shortDate, todayIso } from "./scheduleModel";
 
 // The session page (OP1-083; OpsTabsV4 view=session). Route
 // /app/business/classes/:id. Tiles: Edit, Message (B7: shown, not available
@@ -122,6 +122,8 @@ export default function SessionPage() {
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0]
     : undefined;
   const instructorName = session.professionalId ? api.nameOf(session.professionalId) : "";
+  // OP1-093 row 3: after a substitute is assigned (this visit; the stored exception is B9).
+  const coverFor = session.professionalId ? api.coveringFor(session.id) : null;
 
   type Tile = { key: string; label: string; icon: React.ReactNode; tone?: "high"; disabled?: boolean; aria?: string; onClick?: () => void };
   const tiles: Tile[] = ended
@@ -213,7 +215,7 @@ export default function SessionPage() {
         </div>
         <button
           type="button"
-          onClick={() => (session.professionalId ? navigate("/app/business/more/employees") : actions.openSubstitute(id))}
+          onClick={() => (session.professionalId ? navigate(`/app/business/employees/${session.professionalId}`) : actions.openSubstitute(id))}
           className="tap w-full flex items-center text-left"
           style={{ gap: 10, padding: "10px 16px", minHeight: 54 }}
         >
@@ -230,7 +232,9 @@ export default function SessionPage() {
             </span>
             <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>
               {session.professionalId
-                ? next
+                ? coverFor
+                  ? `Covering for ${api.nameOf(coverFor)} ${dayWords(session.date, today)}`
+                  : next
                   ? `Also teaching ${next.title} ${next.date === today ? "today" : next.date === addDays(today, 1) ? "tomorrow" : `on ${shortDate(next.date)}`}`
                   : "No other classes coming up"
                 : "Tap to choose who teaches it"}

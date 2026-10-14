@@ -319,16 +319,27 @@ export interface OwedRow {
   overdue: number;
 }
 
+/**
+ * The one "money owed" rule, shared by Revenue › Payments and Analytics ›
+ * Client outcomes: unpaid, with an agreed price above zero, and for a
+ * membership only while it is active. A booking with no price agreed is not
+ * money owed.
+ */
+export function isOwed(
+  r: Pick<PaymentRecord, "kind" | "status" | "amount" | "membershipStatus">,
+): boolean {
+  return (
+    r.status === "pending" &&
+    r.amount !== null &&
+    r.amount > 0 &&
+    (r.kind === "class" || r.membershipStatus === "active")
+  );
+}
+
 /** Unpaid items with an agreed price: active memberships awaiting payment, unpaid class bookings. */
 export function owed(records: PaymentRecord[], today: string): OwedRow[] {
   return records
-    .filter(
-      (r) =>
-        r.status === "pending" &&
-        r.amount !== null &&
-        r.amount > 0 &&
-        (r.kind === "class" || r.membershipStatus === "active"),
-    )
+    .filter(isOwed)
     .map((rec) => ({
       rec,
       overdue: rec.dueOn ? daysBetween(rec.dueOn, today) : 0,

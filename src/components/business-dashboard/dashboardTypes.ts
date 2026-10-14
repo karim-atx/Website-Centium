@@ -11,7 +11,6 @@ export interface DashBusiness {
   name: string;
   type: string;
   active: boolean;
-  perk: string | null;
 }
 
 export interface DashClass {

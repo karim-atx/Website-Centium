@@ -58,11 +58,16 @@ const set = (next: Partial<ScheduleState>) => {
   listeners.forEach((l) => l());
 };
 let inflight: Promise<void> | null = null;
+/** classId → the instructor a substitute replaced (this visit only, OP1-093). */
+const covers = new Map<string, string>();
 
 async function load(uid: string): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
-    if (state.uid !== uid) state = { ...EMPTY, uid };
+    if (state.uid !== uid) {
+      state = { ...EMPTY, uid };
+      covers.clear();
+    }
     set({ loading: true });
     const r = await fetchMyClasses(uid);
     if (!r.ok) {
@@ -151,15 +156,29 @@ export function useSchedule() {
 
   const update = useCallback(async (classId: string, draft: ClassDraft) => {
     const r = await updateClass(classId, draft);
-    if (r.ok) set({ classes: sortRows(state.classes.map((c) => (c.id === classId ? r.updated : c))) });
+    if (r.ok) {
+      if (r.updated.professionalId !== state.classes.find((c) => c.id === classId)?.professionalId) covers.delete(classId);
+      set({ classes: sortRows(state.classes.map((c) => (c.id === classId ? r.updated : c))) });
+    }
     return r;
   }, []);
 
   const assign = useCallback(async (classId: string, professionalId: string | null) => {
+    const before = state.classes.find((c) => c.id === classId)?.professionalId ?? null;
     const r = await assignInstructor(classId, professionalId);
-    if (r.ok) set({ classes: state.classes.map((c) => (c.id === classId ? r.updated : c)) });
+    if (r.ok) {
+      set({ classes: state.classes.map((c) => (c.id === classId ? r.updated : c)) });
+      // OP1-093 row 3: remember who was replaced, for "Covering for {name}".
+      // Kept for this visit only: the per-date exception that would store it
+      // is B9 (class_series, BU2-17).
+      const original = covers.get(classId) ?? before;
+      if (original && professionalId && original !== professionalId) covers.set(classId, original);
+      else covers.delete(classId);
+    }
     return r;
   }, []);
+
+  const coveringFor = useCallback((classId: string): string | null => covers.get(classId) ?? null, []);
 
   const remove = useCallback(async (classId: string) => {
     // V6-55: Delete only for a class with no bookings (a delete cascades the
@@ -196,6 +215,7 @@ export function useSchedule() {
     assign,
     remove,
     nameOf,
+    coveringFor,
   };
 }
 
