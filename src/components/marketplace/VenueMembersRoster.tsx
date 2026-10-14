@@ -7,6 +7,7 @@ import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/con
 import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 
 // A venue's member roster (stage A4, venue_members()): THE one roster
@@ -55,6 +56,8 @@ export function VenueMembersRoster({
   id?: string;
 }) {
   const online = useOnline();
+  const access = useConsoleAccess();
+  const deskOk = access.meets("front_desk") || access.failed;
   const [filter, setFilter] = useState<Filter>("all");
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<{ key: string; members: VenueMember[]; total: number } | null>(null);
@@ -132,7 +135,8 @@ export function VenueMembersRoster({
       <div className={clsx(!fresh && current && "opacity-60")} aria-busy={!fresh}>
         {members.map((m) => {
           const pill = passPill(m);
-          const canPay = m.paymentStatus === "pending";
+          // Recording cash is a desk action: mark_gym_membership_paid needs front_desk (Database b95ef5c).
+          const canPay = m.paymentStatus === "pending" && deskOk;
           return (
             <VDetailRow
               key={m.membershipId}

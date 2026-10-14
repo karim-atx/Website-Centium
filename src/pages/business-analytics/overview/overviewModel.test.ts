@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildClock, f12, type ClockColours, type ClockInput, type ClockItem } from "./clockModel.ts";
-import { headline, headlineSize, insights, outcomes, revenueInsight, type OvRaw } from "./overviewModel.ts";
+import { headline, headlineSize, insights, outcomes, revenueInsight, shareBody, type OvRaw } from "./overviewModel.ts";
 import { owed, type PaymentRecord } from "../../../services/business-revenue/model.ts";
 
 const C: ClockColours = {
@@ -256,4 +256,13 @@ test("revenue insight reads recorded payments like the Revenue page (M1)", () =>
   assert.deepEqual(revenueInsight({ records: und, range, today }), { key: "revenue", value: "$0", delta: "", sub: "Collected this period. $45 not counted yet.", up: false });
   // Early (first payment under 4 weeks ago): no delta, as the Revenue page.
   assert.equal(revenueInsight({ records: [pay({ amount: 10, paidAt: "2026-10-01T10:00:00" })], range, today }).delta, "");
+});
+
+test("client outcomes: the DI-07 share count leads the empty body, never below the threshold as figures", () => {
+  const need = "Outcomes appear once 5 or more clients choose to share their progress with you.";
+  assert.equal(shareBody(null), need);
+  assert.equal(shareBody(0), need);
+  assert.equal(shareBody(1), "1 client shares their progress with you so far. " + need);
+  assert.equal(shareBody(3), "3 clients share their progress with you so far. " + need);
+  assert.equal(shareBody(7), "7 clients share their progress with you. Their group outcomes are coming soon.");
 });

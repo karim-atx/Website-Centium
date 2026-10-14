@@ -7,8 +7,10 @@ import { linePx, textPx } from "../../../theme/textSize";
 import { ErrorRow, KitEmpty, KitLabel, KitList, KitTip, NumberBoxes } from "../../../components/business-dashboard/parts";
 import { useAnalytics } from "../analyticsContext";
 import { loadOverview } from "./overviewData";
-import { isoDay, outcomes, type OvRaw } from "./overviewModel";
+import { isoDay, outcomes, shareBody, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
+import { useBusiness } from "../../../components/business-more/useBusiness";
+import { fetchOutcomeShareCount } from "../../../services/business-members";
 
 // Analytics › Client outcomes (OURS-AN1-client-outcomes, V6-28): the kept
 // Client Outcomes feature in the AN1 / BizTypeKit language, opened from the
@@ -47,6 +49,17 @@ export function ClientOutcomesPage() {
   const [error, setError] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const today = isoDay(new Date());
+  // B7 DI-07: how many clients share progress (a count only; never who).
+  const { business } = useBusiness();
+  const [shareCount, setShareCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!business?.id) return;
+    let alive = true;
+    void fetchOutcomeShareCount(business.id).then((n) => alive && setShareCount(n));
+    return () => {
+      alive = false;
+    };
+  }, [business?.id]);
 
   useEffect(() => setExport("", null), [setExport]);
 
@@ -98,7 +111,7 @@ export function ClientOutcomesPage() {
       )}
 
       <KitLabel c={c} label="Shared progress" />
-      <KitEmpty c={c} icon="heart-pulse" title="Not enough shared data yet" body="Outcomes appear once 5 or more clients choose to share their progress with you." />
+      <KitEmpty c={c} icon="heart-pulse" title="Not enough shared data yet" body={shareBody(shareCount)} />
 
       {!loading && rows.length > 0 && (
         <>

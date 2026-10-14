@@ -166,6 +166,13 @@ export interface VenueMember {
   /** A first name. The venue is told nothing else about who this is. */
   firstName: string;
   isMinor: boolean;
+  /**
+   * B7 MB-01 (b95ef5c): the person and their number at this business. Never
+   * null on the local stack once the stage is there; null on a database
+   * without it. The desk searches by number ("42", "0042", "#42").
+   */
+  personId: string | null;
+  memberNumber: number | null;
   planName: string;
   status: MembershipStatus;
   paymentMethod: string;
@@ -189,6 +196,8 @@ export type VenueMemberRow = {
   membership_id: string;
   member_first_name: string | null;
   member_is_minor: boolean | null;
+  person_id?: string | null;
+  member_number?: number | null;
   plan_name: string;
   status: MembershipStatus;
   payment_method: string;
@@ -208,6 +217,8 @@ export function toVenueMember(r: VenueMemberRow): VenueMember {
     membershipId: r.membership_id,
     firstName: r.member_first_name?.trim() || "Member",
     isMinor: r.member_is_minor === true,
+    personId: r.person_id ?? null,
+    memberNumber: r.member_number ?? null,
     planName: r.plan_name,
     status: r.status,
     paymentMethod: r.payment_method,
@@ -517,4 +528,16 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
     default:
       return stage4Message(code, serverMessage, fallback);
   }
+}
+
+/**
+ * A desk search: the first name the reader gives, or the member number
+ * ("42", "0042", "#42" all find member 42), the same rule business_people uses.
+ */
+export function matchesMemberQuery(m: Pick<VenueMember, "firstName" | "memberNumber">, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  const num = /^#?\s*(\d+)$/.exec(q);
+  if (num) return m.memberNumber !== null && m.memberNumber === Number(num[1]);
+  return m.firstName.toLowerCase().includes(q);
 }

@@ -6,7 +6,8 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { CHECK_INS_LIVE } from "../../../services/front-desk";
 import type { FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
-import { paidLine } from "../../../services/venues/consoleLogic";
+import { matchesMemberQuery, paidLine } from "../../../services/venues/consoleLogic";
+import { memberNumberLabel } from "../../../services/business-members";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { textPx } from "../../../theme/textSize";
 
@@ -14,8 +15,9 @@ import { textPx } from "../../../theme/textSize";
 // 18 20 12, pinned footer 12 20 34, 46 r14 fields, 52 r16 Check in 14/700).
 // Writing the check-in is B10 (BU2-07): the sheet finds the member and their
 // pass now (venue_members), and the button stays unavailable with a note
-// until the stage lands. Search by member number needs venue_members to
-// carry the number (B7 MB-01 shipped it on business_people only; asked).
+// until the stage lands. Search matches the first name or the member number
+// (venue_members carries it since B7 b95ef5c); the result line leads with
+// "Member #0042" so the desk can confirm the number it typed.
 // Footer link (OURS-OP1-member-codes D9): a walk-in who is not a member yet
 // gets a member code from Analytics › Members › Member codes.
 
@@ -51,14 +53,14 @@ export const CheckInSheet: React.FC<{
     const q = query.trim().toLowerCase();
     if (!q || picked) return [];
     return members
-      .filter((m) => m.status === "active" && m.firstName.toLowerCase().includes(q))
+      .filter((m) => m.status === "active" && matchesMemberQuery(m, q))
       .slice(0, 6);
   }, [query, members, picked]);
 
   const passValid = picked?.passState === "valid";
   const passLabel = (m: FrontDeskMember) => (m.expiresOn ? `${m.planName || "Membership"} · until ${dayMonthYear(m.expiresOn)}` : m.planName || "Membership");
   /** Search result sub: the pass, then "Paid {d Mon}" when a payment is recorded. */
-  const resultSub = (m: FrontDeskMember) => [passLabel(m), paidLine(m)].filter(Boolean).join(" · ");
+  const resultSub = (m: FrontDeskMember) => [m.memberNumber !== null ? memberNumberLabel(m.memberNumber) : null, passLabel(m), paidLine(m)].filter(Boolean).join(" · ");
   const refused = !!picked && !!pass && !passValid;
 
   const disabled = !CHECK_INS_LIVE || !online || !picked || !pass || !passValid;

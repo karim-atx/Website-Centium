@@ -585,3 +585,36 @@ export async function shareMyNameWithBusiness(businessId: string, share: boolean
   }
   return { ok: true, shared: typeof data === "boolean" ? data : share };
 }
+
+// ---------------------------------------------------------------------------
+// B7 DI-07: the client's own switch for health figures in aggregate reports
+// ---------------------------------------------------------------------------
+//
+// SEPARATE FROM THE NAME SWITCH, by rule (the Database guard fails a
+// migration that makes one read the other): showing a gym your first name
+// never hands it your progress, and the reverse. The business only ever
+// learns a count (business_client_share_count), never who shared.
+
+/** Every business the member shares progress with (own rows; a revoked share keeps its row). */
+export async function fetchMyOutcomeShares(userId: string): Promise<{ ok: true; businessIds: Set<string> } | { ok: false }> {
+  const db = supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => Promise<{ data: unknown; error: { message: string } | null }> } } };
+  const r = await db.from("business_client_shares").select("business_id, revoked_at").eq("client_id", userId);
+  if (r.error) return { ok: false };
+  return { ok: true, businessIds: new Set(((r.data ?? []) as { business_id: string; revoked_at: string | null }[]).filter((x) => !x.revoked_at).map((x) => x.business_id)) };
+}
+
+export async function shareMyOutcomesWithBusiness(businessId: string, share: boolean): Promise<{ ok: true; shared: boolean } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("share_my_outcomes_with_business", { p_business_id: businessId, p_share: share });
+  if (error) {
+    console.error("[members] Could not change progress sharing:", error.message);
+    return { ok: false, message: describe(error, "Couldn't save that. Try again.") };
+  }
+  return { ok: true, shared: typeof data === "boolean" ? data : share };
+}
+
+/** How many clients share progress with the business; null while the stage is missing or unreadable. */
+export async function fetchOutcomeShareCount(businessId: string): Promise<number | null> {
+  const { data, error } = await rpc().rpc("business_client_share_count", { p_business_id: businessId });
+  if (error || data === null || data === undefined) return null;
+  return Number(data);
+}

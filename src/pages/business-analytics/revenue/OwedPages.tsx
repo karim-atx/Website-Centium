@@ -43,6 +43,7 @@ import {
 } from "./PayKit";
 import { owedChip, REVENUE_BASE } from "./payModel";
 import { useRevenue } from "./revenueContext";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 
 // Money owed (AN14-035 / -037 to -043, PaySeeAllV2 kind "owed"), the owed
 // detail (AN14-044 / -089) and the Mark as paid pop-up and toast (AN14-046,
@@ -357,6 +358,8 @@ export const PaymentDetailPage: React.FC<{ from: "owed" | "transactions"; recKey
   const navigate = useNavigate();
   const today = todayIso();
   const [paid, setPaid] = useState(false);
+  const access = useConsoleAccess();
+  const canMark = access.meets("front_desk") || access.failed;
   const back =
     from === "owed"
       ? `${REVENUE_BASE}/payments/owed`
@@ -471,7 +474,9 @@ export const PaymentDetailPage: React.FC<{ from: "owed" | "transactions"; recKey
         histTitle="Recent payments"
         hist={hist}
         actions={
-          unpaid
+          // Recording cash is a desk action (mark_*_paid need front_desk,
+          // Database b95ef5c), not part of seeing revenue.
+          unpaid && canMark
             ? [
                 {
                   t: "Mark as paid",

@@ -21,6 +21,7 @@ import {
   toRosterEntry,
   toVenueDashboard,
   toVenueMember,
+  matchesMemberQuery,
   totalOf,
   validateDrafts,
   type DayDraft,
@@ -124,7 +125,7 @@ const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   ...over,
 });
 
-test("toVenueMember: carries a first name and a minor flag, nothing more", () => {
+test("toVenueMember: carries a first name, a minor flag and the business member number (B7), nothing more", () => {
   const m = toVenueMember(memberRow({ member_is_minor: true }));
   assert.deepEqual(Object.keys(m).sort(), [
     "expiresOn",
@@ -132,11 +133,13 @@ test("toVenueMember: carries a first name and a minor flag, nothing more", () =>
     "isMinor",
     "joinedAt",
     "markedPaidBy",
+    "memberNumber",
     "membershipId",
     "paidAt",
     "passState",
     "paymentMethod",
     "paymentStatus",
+    "personId",
     "planName",
     "priceAgreed",
     "startedOn",
@@ -145,6 +148,15 @@ test("toVenueMember: carries a first name and a minor flag, nothing more", () =>
   assert.equal(m.isMinor, true);
   assert.equal(m.priceAgreed, 120);
   assert.equal(toVenueMember(memberRow({ member_first_name: null })).firstName, "Member");
+  assert.equal(m.memberNumber, null);
+  assert.equal(toVenueMember(memberRow({ member_number: 42, person_id: "p" })).memberNumber, 42);
+});
+
+test("matchesMemberQuery: a shared first name, or the number as 42, 0042 or #42", () => {
+  const m = { firstName: "Sarah", memberNumber: 42 };
+  for (const q of ["42", "0042", "#42", "# 42", "sar"]) assert.equal(matchesMemberQuery(m, q), true, q);
+  for (const q of ["4", "420", "#41", "", "ben"]) assert.equal(matchesMemberQuery(m, q), false, q);
+  assert.equal(matchesMemberQuery({ firstName: "Member", memberNumber: null }, "42"), false);
 });
 
 test("totalOf / pageLine: the unpaginated total rides on every row", () => {

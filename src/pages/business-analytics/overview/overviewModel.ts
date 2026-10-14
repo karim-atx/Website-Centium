@@ -352,3 +352,12 @@ export function overviewCsv(cells: HeadCell[], ins: Insight[]): (string | number
     ["Revenue", v(ins[1].value), null],
   ];
 }
+
+/** The Shared progress empty body: the DI-07 count when there is one (below 5 the outcomes reader shows nothing). */
+export function shareBody(n: number | null): string {
+  const need = "Outcomes appear once 5 or more clients choose to share their progress with you.";
+  if (!n) return need;
+  // 5 or more share, but the outcomes reader (B15) is not built yet.
+  if (n >= 5) return `${n} clients share their progress with you. Their group outcomes are coming soon.`;
+  return `${n} ${n === 1 ? "client shares" : "clients share"} their progress with you so far. ${need}`;
+}

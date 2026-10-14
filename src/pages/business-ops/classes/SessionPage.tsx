@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Activity, Bike, CalendarDays, Dumbbell, MessageCircle, Pencil, PersonStanding, Repeat2, Trash2, User, UserRound, Users } from "lucide-react";
 import { ClassRosterSheet } from "../../../components/marketplace/ClassRosterSheet";
 import { fetchClassRoster } from "../../../services/venues/console";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { methodLabel, money, splitRoster, type RosterEntry } from "../../../services/venues/consoleLogic";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
@@ -51,6 +52,12 @@ export default function SessionPage() {
   const [roster, setRoster] = useState<{ id: string; entries: RosterEntry[] } | null>(null);
   const [rosterError, setRosterError] = useState(false);
   const [tick, setTick] = useState(0);
+  // venue_class_roster needs front_desk (Database b95ef5c): an instructor
+  // holding only schedule is refused (ATX03), so the card says why instead
+  // of offering a retry that cannot work.
+  const access = useConsoleAccess();
+  const rosterAllowed = (access.ready && access.meets("front_desk")) || access.failed;
+  const rosterHidden = access.ready && !rosterAllowed;
   const actions = useSessionActions(api, {
     onDeleted: () => navigate("/app/business/classes", { replace: true }),
   });
@@ -59,7 +66,7 @@ export default function SessionPage() {
   const session = api.sessions.find((x) => x.id === id) ?? null;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !rosterAllowed) return;
     let alive = true;
     void fetchClassRoster(id).then((r) => {
       if (!alive) return;
@@ -73,7 +80,7 @@ export default function SessionPage() {
     return () => {
       alive = false;
     };
-  }, [id, tick, session?.booked]);
+  }, [id, tick, session?.booked, rosterAllowed]);
 
   const backLabel = api.kind === "classes" ? "Schedule" : "Classes";
   const people = api.people;
@@ -203,7 +210,7 @@ export default function SessionPage() {
         marginTop={14}
         boxes={[
           { label: "Booked", value: `${session.booked}/${session.maxCapacity}`, delta: `${pct}%`, deltaInk: c.faint },
-          { label: "Waitlist", value: entries ? String(waitlist.length) : "–", dash: !entries, onClick: waitlist.length ? () => setRosterOpen(true) : undefined },
+          { label: "Waitlist", value: entries ? String(waitlist.length) : "–", dash: !entries, onClick: waitlist.length && rosterAllowed ? () => setRosterOpen(true) : undefined },
         ]}
         line={line}
       />
@@ -258,7 +265,9 @@ export default function SessionPage() {
             {session.booked}
           </p>
         </div>
-        {rosterError && !entries ? (
+        {rosterHidden ? (
+          <p style={{ margin: 0, padding: "10px 16px 14px", fontSize: textPx(13), lineHeight: linePx(18), color: c.faint }}>Who booked is shown to staff with front desk access.</p>
+        ) : rosterError && !entries ? (
           <ErrorCard c={c} inner message="Couldn't load who's booked. Check your connection and try again." onRetry={() => setTick((t) => t + 1)} disabled={offline} />
         ) : !entries ? (
           [0, 1].map((i) => (
@@ -309,7 +318,7 @@ export default function SessionPage() {
         )}
       </OpsCard>
 
-      <ClassRosterSheet classId={rosterOpen ? id : null} title={session.title} onClose={() => setRosterOpen(false)} />
+      <ClassRosterSheet classId={rosterOpen && rosterAllowed ? id : null} title={session.title} onClose={() => setRosterOpen(false)} />
       {actions.elements}
     </div>
   );
