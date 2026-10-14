@@ -48,15 +48,22 @@ import Messages from "./pages/messages/Messages";
 import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
-import BusinessAnalyticsTab from "./pages/marketplace/BusinessAnalyticsTab";
+import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
 import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
-import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
-import BusinessMembersTab from "./pages/marketplace/BusinessMembersTab";
-import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
+import TeamRoutes from "./pages/business-team/TeamRoutes";
+import MyBusinessesPage from "./pages/professionals/MyBusinessesPage";
+import SchedulePage from "./pages/business-ops/classes/SchedulePage";
+import SessionPage from "./pages/business-ops/classes/SessionPage";
+import ClassRulesPage from "./pages/business-ops/classes/ClassRulesPage";
 import BusinessOperationsTab from "./pages/marketplace/BusinessOperationsTab";
-import BusinessGymTab from "./pages/marketplace/BusinessGymTab";
+import { PlansRoutes } from "./pages/business-ops/plans";
+import { BusinessOrdersRoutes, StoreProductsRoute } from "./pages/business-ops/store/StoreOpsRoutes";
+import BusinessAppointmentsRoutes from "./pages/business-ops/appointments/AppointmentsRoutes";
+import AppointmentServicesPage from "./pages/business-ops/appointments/ServicesPage";
+import StoreRoutes from "./pages/store/StoreRoutes";
+import AppointmentRoutes from "./pages/appointments/AppointmentRoutes";
 import BusinessVenueTab from "./pages/marketplace/BusinessVenueTab";
 import BusinessCalendarTab from "./pages/marketplace/BusinessCalendarTab";
 import Profile from "./pages/profile/Profile";
@@ -461,21 +468,34 @@ function AppRoutes() {
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
-        <Route path="/app/business/analytics" element={<BusinessAnalyticsTab />} />
+        <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
         <Route path="/app/business/marketplace" element={<BusinessMarketplaceTab />} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
-            Today's listings page until the Products shell (OURS-MA1-store-products-tab) lands. */}
-        <Route path="/app/business/products" element={<BusinessMarketplaceTab />} />
+            Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
+            types keep today's listings page on this address. */}
+        <Route path="/app/business/products/*" element={<StoreProductsRoute />} />
+        {/* v6 Batch 4: Store orders (detail, returns, See all) and appointments. */}
+        <Route path="/app/business/orders/*" element={<BusinessOrdersRoutes />} />
+        <Route path="/app/business/appointments/*" element={<BusinessAppointmentsRoutes />} />
+        <Route path="/app/business/services" element={<AppointmentServicesPage />} />
+        {/* v6 Batch 4 (V6-49, designed by us): the customer side. */}
+        <Route path="/app/store/*" element={<StoreRoutes />} />
+        <Route path="/app/appointments/*" element={<AppointmentRoutes />} />
         <Route path="/app/business/profile" element={<BusinessProfilePage />} />
         {/* v6 Batch 3: the business More sub-pages (MO1B). */}
         <Route path="/app/business/more/*" element={<BusinessMoreRoutes />} />
         <Route path="/app/business/messages" element={<Navigate to="/app/messages" replace />} />
-        <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
-        <Route path="/app/business/members" element={<BusinessMembersTab />} />
-        <Route path="/app/business/classes" element={<BusinessClassesTab />} />
+        <Route path="/app/business/employees/*" element={<TeamRoutes />} />
+        <Route path="/app/businesses" element={<MyBusinessesPage />} />
+        <Route path="/app/business/members" element={<Navigate to="/app/business/analytics/members/codes" replace />} />
+        {/* v6 Batch 4 · Classes: Schedule, Class rules and the session page (OP1-074 … 155). */}
+        <Route path="/app/business/classes" element={<SchedulePage />} />
+        <Route path="/app/business/classes/rules" element={<ClassRulesPage />} />
+        <Route path="/app/business/classes/:id" element={<SessionPage />} />
         <Route path="/app/business/operations" element={<BusinessOperationsTab />} />
-        <Route path="/app/business/gym" element={<BusinessGymTab />} />
-        <Route path="/app/business/venue" element={<BusinessVenueTab />} />
+        {/* v6 Batch 4: plans (Front desk › Memberships) and the plan page. */}
+        <Route path="/app/business/gym/*" element={<PlansRoutes />} />
+        <Route path="/app/business/venue/*" element={<BusinessVenueTab />} />
         <Route path="/app/business/calendar" element={<BusinessCalendarTab />} />
         <Route path="/app/profile" element={<Profile />} />
         <Route path="/app/profile/cv" element={<MyCv />} />

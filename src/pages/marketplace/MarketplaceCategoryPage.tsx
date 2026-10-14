@@ -12,7 +12,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, type LucideIcon } from "lucide-react";
+import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, ShoppingBag, type LucideIcon } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
 import { initials } from "../../components/professionals/typeColour";
@@ -309,6 +309,24 @@ function BusinessPage({ businessId }: { businessId: string }) {
         <p role="alert" className="mb-3 text-[12px] font-semibold text-status-high">
           {error}
         </p>
+      )}
+
+      {/* v6 Batch 4 (V6-49, designed by us): a store's shop, cart and checkout,
+          and booking for a Wellness Service (the storefront links to it). */}
+      {TYPE_CATEGORY[venue.venueType] && (
+        <Link
+          to={`/app/store/${venue.venueId}`}
+          className="tap mb-4 flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 no-underline"
+        >
+          <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
+            <ShoppingBag size={17} className="text-primary-dark" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-charcoal truncate">Shop</span>
+            <span className="block text-[12px] text-charcoal-faint truncate">{venue.venueType === "wellness_service" ? "Products and appointments" : "Products, pickup and delivery"}</span>
+          </span>
+          <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
+        </Link>
       )}
 
       <p className="section-label text-charcoal-faint pt-2 mb-2.5">Listings</p>

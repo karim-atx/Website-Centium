@@ -5,6 +5,7 @@ import {
   Bell,
   BellRing,
   Building2,
+  CalendarClock,
   CalendarDays,
   CalendarRange,
   CalendarX,
@@ -249,6 +250,8 @@ export default function BusinessMoreIndex() {
             />
             <BizRow well="index" icon={FileCheck} title="Terms clients accept" desc="Shown before checkout" onClick={sub("store-policies")} />
             {wellness && <BizRow well="index" icon={FileCheck} title="Terms and waivers" desc="For appointments" onClick={sub("policy/appointment_waiver")} />}
+            {/* v6 Batch 4 (V6-158): services and free slots are set up here. */}
+            {wellness && <BizRow well="index" icon={CalendarClock} title="Services and free slots" desc="What clients can book, and when" onClick={go("/app/business/services")} />}
           </BizCard>
         </>
       )}

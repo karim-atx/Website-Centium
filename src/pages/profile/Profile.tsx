@@ -47,6 +47,8 @@ import {
   HandHeart,
   KeyRound,
   Plus,
+  Package,
+  CalendarCheck,
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
@@ -467,6 +469,30 @@ export default function Profile() {
           off. Also on Health, where the Cycle card would be. */}
       {/* Decision 23 (item 100): both as r18 cards with a 36 #F0EDF9 icon
           tile, like the Recovery card (`tile`; Health and Home keep theirs). */}
+      {/* v6 Batch 4 (V6-49, designed by us): the customer's store orders and
+          appointments, as the MO1.5.1 Join rows above. */}
+      {user.accountType === "customer" && (
+        <div className="mb-6 space-y-2 animate-fade-slide-up">
+          {[
+            { icon: Package, label: "My orders", onClick: () => navigate("/app/store/orders") },
+            { icon: CalendarCheck, label: "My appointments", onClick: () => navigate("/app/appointments") },
+          ].map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={r.onClick}
+              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+            >
+              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
+              </span>
+              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+            </button>
+          ))}
+        </div>
+      )}
+
       <TrackerQuestion className="mb-6" tile />
 
       {/* Task T: only for an older account with no date of birth. */}

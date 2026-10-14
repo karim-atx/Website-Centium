@@ -2,13 +2,38 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Users, CalendarDays, ChevronRight, KeyRound, Store } from "lucide-react";
+import { useBusinessNavKind } from "../../components/navigation/useBusinessNavKind";
+import { FrontDeskPage } from "../business-ops/frontdesk/FrontDeskPage";
+import { MembershipsTab } from "../business-ops/plans";
+import StoreOrdersPage from "../business-ops/store/StoreOrdersPage";
+import AppointmentsPage from "../business-ops/appointments/AppointmentsPage";
+import SchedulePage from "../business-ops/classes/SchedulePage";
+
+// v6 (V6-54, HANDOVER §5): the business navbar's per-type tab at
+// /app/business/operations. ONE SHELL, ONE BRANCH PER TYPE: each Batch 4 area
+// adds its own branch here and nothing else (re-read before editing).
+// - gym: Front desk (Entries · Passes · Memberships), business-ops/frontdesk;
+//   the Memberships tab is the plan list from business-ops/plans.
+// - classes (Schedule), store (Orders), appointments: their areas' pages.
+// - unknown type: the old landing below, until the type is known.
+export default function BusinessOperationsTab() {
+  const kind = useBusinessNavKind();
+  if (kind === "gym") return <FrontDeskPage memberships={<MembershipsTab />} />;
+  // Batch 4 classes: Schedule (OP1-074 … 155), business-ops/classes.
+  if (kind === "classes") return <SchedulePage />;
+  // Batch 4 store: Orders (To fulfil · Completed · Returns); a Wellness
+  // Service with appointments only: Appointments (O11).
+  if (kind === "store") return <StoreOrdersPage />;
+  if (kind === "appointments") return <AppointmentsPage />;
+  return <OperationsLanding />;
+}
 
 // V9 (QA 9.0): "Add a new button between analytics and marketplace called
 // operations that house both the employees and classes buttons found in
 // more" — a landing page for the two, freeing up bottom-nav room.
 // V10 (QA 10.0): "a button that has to do with the gym itself" — membership
 // plan management, added alongside Employees/Classes.
-export default function BusinessOperationsTab() {
+function OperationsLanding() {
   const navigate = useNavigate();
   const items = [
     // Stage A4: the venue console (hours, logo and cover, members, rosters).
