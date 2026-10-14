@@ -541,10 +541,13 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
 }
 
 /**
- * A label the server masked (Q-05): "Member #0042", "Client #0042", "Guest",
- * or our own fallbacks. Avatars show the person glyph for these rather than
- * an initial, which would be the "M" of "Member".
+ * A label the server masked (Q-05). The server sends exactly a first name,
+ * "Member #0042", or "Guest" (money readers, a payment with no account); a
+ * bare "Member" from the server is a Database bug to report, not a state.
+ * "Member" / "Client" here are only our own fallbacks for a missing label.
+ * Avatars show the person glyph for these rather than an initial, which
+ * would be the "M" of "Member".
  */
 export function isMaskedLabel(label: string): boolean {
-  return /^(Member|Client) #\d+$/.test(label.trim()) || ["Guest", "Member", "Client"].includes(label.trim());
+  return /^Member #\d+$/.test(label.trim()) || ["Guest", "Member", "Client"].includes(label.trim());
 }

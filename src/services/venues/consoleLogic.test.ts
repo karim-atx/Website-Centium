@@ -153,8 +153,8 @@ test("toVenueMember: carries the server's label (Q-05), a minor flag and the bus
 });
 
 test("isMaskedLabel: the server's masked labels get the person glyph, a shared name its initial", () => {
-  for (const l of ["Member #0001", "Client #0042", "Guest", "Member", " Member #12 "]) assert.equal(isMaskedLabel(l), true, l);
-  for (const l of ["Sarah", "Membership", "#0042", "Lina"]) assert.equal(isMaskedLabel(l), false, l);
+  for (const l of ["Member #0001", "Guest", "Member", " Member #12 "]) assert.equal(isMaskedLabel(l), true, l);
+  for (const l of ["Sarah", "Membership", "#0042", "Lina", "Client #0042"]) assert.equal(isMaskedLabel(l), false, l);
 });
 
 test("totalOf / pageLine: the unpaginated total rides on every row", () => {
