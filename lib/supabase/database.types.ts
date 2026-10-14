@@ -23471,7 +23471,7 @@ export type Database = {
       subscription_tier_type: "professional" | "business" | "client"
       template_level: "beginner" | "intermediate" | "advanced"
       theme_mode: "light" | "dark" | "auto"
-      thread_kind: "peer" | "official_support" | "group" | "venue"
+      thread_kind: "peer" | "official_support" | "group" | "venue" | "business"
       thread_member_role: "owner" | "member"
       thread_member_status:
         | "invited"
@@ -24066,7 +24066,7 @@ export const Constants = {
       subscription_tier_type: ["professional", "business", "client"],
       template_level: ["beginner", "intermediate", "advanced"],
       theme_mode: ["light", "dark", "auto"],
-      thread_kind: ["peer", "official_support", "group", "venue"],
+      thread_kind: ["peer", "official_support", "group", "venue", "business"],
       thread_member_role: ["owner", "member"],
       thread_member_status: [
         "invited",

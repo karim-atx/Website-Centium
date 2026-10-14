@@ -8,6 +8,8 @@ import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLi
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import { useNavigate } from "react-router-dom";
+import { startMemberThread } from "../../services/messaging";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 
 // A venue's member roster (stage A4, venue_members()): THE one roster
@@ -20,9 +22,9 @@ import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOf
 // rows come first from the server (they are the ones somebody must act on);
 // total_count drives the paging so there is no second call. A row with
 // something to do opens a K20 menu: "Mark as paid" while the payment is
-// pending (mark_gym_membership_paid, insider-gated and idempotent). "Message"
-// waits for B7's business-to-member threads (V6-26): no message buttons
-// before B7 is on the stack.
+// pending (mark_gym_membership_paid, needs front_desk) and "Message" for
+// staff holding messages (B7 MB-02 start_member_thread: one thread per
+// member whoever presses it; it opens in Messages).
 
 /** K8 tone for a member's tag (Valid good, Awaiting payment caution, else soft; an upcoming renewal "Starts {date}", MB-05). */
 function passPill(m: VenueMember): { tone: PillTone; label: string } {
@@ -58,6 +60,8 @@ export function VenueMembersRoster({
   const online = useOnline();
   const access = useConsoleAccess();
   const deskOk = access.meets("front_desk") || access.failed;
+  const canMessage = access.meets("messages") && !!access.businessId;
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<{ key: string; members: VenueMember[]; total: number } | null>(null);
@@ -118,6 +122,17 @@ export function VenueMembersRoster({
     onChanged?.();
   };
 
+  const message = async (m: VenueMember) => {
+    setMenu(null);
+    if (busy || !access.businessId || !m.personId) return;
+    setBusy(true);
+    setRowError(null);
+    const r = await startMemberThread(access.businessId, m.personId);
+    setBusy(false);
+    if (!r.ok) return setRowError(r.message);
+    navigate("/app/messages", { state: { threadId: r.threadId } });
+  };
+
   const statusWord = status ? `${status} ` : "";
   const header = card ? "Members" : `${total.toLocaleString()} ${statusWord}membership${total === 1 ? "" : "s"}`;
   const right = card ? (current ? `${total.toLocaleString()} membership${total === 1 ? "" : "s"}` : undefined) : "Unpaid first";
@@ -136,7 +151,7 @@ export function VenueMembersRoster({
         {members.map((m) => {
           const pill = passPill(m);
           // Recording cash is a desk action: mark_gym_membership_paid needs front_desk (Database b95ef5c).
-          const canPay = m.paymentStatus === "pending" && deskOk;
+          const hasActions = (m.paymentStatus === "pending" && deskOk) || (canMessage && !!m.personId);
           return (
             <VDetailRow
               key={m.membershipId}
@@ -146,8 +161,8 @@ export function VenueMembersRoster({
               sub={memberFact(m)}
               sub2={memberDates(m)}
               right={<VPill tone={pill.tone} label={pill.label} />}
-              onClick={canPay ? (e) => setMenu({ member: m, anchor: e.currentTarget }) : undefined}
-              ariaLabel={canPay ? `${m.firstName}, ${pill.label}. Actions` : undefined}
+              onClick={hasActions ? (e) => setMenu({ member: m, anchor: e.currentTarget }) : undefined}
+              ariaLabel={hasActions ? `${m.firstName}, ${pill.label}. Actions` : undefined}
               disabled={busy}
             />
           );
@@ -211,8 +226,11 @@ export function VenueMembersRoster({
         variant="field"
         width={204}
         heading={menu?.member.firstName}
-        options={[{ value: "paid", label: "Mark as paid", disabled: !online }]}
-        onSelect={() => menu && void markPaid(menu.member)}
+        options={[
+          ...(menu && menu.member.paymentStatus === "pending" && deskOk ? [{ value: "paid", label: "Mark as paid", disabled: !online }] : []),
+          ...(menu && canMessage && menu.member.personId ? [{ value: "message", label: "Message", disabled: !online }] : []),
+        ]}
+        onSelect={(v) => menu && void (v === "message" ? message(menu.member) : markPaid(menu.member))}
       />
     </div>
   );
