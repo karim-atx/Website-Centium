@@ -59,10 +59,16 @@ export async function fetchMyTeam(userId: string): Promise<TeamResult> {
   }
   if (!business.id) return { ok: true, businessId: null, members: [] };
 
-  const rows = await supabase
-    .from("business_employees")
-    .select("professional_id")
-    .eq("business_id", business.id);
+  // ACCEPTED ONLY (B0 consent, Release 2). An unaccepted row is an
+  // invitation: no seat, no access, not on the team. The "Run by" pickers,
+  // the analytics count and the plan's seat line all mean the people who said
+  // yes; the Team page reads invitations itself (business-team/team.ts).
+  // accepted_at is not in the production-generated types yet, hence the cast.
+  const rows: { data: { professional_id: string }[] | null; error: { message: string } | null } = await (
+    supabase.from("business_employees").select("professional_id").eq("business_id", business.id) as unknown as {
+      not: (c: string, op: string, v: null) => Promise<{ data: { professional_id: string }[] | null; error: { message: string } | null }>;
+    }
+  ).not("accepted_at", "is", null);
 
   if (rows.error) {
     console.error("[business-team] Could not read employees:", rows.error.message);

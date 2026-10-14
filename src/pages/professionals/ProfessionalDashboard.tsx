@@ -11,6 +11,7 @@ import {
 } from "../../services/hire-inbox";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
 import { ProGetSetUpCard } from "../../components/professionals/ProGetSetUpCard";
+import { TeamInvitesNotice } from "../../components/professionals/TeamInvitesNotice";
 import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
 import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
 import { hireGate } from "../../services/hires/proLogic";
@@ -287,6 +288,9 @@ export default function ProfessionalDashboard() {
       />
 
       <TwoFactorNudge />
+
+      {/* v6 Batch 4 · B0: a business invited them to its team (accept on Your businesses). */}
+      <TeamInvitesNotice className="mb-4" />
 
       {/* v6 Batch 3 · OB-157 / 191 / 214: Get set up, until every row is done. */}
       <ProGetSetUpCard onAddClient={() => setAddOpen(true)} onPlans={() => setPlansOpen(true)} className="mb-4" />

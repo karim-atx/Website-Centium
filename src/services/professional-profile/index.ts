@@ -252,9 +252,12 @@ export type LeaveAffiliationResult = { ok: true } | { ok: false; message: string
  * ZERO ROWS IS NOT AN ERROR. Leaving a business you are not in is the state
  * the caller wanted either way, and a stale button is the likeliest cause.
  */
-export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
+export async function leaveAffiliation(businessId: string): Promise<LeaveAffiliationResult> {
+  // ONE BUSINESS (B0, Release 2): a professional may work for several, so
+  // leaving is scoped to the business named; the policy still limits the
+  // delete to the caller's own rows.
   try {
-    const { error } = await supabase.from("business_employees").delete().not("id", "is", null);
+    const { error } = await supabase.from("business_employees").delete().eq("business_id", businessId);
     if (error) {
       console.error("[professional-profile] Could not leave business:", error.code, error.message);
       return { ok: false, message: describe(error) };

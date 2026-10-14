@@ -20,6 +20,7 @@ import {
   Banknote,
   Globe2,
   Store,
+  Building2,
 } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 import BusinessMoreIndex from "../business-more/BusinessMoreIndex";
@@ -112,6 +113,8 @@ function PersonalMore() {
           isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
           isProfessional && forumAllowed && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
           isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
+          // v6 Batch 4 · B0 / B6: invitations, teams and join requests.
+          isProfessional && { icon: Building2, label: "Your businesses", desc: "Team invitations and businesses you work with", to: "/app/businesses" },
           isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
           hasVenues && { icon: Store, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" },
           isProfessional && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },

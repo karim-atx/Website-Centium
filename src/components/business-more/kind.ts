@@ -28,7 +28,7 @@ export const typeLabel = (type: string | null | undefined): string =>
   BUSINESS_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "Business";
 
 /** COPY vocabulary: Staff. */
-export const STAFF_LABEL: Record<BizKind, string> = { classes: "Instructors", gym: "Employees", store: "Staff" };
+export const STAFF_LABEL: Record<BizKind, string> = { classes: "Instructors", gym: "Team", store: "Staff" };
 
 /** The venue kind a new location takes (B5 venue_kind). */
 export function venueKindOf(type: string | null | undefined): "gym" | "studio" | "store" | "wellness" {

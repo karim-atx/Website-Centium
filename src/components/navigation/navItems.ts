@@ -139,7 +139,9 @@ const OPERATIONS_PAGES = [
   "/app/business/venue",
   "/app/business/gym",
   "/app/business/classes",
-  "/app/business/employees",
+  // v6 Batch 4: Store order / return detail and the appointment pages.
+  "/app/business/orders",
+  "/app/business/appointments",
 ];
 
 /**
@@ -153,8 +155,12 @@ export const BUSINESS_MORE_PAGES = [
   "/app/settings",
   "/app/business/profile",
   "/app/business/more",
+  // V6-54: the team lives under More › Team and access.
+  "/app/business/employees",
   "/app/messages",
   "/app/business/calendar",
+  // v6 Batch 4 (V6-158): services and free slots are set up under More.
+  "/app/business/services",
 ];
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");

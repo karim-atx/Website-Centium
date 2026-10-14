@@ -488,6 +488,17 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
   }
 
   const perBlock = seatAddon?.seatsPerUnit ?? 0;
+  // B6 (Release 2): capacity is the plan's included seats plus blocks × seats
+  // per block, and business_seat_capacity() is the one authority for it
+  // (included_seats is a subscription_tiers column the production-generated
+  // types don't have yet). Without B6 on the stack, the old blocks-only count.
+  let totalSeats = seatBlocks * perBlock;
+  if (active) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 function, not in the production-generated types
+    const cap = await (supabase as any).rpc("my_business_seat_capacity");
+    const row = Array.isArray(cap.data) ? cap.data[0] : cap.data;
+    if (!cap.error && row && typeof row.capacity === "number") totalSeats = row.capacity;
+  }
   return {
     ok: true,
     plan: {
@@ -495,7 +506,7 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
       seatAddon,
       active,
       seatBlocks,
-      totalSeats: seatBlocks * perBlock,
+      totalSeats,
       monthlyTotal:
         Math.round(((base?.monthlyPrice ?? 0) + seatBlocks * (seatAddon?.monthlyPrice ?? 0)) * 100) / 100,
     },
