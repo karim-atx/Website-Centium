@@ -51,8 +51,8 @@ export interface Membership {
   businessId: string;
   /** The member's account. Null on the business's roster: list_business_members never hands it out. */
   memberId: string | null;
-  /** First name only (B7 list_business_members); null on the member's own side, or when the reader has none. */
-  firstName?: string | null;
+  /** The server's label (list_business_members, Q-05): a shared first name or "Member #0042"; null on the member's own side. */
+  label?: string | null;
   /** Under 18 (a flag, never an age). */
   isMinor?: boolean;
   membershipPlanId: string | null;
@@ -250,7 +250,8 @@ export async function fetchMyMembers(
 
 type ListedMember = {
   membership_id: string;
-  member_first_name: string | null;
+  /** Q-05 (Database 0587c8a): masked ("Member #0042") unless shared. */
+  member_label: string | null;
   member_is_minor: boolean | null;
   plan_name: string | null;
   plan_price: number | string | null;
@@ -269,7 +270,7 @@ export function listedToMembership(r: ListedMember, businessId: string): Members
     id: r.membership_id,
     businessId,
     memberId: null,
-    firstName: r.member_first_name?.trim() || null,
+    label: r.member_label?.trim() || null,
     isMinor: !!r.member_is_minor,
     membershipPlanId: null,
     status: STATES.includes(r.state as MembershipStatus) ? (r.state as MembershipStatus) : "pending",

@@ -329,7 +329,8 @@ export async function deletePlan(planId: string): Promise<{ ok: boolean; message
 /** One active member of a plan, as the venue readers return them (first name only). */
 export interface PlanMember {
   membershipId: string;
-  firstName: string;
+  /** Q-05: masked ("Member #0042") unless shared. */
+  label: string;
   isMinor: boolean;
   startedOn: string;
   expiresOn: string | null;
@@ -354,7 +355,7 @@ export async function fetchMembersByPlanName(businessId: string): Promise<Map<st
     read = true;
     for (const m of page.value.members) {
       const list = byName.get(m.planName) ?? [];
-      list.push({ membershipId: m.membershipId, firstName: m.firstName, isMinor: m.isMinor, startedOn: m.startedOn, expiresOn: m.expiresOn });
+      list.push({ membershipId: m.membershipId, label: m.label, isMinor: m.isMinor, startedOn: m.startedOn, expiresOn: m.expiresOn });
       byName.set(m.planName, list);
     }
   }

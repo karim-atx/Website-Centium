@@ -163,8 +163,13 @@ export type PaymentStatus = "pending" | "paid" | "refunded";
 
 export interface VenueMember {
   membershipId: string;
-  /** A first name. The venue is told nothing else about who this is. */
-  firstName: string;
+  /**
+   * The server's label (Q-05, Database 0587c8a): the first name only if the
+   * member shared it with this business, else "Member #0042". Render it;
+   * never treat it as a name. The desk's check-in reads names through
+   * desk_find_member instead.
+   */
+  label: string;
   isMinor: boolean;
   /**
    * B7 MB-01 (b95ef5c): the person and their number at this business. Never
@@ -194,7 +199,7 @@ export interface VenueMember {
 
 export type VenueMemberRow = {
   membership_id: string;
-  member_first_name: string | null;
+  member_label: string | null;
   member_is_minor: boolean | null;
   person_id?: string | null;
   member_number?: number | null;
@@ -215,7 +220,7 @@ export type VenueMemberRow = {
 export function toVenueMember(r: VenueMemberRow): VenueMember {
   return {
     membershipId: r.membership_id,
-    firstName: r.member_first_name?.trim() || "Member",
+    label: r.member_label?.trim() || "Member",
     isMinor: r.member_is_minor === true,
     personId: r.person_id ?? null,
     memberNumber: r.member_number ?? null,
@@ -292,7 +297,8 @@ export interface RosterEntry {
   kind: "booked" | "waitlist";
   /** B7 (Database 65e0311): who, for Message clients (start_member_thread). Null without the column. */
   personId: string | null;
-  firstName: string;
+  /** Q-05: a first name for the front desk, "Member #0042" for the class's instructor (unless shared). */
+  label: string;
   isMinor: boolean;
   paymentMethod: string | null;
   paymentStatus: PaymentStatus | null;
@@ -304,7 +310,7 @@ export interface RosterEntry {
 export type RosterRow = {
   entry_kind: "booked" | "waitlist";
   person_id?: string | null;
-  client_first_name: string | null;
+  client_label: string | null;
   client_is_minor: boolean | null;
   payment_method: string | null;
   payment_status: PaymentStatus | null;
@@ -317,7 +323,7 @@ export function toRosterEntry(r: RosterRow): RosterEntry {
   return {
     kind: r.entry_kind,
     personId: r.person_id ?? null,
-    firstName: r.client_first_name?.trim() || "Client",
+    label: r.client_label?.trim() || "Client",
     isMinor: r.client_is_minor === true,
     paymentMethod: r.payment_method,
     paymentStatus: r.payment_status,
@@ -535,13 +541,10 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
 }
 
 /**
- * A desk search: the first name the reader gives, or the member number
- * ("42", "0042", "#42" all find member 42), the same rule business_people uses.
+ * A label the server masked (Q-05): "Member #0042", "Client #0042", "Guest",
+ * or our own fallbacks. Avatars show the person glyph for these rather than
+ * an initial, which would be the "M" of "Member".
  */
-export function matchesMemberQuery(m: Pick<VenueMember, "firstName" | "memberNumber">, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return false;
-  const num = /^#?\s*(\d+)$/.exec(q);
-  if (num) return m.memberNumber !== null && m.memberNumber === Number(num[1]);
-  return m.firstName.toLowerCase().includes(q);
+export function isMaskedLabel(label: string): boolean {
+  return /^(Member|Client) #\d+$/.test(label.trim()) || ["Guest", "Member", "Client"].includes(label.trim());
 }

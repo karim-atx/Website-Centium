@@ -70,7 +70,8 @@ interface VenueRow {
 }
 interface MemberRow {
   membership_id: string;
-  member_first_name: string | null;
+  /** Q-05: masked unless shared. */
+  member_label: string | null;
   member_is_minor: boolean | null;
   plan_name: string | null;
   status: string;
@@ -121,7 +122,7 @@ async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
         paidUndated: paid,
         createdAt: m.joined_at,
         dueOn: m.started_on,
-        who: m.member_first_name,
+        who: m.member_label,
         isMinor: !!m.member_is_minor,
         item: m.plan_name ?? "Membership",
         membershipStatus: m.status,
@@ -226,9 +227,9 @@ export async function fetchRevenue(
   // summary leaves most clients' names out.
   const named = new Map<string, { who: string | null; minor: boolean }>();
   for (const venue of venues) {
-    const pp = await rpc<{ kind: string; id: string; person_first_name: string | null; person_is_minor: boolean | null }[]>("venue_pending_payments", { p_gym_id: venue.gym_id });
+    const pp = await rpc<{ kind: string; id: string; person_label: string | null; person_is_minor: boolean | null }[]>("venue_pending_payments", { p_gym_id: venue.gym_id });
     if (pp.error) return fail(pp.error, LOAD_FAIL);
-    for (const x of pp.data ?? []) if (x.kind === "class") named.set(x.id, { who: x.person_first_name, minor: !!x.person_is_minor });
+    for (const x of pp.data ?? []) if (x.kind === "class") named.set(x.id, { who: x.person_label, minor: !!x.person_is_minor });
   }
   records.push(
     ...b.value.map((r) => {
@@ -313,6 +314,8 @@ export async function fetchMoneyOwed(
   opts: {
     sort?: MoneyOwedSort;
     filter?: MoneyOwedFilter;
+    /** "cash" / "whish" (venue_payment_method); null = every method. An unknown one is refused (22023). */
+    method?: string | null;
     limit?: number;
     offset?: number;
   } = {},
@@ -321,6 +324,7 @@ export async function fetchMoneyOwed(
     p_business_id: businessId,
     p_sort: opts.sort ?? "overdue",
     p_filter: opts.filter ?? "all",
+    p_method: opts.method ?? null,
     p_limit: opts.limit ?? 50,
     p_offset: opts.offset ?? 0,
   });
@@ -344,10 +348,11 @@ export async function fetchAllMoneyOwed(
   businessId: string,
   sort: MoneyOwedSort,
   filter: MoneyOwedFilter,
+  method: string | null = null,
 ): Promise<Result<MoneyOwedPage>> {
   const rows: MoneyOwedRow[] = [];
   for (let offset = 0; offset < 5000; offset += 200) {
-    const r = await fetchMoneyOwed(businessId, { sort, filter, limit: 200, offset });
+    const r = await fetchMoneyOwed(businessId, { sort, filter, method, limit: 200, offset });
     if (!r.ok || r.value.denied) return r;
     rows.push(...r.value.rows);
     if (r.value.rows.length < 200 || rows.length >= r.value.total) break;

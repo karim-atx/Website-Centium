@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { isMaskedLabel } from "../../../services/venues/consoleLogic";
 import { useNavigate, useParams } from "react-router-dom";
 import clsx from "clsx";
-import { ArrowRightLeft, Copy, RotateCcw, Trash2, CalendarClock, CalendarDays, ChevronLeft, Gauge, Hash, QrCode, Repeat, Sun, UserCheck, type LucideIcon } from "lucide-react";
+import { ArrowRightLeft, Copy, RotateCcw, Trash2, CalendarClock, CalendarDays, ChevronLeft, Gauge, Hash, QrCode, Repeat, Sun, UserCheck, type LucideIcon, UserRound } from "lucide-react";
 import { hasInAppHistory } from "../../../hooks/useBack";
 import { useOnline } from "../../../hooks/useOnline";
 import type { MembershipPlanRow, PlanMember } from "../../../services/membership-plans";
@@ -84,11 +85,11 @@ const MemberRow: React.FC<{ m: PlanMember; first: boolean }> = ({ m, first }) =>
       className="shrink-0 flex items-center justify-center rounded-full bg-teal-pale text-[12px] font-extrabold"
       style={{ width: 34, height: 34, color: "rgb(var(--c-teal-text))" }}
     >
-      {initials(m.firstName)}
+      {isMaskedLabel(m.label) ? <UserRound size={15} aria-hidden /> : initials(m.label)}
     </span>
     <div className="flex-1 min-w-0">
       <p className="text-[13px] font-bold leading-[17px] text-charcoal">
-        {m.firstName}
+        {m.label}
         {m.isMinor && <span className="text-[11px] font-bold text-charcoal-faint"> · Under 18</span>}
       </p>
       <p className="text-[11.5px] leading-[15px] text-charcoal-faint">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, ScanLine } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
@@ -49,6 +49,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
   const navigate = useNavigate();
   const online = useOnline();
   const data = useFrontDesk();
+  const gymIds = useMemo(() => data.venues.map((v) => v.gymId), [data.venues]);
   const [opened] = useState(() => new Date());
   const now = data.loadedAt ?? opened;
   const [checkIn, setCheckIn] = useState<{ open: boolean; membershipId: string | null }>({ open: false, membershipId: null });
@@ -92,6 +93,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
         open={checkIn.open}
         initialMembershipId={checkIn.membershipId}
         onClose={() => setCheckIn({ open: false, membershipId: null })}
+        gymIds={gymIds}
         members={data.members}
         online={online}
         onScanInstead={() => {

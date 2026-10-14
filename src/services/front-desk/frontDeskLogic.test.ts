@@ -61,7 +61,7 @@ test("payment due offers Mark as paid; expired offers a day pass only when sold;
 
 test("renewals (MB-05): server rows map; to chase first, then ending, then renewed; subs say what was decided", () => {
   const row = (id: string, days: number, over: Partial<RenewalDueRow> = {}): RenewalDueRow => ({
-    membership_id: id, member_first_name: "Mina", member_is_minor: false, plan_name: "Monthly", expires_on: "2026-10-20",
+    membership_id: id, member_label: "Mina", member_is_minor: false, plan_name: "Monthly", expires_on: "2026-10-20",
     days_left: days, cancel_at_period_end: false, payment_status: "paid", already_renewed: false, total_count: 3, ...over,
   });
   const list = sortRenewals([
@@ -76,7 +76,7 @@ test("renewals (MB-05): server rows map; to chase first, then ending, then renew
   assert.equal(renewalSub(list[1]), "Monthly · renews in 6 days");
   assert.equal(renewalSub(list[2]), "Monthly · ends 20 Oct 2026");
   assert.equal(renewalSub(list[3]), "Monthly · renewed, next period from 20 Oct 2026");
-  assert.equal(toRenewalDue(row("x", 1, { member_first_name: null, plan_name: null }), "g").planName, "Membership");
+  assert.equal(toRenewalDue(row("x", 1, { member_label: null, plan_name: null }), "g").planName, "Membership");
 });
 
 test("renewal rate: NULL is \"–\" with \"No renewals were due\", never 0% or 100%", () => {

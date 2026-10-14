@@ -11,6 +11,9 @@ import {
   toPassCheck,
   toRenewalDue,
   toRenewalStats,
+  toDeskMember,
+  type DeskMember,
+  type DeskMemberRow,
   type Entry,
   type FrontDeskMember,
   type PassCheck,
@@ -77,8 +80,8 @@ const PAGE = 200;
 
 /**
  * Every membership at the business's venues (venue_members(), all statuses),
- * paged at the server's 200 cap. First names only: the venue is told nothing
- * else about who a member is.
+ * paged at the server's 200 cap. Labels only (Q-05: "Member #0042" unless
+ * shared); the check-in searches names through deskFindMember.
  */
 export async function fetchFrontDeskMembers(venues: FrontDeskVenue[]): Promise<Result<FrontDeskMember[]>> {
   const out: FrontDeskMember[] = [];
@@ -93,6 +96,19 @@ export async function fetchFrontDeskMembers(venues: FrontDeskVenue[]): Promise<R
     }
   }
   return { ok: true, value: out };
+}
+
+/**
+ * The check-in search (desk_find_member): a first name or the member number,
+ * valid passes first, capped by the server at 50. Needs front_desk.
+ */
+export async function deskFindMember(gymId: string, search: string, limit = 6): Promise<Result<DeskMember[]>> {
+  const { data, error } = await rpc<DeskMemberRow[]>("desk_find_member", { p_gym_id: gymId, p_search: search.trim(), p_limit: limit });
+  if (error) {
+    console.error("[front desk] Could not search members:", error.message);
+    return fail(error, "Couldn't search right now. Try again.");
+  }
+  return { ok: true, value: (data ?? []).map(toDeskMember) };
 }
 
 /**

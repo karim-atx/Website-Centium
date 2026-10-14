@@ -5,7 +5,7 @@ import { ClassRosterSheet } from "../../../components/marketplace/ClassRosterShe
 import { fetchClassRoster } from "../../../services/venues/console";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useApp } from "../../../context/AppContext";
-import { methodLabel, money, splitRoster, type RosterEntry } from "../../../services/venues/consoleLogic";
+import { isMaskedLabel, methodLabel, money, splitRoster, type RosterEntry } from "../../../services/venues/consoleLogic";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useOps } from "./opsTheme";
@@ -301,10 +301,10 @@ export default function SessionPage() {
         ) : (
           <>
             {bookedList.slice(0, 3).map((e, i) => (
-              <div key={`${e.firstName}-${e.at}-${i}`} className="flex items-center" style={{ gap: 10, padding: "10px 16px", minHeight: 55, borderTop: i ? `1px solid ${c.divider}` : "none" }}>
-                {e.firstName ? (
+              <div key={`${e.label}-${e.at}-${i}`} className="flex items-center" style={{ gap: 10, padding: "10px 16px", minHeight: 55, borderTop: i ? `1px solid ${c.divider}` : "none" }}>
+                {!isMaskedLabel(e.label) ? (
                   <span className="shrink-0 flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 999, background: c.tealPale, color: c.tealInk, fontSize: textPx(12), fontWeight: 800 }}>
-                    {initialOf(e.firstName)}
+                    {initialOf(e.label)}
                   </span>
                 ) : (
                   <span className="shrink-0 flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 999, background: c.soft, color: c.faint, border: c.hc ? `1px solid ${c.border}` : undefined }}>
@@ -313,7 +313,7 @@ export default function SessionPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="flex items-center flex-wrap" style={{ margin: 0, gap: 6, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: c.ink }}>
-                    {e.firstName || "Member"}
+                    {e.label}
                     {e.isMinor && <Tag size="head" label="Under 18" bg={c.soft} ink={c.faint} />}
                   </p>
                   <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>

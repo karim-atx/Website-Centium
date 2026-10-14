@@ -374,13 +374,13 @@ export const OwedListPage: React.FC = () => {
   const [method, setMethod] = useState<"all" | "cash" | "whish">("all");
   const [item, setItem] = useState<OwedItemFilter>("all");
   const [menu, setMenu] = useState<string | null>(null);
-  const owed = useMoneyOwed(sort, item);
+  const owed = useMoneyOwed(sort, item, method);
   const { toast, paidKey } = useRouteToast(owed.reload);
   const remind = useSendReminder(owed.reload);
   const canRemind = useCanRemind(owed.live);
 
   const all = owed.items.filter((o) => o.key !== paidKey);
-  const list = all.filter((o) => method === "all" || o.method === method);
+  const list = all;
   const total = sum(list.map((o) => o.amount));
   const filtered = method !== "all" || item !== "all";
   const oldest = list.reduce<OwedItem | null>(
@@ -389,7 +389,7 @@ export const OwedListPage: React.FC = () => {
   );
   // Empty means nothing owed at all: an Item type filter that matches nothing
   // is "Nothing owed here", not the paid-up card.
-  const empty = all.length === 0 && item === "all";
+  const empty = all.length === 0 && item === "all" && method === "all";
 
   const itemOpts = [
     { value: "all", label: "All items", header: "Item type" },

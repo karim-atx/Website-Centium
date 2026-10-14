@@ -25,7 +25,8 @@ export interface MoneyOwedState {
 
 /**
  * Money owed for the Revenue screens (list, detail, Payments card).
- * money_owed when the database has it, sorted and filtered there; the
+ * money_owed when the database has it, sorted and filtered there (method
+ * too, Database 0587c8a, so paging stays exact); the
  * client-side list from the revenue read when it answers "missing" (the
  * pending rule). It waits for the revenue read (item names and "Member since"
  * come from it) and reads again whenever that read reloads.
@@ -33,6 +34,7 @@ export interface MoneyOwedState {
 export function useMoneyOwed(
   sort: OwedSort,
   filter: OwedItemFilter,
+  method: "all" | "cash" | "whish" = "all",
 ): MoneyOwedState {
   const rev = useRevenue();
   const { data, businessId } = rev;
@@ -45,7 +47,7 @@ export function useMoneyOwed(
   useEffect(() => {
     if (!businessId || !data) return;
     let alive = true;
-    void fetchAllMoneyOwed(businessId, sort, owedServerFilter(filter)).then(
+    void fetchAllMoneyOwed(businessId, sort, owedServerFilter(filter), method === "all" ? null : method).then(
       (r) => {
         if (!alive) return;
         if (r.ok) {
@@ -60,15 +62,16 @@ export function useMoneyOwed(
     return () => {
       alive = false;
     };
-  }, [businessId, data, sort, filter, tick]);
+  }, [businessId, data, sort, filter, method, tick]);
 
   const today = todayIso();
   const items = useMemo(() => {
     if (!data || !server) return [];
     if (server === "pending")
-      return owedFromRecords(data.records, today, sort, filter);
+      // The old client-side path (money_owed missing): the method filter is applied here.
+      return owedFromRecords(data.records, today, sort, filter).filter((o) => method === "all" || o.method === method);
     return server.rows.map((r) => owedItemFromRow(r, data.records));
-  }, [data, server, today, sort, filter]);
+  }, [data, server, today, sort, filter, method]);
 
   const { reload: reloadRevenue } = rev;
   const reload = useCallback(() => {

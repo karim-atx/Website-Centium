@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { PopupMenu } from "../ui/PopupMenu";
 import { initials } from "../professionals/typeColour";
 import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/console";
-import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
+import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
@@ -117,7 +117,7 @@ export function VenueMembersRoster({
       setRowError(r.message);
       return;
     }
-    onToast?.(`Marked as paid. ${m.firstName}'s pass is valid now.`);
+    onToast?.(`Marked as paid. ${m.label}'s pass is valid now.`);
     setTick((t) => t + 1);
     onChanged?.();
   };
@@ -155,14 +155,14 @@ export function VenueMembersRoster({
           return (
             <VDetailRow
               key={m.membershipId}
-              avatar={<VAvatar initial={initials(m.firstName)} />}
-              title={m.firstName}
+              avatar={isMaskedLabel(m.label) ? <VAvatar masked /> : <VAvatar initial={initials(m.label)} />}
+              title={m.label}
               titleExtra={m.isMinor && <VPill tone="pale" label="Under 18" />}
               sub={memberFact(m)}
               sub2={memberDates(m)}
               right={<VPill tone={pill.tone} label={pill.label} />}
               onClick={hasActions ? (e) => setMenu({ member: m, anchor: e.currentTarget }) : undefined}
-              ariaLabel={hasActions ? `${m.firstName}, ${pill.label}. Actions` : undefined}
+              ariaLabel={hasActions ? `${m.label}, ${pill.label}. Actions` : undefined}
               disabled={busy}
             />
           );
@@ -225,7 +225,7 @@ export function VenueMembersRoster({
         anchor={menu?.anchor ?? null}
         variant="field"
         width={204}
-        heading={menu?.member.firstName}
+        heading={menu?.member.label}
         options={[
           ...(menu && menu.member.paymentStatus === "pending" && deskOk ? [{ value: "paid", label: "Mark as paid", disabled: !online }] : []),
           ...(menu && canMessage && menu.member.personId ? [{ value: "message", label: "Message", disabled: !online }] : []),

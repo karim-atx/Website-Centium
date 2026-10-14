@@ -1,12 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Search } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
-import { CHECK_INS_LIVE } from "../../../services/front-desk";
-import type { FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
-import { matchesMemberQuery, paidLine } from "../../../services/venues/consoleLogic";
+import { CHECK_INS_LIVE, deskFindMember } from "../../../services/front-desk";
+import type { DeskMember, FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
 import { memberNumberLabel } from "../../../services/business-members";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { textPx } from "../../../theme/textSize";
@@ -15,9 +14,11 @@ import { textPx } from "../../../theme/textSize";
 // 18 20 12, pinned footer 12 20 34, 46 r14 fields, 52 r16 Check in 14/700).
 // Writing the check-in is B10 (BU2-07): the sheet finds the member and their
 // pass now (venue_members), and the button stays unavailable with a note
-// until the stage lands. Search matches the first name or the member number
-// (venue_members carries it since B7 b95ef5c); the result line leads with
-// "Member #0042" so the desk can confirm the number it typed.
+// until the stage lands. The search is the server's desk_find_member (Q-05,
+// Database 0587c8a): checking somebody in is where a first name is shown, so
+// it matches a first name or the member number ("42", "0042", "#42"), valid
+// passes first; the members list itself is masked. The result line leads
+// with "Member #0042" so the desk can confirm the number it typed.
 // Footer link (OURS-OP1-member-codes D9): a walk-in who is not a member yet
 // gets a member code from Analytics › Members › Member codes.
 
@@ -26,14 +27,18 @@ const FIELD = "w-full flex items-center bg-cream-soft border-[1.5px] border-soli
 export const CheckInSheet: React.FC<{
   open: boolean;
   onClose: () => void;
+  /** The business's venues; the search runs at each (desk_find_member is per venue). */
+  gymIds: string[];
+  /** The masked list, only to preselect a membership from a scan or a row. */
   members: FrontDeskMember[];
   online: boolean;
   onScanInstead: () => void;
   /** Preselect (Sell a day pass from a scan result, a denied row). */
   initialMembershipId?: string | null;
-}> = ({ open, onClose, members, online, onScanInstead, initialMembershipId }) => {
+}> = ({ open, onClose, gymIds, members, online, onScanInstead, initialMembershipId }) => {
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<FrontDeskMember | null>(null);
+  const [picked, setPicked] = useState<Pick<DeskMember, "membershipId" | "planName" | "expiresOn" | "passState" | "memberNumber"> & { name: string } | null>(null);
+  const [results, setResults] = useState<{ q: string; rows: DeskMember[] } | null>(null);
   const [pass, setPass] = useState<string | null>(null);
   const [passMenu, setPassMenu] = useState(false);
   const [passEl, setPassEl] = useState<HTMLButtonElement | null>(null);
@@ -42,25 +47,38 @@ export const CheckInSheet: React.FC<{
   useEffect(() => {
     if (!open) return;
     const m = initialMembershipId ? members.find((x) => x.membershipId === initialMembershipId) ?? null : null;
-    setPicked(m);
-    setQuery(m ? m.firstName : "");
+    setPicked(m ? { membershipId: m.membershipId, planName: m.planName, expiresOn: m.expiresOn, passState: m.passState, memberNumber: m.memberNumber, name: m.label } : null);
+    setQuery(m ? m.label : "");
     setPass(m ? m.membershipId : null);
     setPassMenu(false);
     // Opening resets the form (a later members reload does not).
   }, [open, initialMembershipId]);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || picked) return [];
-    return members
-      .filter((m) => m.status === "active" && matchesMemberQuery(m, q))
-      .slice(0, 6);
-  }, [query, members, picked]);
+  // Search as the desk types (a short pause first), the server deciding who matches.
+  const q = query.trim();
+  useEffect(() => {
+    if (!open || gymIds.length === 0 || !q || picked) return;
+    let alive = true;
+    const t = window.setTimeout(() => {
+      void Promise.all(gymIds.map((g) => deskFindMember(g, q, 6))).then((rs) => {
+        if (!alive) return;
+        const rows = rs.flatMap((r) => (r.ok ? r.value : [])).filter((m) => m.status === "active" || m.status === "upcoming");
+        // Valid passes first, as each venue's answer already is.
+        rows.sort((a, b) => Number(b.passState === "valid") - Number(a.passState === "valid"));
+        setResults({ q, rows: rows.slice(0, 6) });
+      });
+    }, 200);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [open, gymIds, q, picked]);
+  const shown = results && results.q === q ? results.rows : null;
 
   const passValid = picked?.passState === "valid";
-  const passLabel = (m: FrontDeskMember) => (m.expiresOn ? `${m.planName || "Membership"} · until ${dayMonthYear(m.expiresOn)}` : m.planName || "Membership");
-  /** Search result sub: the pass, then "Paid {d Mon}" when a payment is recorded. */
-  const resultSub = (m: FrontDeskMember) => [m.memberNumber !== null ? memberNumberLabel(m.memberNumber) : null, passLabel(m), paidLine(m)].filter(Boolean).join(" · ");
+  const passLabel = (m: { planName: string; expiresOn: string | null }) => (m.expiresOn ? `${m.planName || "Membership"} · until ${dayMonthYear(m.expiresOn)}` : m.planName || "Membership");
+  /** Search result sub: "Member #0042", then the pass (desk_find_member carries no paid date). */
+  const resultSub = (m: DeskMember) => [m.memberNumber !== null ? memberNumberLabel(m.memberNumber) : null, passLabel(m)].filter(Boolean).join(" · ");
   const refused = !!picked && !!pass && !passValid;
 
   const disabled = !CHECK_INS_LIVE || !online || !picked || !pass || !passValid;
@@ -107,7 +125,7 @@ export const CheckInSheet: React.FC<{
         <label htmlFor="fd-member" className="block text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ marginBottom: 6 }}>
           Member
         </label>
-        <div className={FIELD} style={{ minHeight: 46, borderRadius: 14, padding: "0 12px", gap: 8, marginBottom: results.length || (query && !picked) ? 6 : 12 }}>
+        <div className={FIELD} style={{ minHeight: 46, borderRadius: 14, padding: "0 12px", gap: 8, marginBottom: query && !picked ? 6 : 12 }}>
           <input
             id="fd-member"
             value={query}
@@ -124,20 +142,24 @@ export const CheckInSheet: React.FC<{
         </div>
         {query.trim() && !picked && (
           <div role="listbox" aria-label="Members" className="bg-cream-card border border-solid border-th-aea1dc/50 shadow-menu" style={{ borderRadius: 14, padding: 8, marginBottom: 12 }}>
-            {results.length === 0 ? (
+            {shown === null ? (
+              <p className="text-[11px] leading-[15px] text-charcoal-faint" style={{ padding: "8px 10px" }}>
+                Searching…
+              </p>
+            ) : shown.length === 0 ? (
               <div style={{ padding: "8px 10px" }}>
                 <p className="text-[13px] font-bold leading-[18px] text-charcoal">No member found</p>
                 <p className="text-[11px] leading-[15px] text-charcoal-faint">Check the spelling or the member code.</p>
               </div>
             ) : (
-              results.map((m) => (
+              shown.map((m) => (
                 <button
                   key={m.membershipId}
                   type="button"
                   role="option"
                   aria-selected={false}
                   onClick={() => {
-                    setPicked(m);
+                    setPicked({ ...m, name: m.firstName });
                     setQuery(m.firstName);
                     setPass(m.membershipId);
                   }}

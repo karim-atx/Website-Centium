@@ -3,7 +3,7 @@ import { Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { initials } from "../professionals/typeColour";
 import { fetchClassRoster } from "../../services/venues/console";
-import { methodLabel, money, splitRoster, type RosterEntry } from "../../services/venues/consoleLogic";
+import { isMaskedLabel, methodLabel, money, splitRoster, type RosterEntry } from "../../services/venues/consoleLogic";
 import { range12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
 import { CARD, VAvatar, VCardError, VDetailRow, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
@@ -108,8 +108,8 @@ export function ClassRosterSheet({
     return (
       <VDetailRow
         key={`${e.kind}-${i}`}
-        avatar={e.kind === "waitlist" ? <VAvatar number={e.waitlistPosition ?? i + 1} /> : <VAvatar initial={initials(e.firstName)} />}
-        title={e.firstName}
+        avatar={e.kind === "waitlist" ? <VAvatar number={e.waitlistPosition ?? i + 1} /> : isMaskedLabel(e.label) ? <VAvatar masked /> : <VAvatar initial={initials(e.label)} />}
+        title={e.label}
         titleExtra={e.isMinor && <VPill tone="pale" label="Under 18" />}
         sub={sub}
         right={e.kind === "booked" && pay ? <VPill tone={pay.tone} label={pay.label} /> : undefined}

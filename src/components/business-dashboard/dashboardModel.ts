@@ -457,7 +457,7 @@ export function activityEvents(raw: DashRaw, now: Date, days = 30): ActivityEven
         type: "joined",
         at: m.respondedAt,
         day: localDayOf(m.respondedAt),
-        title: `${m.firstName ?? maskedMember(m.memberId)} joined`,
+        title: `${m.label ?? maskedMember(m.memberId)} joined`,
         sub: viaCode ? `Redeemed a code · ${plan ?? "no plan"}` : plan ?? "No plan",
         initial: null,
       });
@@ -471,7 +471,7 @@ export function activityEvents(raw: DashRaw, now: Date, days = 30): ActivityEven
         type: "ended",
         at: m.endedAt,
         day: localDayOf(m.endedAt),
-        title: `${m.firstName ?? maskedMember(m.memberId)} ended their membership`,
+        title: `${m.label ?? maskedMember(m.memberId)} ended their membership`,
         sub: `Member since ${sinceLabel}`,
         initial: null,
       });

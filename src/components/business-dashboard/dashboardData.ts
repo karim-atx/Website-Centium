@@ -154,10 +154,10 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       Promise.all(todayIds.map(async (id) => [id, await fetchClassRoster(id)] as const)),
       // B7 MB-05: the server's renewals list (venue_renewals_due), not a client filter.
       gymId ? fetchRenewalsDue(gymId, 7) : Promise.resolve(null),
-      // B7: first names for the activity feed (the table read above has ids only).
+      // B7 / Q-05: the activity feed's labels (a shared first name or "Member #0042"; the table read above has ids only).
       fetchMyMembers(bid, { limit: 200 }),
     ]);
-  const firstNames = new Map(named.ok ? named.members.map((m) => [m.id, m.firstName ?? null] as const) : []);
+  const labels = new Map(named.ok ? named.members.map((m) => [m.id, m.label ?? null] as const) : []);
 
   const bookings = ok(bookingsRes, "bookings", partial, [] as { business_class_id: string; client_id: string; created_at: string }[]).map((r) => ({
     classId: r.business_class_id,
@@ -167,7 +167,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
   const members = ok(membersRes, "members", partial, []).map((r) => ({
     id: r.id,
     memberId: r.member_id,
-    firstName: firstNames.get(r.id) ?? null,
+    label: labels.get(r.id) ?? null,
     planId: r.membership_plan_id,
     invitedAt: r.invited_at,
     respondedAt: r.responded_at,

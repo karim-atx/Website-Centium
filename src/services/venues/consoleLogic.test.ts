@@ -21,7 +21,7 @@ import {
   toRosterEntry,
   toVenueDashboard,
   toVenueMember,
-  matchesMemberQuery,
+  isMaskedLabel,
   totalOf,
   validateDrafts,
   type DayDraft,
@@ -108,7 +108,7 @@ test("toVenueDashboard: money as numbers, missing counts as 0", () => {
 
 const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   membership_id: "m1",
-  member_first_name: "Rana",
+  member_label: "Rana",
   member_is_minor: false,
   plan_name: "Monthly",
   status: "active",
@@ -125,13 +125,13 @@ const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   ...over,
 });
 
-test("toVenueMember: carries a first name, a minor flag and the business member number (B7), nothing more", () => {
+test("toVenueMember: carries the server's label (Q-05), a minor flag and the business member number (B7), nothing more", () => {
   const m = toVenueMember(memberRow({ member_is_minor: true }));
   assert.deepEqual(Object.keys(m).sort(), [
     "expiresOn",
-    "firstName",
     "isMinor",
     "joinedAt",
+    "label",
     "markedPaidBy",
     "memberNumber",
     "membershipId",
@@ -147,16 +147,14 @@ test("toVenueMember: carries a first name, a minor flag and the business member 
   ]);
   assert.equal(m.isMinor, true);
   assert.equal(m.priceAgreed, 120);
-  assert.equal(toVenueMember(memberRow({ member_first_name: null })).firstName, "Member");
+  assert.equal(toVenueMember(memberRow({ member_label: null })).label, "Member");
   assert.equal(m.memberNumber, null);
   assert.equal(toVenueMember(memberRow({ member_number: 42, person_id: "p" })).memberNumber, 42);
 });
 
-test("matchesMemberQuery: a shared first name, or the number as 42, 0042 or #42", () => {
-  const m = { firstName: "Sarah", memberNumber: 42 };
-  for (const q of ["42", "0042", "#42", "# 42", "sar"]) assert.equal(matchesMemberQuery(m, q), true, q);
-  for (const q of ["4", "420", "#41", "", "ben"]) assert.equal(matchesMemberQuery(m, q), false, q);
-  assert.equal(matchesMemberQuery({ firstName: "Member", memberNumber: null }, "42"), false);
+test("isMaskedLabel: the server's masked labels get the person glyph, a shared name its initial", () => {
+  for (const l of ["Member #0001", "Client #0042", "Guest", "Member", " Member #12 "]) assert.equal(isMaskedLabel(l), true, l);
+  for (const l of ["Sarah", "Membership", "#0042", "Lina"]) assert.equal(isMaskedLabel(l), false, l);
 });
 
 test("totalOf / pageLine: the unpaginated total rides on every row", () => {
@@ -175,16 +173,16 @@ test("passStateTag: the desk's wording for awaiting payment and valid", () => {
 
 test("roster: mapping and the booked / waitlist split", () => {
   const entries = [
-    toRosterEntry({ entry_kind: "booked", client_first_name: "Sam", client_is_minor: false, payment_method: "cash", payment_status: "pending", price_agreed: "20", at: "t1", waitlist_position: null }),
-    toRosterEntry({ entry_kind: "waitlist", client_first_name: "Lea", client_is_minor: true, payment_method: null, payment_status: null, price_agreed: null, at: "t2", waitlist_position: 1 }),
-    toRosterEntry({ entry_kind: "waitlist", client_first_name: null, client_is_minor: null, payment_method: null, payment_status: null, price_agreed: null, at: "t3", waitlist_position: 2 }),
+    toRosterEntry({ entry_kind: "booked", client_label: "Sam", client_is_minor: false, payment_method: "cash", payment_status: "pending", price_agreed: "20", at: "t1", waitlist_position: null }),
+    toRosterEntry({ entry_kind: "waitlist", client_label: "Lea", client_is_minor: true, payment_method: null, payment_status: null, price_agreed: null, at: "t2", waitlist_position: 1 }),
+    toRosterEntry({ entry_kind: "waitlist", client_label: null, client_is_minor: null, payment_method: null, payment_status: null, price_agreed: null, at: "t3", waitlist_position: 2 }),
   ];
   const { booked, waitlist } = splitRoster(entries);
   assert.equal(booked.length, 1);
   assert.equal(booked[0].priceAgreed, 20);
   assert.equal(waitlist.length, 2);
   assert.equal(waitlist[0].isMinor, true);
-  assert.equal(waitlist[1].firstName, "Client");
+  assert.equal(waitlist[1].label, "Client");
   assert.equal(waitlist[1].isMinor, false);
 });
 

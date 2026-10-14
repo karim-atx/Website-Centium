@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isMaskedLabel } from "../../../services/venues/consoleLogic";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, ChevronDown, Copy, Plus, Share2, Ticket, UserMinus, Users, XCircle } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
@@ -80,7 +81,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const waiting = liveCodes(codes);
   const members = data.members ?? [];
   const memberCount = Math.max(data.memberTotal, members.length);
-  const memberName = (m: Membership) => m.firstName ?? maskedMemberLabel(m.id);
+  const memberName = (m: Membership) => m.label ?? maskedMemberLabel(m.id);
   const memberCountLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
   const redeemed = codes.filter((c) => c.redeemed).length;
   const pct = codes.length > 0 ? Math.round((redeemed / codes.length) * 100) : null;
@@ -133,7 +134,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       <AnListRow
         key={m.id}
         first={i === 0}
-        avatar={m.firstName ? <AnAvatar initial={m.firstName.charAt(0).toUpperCase()} index={i} /> : <AnAvatar masked />}
+        avatar={m.label && !isMaskedLabel(m.label) ? <AnAvatar initial={m.label.charAt(0).toUpperCase()} index={i} /> : <AnAvatar masked />}
         name={memberName(m)}
         nameExtra={m.isMinor ? <MemberTag label="Under 18" tone="muted" /> : undefined}
         fact={`${m.planName ?? "No plan"} · ${memberFact(m)}`}

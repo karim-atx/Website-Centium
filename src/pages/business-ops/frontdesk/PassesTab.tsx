@@ -70,7 +70,7 @@ export const PassesTab: React.FC<{
       showToast(res.message);
       return;
     }
-    showToast(`${r.firstName}'s membership is renewed from ${dayMonthYear(r.expiresOn)}. Payment is due.`);
+    showToast(`${r.label}'s membership is renewed from ${dayMonthYear(r.expiresOn)}. Payment is due.`);
     onChanged();
   };
 
@@ -78,10 +78,10 @@ export const PassesTab: React.FC<{
     <DeskRow
       key={r.membershipId}
       icon={r.alreadyRenewed ? CheckCircle2 : r.cancelAtPeriodEnd ? XCircle : RefreshCw}
-      title={r.firstName}
+      title={r.label}
       sub={renewalSub(r)}
       first={i === 0}
-      ariaLabel={`${r.firstName}, ${renewalSub(r)}. Options`}
+      ariaLabel={`${r.label}, ${renewalSub(r)}. Options`}
       menuOpen={menuFor?.membershipId === r.membershipId}
       onClick={(el) => openMenu(r, el)}
       trailing={
@@ -95,7 +95,7 @@ export const PassesTab: React.FC<{
           <ChipButton
             tone="pale"
             label="Remind"
-            ariaLabel={canRemind(r) ? `Remind ${r.firstName}` : `Remind ${r.firstName} (needs messages access)`}
+            ariaLabel={canRemind(r) ? `Remind ${r.label}` : `Remind ${r.label} (needs messages access)`}
             disabled={!canRemind(r) || busy}
             onClick={() => void remind(r)}
           />
@@ -123,7 +123,7 @@ export const PassesTab: React.FC<{
         onClose={() => setEnding(null)}
         onDone={(r, status) => {
           setEnding(null);
-          showToast(status === "cancelled" ? `${r.firstName}'s membership has ended.` : `${r.firstName}'s membership ends on ${dayMonthYear(r.expiresOn)}.`);
+          showToast(status === "cancelled" ? `${r.label}'s membership has ended.` : `${r.label}'s membership ends on ${dayMonthYear(r.expiresOn)}.`);
           onChanged();
         }}
       />
@@ -296,7 +296,7 @@ const EndPopup: React.FC<{
       frame="kit"
       tone="destructive"
       icon={<XCircle size={20} strokeWidth={2.2} />}
-      title={ending ? `End ${ending.firstName}’s membership?` : ""}
+      title={ending ? `End ${ending.label}’s membership?` : ""}
       subtitle={now ? "Their pass stops working straight away." : `Their pass stops working at the end of the paid period, on ${until}.`}
       confirmLabel={busy ? "Ending…" : "End membership"}
       cancelLabel="Keep it"

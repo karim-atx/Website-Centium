@@ -348,12 +348,63 @@ export function hourShort(h: number): string {
 
 export type FrontDeskMember = VenueMember & { gymId: string };
 
+// ---------------------------------------------------------------------------
+// Check-in search (Q-05, Database 0587c8a): desk_find_member(gym, search,
+// limit). The act of checking somebody in is the one place a first name is
+// shown (the user's rule); the members LIST is masked. It matches a first
+// name or the member number ("42", "0042", "#42"), valid passes first, and
+// carries no price, method or paid date.
+// ---------------------------------------------------------------------------
+
+export type DeskMemberRow = {
+  membership_id: string;
+  person_id: string | null;
+  member_number: number | null;
+  member_first_name: string | null;
+  member_is_minor: boolean | null;
+  plan_name: string | null;
+  status: string;
+  payment_status: "pending" | "paid" | "refunded" | null;
+  expires_on: string | null;
+  pass_state: string | null;
+};
+
+export interface DeskMember {
+  membershipId: string;
+  personId: string | null;
+  memberNumber: number | null;
+  /** A first name: the desk may see it (desk_find_member). */
+  firstName: string;
+  isMinor: boolean;
+  planName: string;
+  status: string;
+  paymentStatus: "pending" | "paid" | "refunded" | null;
+  expiresOn: string | null;
+  passState: string | null;
+}
+
+export function toDeskMember(r: DeskMemberRow): DeskMember {
+  return {
+    membershipId: r.membership_id,
+    personId: r.person_id ?? null,
+    memberNumber: r.member_number ?? null,
+    firstName: r.member_first_name?.trim() || "Member",
+    isMinor: r.member_is_minor === true,
+    planName: r.plan_name?.trim() || "Membership",
+    status: r.status,
+    paymentStatus: r.payment_status ?? null,
+    expiresOn: r.expires_on ?? null,
+    passState: r.pass_state ?? null,
+  };
+}
+
 export type RenewalDueRow = {
   membership_id: string;
   /** B7 (Database 65e0311): who, for Remind (start_member_thread). */
   person_id?: string | null;
   member_number?: number | null;
-  member_first_name: string | null;
+  /** Q-05: masked ("Member #0042") unless the member shared their name. */
+  member_label: string | null;
   member_is_minor: boolean | null;
   plan_name: string | null;
   expires_on: string;
@@ -370,7 +421,8 @@ export interface RenewalDue {
   /** Null on a database without B7's columns: Remind stays unavailable. */
   personId: string | null;
   memberNumber: number | null;
-  firstName: string;
+  /** Q-05: the server's label, masked unless shared. */
+  label: string;
   isMinor: boolean;
   planName: string;
   expiresOn: string;
@@ -388,7 +440,7 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
     gymId,
     personId: r.person_id ?? null,
     memberNumber: r.member_number ?? null,
-    firstName: r.member_first_name?.trim() || "Member",
+    label: r.member_label?.trim() || "Member",
     isMinor: r.member_is_minor === true,
     planName: r.plan_name?.trim() || "Membership",
     expiresOn: r.expires_on,
@@ -402,7 +454,7 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
 /** Who still needs doing first: not renewed and not ending, soonest first; then ending; then renewed. */
 export function sortRenewals(rows: RenewalDue[]): RenewalDue[] {
   const rank = (r: RenewalDue) => (r.alreadyRenewed ? 2 : r.cancelAtPeriodEnd ? 1 : 0);
-  return [...rows].sort((a, b) => rank(a) - rank(b) || a.daysLeft - b.daysLeft || a.firstName.localeCompare(b.firstName));
+  return [...rows].sort((a, b) => rank(a) - rank(b) || a.daysLeft - b.daysLeft || a.label.localeCompare(b.label));
 }
 
 /** The ones a desk should chase: not renewed and not ending at the period end. */
