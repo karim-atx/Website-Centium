@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildClock, f12, type ClockColours, type ClockInput, type ClockItem } from "./clockModel.ts";
 import { headline, headlineSize, insights, outcomes, revenueInsight, shareBody, type OvRaw } from "./overviewModel.ts";
-import { owed, type PaymentRecord } from "../../../services/business-revenue/model.ts";
+import { figuresFromRecorded, owed, type PaymentRecord } from "../../../services/business-revenue/model.ts";
 
 const C: ClockColours = {
   dark: false,
@@ -256,6 +256,29 @@ test("revenue insight reads recorded payments like the Revenue page (M1)", () =>
   assert.deepEqual(revenueInsight({ records: und, range, today }), { key: "revenue", value: "$0", delta: "", sub: "Collected this period. $45 not counted yet.", up: false });
   // Early (first payment under 4 weeks ago): no delta, as the Revenue page.
   assert.equal(revenueInsight({ records: [pay({ amount: 10, paidAt: "2026-10-01T10:00:00" })], range, today }).delta, "");
+});
+
+test("revenue insight reads the B8 RV-01 readers' figures when they answer", () => {
+  const range = { from: "2026-09-17", to: "2026-10-14", compare: true };
+  const today = "2026-10-14";
+  const prev = { from: "2026-08-20", to: "2026-09-16" };
+  const figures = figuresFromRecorded(
+    {
+      denied: false,
+      streams: [{ price_type: "membership", payments: 1, gross: "120", refunded: "20", net: "100" }],
+      prevStreams: [{ price_type: "membership", payments: 1, gross: "80", refunded: "0", net: "80" }],
+      plans: [],
+      paid: [],
+      first: "2026-08-01",
+    },
+    range,
+    prev,
+  );
+  // The records say nothing was paid; the readers win (net of the refund).
+  assert.deepEqual(revenueInsight({ records: [], range, today, figures }), { key: "revenue", value: "$100", delta: "+25%", sub: "Collected this period", up: true });
+  // No revenue permission: the empty card, not an error.
+  const denied = figuresFromRecorded({ denied: true, streams: [], prevStreams: [], plans: [], paid: [], first: null }, range, prev);
+  assert.equal(revenueInsight({ records: [], range, today, figures: denied }).value, "–");
 });
 
 test("client outcomes: the DI-07 share count leads the empty body, never below the threshold as figures", () => {

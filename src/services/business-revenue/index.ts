@@ -3,6 +3,13 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import {
   describePaymentRefusal,
+  dayIn,
+  describeRefundRefusal,
+  type LedgerStatus,
+  type OwedSourceKind,
+  type PlanReaderRow,
+  type StreamReaderRow,
+  type TxReaderRow,
   type MoneyOwedFilter,
   type MoneyOwedRow,
   type MoneyOwedSort,
@@ -37,6 +44,10 @@ export * from "./model";
 // unmark_payment_paid, send_payment_reminder) is decided by each call's own
 // answer: a missing function (PGRST202 / 42883) comes back `pending` and the
 // Money owed screens keep the client-side list, with no Undo and no reminders.
+// B8 RV-01 (recorded_revenue_by_stream / _by_plan, transactions_page) and
+// RV-04 (record_refund) follow the same rule (bottom of this file): the
+// records read here stay the fallback for Overview, Streams and Transactions
+// only while those functions are missing.
 
 export type Result<T> =
   | { ok: true; value: T }
@@ -404,4 +415,286 @@ export async function sendPaymentReminder(
     };
   }
   return { ok: true, value: String(data) };
+}
+
+// ---------- B8 RV-01: recorded revenue readers ----------
+//
+// recorded_revenue_by_stream, recorded_revenue_by_plan and transactions_page
+// all need the revenue permission (business_can). Each call decides its own
+// state, as money_owed does: ATX09 → an empty, `denied` answer (not an
+// error); a missing function (PGRST202 / 42883) → `pending`, and the screens
+// keep the records' sums. Dates go as the business-local days the readers
+// take (YYYY-MM-DD); null is all time.
+
+const REV_FAIL = "Couldn't load revenue.";
+const TX_FAIL = "Couldn't load transactions.";
+
+export interface ReaderPage<T> {
+  rows: T[];
+  /** transactions_page's total_count (the reader rows' length elsewhere). */
+  total: number;
+  /** The caller lacks the revenue permission (ATX09): shown as empty. */
+  denied: boolean;
+}
+
+async function readerCall<T extends object>(
+  fn: string,
+  args: Record<string, unknown>,
+  failText: string,
+): Promise<Result<ReaderPage<T>>> {
+  const { data, error } = await rpc<T[]>(fn, args);
+  if (error) {
+    if (isMissingFunction(error)) return { ok: false, pending: true, code: error.code, message: "" };
+    if (error.code === "ATX09") return { ok: true, value: { rows: [], total: 0, denied: true } };
+    console.error(`[revenue] Could not read ${fn}:`, error.message);
+    return fail(error, failText);
+  }
+  const rows = data ?? [];
+  const head = rows[0] as { total_count?: unknown } | undefined;
+  const total = head && head.total_count !== undefined ? Number(head.total_count) : rows.length;
+  return { ok: true, value: { rows, total, denied: false } };
+}
+
+/** recorded_revenue_by_stream(business, from, to): per price type, net of refunds. */
+export function fetchRevenueByStream(
+  businessId: string,
+  from: string | null,
+  to: string | null,
+): Promise<Result<ReaderPage<StreamReaderRow>>> {
+  return readerCall<StreamReaderRow>(
+    "recorded_revenue_by_stream",
+    { p_business_id: businessId, p_from: from, p_to: to },
+    REV_FAIL,
+  );
+}
+
+/** recorded_revenue_by_plan(business, from, to): per plan; the null plan holds class bookings and other income. */
+export function fetchRevenueByPlan(
+  businessId: string,
+  from: string | null,
+  to: string | null,
+): Promise<Result<ReaderPage<PlanReaderRow>>> {
+  return readerCall<PlanReaderRow>(
+    "recorded_revenue_by_plan",
+    { p_business_id: businessId, p_from: from, p_to: to },
+    REV_FAIL,
+  );
+}
+
+export interface TxQuery {
+  from: string | null;
+  to: string | null;
+  /** business_payment_status; null = every status. Unknown → 22023. */
+  status?: LedgerStatus | null;
+  /** venue_payment_method; null = every method. Unknown → 22023. */
+  method?: PayMethod | null;
+  /** A shared first name, member number, amount ("15") or provider reference. */
+  search?: string | null;
+}
+
+/** transactions_page: one page, newest first (paid_at, else recorded_at), refunded and pending rows included. */
+export function fetchTransactions(
+  businessId: string,
+  q: TxQuery,
+  limit = 50,
+  offset = 0,
+): Promise<Result<ReaderPage<TxReaderRow>>> {
+  const search = q.search?.trim() ? q.search.trim() : null;
+  return readerCall<TxReaderRow>(
+    "transactions_page",
+    {
+      p_business_id: businessId,
+      p_from: q.from,
+      p_to: q.to,
+      p_status: q.status ?? null,
+      p_method: q.method ?? null,
+      p_search: search,
+      p_limit: limit,
+      p_offset: offset,
+    },
+    TX_FAIL,
+  );
+}
+
+/** Every page of transactions_page for one query (200 a page, the reader's cap). */
+export async function fetchAllTransactions(
+  businessId: string,
+  q: TxQuery,
+): Promise<Result<ReaderPage<TxReaderRow>>> {
+  const rows: TxReaderRow[] = [];
+  let total = 0;
+  for (let offset = 0; offset < 10000; offset += 200) {
+    const r = await fetchTransactions(businessId, q, 200, offset);
+    if (!r.ok || r.value.denied) return r;
+    rows.push(...r.value.rows);
+    total = r.value.total;
+    if (r.value.rows.length < 200 || rows.length >= total) break;
+  }
+  return { ok: true, value: { rows, total, denied: false } };
+}
+
+/** The first day money was recorded as paid (all time): transactions_page's oldest paid row. */
+export async function fetchFirstPaidDay(businessId: string): Promise<Result<string | null>> {
+  const head = await fetchTransactions(businessId, { from: null, to: null, status: "paid" }, 1, 0);
+  if (!head.ok) return head;
+  if (head.value.denied || head.value.total === 0) return { ok: true, value: null };
+  if (head.value.total === 1) return { ok: true, value: head.value.rows[0]?.paid_on ?? null };
+  const last = await fetchTransactions(businessId, { from: null, to: null, status: "paid" }, 1, head.value.total - 1);
+  if (!last.ok) return last;
+  return { ok: true, value: last.value.rows[0]?.paid_on ?? head.value.rows[0]?.paid_on ?? null };
+}
+
+// ---------- One payment, for the Transactions detail ----------
+
+export interface RefundEntry {
+  id: string;
+  amount: number;
+  reason: string | null;
+  at: string;
+  /** The business's own day of `at`. */
+  on: string;
+}
+
+export interface LedgerPayment {
+  id: string;
+  sourceKind: OwedSourceKind;
+  sourceId: string;
+  personId: string | null;
+  label: string;
+  priceType: string;
+  amount: number;
+  refunded: number;
+  method: PayMethod;
+  status: LedgerStatus;
+  dueOn: string | null;
+  paidAt: string | null;
+  /** The business's own day of paid_at (as the readers' paid_on). */
+  paidOn: string | null;
+  recordedAt: string;
+  gymId: string | null;
+  refunds: RefundEntry[];
+}
+
+/**
+ * One business_payments row (the revenue SELECT policy), its refunds
+ * (business_refunds, same policy) and the person's label as the readers give
+ * it (business_person_label; "Guest" without an account). Null when the row
+ * is not visible (gone, or no revenue permission).
+ */
+export async function fetchLedgerPayment(
+  businessId: string,
+  paymentId: string,
+): Promise<Result<LedgerPayment | null>> {
+  const p = await db
+    .from("business_payments")
+    .select("id, business_id, gym_id, source_kind, source_id, payer_id, price_type, amount, method, status, due_on, paid_at, recorded_at")
+    .eq("id", paymentId);
+  if (p.error) {
+    console.error("[revenue] Could not read the payment:", p.error.message);
+    return fail(p.error, "Couldn't load this payment.");
+  }
+  const row = (p.data ?? []).find((x) => x.business_id === businessId);
+  if (!row) return { ok: true, value: null };
+  const r = await db
+    .from("business_refunds")
+    .select("id, amount, reason, at")
+    .eq("payment_id", paymentId);
+  if (r.error) {
+    console.error("[revenue] Could not read refunds:", r.error.message);
+    return fail(r.error, "Couldn't load this payment.");
+  }
+  // The readers date in the business's timezone (UTC when unset): the detail does too.
+  const b = await db.from("business_profiles").select("timezone").eq("id", businessId);
+  const tz = (!b.error && (b.data?.[0]?.timezone as string | null)) || "UTC";
+  const refunds = (r.data ?? [])
+    .map((x) => ({
+      id: x.id as string,
+      amount: Number(x.amount),
+      reason: (x.reason as string | null) ?? null,
+      at: x.at as string,
+      on: dayIn(x.at as string, tz),
+    }))
+    .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  const payer = (row.payer_id as string | null) ?? null;
+  let label = "Guest";
+  if (payer) {
+    const l = await rpc<string>("business_person_label", {
+      p_business_id: businessId,
+      p_person_id: payer,
+    });
+    if (l.error) {
+      console.error("[revenue] Could not read the person's label:", l.error.message);
+      return fail(l.error, "Couldn't load this payment.");
+    }
+    label = String(l.data ?? "Member");
+  }
+  return {
+    ok: true,
+    value: {
+      id: row.id as string,
+      sourceKind: row.source_kind as OwedSourceKind,
+      sourceId: row.source_id as string,
+      personId: payer,
+      label,
+      priceType: row.price_type as string,
+      amount: Number(row.amount),
+      refunded: refunds.reduce((s, x) => s + x.amount, 0),
+      method: row.method as PayMethod,
+      status: row.status as LedgerStatus,
+      dueOn: (row.due_on as string | null) ?? null,
+      paidAt: (row.paid_at as string | null) ?? null,
+      paidOn: row.paid_at ? dayIn(row.paid_at as string, tz) : null,
+      recordedAt: row.recorded_at as string,
+      gymId: (row.gym_id as string | null) ?? null,
+      refunds,
+    },
+  };
+}
+
+// ---------- B8 RV-04: refunds ----------
+
+/**
+ * record_refund(payment, amount, reason): records money given back (Centium
+ * does not move it). Needs revenue; refuses a never-paid payment and an
+ * amount over what is left (22023, naming the figures). Reaching the full
+ * amount moves the payment to 'refunded' on the server.
+ */
+export async function recordRefund(
+  paymentId: string,
+  amount: number,
+  reason: string | null,
+): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("record_refund", {
+    p_payment_id: paymentId,
+    p_amount: amount,
+    p_reason: reason?.trim() ? reason.trim() : null,
+  });
+  if (error) {
+    if (isMissingFunction(error))
+      return { ok: false, pending: true, code: error.code, message: "Refunds aren't available yet." };
+    console.error("[revenue] Could not record a refund:", error.message);
+    return {
+      ok: false,
+      code: error.code,
+      message: isOffline(error) ? OFFLINE_MESSAGE : describeRefundRefusal(error),
+    };
+  }
+  return { ok: true, value: String(data) };
+}
+
+/** Where each ledger row came from (business_payments.source_kind / source_id), for its plan name or class title. */
+export async function fetchPaymentSources(
+  ids: string[],
+): Promise<Result<Map<string, { sourceKind: string; sourceId: string }>>> {
+  const out = new Map<string, { sourceKind: string; sourceId: string }>();
+  for (let i = 0; i < ids.length; i += 150) {
+    const r = await db
+      .from("business_payments")
+      .select("id, source_kind, source_id")
+      .in("id", ids.slice(i, i + 150));
+    if (r.error) return fail(r.error, TX_FAIL);
+    for (const x of r.data ?? [])
+      out.set(x.id as string, { sourceKind: x.source_kind as string, sourceId: x.source_id as string });
+  }
+  return { ok: true, value: out };
 }

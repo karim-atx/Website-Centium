@@ -24,6 +24,24 @@ import {
   transactions,
   undatedPaid,
   type PaymentRecord,
+  byLedgerOrder,
+  dayIn,
+  describeRefundRefusal,
+  figuresFromRecorded,
+  figuresFromRecords,
+  moneyCents,
+  parseRefundAmount,
+  readerTotals,
+  recordedPlans,
+  recordedSeries,
+  recordedStreams,
+  recordKeyOf,
+  refundable,
+  txItemFromRow,
+  txPill,
+  type PlanReaderRow,
+  type StreamReaderRow,
+  type TxReaderRow,
 } from "./model.ts";
 
 const rec = (o: Partial<PaymentRecord>): PaymentRecord => ({
@@ -242,4 +260,198 @@ test("money owed: reminders sent reads none yet, or the count and the last day",
   assert.equal(remindersLine(0, null), "None yet");
   assert.equal(remindersLine(2, "2026-10-12T09:00:00"), "2, last 12 Oct");
   assert.equal(remindersLine(1, null), "1");
+});
+
+// ---------- B8 RV-01 / RV-04 ----------
+
+const txRow = (o: Partial<TxReaderRow>): TxReaderRow => ({
+  payment_id: o.payment_id ?? "p1",
+  recorded_at: "2026-10-01T08:00:00Z",
+  paid_at: "2026-10-01T08:00:00Z",
+  paid_on: "2026-10-01",
+  status: "paid",
+  source_kind: "class_booking",
+  price_type: "drop_in",
+  person_id: "u1",
+  member_number: 3,
+  label: "Member #0003",
+  gym_id: null,
+  venue_name: null,
+  method: "cash",
+  amount: "15.00",
+  refunded: "0",
+  net: "15.00",
+  provider_reference: null,
+  total_count: 1,
+  ...o,
+});
+
+test("recorded revenue: streams are the server's price types at net, with payments, plans and refunds", () => {
+  const rows: StreamReaderRow[] = [
+    { price_type: "membership", payments: 2, gross: "220.00", refunded: "20.00", net: "200.00" },
+    { price_type: "drop_in", payments: "1", gross: "15.00", refunded: "0", net: "15.00" },
+  ];
+  const plans: PlanReaderRow[] = [
+    { plan_id: "a", plan_name: "Monthly", payments: 1, gross: "120", refunded: "20", net: "100" },
+    { plan_id: "b", plan_name: null, payments: 1, gross: "100", refunded: "0", net: "100" },
+    { plan_id: null, plan_name: null, payments: 1, gross: "15", refunded: "0", net: "15" },
+  ];
+  const s = recordedStreams(rows, plans);
+  assert.deepEqual(
+    s.map((r) => [r.key, r.label, r.value]),
+    [
+      ["membership", "Memberships", 200],
+      ["drop_in", "Drop-ins", 15],
+    ],
+  );
+  assert.deepEqual(s[0].details, [
+    { label: "Payments", value: "2" },
+    { label: "Monthly", value: "$100" },
+    { label: "Deleted plan", value: "$100" },
+    { label: "Refunded", value: "−$20", bad: true },
+  ]);
+  assert.deepEqual(s[1].details, [{ label: "Payments", value: "1" }]);
+  assert.deepEqual(readerTotals(rows), { net: 215, gross: 235, refunded: 20, payments: 3 });
+});
+
+test("recorded revenue: by plan keeps the null plan as Classes and other, and a deleted plan's row", () => {
+  const p = recordedPlans([
+    { plan_id: "a", plan_name: "Monthly", payments: 3, gross: "300", refunded: "0", net: "300" },
+    { plan_id: null, plan_name: null, payments: 2, gross: "30", refunded: "0", net: "30" },
+    { plan_id: "gone", plan_name: null, payments: 1, gross: "10", refunded: "0", net: "10" },
+  ]);
+  assert.deepEqual(
+    p.map((r) => [r.key, r.label, r.value, r.n]),
+    [
+      ["a", "Monthly", 300, 3],
+      ["none", "Classes and other", 30, 2],
+      ["gone", "Deleted plan", 10, 1],
+    ],
+  );
+  // The plans add up to the revenue: nothing is dropped.
+  assert.equal(p.reduce((s, r) => s + r.value, 0), 340);
+});
+
+test("recorded revenue: the series uses the server's paid_on and net, and skips unpaid rows", () => {
+  const period = { from: "2026-10-01", to: "2026-10-03" };
+  const s = recordedSeries(
+    [
+      txRow({ payment_id: "a", paid_on: "2026-10-01", net: "15.00" }),
+      txRow({ payment_id: "b", paid_on: "2026-10-03", price_type: "membership", amount: "120", refunded: "20", net: "100" }),
+      txRow({ payment_id: "c", status: "pending", paid_on: null, paid_at: null }),
+      txRow({ payment_id: "d", paid_on: "2026-09-30" }),
+    ],
+    period,
+  );
+  assert.deepEqual(s.days, ["2026-10-01", "2026-10-02", "2026-10-03"]);
+  assert.deepEqual(s.total, [15, 0, 100]);
+  assert.deepEqual(s.count, [1, 0, 1]);
+  assert.deepEqual(s.byKind.drop_in, [15, 0, 0]);
+  assert.deepEqual(s.byKind.membership, [0, 0, 100]);
+});
+
+test("recorded revenue: figures from the readers (totals, early rule input, per booking, denied)", () => {
+  const p = { from: "2026-10-01", to: "2026-10-07" };
+  const prev = { from: "2026-09-24", to: "2026-09-30" };
+  const f = figuresFromRecorded(
+    {
+      denied: false,
+      streams: [{ price_type: "drop_in", payments: 2, gross: "30", refunded: "0", net: "30" }],
+      prevStreams: [{ price_type: "drop_in", payments: 1, gross: "15", refunded: "0", net: "15" }],
+      plans: [],
+      paid: [
+        txRow({ payment_id: "a", paid_on: "2026-10-02" }),
+        txRow({ payment_id: "b", paid_on: "2026-10-03" }),
+        txRow({ payment_id: "c", paid_on: "2026-09-25" }),
+        txRow({ payment_id: "m", paid_on: "2026-10-03", source_kind: "membership", price_type: "membership", net: "99" }),
+      ],
+      first: "2026-08-01",
+    },
+    p,
+    prev,
+  );
+  assert.equal(f.live, true);
+  assert.equal(f.tot, 30);
+  assert.equal(f.totP, 15);
+  assert.equal(f.anyPaid, true);
+  assert.deepEqual(f.undated, { n: 0, amount: 0 });
+  assert.deepEqual(f.bookings, { n: 2, amount: 30, nP: 1, amountP: 15 });
+  const none = figuresFromRecorded({ denied: true, streams: [], prevStreams: [], plans: [], paid: [], first: null }, p, prev);
+  assert.equal(none.denied, true);
+  assert.equal(none.anyPaid, false);
+  assert.equal(none.tot, 0);
+});
+
+test("recorded revenue: before B8 the figures are the records' sums", () => {
+  const p = { from: "2026-10-01", to: "2026-10-07" };
+  const prev = { from: "2026-09-24", to: "2026-09-30" };
+  const f = figuresFromRecords(
+    [
+      rec({ amount: 15, paidAt: "2026-10-02T10:00:00" }),
+      rec({ kind: "membership", amount: 45, paidUndated: true }),
+    ],
+    p,
+    prev,
+  );
+  assert.equal(f.live, false);
+  assert.equal(f.tot, 15);
+  assert.deepEqual(f.undated, { n: 1, amount: 45 });
+  assert.equal(f.streams[0].details[0].value, "$15");
+});
+
+test("transactions: a ledger row keeps its label, masks the avatar, and names part refunds", () => {
+  const t = txItemFromRow(txRow({ amount: "15.00", refunded: "5.00", net: "10.00" }), "Spin 45");
+  assert.equal(t.key, "p1");
+  assert.equal(t.label, "Member #0003");
+  assert.equal(t.who, null);
+  assert.equal(t.item, "Spin 45");
+  assert.equal(t.day, "2026-10-01");
+  assert.equal(t.pill, "Part refunded");
+  assert.equal(t.refunded, 5);
+  const named = txItemFromRow(txRow({ label: "Rana", price_type: "membership" }));
+  assert.equal(named.who, "Rana");
+  assert.equal(named.item, "Membership");
+  assert.equal(txItemFromRow(txRow({ label: "Guest" })).who, null);
+  assert.equal(txPill("pending", 0), "Owed");
+  assert.equal(txPill("refunded", 15), "Refunded");
+  assert.equal(txPill("paid", 0), "Paid");
+  assert.equal(recordKeyOf("membership", "x"), "membership:x");
+  assert.equal(recordKeyOf("class_booking", "y"), "class:y");
+  assert.equal(recordKeyOf("day_pass", "z"), null);
+});
+
+test("transactions: merged issue statuses keep the reader's order", () => {
+  const rows = [
+    txRow({ payment_id: "b", paid_at: null, recorded_at: "2026-10-02T09:00:00Z" }),
+    txRow({ payment_id: "a", paid_at: "2026-10-03T09:00:00Z" }),
+    txRow({ payment_id: "c", paid_at: "2026-10-02T09:00:00Z" }),
+  ].sort(byLedgerOrder);
+  assert.deepEqual(rows.map((r) => r.payment_id), ["a", "b", "c"]);
+});
+
+test("refunds: what is left, the amount field, and refusals with the server's figures", () => {
+  assert.equal(refundable("paid", 15, 5), 10);
+  assert.equal(refundable("pending", 15, 0), 0);
+  assert.equal(refundable("refunded", 15, 15), 0);
+  assert.deepEqual(parseRefundAmount("7.5", 10), { ok: true, value: 7.5 });
+  assert.deepEqual(parseRefundAmount("$10", 10), { ok: true, value: 10 });
+  assert.deepEqual(parseRefundAmount("", 10), { ok: false, message: "Enter an amount." });
+  assert.deepEqual(parseRefundAmount("0", 10), { ok: false, message: "Enter an amount above $0." });
+  assert.deepEqual(parseRefundAmount("10.01", 10), { ok: false, message: "You can refund up to $10." });
+  assert.deepEqual(parseRefundAmount("1.234", 10), { ok: false, message: "Enter an amount in dollars and cents, like 7.50." });
+  assert.equal(moneyCents(7.5), "$7.50");
+  assert.equal(moneyCents(1500), "$1,500");
+  assert.equal(
+    describeRefundRefusal({ code: "22023", message: "that would refund 20.00, more than the 15.00 paid (0.00 already refunded)" }),
+    "That would refund $20, more than the $15 paid ($0 already refunded).",
+  );
+  assert.equal(
+    describeRefundRefusal({ code: "22023", message: "that payment has not been paid, so there is nothing to refund (it is pending)" }),
+    "That payment has not been paid, so there is nothing to refund (it is pending).",
+  );
+  assert.equal(describeRefundRefusal({ code: "ATX09" }), "You need the Revenue permission to do this.");
+  assert.equal(describeRefundRefusal({ code: "XX000" }), "Couldn't record the refund. Try again.");
+  // The business's own day, as the readers date it.
+  assert.equal(dayIn("2026-10-05T22:30:00Z", "Asia/Beirut"), "2026-10-06");
+  assert.equal(dayIn("2026-10-05T22:30:00Z", "UTC"), "2026-10-05");
 });

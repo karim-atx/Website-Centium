@@ -1,17 +1,19 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, ChevronDown, Download, Receipt, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   dMon,
   money,
-  transactions as txOf,
-  type TxRow,
-  type TxStatus,
+  moneyCents,
+  type TxFilter,
+  type TxItem,
+  type TxPill,
 } from "../../../services/business-revenue";
 import { useAnalytics } from "../analyticsContext";
 import {
   Avatar,
   downloadCsv,
+  ErrorLine,
   MoreRow,
   Pill,
   RCard,
@@ -19,86 +21,96 @@ import {
   Skel,
   SoonChip,
   v,
-  whoOf,
   type PillTone,
 } from "./kit";
 import { REVENUE_BASE } from "./payModel";
-import { useRevenue } from "./revenueContext";
+import { useTransactions } from "./useTransactions";
 
 // Transactions (OURS-AN14-transactions; AnInsightsV3 sub "tx"): search,
 // one filter (in flow under the row, OD-1), the list with Export CSV, five
 // rows then "See all". Before Whish the Whish option is "Soon" and disabled
 // and no row is ever "Failed" (cash cannot fail).
+//
+// B8 RV-01: the list is transactions_page (refunded and pending rows too,
+// masked labels as given), with the search (first name, member number,
+// amount, provider reference), the status and the method on the server
+// (useTransactions). A partly refunded payment is "Part refunded" with the
+// amount refunded in its line (RV-04). Before B8 (reader missing) the list is
+// the records' one, searched here by who and item.
 
-type Filter = "all" | "whish" | "cash" | "issues";
-const TONE: Record<TxStatus, PillTone> = {
+const TONE: Record<TxPill, PillTone> = {
   Paid: "good",
   Owed: "warn",
   Refunded: "soft",
+  "Part refunded": "soft",
+  Failed: "high",
+  Void: "soft",
 };
 
 export const TransactionsTab: React.FC = () => {
   const { range } = useAnalytics();
-  const { data, loading } = useRevenue();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  // The server search waits for a pause in typing.
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => setSearch(q.trim()), 300);
+    return () => window.clearTimeout(id);
+  }, [q]);
+  const [filter, setFilter] = useState<TxFilter>("all");
   const [open, setOpen] = useState(false);
   const [all, setAll] = useState(false);
+  const tx = useTransactions(range, filter, search, all);
 
-  const rows = useMemo(() => txOf(data?.records ?? [], range), [data, range]);
-  const counts = {
-    all: rows.length,
-    whish: rows.filter((t) => t.rec.method === "whish").length,
-    cash: rows.filter((t) => t.rec.method === "cash").length,
-    issues: rows.filter((t) => t.status !== "Paid").length,
-  };
-  const FL: { k: Filter; t: string; soon?: boolean }[] = [
+  const counts = tx.counts;
+  const FL: { k: TxFilter; t: string; soon?: boolean }[] = [
     { k: "all", t: "All payments" },
     { k: "whish", t: "Whish", soon: true },
     { k: "cash", t: "Cash" },
     { k: "issues", t: "Owed, failed or refunded" },
   ];
-  const needle = q.trim().toLowerCase();
-  const list = rows.filter(
-    (t) =>
-      (filter === "all" ||
-        (filter === "whish" && t.rec.method === "whish") ||
-        (filter === "cash" && t.rec.method === "cash") ||
-        (filter === "issues" && t.status !== "Paid")) &&
-      (!needle ||
-        (whoOf(t.rec) + " " + t.rec.item).toLowerCase().includes(needle)),
-  );
-  const shown = all ? list : list.slice(0, 5);
+  const needle = search;
+  const shown = tx.items;
   const label =
     (needle
       ? "Results · "
       : filter === "all"
         ? "Transactions · "
-        : FL.find((f) => f.k === filter)!.t + " · ") + list.length;
-  const none = rows.length === 0;
+        : FL.find((f) => f.k === filter)!.t + " · ") + tx.total;
+  const none = !needle && filter === "all" && tx.total === 0;
 
-  const subOf = (t: TxRow) => {
-    const m = t.rec.method === "whish" ? "Whish" : "Cash";
-    if (t.rec.paidUndated)
-      return `${whoOf(t.rec)} · bought ${dMon(t.day)} · ${m}`;
-    return `${whoOf(t.rec)} · ${dMon(t.day)} · ${m}`;
+  const subOf = (t: TxItem) => {
+    const m = t.method === "whish" ? "Whish" : "Cash";
+    const refunded =
+      t.status === "paid" && t.refunded > 0
+        ? ` · ${moneyCents(t.refunded)} refunded`
+        : "";
+    if (t.undated) return `${t.label} · bought ${dMon(t.day)} · ${m}`;
+    return `${t.label} · ${dMon(t.day)} · ${m}${refunded}`;
   };
 
-  const exportCsv = () =>
+  const exportCsv = async () => {
+    const list = await tx.everything();
+    if (!list) return;
     downloadCsv("centium-transactions.csv", [
-      ["Day", "Item", "Who", "Method", "Amount (USD)", "Status"],
+      ["Day", "Item", "Who", "Method", "Amount (USD)", "Refunded (USD)", "Status"],
       ...list.map((t) => [
         t.day,
-        t.rec.item,
-        whoOf(t.rec),
-        t.rec.method === "whish" ? "Whish" : "Cash",
-        t.rec.amount ?? null,
-        t.status,
+        t.item,
+        t.label,
+        t.method === "whish" ? "Whish" : "Cash",
+        t.amount,
+        t.refunded,
+        t.pill,
       ]),
     ]);
+  };
 
-  if (loading && !data)
+  if (tx.error && !tx.items.length && !tx.live)
+    return (
+      <ErrorLine message="Couldn't load transactions." onRetry={tx.reload} />
+    );
+  if (tx.loading)
     return (
       <div role="status" aria-label="Loading" className="mt-[16px]">
         <Skel h={44} r={14} />
@@ -132,8 +144,8 @@ export const TransactionsTab: React.FC = () => {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search member or item"
-            aria-label="Search member or item"
+            placeholder={tx.live ? "Search member or amount" : "Search member or item"}
+            aria-label={tx.live ? "Search member or amount" : "Search member or item"}
             className="flex-1 min-w-0 bg-transparent outline-none text-[13px] placeholder:text-charcoal-faint"
             style={{ color: v("ink") }}
           />
@@ -223,10 +235,10 @@ export const TransactionsTab: React.FC = () => {
 
       <div className="flex items-center justify-between gap-[12px] mt-[20px] mx-[4px] mb-[8px]">
         <SecLabel className="!m-0">{label}</SecLabel>
-        {!none && list.length > 0 && (
+        {!none && tx.total > 0 && (
           <button
             type="button"
-            onClick={exportCsv}
+            onClick={() => void exportCsv()}
             className="tap min-h-[36px] flex items-center gap-[5px] text-[12px] font-extrabold whitespace-nowrap rounded-[10px] px-[6px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
             style={{ color: v("pdark") }}
           >
@@ -238,11 +250,11 @@ export const TransactionsTab: React.FC = () => {
       <RCard>
         {shown.map((t, i) => (
           <button
-            key={t.rec.key}
+            key={t.key}
             type="button"
             onClick={() =>
               navigate(
-                `${REVENUE_BASE}/transactions/${encodeURIComponent(t.rec.key)}`,
+                `${REVENUE_BASE}/transactions/${encodeURIComponent(t.key)}`,
               )
             }
             className="tap w-full grid items-center text-left px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
@@ -252,13 +264,13 @@ export const TransactionsTab: React.FC = () => {
               borderTop: i ? `1px solid ${v("divider")}` : "none",
             }}
           >
-            <Avatar who={t.rec.who} size={34} font={12} icon={16} />
+            <Avatar who={t.who} size={34} font={12} icon={16} />
             <span className="min-w-0">
               <span
                 className="block text-[13px] font-extrabold leading-[17px] truncate"
                 style={{ color: v("ink") }}
               >
-                {t.rec.item}
+                {t.item}
               </span>
               <span
                 className="block text-[11px] leading-[15px] mt-[1px]"
@@ -271,23 +283,23 @@ export const TransactionsTab: React.FC = () => {
               <span
                 className="text-[14px] font-extrabold whitespace-nowrap rv-num"
                 style={{
-                  color: t.status === "Refunded" ? v("faint") : v("ink"),
+                  color: t.status === "refunded" ? v("faint") : v("ink"),
                 }}
               >
-                {money(t.rec.amount ?? 0)}
+                {money(t.amount)}
               </span>
-              <Pill tone={TONE[t.status]}>{t.status}</Pill>
+              <Pill tone={TONE[t.pill]}>{t.pill}</Pill>
             </span>
           </button>
         ))}
-        {!all && !needle && list.length > 5 && (
+        {!all && !needle && tx.total > 5 && (
           <MoreRow
-            label={`See all ${list.length}`}
+            label={`See all ${tx.total}`}
             onClick={() => setAll(true)}
             minH={48}
           />
         )}
-        {(none || list.length === 0) && (
+        {(none || tx.total === 0) && (
           <div className="px-[20px] py-[24px] text-center">
             <span className="inline-flex" style={{ color: v("faint") }}>
               <Receipt size={22} aria-hidden />
@@ -304,9 +316,11 @@ export const TransactionsTab: React.FC = () => {
                 { color: v("faint"), textWrap: "pretty" } as React.CSSProperties
               }
             >
-              {none
-                ? "Revenue appears here once you record a payment. Cash today, Whish soon."
-                : "Try another search or filter."}
+              {tx.denied
+                ? "Transactions show here for people with the Revenue permission."
+                : none
+                  ? "Revenue appears here once you record a payment. Cash today, Whish soon."
+                  : "Try another search or filter."}
             </p>
           </div>
         )}

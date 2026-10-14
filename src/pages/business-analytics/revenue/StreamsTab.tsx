@@ -1,21 +1,20 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  byPlan,
-  money,
-  streams as streamsOf,
-  sum,
-} from "../../../services/business-revenue";
+import { money, sum } from "../../../services/business-revenue";
 import { useAnalytics } from "../analyticsContext";
-import { RCard, SecLabel, Skel, v } from "./kit";
+import { ErrorLine, RCard, SecLabel, Skel, v } from "./kit";
 import { useRevenue } from "./revenueContext";
+import { useRecordedRevenue } from "./useRecordedRevenue";
 
 // AN14-013 to -018 (AnInsightsV3 sub "streams"): two collapsible cards,
 // "Revenue by stream" and "Revenue by membership plan" (Classes: "plan or
-// pack"; hidden for a store, AN14-018 row 2). Streams are the recorded
-// payments' sources (memberships, class bookings); products and discounts
-// join when orders (B11) and promotions (B13) exist. Both cards may be open.
+// pack"; hidden for a store, AN14-018 row 2). Both cards may be open.
+// B8 RV-01: streams are recorded_revenue_by_stream's price types (net of
+// refunds; a row's detail: payments, a membership's plans, refunds), plans
+// are recorded_revenue_by_plan (the null plan is "Classes and other", never
+// dropped, so the plans add up to the revenue). Before B8 (readers missing)
+// both are the records' sums. Discounts join when promotions (B13) exist.
 
 const Collapsible: React.FC<{
   title: string;
@@ -72,25 +71,24 @@ const Collapsible: React.FC<{
 
 export const StreamsTab: React.FC = () => {
   const { range, kind } = useAnalytics();
-  const { data, loading } = useRevenue();
+  const { data } = useRevenue();
   const navigate = useNavigate();
   const [aOpen, setAOpen] = useState(false);
   const [bOpen, setBOpen] = useState(false);
   const [rowOpen, setRowOpen] = useState<string | null>(null);
   const store = kind === "store";
+  const rec = useRecordedRevenue(range, data?.records ?? null, { series: false });
+  const f = rec.figures;
 
-  const rows = useMemo(
-    () => streamsOf(data?.records ?? [], range).filter((s) => s.value > 0),
-    [data, range],
-  );
-  const plans = useMemo(
-    () => byPlan(data?.records ?? [], range),
-    [data, range],
-  );
+  const rows = f?.streams ?? [];
+  const plans = f?.plans ?? [];
   const total = sum(rows.map((r) => r.value));
   const mx = Math.max(1, ...rows.map((r) => r.value));
+  const planMx = Math.max(1, ...plans.map((p) => p.value));
 
-  if (loading && !data)
+  if (rec.error && !f)
+    return <ErrorLine message="Couldn't load revenue." onRetry={rec.reload} />;
+  if (!f)
     return (
       <div role="status" aria-label="Loading">
         <SecLabel>Revenue by stream</SecLabel>
@@ -100,8 +98,12 @@ export const StreamsTab: React.FC = () => {
       </div>
     );
 
+  const denied = f.denied
+    ? "Revenue shows here for people with the Revenue permission."
+    : null;
   let aLine: string;
-  if (!total) aLine = "No revenue yet.";
+  if (denied) aLine = denied;
+  else if (!total) aLine = "No revenue yet.";
   else if (rows.length === 1)
     aLine = `All revenue comes from ${rows[0].label.toLowerCase()}.`;
   else {
@@ -109,9 +111,11 @@ export const StreamsTab: React.FC = () => {
     aLine = `${top.label} bring in ${Math.round((top.value / total) * 100)}%.`;
   }
   const hasPlans = (data?.plans.length ?? 0) > 0;
-  const topPlan = plans[0];
-  const bLine =
-    !hasPlans && kind === "gym"
+  // The plan that brings in the most (the reader's order); "Classes and other" only when no plan earned.
+  const topPlan = plans.find((p) => p.key !== "none") ?? plans[0];
+  const bLine = denied
+    ? denied
+    : !hasPlans && kind === "gym"
       ? "No membership plans yet."
       : topPlan
         ? `${topPlan.label} brings in the most: ${money(topPlan.value)} from ${topPlan.n} ${topPlan.n === 1 ? "payment" : "payments"}.`
@@ -187,17 +191,17 @@ export const StreamsTab: React.FC = () => {
                     className="mt-[8px] rounded-[12px] px-[10px] py-[8px] flex flex-col gap-[4px]"
                     style={{ background: v("soft") }}
                   >
-                    {r.details.map((d) => (
+                    {r.details.map((d, k) => (
                       <span
-                        key={d.label}
+                        key={k}
                         className="flex justify-between text-[11.5px]"
                       >
                         <span style={{ color: v("ink-soft") }}>{d.label}</span>
                         <span
                           className="font-extrabold rv-num"
-                          style={{ color: v("ink") }}
+                          style={{ color: d.bad ? v("high") : v("ink") }}
                         >
-                          {money(d.value)}
+                          {d.value}
                         </span>
                       </span>
                     ))}
@@ -262,7 +266,7 @@ export const StreamsTab: React.FC = () => {
             ) : (
               <div className="flex flex-col gap-[12px] mt-[12px]">
                 {plans.map((p) => (
-                  <div key={p.label}>
+                  <div key={p.key}>
                     <div
                       className="flex justify-between text-[12.5px]"
                       style={{ color: v("ink") }}
@@ -279,7 +283,7 @@ export const StreamsTab: React.FC = () => {
                       <div
                         className="h-full rounded-full"
                         style={{
-                          width: `${((p.value / plans[0].value) * 100).toFixed(1)}%`,
+                          width: `${((p.value / planMx) * 100).toFixed(1)}%`,
                           background: v("primary"),
                         }}
                       />

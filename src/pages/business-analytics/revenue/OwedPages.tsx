@@ -683,7 +683,11 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
   );
 };
 
-/** One transaction (AN14-044 layout), reached from Transactions (/transactions/:key). */
+/**
+ * One record as a transaction (AN14-044 layout), before B8: reached from
+ * Transactions (/transactions/kind:id) only while transactions_page is
+ * missing. A ledger row opens TransactionDetailPage (TransactionDetail.tsx).
+ */
 export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   const { data, loading, error, reload } = useRevenue();
   const navigate = useNavigate();

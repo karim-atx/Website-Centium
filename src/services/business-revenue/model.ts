@@ -5,10 +5,13 @@
 // Monday to Sunday, and anything the database does not tell us yet stays out
 // of the sums (and is named as such by the screen).
 //
-// Today's records are the cash fields on gym_memberships and
+// Before B8 the records are the cash fields on gym_memberships and
 // business_class_bookings (price_agreed, payment_status, paid_at). B8's
 // business_payments ledger replaces this reader screen by screen: Money owed
-// reads money_owed (B8 RV-02, below); the other readers are not shipped yet.
+// reads money_owed (B8 RV-02); Overview, Streams, by plan and Transactions
+// read recorded_revenue_by_stream / _by_plan and transactions_page (B8 RV-01,
+// below); refunds go through record_refund (RV-04). The record sums here stay
+// only as the fallback while those functions are missing on a database.
 
 import {
   addDays,
@@ -17,6 +20,7 @@ import {
   isoOf,
   mondayOf,
 } from "../../pages/business-analytics/analyticsRange";
+import { isMaskedLabel } from "../venues/consoleLogic";
 
 export type PayMethod = "cash" | "whish";
 export type PayStatus = "pending" | "paid" | "refunded";
@@ -169,10 +173,29 @@ export const STREAMS: StreamDef[] = [
   { key: "class", label: "Class bookings" },
 ];
 
+/**
+ * A stream's name: the records' two kinds (before B8) and the ledger's price
+ * types (recorded_revenue_by_stream groups by price_type).
+ */
+export const STREAM_LABEL: Record<string, string> = {
+  membership: "Memberships",
+  class: "Class bookings",
+  class_pack: "Class packs",
+  intro_offer: "Intro offers",
+  drop_in: "Drop-ins",
+  day_pass: "Day passes",
+  intro_week: "Intro weeks",
+  product: "Products",
+  delivery: "Delivery",
+  other: "Other",
+};
+export const streamLabel = (key: string) => STREAM_LABEL[key] ?? "Other";
+
 export interface DaySeries {
   days: string[];
   total: number[];
-  byKind: Record<PayKind, number[]>;
+  /** Per stream key (PayKind before B8, price_type from the ledger). */
+  byKind: Record<string, number[]>;
   count: number[];
 }
 
@@ -182,7 +205,7 @@ export function dailySeries(records: PaymentRecord[], p: Period): DaySeries {
   const index = new Map(days.map((d, i) => [d, i]));
   const total = new Array(len).fill(0);
   const count = new Array(len).fill(0);
-  const byKind: Record<PayKind, number[]> = {
+  const byKind: Record<string, number[]> = {
     membership: new Array(len).fill(0),
     class: new Array(len).fill(0),
   };
@@ -691,11 +714,18 @@ export function busiestDay(
 
 // ---------- Streams ----------
 
+export interface StreamDetail {
+  label: string;
+  value: string;
+  /** A reduction (refunds): drawn in the negative ink. */
+  bad?: boolean;
+}
 export interface StreamRow {
-  key: PayKind;
+  /** PayKind before B8, the price_type from the ledger. */
+  key: string;
   label: string;
   value: number;
-  details: { label: string; value: number }[];
+  details: StreamDetail[];
 }
 
 export function streams(records: PaymentRecord[], p: Period): StreamRow[] {
@@ -715,13 +745,15 @@ export function streams(records: PaymentRecord[], p: Period): StreamRow[] {
       label: s.label,
       value: sum(list.map((r) => r.amount as number)),
       details: [...by]
-        .map(([label, value]) => ({ label, value }))
-        .sort((a, b) => b.value - a.value),
+        .sort((a, b) => b[1] - a[1])
+        .map(([label, value]) => ({ label, value: money(value) })),
     };
   });
 }
 
 export interface PlanRow {
+  /** The plan id (ledger; "none" for the null plan), or the label (records). */
+  key: string;
   label: string;
   value: number;
   n: number;
@@ -746,6 +778,7 @@ export function byPlan(records: PaymentRecord[], p: Period): PlanRow[] {
   }
   return [...by]
     .map(([label, v]) => ({
+      key: label,
       label,
       value: v.value,
       n: v.n,
@@ -797,4 +830,400 @@ export function initials(name: string | null): string | null {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+// ---------- B8 RV-01: recorded revenue readers ----------
+//
+// recorded_revenue_by_stream / _by_plan (business, from, to) and
+// transactions_page decide what the client must not redo: the day each
+// payment belongs to (the BUSINESS'S date, Monday weeks), which payments count
+// (paid only: a fully refunded payment is absent; a partially refunded one
+// has refunded > 0 and counts its net), and the masked labels. From / to null
+// is all time. Nothing below re-buckets: a series day is the server's paid_on.
+
+export type PriceType =
+  | "membership"
+  | "class_pack"
+  | "intro_offer"
+  | "drop_in"
+  | "day_pass"
+  | "intro_week"
+  | "product"
+  | "delivery"
+  | "other";
+
+type Num = number | string;
+const n0 = (v: Num | null | undefined) => (v === null || v === undefined || v === "" ? 0 : Number(v));
+
+/** One recorded_revenue_by_stream row, as the server returns it. */
+export interface StreamReaderRow {
+  price_type: PriceType;
+  payments: Num;
+  gross: Num;
+  refunded: Num;
+  net: Num;
+}
+
+/** One recorded_revenue_by_plan row: a null plan_id holds class bookings and other non-plan income; a deleted plan keeps its row with a null name. */
+export interface PlanReaderRow {
+  plan_id: string | null;
+  plan_name: string | null;
+  payments: Num;
+  gross: Num;
+  refunded: Num;
+  net: Num;
+}
+
+export type LedgerStatus = "pending" | "paid" | "failed" | "refunded" | "void";
+
+/** One transactions_page row (refunded AND pending rows included). */
+export interface TxReaderRow {
+  payment_id: string;
+  recorded_at: string;
+  paid_at: string | null;
+  /** The business's own date of paid_at; null while unpaid. */
+  paid_on: string | null;
+  status: LedgerStatus;
+  source_kind: OwedSourceKind;
+  price_type: PriceType;
+  person_id: string | null;
+  member_number: number | null;
+  /** A shared first name, "Member #NNNN" or "Guest". */
+  label: string;
+  gym_id: string | null;
+  venue_name: string | null;
+  method: PayMethod;
+  amount: Num;
+  refunded: Num;
+  net: Num;
+  provider_reference: string | null;
+  total_count: Num;
+}
+
+/** The calendar day (YYYY-MM-DD) of an instant in a timezone: what `(ts at time zone tz)::date` gives the readers. */
+export function dayIn(ts: string, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(ts));
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  } catch {
+    return dayOf(ts);
+  }
+}
+
+/** "$15", or "$7.50" when there are cents (refunds can be part of a payment). */
+export function moneyCents(v: number): string {
+  const neg = v < 0;
+  const a = Math.round(Math.abs(v) * 100) / 100;
+  const whole = Math.floor(a);
+  const cents = Math.round((a - whole) * 100);
+  const body =
+    "$" +
+    String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ",") +
+    (cents ? "." + String(cents).padStart(2, "0") : "");
+  return (neg && a !== 0 ? "−" : "") + body;
+}
+
+/** Sums of reader rows: the period's revenue (net), what was paid, refunds and the payment count. */
+export function readerTotals(
+  rows: { payments: Num; gross: Num; refunded: Num; net: Num }[],
+): { net: number; gross: number; refunded: number; payments: number } {
+  let net = 0;
+  let gross = 0;
+  let refunded = 0;
+  let payments = 0;
+  for (const r of rows) {
+    net += n0(r.net);
+    gross += n0(r.gross);
+    refunded += n0(r.refunded);
+    payments += n0(r.payments);
+  }
+  return { net, gross, refunded, payments };
+}
+
+/** The plan row's name: the null plan is "Classes and other"; a deleted plan has no name left. */
+export function planLabel(r: Pick<PlanReaderRow, "plan_id" | "plan_name">): string {
+  if (r.plan_id === null) return "Classes and other";
+  return r.plan_name ?? "Deleted plan";
+}
+
+/** Revenue by membership plan from recorded_revenue_by_plan, in the server's order. Never drops the null-plan row. */
+export function recordedPlans(rows: PlanReaderRow[]): PlanRow[] {
+  return rows.map((r) => ({
+    key: r.plan_id ?? "none",
+    label: planLabel(r),
+    value: n0(r.net),
+    n: n0(r.payments),
+    each: null,
+  }));
+}
+
+/**
+ * Revenue by stream from recorded_revenue_by_stream (server order, net
+ * values). A row's detail lines: its payments, a membership's plans (net,
+ * from the by-plan reader), and refunds already taken off.
+ */
+export function recordedStreams(rows: StreamReaderRow[], plans: PlanReaderRow[]): StreamRow[] {
+  return rows.map((r) => {
+    const details: StreamDetail[] = [{ label: "Payments", value: String(n0(r.payments)) }];
+    if (r.price_type === "membership")
+      for (const p of plans)
+        if (p.plan_id !== null) details.push({ label: planLabel(p), value: money(n0(p.net)) });
+    const refunded = n0(r.refunded);
+    if (refunded > 0)
+      details.push({ label: "Refunded", value: "−" + moneyCents(refunded), bad: true });
+    return { key: r.price_type, label: streamLabel(r.price_type), value: n0(r.net), details };
+  });
+}
+
+/**
+ * The daily series from transactions_page's paid rows, each on the server's
+ * own paid_on day and at its net (paid minus part refunds), per price type.
+ */
+export function recordedSeries(rows: TxReaderRow[], p: Period): DaySeries {
+  const len = daysBetween(p.from, p.to) + 1;
+  const days = Array.from({ length: len }, (_, i) => addDays(p.from, i));
+  const index = new Map(days.map((d, i) => [d, i]));
+  const total = new Array(len).fill(0);
+  const count = new Array(len).fill(0);
+  const byKind: Record<string, number[]> = {};
+  for (const r of rows) {
+    if (r.status !== "paid" || !r.paid_on) continue;
+    const i = index.get(r.paid_on);
+    if (i === undefined) continue;
+    const net = n0(r.net);
+    total[i] += net;
+    (byKind[r.price_type] ??= new Array(len).fill(0))[i] += net;
+    count[i] += 1;
+  }
+  return { days, total, byKind, count };
+}
+
+/** What a period's revenue figures are made of, from either reader. */
+export interface RevenueFigures {
+  /** The B8 readers answered (false: the records, before B8). */
+  live: boolean;
+  /** No revenue permission: empty, not an error. */
+  denied: boolean;
+  tot: number;
+  totP: number;
+  series: DaySeries;
+  prevSeries: DaySeries;
+  /** The first day money was recorded as paid (the "early" rule). */
+  first: string | null;
+  anyPaid: boolean;
+  /** Before B8 only: paid memberships with no readable date. */
+  undated: { n: number; amount: number };
+  /** Class bookings paid in the period and the one before (Per booking). */
+  bookings: { n: number; amount: number; nP: number; amountP: number };
+  streams: StreamRow[];
+  plans: PlanRow[];
+}
+
+/** Before B8 (the readers are missing): the records' sums. */
+export function figuresFromRecords(records: PaymentRecord[], p: Period, prev: Period): RevenueFigures {
+  const series = dailySeries(records, p);
+  const prevSeries = dailySeries(records, prev);
+  return {
+    live: false,
+    denied: false,
+    tot: sum(series.total),
+    totP: sum(prevSeries.total),
+    series,
+    prevSeries,
+    first: firstPaidDay(records),
+    anyPaid: records.some((r) => r.status === "paid" && r.amount !== null),
+    undated: undatedPaid(records),
+    bookings: {
+      n: paidCount(records, p, "class"),
+      amount: collected(records, p, "class"),
+      nP: paidCount(records, prev, "class"),
+      amountP: collected(records, prev, "class"),
+    },
+    streams: streams(records, p).filter((s) => s.value > 0),
+    plans: byPlan(records, p),
+  };
+}
+
+export interface RecordedInput {
+  denied: boolean;
+  streams: StreamReaderRow[];
+  prevStreams: StreamReaderRow[];
+  plans: PlanReaderRow[];
+  /** transactions_page paid rows over the period and the one before. */
+  paid: TxReaderRow[];
+  first: string | null;
+}
+
+/** B8 RV-01: the readers' figures. Totals are the by-stream sums; the series is the paid rows on their own days. */
+export function figuresFromRecorded(i: RecordedInput, p: Period, prev: Period): RevenueFigures {
+  const bookings = (q: Period) => {
+    const list = i.paid.filter(
+      (r) =>
+        r.status === "paid" &&
+        r.source_kind === "class_booking" &&
+        !!r.paid_on &&
+        inRange(r.paid_on, q.from, q.to),
+    );
+    return { n: list.length, amount: sum(list.map((r) => n0(r.net))) };
+  };
+  const cur = bookings(p);
+  const before = bookings(prev);
+  return {
+    live: true,
+    denied: i.denied,
+    tot: readerTotals(i.streams).net,
+    totP: readerTotals(i.prevStreams).net,
+    series: recordedSeries(i.paid, p),
+    prevSeries: recordedSeries(i.paid, prev),
+    first: i.first,
+    anyPaid: i.first !== null,
+    undated: { n: 0, amount: 0 },
+    bookings: { n: cur.n, amount: cur.amount, nP: before.n, amountP: before.amount },
+    streams: recordedStreams(i.streams, i.plans),
+    plans: recordedPlans(i.plans),
+  };
+}
+
+// ---------- Transactions, one list from either reader ----------
+
+export type TxFilter = "all" | "whish" | "cash" | "issues";
+/** "Owed, failed or refunded": transactions_page takes one status, so this filter asks for each. */
+export const ISSUE_STATUSES: LedgerStatus[] = ["pending", "failed", "refunded"];
+
+export type TxPill = "Paid" | "Owed" | "Refunded" | "Part refunded" | "Failed" | "Void";
+
+export interface TxItem {
+  /** Route key: the payment id (ledger) or the record key (before B8). */
+  key: string;
+  paymentId: string | null;
+  /** The label as given ("Member #0003", "Guest" or a shared first name). */
+  label: string;
+  /** The name for initials; null when masked (the person glyph). */
+  who: string | null;
+  item: string;
+  /** The day shown: the business's paid day, else the day it was recorded. */
+  day: string;
+  /** Before B8: paid, but its date is not readable ("bought {d Mon}"). */
+  undated: boolean;
+  method: PayMethod;
+  amount: number;
+  refunded: number;
+  status: LedgerStatus;
+  pill: TxPill;
+}
+
+export function txPill(status: LedgerStatus, refunded: number): TxPill {
+  if (status === "paid") return refunded > 0 ? "Part refunded" : "Paid";
+  if (status === "pending") return "Owed";
+  if (status === "refunded") return "Refunded";
+  if (status === "failed") return "Failed";
+  return "Void";
+}
+
+/** The item word for a ledger row: the plan name or class title the records hold, else the price type's word. */
+export function ledgerItem(priceType: string, rec: Pick<PaymentRecord, "item"> | undefined): string {
+  return rec?.item ?? PRICE_TYPE_ITEM[priceType] ?? "Payment";
+}
+
+/** A ledger row's record key (membership / class booking), to find its plan name or class title. */
+export function recordKeyOf(sourceKind: string, sourceId: string): string | null {
+  return sourceKind === "membership"
+    ? `membership:${sourceId}`
+    : sourceKind === "class_booking"
+      ? `class:${sourceId}`
+      : null;
+}
+
+export function txItemFromRow(r: TxReaderRow, item?: string): TxItem {
+  const refunded = n0(r.refunded);
+  return {
+    key: r.payment_id,
+    paymentId: r.payment_id,
+    label: r.label,
+    who: isMaskedLabel(r.label) ? null : r.label,
+    item: item ?? ledgerItem(r.price_type, undefined),
+    day: r.paid_on ?? dayOf(r.recorded_at),
+    undated: false,
+    method: r.method,
+    amount: n0(r.amount),
+    refunded,
+    status: r.status,
+    pill: txPill(r.status, refunded),
+  };
+}
+
+/** Before B8 (transactions_page missing): a record as a transaction. */
+export function txItemFromRecord(t: TxRow): TxItem {
+  const status: LedgerStatus =
+    t.rec.status === "paid" ? "paid" : t.rec.status === "refunded" ? "refunded" : "pending";
+  return {
+    key: t.rec.key,
+    paymentId: null,
+    label: t.rec.who ?? "Member",
+    who: t.rec.who,
+    item: t.rec.item,
+    day: t.day,
+    undated: t.rec.paidUndated,
+    method: t.rec.method,
+    amount: t.rec.amount ?? 0,
+    refunded: 0,
+    status,
+    pill: txPill(status, 0),
+  };
+}
+
+/** transactions_page's own order (coalesce(paid_at, recorded_at) desc, then id), for merging the issue statuses. */
+export function byLedgerOrder(a: TxReaderRow, b: TxReaderRow): number {
+  const da = Date.parse(a.paid_at ?? a.recorded_at);
+  const db = Date.parse(b.paid_at ?? b.recorded_at);
+  if (da !== db) return db - da;
+  return a.payment_id < b.payment_id ? -1 : a.payment_id > b.payment_id ? 1 : 0;
+}
+
+// ---------- B8 RV-04: refunds ----------
+
+/** What can still go back: a paid payment's amount less its refunds; nothing for any other status. */
+export function refundable(status: LedgerStatus, amount: number, refunded: number): number {
+  if (status !== "paid") return 0;
+  return Math.max(0, Math.round((amount - refunded) * 100) / 100);
+}
+
+/** The refund field's text as an amount (dollars and cents, above 0, at most what is left). */
+export function parseRefundAmount(
+  text: string,
+  max: number,
+): { ok: true; value: number } | { ok: false; message: string } {
+  const t = text.trim().replace(/^\$/, "").replace(/,/g, "").trim();
+  if (!t) return { ok: false, message: "Enter an amount." };
+  if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(t))
+    return { ok: false, message: "Enter an amount in dollars and cents, like 7.50." };
+  const value = Math.round(Number(t) * 100) / 100;
+  if (value <= 0) return { ok: false, message: "Enter an amount above $0." };
+  if (value > max + 1e-9) return { ok: false, message: `You can refund up to ${moneyCents(max)}.` };
+  return { ok: true, value };
+}
+
+/** A record_refund refusal in the app's words; 22023 carries the server's own figures. */
+export function describeRefundRefusal(error: { code?: string; message?: string }): string {
+  switch (error.code ?? "") {
+    case "ATX08":
+      return "That payment isn't there any more.";
+    case "ATX09":
+      return "You need the Revenue permission to do this.";
+    case "22023": {
+      // "that would refund 20.00, more than the 15.00 paid (0.00 already refunded)": the figures as money.
+      const m = /would refund ([\d.]+), more than the ([\d.]+) paid \(([\d.]+) already refunded\)/.exec(error.message ?? "");
+      if (m)
+        return `That would refund ${moneyCents(Number(m[1]))}, more than the ${moneyCents(Number(m[2]))} paid (${moneyCents(Number(m[3]))} already refunded).`;
+      return serverSentence(error.message, "Couldn't record the refund. Try again.");
+    }
+    default:
+      return "Couldn't record the refund. Try again.";
+  }
 }

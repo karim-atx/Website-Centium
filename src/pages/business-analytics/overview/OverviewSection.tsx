@@ -12,6 +12,7 @@ import { ListingSheet } from "../../../components/business-dashboard/HeaderParts
 import { saveListingActive } from "../../../services/business-market";
 import { useAnalytics } from "../analyticsContext";
 import { useRevenueData } from "../revenue/useRevenueData";
+import { useRecordedRevenue } from "../revenue/useRecordedRevenue";
 import { loadOverview } from "./overviewData";
 import { dayItems, emptyNextLine, headline, headlineSize, insights, isoDay, overviewCsv, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
@@ -82,11 +83,16 @@ export function OverviewSection() {
   }, [profileReady, authUserId, load]);
   // The Revenue card reads what Revenue › Overview reads (M1): one reader, same sums.
   const rev = useRevenueData();
+  const revRecords = rev.data?.records ?? null;
+  // B8 RV-01: the totals from recorded_revenue_by_stream (the records' sums while it is missing).
+  const recorded = useRecordedRevenue(range, revRecords, { plans: false, series: false });
   const reloadRev = rev.reload;
+  const reloadRecorded = recorded.reload;
   usePoll(
     () => {
       void load();
       reloadRev();
+      reloadRecorded();
     },
     POLL_MS,
     !!raw && online,
@@ -95,10 +101,14 @@ export function OverviewSection() {
   // A new range reloads with the skeleton (OURS-AN1-custom-range-sheet #8).
   const loading = !raw || loadedFor !== rangeKey;
   const cells = useMemo(() => (raw ? headline(kind, raw, range, today) : null), [raw, kind, range, today]);
-  const revRecords = rev.data?.records ?? null;
-  const ins = useMemo(() => (raw ? insights(raw, { records: revRecords, range, today }) : null), [raw, revRecords, range, today]);
-  const revLoading = rev.loading && !rev.data;
-  const revCard = loading || revLoading ? null : rev.error && !rev.data ? { value: "–", delta: "", sub: rev.error, up: false } : (ins?.[1] ?? null);
+  const revFigures = recorded.figures;
+  const ins = useMemo(
+    () => (raw ? insights(raw, revFigures ? { records: revRecords, range, today, figures: revFigures } : null) : null),
+    [raw, revRecords, revFigures, range, today],
+  );
+  const revLoading = (rev.loading && !rev.data) || (!revFigures && !recorded.error);
+  const revError = (rev.error && !rev.data ? rev.error : null) ?? (!revFigures ? recorded.error : null);
+  const revCard = loading || revLoading ? null : revError ? { value: "–", delta: "", sub: revError, up: false } : (ins?.[1] ?? null);
   const items = useMemo(() => (raw ? dayItems(kind, raw, today) : []), [raw, kind, today]);
   const isEmpty = kind !== "store" && !!raw && !raw.anyClass;
 

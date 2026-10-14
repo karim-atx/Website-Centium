@@ -14,37 +14,49 @@ import {
 import {
   activeMembers,
   bestWeek,
-  collected,
-  dailySeries,
   dddDMon,
   dMon,
-  firstPaidDay,
   money,
   moneyDelta,
   moneyK,
-  paidCount,
   pctDelta,
   recurringMonthly,
-  STREAMS,
+  streamLabel,
   sum,
   today as todayIso,
-  undatedPaid,
-  type PayKind,
 } from "../../../services/business-revenue";
 import { useAnalytics } from "../analyticsContext";
-import { RCard, SecLabel, Skel, v } from "./kit";
+import { ErrorLine, RCard, SecLabel, Skel, v } from "./kit";
 import { useRevenue } from "./revenueContext";
+import { useRecordedRevenue } from "./useRecordedRevenue";
 
 // AN14-001 / -003 / -005 to -009 / -011 (AnInsightsV3 page "revenue", sub
 // "overview"; chart cfg chA, modes Total / By stream). Every value comes from
 // recorded payments with a known paid date (V6-43). Deltas need a full
 // previous period (no deltas in the first 4 weeks: "early"); the chart needs
 // 2 weeks of payments; nothing recorded at all is the $0 state.
+//
+// B8 RV-01: the hero, the period before and the streams are
+// recorded_revenue_by_stream (net of refunds); the daily series is the paid
+// transactions_page rows on the business's own days. The records' sums are
+// only the fallback while those readers are missing (useRecordedRevenue).
+// Recurring each month and active members stay on the memberships: they are
+// not payments.
 
-const STREAM_COL: Record<PayKind, string> = {
+/** Memberships, Class bookings and Products as AN14-003 row 2; the other price types OURS. */
+const STREAM_COL: Record<string, string> = {
   membership: v("primary"),
   class: v("teal-dark"),
+  drop_in: v("teal-dark"),
+  product: v("caution"),
+  class_pack: v("pdark"),
+  day_pass: v("good"),
+  intro_offer: v("amber"),
+  intro_week: v("week-bar"),
+  delivery: v("pay-caution"),
+  other: v("tert"),
 };
+const colOf = (k: string) => STREAM_COL[k] ?? v("tert");
 
 /** "the 4 weeks before" etc. for the lead. */
 function beforeWords(key: string): string {
@@ -56,45 +68,30 @@ function beforeWords(key: string): string {
 
 export const OverviewTab: React.FC = () => {
   const { range, kind } = useAnalytics();
-  const { data, loading } = useRevenue();
+  const { data } = useRevenue();
   const today = todayIso();
   const store = kind === "store";
+  const rec = useRecordedRevenue(range, data?.records ?? null, { plans: false });
+  const f = rec.figures;
 
   const m = useMemo(() => {
-    const records = data?.records ?? [];
-    const prev = previousOf(range);
-    const series = dailySeries(records, range);
-    const prevSeries = dailySeries(records, prev);
-    const tot = sum(series.total);
-    const totP = sum(prevSeries.total);
-    const first = firstPaidDay(records);
-    const anyPaid = records.some(
-      (r) => r.status === "paid" && r.amount !== null,
-    );
-    const age = first ? daysBetween(first, today) : 0;
-    const early = !!first && age < 28;
-    const chartEarly = !!first && age < 14;
-    const compare = range.compare && !early;
-    const und = undatedPaid(records);
+    if (!f) return null;
+    const age = f.first ? daysBetween(f.first, today) : 0;
+    const early = !!f.first && age < 28;
     return {
-      records,
-      prev,
-      series,
-      prevSeries,
-      tot,
-      totP,
-      first,
-      anyPaid,
+      ...f,
+      records: data?.records ?? [],
+      prev: previousOf(range),
       early,
-      chartEarly,
-      compare,
-      und,
+      chartEarly: !!f.first && age < 14,
+      compare: range.compare && !early,
+      und: f.undated,
     };
-  }, [data, range, today]);
+  }, [f, data, range, today]);
 
-  const empty = !m.anyPaid;
-
-  if (loading && !data)
+  if (rec.error && !m)
+    return <ErrorLine message="Couldn't load revenue." onRetry={rec.reload} />;
+  if (!m)
     return (
       <div role="status" aria-label="Loading">
         <RCard className="mt-[16px] px-[16px] pt-[20px] pb-[16px]">
@@ -111,6 +108,8 @@ export const OverviewTab: React.FC = () => {
         </RCard>
       </div>
     );
+
+  const empty = !m.anyPaid;
 
   // ---- hero ----
   const heroValue = empty ? "$0" : money(m.tot);
@@ -131,13 +130,12 @@ export const OverviewTab: React.FC = () => {
       { v: "–", d: null, l: "Returned" },
     ];
   } else {
-    const rec = recurringMonthly(m.records, today);
+    const recurring = recurringMonthly(m.records, today);
     let second: Box;
     if (kind === "classes") {
-      const n = paidCount(m.records, range, "class");
-      const nP = paidCount(m.records, m.prev, "class");
-      const per = n ? collected(m.records, range, "class") / n : 0;
-      const perP = nP ? collected(m.records, m.prev, "class") / nP : 0;
+      const { n, nP } = m.bookings;
+      const per = n ? m.bookings.amount / n : 0;
+      const perP = nP ? m.bookings.amountP / nP : 0;
       second = {
         v: money(per),
         d: m.compare && n && nP ? moneyDelta(per, perP) : null,
@@ -152,14 +150,16 @@ export const OverviewTab: React.FC = () => {
         l: "Per active member",
       };
     }
-    boxes = [{ v: money(rec), d: null, l: "Recurring each month" }, second];
+    boxes = [{ v: money(recurring), d: null, l: "Recurring each month" }, second];
   }
   if (empty)
     boxes = boxes.map((b) => ({ ...b, v: b.v === "–" ? "–" : "$0", d: null }));
 
   // ---- lead (template sentences from numbers only, OD-4) ----
   let lead: string;
-  if (empty)
+  if (m.denied)
+    lead = "Revenue shows here for people with the Revenue permission.";
+  else if (empty)
     lead =
       "No transactions yet. Revenue appears once you record a payment. Cash today, Whish soon.";
   else if (m.early)
@@ -190,7 +190,11 @@ export const OverviewTab: React.FC = () => {
 
   // ---- chart ----
   const days = m.series.days;
-  const present = STREAMS.filter((s) => sum(m.series.byKind[s.key]) > 0);
+  // Each stream with money in the range, in the by-stream order (most revenue first).
+  const present = [...m.streams.map((s) => s.key), ...Object.keys(m.series.byKind)]
+    .filter((k, i, a) => a.indexOf(k) === i)
+    .filter((k) => sum(m.series.byKind[k] ?? []) > 0)
+    .map((k) => ({ key: k, label: streamLabel(k) }));
   const tips: ScrubTipRow[][] = days.map((_, i) => {
     const rows: ScrubTipRow[] = [{ l: "Total", v: money(m.series.total[i]) }];
     if (present.length > 1)
@@ -198,7 +202,7 @@ export const OverviewTab: React.FC = () => {
         rows.push({
           l: s.label,
           v: money(m.series.byKind[s.key][i]),
-          col: STREAM_COL[s.key],
+          col: colOf(s.key),
         }),
       );
     rows.push({ l: "Transactions", v: String(m.series.count[i]) });
@@ -286,7 +290,7 @@ export const OverviewTab: React.FC = () => {
         series: present.map((s) => ({
           t: s.label,
           vals: m.series.byKind[s.key],
-          col: STREAM_COL[s.key],
+          col: colOf(s.key),
         })),
         tips,
       });

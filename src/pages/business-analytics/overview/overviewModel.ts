@@ -7,7 +7,7 @@
 
 import type { ClockItem } from "./clockModel";
 import { f12, hoursOf } from "./clockModel";
-import { collected, firstPaidDay, isOwed, money, pctDelta, undatedPaid, type PaymentRecord } from "../../../services/business-revenue/model";
+import { figuresFromRecords, isOwed, money, pctDelta, type PaymentRecord, type RevenueFigures } from "../../../services/business-revenue/model";
 
 export type OverviewKind = "classes" | "gym" | "store";
 
@@ -240,29 +240,31 @@ export interface Insight {
 }
 
 /**
- * The Revenue card reads what the Revenue page reads (fetchRevenue: recorded
- * payments only, V6-43) and sums them with the same functions, so the card
- * and the page it opens agree. Null records: not loaded, the drawn "–".
+ * The Revenue card reads what Revenue › Overview reads, so the card and the
+ * page it opens agree (V6-43, recorded payments only): `figures` from the B8
+ * RV-01 readers (useRecordedRevenue: recorded_revenue_by_stream, net of
+ * refunds), or the records' sums while those readers are missing. Null:
+ * not loaded, the drawn "–".
  */
 export interface RevenueIn {
   records: PaymentRecord[] | null;
   range: Range;
   today: string;
+  /** The readers' figures for this range (B8 RV-01); absent: the records' sums. */
+  figures?: RevenueFigures | null;
 }
 
 export function revenueInsight(rev: RevenueIn | null): Insight {
   const none: Insight = { key: "revenue", value: "–", delta: "", sub: "No transactions yet.", up: false };
-  if (!rev || !rev.records) return none;
+  if (!rev) return none;
   const { records, range, today } = rev;
-  // As Revenue › Overview: nothing recorded until a paid record exists.
-  if (!records.some((r) => r.status === "paid" && r.amount !== null)) return none;
-  const tot = collected(records, range);
-  const first = firstPaidDay(records);
-  const early = !!first && daysBetween(first, today) < 28;
-  const d = range.compare && !early ? pctDelta(tot, collected(records, previousRange(range))) : null;
-  const und = undatedPaid(records);
-  const sub = und.n > 0 ? `Collected this period. ${money(und.amount)} not counted yet.` : "Collected this period";
-  return { key: "revenue", value: money(tot), delta: d ?? "", sub, up: !!d && d.startsWith("+") };
+  const f = rev.figures ?? (records ? figuresFromRecords(records, range, previousRange(range)) : null);
+  // As Revenue › Overview: nothing recorded until a paid payment exists.
+  if (!f || !f.anyPaid) return none;
+  const early = !!f.first && daysBetween(f.first, today) < 28;
+  const d = range.compare && !early ? pctDelta(f.tot, f.totP) : null;
+  const sub = f.undated.n > 0 ? `Collected this period. ${money(f.undated.amount)} not counted yet.` : "Collected this period";
+  return { key: "revenue", value: money(f.tot), delta: d ?? "", sub, up: !!d && d.startsWith("+") };
 }
 
 export function insights(raw: OvRaw, rev: RevenueIn | null = null): Insight[] {

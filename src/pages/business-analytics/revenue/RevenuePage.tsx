@@ -16,6 +16,7 @@ import { StreamsTab } from "./StreamsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { TransactionsTab } from "./TransactionsTab";
 import { OwedDetailPage, OwedListPage, PaymentDetailPage } from "./OwedPages";
+import { TransactionDetailPage } from "./TransactionDetail";
 import { RenewalDetailPage, RenewalsPage } from "./RenewalPages";
 import { FailedDetailPage, FailedListPage } from "./FailedPages";
 import { REVENUE_BASE } from "./payModel";
@@ -64,8 +65,11 @@ export default function RevenuePage() {
     page = parts[2] ? <RenewalDetailPage recKey={decodeURIComponent(parts[2])} /> : <RenewalsPage />;
   else if (parts[0] === "payments" && parts[1] === "failed")
     page = parts[2] ? <FailedDetailPage recKey={decodeURIComponent(parts[2])} /> : <FailedListPage />;
-  else if (parts[0] === "transactions" && parts[1])
-    page = <PaymentDetailPage recKey={decodeURIComponent(parts[1])} />;
+  else if (parts[0] === "transactions" && parts[1]) {
+    // A ledger row (B8 RV-01) is keyed by its payment id; a record (before B8) by "kind:id".
+    const key = decodeURIComponent(parts[1]);
+    page = key.includes(":") ? <PaymentDetailPage recKey={key} /> : <TransactionDetailPage paymentId={key} />;
+  }
   else if (parts.length > 1) return <Navigate to={REVENUE_BASE} replace />;
 
   const sub = parts[0] ?? "overview";
