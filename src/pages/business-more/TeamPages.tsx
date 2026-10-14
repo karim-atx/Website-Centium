@@ -7,7 +7,7 @@ import { copyText, shareOrCopy } from "../../components/business-more/share";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
-import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
+import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, roleUsesSeat, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ROLE_LABEL } from "../business-team/teamLogic";
 
@@ -18,8 +18,8 @@ import { ROLE_LABEL } from "../business-team/teamLogic";
 // - Employees and Join requests are the OP1 team screens now
 //   (/app/business/employees and /requests, pages/business-team); these two
 //   routes forward there so More › Team and access opens the one Team page.
-// - Roles: each person's B6 role, read-only (no write path for role or
-//   permissions in B6; the permission toggles stay hidden, V6-84).
+// - Roles: each person's B6 role; changing role, permissions and pay is on
+//   the person page (set_employee_terms, B6 follow-up).
 // - Seats: capacity from business_seat_capacity (included seats + blocks ×
 //   seats per block); invitations hold no seat (B0); buying seats is the
 //   email request until B8 records a Centium charge (V6-41).
@@ -70,8 +70,8 @@ export function JoinRequestsPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Roles and permissions (B6 roles, read-only; V6-84: the per-role permission
-// toggles stay hidden until there is a way to change them)
+// Roles and permissions: each person's role; rows open the person page,
+// where set_employee_terms changes role, permissions and pay.
 
 export function RolesPage() {
   const navigate = useNavigate();
@@ -82,13 +82,13 @@ export function RolesPage() {
       {error && <LoadError message="Couldn't load your team." onRetry={reload} />}
       {!rows && !error && <RowsSkeleton rows={3} />}
       {rows && (
-        <BizSection label="People" footer={rows.length > 0 ? "Changing a role or its access is coming soon." : undefined}>
+        <BizSection label="People" footer={rows.length > 0 ? "Tap a person to change their role, what they can do and their pay." : undefined}>
           <BizRow title={user.firstName || "You"} desc="Owner · everything" value="Owner" />
           {rows.map((r) => (
             <BizRow
               key={r.professionalId}
               title={r.name}
-              desc={r.acceptedAt ? "Team member" : "Invited, hasn't accepted yet"}
+              desc={(r.acceptedAt ? "Team member" : "Invited, hasn't accepted yet") + (roleUsesSeat(r.role) ? " · uses a seat" : "")}
               value={ROLE_LABEL[r.role]}
               dim={!r.acceptedAt}
               onClick={() => navigate(`/app/business/employees/${r.professionalId}`)}
@@ -113,8 +113,10 @@ export function SeatsPage() {
   const [sheet, setSheet] = useState(false);
 
   const per = plan?.seatAddon?.seatsPerUnit ?? capacity?.seatsPerUnit ?? 5;
-  const accepted = rows?.filter((r) => r.acceptedAt) ?? [];
-  const invited = rows?.filter((r) => !r.acceptedAt) ?? [];
+  // Seats count instructors and trainers only (B6 follow-up, Q-09).
+  const accepted = rows?.filter((r) => r.acceptedAt && roleUsesSeat(r.role)) ?? [];
+  const invited = rows?.filter((r) => !r.acceptedAt && roleUsesSeat(r.role)) ?? [];
+  const noSeat = rows?.filter((r) => !roleUsesSeat(r.role)) ?? [];
   const total = capacity?.capacity ?? 0;
   const blocks = capacity?.seatBlocks ?? 0;
   const included = Math.max(0, total - blocks * per);
@@ -128,7 +130,7 @@ export function SeatsPage() {
         <>
           <BizHero
             label="Seats used"
-            value={`${accepted.length} of ${total}`}
+            value={`${capacity?.used ?? accepted.length} of ${total}`}
             sub={
               total === 0
                 ? "No seats yet"
@@ -153,6 +155,13 @@ export function SeatsPage() {
             <BizSection label="Invited" footer="An invitation uses a seat only once it's accepted.">
               {invited.map((m) => (
                 <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={`Invited ${fmt(m.invitedAt)}`} value="Pending" onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+              ))}
+            </BizSection>
+          )}
+          {noSeat.length > 0 && (
+            <BizSection label="No seat needed" footer="Front desk, managers, staff and shop assistants don't use a seat.">
+              {noSeat.map((m) => (
+                <BizRow key={m.professionalId} icon={User} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited`} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}

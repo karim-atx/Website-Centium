@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Award, CalendarClock, CalendarDays, ChevronDown, FileBadge, MessageCircle, Repeat2, TriangleAlert, UserMinus, UserX } from "lucide-react";
+import { Award, CalendarClock, CalendarDays, FileBadge, MessageCircle, Repeat2, TriangleAlert, UserMinus, UserX } from "lucide-react";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { removeTeamMember } from "../../services/business-team";
-import { fetchBooked, fetchCredentials, type Credential } from "../../services/business-team/team";
+import { fetchBooked, fetchCredentials, roleUsesSeat, type Credential } from "../../services/business-team/team";
 import { fetchReviewsFor } from "../../services/professional-reviews";
 import { MIN_REVIEWS_FOR_AVERAGE } from "../../services/professional-reviews/rules";
 import { range12 } from "../../utils/time12";
 import { localDayOf } from "../../utils/date";
 import { AvailabilityCard } from "./AvailabilityCard";
+import { PermissionsCard, RoleCard } from "./PersonTerms";
+import { SeatsFullSheet } from "./TeamSheets";
 import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
-import { ROLE_DOES, ROLE_LABEL, TEAM_TITLE, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
+import { ROLE_LABEL, TEAM_TITLE, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-061 / 130 (person page), 063 / 132 (credentials), 064 (remove
@@ -31,6 +33,7 @@ export function PersonPage({ data }: { data: TeamData }) {
   const person = people?.find((p) => p.professionalId === id) ?? null;
   const [toast, showToast] = useTeamToast();
   const [confirm, setConfirm] = useState(false);
+  const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [creds, setCreds] = useState<Credential[] | null>(null);
@@ -146,7 +149,7 @@ export function PersonPage({ data }: { data: TeamData }) {
             <span className={accepted ? "tm-pill" : "tm-pill inv"}>{accepted ? "Active" : "Invited"}</span>
           </p>
           <p className="tm-ds1">
-            {accepted ? `${ROLE_LABEL[person.role]} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`}
+            {(accepted ? `${ROLE_LABEL[person.role]} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`) + (roleUsesSeat(person.role) ? "" : " · no seat needed")}
           </p>
           <p className="tm-ds2">
             {accepted ? `${weekCount} session${weekCount === 1 ? "" : "s"} this week` + (rating ? ` · ${rating}` : "") : "Hasn't accepted yet"}
@@ -164,18 +167,14 @@ export function PersonPage({ data }: { data: TeamData }) {
       </div>
       {chatError && <Notice message={chatError} />}
 
-      <DCard title="Role">
-        <Row
-          title={ROLE_DOES[person.role]}
-          sub="Changing a role is coming soon."
-          trailing={
-            <button type="button" className="tm-pick tm-hit" disabled aria-label={`Role: ${ROLE_LABEL[person.role]}. Changing a role is coming soon.`}>
-              {ROLE_LABEL[person.role]}
-              <ChevronDown size={14} />
-            </button>
-          }
-        />
-      </DCard>
+      <RoleCard
+        person={person}
+        kind={kind}
+        disabled={offline}
+        onSaved={data.reload}
+        onToast={showToast}
+        onNoSeats={() => setFull(true)}
+      />
 
       <DCard title="Credentials" right={`From ${first}'s profile`}>
         {!accepted && <Row icon={<FileBadge size={16} />} title="Certification" sub={`Shows once ${first} accepts the invite.`} />}
@@ -244,6 +243,8 @@ export function PersonPage({ data }: { data: TeamData }) {
         />
       )}
 
+      <PermissionsCard key={person.permissions.join()} person={person} disabled={offline} onSaved={data.reload} onToast={showToast} />
+
       {accepted && (
         <button type="button" className="tm-danger tap" disabled={offline} onClick={() => setConfirm(true)}>
           <UserMinus size={16} strokeWidth={2.2} />
@@ -272,6 +273,7 @@ export function PersonPage({ data }: { data: TeamData }) {
         }}
         onConfirm={() => void doRemove()}
       />
+      <SeatsFullSheet open={full} onClose={() => setFull(false)} counts={seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity)} />
       {toast}
     </TeamScope>
   );

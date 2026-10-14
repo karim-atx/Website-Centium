@@ -24,6 +24,9 @@ export interface MyEmployment {
   businessName: string;
   acceptedAt: string | null;
   invitedAt: string;
+  /** The role they're invited as, and the owner's note (invite_message, B6 follow-up). */
+  role: string | null;
+  message: string | null;
 }
 
 export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmployment[] } | { ok: false; message: string }> {
@@ -31,6 +34,16 @@ export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmploym
   if (error) {
     return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't load your businesses. Try again." };
   }
+  // The role and the owner's note come from the caller's own rows
+  // (business_employees_select_professional); my_business_employments() doesn't
+  // return them. A failed read only loses the note, not the invitation.
+  const { data: auth } = await supabase.auth.getUser();
+  const own = auth.user?.id
+    ? await db.from("business_employees").select("business_id, role, invite_message").eq("professional_id", auth.user.id)
+    : { data: [] };
+  const extra = new Map(
+    ((own.data ?? []) as { business_id: string; role: string | null; invite_message: string | null }[]).map((r) => [r.business_id, r])
+  );
   return {
     ok: true,
     value: ((data ?? []) as { business_id: string; business_name: string | null; accepted_at: string | null; invited_at: string }[]).map((r) => ({
@@ -38,6 +51,8 @@ export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmploym
       businessName: r.business_name?.trim() || "A business",
       acceptedAt: r.accepted_at,
       invitedAt: r.invited_at,
+      role: extra.get(r.business_id)?.role ?? null,
+      message: extra.get(r.business_id)?.invite_message ?? null,
     })),
   };
 }
@@ -47,6 +62,10 @@ export async function acceptEmployment(businessId: string): Promise<Done> {
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   if (error.code === "ATXA3") return { ok: false, message: "This invitation was withdrawn." };
+  // B6 follow-up: the seat cap now also holds on acceptance.
+  if (`${error.message ?? ""}`.includes("ATXC0") || error.code === "23514") {
+    return { ok: false, message: "This business has no free seat right now. Ask them to add one." };
+  }
   console.error("[employment] accept failed:", error.code, error.message);
   return { ok: false, message: "Couldn't accept. Try again." };
 }

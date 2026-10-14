@@ -1,5 +1,6 @@
 import type { BizKind } from "../../components/business-more/kind";
 import type { BusinessRole, ClassSession, TeamPerson } from "../../services/business-team/team";
+import { roleUsesSeat } from "../../services/business-team/seats";
 import { range12 } from "../../utils/time12";
 import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
 import { localDayOf, shiftDate } from "../../utils/date";
@@ -91,9 +92,21 @@ export interface SeatCounts {
 }
 
 /** used = accepted (B0: only they hold a seat); free = total − used − invited (source 637). */
-export function seatCounts(people: TeamPerson[], capacity: number): SeatCounts {
-  const used = people.filter(isAccepted).length;
-  const invited = people.length - used;
+/** People whose role uses a seat (instructor, trainer; B6 follow-up, Q-09). */
+export const seatHolders = (people: TeamPerson[]) => people.filter((p) => roleUsesSeat(p.role));
+/** People whose role needs no seat (front desk, manager, staff, shop assistant). */
+export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !roleUsesSeat(p.role));
+
+/**
+ * used = accepted seat-using roles; invited = unaccepted seat-using roles (B0:
+ * an invitation holds no seat, it's reported apart); free = total − used −
+ * invited (source 637). The database's my_business_seat_capacity counts the
+ * same way; the screen prefers its numbers when they're loaded.
+ */
+export function seatCounts(people: TeamPerson[], capacity: number, server?: { used: number; invited: number } | null): SeatCounts {
+  const holders = seatHolders(people);
+  const used = server?.used ?? holders.filter(isAccepted).length;
+  const invited = server?.invited ?? holders.length - holders.filter(isAccepted).length;
   return { used, invited, total: capacity, free: Math.max(0, capacity - used - invited) };
 }
 
@@ -117,7 +130,8 @@ export type Seat = { kind: "person"; person: TeamPerson; index: number } | { kin
  * invitations than cells the grid grows by one block for them.
  */
 export function seatBlocks(people: TeamPerson[], capacity: number, perBlock: number): Seat[][] {
-  const ordered = [...people.filter(isAccepted), ...people.filter((p) => !isAccepted(p))];
+  const holders = seatHolders(people);
+  const ordered = [...holders.filter(isAccepted), ...holders.filter((p) => !isAccepted(p))];
   const cells = Math.max(capacity, Math.ceil(ordered.length / perBlock) * perBlock);
   const seats: Seat[] = Array.from({ length: cells }, (_, i) =>
     ordered[i] ? { kind: "person", person: ordered[i], index: i } : { kind: "free", index: i }
@@ -153,9 +167,13 @@ export function teamBoxes(
   sessions: ClassSession[],
   capacity: number,
   today: string,
-  now: number = Date.now()
+  now: number = Date.now(),
+  server?: { used: number; invited: number } | null
 ): Boxes {
-  const c = seatCounts(people, capacity);
+  const c = seatCounts(people, capacity, server);
+  // Everyone counts as team, seat or not (a receptionist is on the team).
+  const active = people.filter(isAccepted).length;
+  const openInvites = people.length - active;
   const thisWeek = weekRange(today, 0);
   const lastWeek = weekRange(today, -1);
   const teamIds = new Set(people.filter(isAccepted).map((p) => p.professionalId));
@@ -176,25 +194,25 @@ export function teamBoxes(
         { label: "Active team", value: "0", delta: "" },
         { label: kind === "store" ? "Open invites" : "Sessions this week", value: "0", delta: "" },
       ],
-      line: "Invite the people who work with you. Each one uses a seat.",
+      line: "Invite the people who work with you. Instructors and trainers use a seat.",
     };
   }
   if (kind === "store") {
     const firstInvited = people.find((p) => !isAccepted(p));
     return {
       boxes: [
-        { label: "Active team", value: String(c.used), delta: "" },
-        { label: "Open invites", value: String(c.invited), delta: "" },
+        { label: "Active team", value: String(active), delta: "" },
+        { label: "Open invites", value: String(openInvites), delta: "" },
       ],
       line: `${c.used} of ${c.total} seats used.` + (firstInvited ? ` ${firstInvited.name} hasn't accepted their invite yet.` : ""),
     };
   }
   const boxes = [
-    { label: "Active team", value: String(c.used), delta: early ? "" : signed(c.used - activeWeekAgo) },
+    { label: "Active team", value: String(active), delta: early ? "" : signed(active - activeWeekAgo) },
     { label: "Sessions this week", value: String(sessThis.length), delta: early ? "" : signed(sessThis.length - sessLast.length) },
   ];
   if (early) {
-    return { boxes, line: `${c.used} ${STAFF_WORD[kind][c.used === 1 ? 0 : 1]} so far. Seats left: ${c.free}.` };
+    return { boxes, line: `${active} ${STAFF_WORD[kind][active === 1 ? 0 : 1]} so far. Seats left: ${c.free}.` };
   }
   const byPerson = new Map<string, number>();
   for (const s of sessThis) byPerson.set(s.professionalId!, (byPerson.get(s.professionalId!) ?? 0) + 1);

@@ -15,6 +15,7 @@ import {
   ROLE_LABEL,
   seatBlocks,
   seatCounts,
+  noSeatPeople,
   seatHint,
   seatLine,
   teamBoxes,
@@ -59,9 +60,11 @@ export function TeamPage({ data }: { data: TeamData }) {
 
   const total = capacity?.capacity ?? 0;
   const per = capacity?.seatsPerUnit ?? PER_BLOCK;
-  const counts = seatCounts(people ?? [], total);
+  const server = capacity ? { used: capacity.used, invited: capacity.invited } : null;
+  const counts = seatCounts(people ?? [], total, server);
+  const noSeat = useMemo(() => noSeatPeople(people ?? []), [people]);
   const blocks = useMemo(() => seatBlocks(people ?? [], total, per), [people, total, per]);
-  const boxes = useMemo(() => teamBoxes(kind, people ?? [], sessions, total, today), [kind, people, sessions, total, today]);
+  const boxes = useMemo(() => teamBoxes(kind, people ?? [], sessions, total, today, Date.now(), server), [kind, people, sessions, total, today, capacity]);
   const waiting = requests?.length ?? 0;
   const selPerson = (people ?? []).find((p) => p.professionalId === selected && isAccepted(p)) ?? null;
   const ready = !!people && !!capacity;
@@ -201,6 +204,25 @@ export function TeamPage({ data }: { data: TeamData }) {
               </ul>
             </div>
           ))}
+        {ready && noSeat.length > 0 && (
+          <div>
+            <p className="tm-block-l">No seat needed</p>
+            <ul className="tm-grid" aria-label="Team members who don't use a seat">
+              {noSeat.map((p) => (
+                <li key={p.professionalId} style={{ minWidth: 0 }}>
+                  <SeatButton
+                    person={p}
+                    selected={selected === p.professionalId}
+                    onClick={() => {
+                      if (!isAccepted(p)) return navigate(`/app/business/employees/${p.professionalId}`);
+                      setSelected((x) => (x === p.professionalId ? null : p.professionalId));
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {!ready && !error && (
           <>
             <p className="tm-block-l">&nbsp;</p>
@@ -247,7 +269,16 @@ export function TeamPage({ data }: { data: TeamData }) {
           }}
         />
       )}
-      <SeatsFullSheet open={fullOpen} onClose={() => setFullOpen(false)} counts={counts} mode={addMode} />
+      <SeatsFullSheet
+        open={fullOpen}
+        onClose={() => setFullOpen(false)}
+        counts={counts}
+        mode={addMode}
+        onInviteNoSeat={() => {
+          setFullOpen(false);
+          setInviteOpen(true);
+        }}
+      />
       {toast}
     </TeamScope>
   );

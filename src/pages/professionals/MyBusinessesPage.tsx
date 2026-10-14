@@ -29,6 +29,16 @@ import { formatDisplayDate, localDayOf } from "../../utils/date";
 // time they join a team (business_employees_sync_affiliation), so the page
 // says so before they accept.
 
+/** Role names (B6 business_role) for "Invited … · as {role}". */
+const ROLE_NAME: Record<string, string> = {
+  instructor: "Instructor",
+  trainer: "Personal trainer",
+  front_desk: "Front desk",
+  manager: "Manager",
+  staff: "Staff",
+  shop_assistant: "Shop assistant",
+};
+
 export default function MyBusinessesPage() {
   const { user } = useApp();
   const [list, setList] = useState<MyEmployment[] | null>(null);
@@ -129,9 +139,15 @@ export default function MyBusinessesPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-charcoal">{`${e.businessName} invited you to their team`}</p>
-                    <p className="text-xs text-charcoal-faint">{`Invited ${formatDisplayDate(localDayOf(e.invitedAt))}`}</p>
+                    <p className="text-xs text-charcoal-faint">{`Invited ${formatDisplayDate(localDayOf(e.invitedAt))}` + (e.role && ROLE_NAME[e.role] ? ` · as ${ROLE_NAME[e.role]}` : "")}</p>
                   </div>
                 </div>
+                {e.message && (
+                  <blockquote className="mt-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-[12.5px] leading-[18px] text-charcoal whitespace-pre-line">
+                    <span className="block text-[11px] font-semibold text-charcoal-faint mb-1">{`Message from ${e.businessName}`}</span>
+                    {e.message}
+                  </blockquote>
+                )}
                 <p className="text-xs text-charcoal-soft mt-3 leading-[17px]">
                   {`Accepting lets ${e.businessName} schedule you and see your licences. While you're on a team, your public listing in the directory is turned off. You can leave at any time.`}
                 </p>

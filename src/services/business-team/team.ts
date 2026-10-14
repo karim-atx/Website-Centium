@@ -34,7 +34,11 @@ const fail = <T>(error: { code?: string; message?: string } | null | undefined, 
 
 export type BusinessRole = "instructor" | "trainer" | "front_desk" | "manager" | "staff" | "shop_assistant";
 
+export { roleUsesSeat } from "./seats";
+
 export interface TeamPerson {
+  /** business_employees.id (set_employee_terms takes it). */
+  employmentId: string;
   professionalId: string;
   name: string;
   avatarUrl: string | null;
@@ -44,10 +48,16 @@ export interface TeamPerson {
   invitedAt: string;
   /** null = invited, not accepted (B0): no seat, no access. */
   acceptedAt: string | null;
+  /** null = not agreed (not zero). */
+  payRate: number | null;
+  inviteMessage: string | null;
 }
 
 interface EmployeeRow {
+  id: string;
   professional_id: string;
+  pay_rate_per_class: number | string | null;
+  invite_message: string | null;
   created_at: string;
   accepted_at: string | null;
   role: BusinessRole | null;
@@ -72,7 +82,7 @@ async function namesFor(ids: string[]): Promise<Map<string, { name: string; avat
 export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]>> {
   const rows = await db
     .from("business_employees")
-    .select("professional_id, created_at, accepted_at, role, permissions")
+    .select("id, professional_id, created_at, accepted_at, role, permissions, pay_rate_per_class, invite_message")
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
@@ -81,6 +91,7 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
   return {
     ok: true,
     value: list.map((r) => ({
+      employmentId: r.id,
       professionalId: r.professional_id,
       name: names.get(r.professional_id)?.name ?? "Unnamed",
       avatarUrl: names.get(r.professional_id)?.avatarUrl ?? null,
@@ -88,29 +99,40 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
       permissions: r.permissions ?? [],
       invitedAt: r.created_at,
       acceptedAt: r.accepted_at,
+      payRate: r.pay_rate_per_class == null ? null : Number(r.pay_rate_per_class),
+      inviteMessage: r.invite_message,
     })),
   };
 }
 
-/** Seat capacity (B6: included seats + blocks × seats per block; 0 without an active plan). */
+/**
+ * Seat capacity (B6 follow-up: my_business_seat_capacity returns seats_total =
+ * included seats + blocks × seats per block (0 without an active plan),
+ * seats_used = ACCEPTED seat-using roles only, seats_invited = unaccepted
+ * seat-using roles, reported separately and never counted as used).
+ */
 export interface SeatCapacity {
   capacity: number;
   seatBlocks: number;
   seatsPerUnit: number | null;
+  used: number;
+  invited: number;
 }
 
 export async function fetchSeatCapacity(): Promise<Result<SeatCapacity>> {
   const { data, error } = await db.rpc("my_business_seat_capacity");
   if (error) return fail(error, "Couldn't check your seats.");
   const row = (Array.isArray(data) ? data[0] : data) as
-    | { capacity: number | null; seat_blocks: number | null; seats_per_unit: number | null }
+    | { seats_total: number | null; seat_blocks: number | null; seats_per_unit: number | null; seats_used: number | null; seats_invited: number | null }
     | undefined;
   return {
     ok: true,
     value: {
-      capacity: row?.capacity ?? 0,
+      capacity: row?.seats_total ?? 0,
       seatBlocks: row?.seat_blocks ?? 0,
       seatsPerUnit: row?.seats_per_unit ?? null,
+      used: Number(row?.seats_used ?? 0),
+      invited: Number(row?.seats_invited ?? 0),
     },
   };
 }
@@ -136,15 +158,16 @@ export type InviteOutcome =
  * invite_employee(identifier, role, business, message). The identifier is an
  * email (exact match) or a business code; one not-found answer covers a
  * missing account, yourself and somebody already on the team (ATXB9 22023).
- * The message parameter exists but is not stored anywhere yet, so the sheet
- * does not offer it.
+ * The optional message is stored on the employment (invite_message, B6
+ * follow-up) and shown to the invitee. Roles that don't use a seat (front
+ * desk, manager) can be invited into a full business.
  */
-export async function inviteEmployee(businessId: string, identifier: string, role: BusinessRole): Promise<InviteOutcome> {
+export async function inviteEmployee(businessId: string, identifier: string, role: BusinessRole, message?: string | null): Promise<InviteOutcome> {
   const { error } = await db.rpc("invite_employee", {
     p_identifier: identifier.trim(),
     p_role: role,
     p_business_id: businessId,
-    p_message: null,
+    p_message: message?.trim() ? message.trim() : null,
   });
   if (!error) return { ok: true };
   const text = `${error.message ?? ""}`;
@@ -311,4 +334,32 @@ export async function fetchAvailability(businessId: string, professionalId: stri
       end: r.ends_at,
     })),
   };
+}
+
+export type TermsOutcome = { ok: true } | { ok: false; reason: "own" | "no_seats" | "failed"; message: string };
+
+/**
+ * set_employee_terms(employment, role, permissions, pay rate, clear pay rate)
+ * (B6 follow-up). Needs members; nobody changes their own (ATXC1). A role that
+ * starts using a seat in a full business is refused (ATXC0). Pass only what
+ * changes: a role change does not reset tailored permissions.
+ */
+export async function setEmployeeTerms(
+  employmentId: string,
+  terms: { role?: BusinessRole; permissions?: string[]; payRate?: number; clearPayRate?: boolean }
+): Promise<TermsOutcome> {
+  const { error } = await db.rpc("set_employee_terms", {
+    p_employment_id: employmentId,
+    p_role: terms.role ?? null,
+    p_permissions: terms.permissions ?? null,
+    p_pay_rate_per_class: terms.payRate ?? null,
+    p_clear_pay_rate: !!terms.clearPayRate,
+  });
+  if (!error) return { ok: true };
+  const text = `${error.message ?? ""}`;
+  if (isOffline(error)) return { ok: false, reason: "failed", message: "Couldn't save. Check your connection and try again." };
+  if (text.includes("your own")) return { ok: false, reason: "own", message: "You can't change your own role or access. Ask the owner." };
+  if (text.includes("ATXC0") || error.code === "23514") return { ok: false, reason: "no_seats", message: "All seats are in use." };
+  console.error("[business-team] set_employee_terms failed:", error.code, error.message);
+  return { ok: false, reason: "failed", message: "Couldn't save. Try again." };
 }

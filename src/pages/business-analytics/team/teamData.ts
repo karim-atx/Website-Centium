@@ -14,14 +14,16 @@ import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../
 // AN5 Team analytics: an adapter over the shared services this batch's Team
 // agent (services/business-team/team.ts: team, seats, seat price, join
 // requests, invite) and Classes agent (services/business-classes: bookings,
-// assign) own, shaped for the Analytics pages. Only two reads are local:
-// business_employees.pay_rate_per_class (not in the Team service's person)
-// and the first day a class was taught (the early-data rule).
+// assign) own, shaped for the Analytics pages. Pay rates now come from the
+// Team service's person (pay_rate_per_class; written on the Team person page
+// through set_employee_terms, B6 follow-up). Only the first day a class was
+// taught (the early-data rule) is read here.
 //
 // Not here because the backend does not exist yet (each screen draws its
 // pending state): scorecard readers and return rates (B15), instructor
 // reviews (B14, V6-85), a server-side assign / move with member notices (B9),
-// seat purchase (B8), role and pay-rate changes (no function or grant).
+// seat purchase (B8). Role, permission and pay changes live on the Team
+// person page (set_employee_terms).
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B6 columns, not in the production-generated types
 const db = supabase as any;
@@ -73,21 +75,14 @@ const OFFLINE = (m: string | undefined) => !!m && /connection|reach the server/i
 
 export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
   try {
-    const [team, cap, price, reqs, rates] = await Promise.all([
+    const [team, cap, price, reqs] = await Promise.all([
       fetchTeam(businessId),
       fetchSeatCapacity(),
       fetchSeatBlockPrice(),
       fetchJoinRequests(businessId),
-      db.from("business_employees").select("professional_id, pay_rate_per_class").eq("business_id", businessId),
     ]);
     if (!team.ok) return { ok: false, offline: OFFLINE(team.message) };
     if (!cap.ok) return { ok: false, offline: OFFLINE(cap.message) };
-    const rateById = new Map<string, number | null>(
-      ((rates.data ?? []) as { professional_id: string; pay_rate_per_class: number | string | null }[]).map((r) => [
-        r.professional_id,
-        r.pay_rate_per_class == null ? null : Number(r.pay_rate_per_class),
-      ])
-    );
     const ordered = [...team.value].sort((a, b) => {
       if (!!a.acceptedAt !== !!b.acceptedAt) return a.acceptedAt ? -1 : 1;
       return (a.acceptedAt ?? a.invitedAt).localeCompare(b.acceptedAt ?? b.invitedAt);
@@ -102,7 +97,7 @@ export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
           role: p.role,
           acceptedAt: p.acceptedAt,
           createdAt: p.invitedAt,
-          payRate: rateById.get(p.professionalId) ?? null,
+          payRate: p.payRate,
           seat: i + 1,
         })),
         seats: {
@@ -182,8 +177,8 @@ export async function fetchNames(ids: string[]): Promise<Map<string, string>> {
 export type InviteResult = { ok: true } | { ok: false; kind: "notfound" | "noseats" | "network" | "denied" | "limited"; message: string };
 
 /** invite_employee through the Team service (exact match, rate limited, one not-found text). */
-export async function inviteEmployee(identifier: string, role: BusinessRole, businessId: string): Promise<InviteResult> {
-  const r = await inviteViaTeam(businessId, identifier, role);
+export async function inviteEmployee(identifier: string, role: BusinessRole, businessId: string, message?: string | null): Promise<InviteResult> {
+  const r = await inviteViaTeam(businessId, identifier, role, message);
   if (r.ok) return { ok: true };
   const kind = r.reason === "not_found" ? "notfound" : r.reason === "no_seats" ? "noseats" : r.reason === "not_allowed" ? "denied" : r.reason === "rate_limited" ? "limited" : "network";
   return { ok: false, kind, message: r.message };

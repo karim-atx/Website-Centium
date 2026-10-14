@@ -5,6 +5,7 @@ import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { useOnline } from "../../../hooks/useOnline";
 import { Buttons, ErrLine, LeadRow, Sheet } from "./parts";
 import { inviteEmployee, type BusinessRole } from "./teamData";
+import { roleUsesSeat } from "../../../services/business-team/seats";
 import { ROLE_ICON, ROLE_LABEL, rolesFor, type Vocab } from "./vocab";
 
 // AN5-012 (sheet), AN5-013 / AN5-015 (role listbox, built on PopupMenu as
@@ -15,8 +16,9 @@ import { ROLE_ICON, ROLE_LABEL, rolesFor, type Vocab } from "./vocab";
 // Not built, with reasons (BACKEND B6, see the checklist rows):
 // - the live "found: Taylor H." chip (row 13.1): invite_employee answers only
 //   on send, there is no lookup function, so a miss shows after Send;
-// - the Message field (rows 13-14): invite_employee takes p_message but stores
-//   it nowhere, so a note would be thrown away.
+// The Message field (rows 13-14) is back: invite_employee stores it as
+// invite_message (B6 follow-up) and the professional sees it with the
+// invitation. Seats count instructors and trainers only (role_uses_seat).
 
 type Step = "form" | "sent" | "failed";
 
@@ -43,6 +45,7 @@ export function InviteSheet({
   const roles = rolesFor(vocab.kind);
   const [step, setStep] = useState<Step>("form");
   const [identifier, setIdentifier] = useState("");
+  const [message, setMessage] = useState("");
   const [role, setRole] = useState<BusinessRole>(roles[0]);
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -56,6 +59,7 @@ export function InviteSheet({
     if (!open) return;
     setStep("form");
     setIdentifier("");
+    setMessage("");
     setRole(roles[0]);
     setBusy(false);
     setNotFound(null);
@@ -75,7 +79,7 @@ export function InviteSheet({
     setBusy(true);
     setNotFound(null);
     setLimited(null);
-    const r = await inviteEmployee(identifier, role, businessId);
+    const r = await inviteEmployee(identifier, role, businessId, message);
     setBusy(false);
     if (r.ok) {
       setStep("sent");
@@ -183,9 +187,24 @@ export function InviteSheet({
           </div>
         </div>
 
+        <div>
+          <label className="an5-label" htmlFor="an5-invite-msg">
+            Message (optional)
+          </label>
+          <textarea
+            id="an5-invite-msg"
+            className="an5-textarea"
+            maxLength={300}
+            placeholder="Add a note (optional)"
+            value={message}
+            disabled={busy}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </div>
+
         <div className="an5-seatnote">
           <Armchair size={16} aria-hidden />
-          <span>{freeSeats <= 1 ? "Uses your last free seat. You can add seats later." : `Uses 1 of your ${freeSeats} free seats. You can add seats later.`}</span>
+          <span>{!roleUsesSeat(role) ? `${ROLE_LABEL[role]} doesn't use a seat.` : freeSeats <= 1 ? "Uses your last free seat. You can add seats later." : `Uses 1 of your ${freeSeats} free seats. You can add seats later.`}</span>
         </div>
 
         <Buttons

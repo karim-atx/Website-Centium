@@ -1,13 +1,16 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import type { ClassSession, TeamPerson } from "../../services/business-team/team";
-import { clashOf, initials, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
+import { clashOf, initials, noSeatPeople, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
 
-const person = (id: string, name: string, accepted: boolean, invitedAt = "2026-09-01T10:00:00Z"): TeamPerson => ({
+const person = (id: string, name: string, accepted: boolean, invitedAt = "2026-09-01T10:00:00Z", role: TeamPerson["role"] = "instructor"): TeamPerson => ({
+  employmentId: "e-" + id,
+  payRate: null,
+  inviteMessage: null,
   professionalId: id,
   name,
   avatarUrl: null,
-  role: "instructor",
+  role,
   permissions: [],
   invitedAt,
   acceptedAt: accepted ? invitedAt : null,
@@ -70,7 +73,7 @@ test("clash: same person, same day, overlapping times", () => {
 
 test("number boxes: empty, early and store wording; deltas hidden while early", () => {
   const now = Date.parse("2026-10-14T12:00:00Z");
-  assert.equal(teamBoxes("gym", [], [], 5, "2026-10-14", now).line, "Invite the people who work with you. Each one uses a seat.");
+  assert.equal(teamBoxes("gym", [], [], 5, "2026-10-14", now).line, "Invite the people who work with you. Instructors and trainers use a seat.");
   const fresh = [person("a", "Rami", true, "2026-10-10T10:00:00Z")];
   const early = teamBoxes("gym", fresh, [], 5, "2026-10-14", now);
   assert.equal(early.line, "1 team member so far. Seats left: 4.");
@@ -83,4 +86,20 @@ test("number boxes: empty, early and store wording; deltas hidden while early", 
   assert.equal(busy.line, "John teaches the most: 2 sessions this week.");
   assert.equal(busy.boxes[1].value, "2");
   assert.equal(busy.boxes[1].delta, "+2");
+});
+
+test("seats count instructors and trainers only (B6 follow-up, role_uses_seat)", () => {
+  const people = [
+    person("a", "John", true),
+    person("b", "Desk", true, "2026-09-01T10:00:00Z", "front_desk"),
+    person("c", "Boss", false, "2026-09-01T10:00:00Z", "manager"),
+    person("d", "Taylor", false, "2026-09-01T10:00:00Z", "trainer"),
+  ];
+  assert.deepEqual(seatCounts(people, 5), { used: 1, invited: 1, total: 5, free: 3 });
+  assert.deepEqual(noSeatPeople(people).map((p) => p.name), ["Desk", "Boss"]);
+  assert.equal(seatBlocks(people, 5, 5)[0].filter((s) => s.kind === "person").length, 2);
+  // The server's numbers win when loaded.
+  assert.deepEqual(seatCounts(people, 5, { used: 2, invited: 0 }), { used: 2, invited: 0, total: 5, free: 3 });
+  // Active team counts everybody accepted, seat or not.
+  assert.equal(teamBoxes("gym", people, [], 5, "2026-10-14", Date.parse("2026-10-14T12:00:00Z")).boxes[0].value, "2");
 });

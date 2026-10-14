@@ -1,3 +1,4 @@
+import { roleUsesSeat } from "../../../services/business-team/seats";
 import type { TeamPerson } from "./teamData";
 import type { TeamState } from "./useTeam";
 import type { Vocab } from "./vocab";
@@ -11,8 +12,10 @@ export interface SeatEntry {
 
 export function seatList(state: TeamState): SeatEntry[] {
   const people = state.team?.people ?? [];
-  const used = people.filter((p) => p.acceptedAt);
-  const pending = people.filter((p) => !p.acceptedAt);
+  // Seats count instructors and trainers only (B6 follow-up, role_uses_seat).
+  const holders = people.filter((p) => roleUsesSeat(p.role));
+  const used = holders.filter((p) => p.acceptedAt);
+  const pending = holders.filter((p) => !p.acceptedAt);
   const free = Math.max(0, (state.team?.seats.capacity ?? 0) - used.length - pending.length);
   return [
     ...used.map((person) => ({ kind: "used" as const, person })),

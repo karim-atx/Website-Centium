@@ -6,9 +6,10 @@ import type { TeamState } from "./useTeam";
 import type { Vocab } from "./vocab";
 
 // AN5-065 Team › Pay. Pay = business_employees.pay_rate_per_class (B6; NULL
-// means not agreed) × classes taught in range. Nothing can write a rate yet
-// (no function or grant), so most businesses see the drawn "No pay data yet"
-// state (row 11). Revenue per class needs recorded booking payments (B8), so
+// means not agreed) × classes taught in range. The rate is set on the Team
+// person page (Role card › Pay per class, set_employee_terms, B6 follow-up)
+// and read here through the Team service; with none set this shows the drawn
+// "No pay data yet" state (row 11). Revenue per class needs recorded booking payments (B8), so
 // the revenue-vs-pay block is not shown until then.
 
 export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vocab: Vocab; onBack: () => void; onCard: (id: string) => void }) {

@@ -3,7 +3,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import type { BizKind } from "../../components/business-more/kind";
-import { fetchSeatBlockPrice, inviteEmployee, type BusinessRole } from "../../services/business-team/team";
+import { fetchSeatBlockPrice, inviteEmployee, roleUsesSeat, type BusinessRole } from "../../services/business-team/team";
 import { upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { roleOptions, type SeatCounts } from "./teamLogic";
 import { isOfflineNow } from "./parts";
@@ -49,7 +49,9 @@ export function InviteSheet({
 }) {
   const roles = roleOptions(kind);
   const [identifier, setIdentifier] = useState("");
-  const [role, setRole] = useState<BusinessRole>(roles[0].value);
+  const firstRole = (counts.free > 0 ? roles[0] : roles.find((r) => !roleUsesSeat(r.value)) ?? roles[0]).value;
+  const [role, setRole] = useState<BusinessRole>(firstRole);
+  const [message, setMessage] = useState("");
   const [menu, setMenu] = useState(false);
   const [menuTop, setMenuTop] = useState(23);
   const [busy, setBusy] = useState(false);
@@ -62,13 +64,14 @@ export function InviteSheet({
   useEffect(() => {
     if (!open) {
       setIdentifier("");
-      setRole(roleOptions(kind)[0].value);
+      setMessage("");
+      setRole(firstRole);
       setMenu(false);
       setBusy(false);
       setFieldError(null);
       setSendError(null);
     }
-  }, [open, kind]);
+  }, [open, kind, firstRole]);
 
   useEffect(() => {
     if (!menu) return;
@@ -102,7 +105,7 @@ export function InviteSheet({
     setBusy(true);
     setFieldError(null);
     setSendError(null);
-    const r = await inviteEmployee(businessId, identifier, role);
+    const r = await inviteEmployee(businessId, identifier, role, message);
     setBusy(false);
     if (r.ok) return onSent();
     if (r.reason === "no_seats") return onNoSeats();
@@ -111,7 +114,12 @@ export function InviteSheet({
   };
 
   const seatSub =
-    counts.free === 1 ? "One seat left. It's used once they accept." : `${counts.free} seats free. A seat is used once they accept.`;
+    counts.free === 0
+      ? "No seats free. Front desk and managers don't need one."
+      : counts.free === 1
+        ? "One seat left. It's used once they accept."
+        : `${counts.free} seats free. A seat is used once they accept.`;
+  const noSeatPicked = counts.free === 0 && roleUsesSeat(role);
 
   return (
     <>
@@ -185,7 +193,7 @@ export function InviteSheet({
                   >
                     <span>
                       <span className="tm-opt-t">{o.label}</span>
-                      <span className="tm-opt-s">{o.sub}</span>
+                      <span className="tm-opt-s">{roleUsesSeat(o.value) ? `${o.sub} · uses a seat` : o.sub}</span>
                     </span>
                     {o.value === role && <Check size={16} strokeWidth={2.6} />}
                   </button>
@@ -193,8 +201,27 @@ export function InviteSheet({
               </div>
             )}
           </div>
-          <p className="tm-sh-note">They get the invite in their Centium app and join once they accept.</p>
-          <button type="button" className={busy ? "tm-sh-btn busy" : "tm-sh-btn"} disabled={!valid || busy} onClick={() => void send()}>
+          <div className="tm-fld">
+            <label className="tm-fld-l" htmlFor="tm-invite-msg">
+              Message (optional)
+            </label>
+            <textarea
+              id="tm-invite-msg"
+              className="tm-input tm-textarea"
+              rows={3}
+              maxLength={300}
+              value={message}
+              disabled={busy}
+              placeholder="Add a note for them"
+              aria-describedby={message.length >= 250 ? "tm-invite-count" : undefined}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            {message.length >= 250 && (
+              <p id="tm-invite-count" className="tm-fld-count">{`${message.length} of 300`}</p>
+            )}
+          </div>
+          {noSeatPicked && <p className="tm-sh-note">{`${roleLabel} uses a seat and none are free. Add seats, or pick a role that doesn't need one.`}</p>}
+          <button type="button" className={busy ? "tm-sh-btn busy" : "tm-sh-btn"} disabled={!valid || busy || noSeatPicked} onClick={() => void send()}>
             {busy ? "Sending…" : "Send invite"}
           </button>
           {sendError && (
@@ -234,12 +261,15 @@ export function SeatsFullSheet({
   counts,
   approveName,
   mode = "full",
+  onInviteNoSeat,
 }: {
   open: boolean;
   onClose: () => void;
   counts: SeatCounts;
   /** "full": All seats in use (OP1-070 / 127). "add": the Add seats button with seats still free (OURS title). */
   mode?: "full" | "add";
+  /** Invite a role that needs no seat (front desk, manager) from a full business. */
+  onInviteNoSeat?: () => void;
   /** Set when the sheet opened from approving a join request (OP1-127). */
   approveName?: string | null;
 }) {
@@ -282,6 +312,13 @@ export function SeatsFullSheet({
         <p className="tm-sh-err" style={{ color: "var(--tm-faint)" }}>
           We'll add them and send you the bill. Paying with Whish is coming soon.
         </p>
+        {onInviteNoSeat && mode === "full" && !approveName && (
+          <div style={{ textAlign: "center" }}>
+            <button type="button" className="tm-link tap" onClick={onInviteNoSeat}>
+            Invite someone who doesn't need a seat
+          </button>
+          </div>
+        )}
       </div>
     </BottomSheet>
   );
