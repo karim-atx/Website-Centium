@@ -104,6 +104,12 @@ interface PopupMenuProps<V extends string> {
   onDone?: () => void;
   doneLabel?: string;
   /**
+   * Keep the card open when a row is picked, without the multi-select
+   * square check (OP1-164 Limit, OP1-173 Commitment: single choices per
+   * group, closed by Done). Off by default.
+   */
+  keepOpen?: boolean;
+  /**
    * v6 Part B menus (HE1.9.b #28-#31): 0.5px card and row borders, the card
    * border #AEA1DC@50% (dark #A991FE@50%), no card shadow in dark. Off by
    * default, so every other menu is unchanged.
@@ -162,6 +168,7 @@ export function PopupMenu<V extends string>({
   clampTo,
   onDone,
   doneLabel = "Done",
+  keepOpen,
   hairline,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
@@ -246,7 +253,9 @@ export function PopupMenu<V extends string>({
             bottom: pos.bottom,
             left: pos.left,
             width: pos.width,
-            maxHeight: pos.maxHeight,
+            // content-box: the space on that side less the padding and border,
+            // so a clamped card stops at the edge (OP1-161 row 1: 8 in).
+            maxHeight: Math.max(0, pos.maxHeight - 2 * pad - 2),
             boxSizing: "content-box",
             background: "rgb(var(--c-cream-card))",
             border: health
@@ -274,7 +283,7 @@ export function PopupMenu<V extends string>({
               disabled={opt.disabled}
               onClick={() => {
                 onSelect(opt.value);
-                if (!multiSelect) onClose();
+                if (!multiSelect && !keepOpen) onClose();
               }}
               className="tap w-full flex items-center text-left disabled:opacity-40"
               style={
@@ -404,7 +413,9 @@ export const MenuStepper: React.FC<{
   increaseLabel?: string;
   /** Accessible name of the value. */
   label?: string;
-}> = ({ value, onChange, min = 1, max = 99, decreaseLabel = "Fewer", increaseLabel = "More", label }) => {
+  /** Both buttons disabled (the row's choice is not available yet). */
+  disabled?: boolean;
+}> = ({ value, onChange, min = 1, max = 99, decreaseLabel = "Fewer", increaseLabel = "More", label, disabled }) => {
   const dark = useIsDark();
   const glyph = dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))";
   const btn: React.CSSProperties = {
@@ -419,7 +430,7 @@ export const MenuStepper: React.FC<{
   const hit = "relative flex items-center justify-center disabled:opacity-40 before:absolute before:content-[''] before:-inset-y-[6px] before:-inset-x-[3px]";
   return (
     <span className="flex items-center" style={{ gap: 6 }} onClick={stop} onPointerDown={stop}>
-      <button type="button" aria-label={decreaseLabel} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={hit} style={btn}>
+      <button type="button" aria-label={decreaseLabel} disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={hit} style={btn}>
         <Minus size={15} strokeWidth={2.4} aria-hidden />
       </button>
       <span
@@ -442,7 +453,7 @@ export const MenuStepper: React.FC<{
       >
         {value}
       </span>
-      <button type="button" aria-label={increaseLabel} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={hit} style={btn}>
+      <button type="button" aria-label={increaseLabel} disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={hit} style={btn}>
         <Plus size={15} strokeWidth={2.4} aria-hidden />
       </button>
     </span>

@@ -549,7 +549,7 @@ export default function Messages() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages"
+            placeholder={user.accountType === "business" ? "Search" : "Search messages"}
             className="flex-1 min-w-0 bg-transparent text-[13.5px] leading-[20.3px] font-normal text-charcoal placeholder:text-charcoal-muted focus:outline-none"
           />
         </label>
@@ -647,12 +647,12 @@ export default function Messages() {
         <EmptyState
           c={c}
           icon={<MessageCircle size={26} aria-hidden />}
-          title="No conversations yet"
+          title={user.accountType === "business" ? "No messages yet" : "No conversations yet"}
           helper={
             isProfessional
               ? "Chats with your clients and groups show up here. Tap + to start one."
               : user.accountType === "business"
-                ? "Chats with your members and customers show up here."
+                ? "Messages with your team and members show here."
                 : "Chats with your professionals, gyms and groups show up here."
           }
           frame

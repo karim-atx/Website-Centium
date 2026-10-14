@@ -66,6 +66,36 @@ export const ConfirmCard: React.FC<{
   secondary?: { label: string; onClick: () => void };
   /** Stacked only: which source's card values (see above). */
   frame?: "ops" | "kit";
+  /**
+   * Stacked only (OpsTabsV4 plan confirms, OP1-048 / 049 / 051):
+   * - `cancelVariant` "outlined": the safe action is a 48 tall r14 button with
+   *   a 1px rgba(36,31,27,0.11) / rgba(245,243,250,0.08) border, 14/800 ink
+   *   (pixels), instead of the 44 text cancel ("text", default).
+   * - `disc`: the icon disc's own fill and glyph colours (pause caution,
+   *   hide soft / inkSoft), instead of the tone's.
+   * - `destructiveFill` "solid": the destructive confirm is status-high with
+   *   on-destructive ink (#C0392B / white, dark #F09A8E / #0D0B1A, V6-02)
+   *   instead of the BizTypeKit tint ("tint", default).
+   * - `initialFocus` "cancel": focus the safe action on open (OP1-048 A3).
+   */
+  cancelVariant?: "text" | "outlined";
+  disc?: { bg: string; ink: string };
+  destructiveFill?: "tint" | "solid";
+  initialFocus?: "confirm" | "cancel";
+  /** Stacked / decision: the scrim's 2px blur (OpsTabsV4 draws it, OP1-048 row 1). Off by default. */
+  scrimBlur?: boolean;
+  /** Stacked only (v6 Batch 4, front desk scan results): extra content under the body (a chip, an error line). */
+  extra?: React.ReactNode;
+  /** Stacked only (v6 Batch 4): the confirm is drawn but not available yet (a pending backend stage). */
+  confirmDisabled?: boolean;
+  /** Stacked (v6 Batch 4, BizTypeKit pops OP1-004): the title's line height when a frame draws other than 22 (17 × 1.5 = 25.5). */
+  titleLineHeight?: number;
+  /**
+   * Stacked / decision (v6 Batch 4, Classes): the confirm button's own fill
+   * and ink when a frame draws other than the tone (OP1-086 O1: #C0392B with
+   * white in dark too; AN3-070: dark #E0786A with #0D0B1A). Unset: unchanged.
+   */
+  confirmStyle?: React.CSSProperties;
 }> = ({
   open,
   title,
@@ -80,11 +110,21 @@ export const ConfirmCard: React.FC<{
   cancelLabel = "Cancel",
   secondary,
   frame = "ops",
+  cancelVariant = "text",
+  disc,
+  destructiveFill = "tint",
+  initialFocus = "confirm",
+  scrimBlur,
+  extra,
+  confirmDisabled,
+  titleLineHeight,
+  confirmStyle: confirmOverride,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onCancel);
   const dark = useIsDark();
   const firstRef = useRef<HTMLButtonElement | null>(null);
+  const safeRef = useRef<HTMLButtonElement | null>(null);
   const cancelRef = useRef(onCancel);
   useEffect(() => {
     cancelRef.current = onCancel;
@@ -93,13 +133,13 @@ export const ConfirmCard: React.FC<{
     if (!open || layout === "row") return;
     // Stacked focuses the primary action, decision the safe one (OP1-085 O3,
     // AN3-066 row 7).
-    firstRef.current?.focus({ preventScroll: true });
+    (layout === "stacked" && initialFocus === "cancel" ? safeRef : firstRef).current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") cancelRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, layout]);
+  }, [open, layout, initialFocus]);
   if (!open) return null;
 
   const ink = "rgb(var(--c-charcoal))";
@@ -167,14 +207,15 @@ export const ConfirmCard: React.FC<{
   // Confirm fills. Stacked destructive is the BizTypeKit tint (highBg / high);
   // decision destructive is the solid red with on-destructive ink (V6-02).
   const confirmStyle: React.CSSProperties = destructive
-    ? decision
+    ? decision || destructiveFill === "solid"
       ? { background: "rgb(var(--c-status-high))", color: "rgb(var(--c-on-destructive))" }
       : { background: "rgb(var(--c-status-high-bg))", color: "rgb(var(--c-status-high))" }
     : { background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))" };
+  if (confirmOverride) Object.assign(confirmStyle, confirmOverride);
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center px-6">
-      <div className="absolute inset-0 animate-fade-in" style={{ background: "rgba(36,31,27,0.4)" }} onClick={onCancel} />
+      <div className={`absolute inset-0 animate-fade-in ${scrimBlur ? "backdrop-blur-[2px]" : ""}`} style={{ background: "rgba(36,31,27,0.4)" }} onClick={onCancel} />
       <div
         role="alertdialog"
         aria-modal="true"
@@ -190,8 +231,8 @@ export const ConfirmCard: React.FC<{
               width: 44,
               height: 44,
               borderRadius: 999,
-              background: destructive ? "rgb(var(--c-status-high-bg))" : "rgb(var(--c-primary-pale))",
-              color: destructive ? "rgb(var(--c-status-high))" : dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))",
+              background: disc?.bg ?? (destructive ? "rgb(var(--c-status-high-bg))" : "rgb(var(--c-primary-pale))"),
+              color: disc?.ink ?? (destructive ? "rgb(var(--c-status-high))" : dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))"),
             }}
           >
             {icon}
@@ -201,7 +242,7 @@ export const ConfirmCard: React.FC<{
           style={{
             margin: !decision && icon ? "10px 0 0" : 0,
             fontSize: textPx(17),
-            lineHeight: linePx(22),
+            lineHeight: linePx(titleLineHeight ?? 22),
             fontWeight: 800,
             color: ink,
             textWrap: "balance",
@@ -221,6 +262,7 @@ export const ConfirmCard: React.FC<{
             {subtitle}
           </p>
         )}
+        {!decision && extra}
         {decision ? (
           <div className="grid grid-cols-2" style={{ gap: 10, marginTop: 18 }}>
             <button
@@ -245,8 +287,8 @@ export const ConfirmCard: React.FC<{
             <button
               ref={firstRef}
               onClick={onConfirm}
-              disabled={busy}
-              className="tap w-full disabled:opacity-60"
+              disabled={busy || confirmDisabled}
+              className={confirmDisabled ? "w-full opacity-50" : "tap w-full disabled:opacity-60"}
               style={{ minHeight: 48, borderRadius: 14, fontSize: textPx(14), fontWeight: 800, padding: "0 12px", ...confirmStyle }}
             >
               {confirmLabel}
@@ -261,9 +303,14 @@ export const ConfirmCard: React.FC<{
               </button>
             )}
             <button
+              ref={safeRef}
               onClick={onCancel}
               className="tap w-full"
-              style={{ minHeight: 44, background: "transparent", color: inkSoft, fontSize: textPx(14), fontWeight: 700 }}
+              style={
+                cancelVariant === "outlined"
+                  ? { minHeight: 48, borderRadius: 14, border: `1px solid ${outline}`, background: "transparent", color: ink, fontSize: textPx(14), fontWeight: 800, padding: "0 12px" }
+                  : { minHeight: 44, background: "transparent", color: inkSoft, fontSize: textPx(14), fontWeight: 700 }
+              }
             >
               {cancelLabel}
             </button>

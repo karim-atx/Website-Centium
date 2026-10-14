@@ -350,7 +350,7 @@ export async function inviteMember(
 export async function createMemberCode(
   businessId: string,
   membershipPlanId: string | null
-): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string }> {
+): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string; code?: string }> {
   const { data, error } = await rpc().rpc("create_business_member_code", {
     p_business_id: businessId,
     p_membership_plan_id: membershipPlanId,
@@ -361,7 +361,7 @@ export async function createMemberCode(
 
   if (error || !data) {
     console.error("[members] Could not create a member code:", error?.message);
-    return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again.") };
+    return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again."), code: error?.code };
   }
   const row = data as {
     id: string;

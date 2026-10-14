@@ -38,6 +38,8 @@ interface BottomSheetProps {
    * 12 × 20 × 30; MO1.1.2.3). Unset keeps max(34, safe area + 20).
    */
   footerBottom?: number;
+  /** The footer's side padding when a frame draws other than the chrome's 20 / 16 (OpsTabsV4: 18, OP1-041 row 5). */
+  footerPadX?: number;
   /**
    * "tall" raises the max height to nearly the full viewport, minus a small
    * top inset (FO8). The default max is `maxHeightPct` of the dynamic
@@ -100,6 +102,13 @@ interface BottomSheetProps {
   fillHeight?: boolean;
   /** Drag the header down to close (WO1.3 S1 "swipe down"): past 80 px, or a quick flick, it closes. */
   swipeToClose?: boolean;
+  /**
+   * Tapping the scrim closes the sheet (default true). OpsTabsV4 sheets close
+   * by the X only (OP1-041 S1, HANDOVER §2.3); Back still closes.
+   */
+  closeOnScrim?: boolean;
+  /** Let a long title wrap (centred, balanced) instead of truncating; the header grows from its height (AN5 sheets, Larger text: AN5-017 O1). */
+  titleWrap?: boolean;
 }
 
 const EXIT_MS = 350;
@@ -175,6 +184,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   titleIcon,
   footerRule,
   footerBottom,
+  footerPadX,
   headerHeight = 53,
   chrome = "app",
   scrim,
@@ -186,6 +196,8 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   titleLineHeight,
   fillHeight,
   swipeToClose,
+  closeOnScrim = true,
+  titleWrap,
 }) => {
   // Swipe down to close, from the header (WO1.3 S1).
   const [dragY, setDragY] = useState(0);
@@ -272,7 +284,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
       <div
         className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
         style={{ background: scrimColour, animation: scrimAnim }}
-        onClick={onClose}
+        onClick={closeOnScrim ? onClose : undefined}
       />
       {hideHeader ? (
         <div
@@ -309,7 +321,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
           <div
             className="shrink-0 flex items-center justify-between"
             {...swipeHandlers}
-            style={{ height: handle ? 46 : headerHeight, padding: "0 18px", ...(swipeToClose ? { touchAction: "none" } : null) }}
+            style={{ ...(titleWrap ? { minHeight: handle ? 46 : headerHeight, paddingTop: 8, paddingBottom: 8 } : { height: handle ? 46 : headerHeight }), paddingLeft: 18, paddingRight: 18, ...(swipeToClose ? { touchAction: "none" } : null) }}
           >
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (
@@ -330,7 +342,9 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
                 style={{ color: titleColor, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", gap: 9, ...(titleLineHeight ? { lineHeight: linePx(titleLineHeight) } : null) }}
               >
                 {titleIcon && <span className="flex shrink-0">{titleIcon}</span>}
-                <span className="min-w-0 truncate">{title}</span>
+                <span className={titleWrap ? "min-w-0 text-center" : "min-w-0 truncate"} style={titleWrap ? { textWrap: "balance" } as React.CSSProperties : undefined}>
+                  {title}
+                </span>
               </h2>
             )}
             {/* 26px slot: headerAction overflows leftward so the title stays
@@ -358,7 +372,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
               className="shrink-0"
               style={{
                 background: body,
-                padding: `${footerRule ? 8 : 12}px ${market ? 16 : 20}px ${footerPad}`,
+                padding: `${footerRule ? 8 : 12}px ${footerPadX ?? (market ? 16 : 20)}px ${footerPad}`,
                 borderTop: footerRule ? "1px solid var(--sheet-rule)" : undefined,
               }}
             >

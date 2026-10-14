@@ -1,23 +1,24 @@
 import { useEffect, useState } from "react";
-import { Users, Clock, Wallet, HandCoins, CalendarDays, Ticket, ListOrdered, CalendarX, Star } from "lucide-react";
-import { Card } from "../ui/Card";
-import { MemberTag } from "./MemberTag";
 import { fetchVenueDashboard } from "../../services/venues/console";
-import { money, reviewsLine, type VenueDashboard } from "../../services/venues/consoleLogic";
-import { openNowTag } from "../../services/venues/hours";
+import { money, type VenueDashboard } from "../../services/venues/consoleLogic";
+import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 
-// venue_dashboard(id) (stage A4) in the Analytics tab's KPI card grid: the
-// same 2-up Card, 16px primary icon, 18/700 value, 11/600 label and 10.5
-// sub-line. NOT YET MATCHED TO THE BUSINESS UI BOARD.
+// venue_dashboard(id) (stage A4), restyled per OURS-OP1-venue-figures: four
+// K5 two-up number-box cards (the OpsTabsV4 "Active plans | Members on plans"
+// card), each with its line. The reviews figure moved into the console head.
+// No deltas: venue_dashboard returns no previous period (data honesty).
 //
 // THE TWO MONEY FIGURES ARE NOT REVENUE (the contract: payments happen outside
 // Centium, BR-04). One is what was agreed and is unpaid; the other is what
 // somebody at the venue pressed "mark paid" on this month. Labelled as exactly
-// that. The week and month are the venue's own (computed in gyms.timezone).
+// that, with the not-revenue note as that card's line. The week and month are
+// the venue's own (computed in gyms.timezone). "–" only while loading; a real
+// 0 shows "0".
 
-export function VenueFigures({ gymId }: { gymId: string }) {
+export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: string; timezone: string; refreshKey?: number }) {
   const [data, setData] = useState<{ gymId: string; value: VenueDashboard | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,50 +35,56 @@ export function VenueFigures({ gymId }: { gymId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [gymId]);
+  }, [gymId, refreshKey, tick]);
 
   const d = data?.gymId === gymId ? data.value : null;
-  const open = d ? openNowTag(d.isOpenNow) : null;
-
-  const tiles = d
-    ? [
-        { icon: Users, label: "Active members", value: d.activeMembers.toLocaleString(), sub: `${d.membersTotal.toLocaleString()} memberships in total` },
-        { icon: Clock, label: "Awaiting payment", value: d.membershipsAwaitingPayment.toLocaleString(), sub: "Active memberships not yet paid" },
-        { icon: Wallet, label: "Agreed, not yet paid", value: money(d.amountAwaitingPayment), sub: "Memberships waiting to be marked paid" },
-        { icon: HandCoins, label: "Marked paid this month", value: money(d.amountMarkedPaidThisMonth), sub: "Memberships and class bookings" },
-        { icon: CalendarDays, label: "Classes this week", value: d.classesThisWeek.toLocaleString(), sub: "Monday to Sunday, venue time" },
-        { icon: Ticket, label: "Bookings this week", value: d.bookingsThisWeek.toLocaleString(), sub: "Across this week's classes" },
-        { icon: ListOrdered, label: "On waitlists", value: d.waitlistWaiting.toLocaleString(), sub: "People waiting for a place" },
-        { icon: CalendarX, label: "Cancellations this week", value: d.cancellationsThisWeek.toLocaleString(), sub: "Class bookings cancelled" },
-        { icon: Star, label: "Reviews", value: d.reviewsAverage === null ? "–" : d.reviewsAverage.toFixed(1), sub: reviewsLine(d.reviewsAverage, d.reviewsCount) },
-      ]
-    : [];
+  const n = (v: number | undefined) => (d && v !== undefined ? v.toLocaleString() : null);
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-2.5">
-        <p className="section-label text-charcoal-faint">This venue</p>
-        {open && <MemberTag label={open.label} tone={open.tone} />}
-      </div>
-      {error && <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">{error}</p>}
-      {!d && !error && <p className="text-xs text-charcoal-faint mb-3">Loading figures…</p>}
-      {d && (
-        <>
-          <div className="grid grid-cols-2 gap-2.5">
-            {tiles.map((k) => (
-              <Card key={k.label} className="animate-fade-slide-up">
-                <k.icon size={16} className="text-primary mb-2" />
-                <p className="text-lg font-bold text-charcoal leading-tight tabular-nums">{k.value}</p>
-                <p className="text-[11px] font-semibold text-charcoal-soft leading-tight mt-1">{k.label}</p>
-                <p className="text-[10.5px] text-charcoal-faint leading-tight mt-0.5">{k.sub}</p>
-              </Card>
-            ))}
-          </div>
-          <p className="text-[11px] text-charcoal-faint text-center mt-2.5">
-            Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.
-          </p>
-        </>
+    <section aria-label="This venue">
+      <VGroupHeader left="This venue" />
+      {error && !d ? (
+        <div className={`${CARD} rounded-[22px] overflow-hidden`}>
+          <VCardError title="Couldn't load this part" message={error} onRetry={() => setTick((t) => t + 1)} />
+        </div>
+      ) : (
+        <div className="space-y-[12px]">
+          <VNumberCard
+            boxes={[
+              { label: "Active members", value: n(d?.activeMembers) },
+              { label: "Awaiting payment", value: n(d?.membershipsAwaitingPayment) },
+            ]}
+            line={
+              d
+                ? d.membersTotal === 0
+                  ? "No memberships at this venue yet."
+                  : `${d.membersTotal.toLocaleString()} membership${d.membersTotal === 1 ? "" : "s"} in total. Unpaid ones are listed first under Members.`
+                : null
+            }
+          />
+          <VNumberCard
+            boxes={[
+              { label: "Agreed, not yet paid", value: d ? money(d.amountAwaitingPayment) : null },
+              { label: "Marked paid this month", value: d ? money(d.amountMarkedPaidThisMonth) : null },
+            ]}
+            line="Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid."
+          />
+          <VNumberCard
+            boxes={[
+              { label: "Classes this week", value: n(d?.classesThisWeek) },
+              { label: "Bookings this week", value: n(d?.bookingsThisWeek) },
+            ]}
+            line={`Monday to Sunday, on the venue's clock (${timezone}).`}
+          />
+          <VNumberCard
+            boxes={[
+              { label: "On waitlists", value: n(d?.waitlistWaiting) },
+              { label: "Cancellations this week", value: n(d?.cancellationsThisWeek) },
+            ]}
+            line="People waiting for a place, and class bookings cancelled this week."
+          />
+        </div>
       )}
-    </div>
+    </section>
   );
 }

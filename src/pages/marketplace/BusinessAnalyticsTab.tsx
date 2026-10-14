@@ -83,7 +83,10 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function BusinessAnalyticsTab() {
+// Batch 4: the Analytics shell (src/pages/business-analytics) renders this
+// body `embedded` (no header, notice or section chips) for the sections that
+// have no v6 view yet; `view` picks Insights or Outcomes.
+export default function BusinessAnalyticsTab({ embedded = false, view }: { embedded?: boolean; view?: "insights" | "outcomes" } = {}) {
   const { businessListing, user } = useApp();
   // Real counts. Offerings, classes and plans were three localStorage
   // collections, one of them seeded with two invented plans — so a gym that
@@ -96,7 +99,8 @@ export default function BusinessAnalyticsTab() {
   const { team: myEmployees } = useBusinessTeam();
   const isGym = user.businessType === "gym";
 
-  const [section, setSection] = useState<"insights" | "outcomes">("insights");
+  const [chosen, setSection] = useState<"insights" | "outcomes">("insights");
+  const section = embedded && view ? view : chosen;
   const [period, setPeriod] = useState<Period>("This month");
   const [openInsight, setOpenInsight] = useState<(typeof insightActions)[number] | null>(null);
   const [atRiskOpen, setAtRiskOpen] = useState(false);
@@ -131,10 +135,10 @@ export default function BusinessAnalyticsTab() {
 
   return (
     <div>
-      <PageHeader title="Analytics" subtitle="Business performance and client outcomes" />
-      <BusinessPrototypeNotice />
+      {!embedded && <PageHeader title="Analytics" subtitle="Business performance and client outcomes" />}
+      {!embedded && <BusinessPrototypeNotice />}
 
-      <div className="flex gap-2 mb-4">
+      <div className={embedded ? "hidden" : "flex gap-2 mb-4"}>
         <Chip active={section === "insights"} onClick={() => setSection("insights")}>
           Business Insights
         </Chip>
