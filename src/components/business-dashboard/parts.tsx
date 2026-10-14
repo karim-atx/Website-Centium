@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertCircle, CalendarPlus, ChevronRight, Lightbulb, Package, ScanLine, type LucideIcon } from "lucide-react";
+import { AlertCircle, CalendarPlus, ChevronRight, HeartPulse, Lightbulb, Package, ScanLine, type LucideIcon } from "lucide-react";
 import type { DashPalette } from "./palette";
 import type { NumberBox } from "./dashboardModel";
 import { linePx, textPx } from "../../theme/textSize";
@@ -154,7 +154,7 @@ export function KitList({ c, rows }: { c: DashPalette; rows: KitRow[] }) {
   );
 }
 
-const EMPTY_ICONS = { "calendar-plus": CalendarPlus, "scan-line": ScanLine, package: Package } as const;
+const EMPTY_ICONS = { "calendar-plus": CalendarPlus, "scan-line": ScanLine, package: Package, "heart-pulse": HeartPulse } as const;
 
 /** Empty card (DA1-006): r 20, 1.5 dashed fill, pad 24 × 18, tile 48 r 14, title 15/800, body 12.5/18. */
 export function KitEmpty({ c, icon, title, body }: { c: DashPalette; icon: keyof typeof EMPTY_ICONS; title: string; body: string }) {

@@ -14,6 +14,12 @@ export interface AnalyticsCtx {
   kind: BizKind;
   /** The rows Export CSV writes (header first). Null hides the link. */
   setExport: (name: string, rows: CsvRow[] | null) => void;
+  /**
+   * The pushed screens the shell can open at /app/business/analytics/<key>
+   * (PUSHED_VIEWS in sections.tsx: Client outcomes now; Reputation and
+   * Revenue once their owners register them). Optional for older callers.
+   */
+  pushed?: readonly string[];
 }
 
 export const AnalyticsContext = createContext<AnalyticsCtx | null>(null);

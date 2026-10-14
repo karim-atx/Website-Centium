@@ -124,6 +124,20 @@ export function MembersSection() {
         </AnCard>
       )}
 
+      {/* AN1-026 K1 / V6-28: the Client outcomes screen, also reached from the Overview "More insights" card. */}
+      {known && (
+        <AnCard className="mt-[12px]" label="Client outcomes">
+          <AnIndexRow
+            first
+            title="Client outcomes"
+            lead="Only from clients who share with you"
+            value={null}
+            onClick={() => navigate("/app/business/analytics/outcomes")}
+            ariaLabel="Client outcomes"
+          />
+        </AnCard>
+      )}
+
       {/* OURS-AN4-member-rosters: Venue members (any business with venues). */}
       {known && data.venues.length > 0 && (
         <AnCard className="mt-[12px]" label="Venue members">
