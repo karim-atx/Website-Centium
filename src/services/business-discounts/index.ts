@@ -5,7 +5,8 @@ import { resolveMyBusinessId } from "../business-profile";
 //
 // WHAT THIS REPLACES. `businessListing.discounts` was a `{ id, label }[]`
 // inside the same usePersistentState object the listing used — added and
-// removed in BusinessMarketplaceTab, counted on the dashboard, and never
+// removed in BusinessMarketplaceTab (since v6 Batch 5: Marketplace ›
+// Promotions, "Offers on your listing"), counted on the dashboard, and never
 // written anywhere a client could see it. The copy on that screen says "add
 // one to feature it on Explore", which was not true of a value living in one
 // browser's localStorage.

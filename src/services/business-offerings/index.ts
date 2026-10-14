@@ -6,7 +6,8 @@ import { formatPrice, parsePrice } from "../../utils/price";
 // A business's marketplace listings: the real business_offerings rows.
 //
 // WHAT THIS REPLACES. `businessOfferings` was a plain localStorage array. The
-// business side (BusinessMarketplaceTab) created and deleted them, and the
+// business side (BusinessMarketplaceTab; since v6 Batch 5 the Store Products
+// tab and the Marketplace Listing "Offerings" card) created and deleted them, and the
 // CLIENT side (MarketplaceCategoryPage's "From Centium businesses" block) read
 // the very same array — which meant it could only ever show a business its own
 // listings back to itself. On a client's device that array is empty and always

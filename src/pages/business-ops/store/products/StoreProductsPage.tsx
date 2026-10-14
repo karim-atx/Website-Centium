@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Package, ShoppingBag, Store } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Package, ShoppingBag } from "lucide-react";
 import { fetchStoreProducts, productCounts, stockChip, type Product } from "../../../../services/store/products";
 import { moneyShort } from "../../../../services/store/format";
 import { useOnline } from "../../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextTabs, useOpsToast } from "../opsKit";
 import { useLive, useStoreBusiness } from "../storeShared";
 import { ProductEditorSheet } from "./ProductEditorSheet";
+import { StoreMarketPanel } from "../../../business-market/MarketplacePage";
 
 // OP1-008 / OP1-012 · Store › Products tab. Tabs per V6-54: Products ·
 // Listing · Performance · Promotions. The Products tab is OP1 (this file);
-// Listing / Performance / Promotions are MA1's (Batch 5): until they land,
-// those tabs point at today's listing and discounts page so nothing live is
-// lost. Products are business_offerings rows (V6-50).
+// Listing / Performance / Promotions are MA1's (Batch 5): they render the
+// Marketplace bodies (StoreMarketPanel, src/pages/business-market).
+// Products are business_offerings rows (V6-50).
 
 type TabKey = "products" | "listing" | "performance" | "promotions";
 const TABS: { key: TabKey; label: string }[] = [
@@ -42,7 +43,6 @@ export function groupProducts(list: Product[]): { name: string; list: Product[] 
 }
 
 export default function StoreProductsPage() {
-  const navigate = useNavigate();
   const online = useOnline();
   const [params, setParams] = useSearchParams();
   const category = params.get("category");
@@ -95,16 +95,9 @@ export default function StoreProductsPage() {
 
   let body: React.ReactNode;
   if (tab !== "products") {
-    body = (
-      <ListCard label="Listing and promotions">
-        <KitRow
-          icon={Store}
-          title="Listing and discounts"
-          sub="Your Explore listing and discounts, as they are today"
-          onClick={() => navigate("/app/business/marketplace")}
-        />
-      </ListCard>
-    );
+    // Batch 5 · MA1-067 / 071 / 072 (OURS-MA1-store-products-tab): the
+    // Marketplace Listing, Performance and Promotions bodies for a store.
+    body = <StoreMarketPanel tab={tab} />;
   } else if (loadError || s.status === "error") {
     body = <ErrorCard text="Couldn't load your products." onRetry={() => (loadError ? reloadBiz() : live.reload())} />;
   } else if (!ready || (businessId && s.status === "loading")) {

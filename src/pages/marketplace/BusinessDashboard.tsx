@@ -13,7 +13,7 @@ import { localDayOf } from "../../utils/date";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { dashPalette } from "../../components/business-dashboard/palette";
 import { GaugeCluster, type ClusterControl, type ClusterGauge } from "../../components/business-dashboard/GaugeCluster";
-import { dismissSetup, loadDashboard, saveListingActive, saveListingPerk, type DashRaw } from "../../components/business-dashboard/dashboardData";
+import { dismissSetup, loadDashboard, saveListingActive, type DashRaw } from "../../components/business-dashboard/dashboardData";
 import {
   activityEvents,
   attentionItems,
@@ -40,16 +40,17 @@ import { textPx } from "../../theme/textSize";
 // V6-52 (BizSummaryV27 gauge cluster as drawn + the per-type BizTypeKit
 // "Today" block underneath; a gym without classes gets the OURS gauge set),
 // V6-53 (Store quick actions per COPY / D12), V6-71 (no prototype notice),
-// V6-88 (perk editing stays here until MA1 "Offers on your listing" ships in
-// Batch 5, then leaves), V6-106 (motion from the source), V6-107 (week strip
-// at 360 as drawn), V6-108 (quick actions navigate; press state and long-press
-// name kept), V6-127 (Members reached dropped).
+// V6-88 (the perk editor left for MA1 "Offers on your listing", Batch 5),
+// V6-106 (motion from the source), V6-107 (week strip at 360 as drawn),
+// V6-108 (quick actions navigate; press state and long-press name kept),
+// V6-127 (Members reached dropped).
 //
 // REPLACES the whole earlier page (HANDOVER §1: the old dashboard must not
 // exist). Kept live features, restyled (OURS-DA-kept-features): the listing
-// switch and perk (now the real business_profiles.active / perk, where the
-// old page only wrote this device's storage), DobPromptCard, the venue
-// switcher, the venue figures and the Venue console link.
+// switch (now the real business_profiles.active, where the old page only
+// wrote this device's storage; the perk moved to Marketplace › Promotions),
+// DobPromptCard, the venue switcher, the venue figures and the Venue console
+// link.
 //
 // ONLY REAL NUMBERS. Every figure is computed from rows on the local stack;
 // a figure whose table does not exist yet (check-ins, orders, renewals
@@ -144,13 +145,6 @@ export default function BusinessDashboard() {
     }
     return null;
   };
-  const onSavePerk = async (v: string) => {
-    if (!business || !raw) return "Couldn't save the perk. Try again.";
-    const r = await saveListingPerk(business.id, v);
-    if (!r.ok) return r.message ?? null;
-    setRaw((prev) => (prev && prev.business ? { ...prev, business: { ...prev.business, perk: v.trim() || null } } : prev));
-    return null;
-  };
 
   const onAttention = (a: AttentionItem) => {
     setPanelOpen(false);
@@ -165,7 +159,7 @@ export default function BusinessDashboard() {
       plans: "/app/business/gym",
       members: "/app/business/members",
       checkin: "/app/business/operations",
-      products: "/app/business/marketplace",
+      products: "/app/business/products",
       delivery: "/app/business/profile",
       orders: "/app/business/operations",
     };
@@ -177,23 +171,23 @@ export default function BusinessDashboard() {
   const controls: ClusterControl[] =
     kind === "store"
       ? [
-          { key: "product", Icon: PackagePlus, name: "Add product", onActivate: () => go("/app/business/marketplace") },
+          { key: "product", Icon: PackagePlus, name: "Add product", onActivate: () => go("/app/business/products") },
           { key: "orders", Icon: Package, name: "View orders", onActivate: () => go("/app/business/operations") },
-          { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace") },
+          { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/products?tab=promotions&offer=new") },
         ]
       : kind === "gym"
         ? [
             { key: "checkin", Icon: ScanLine, name: "Check someone in", onActivate: () => go("/app/business/operations") },
             { key: "daypass", Icon: Ticket, name: "Sell a day pass", onActivate: () => go("/app/business/gym") },
             { key: "invite", Icon: MailPlus, name: "Invite member", onActivate: () => go("/app/business/members") },
-            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace") },
+            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
             { key: "employee", Icon: IdCard, name: "Add employee", onActivate: () => go("/app/business/employees") },
           ]
         : [
             { key: "class", Icon: CalendarPlus, name: "Create class", onActivate: () => go("/app/business/classes") },
             { key: "invite", Icon: MailPlus, name: "Invite member", onActivate: () => go("/app/business/members") },
             { key: "offering", Icon: PackagePlus, name: "Add offering", onActivate: () => go("/app/business/marketplace") },
-            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace") },
+            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
             { key: "employee", Icon: IdCard, name: "Add employee", onActivate: () => go("/app/business/employees") },
           ];
 
@@ -311,7 +305,7 @@ export default function BusinessDashboard() {
         <p style={{ fontSize: textPx(11), color: c.faint, textAlign: "center", marginTop: 0 }}>You're staff at this venue, so you can view it but only the owner can change it.</p>
       )}
 
-      <ListingSheet c={c} open={sheetOpen} onClose={() => setSheetOpen(false)} active={!!business?.active} perk={business?.perk ?? ""} onToggle={onToggleListing} onSavePerk={onSavePerk} />
+      <ListingSheet c={c} open={sheetOpen} onClose={() => setSheetOpen(false)} active={!!business?.active} onToggle={onToggleListing} />
     </div>
   );
 }

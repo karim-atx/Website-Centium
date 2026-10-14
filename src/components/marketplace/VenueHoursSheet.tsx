@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Search, Trash2 } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { ConfirmCard } from "../ui/ConfirmCard";
 import { saveHours, saveVenueTimezone } from "../../services/venues/console";
 import { draftWrapsMidnight, draftsFromRows, validateDrafts, type DayDraft, type GymHoursTableRow } from "../../services/venues/consoleLogic";
 import { formatMinutes12 } from "../../utils/time12";
@@ -272,6 +273,9 @@ export function VenueHoursSheet({
   const [wheel, setWheel] = useState<Open>(null);
   const [zoneOpen, setZoneOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // MA1-009 row 3 / S4 (Batch 5): Save waits for a change, and closing with
+  // a change asks first (the MA1-144 pop-up pattern).
+  const [discard, setDiscard] = useState(false);
 
   // Each opening starts from the saved rows.
   const [openedFor, setOpenedFor] = useState(false);
@@ -288,6 +292,8 @@ export function VenueHoursSheet({
   }
 
   const errors = validateDrafts(drafts);
+  const changed = zone !== timezone || JSON.stringify(drafts) !== JSON.stringify(draftsFromRows(rows));
+  const close = () => (changed && !saving ? setDiscard(true) : onClose());
   const zones = useMemo(() => zoneList(timezone), [timezone]);
   const shownZones = useMemo(() => {
     const q = query.trim().toLowerCase().replace(/\s+/g, "_");
@@ -341,8 +347,8 @@ export function VenueHoursSheet({
       <button
         type="button"
         onClick={() => void save()}
-        disabled={saving || !online}
-        className="tap w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill text-[14.5px] font-extrabold disabled:opacity-60"
+        disabled={saving || !online || !changed}
+        className="tap w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill text-[14.5px] font-extrabold disabled:opacity-40"
       >
         {saving ? "Saving…" : "Save hours"}
       </button>
@@ -351,7 +357,7 @@ export function VenueHoursSheet({
 
   return (
     <>
-      <BottomSheet open={open && !zoneOpen} onClose={onClose} title="Opening hours" tone="business" chrome="market" headerHeight={58} footer={footer}>
+      <BottomSheet open={open && !zoneOpen} onClose={close} title="Opening hours" tone="business" chrome="market" headerHeight={58} footer={footer}>
         <div className="relative">
           {!wheel && (
             <div className="text-[12.5px] leading-[18px] text-charcoal-soft mb-[12px] space-y-[6px]">
@@ -481,6 +487,25 @@ export function VenueHoursSheet({
           </div>
         </div>
       </BottomSheet>
+
+      <ConfirmCard
+        open={open && discard}
+        layout="stacked"
+        frame="ops"
+        tone="destructive"
+        disc={{ bg: "rgb(var(--c-cream-soft))", ink: "rgb(var(--c-charcoal-soft))" }}
+        icon={<Trash2 size={20} strokeWidth={2.2} />}
+        title="Discard your changes?"
+        subtitle="Your opening hours keep their saved times."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        scrimBlur
+        onConfirm={() => {
+          setDiscard(false);
+          onClose();
+        }}
+        onCancel={() => setDiscard(false)}
+      />
 
       <BottomSheet open={open && zoneOpen} onClose={() => setZoneOpen(false)} title="Time zone" tone="business" headerHeight={62} bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}>
         <label className="flex items-center gap-2 min-h-[48px] rounded-[14px] bg-cream-soft border border-solid border-[#DEDDDE] dark:border-[#343740]" style={{ padding: "0 14px" }}>

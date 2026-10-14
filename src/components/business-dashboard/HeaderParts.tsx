@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CalendarClock, Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Ticket, Users, X } from "lucide-react";
+import { Bell, CalendarClock, Check, ChevronDown, ChevronRight, Eye, EyeOff, Ticket, Users, X } from "lucide-react";
 import type { DashPalette } from "./palette";
 import type { AttentionItem, SetupStep } from "./dashboardModel";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -343,63 +343,35 @@ export function SetupCard({ c, steps, onStep, onDismiss }: { c: DashPalette; ste
 }
 
 /**
- * OURS-DA-kept-features #1-#2 · "Your listing" sheet: Active on Explore
- * (business_profiles.active) and the perk (business_profiles.perk). V6-88:
- * the perk editor leaves the Dashboard when MA1 "Offers on your listing" ships
- * (Batch 5).
+ * OURS-DA-kept-features #1 · "Your listing" sheet: Active on Explore
+ * (business_profiles.active). V6-88: the perk editor (#2) left the Dashboard
+ * for MA1 Marketplace › Promotions › "Offers on your listing" (Batch 5).
  */
 export function ListingSheet({
   c,
   open,
   onClose,
   active,
-  perk,
   onToggle,
-  onSavePerk,
 }: {
   c: DashPalette;
   open: boolean;
   onClose: () => void;
   active: boolean;
-  perk: string;
   onToggle: (v: boolean) => Promise<string | null>;
-  onSavePerk: (v: string) => Promise<string | null>;
+  /** @deprecated V6-88: the perk is edited in Marketplace › Promotions only. Ignored; kept so callers still compile. */
+  perk?: string;
+  /** @deprecated V6-88 (see perk). Ignored. */
+  onSavePerk?: (v: string) => Promise<string | null>;
 }) {
-  const [draft, setDraft] = useState(perk);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) {
-      setDraft(perk);
-      setError(null);
-    }
+    if (open) setError(null);
   }
-  const save = async () => {
-    setSaving(true);
-    const msg = await onSavePerk(draft);
-    setSaving(false);
-    if (msg) setError(msg);
-    else onClose();
-  };
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title="Your listing"
-      tone="business"
-      footer={
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={saving || draft.trim() === perk.trim()}
-          style={{ width: "100%", height: 52, borderRadius: 16, background: c.fill, color: c.onFill, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(14), fontWeight: 700, border: 0, opacity: saving || draft.trim() === perk.trim() ? 0.5 : 1 }}
-        >
-          Save
-        </button>
-      }
-    >
+    <BottomSheet open={open} onClose={onClose} title="Your listing" tone="business">
       <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, marginBottom: 16 }}>
         <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgb(var(--th-7d67d9))" }}>
           {active ? <Eye size={18} aria-hidden /> : <EyeOff size={18} aria-hidden />}
@@ -414,18 +386,6 @@ export function ListingSheet({
           label="Listing active"
         />
       </div>
-      <label style={{ display: "block", marginBottom: 12 }}>
-        <span style={{ display: "block", fontSize: textPx(12), fontWeight: 700, color: c.inkSoft, marginBottom: 6 }}>Perk shown on your Explore listing</span>
-        <span style={{ height: 46, borderRadius: 14, background: c.soft, border: `1.5px solid ${c.border}`, display: "flex", alignItems: "center", gap: 8, padding: "0 12px", boxSizing: "border-box" }}>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            maxLength={120}
-            style={{ flex: 1, minWidth: 0, fontSize: textPx(13.5), fontWeight: 700, color: c.ink, background: "transparent", border: 0, outline: "none", padding: 0 }}
-          />
-          <Pencil size={16} strokeWidth={2.2} color={c.faint} aria-hidden />
-        </span>
-      </label>
       {error && <p style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.high, margin: "0 0 8px" }}>{error}</p>}
     </BottomSheet>
   );

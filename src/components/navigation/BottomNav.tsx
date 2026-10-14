@@ -249,6 +249,8 @@ export const BottomNav: React.FC = () => {
   // v6 Business UI (NAV-001 to NAV-010, X-31): ClientNavBarV3 two-tone, one
   // tab set per business type, 10 in from the column edges (V6-103).
   if (isBusiness) {
+    // MA1-026: Preview as client draws no navbar (source `showNav` false).
+    if (/^\/app\/business\/(marketplace|products)\/preview\/?$/.test(location.pathname)) return null;
     return <BusinessBar kind={businessKind} pathname={location.pathname} unread={unread.total > 0} t={t} />;
   }
 

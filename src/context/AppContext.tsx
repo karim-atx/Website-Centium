@@ -1285,7 +1285,8 @@ interface AppState {
   deletionRequestedAt: string | null;
 
   businessListing: {
-    perk: string;
+    // V6-88 (Batch 5): `perk` is gone from here; the real business_profiles.perk
+    // is edited in Marketplace › Promotions ("Offers on your listing").
     active: boolean;
     membersReached: number;
     bio: string;
@@ -3663,7 +3664,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // were not merely unpersisted but INVENTED: two seeded entries every business
   // account has been shown as its own since onboarding.
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
-    perk: "10% off with Centium",
     active: true,
     membersReached: 34,
     bio: "",

@@ -49,7 +49,7 @@ import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
-import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
+import MarketRoutes from "./pages/business-market/MarketRoutes";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import TeamRoutes from "./pages/business-team/TeamRoutes";
@@ -469,7 +469,7 @@ function AppRoutes() {
         <Route path="/app/marketplace" element={<Marketplace />} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
-        <Route path="/app/business/marketplace" element={<BusinessMarketplaceTab />} />
+        <Route path="/app/business/marketplace/*" element={<MarketRoutes />} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
             Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
             types keep today's listings page on this address. */}
