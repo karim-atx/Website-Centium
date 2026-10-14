@@ -16,8 +16,6 @@ import {
   CalendarDays,
   Percent,
   KeyRound,
-  Wallet,
-  Repeat,
   UserCheck,
   Gauge,
   AlertTriangle,
@@ -44,12 +42,6 @@ import {
 // check-in history instead.
 const periods = ["Today", "This week", "This month", "This quarter"] as const;
 type Period = (typeof periods)[number];
-const periodDivisor: Record<Period, number> = {
-  Today: 30,
-  "This week": 4.3,
-  "This month": 1,
-  "This quarter": 1 / 3,
-};
 
 const insightActions: { label: string; action: string }[] = [
   { label: "Declining training adherence", action: "Review client timeline, send check-in, adjust plan, book review." },
@@ -106,8 +98,6 @@ export default function BusinessAnalyticsTab({ embedded = false, view }: { embed
   const [atRiskOpen, setAtRiskOpen] = useState(false);
 
   const members = Math.max(businessListing.membersReached, 24);
-  const mrr = Math.round((members * 43.1) / periodDivisor[period]);
-  const totalRevenue = Math.round(mrr * 1.24);
   const newLeads = Math.max(6, Math.round(members * 0.1));
   const leadsSigned = Math.round(newLeads * 0.256);
   const conversionPct = newLeads > 0 ? Math.round((leadsSigned / newLeads) * 100) : 0;
@@ -115,8 +105,6 @@ export default function BusinessAnalyticsTab({ embedded = false, view }: { embed
 
   const businessKpis = [
     { icon: Users, label: "Active clients/members", value: members.toLocaleString(), sub: "+6.2% vs prior period" },
-    { icon: Repeat, label: "Monthly recurring revenue", value: `$${mrr.toLocaleString()}`, sub: "+4.1% vs prior period" },
-    { icon: Wallet, label: "Total revenue", value: `$${totalRevenue.toLocaleString()}`, sub: period },
     { icon: UserCheck, label: "Retention / churn", value: "92% / 3.1%", sub: "Indicates whether clients stay" },
     { icon: Tag, label: "Leads / conversion", value: `${newLeads} · ${leadsSigned} signed`, sub: `${conversionPct}% conversion` },
     { icon: CalendarDays, label: "Attendance / engagement", value: "3.1 visits", sub: "per member this month" },
