@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { fetchCredentialRows, fetchLicenceStatus, fetchOwnerProgress, markOwnerItemDismissed } from "../../services/professional-onboarding";
-import { fetchMyCv } from "../../services/professional-cv";
+import { fetchMyCv, type Licence } from "../../services/professional-cv";
 import { fetchProLaneColumns } from "../../services/professional-onboarding";
 import { setPublicListing } from "../../services/professional-profile";
 import { ProStatusScreen, type ProStatus } from "../onboarding/pro/ProStatusScreen";
+import { ProLicencePublish } from "../onboarding/pro/ProLicencePublish";
 import { GO_LIVE_ON_VERIFICATION, PRO_LABEL, initials, proKindOf } from "../onboarding/pro/proModel";
 
 /**
@@ -24,6 +25,9 @@ export default function ProVerification() {
     tags: [],
     line: null,
   });
+  // OURS-licence-publish: verified is not public. The licences stay hidden
+  // until the person switches them on here or in My CV (20261120150000).
+  const [licences, setLicences] = useState<Licence[]>([]);
 
   const load = useCallback(async () => {
     if (!authUserId) return;
@@ -49,6 +53,7 @@ export default function ProVerification() {
       await setPublicListing(true);
       await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
     }
+    setLicences(cv.ok ? cv.cv.licences : []);
     setState({
       status,
       reason: st.status.kind === "rejected" ? st.status.reason : null,
@@ -80,6 +85,14 @@ export default function ProVerification() {
       onPrimary={() => navigate("/app/professionals")}
       onFix={() => navigate("/app/profile/cv")}
       onRetry={() => void load()}
+      extra={
+        <ProLicencePublish
+          licences={licences}
+          onChanged={(l) => setLicences((ls) => ls.map((x) => (x.id === l.id ? l : x)))}
+          unnamedHint="Add its name in My CV to show it on your profile."
+          margin="18px 2px 4px"
+        />
+      }
     />
   );
 }

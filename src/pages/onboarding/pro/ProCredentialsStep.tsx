@@ -16,6 +16,8 @@ import { credentialsComplete, fileLine, isRegulated, licenceNumberError } from "
 import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { UploadRow, type UploadState } from "./parts";
+import { ProLicencePublish } from "./ProLicencePublish";
+import type { Licence } from "../../../services/professional-cv";
 import type { ProStepProps } from "./types";
 
 /**
@@ -194,6 +196,24 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
     onNext();
   };
 
+  // OURS-licence-publish: every licence this step created, offered for the
+  // profile as its own step. They arrive hidden (20261120150000); nothing here
+  // switches one on for the person.
+  const created = [rows?.registration, rows?.degree, rows?.certificate].filter(
+    (l, i, all): l is Licence => !!l && all.findIndex((x) => x?.id === l.id) === i
+  );
+  const publishChanged = (l: Licence) =>
+    setRows((prev) =>
+      prev
+        ? {
+            ...prev,
+            registration: prev.registration?.id === l.id ? l : prev.registration,
+            degree: prev.degree?.id === l.id ? l : prev.degree,
+            certificate: prev.certificate?.id === l.id ? l : prev.certificate,
+          }
+        : prev
+    );
+
   const certSaved = reg ? !!rows?.degree : !!certPath;
   const certSubtitle = certSaved
     ? pro.certificateFile
@@ -318,6 +338,12 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
           </ObTip>
         </>
       )}
+      <ProLicencePublish
+        licences={created}
+        onChanged={publishChanged}
+        unnamedHint="Give it a name in the next step, Your background, to show it on your profile."
+        margin="20px 2px 4px"
+      />
     </ObStep>
   );
 };

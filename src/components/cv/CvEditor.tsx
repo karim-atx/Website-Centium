@@ -4,6 +4,7 @@ import { ChevronRight, Plus } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { LicenceStatusBadge, RejectionNote } from "./CvBadges";
+import { LicencePublishRow } from "./LicencePublish";
 import {
   AwardSheet,
   EducationSheet,
@@ -225,6 +226,8 @@ export const CvEditor: React.FC<{
     setCv((c) => (c ? { ...c, [key]: (c[key] as { id: string }[]).filter((r) => r.id !== id) } : c));
 
   const licences = cv.licences;
+  const licenceChanged = (l: Licence) =>
+    setCv((c) => (c ? { ...c, licences: c.licences.map((x) => (x.id === l.id ? l : x)) } : c));
   const experience = byRecency(cv.experience, true);
   const education = byRecency(cv.education, false);
 
@@ -268,7 +271,12 @@ export const CvEditor: React.FC<{
               sub={licenceLine(l)}
               onClick={() => setOpen({ kind: "licence", entry: l })}
               right={<LicenceStatusBadge status={status} />}
-              after={status.kind === "rejected" ? <RejectionNote reason={status.reason} /> : undefined}
+              after={
+                <div className="flex flex-col gap-2">
+                  {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
+                  <LicencePublishRow licence={l} onChanged={licenceChanged} />
+                </div>
+              }
             />
           );
         })}

@@ -9,6 +9,7 @@ import { FORMATS, PRO_LABEL, isRegulated, initials, workSummary } from "./proMod
 import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { ProfilePreview, SummaryCard } from "./parts";
+import { ProLicencePublish } from "./ProLicencePublish";
 import type { ProStepProps } from "./types";
 
 /** What the Background summary lists, from the stored CV. */
@@ -43,7 +44,7 @@ export const ProReviewStep: React.FC<
 > = ({ kind, shared, pro, setPro, onBack, goTo, onSubmit }) => {
   const flow = useOnboardingFlow();
   const { user } = useApp();
-  const { cv } = useMyCv();
+  const { cv, setCv } = useMyCv();
   const [termsError, setTermsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -115,6 +116,15 @@ export const ProReviewStep: React.FC<
         tags={pro.specialties.slice(0, 3)}
         line={cv?.profile.headline ?? null}
       />
+      {/* OURS-licence-publish: the licences that will be on that profile, by choice, before going live. */}
+      {cv && (
+        <ProLicencePublish
+          licences={cv.licences}
+          onChanged={(l) => setCv((c) => (c ? { ...c, licences: c.licences.map((x) => (x.id === l.id ? l : x)) } : c))}
+          unnamedHint="Add its name in Your background to show it on your profile."
+          margin="18px 2px 4px"
+        />
+      )}
       <ObTerms
         on={pro.termsAccepted}
         onChange={(on) => {

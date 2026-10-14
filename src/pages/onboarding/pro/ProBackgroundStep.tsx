@@ -4,6 +4,7 @@ import { ObStep, ObFooter } from "../shell/ObShell";
 import { ObCollapsible, ObTip } from "../shell/ObBlocks";
 import { useOnboardingFlow, OB_STRINGS } from "../shell/flow";
 import { EducationSheet, ExperienceSheet, LicenceSheet, SkillsLanguagesSheet } from "../../../components/cv/CvSheets";
+import { PUBLISH_STRINGS, publishState } from "../../../components/cv/licencePublishState";
 import { nextPosition, useMyCv } from "../../../components/cv/useMyCv";
 import {
   licenceStatus,
@@ -65,7 +66,13 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
         key: l.id,
         icon: Award,
         title: l.name ?? (l.mirrorsCertification ? "Certificate from Credentials" : "Unnamed licence"),
-        description: l.mirrorsCertification && !l.issuingBody ? "Added from your certificate" : l.issuingBody ?? undefined,
+        // Public / Not public (20261120150000): the switch is in the licence sheet.
+        description: [
+          l.mirrorsCertification && !l.issuingBody ? "Added from your certificate" : l.issuingBody,
+          publishState(l) === "public" ? PUBLISH_STRINGS.public : PUBLISH_STRINGS.notPublic,
+        ]
+          .filter(Boolean)
+          .join(" · "),
         status:
           st.kind === "pending"
             ? { text: "Pending check", tone: "warn" as const }

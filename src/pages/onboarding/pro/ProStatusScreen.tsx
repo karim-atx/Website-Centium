@@ -35,6 +35,8 @@ export interface ProStatusProps {
   onPrimary: () => void;
   onFix?: () => void;
   onRetry?: () => void;
+  /** OURS-licence-publish: the "Show on your profile" choice, under the pending and live / verified states. */
+  extra?: React.ReactNode;
 }
 
 /**
@@ -54,6 +56,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   onPrimary,
   onFix,
   onRetry,
+  extra,
 }) => {
   const reduced = useReducedMotion();
   const celebrate = status === "live" || status === "verified";
@@ -112,6 +115,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
             { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
           ]}
         />
+        {extra}
       </>
     );
     footer = <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary }} />;
@@ -164,6 +168,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
             line={preview.line}
           />
         )}
+        {k >= 3 && extra}
       </>
     );
     footer = (

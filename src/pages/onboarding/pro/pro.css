@@ -42,6 +42,15 @@
   background: var(--ob-high-bg);
   color: var(--ob-high);
 }
+/* OURS-licence-publish: a licence shown on the profile (pale + accent text). */
+.obp-pill[data-tone="accent"] {
+  background: var(--ob-pale);
+  color: var(--ob-accent);
+}
+/* Not public, on the page fill (the default card fill would vanish there). */
+.ob-tg .obp-pill[data-tone="soft"] {
+  background: var(--ob-soft);
+}
 
 /* ---- Number boxes (isNums) ------------------------------------------------------------ */
 .obp-nums {
