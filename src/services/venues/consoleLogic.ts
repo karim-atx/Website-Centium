@@ -290,6 +290,8 @@ export const methodLabel = (m: string | null): string => (m ? (PAYMENT_METHOD_LA
 
 export interface RosterEntry {
   kind: "booked" | "waitlist";
+  /** B7 (Database 65e0311): who, for Message clients (start_member_thread). Null without the column. */
+  personId: string | null;
   firstName: string;
   isMinor: boolean;
   paymentMethod: string | null;
@@ -301,6 +303,7 @@ export interface RosterEntry {
 
 export type RosterRow = {
   entry_kind: "booked" | "waitlist";
+  person_id?: string | null;
   client_first_name: string | null;
   client_is_minor: boolean | null;
   payment_method: string | null;
@@ -313,6 +316,7 @@ export type RosterRow = {
 export function toRosterEntry(r: RosterRow): RosterEntry {
   return {
     kind: r.entry_kind,
+    personId: r.person_id ?? null,
     firstName: r.client_first_name?.trim() || "Client",
     isMinor: r.client_is_minor === true,
     paymentMethod: r.payment_method,

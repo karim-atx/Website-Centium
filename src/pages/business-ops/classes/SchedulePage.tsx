@@ -108,12 +108,19 @@ export default function SchedulePage() {
   const firstLoad = api.loading && api.loadedAt === null;
 
   const menuSession = menuFor ? api.sessions.find((s) => s.id === menuFor.id) ?? null : null;
+  // OP1-088 (B7 MB-02): only for a seat that may message and see who booked, and a session someone booked.
+  const msgOption: PopupMenuOption<string> | null =
+    menuSession && actions.canMessage && menuSession.booked > 0
+      ? { value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline, note: offline ? "You're offline" : undefined }
+      : null;
   const menuOptions: PopupMenuOption<string>[] = menuSession
     ? isEnded(menuSession, now)
-      ? [{ value: "msg", label: "Message members", disabled: true, note: "Soon" }]
+      ? msgOption
+      ? [msgOption]
+      : []
       : [
           { value: "edit", label: "Edit" },
-          { value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: true, note: "Soon" },
+          ...(msgOption ? [msgOption] : []),
           { value: "sub", label: "Request a substitute" },
           ...(menuSession.booked === 0 ? [{ value: "delete", label: "Delete class", destructive: true }] : []),
         ]
@@ -172,6 +179,7 @@ export default function SchedulePage() {
           reduced={reduced}
           onOpenSession={(id) => navigate(`/app/business/classes/${id}`)}
           onAssign={(id) => actions.openSubstitute(id)}
+          onMessageMembers={actions.canMessage ? (id) => actions.openMessage(id) : null}
           onMessageInstructor={async (pid) => {
             const r = await startThread(pid);
             if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
@@ -312,6 +320,7 @@ export default function SchedulePage() {
           if (!id) return;
           if (v === "edit") actions.openEdit(id);
           if (v === "sub") actions.openSubstitute(id);
+          if (v === "msg") actions.openMessage(id);
           if (v === "delete") actions.openDelete(id);
         }}
         width={200}
@@ -435,6 +444,7 @@ function NeedsAttention({
   onOpenSession,
   onAssign,
   onMessageInstructor,
+  onMessageMembers,
 }: {
   c: OpsColors;
   open: boolean;
@@ -446,6 +456,8 @@ function NeedsAttention({
   onOpenSession: (id: string) => void;
   onAssign: (id: string) => void;
   onMessageInstructor: (professionalId: string) => void;
+  /** OP1-088: null when this seat can't message the booked people. */
+  onMessageMembers: ((sessionId: string) => void) | null;
 }) {
   const count = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
   const [tip, setTip] = useState<number | null>(null);
@@ -497,6 +509,8 @@ function NeedsAttention({
             const s = is.sessions[0];
             const col = is.kind === "low" ? c.caution : c.high;
             const instructorMsg = is.kind === "double" && !!s.professionalId;
+            const membersMsg = !instructorMsg && !!onMessageMembers && s.booked > 0;
+            const msgOn = instructorMsg || membersMsg;
             const msgAria = instructorMsg ? `Message ${nameOf(s.professionalId)}` : `Message the ${s.booked} booked ${people}`;
             return (
               <div key={is.kind} className="grid" style={{ gridTemplateColumns: "3px 30px minmax(0,1fr)", columnGap: 10, padding: "12px 14px 12px 16px", borderTop: `1px solid ${c.divider}` }}>
@@ -533,14 +547,15 @@ function NeedsAttention({
                       tabIndex={open ? 0 : -1}
                       aria-label={msgAria}
                       title={msgAria}
-                      disabled={!instructorMsg}
-                      aria-disabled={!instructorMsg || undefined}
+                      disabled={!msgOn}
+                      aria-disabled={!msgOn || undefined}
                       onClick={() => {
                         if (longPressed.current) {
                           longPressed.current = false;
                           return;
                         }
                         if (instructorMsg && s.professionalId) onMessageInstructor(s.professionalId);
+                        else if (membersMsg) onMessageMembers?.(s.id);
                       }}
                       onPointerDown={() => {
                         longPressed.current = false;
@@ -555,7 +570,7 @@ function NeedsAttention({
                       }}
                       onPointerLeave={() => press.current && window.clearTimeout(press.current)}
                       className="tap flex items-center justify-center shrink-0"
-                      style={{ marginLeft: "auto", width: 44, height: 44, borderRadius: 12, background: c.soft, color: c.pDark, opacity: instructorMsg ? 1 : 0.45 }}
+                      style={{ marginLeft: "auto", width: 44, height: 44, borderRadius: 12, background: c.soft, color: c.pDark, opacity: msgOn ? 1 : 0.45 }}
                     >
                       <MessageCircle size={17} strokeWidth={2} />
                     </button>
@@ -566,7 +581,7 @@ function NeedsAttention({
                       aria-hidden
                       style={{ margin: "6px 0 0 auto", width: "max-content", maxWidth: 260, background: c.dark ? "#F5F3FA" : "#241F1B", color: c.dark ? "#121317" : "#FFFFFF", fontSize: textPx(11.5), fontWeight: 700, padding: "5px 9px", borderRadius: 8 }}
                     >
-                      {instructorMsg ? msgAria : `${msgAria}: soon`}
+                      {msgOn ? msgAria : `${msgAria}: needs messages access`}
                     </p>
                   )}
                 </div>

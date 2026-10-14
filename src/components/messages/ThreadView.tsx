@@ -277,7 +277,9 @@ export const ThreadView: React.FC<{
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
   // ways; the composer and the call button give way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
-  const safetyApplies = !departed && thread.kind === "peer";
+  // B7 MB-02: the member may block a business (its owner is the target;
+  // the block covers everyone there). The business side has no Block.
+  const safetyApplies = !departed && (thread.kind === "peer" || (thread.kind === "business" && !!thread.business?.memberSide));
   // Reporting a message works in a direct chat and in a group alike.
   const canReport = !departed && thread.kind !== "official_support";
   const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
@@ -1962,7 +1964,9 @@ export const ThreadView: React.FC<{
             </p>
             <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
               {block.iBlocked
-                ? "Neither of you can message or call the other. They haven't been told."
+                ? thread.kind === "business"
+                  ? "No one there can message you, and you can't message them until you unblock. They haven't been told."
+                  : "Neither of you can message or call the other. They haven't been told."
                 : "Messages and calls aren't available in this conversation."}
             </p>
             {block.iBlocked && (
@@ -2169,6 +2173,7 @@ export const ThreadView: React.FC<{
             open={blockOpen}
             onClose={() => setBlockOpen(false)}
             personName={thread.participantName}
+            business={thread.kind === "business"}
             iBlocked={block.iBlocked}
             busy={safetyBusy}
             error={safetyError}

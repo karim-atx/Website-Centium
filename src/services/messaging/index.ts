@@ -113,7 +113,7 @@ export interface MessageThread {
    * labels them ("Member #0001" unless they shared their name). Calls are
    * off on these threads (thread_allows_calls). Null for every other thread.
    */
-  business: { id: string; name: string; logoUrl: string | null; memberSide: boolean } | null;
+  business: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
   /**
    * Who the other party is, from my_conversations().other_role (Database B3,
    * 20261116040000; PB-O-41): "official", "gym", a professional_subtype, or
@@ -127,8 +127,9 @@ export interface MessageThread {
 }
 
 /** The letters an avatar shows when there's no photo: the venue's initials on the member side. */
-export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue">): string {
+export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue" | "business">): string {
   if (thread.venue?.memberSide) return thread.venue.initials;
+  if (thread.business?.memberSide) return thread.business.initials;
   return thread.participantName.trim().charAt(0).toUpperCase();
 }
 
@@ -504,6 +505,10 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     other_role?: string | null;
     last_sender_first_name?: string | null;
     cleared_at?: string | null;
+    business_id?: string | null;
+    business_name?: string | null;
+    business_initials?: string | null;
+    business_logo_url?: string | null;
   };
   const venueThreadIds = (data ?? []).filter((r) => !!(r as VenueCols).venue_id).map((r) => r.thread_id as string);
   const memberSideThreads = await venueThreadsIStarted(venueThreadIds);
@@ -566,11 +571,14 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
     venue,
-    business: null,
+    business: businessOf(r.kind, v, r.other_first_name),
     otherRole: v.other_role ?? null,
     lastSenderFirstName: v.last_sender_first_name?.trim() || null,
     clearedAt: v.cleared_at ?? null,
     };
+    // B7 MB-02 (Database 65e0311): the member sees the business, its name and
+    // logo; the owner side's other_first_name is already the masked label.
+    if (base.business?.memberSide) return { ...base, participantName: base.business.name, participantAvatarUrl: base.business.logoUrl };
     if (!venue) return base;
     // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".
     return venue.memberSide
@@ -589,16 +597,33 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 // B7 MB-02: business ↔ member threads
 // ---------------------------------------------------------------------------
 //
-// my_conversations() lists a business thread for the member and for the
-// OWNER (a participant), but names the other person: the member would see
-// the owner's own first name and role, and the owner the member's unmasked
-// first name. So both are renamed here: the member sees the business, the
-// business side sees business_member_threads' label. Staff holding
+// my_conversations() names both sides correctly since Database 65e0311: the
+// owner's other_first_name is business_person_label() ("Member #0001" unless
+// shared), and the member gets other_first_name / other_role null plus
+// business_id, business_name, business_initials, business_logo_url. The
+// member side is the side the name is withheld from. Staff holding
 // 'messages' are not participants: their business threads come from
-// business_member_threads alone and are added to the list.
+// business_member_threads and are added to the list here.
+
+/** What the member sees when a business has no name set. */
+const MEMBER_SIDE_FALLBACK = "Your gym or studio";
+
+function businessOf(
+  kind: string | null,
+  v: { business_id?: string | null; business_name?: string | null; business_initials?: string | null; business_logo_url?: string | null },
+  otherFirstName: string | null
+): MessageThread["business"] {
+  if (kind !== "business" || !v.business_id) return null;
+  return {
+    id: v.business_id,
+    name: v.business_name?.trim() || MEMBER_SIDE_FALLBACK,
+    initials: v.business_initials?.trim() || (v.business_name?.trim().charAt(0).toUpperCase() ?? "") || "G",
+    logoUrl: v.business_logo_url ?? null,
+    memberSide: otherFirstName === null,
+  };
+}
 
 type Loose = {
-  from: (t: string) => { select: (c: string) => { in: (k: string, v: string[]) => PromiseLike<{ data: unknown; error: PostgrestError | null }> } };
   rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PostgrestError | null }>;
 };
 const loose = () => supabase as unknown as Loose;
@@ -614,60 +639,16 @@ async function withBusinessThreads(threads: MessageThread[]): Promise<MessageThr
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
   const access = uid ? await loadConsoleAccess(uid) : null;
-  const seats = access?.ok ? access.value.seats : [];
-  const mine = threads.filter((t) => t.kind === "business");
-  if (mine.length === 0 && !seats.some((s) => !s.isOwner && s.permissions.includes("messages"))) return threads;
-
-  // Which business each listed business thread belongs to.
-  const bizOf = new Map<string, string>();
-  if (mine.length > 0) {
-    const r = await loose().from("message_threads").select("id, business_id").in("id", mine.map((t) => t.id));
-    for (const row of (r.data ?? []) as { id: string; business_id: string | null }[]) if (row.business_id) bizOf.set(row.id, row.business_id);
-  }
-  const seatOf = new Map(seats.map((s) => [s.businessId, s]));
-  // The business side's labels, for every seat that may read its threads.
-  const labelled = seats.filter((s) => s.permissions.includes("messages"));
-  const rowsBySeat = new Map(await Promise.all(labelled.map(async (s) => [s.businessId, await businessThreadRows(s.businessId)] as const)));
-  const labelOf = new Map<string, BizThreadRow>();
-  for (const rows of rowsBySeat.values()) for (const row of rows) labelOf.set(row.thread_id, row);
-
-  // The member side's business names and logos.
-  const memberBiz = [...new Set([...bizOf.values()].filter((b) => !seatOf.has(b)))];
-  const names = new Map<string, { name: string; logoUrl: string | null }>();
-  if (memberBiz.length > 0) {
-    const r = await loose().from("business_profiles").select("id, business_name, logo_url").in("id", memberBiz);
-    for (const row of (r.data ?? []) as { id: string; business_name: string | null; logo_url: string | null }[]) {
-      names.set(row.id, { name: row.business_name?.trim() || MEMBER_SIDE_FALLBACK, logoUrl: row.logo_url });
-    }
-  }
-
-  const renamed = threads.map((t): MessageThread => {
-    if (t.kind !== "business") return t;
-    const bid = bizOf.get(t.id) ?? null;
-    const seat = bid ? seatOf.get(bid) : undefined;
-    if (bid && seat) {
-      const row = labelOf.get(t.id);
-      return { ...t, participantName: row?.label ?? "Member", participantAvatarUrl: null, otherRole: null, business: { id: bid, name: seat.businessName, logoUrl: null, memberSide: false } };
-    }
-    const biz = bid ? names.get(bid) : undefined;
-    const name = biz?.name ?? MEMBER_SIDE_FALLBACK;
-    return {
-      ...t,
-      participantName: name,
-      participantAvatarUrl: biz?.logoUrl ?? null,
-      otherRole: null,
-      business: { id: bid ?? "", name, logoUrl: biz?.logoUrl ?? null, memberSide: true },
-    };
-  });
-
+  const staffSeats = (access?.ok ? access.value.seats : []).filter((s) => !s.isOwner && s.permissions.includes("messages"));
+  if (staffSeats.length === 0) return threads;
+  const rowsBySeat = new Map(await Promise.all(staffSeats.map(async (s) => [s.businessId, await businessThreadRows(s.businessId)] as const)));
   // Staff: the business threads they read but are not a participant in.
   const listed = new Set(threads.map((t) => t.id));
   const extra: { seatId: string; seatName: string; row: BizThreadRow }[] = [];
-  for (const s of labelled) {
-    if (s.isOwner) continue;
+  for (const s of staffSeats) {
     for (const row of rowsBySeat.get(s.businessId) ?? []) if (!listed.has(row.thread_id)) extra.push({ seatId: s.businessId, seatName: s.businessName, row });
   }
-  if (extra.length === 0) return renamed;
+  if (extra.length === 0) return threads;
   const latest = await latestMessages(extra.map((e) => e.row.thread_id));
   const staffThreads = extra.map(({ seatId, seatName, row }): MessageThread => {
     const m = latest.get(row.thread_id);
@@ -685,17 +666,15 @@ async function withBusinessThreads(threads: MessageThread[]): Promise<MessageThr
       unreadCount: 0,
       lastReadAt: null,
       venue: null,
-      business: { id: seatId, name: seatName, logoUrl: null, memberSide: false },
+      business: { id: seatId, name: seatName, initials: seatName.trim().charAt(0).toUpperCase() || "G", logoUrl: null, memberSide: false },
       otherRole: null,
       lastSenderFirstName: null,
       clearedAt: null,
     };
   });
-  return [...renamed, ...staffThreads].sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
+  return [...threads, ...staffThreads].sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
 }
 
-/** What the member sees when the business's name can't be read (a delisted business). */
-const MEMBER_SIDE_FALLBACK = "Your gym or studio";
 
 type LatestRow = {
   id: string;

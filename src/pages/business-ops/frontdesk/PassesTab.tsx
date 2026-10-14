@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
+import { startMemberThread } from "../../../services/messaging";
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
@@ -17,10 +20,11 @@ import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, Nu
 //   don't chase);
 // - End = end_gym_membership(id, reason, at_period_end): at the end of the
 //   paid period by default, or now;
-// - Remind waits for member messaging (MB-02): drawn, marked Coming soon.
+// - Remind = start_member_thread(business, person) (B7 MB-02), then the
+//   member's one thread opens in Messages to write the reminder. It needs
+//   the messages permission; without it the chip stays, unavailable.
 // Day pass sales are BU2-10: their boxes show "–".
 
-const SOON = "Coming soon";
 
 export const PassesTab: React.FC<{
   renewals: RenewalDue[];
@@ -39,6 +43,17 @@ export const PassesTab: React.FC<{
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, showToast] = useBizToast();
+  const access = useConsoleAccess();
+  const navigate = useNavigate();
+  const canRemind = (r: RenewalDue) => online && !!r.personId && !!access.businessId && access.meets("messages");
+  const remind = async (r: RenewalDue) => {
+    if (busy || !access.businessId || !r.personId) return;
+    setBusy(true);
+    const res = await startMemberThread(access.businessId, r.personId);
+    setBusy(false);
+    if (!res.ok) return showToast(res.message);
+    navigate("/app/messages", { state: { threadId: res.threadId } });
+  };
   const openMenu = (r: RenewalDue, el: HTMLElement) => {
     setAnchor(el.closest<HTMLElement>("[role=listitem]") ?? el);
     setMenuFor(r);
@@ -76,8 +91,14 @@ export const PassesTab: React.FC<{
           <StatusChip tone="warn">Ending</StatusChip>
         ) : (
           // Drawn as a chip, but it is an action (OP1-017 row 10): a button
-          // with a 44 hit box. Reminders wait for member messaging (MB-02).
-          <ChipButton tone="pale" label="Remind" ariaLabel={`Remind ${r.firstName} (coming soon)`} disabled onClick={(el) => openMenu(r, el)} />
+          // with a 44 hit box; it opens the member's thread (MB-02).
+          <ChipButton
+            tone="pale"
+            label="Remind"
+            ariaLabel={canRemind(r) ? `Remind ${r.firstName}` : `Remind ${r.firstName} (needs messages access)`}
+            disabled={!canRemind(r) || busy}
+            onClick={() => void remind(r)}
+          />
         )
       }
     />
@@ -91,6 +112,7 @@ export const PassesTab: React.FC<{
         online={online}
         onClose={() => setMenuFor(null)}
         onRenew={(r) => void renew(r)}
+        onRemind={access.businessId && access.meets("messages") ? (r) => void remind(r) : null}
         onEnd={setEnding}
       />
       <EndPopup
@@ -187,15 +209,17 @@ const PassIllustration: React.FC = () => {
   );
 };
 
-/** S3: the row's menu. Renew is hidden once renewed or ending; Send a reminder waits for MB-02. */
+/** S3: the row's menu. Renew and Send a reminder are hidden once renewed or ending; a reminder needs messages. */
 const RenewalMenu: React.FC<{
   menuFor: RenewalDue | null;
   anchor: HTMLElement | null;
   online: boolean;
   onClose: () => void;
   onRenew: (r: RenewalDue) => void;
+  /** Null when this seat can't message the member (no messages permission, or no person id yet). */
+  onRemind: ((r: RenewalDue) => void) | null;
   onEnd: (r: RenewalDue) => void;
-}> = ({ menuFor, anchor, online, onClose, onRenew, onEnd }) => {
+}> = ({ menuFor, anchor, online, onClose, onRenew, onRemind, onEnd }) => {
   const chase = !!menuFor && !menuFor.alreadyRenewed && !menuFor.cancelAtPeriodEnd;
   const offline = online ? undefined : "You're offline";
   return (
@@ -206,7 +230,7 @@ const RenewalMenu: React.FC<{
       align="right"
       options={[
         ...(chase ? [{ value: "renew", label: "Renew", disabled: !online, note: offline }] : []),
-        ...(chase ? [{ value: "remind", label: "Send a reminder", disabled: true, note: SOON }] : []),
+        ...(chase && onRemind && menuFor.personId ? [{ value: "remind", label: "Send a reminder", disabled: !online, note: offline }] : []),
         { value: "end", label: "End membership", destructive: true, disabled: !online, note: offline },
       ]}
       onSelect={(v) => {
@@ -214,6 +238,7 @@ const RenewalMenu: React.FC<{
         onClose();
         if (!r) return;
         if (v === "renew") onRenew(r);
+        if (v === "remind") onRemind?.(r);
         if (v === "end") onEnd(r);
       }}
     />

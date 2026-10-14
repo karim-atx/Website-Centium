@@ -133,11 +133,21 @@ export default function SessionPage() {
   const coverFor = session.professionalId ? api.coveringFor(session.id) : null;
 
   type Tile = { key: string; label: string; icon: React.ReactNode; tone?: "high"; disabled?: boolean; aria?: string; onClick?: () => void };
+  // OP1-088 (B7 MB-02): needs messages and front_desk, and someone booked.
+  const msgReady = actions.canMessage && session.booked > 0;
+  const msgTile: Tile = {
+    key: "msg",
+    label: "Message",
+    icon: <MessageCircle size={17} strokeWidth={2.1} />,
+    disabled: !msgReady || offline,
+    aria: !actions.canMessage ? `Message ${people}, needs messages access` : session.booked === 0 ? `Message ${people}, nobody has booked yet` : `Message the ${session.booked} booked ${people}`,
+    onClick: msgReady ? () => actions.openMessage(id) : undefined,
+  };
   const tiles: Tile[] = ended
-    ? [{ key: "msg", label: "Message", icon: <MessageCircle size={17} strokeWidth={2.1} />, disabled: true, aria: `Message ${people}, coming soon` }]
+    ? [msgTile]
     : [
         { key: "edit", label: "Edit", icon: <Pencil size={17} strokeWidth={2.1} />, onClick: () => actions.openEdit(id), disabled: offline },
-        { key: "msg", label: "Message", icon: <MessageCircle size={17} strokeWidth={2.1} />, disabled: true, aria: `Message ${people}, coming soon` },
+        msgTile,
         { key: "sub", label: "Substitute", icon: <Repeat2 size={17} strokeWidth={2.1} />, onClick: () => actions.openSubstitute(id), disabled: offline },
         ...(session.booked === 0
           ? [{ key: "delete", label: "Delete", icon: <Trash2 size={17} strokeWidth={2.1} />, tone: "high" as const, onClick: () => actions.openDelete(id), disabled: offline }]

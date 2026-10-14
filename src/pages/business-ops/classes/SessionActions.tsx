@@ -7,12 +7,16 @@ import { time12 } from "../../../utils/time12";
 import { ClassSheet } from "./ClassSheet";
 import { blankForm, carryOf, formOf, type ClassForm } from "./classForm";
 import { SubstituteSheet } from "./SubstituteSheet";
+import { MessageMembersSheet } from "./MessageMembersSheet";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { dayWords, shortDate, todayIso, type Session } from "./scheduleModel";
 import type { ScheduleApi } from "./useSchedule";
 
 // The actions a session offers wherever it is shown (Schedule row menu,
 // session page tiles, Needs attention): Create / Edit (the class sheet),
-// Request a substitute, Delete. One place, so every entry behaves the same.
+// Request a substitute, Message members (OP1-088, B7 MB-02), Delete. One
+// place, so every entry behaves the same. Messaging needs both messages and
+// front_desk: the booked list (venue_class_roster) is a desk reader.
 //
 // CANCEL SESSION (V6-55): cancel_class_session is B9 and not on the stack, so
 // a session with bookings offers no cancel at all (never the silent delete,
@@ -37,6 +41,10 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
   const today = todayIso();
   const [sheet, setSheet] = useState<{ mode: "create" | "edit"; initial: ClassForm; editingId?: string } | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
+  const [msgFor, setMsgFor] = useState<string | null>(null);
+  const access = useConsoleAccess();
+  /** Message members: the seat may message and read who booked. */
+  const canMessage = access.meets("messages") && access.meets("front_desk");
   const [deleteFor, setDeleteFor] = useState<Session | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -53,6 +61,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
     [api.classes]
   );
   const openSubstitute = useCallback((id: string) => setSubFor(id), []);
+  const openMessage = useCallback((id: string) => setMsgFor(id), []);
   const openDelete = useCallback(
     (id: string) => {
       const s = api.sessions.find((x) => x.id === id);
@@ -67,6 +76,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
   const editing = sheet?.editingId ? api.classes.find((c) => c.id === sheet.editingId) ?? null : null;
   const editingBooked = sheet?.editingId ? api.sessions.find((s) => s.id === sheet.editingId)?.booked ?? 0 : 0;
   const subSession = subFor ? api.sessions.find((s) => s.id === subFor) ?? null : null;
+  const msgSession = msgFor ? api.sessions.find((s) => s.id === msgFor) ?? null : null;
 
   const elements = (
     <>
@@ -133,6 +143,15 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           return { ok: true };
         }}
       />
+      <MessageMembersSheet
+        open={!!msgFor}
+        session={msgSession}
+        businessId={api.businessId}
+        people={api.people === "clients" ? "clients" : "members"}
+        online={api.online}
+        onClose={() => setMsgFor(null)}
+        onSent={(m) => show(m)}
+      />
       <ConfirmCard
         open={!!deleteFor}
         layout="stacked"
@@ -177,7 +196,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
     </>
   );
 
-  return { elements, openCreate, openEdit, openSubstitute, openDelete, show };
+  return { elements, openCreate, openEdit, openSubstitute, openMessage, canMessage, openDelete, show };
 }
 
 export type SessionActions = ReturnType<typeof useSessionActions>;

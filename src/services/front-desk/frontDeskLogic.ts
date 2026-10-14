@@ -350,6 +350,9 @@ export type FrontDeskMember = VenueMember & { gymId: string };
 
 export type RenewalDueRow = {
   membership_id: string;
+  /** B7 (Database 65e0311): who, for Remind (start_member_thread). */
+  person_id?: string | null;
+  member_number?: number | null;
   member_first_name: string | null;
   member_is_minor: boolean | null;
   plan_name: string | null;
@@ -364,6 +367,9 @@ export type RenewalDueRow = {
 export interface RenewalDue {
   membershipId: string;
   gymId: string;
+  /** Null on a database without B7's columns: Remind stays unavailable. */
+  personId: string | null;
+  memberNumber: number | null;
   firstName: string;
   isMinor: boolean;
   planName: string;
@@ -380,6 +386,8 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
   return {
     membershipId: r.membership_id,
     gymId,
+    personId: r.person_id ?? null,
+    memberNumber: r.member_number ?? null,
     firstName: r.member_first_name?.trim() || "Member",
     isMinor: r.member_is_minor === true,
     planName: r.plan_name?.trim() || "Membership",
