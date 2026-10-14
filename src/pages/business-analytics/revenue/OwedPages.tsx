@@ -395,11 +395,12 @@ export const OwedListPage: React.FC = () => {
     { value: "all", label: "All items", header: "Item type" },
     {
       value: "membership",
-      label: kind === "classes" ? "Plans and packs" : "Memberships",
+      // money_owed puts class packs with classes, so this one is plans only (user, 14 Oct).
+      label: kind === "classes" ? "Plans" : "Memberships",
     },
     {
       value: "class",
-      label: kind === "classes" ? "Class bookings" : "Classes",
+      label: kind === "classes" ? "Classes and packs" : "Classes",
     },
   ];
   const ctrls = [

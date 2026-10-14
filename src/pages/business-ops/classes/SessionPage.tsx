@@ -4,6 +4,7 @@ import { Activity, Bike, CalendarDays, Dumbbell, MessageCircle, Pencil, PersonSt
 import { ClassRosterSheet } from "../../../components/marketplace/ClassRosterSheet";
 import { fetchClassRoster } from "../../../services/venues/console";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
+import { useApp } from "../../../context/AppContext";
 import { methodLabel, money, splitRoster, type RosterEntry } from "../../../services/venues/consoleLogic";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
@@ -52,11 +53,16 @@ export default function SessionPage() {
   const [roster, setRoster] = useState<{ id: string; entries: RosterEntry[] } | null>(null);
   const [rosterError, setRosterError] = useState(false);
   const [tick, setTick] = useState(0);
-  // venue_class_roster needs front_desk (Database b95ef5c): an instructor
-  // holding only schedule is refused (ATX03), so the card says why instead
-  // of offering a retry that cannot work.
+  // venue_class_roster needs front_desk (Database b95ef5c). The instructor
+  // teaching THIS class may see who booked it too (user, 14 Oct: masked as
+  // "Member #code" unless shared), once the Database allows it; until then
+  // its refusal (ATX03) reads as the same explanation, never a retry that
+  // cannot work.
+  const { authUserId } = useApp();
   const access = useConsoleAccess();
-  const rosterAllowed = (access.ready && access.meets("front_desk")) || access.failed;
+  const [refused, setRefused] = useState<string | null>(null);
+  const teachesIt = !!authUserId && api.sessions.find((x) => x.id === id)?.professionalId === authUserId;
+  const rosterAllowed = ((access.ready && (access.meets("front_desk") || teachesIt)) || access.failed) && refused !== id;
   const rosterHidden = access.ready && !rosterAllowed;
   const actions = useSessionActions(api, {
     onDeleted: () => navigate("/app/business/classes", { replace: true }),
@@ -71,7 +77,8 @@ export default function SessionPage() {
     void fetchClassRoster(id).then((r) => {
       if (!alive) return;
       if (!r.ok) {
-        setRosterError(true);
+        if (r.code === "ATX03") setRefused(id);
+        else setRosterError(true);
         return;
       }
       setRosterError(false);
