@@ -6,6 +6,32 @@ import type { BusinessRole } from "./team";
  * staff and shop_assistant don't (B6 follow-up 20261120060000, Q-09). A mirror
  * of role_uses_seat(role) for drawing the grid without a round trip per
  * person; the database stays the authority (the cap trigger and
- * my_business_seat_capacity both call role_uses_seat).
+ * my_business_seat_capacity both call role_uses_seat). Use it only where the
+ * server hasn't answered: menus before a person exists, and invitations
+ * (employee_credentials returns uses_seat for accepted employees).
  */
 export const roleUsesSeat = (role: BusinessRole): boolean => role === "instructor" || role === "trainer";
+
+/** A person's seat answer: the server's uses_seat when the reader returned it, else the role rule. */
+export const personUsesSeat = (p: { role: BusinessRole; usesSeat?: boolean | null }): boolean =>
+  typeof p.usesSeat === "boolean" ? p.usesSeat : roleUsesSeat(p.role);
+
+const SUBTYPE: Record<string, string> = {
+  trainer: "Personal trainer",
+  dietitian: "Dietitian",
+  physiotherapist: "Physiotherapist",
+  doctor: "Doctor",
+};
+const GROUP: Record<string, string> = { fitness: "Fitness", clinical: "Clinical", nutrition: "Nutrition" };
+
+/**
+ * The person's profession for the team list and person page (shown next to the
+ * role, which is an access level). "Other" is never printed: the discipline
+ * they typed, else their closest group; null when nothing is known.
+ */
+export function professionLabel(p: { subtype?: string | null; otherDiscipline?: string | null; closestGroup?: string | null }): string | null {
+  if (p.subtype && SUBTYPE[p.subtype]) return SUBTYPE[p.subtype];
+  if (p.subtype === "other" && p.otherDiscipline?.trim()) return p.otherDiscipline.trim();
+  if (p.closestGroup && GROUP[p.closestGroup]) return GROUP[p.closestGroup];
+  return null;
+}

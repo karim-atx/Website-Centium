@@ -10,6 +10,7 @@ const person = (id: string, seat: number, accepted = true): TeamPerson => ({
   acceptedAt: accepted ? "2026-09-01T00:00:00Z" : null,
   createdAt: "2026-09-01T00:00:00Z",
   payRate: null,
+  usesSeat: null,
   seat,
 });
 const cls = (id: string, date: string, start: string, end: string, pro: string | null, booked = 0, capacity = 10): ClassRow => ({

@@ -7,9 +7,10 @@ import { copyText, shareOrCopy } from "../../components/business-more/share";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
-import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, roleUsesSeat, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
+import { personUsesSeat } from "../../services/business-team/seats";
+import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { upgradeMailto } from "../../services/subscription-tiers/upgrade";
-import { ROLE_LABEL } from "../business-team/teamLogic";
+import { ROLE_LABEL, roleAndProfession } from "../business-team/teamLogic";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -88,7 +89,7 @@ export function RolesPage() {
             <BizRow
               key={r.professionalId}
               title={r.name}
-              desc={(r.acceptedAt ? "Team member" : "Invited, hasn't accepted yet") + (roleUsesSeat(r.role) ? " · uses a seat" : "")}
+              desc={(r.acceptedAt ? roleAndProfession(r) : "Invited, hasn't accepted yet") + (personUsesSeat(r) ? " · uses a seat" : "")}
               value={ROLE_LABEL[r.role]}
               dim={!r.acceptedAt}
               onClick={() => navigate(`/app/business/employees/${r.professionalId}`)}
@@ -114,9 +115,9 @@ export function SeatsPage() {
 
   const per = plan?.seatAddon?.seatsPerUnit ?? capacity?.seatsPerUnit ?? 5;
   // Seats count instructors and trainers only (B6 follow-up, Q-09).
-  const accepted = rows?.filter((r) => r.acceptedAt && roleUsesSeat(r.role)) ?? [];
-  const invited = rows?.filter((r) => !r.acceptedAt && roleUsesSeat(r.role)) ?? [];
-  const noSeat = rows?.filter((r) => !roleUsesSeat(r.role)) ?? [];
+  const accepted = rows?.filter((r) => r.acceptedAt && personUsesSeat(r)) ?? [];
+  const invited = rows?.filter((r) => !r.acceptedAt && personUsesSeat(r)) ?? [];
+  const noSeat = rows?.filter((r) => !personUsesSeat(r)) ?? [];
   const total = capacity?.capacity ?? 0;
   const blocks = capacity?.seatBlocks ?? 0;
   const included = Math.max(0, total - blocks * per);
@@ -143,7 +144,7 @@ export function SeatsPage() {
             return (
               <BizSection key={b} label={b === 0 && included > 0 ? "Included seats" : `Block ${b + (included > 0 ? 0 : 1)}`}>
                 {members.map((m) => (
-                  <BizRow key={m.professionalId} icon={User} title={m.name} desc={ROLE_LABEL[m.role]} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                  <BizRow key={m.professionalId} icon={User} title={m.name} desc={roleAndProfession(m)} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
                 ))}
                 {Array.from({ length: Math.max(0, per - members.length) }, (_, i) => (
                   <BizRow key={`free-${i}`} icon={Plus} title="Free seat" desc="Invite a professional" onClick={() => navigate("/app/business/employees")} />

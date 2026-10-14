@@ -1,6 +1,6 @@
 import type { BizKind } from "../../components/business-more/kind";
 import type { BusinessRole, ClassSession, TeamPerson } from "../../services/business-team/team";
-import { roleUsesSeat } from "../../services/business-team/seats";
+import { personUsesSeat, professionLabel } from "../../services/business-team/seats";
 import { range12 } from "../../utils/time12";
 import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
 import { localDayOf, shiftDate } from "../../utils/date";
@@ -70,6 +70,12 @@ export const ROLE_DOES: Record<BusinessRole, string> = {
 /** Short role under a seat (source roleShort). */
 export const roleShort = (role: BusinessRole) => ROLE_LABEL[role].replace("Personal trainer", "Trainer").replace("Shop assistant", "Assistant");
 
+/** "Instructor · Physiotherapist": the access level and, when known, the profession (B6 follow-up). */
+export const roleAndProfession = (p: TeamPerson) => {
+  const prof = professionLabel(p);
+  return prof && prof !== ROLE_LABEL[p.role] ? `${ROLE_LABEL[p.role]} · ${prof}` : ROLE_LABEL[p.role];
+};
+
 export const firstWord = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 /** Initials from the name (first letters of up to two words); "?" when unnamed. */
@@ -93,9 +99,9 @@ export interface SeatCounts {
 
 /** used = accepted (B0: only they hold a seat); free = total − used − invited (source 637). */
 /** People whose role uses a seat (instructor, trainer; B6 follow-up, Q-09). */
-export const seatHolders = (people: TeamPerson[]) => people.filter((p) => roleUsesSeat(p.role));
+export const seatHolders = (people: TeamPerson[]) => people.filter((p) => personUsesSeat(p));
 /** People whose role needs no seat (front desk, manager, staff, shop assistant). */
-export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !roleUsesSeat(p.role));
+export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !personUsesSeat(p));
 
 /**
  * used = accepted seat-using roles; invited = unaccepted seat-using roles (B0:

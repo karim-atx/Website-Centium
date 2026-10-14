@@ -12,7 +12,7 @@ import {
   isAccepted,
   previewLine,
   roleShort,
-  ROLE_LABEL,
+  roleAndProfession,
   seatBlocks,
   seatCounts,
   noSeatPeople,
@@ -324,7 +324,7 @@ function SeatPreview({ person, sessions, today, onProfile }: { person: TeamPerso
       <Avatar name={person.name} url={person.avatarUrl} className="tm-av" />
       <div className="tm-pv-b">
         <p className="tm-pv-n">{person.name}</p>
-        <p className="tm-pv-r">{ROLE_LABEL[person.role]}</p>
+        <p className="tm-pv-r">{roleAndProfession(person)}</p>
         {next.length === 0 && (
           <p className="tm-pv-next">
             <CalendarClock size={13} />

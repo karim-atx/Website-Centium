@@ -4,7 +4,8 @@ import { Award, CalendarClock, CalendarDays, FileBadge, MessageCircle, Repeat2, 
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { removeTeamMember } from "../../services/business-team";
-import { fetchBooked, fetchCredentials, roleUsesSeat, type Credential } from "../../services/business-team/team";
+import { fetchBooked, fetchCredentials, type Credential } from "../../services/business-team/team";
+import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchReviewsFor } from "../../services/professional-reviews";
 import { MIN_REVIEWS_FOR_AVERAGE } from "../../services/professional-reviews/rules";
 import { range12 } from "../../utils/time12";
@@ -13,7 +14,7 @@ import { AvailabilityCard } from "./AvailabilityCard";
 import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
 import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
-import { ROLE_LABEL, TEAM_TITLE, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
+import { ROLE_LABEL, TEAM_TITLE, roleAndProfession, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-061 / 130 (person page), 063 / 132 (credentials), 064 (remove
@@ -149,7 +150,7 @@ export function PersonPage({ data }: { data: TeamData }) {
             <span className={accepted ? "tm-pill" : "tm-pill inv"}>{accepted ? "Active" : "Invited"}</span>
           </p>
           <p className="tm-ds1">
-            {(accepted ? `${ROLE_LABEL[person.role]} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`) + (roleUsesSeat(person.role) ? "" : " · no seat needed")}
+            {(accepted ? `${roleAndProfession(person)} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`) + (personUsesSeat(person) ? "" : " · no seat needed")}
           </p>
           <p className="tm-ds2">
             {accepted ? `${weekCount} session${weekCount === 1 ? "" : "s"} this week` + (rating ? ` · ${rating}` : "") : "Hasn't accepted yet"}

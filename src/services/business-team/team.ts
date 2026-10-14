@@ -51,6 +51,16 @@ export interface TeamPerson {
   /** null = not agreed (not zero). */
   payRate: number | null;
   inviteMessage: string | null;
+  /**
+   * What the person is (B6 follow-up: employee_credentials gains
+   * professional_subtype, other_discipline, closest_group, uses_seat).
+   * Accepted employees only; null for an invitation or a non-professional.
+   */
+  subtype: string | null;
+  otherDiscipline: string | null;
+  closestGroup: string | null;
+  /** The server's seat answer (role_uses_seat); null when the reader didn't return the person. */
+  usesSeat: boolean | null;
 }
 
 interface EmployeeRow {
@@ -78,6 +88,40 @@ async function namesFor(ids: string[]): Promise<Map<string, { name: string; avat
   );
 }
 
+interface About {
+  subtype: string | null;
+  otherDiscipline: string | null;
+  closestGroup: string | null;
+  usesSeat: boolean | null;
+}
+
+/**
+ * Profession and seat answer per accepted employee, from employee_credentials
+ * (one row per licence, so the first row per person is enough). A failed read
+ * only loses the profession; the team still loads.
+ */
+async function professionsFor(businessId: string): Promise<Map<string, About>> {
+  const { data, error } = await db.rpc("employee_credentials", { p_business_id: businessId });
+  const out = new Map<string, About>();
+  if (error) return out;
+  for (const r of (data ?? []) as {
+    professional_id: string;
+    professional_subtype: string | null;
+    other_discipline: string | null;
+    closest_group: string | null;
+    uses_seat: boolean | null;
+  }[]) {
+    if (out.has(r.professional_id)) continue;
+    out.set(r.professional_id, {
+      subtype: r.professional_subtype ?? null,
+      otherDiscipline: r.other_discipline ?? null,
+      closestGroup: r.closest_group ?? null,
+      usesSeat: typeof r.uses_seat === "boolean" ? r.uses_seat : null,
+    });
+  }
+  return out;
+}
+
 /** Everyone on the business's team, accepted and invited, earliest first. */
 export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]>> {
   const rows = await db
@@ -87,7 +131,7 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
     .order("created_at", { ascending: true });
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
   const list = (rows.data ?? []) as EmployeeRow[];
-  const names = await namesFor(list.map((r) => r.professional_id));
+  const [names, about] = await Promise.all([namesFor(list.map((r) => r.professional_id)), professionsFor(businessId)]);
   return {
     ok: true,
     value: list.map((r) => ({
@@ -101,6 +145,10 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
       acceptedAt: r.accepted_at,
       payRate: r.pay_rate_per_class == null ? null : Number(r.pay_rate_per_class),
       inviteMessage: r.invite_message,
+      subtype: about.get(r.professional_id)?.subtype ?? null,
+      otherDiscipline: about.get(r.professional_id)?.otherDiscipline ?? null,
+      closestGroup: about.get(r.professional_id)?.closestGroup ?? null,
+      usesSeat: about.get(r.professional_id)?.usesSeat ?? null,
     })),
   };
 }

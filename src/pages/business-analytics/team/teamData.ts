@@ -37,6 +37,8 @@ export interface TeamPerson {
   acceptedAt: string | null;
   createdAt: string;
   payRate: number | null;
+  /** The server's seat answer (employee_credentials.uses_seat), null for an invitation. */
+  usesSeat: boolean | null;
   /** Seat order: accepted first (by acceptance), then pending invites. Drives the avatar colour. */
   seat: number;
 }
@@ -98,6 +100,7 @@ export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
           acceptedAt: p.acceptedAt,
           createdAt: p.invitedAt,
           payRate: p.payRate,
+          usesSeat: p.usesSeat,
           seat: i + 1,
         })),
         seats: {

@@ -1,12 +1,17 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import type { ClassSession, TeamPerson } from "../../services/business-team/team";
-import { clashOf, initials, noSeatPeople, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
+import { professionLabel } from "../../services/business-team/seats";
+import { clashOf, initials, noSeatPeople, roleAndProfession, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
 
 const person = (id: string, name: string, accepted: boolean, invitedAt = "2026-09-01T10:00:00Z", role: TeamPerson["role"] = "instructor"): TeamPerson => ({
   employmentId: "e-" + id,
   payRate: null,
   inviteMessage: null,
+  subtype: null,
+  otherDiscipline: null,
+  closestGroup: null,
+  usesSeat: null,
   professionalId: id,
   name,
   avatarUrl: null,
@@ -102,4 +107,15 @@ test("seats count instructors and trainers only (B6 follow-up, role_uses_seat)",
   assert.deepEqual(seatCounts(people, 5, { used: 2, invited: 0 }), { used: 2, invited: 0, total: 5, free: 3 });
   // Active team counts everybody accepted, seat or not.
   assert.equal(teamBoxes("gym", people, [], 5, "2026-10-14", Date.parse("2026-10-14T12:00:00Z")).boxes[0].value, "2");
+});
+
+test("profession next to the role; the server's seat answer wins (B6 follow-up)", () => {
+  const p = { ...person("a", "Rami", true, "2026-09-01T10:00:00Z", "staff"), subtype: "physiotherapist" };
+  assert.equal(roleAndProfession(p), "Staff · Physiotherapist");
+  assert.equal(professionLabel({ subtype: "other", otherDiscipline: "Pilates teacher", closestGroup: "fitness" }), "Pilates teacher");
+  assert.equal(professionLabel({ subtype: "other", otherDiscipline: null, closestGroup: "clinical" }), "Clinical");
+  assert.equal(professionLabel({ subtype: null, otherDiscipline: null, closestGroup: null }), null);
+  assert.equal(roleAndProfession(person("b", "John", true)), "Instructor");
+  // A server answer of false keeps an instructor out of the seat grid.
+  assert.deepEqual(seatCounts([{ ...person("c", "C", true), usesSeat: false }], 5), { used: 0, invited: 0, total: 5, free: 5 });
 });
