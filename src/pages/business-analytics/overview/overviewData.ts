@@ -2,21 +2,24 @@ import { supabase } from "../../../../lib/supabase/client";
 import { fetchMyTeam } from "../../../services/business-team";
 import { getCalendar } from "../../../services/calendar";
 import { occurrenceDates } from "../../../components/calendar/occurrences";
-import { addDays, previousRange, type OvBooking, type OvClass, type OvRaw, type OvReviews, type Range } from "./overviewModel";
+import { mapMetrics } from "../../../services/reputation/mapping";
+import { activeAtWeekOf, fetchBusinessDay, fetchMemberGrowth, fetchPeriodStats, mondayOf, type Read } from "../../../services/business-analytics";
+import { addDays, type OvBooking, type OvClass, type OvRaw, type OvReviews, type Range } from "./overviewModel";
 
-// AN1 Overview reads, client side until the B15 readers exist (DI-01 / DI-04:
-// business_period_stats, business_day). Only what the owner's policies
-// already open: business_profiles (own row), business_classes,
-// business_class_bookings (select_business_owner, with the payment status for
-// "Payment owed"), business_members, business_offerings, store_listings,
-// business_discounts, gyms + gym_review_summary() / gym_reviews_page() for
-// Reputation, the owner's calendar_events for today's events, and the team
+// AN1 Overview reads. The headline is B15's: business_period_stats (DI-02)
+// for the range and business_member_growth for Active members; the Live now
+// clock reads business_day (DI-04). The rest is what the owner's policies
+// already open: business_profiles (own row), business_classes and
+// business_class_bookings (select_business_owner, with the payment status
+// for "Payment owed": Client outcomes' attendance and review list, and the
+// clock only while business_day is missing), business_offerings (the product
+// table since B11; store_listings is no longer read, B16),
+// business_discounts, business_review_metrics() (B14: every review of the
+// business, venues or none) for Reputation, the owner's calendar_events for today's events, and the team
 // names for "Class with …".
 //
-// NOT READ (no table or no owner policy yet): payments (B8: Revenue shows its
-// drawn empty state), check-ins (B10), business_class_cancellations (no owner
-// policy), client consent (B7). Realtime (B15 business_activity) is not on
-// the stack: the page polls every 2 minutes instead (D2).
+// Realtime (B15 business_activity) feeds the dashboard's activity list; this
+// page polls every 2 minutes instead (D2).
 
 type Err = { message: string } | null;
 const db = supabase;
@@ -30,8 +33,8 @@ const fail = (what: string, e: Err): OverviewLoad => {
 
 /**
  * Everything the Overview and Client outcomes show for a range. Classes and
- * bookings cover the previous period (deltas), the last 12 weeks (21-day
- * check-in rule) and today (the dial).
+ * bookings cover the range and the last 12 weeks (Client outcomes' 21-day
+ * check-in rule); the readers bring the headline and today's dial.
  */
 export async function loadOverview(userId: string, range: Range, today: string): Promise<OverviewLoad> {
   const biz = await db.from("business_profiles").select("id, business_type, active, created_at").eq("profile_id", userId).maybeSingle();
@@ -43,7 +46,9 @@ export async function loadOverview(userId: string, range: Range, today: string):
     nextClass: null,
     firstClassDate: null,
     bookings: [],
-    members: [],
+    stats: null,
+    activeNow: null,
+    day: null,
     productsCount: 0,
     discountsCount: 0,
     team: {},
@@ -54,12 +59,14 @@ export async function loadOverview(userId: string, range: Range, today: string):
   if (!b) return { ok: true, raw: empty };
   const bid = b.id;
 
-  const prev = previousRange(range);
-  const lo = [prev.from, addDays(today, -84)].sort()[0];
+  const lo = [range.from, addDays(today, -84)].sort()[0];
   const hi = [range.to, today].sort()[1];
+  // Active members at the end of the range: business_member_growth's weeks end with this week.
+  const end = range.to < today ? range.to : today;
+  const growthWeeks = Math.round((new Date(`${mondayOf(today)}T00:00:00`).getTime() - new Date(`${mondayOf(end)}T00:00:00`).getTime()) / (7 * 86_400_000)) + 1;
 
   type ClassRow = { id: string; title: string; event_date: string; start_time: string; end_time: string; max_capacity: number; professional_id: string | null };
-  const [classes, first, next, bookings, members, offerings, listings, discounts, gyms, team, cal] = await Promise.all([
+  const [classes, first, next, bookings, stats, growth, day, offerings, discounts, allTime, inRangeM, team, cal] = await Promise.all([
     db
       .from("business_classes")
       .select("id, title, event_date, start_time, end_time, max_capacity, professional_id")
@@ -84,11 +91,14 @@ export async function loadOverview(userId: string, range: Range, today: string):
       .gte("business_classes.event_date", lo)
       .lte("business_classes.event_date", hi)
       .limit(20000),
-    db.from("business_members").select("accepted, invited_at, responded_at, ended_at").eq("business_id", bid),
+    fetchPeriodStats(bid, range.from, range.to, range.compare),
+    fetchMemberGrowth(bid, Math.min(52, Math.max(1, growthWeeks))),
+    fetchBusinessDay(bid, today),
     db.from("business_offerings").select("id").eq("business_id", bid),
-    db.from("store_listings").select("id").eq("business_id", bid),
     db.from("business_discounts").select("id").eq("business_id", bid),
-    db.from("gyms").select("id").eq("business_id", bid),
+    // B14 business_review_metrics: all time up to the range end (the rating) and the range (new reviews).
+    db.rpc("business_review_metrics" as never, { p_business_id: bid, p_from: "2000-01-01", p_to: range.to } as never),
+    db.rpc("business_review_metrics" as never, { p_business_id: bid, p_from: range.from, p_to: range.to } as never),
     fetchMyTeam(userId),
     getCalendar(userId),
   ]);
@@ -96,7 +106,9 @@ export async function loadOverview(userId: string, range: Range, today: string):
   if (first.error) return fail("classes", first.error);
   if (next.error) return fail("classes", next.error);
   if (bookings.error) return fail("bookings", bookings.error);
-  if (members.error) return fail("members", members.error);
+  // A reader that refuses (no permission) means no cell, never a 0; one that is missing keeps the drawn "–".
+  const broken = ([stats, growth, day] as Read<unknown>[]).find((r) => !r.ok && !r.pending && !r.denied);
+  if (broken && !broken.ok) return { ok: false, message: broken.message };
 
   const toClass = (r: ClassRow): OvClass => ({
     id: r.id,
@@ -109,42 +121,13 @@ export async function loadOverview(userId: string, range: Range, today: string):
   });
   const firstDate = ((first.data ?? []) as { event_date: string }[])[0]?.event_date ?? null;
 
-  // Reputation: per venue (gym_review_summary), weighted; "new this period" from the newest reviews.
+  // Reputation (B14): the rating and count up to the range end, and the reviews written inside the range.
   let reviews: OvReviews | null = null;
-  const gymIds = gyms.error ? [] : ((gyms.data ?? []) as { id: string }[]).map((g) => g.id);
-  if (gyms.error) console.error("[analytics-overview] Could not read venues:", gyms.error.message);
-  if (gymIds.length) {
-    const sums = await Promise.all(gymIds.map((id) => db.rpc("gym_review_summary", { p_gym_id: id })));
-    let total = 0;
-    let weighted = 0;
-    let failed = false;
-    for (const s of sums) {
-      if (s.error) {
-        failed = true;
-        continue;
-      }
-      const row = (Array.isArray(s.data) ? s.data[0] : s.data) as { average: number | string | null; total: number } | undefined;
-      if (!row || !row.total) continue;
-      total += row.total;
-      weighted += Number(row.average ?? 0) * row.total;
-    }
-    if (!failed || total) {
-      let inRange: number | null = 0;
-      if (total) {
-        const pages = await Promise.all(gymIds.map((id) => db.rpc("gym_reviews_page", { p_gym_id: id, p_sort: "recent", p_limit: 100, p_offset: 0 })));
-        for (const pg of pages) {
-          if (pg.error) {
-            inRange = null;
-            break;
-          }
-          for (const r of (pg.data ?? []) as { created_at: string }[]) {
-            const d = r.created_at.slice(0, 10);
-            if (d >= range.from && d <= range.to) inRange += 1;
-          }
-        }
-      }
-      reviews = { average: total ? weighted / total : 0, total, inRange };
-    }
+  if (allTime.error) console.error("[analytics-overview] Could not read the review metrics:", allTime.error.message);
+  else {
+    const all = mapMetrics((Array.isArray(allTime.data) ? allTime.data[0] : allTime.data) as Record<string, unknown> | null);
+    const cur = inRangeM.error ? null : mapMetrics((Array.isArray(inRangeM.data) ? inRangeM.data[0] : inRangeM.data) as Record<string, unknown> | null);
+    reviews = { average: all.average ?? 0, total: all.reviews, inRange: cur ? cur.reviews : null };
   }
 
   const eventsToday =
@@ -174,13 +157,10 @@ export async function loadOverview(userId: string, range: Range, today: string):
       bookings: ((bookings.data ?? []) as { business_class_id: string; client_id: string; created_at: string; payment_status: string | null; price_agreed: number | string | null }[]).map(
         (r): OvBooking => ({ classId: r.business_class_id, clientId: r.client_id, createdAt: r.created_at, paymentStatus: r.payment_status, priceAgreed: r.price_agreed === null || r.price_agreed === "" ? null : Number(r.price_agreed) })
       ),
-      members: ((members.data ?? []) as { accepted: boolean | null; invited_at: string; responded_at: string | null; ended_at: string | null }[]).map((m) => ({
-        accepted: m.accepted,
-        invitedAt: m.invited_at,
-        respondedAt: m.responded_at,
-        endedAt: m.ended_at,
-      })),
-      productsCount: okCount(offerings, "products") + okCount(listings, "listings"),
+      stats: stats.ok ? stats.value : stats.denied ? {} : null,
+      activeNow: growth.ok ? activeAtWeekOf(growth.value, end) : null,
+      day: day.ok ? day.value : day.denied ? [] : null,
+      productsCount: okCount(offerings, "products"),
       discountsCount: okCount(discounts, "discounts"),
       team: team.ok ? Object.fromEntries(team.members.map((m) => [m.professionalId, m.name])) : {},
       eventsToday,

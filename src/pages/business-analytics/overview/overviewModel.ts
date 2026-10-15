@@ -1,13 +1,15 @@
 // AN1 Overview · the pure model: headline numbers, today's day-clock items,
-// the insight cards and the Client outcomes aggregates, all from rows the
-// owner can already read (no mock figures, HANDOVER §1). Readers that do not
-// exist yet (B10 check-ins, B7 consent, B15 aggregate readers; Revenue reads
-// the recorded payments through services/business-revenue, as its page does)
-// leave their figure as null: the screen shows the drawn "–" / empty state.
+// the insight cards and the Client outcomes aggregates. The headline comes
+// from the B15 readers (business_period_stats DI-02, business_member_growth
+// for Active members) and the day clock from business_day (DI-04); a metric
+// the caller may not hold is absent, so its cell is not drawn (never a 0).
+// Revenue reads the recorded payments through services/business-revenue, as
+// its page does. No mock figures (HANDOVER §1).
 
 import type { ClockItem } from "./clockModel";
 import { f12, hoursOf } from "./clockModel";
 import { figuresFromRecords, isOwed, money, pctDelta, type PaymentRecord, type RevenueFigures } from "../../../services/business-revenue/model";
+import { pctChange, signed, type ClientOutcomes, type DayItem, type PeriodStat, type PeriodStats } from "../../../services/business-analytics/model";
 
 export type OverviewKind = "classes" | "gym" | "store";
 
@@ -28,12 +30,6 @@ export interface OvBooking {
   paymentStatus: string | null;
   /** price_agreed (null: no price agreed, so nothing is owed). */
   priceAgreed: number | null;
-}
-export interface OvMember {
-  accepted: boolean | null;
-  invitedAt: string;
-  respondedAt: string | null;
-  endedAt: string | null;
 }
 export interface OvEvent {
   id: string;
@@ -57,7 +53,12 @@ export interface OvRaw {
   nextClass: OvClass | null;
   firstClassDate: string | null;
   bookings: OvBooking[];
-  members: OvMember[];
+  /** B15 business_period_stats for the range (null: the reader is not on this database). */
+  stats: PeriodStats | null;
+  /** Members at the end of the range, from business_member_growth (null: not readable). */
+  activeNow: number | null;
+  /** B15 business_day for today (null: the reader is not on this database; the class rows are drawn instead). */
+  day: DayItem[] | null;
   productsCount: number;
   discountsCount: number;
   team: Record<string, string>;
@@ -89,10 +90,6 @@ export function previousRange(r: Range): { from: string; to: string } {
   const len = daysBetween(r.from, r.to) + 1;
   return { from: addDays(r.from, -len), to: addDays(r.from, -1) };
 }
-/** Local calendar day of an ISO instant. */
-const dayOfInstant = (at: string) => isoDay(new Date(at));
-const MINUS = "−";
-const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `${MINUS}${Math.abs(n)}` : "0");
 
 // ---- headline numbers (AN1-034 #9, AN1-061, AN1-063) ---------------------------
 
@@ -106,45 +103,33 @@ export interface HeadCell {
 
 export const NOTHING_TO_COMPARE = "Nothing to compare yet";
 
-function activeAt(members: OvMember[], day: string): number {
-  return members.filter((m) => m.accepted === true && m.respondedAt && dayOfInstant(m.respondedAt) <= day && (!m.endedAt || dayOfInstant(m.endedAt) > day)).length;
+/** A cell's delta: hidden with compare off; "Nothing to compare yet" while the metric is early (B15 `early`) or nothing came before. */
+function deltaOf(st: PeriodStat | undefined, compare: boolean, text: (now: number, before: number) => { t: string; d: number } | null): Pick<HeadCell, "delta" | "dir"> {
+  if (!compare) return { delta: null, dir: "none" };
+  if (!st || st.early || st.value === null || st.previous === null) return { delta: NOTHING_TO_COMPARE, dir: "none" };
+  const r = text(st.value, st.previous);
+  if (!r) return { delta: NOTHING_TO_COMPARE, dir: "none" };
+  return { delta: `${r.t} vs prev.`, dir: r.d > 0 ? "up" : r.d < 0 ? "down" : "none" };
 }
 
-/** Early data (HANDOVER §3 states, AN1-034 #9c): under 14 days of activity, deltas are hidden. */
-export function isEarly(raw: OvRaw, today: string): boolean {
-  const starts: string[] = [];
-  if (raw.firstClassDate) starts.push(raw.firstClassDate);
-  for (const m of raw.members) if (m.respondedAt) starts.push(dayOfInstant(m.respondedAt));
-  if (!starts.length) return true;
-  const first = starts.sort()[0];
-  return first > addDays(today, -14);
-}
-
-export function headline(kind: OverviewKind, raw: OvRaw, range: Range, today: string): HeadCell[] {
-  const early = isEarly(raw, today);
-  const prev = previousRange(range);
-  const end = range.to < today ? range.to : today;
-  const prevEnd = prev.to;
-  const showDelta = range.compare;
+/**
+ * The headline cells (AN1-034 #9d, AN1-063 #2) from business_period_stats.
+ * A metric the caller may not hold is absent from the reader, and so is its
+ * cell (never a 0). Before the reader is on the database every cell reads "–".
+ */
+export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell[] {
+  const s = raw.stats;
+  const cmp = range.compare;
   const dash = (label: string, sub: string): HeadCell => ({ label, value: "–", delta: sub, dir: "none" });
-  const cmp = (now: number, before: number, fmt: (d: number) => string, possible: boolean): Pick<HeadCell, "delta" | "dir"> => {
-    if (!showDelta) return { delta: null, dir: "none" };
-    if (early || !possible) return { delta: NOTHING_TO_COMPARE, dir: "none" };
-    const d = now - before;
-    return { delta: `${fmt(d)} vs prev.`, dir: d > 0 ? "up" : d < 0 ? "down" : "none" };
-  };
 
-  const noMembers = raw.members.length === 0;
-  const active: HeadCell = noMembers
-    ? dash("Active members", "No data yet")
-    : { label: "Active members", value: String(activeAt(raw.members, end)), ...cmp(activeAt(raw.members, end), activeAt(raw.members, prevEnd), signed, true) };
-
-  const inR = (iso: string | null, f: string, t: string) => !!iso && iso >= f && iso <= t;
-  const joined = raw.members.filter((m) => m.accepted === true && inR(m.respondedAt ? dayOfInstant(m.respondedAt) : null, range.from, range.to)).length;
-  const ended = raw.members.filter((m) => inR(m.endedAt ? dayOfInstant(m.endedAt) : null, range.from, range.to)).length;
-  const net: HeadCell = noMembers
-    ? dash("Net members", "No data yet")
-    : { label: "Net members", value: signed(joined - ended), delta: `${joined} joined, ${ended} ended`, dir: "none" };
+  let active: HeadCell | null = dash("Active members", "No data yet");
+  let net: HeadCell | null = dash("Net members", "No data yet");
+  if (s) {
+    const n = s.members_net;
+    // Active now against the end of the previous period is this period's net change.
+    active = !n ? null : raw.activeNow === null ? active : { label: "Active members", value: raw.activeNow.toLocaleString("en-US"), ...deltaOf(n, cmp, (v) => ({ t: signed(v), d: v })) };
+    net = !n || n.value === null ? null : { label: "Net members", value: signed(n.value), delta: `${s.members_joined?.value ?? 0} joined, ${s.members_ended?.value ?? 0} ended`, dir: "none" };
+  }
 
   if (kind === "store") {
     return [
@@ -152,41 +137,44 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range, today: st
       net,
       { label: "Live listings", value: String(raw.productsCount), delta: "On Explore now", dir: "none" },
       { label: "Live discounts", value: String(raw.discountsCount), delta: "On your listing", dir: "none" },
-    ];
+    ].filter((c): c is HeadCell => !!c);
   }
 
-  const byClass = new Map<string, number>();
-  for (const b of raw.bookings) byClass.set(b.classId, (byClass.get(b.classId) ?? 0) + 1);
-  const classesIn = (f: string, t: string) => raw.classes.filter((k) => k.date >= f && k.date <= t);
-  const cur = classesIn(range.from, range.to);
-  const before = classesIn(prev.from, prev.to);
-  const sumB = (ks: OvClass[]) => ks.reduce((a, k) => a + (byClass.get(k.id) ?? 0), 0);
-  const sumC = (ks: OvClass[]) => ks.reduce((a, k) => a + Math.max(0, k.cap), 0);
-
-  let booked: HeadCell;
-  if (!raw.anyClass) booked = dash("Booked spots", "No data yet");
-  else {
-    const n = sumB(cur);
-    const p = sumB(before);
-    booked = {
-      label: "Booked spots",
-      value: n.toLocaleString("en-US"),
-      ...cmp(n, p, () => {
-        const pct = Math.round(((n - p) / p) * 100);
-        return pct > 0 ? `+${pct}%` : pct < 0 ? `${MINUS}${Math.abs(pct)}%` : "0%";
-      }, p > 0),
-    };
+  let booked: HeadCell | null = dash("Booked spots", "No data yet");
+  let fill: HeadCell | null = dash("Class fill rate", "No classes yet");
+  if (s && raw.anyClass) {
+    const b = s.class_bookings;
+    booked = !b
+      ? null
+      : b.value === null
+        ? booked
+        : {
+            label: "Booked spots",
+            value: b.value.toLocaleString("en-US"),
+            ...deltaOf(b, cmp, (v, p) => {
+              const t = pctChange(v, p);
+              return t ? { t, d: v - p } : null;
+            }),
+          };
+    const f = s.average_fill_pct;
+    fill = !f
+      ? null
+      : f.value === null
+        ? dash("Class fill rate", "No classes in this range")
+        : {
+            label: "Class fill rate",
+            value: `${Math.round(f.value)}%`,
+            ...deltaOf(f, cmp, (v, p) => {
+              const d = Math.round(v) - Math.round(p);
+              return { t: `${signed(d)} pts`, d };
+            }),
+          };
+  } else if (s && !s.class_bookings) {
+    // Not the caller's to see (schedule): no cells, even before the first class.
+    booked = null;
+    fill = null;
   }
-
-  let fill: HeadCell;
-  if (!raw.anyClass) fill = dash("Class fill rate", "No classes yet");
-  else if (!cur.length || sumC(cur) === 0) fill = dash("Class fill rate", "No classes in this range");
-  else {
-    const pct = Math.round((sumB(cur) / sumC(cur)) * 100);
-    const prevPct = sumC(before) > 0 ? Math.round((sumB(before) / sumC(before)) * 100) : null;
-    fill = { label: "Class fill rate", value: `${pct}%`, ...cmp(pct, prevPct ?? 0, (d) => `${signed(d)} pts`, prevPct !== null) };
-  }
-  return [active, booked, fill, net];
+  return [active, booked, fill, net].filter((c): c is HeadCell => !!c);
 }
 
 /** AN1-034 #9b: size = max(base − 12, base − max(0, len − 4) · base / 12), base 36. */
@@ -201,11 +189,30 @@ const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** "HH:MM" on this device's clock (the dial's own clock) for an instant. */
+const hhmmOf = (at: string) => {
+  const d = new Date(at);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 export function dayItems(kind: OverviewKind, raw: OvRaw, today: string): ClockItem[] {
+  const out: ClockItem[] = [];
+  if (kind !== "store" && raw.day) {
+    // B15 business_day (DI-04): the day's classes with booked / capacity and
+    // the staff first name, cancelled classes left off the dial. Appointments
+    // have no drawn arc on the AN1 clock, so they are not placed on it.
+    for (const k of raw.day.filter((x) => x.kind === "class" && !x.cancelled)) {
+      const ss = hhmmOf(k.startsAt);
+      const es0 = hhmmOf(k.endsAt);
+      const s = hoursOf(ss);
+      let e = hoursOf(es0);
+      if (e <= s) e = 24;
+      out.push({ key: `c:${k.refId}`, classId: k.refId, s, e, ss, es: e === 24 ? "24:00" : es0, t: k.title, who: k.staffFirstName, bk: k.booked, cap: k.capacity, ev: false, loc: null });
+    }
+  }
   const byClass = new Map<string, number>();
   for (const b of raw.bookings) byClass.set(b.classId, (byClass.get(b.classId) ?? 0) + 1);
-  const out: ClockItem[] = [];
-  if (kind !== "store")
+  if (kind !== "store" && !raw.day)
     for (const k of raw.classes.filter((x) => x.date === today)) {
       const s = hoursOf(k.start);
       let e = hoursOf(k.end);
@@ -355,11 +362,29 @@ export function overviewCsv(cells: HeadCell[], ins: Insight[]): (string | number
   ];
 }
 
+/**
+ * Shared progress (DI-07, B15 business_client_outcomes) once 5 or more share:
+ * the cohort's 28-day averages, never a person's. Null below 5 (the reader
+ * sends nulls then, and the empty card with the count shows instead).
+ */
+export function sharedProgress(o: ClientOutcomes, kind: OverviewKind): { boxes: { value: string; label: string }[]; note: string } | null {
+  if (!o.enough) return null;
+  const books = kind !== "store" && o.bookingsPerWeek !== null ? ` They book ${o.bookingsPerWeek.toFixed(1)} ${o.bookingsPerWeek === 1 ? "class" : "classes"} a week.` : "";
+  return {
+    boxes: [
+      { value: o.workoutsPerWeek === null ? "–" : o.workoutsPerWeek.toFixed(1), label: "Workouts a week" },
+      { value: o.dailySteps === null ? "–" : Math.round(o.dailySteps).toLocaleString("en-US"), label: "Daily steps" },
+      { value: o.restingBpm === null ? "–" : `${Math.round(o.restingBpm)} bpm`, label: "Resting heart rate" },
+    ],
+    note: `Averages of the ${o.sharing} clients who share their progress with you, over the last 28 days.${books}`,
+  };
+}
+
 /** The Shared progress empty body: the DI-07 count when there is one (below 5 the outcomes reader shows nothing). */
 export function shareBody(n: number | null): string {
   const need = "Outcomes appear once 5 or more clients choose to share their progress with you.";
   if (!n) return need;
-  // 5 or more share, but the outcomes reader (B15) is not built yet.
+  // 5 or more share but the outcomes reader (B15) is not on this database: only the B7 count is known.
   if (n >= 5) return `${n} clients share their progress with you. Their group outcomes are coming soon.`;
   return `${n} ${n === 1 ? "client shares" : "clients share"} their progress with you so far. ${need}`;
 }

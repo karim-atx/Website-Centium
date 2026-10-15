@@ -187,6 +187,7 @@ export const STREAM_LABEL: Record<string, string> = {
   intro_week: "Intro weeks",
   product: "Products",
   delivery: "Delivery",
+  appointment: "Appointments",
   other: "Other",
 };
 export const streamLabel = (key: string) => STREAM_LABEL[key] ?? "Other";
@@ -497,6 +498,7 @@ const PRICE_TYPE_ITEM: Record<string, string> = {
   intro_week: "Intro week",
   product: "Product",
   delivery: "Delivery",
+  appointment: "Appointment",
 };
 
 /**
@@ -850,6 +852,7 @@ export type PriceType =
   | "intro_week"
   | "product"
   | "delivery"
+  | "appointment"
   | "other";
 
 type Num = number | string;

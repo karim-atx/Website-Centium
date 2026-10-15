@@ -41,6 +41,8 @@ import {
   fetchReviewSummary,
   fetchVenue,
   fetchVenueOpenNow,
+  fetchVenuePhotos,
+  type VenuePhoto,
   type ReviewSummary,
   purchaseGymMembership,
   type GymMembership,
@@ -50,7 +52,6 @@ import {
 import { addDaysIso, commitmentLines, currentMembership, memberTag, PERIOD, planSaving, sortPlans } from "../../services/venues/venueLogic";
 import { hoursLines, isoWeekdayIn, openNowTag, type HoursRow } from "../../services/venues/hours";
 import {
-  bookClass,
   fetchGymClassesThisWeek,
   fetchMarketplaceClasses,
   fetchMyBookedClassIds,
@@ -58,7 +59,14 @@ import {
   type MarketplaceClass,
 } from "../../services/marketplace";
 import { formatPrice } from "../../utils/price";
-import { CompactHeader, DetailHero, DetailLabel, DirectionsMenu, GYM_HERO, LOGO_SHADOW, MapCard, useCompactHeader } from "./venueParts";
+import { useClassBooking, type BookOutcome } from "../../hooks/useClassBooking";
+import { ClassTermsSheet } from "./ClassTermsSheet";
+import { useKnownPosition } from "../../hooks/useKnownPosition";
+import { distanceKm } from "../../services/geo/distance";
+import { distanceText } from "../../services/marketplace/classBooking";
+import { AmenityChips, CompactHeader, DetailHero, DetailLabel, DirectionsMenu, GYM_HERO, LOGO_SHADOW, MapCard, useCompactHeader } from "./venueParts";
+import { recordListingEvent } from "../../services/marketplace/listingEvents";
+import { firstVisitText, heroPhotos, isLivePassState, knownAmenities, parseListingSource, viewerSpotsLeft } from "../../services/marketplace/listingLogic";
 import { time12Split } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
 
@@ -86,10 +94,16 @@ import { formatShortDate } from "../../utils/date";
 // reviews are gym_review_summary() / GymReviews; Message is
 // start_venue_thread() (one thread per member and venue).
 //
+// B13 (MK-02, MK-03, MK-04, MK-07): the hero swipes through the cover and
+// the business's approved photos (business_photos, PB-O-56; the pager shows
+// with two or more); About lists gyms.amenities (PB-O-51, hidden with none)
+// and gyms.first_visit ("First visit", hidden when empty); a class card shows
+// a non-member's spots capped by the class's Centium spots; listing events
+// (fire and forget, once per session): profile_open with the &src= the page
+// was opened from, map_open when a maps app is opened from Directions,
+// book_tap on "Book membership" and "Confirm booking" and a class card's Book.
+//
 // BACKEND, NOT BUILT (pending states; nothing here is faked):
-// - PB-O-56 (B13) photo pager: hidden; a gym has one photo (cover_url).
-// - PB-O-51 (B13) amenities: the section is hidden until gyms.amenities exists.
-// - PB-O-50 (B9) distance: the place line shows the place alone.
 // - A start date at checkout: purchase_gym_membership() takes none, so the
 //   field shows today, fixed. Whish Money is shown as coming (X-29).
 // - Plan features, "Popular", a joining fee and renewal; member-side cancel.
@@ -124,7 +138,7 @@ const nowHHMM = () => {
 const isRefusal = (code?: string) => !!code && code.startsWith("ATX");
 
 export function GymPage({ gymId }: { gymId: string }) {
-  const { profileReady, user } = useApp();
+  const { profileReady, user, authUserId } = useApp();
   const navigate = useNavigate();
   const back = useBack("/app/marketplace?tab=gyms");
   const online = useOnline();
@@ -153,6 +167,32 @@ export function GymPage({ gymId }: { gymId: string }) {
   const [weekError, setWeekError] = useState<string | null>(null);
   const [classId, setClassId] = useState<string | null>(null);
   const [bookError, setBookError] = useState<string | null>(null);
+  // B13 MK-03: the business's approved photos for this venue.
+  const [photos, setPhotos] = useState<VenuePhoto[]>([]);
+  // B13 MK-07: where the page was opened from (&src=…), else 'direct'.
+  const source = parseListingSource(params.get("src"));
+  // B9: Book a class asks for the venue's terms first (ATXE4), as the class
+  // page does (useClassBooking, ClassTermsSheet).
+  const booking = useClassBooking({ classId, businessId: gym?.businessId ?? null, userId: authUserId });
+  // #14 PB-O-50: the distance, on the device, once it has shared its position.
+  const here = useKnownPosition();
+  const settleBooking = (r: BookOutcome, id: string) => {
+    if (r.kind === "terms") {
+      setBookOpen(false);
+      return;
+    }
+    if (r.kind === "error") {
+      if (!r.message) return;
+      if (isRefusal(r.code)) {
+        setBookError(r.message);
+        setBookOpen(true);
+      } else setSaveFailed(true);
+      return;
+    }
+    setBookOpen(false);
+    // MO1.4.2.1.1 interaction 10 → MO1.4.4.2 on the class page.
+    navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}&booked=1`);
+  };
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [owner, setOwner] = useState<string | null>(null);
   const [msgBusy, setMsgBusy] = useState(false);
@@ -251,6 +291,9 @@ export function GymPage({ gymId }: { gymId: string }) {
       setLoadFailed(false);
       setGym(venue.value);
       if (venue.value?.businessId) {
+        const businessId = venue.value.businessId;
+        recordListingEvent({ businessId, kind: "profile_open", source });
+        void fetchVenuePhotos(businessId, venue.value.id).then((ph) => live && setPhotos(ph));
         void fetchBusinessOwner(venue.value.businessId).then((o) => live && setOwner(o));
         const p = await fetchPlansFor([venue.value.businessId]);
         if (!live) return;
@@ -265,7 +308,9 @@ export function GymPage({ gymId }: { gymId: string }) {
     return () => {
       live = false;
     };
-  }, [profileReady, gymId, loadMemberships, loadSummary, reload]);
+    // source is the URL's &src=, which a tab change keeps; the session gate
+    // keeps a reload (Retry) from counting the open again.
+  }, [profileReady, gymId, loadMemberships, loadSummary, reload, source]);
 
   // OURS-gym-classes-tab Data: this venue's classes for the next 28 days
   // (business_classes.gym_id), drawn as Explore's class cards from the
@@ -385,6 +430,7 @@ export function GymPage({ gymId }: { gymId: string }) {
   }
 
   const hasCoords = gym.lat !== null && gym.lng !== null;
+  const gymDistance = here && hasCoords ? distanceText(distanceKm(here, { lat: gym.lat as number, lng: gym.lng as number })) : null;
   const dest = hasCoords ? `${gym.lat},${gym.lng}` : gym.location;
   const flash = (note: string) => {
     setCopied(note);
@@ -445,6 +491,7 @@ export function GymPage({ gymId }: { gymId: string }) {
             label: `Book membership · ${priceOf(plan)}`,
             icon: <BadgeCheck size={16} strokeWidth={1.75} aria-hidden />,
             onClick: () => {
+              if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: plan.id });
               setCheckoutError(null);
               setCheckoutOpen(true);
             },
@@ -465,14 +512,14 @@ export function GymPage({ gymId }: { gymId: string }) {
     <div>
       <CompactHeader title={gym.name} onBack={back} shown={compactShown} hairline={!stuck} headerRef={setHeaderEl} />
 
-      <DetailHero height={240} onBack={back} coverUrl={gym.coverUrl} colors={GYM_HERO}>
+      <DetailHero height={240} onBack={back} photos={heroPhotos(gym.coverUrl, photos)} colors={GYM_HERO}>
         {/* #11-12: the logo frame, 64 × 64 r18 with a 2.7 white ring (dark
             #1C1F28, no shadow), its top 212.1 into the 240 hero; the light
             shadow measured on the frame PNG. A4: the venue's logo (its own
             gyms.logo_url, else its business's); with none, or one that fails
             to load, the initials 18/27 800 in a 58 r15 tile: #FFFFFF on
             #241F1B, dark #121317 on #F5F3FA (V6-148). Photo pager (#9-10):
-            PB-O-56, hidden with one photo. */}
+            PB-O-56 (B13), in DetailHero, hidden with one photo. */}
         <span
           data-logo-frame=""
           className={`absolute left-4 -bottom-[36.1px] w-16 h-16 rounded-[18px] bg-cream-card border-[2.7px] border-cream-card ${LOGO_SHADOW}`}
@@ -485,14 +532,18 @@ export function GymPage({ gymId }: { gymId: string }) {
 
       {/* #13-15: the name 22/33 800 (10 under the logo; two lines at most),
           the Member tag on the right 6 down, the place 12.5/18.8 400 right
-          under it (distance: PB-O-50). The name drives the compact header. */}
+          under it, then "· 0.6 km" (PB-O-50, from the gym's coordinates when
+          the device has shared its position). The name drives the compact
+          header. */}
       <div className="mt-[46px] flex items-start gap-2.5">
         <h1 ref={setNameEl} className="m-0 flex-1 min-w-0 text-[22px] leading-[33px] font-extrabold text-charcoal line-clamp-2 [overflow-wrap:anywhere]">
           {gym.name}
         </h1>
         {tag && <MemberTag label={tag.label} tone={tag.tone} className="mt-[6px]" />}
       </div>
-      {gym.location && <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-faint">{gym.location}</p>}
+      {(gym.location || gymDistance) && (
+        <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-faint">{[gym.location, gymDistance].filter(Boolean).join(" · ")}</p>
+      )}
       {/* #16-17: the rating pill 24 tall, pad 0 9, 0.5px #D9A441 (dark
           #E0B360) on #FBF3E2 (dark gold-pale, O3), Star 11 #D9A441 (dark
           #E0B360) 4 before "4.7 · 128 reviews" 11.5/17.3 700 #9A7424 (dark
@@ -592,7 +643,23 @@ export function GymPage({ gymId }: { gymId: string }) {
               today={isoWeekdayIn(gym.timezone)}
               openNow={openNow}
             />
-            {/* Amenities (#35-36): PB-O-51 (B13), hidden until gyms.amenities exists. */}
+            {/* Amenities (#25, #35-36): PB-O-51 (B13 gyms.amenities), hidden with none. */}
+            {knownAmenities(gym.amenities).length > 0 && (
+              <>
+                <DetailLabel className="mt-[22px]">Amenities</DetailLabel>
+                <AmenityChips className="mt-2" values={gym.amenities} />
+              </>
+            )}
+            {/* B13 MK-02 gyms.first_visit (not drawn on this frame, OURS): the
+                business side's "First visit" title, the text as the bio. */}
+            {firstVisitText(gym.firstVisit) && (
+              <>
+                <DetailLabel className="mt-[22px]">First visit</DetailLabel>
+                <p data-first-visit="" className="mt-2 mb-0 text-[14px] leading-[22.4px] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  {firstVisitText(gym.firstVisit)}
+                </p>
+              </>
+            )}
             {(gym.location || hasCoords) && (
               <>
                 <DetailLabel className="mt-[22px]">Location</DetailLabel>
@@ -633,10 +700,15 @@ export function GymPage({ gymId }: { gymId: string }) {
                     {g.items.map((c) => (
                       <ClassCard
                         key={c.classId}
-                        c={c}
+                        c={(() => {
+                          // B13 MK-04: a non-member's spots stop at the class's Centium spots.
+                          const left = viewerSpotsLeft(c.spotsRemaining, c.centiumSpotsLeft, !!mine && isLivePassState(mine.passState));
+                          return left === c.spotsRemaining ? c : { ...c, spotsRemaining: left, isFull: c.isFull || left <= 0 };
+                        })()}
                         booked={bookedIds.has(c.classId)}
                         hideVenue
                         onOpen={(x) => navigate(`/app/marketplace/class?id=${encodeURIComponent(x.classId)}`)}
+                        onBook={(x) => recordListingEvent({ businessId: x.businessId, kind: "book_tap", source, itemId: x.classId })}
                       />
                     ))}
                   </div>
@@ -746,6 +818,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         address={gym.location}
         coords={hasCoords ? { lat: gym.lat as number, lng: gym.lng as number } : null}
         onCopied={flash}
+        onMapOpen={() => gym.businessId && recordListingEvent({ businessId: gym.businessId, kind: "map_open", source })}
       />
 
       {/* MO1.4.2.5 (S5): the gym's numbers (public_phones, in order) and Copy
@@ -895,7 +968,7 @@ export function GymPage({ gymId }: { gymId: string }) {
           week's classes at this venue, each with its own price. */}
       <CentredPopup
         open={bookOpen}
-        onClose={() => !busy && setBookOpen(false)}
+        onClose={() => !busy && !booking.busy && setBookOpen(false)}
         title="Book a class"
         icon={<CalendarPlus size={22} strokeWidth={1.75} />}
         body={`${gym.name} · this week's classes`}
@@ -958,22 +1031,14 @@ export function GymPage({ gymId }: { gymId: string }) {
           <CtaButton
             size="page"
             label="Confirm booking"
-            loading={busy}
+            loading={booking.busy}
             disabled={!classId || !online}
             className={`mt-5 ${ctaClass}`}
             onClick={async () => {
-              if (!classId || busy) return;
-              setBusy(true);
-              const r = await bookClass(classId);
-              setBusy(false);
-              if (!r.ok) {
-                if (isRefusal(r.code)) setBookError(r.message);
-                else setSaveFailed(true);
-                return;
-              }
-              setBookOpen(false);
-              // MO1.4.2.1.1 interaction 10 → MO1.4.4.2 on the class page.
-              navigate(`/app/marketplace/class?id=${encodeURIComponent(classId)}&booked=1`);
+              if (!classId || booking.busy) return;
+              if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: classId });
+              setBookError(null);
+              settleBooking(await booking.start(), classId);
             }}
           />
         )}
@@ -990,6 +1055,21 @@ export function GymPage({ gymId }: { gymId: string }) {
           See all classes
         </button>
       </CentredPopup>
+
+      {/* OURS-class-terms (B9, ATXE4): the venue's terms before the first
+          booking; Agree and book records them and books the chosen class. */}
+      <ClassTermsSheet
+        docs={booking.terms}
+        businessName={gym.name}
+        busy={booking.busy}
+        online={online}
+        error={booking.termsError}
+        onAgree={async () => {
+          if (!classId) return;
+          settleBooking(await booking.agree(), classId);
+        }}
+        onClose={booking.closeTerms}
+      />
 
       {/* O-TOAST: a write that failed for no stated reason (a dropped
           connection, a server error); nothing changed on screen. */}

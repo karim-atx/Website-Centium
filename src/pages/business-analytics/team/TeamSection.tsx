@@ -15,6 +15,8 @@ import { seatList } from "./helpers";
 import type { Issue } from "./model";
 import type { ClassRow } from "./teamData";
 import { useTeam } from "./useTeam";
+import { useRatings } from "./useRatings";
+import { useCentiumBilling } from "../../../hooks/useCentiumBilling";
 import { roleLabel, vocabFor } from "./vocab";
 import "../shell/analytics.css";
 import "./an5.css";
@@ -41,6 +43,10 @@ export default function TeamSection() {
   const navigate = useNavigate();
   const vocab = vocabFor(kind);
   const state = useTeam(range);
+  // B14 instructor ratings (V6-85): the Ratings tile, page and every scorecard's Ratings box.
+  const ratings = useRatings(state.businessId, range, state.early);
+  // B8 RV-06: the seat order awaiting payment, and buying seats (owner only).
+  const billing = useCentiumBilling();
   const [view, setView] = useState<View>({ k: "index" });
   const [status, setStatus] = useState<string | null>(null);
   const [invite, setInvite] = useState(false);
@@ -102,6 +108,7 @@ export default function TeamSection() {
       page = (
         <TeamIndex
           state={state}
+          ratings={ratings}
           range={range}
           vocab={vocab}
           onTile={(k) => go({ k })}
@@ -110,7 +117,9 @@ export default function TeamSection() {
           onSeat={(p) => navigate(`/app/business/employees/${p.id}`)}
           onRequests={() => navigate("/app/business/employees/requests")}
           onPlan={plan}
-          requestedBlocks={requested}
+          requestedBlocks={billing.available ? (billing.pendingSeat?.quantity ?? 0) : requested}
+          requestedLive={billing.available}
+          canAddSeats={!billing.available || billing.isOwner}
         />
       );
       break;
@@ -127,7 +136,7 @@ export default function TeamSection() {
       );
       break;
     case "ratings":
-      page = <RatingsView state={state} onBack={back} onCard={toCard("ratings", true)} />;
+      page = <RatingsView state={state} ratings={ratings} onBack={back} onCard={toCard("ratings", true)} />;
       break;
     case "pay":
       page = <PayView state={state} vocab={vocab} onBack={back} onCard={toCard("pay")} />;
@@ -145,6 +154,7 @@ export default function TeamSection() {
       page = (
         <ScorecardView
           state={state}
+          ratings={ratings}
           range={range}
           personId={view.id}
           focusRatings={view.ratings}
@@ -189,7 +199,13 @@ export default function TeamSection() {
         pending={pendingN}
         onClose={() => setSeatsMode(null)}
         onPlan={plan}
+        billing={billing}
+        businessId={state.businessId}
         onRequested={(n) => setRequested((x) => x + n)}
+        onChanged={() => {
+          billing.reload();
+          state.reload();
+        }}
       />
       <AssignSheet
         open={assign !== null}

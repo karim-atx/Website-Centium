@@ -1,45 +1,56 @@
 import { useEffect, useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { MailPlus, ShoppingBag, Users } from "lucide-react";
+import { MailPlus, Users } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useAnalytics } from "../analyticsContext";
 import { AnCard, AnEmptyCard, AnHint, AnIndexRow, AnIndexSkeleton, AnStrip } from "./anKit";
-import { activeValue, pagesOf, vocabOf } from "./membersModel";
+import { indexValue, pageView, pagesOf, vocabOf } from "./membersModel";
+import { useMembersFigures } from "./useMembersFigures";
+import { DeltaText } from "./MembersPage";
+import { isoOf, rangeWords } from "../analyticsRange";
 import { liveCodes, useMembersData } from "./useMembersData";
 import { MembersPage } from "./MembersPage";
 import { MemberCodesPage } from "./MemberCodesPage";
 import { VenueMembersPage } from "./VenueMembersPage";
+import { StoreCustomersIndex, TopCustomersPage } from "./StoreCustomers";
 
 // Analytics › Members (AN4): the section index (AN4-001), the section pages
 // (AN4-005 …, MembersPage), Member codes (OURS-AN4-member-codes with the
 // OP1 End pop-up) and the venue roster page (OURS-AN4-member-rosters, the
 // one roster component). Routes: /app/business/analytics/members[/<page> |
 // /codes | /venue]. Per type: Gym "Members", Classes "Clients", Store
-// "Customers" (orders are BU5-15, so Store shows its coming card only).
+// "Customers" (B11: business_people 'customers' + store orders, StoreCustomers.tsx).
 
 const BASE = "/app/business/analytics/members";
 
 export function MembersSection() {
   const params = useParams();
   const sub = (params["*"] ?? "").replace(/\/+$/, "");
-  const { kind, setExport } = useAnalytics();
+  const { kind, range, setExport } = useAnalytics();
   const navigate = useNavigate();
   const online = useOnline();
   const data = useMembersData();
   const access = useConsoleAccess();
   const vocab = vocabOf(kind);
   const pages = useMemo(() => pagesOf(kind), [kind]);
+  // B15: each page's boxes and lead from the readers (membersModel pageView).
+  const today = isoOf(new Date());
+  const fig = useMembersFigures(kind === "store" ? null : data.businessId, range, today);
+  const views = useMemo(() => {
+    const ctx = { planCount: data.plans.length, rangeKey: range.key, rangeWords: rangeWords(range, today), compare: range.compare };
+    return new Map(pages.map((p) => [p.key, pageView(p, vocab, fig.figures, ctx)]));
+  }, [pages, vocab, fig.figures, data.plans.length, range, today]);
 
   const waiting = data.codes ? liveCodes(data.codes).length : null;
   const activeAtVenues = data.venues.reduce((s, v) => s + v.activeMembers, 0);
   // B7: list_business_members' total_count is every membership the business
   // has ever had (pending, active, declined, ended), so "none ever" is real now.
   const anyMembers = data.memberTotal > 0 || (data.members?.length ?? 0) > 0 || data.venues.some((v) => v.activeMembers > 0 || v.membershipsAwaitingPayment > 0);
-  const known = !data.loading && !data.venuesLoading && (data.members !== null || !data.businessId);
+  const known = !data.loading && !data.venuesLoading && (data.members !== null || !data.businessId) && (fig.loaded || !data.businessId);
   const empty = kind !== "classes" && known && !anyMembers;
 
-  // Export CSV: the index rows as they are (coming values export as empty cells, never 0).
+  // Export CSV: the index rows as they are ("–" exports as an empty cell, never 0).
   useEffect(() => {
     if (sub) return;
     if (kind === "store" || !known) {
@@ -48,32 +59,34 @@ export function MembersSection() {
     }
     setExport(`centium-${vocab.people}.csv`, [
       ["Section", "Value", "Note"],
-      ...pages.map((p) => [p.title, p.key === "plans" ? data.plans.length : p.key === "growth" && vocab.label === "Members" ? data.activeTotal : null, p.coming]),
+      ...pages.map((p) => {
+        const v = views.get(p.key);
+        return [p.title, v?.boxes[0].value ?? null, v?.lead ?? p.coming];
+      }),
       ["Member codes waiting", waiting, null],
       ...(data.venues.length > 0 ? [["Active at your venues", activeAtVenues, null]] : []),
     ]);
     return () => setExport("", null);
-  }, [sub, kind, known, pages, data.plans.length, data.activeTotal, waiting, activeAtVenues, data.venues.length, vocab.people, setExport]);
+  }, [sub, kind, known, pages, views, waiting, activeAtVenues, data.venues.length, vocab.people, setExport]);
 
+  if (kind === "store") {
+    if (sub === "customers") return <TopCustomersPage businessId={data.businessId} />;
+    if (sub) return <Navigate to={BASE} replace />;
+    return <StoreCustomersIndex businessId={data.businessId} />;
+  }
   if (sub === "codes") return <MemberCodesPage data={data} vocab={vocab} />;
   if (sub === "venue") return <VenueMembersPage vocab={vocab} />;
   if (sub) {
     const page = pages.find((p) => p.key === sub);
     if (!page) return <Navigate to={BASE} replace />;
-    return <MembersPage page={page} pages={pages} vocab={vocab} plansCount={data.plans.length} data={data} empty={empty} />;
-  }
-
-  if (kind === "store") {
-    return (
-      <AnEmptyCard icon={ShoppingBag} title="No customers yet" body="Customers appear here once your first orders come in." />
-    );
+    return <MembersPage page={page} pages={pages} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} />;
   }
 
   const codesLine = waiting === null ? "Create a code for each new member." : waiting > 0 ? `${waiting} waiting to be used` : "Create a code for each new member.";
 
   return (
     <div>
-      {data.error && <AnStrip offline={!online} text={online ? `Couldn't load your ${vocab.people}. Check your connection and try again.` : `You're offline. Showing ${vocab.people} as of your last visit.`} onRetry={data.reload} />}
+      {(data.error || fig.error) && <AnStrip offline={!online} text={online ? `Couldn't load your ${vocab.people}. Check your connection and try again.` : `You're offline. Showing ${vocab.people} as of your last visit.`} onRetry={() => { data.reload(); fig.reload(); }} />}
 
       {empty ? (
         <AnEmptyCard
@@ -95,16 +108,18 @@ export function MembersSection() {
               <AnIndexSkeleton rows={pages.length} />
             ) : (
               pages.map((p, i) => {
-                const value = p.key === "plans" ? data.plans.length.toLocaleString() : activeValue(p, vocab, data);
+                const v = views.get(p.key)!;
+                const { value, delta } = indexValue(v);
                 return (
                   <AnIndexRow
                     key={p.key}
                     first={i === 0}
                     title={p.title}
-                    lead={p.coming}
+                    lead={v.lead}
                     value={value}
+                    delta={delta ? <DeltaText d={delta} /> : undefined}
                     onClick={() => navigate(`${BASE}/${p.key}`)}
-                    ariaLabel={`${p.title}: ${value ? `${value} ${p.boxes[0]}` : "coming soon"}`}
+                    ariaLabel={`${p.title}: ${value ? `${value} ${v.boxes[0].label}` : "no figure yet"}`}
                   />
                 );
               })

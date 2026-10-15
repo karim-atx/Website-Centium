@@ -5,7 +5,8 @@
 // row is marked OURS in the checklists; every OURS string is listed in the
 // Batch 3 report.
 
-import type { DashRaw, DashClass } from "./dashboardTypes";
+import type { DashRaw, DashClass, GlanceFigure } from "./dashboardTypes";
+import { gymEntriesGauge, gymHasEntries, gymTodayModel, type GymTodayModel } from "./gymToday";
 import type { GaugeSpec } from "./clusterGeometry";
 import type { DashPalette } from "./palette";
 import { occurrenceDates } from "../calendar/occurrences";
@@ -57,9 +58,6 @@ export function dayLabel(iso: string, today: string): string {
   if (iso === shiftDate(today, 1)) return "Tomorrow";
   return shortDay(iso);
 }
-
-/** "Member #4F2A": a member the readers give no first name for (B7 list_business_members gives one; HANDOVER §4). */
-export const maskedMember = (id: string) => `Member #${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 
 const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)[0] : "");
 
@@ -203,10 +201,10 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
   }
 
   if (kind === "gym") {
-    // OURS-DA-gym-gauges: Entries (BU4-04 pending), Renewals due, Net members, Seats used.
+    // OURS-DA-gym-gauges: Entries (B10: unlit until the venue has an entry), Renewals due, Net members, Seats used.
     const r = raw.renewalsDue;
     return [
-      { spec: { kind: "petals", vals: [0, 0, 0, 0, 0, 0, 0], last: [0, 0, 0, 0, 0, 0, 0], today: k.week.indexOf(k.today) }, empty: true, label: "Entries", sub: "No entries yet", subTone: "faint", target: null, format: String },
+      raw.gym && gymHasEntries(raw.gym) ? gymEntriesGauge(raw.gym, k.week, k.lastWeek, k.today) : { spec: { kind: "petals", vals: [0, 0, 0, 0, 0, 0, 0], last: [0, 0, 0, 0, 0, 0, 0], today: k.week.indexOf(k.today) }, empty: true, label: "Entries", sub: "No entries yet", subTone: "faint", target: null, format: String },
       { spec: { kind: "blank" }, empty: r === null, label: "Renewals due", sub: "In the next 7 days", subTone: r === null ? "faint" : "warn", target: r, format: String },
       net,
       seats,
@@ -267,28 +265,43 @@ export const toneColour = (c: DashPalette, t: GaugeModel["subTone"]) => (t === "
 export type TodayBlock =
   | { kind: "empty"; icon: "calendar-plus" | "scan-line" | "package"; title: string; body: string; boxes?: NumberBox[] }
   | {
+      kind: "store";
+      boxes: NumberBox[];
+      /** Orders to fulfil, newest first, cap 3 (DA1-011 #3). */
+      orders: { id: string; glyph: "package" | "truck"; title: string; detail: string; pill: { text: string; tone: "good" | "warn" | "pale" } }[];
+      openCount: number;
+      /** Under 5 left (DA1-011 #4), cap 3. */
+      low: { id: string; title: string; detail: string; value: string }[];
+      lowCount: number;
+      tip: string | null;
+    }
+  | {
       kind: "classes";
       boxes: NumberBox[];
       bars: { h: number; label: string }[];
       hi: number;
       next: { id: string; title: string; detail: string; pill: { text: string; tone: "good" | "pale" | "soft" } }[];
       tip: string | null;
-    };
+    }
+  | GymTodayModel;
 
 export interface NumberBox {
   value: string;
   label: string;
   delta?: string;
-  tone?: "good" | "warn" | "bad";
+  tone?: "good" | "warn" | "bad" | "faint";
 }
 
 export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock {
   const k = counts(raw, now);
-  if (kind === "store") {
-    return { kind: "empty", icon: "package", title: "No orders yet", body: "Orders show here as soon as your first product is listed." };
-  }
+  if (kind === "store") return storeToday(raw);
   if (kind === "gym") {
     const r = raw.renewalsDue;
+    // B10 (DA1-007 / 009): the venue has entries; DA1-010 empty otherwise.
+    if (raw.gym && gymHasEntries(raw.gym)) {
+      const labels = new Map(raw.members.filter((m) => m.label).map((m) => [m.memberId, m.label as string]));
+      return gymTodayModel(raw.gym, r, (id) => labels.get(id) ?? null, now);
+    }
     return {
       kind: "empty",
       icon: "scan-line",
@@ -304,29 +317,15 @@ export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock 
   if (raw.classes.length === 0) {
     return { kind: "empty", icon: "calendar-plus", title: "No classes yet", body: "Add your first class and bookings show here." };
   }
-  const early = isEarly(raw, k);
+  const g = classGlance(raw);
   const todays = k.byDate[k.today] ?? [];
   const fillOf = (c: DashClass) => (c.cap > 0 ? (k.booked[c.id] ?? 0) / c.cap : 0);
-  const sumB = todays.reduce((a, c) => a + (k.booked[c.id] ?? 0), 0);
-  const sumC = todays.reduce((a, c) => a + c.cap, 0);
-  const avg = sumC > 0 ? Math.round((sumB / sumC) * 100) : null;
-  // Same weekday last week, for the Average fill delta.
-  const lastSame = k.byDate[shiftDate(k.today, -7)] ?? [];
-  const lb = lastSame.reduce((a, c) => a + (k.booked[c.id] ?? 0), 0);
-  const lc = lastSame.reduce((a, c) => a + c.cap, 0);
-  const lastAvg = lc > 0 ? Math.round((lb / lc) * 100) : null;
-  const delta = !early && avg !== null && lastAvg !== null ? avg - lastAvg : null;
-  const waitTotal = todays.every((c) => c.id in raw.waitlists) ? todays.reduce((a, c) => a + (raw.waitlists[c.id] ?? 0), 0) : null;
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const upcoming = todays.filter((c) => (minutesOfDay(c.end) ?? 0) > nowMin);
   const hiClass = upcoming[0];
   return {
     kind: "classes",
-    boxes: [
-      { value: String(todays.length), label: "Classes today" },
-      { value: avg === null ? "–" : `${avg}%`, label: "Average fill", delta: delta === null ? undefined : `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% vs last week`, tone: delta !== null && delta < 0 ? "warn" : "good" },
-      { value: waitTotal === null ? "–" : String(waitTotal), label: "On waitlists" },
-    ],
+    boxes: g.boxes,
     bars: todays.map((c) => ({ h: Math.round(fillOf(c) * 100), label: shortHour(c.start) })),
     hi: hiClass ? todays.indexOf(hiClass) : -1,
     next: upcoming.slice(0, 3).map((c) => {
@@ -340,8 +339,41 @@ export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock 
         pill: b >= c.cap ? { text: "Full", tone: "good" as const } : w > 0 ? { text: `${w} on waitlist`, tone: "pale" as const } : { text: `${Math.round(fillOf(c) * 100)}%`, tone: "soft" as const },
       };
     }),
-    tip: early ? "Trends appear after your first two weeks of classes." : null,
+    tip: g.early ? "Trends appear after your first two weeks of classes." : null,
   };
+}
+
+/** B15 · business_glance rows (PostgREST numerics may arrive as strings), by metric. */
+export function toGlance(rows: { metric: string; value: number | string | null; early: boolean | null }[] | null | undefined): Record<string, GlanceFigure> {
+  const out: Record<string, GlanceFigure> = {};
+  for (const r of rows ?? []) out[r.metric] = { value: r.value === null || r.value === undefined ? null : Number(r.value), early: r.early === true };
+  return out;
+}
+
+/**
+ * B15 · the class Today boxes (DA1-003 #5) from business_glance: Classes
+ * today, Average fill (delta against the same weekday last week, the glance
+ * for that date), On waitlists. Only the metrics returned get a box (no
+ * `schedule` permission: no box, not an error). `early` (the business is under
+ * 14 days old or the figure rests on under 10 records) is DA1-005's state: no
+ * delta, and the tip. A failed read keeps the three boxes pending ("–"), never 0.
+ */
+export function classGlance(raw: Pick<DashRaw, "glance" | "glanceLastWeek">): { boxes: NumberBox[]; early: boolean } {
+  const g = raw.glance;
+  if (!g) return { boxes: [{ value: "–", label: "Classes today" }, { value: "–", label: "Average fill" }, { value: "–", label: "On waitlists" }], early: false };
+  const boxes: NumberBox[] = [];
+  const n = (f: GlanceFigure) => (f.value === null ? "–" : String(Math.round(f.value)));
+  if (g.classes_today) boxes.push({ value: n(g.classes_today), label: "Classes today" });
+  const fill = g.average_fill_pct;
+  if (fill) {
+    const avg = fill.value === null ? null : Math.round(fill.value);
+    const lw = raw.glanceLastWeek?.average_fill_pct?.value;
+    const last = lw === null || lw === undefined ? null : Math.round(lw);
+    const delta = !fill.early && avg !== null && last !== null ? avg - last : null;
+    boxes.push({ value: avg === null ? "–" : `${avg}%`, label: "Average fill", delta: delta === null ? undefined : `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% vs last week`, tone: delta !== null && delta < 0 ? "warn" : "good" });
+  }
+  if (g.on_waitlists) boxes.push({ value: n(g.on_waitlists), label: "On waitlists" });
+  return { boxes, early: !!(fill ?? g.classes_today)?.early };
 }
 
 // ---- Schedule (week strip + today card) -------------------------------------
@@ -402,20 +434,7 @@ export function weekItems(raw: DashRaw, now: Date): { dates: string[]; items: Da
   return { dates: k.week, items };
 }
 
-// ---- Recent activity ----------------------------------------------------------
-
-export type ActivityType = "joined" | "ended" | "booked" | "created";
-
-export interface ActivityEvent {
-  key: string;
-  type: ActivityType;
-  at: string;
-  day: string;
-  title: string;
-  sub: string;
-  /** Staff initial for a named row (created by the business); null = masked member. */
-  initial: string | null;
-}
+// ---- Recent activity (rows: activityFeed.ts, B15) ------------------------------
 
 /** "25 min ago", "2h ago" today; "7:12 PM" before today (12-hour, D5). */
 export function whenLabel(at: string, now: Date): string {
@@ -427,141 +446,6 @@ export function whenLabel(at: string, now: Date): string {
     return `${Math.floor(mins / 60)}h ago`;
   }
   return time12(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
-}
-
-export function activityEvents(raw: DashRaw, now: Date, days = 30): ActivityEvent[] {
-  const k = counts(raw, now);
-  const since = shiftDate(k.today, -(days - 1));
-  const out: ActivityEvent[] = [];
-  const classById = Object.fromEntries(raw.classes.map((c) => [c.id, c]));
-  const inWindow = (at: string) => localDayOf(at) >= since;
-  for (const b of raw.bookings) {
-    const c = classById[b.classId];
-    if (!c || !inWindow(b.createdAt)) continue;
-    out.push({
-      key: `b-${b.classId}-${b.clientId}`,
-      type: "booked",
-      at: b.createdAt,
-      day: localDayOf(b.createdAt),
-      title: `${maskedMember(b.clientId)} booked ${c.title}`,
-      sub: `${dayLabel(c.date, k.today)} ${time12(c.start)} · ${k.booked[c.id] ?? 0} of ${c.cap} now booked`,
-      initial: null,
-    });
-  }
-  for (const m of raw.members) {
-    if (m.accepted === true && m.respondedAt && inWindow(m.respondedAt)) {
-      const plan = m.planId ? raw.planNames[m.planId] : undefined;
-      const viaCode = raw.codes.some((x) => x.redeemedBy === m.memberId);
-      out.push({
-        key: `j-${m.id}`,
-        type: "joined",
-        at: m.respondedAt,
-        day: localDayOf(m.respondedAt),
-        title: `${m.label ?? maskedMember(m.memberId)} joined`,
-        sub: viaCode ? `Redeemed a code · ${plan ?? "no plan"}` : plan ?? "No plan",
-        initial: null,
-      });
-    }
-    if (m.endedAt && inWindow(m.endedAt)) {
-      const since0 = m.respondedAt ?? m.invitedAt;
-      const d = new Date(since0);
-      const sinceLabel = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ""}`;
-      out.push({
-        key: `e-${m.id}`,
-        type: "ended",
-        at: m.endedAt,
-        day: localDayOf(m.endedAt),
-        title: `${m.label ?? maskedMember(m.memberId)} ended their membership`,
-        sub: `Member since ${sinceLabel}`,
-        initial: null,
-      });
-    }
-  }
-  for (const c of raw.classes) {
-    if (!inWindow(c.createdAt)) continue;
-    const name = c.professionalId ? raw.team[c.professionalId] : undefined;
-    const who = firstName(name);
-    out.push({
-      key: `c-${c.id}`,
-      type: "created",
-      at: c.createdAt,
-      day: localDayOf(c.createdAt),
-      title: `${c.title} scheduled`,
-      sub: `${DAY_SHORT[mondayIndex(parseDay(c.date).getDay())]} ${time12(c.start)}${who ? ` with ${who}` : ""} · ${c.cap} spots`,
-      initial: who ? who[0].toUpperCase() : null,
-    });
-  }
-  return out.sort((a, b) => b.at.localeCompare(a.at));
-}
-
-export interface WeekTotal {
-  type: ActivityType;
-  label: string;
-  n: number;
-  prev: number;
-  days: number[];
-}
-
-export function weekTotals(kind: DashKind, raw: DashRaw, now: Date): WeekTotal[] {
-  const k = counts(raw, now);
-  const all = activityEvents(raw, now, 14);
-  const perDay = (type: ActivityType, dates: string[]) => dates.map((d) => all.filter((e) => e.type === type && e.day === d).length);
-  const mk = (type: ActivityType, label: string): WeekTotal => {
-    const days = perDay(type, k.week);
-    const prev = perDay(type, k.lastWeek);
-    return { type, label, n: days.reduce((a, b) => a + b, 0), prev: prev.reduce((a, b) => a + b, 0), days };
-  };
-  const base = [mk("joined", "Joined"), mk("ended", "Ended")];
-  return kind === "classes" ? [...base, mk("booked", "Booked"), mk("created", "Classes")] : base;
-}
-
-// ---- Needs your attention (BU4-10, derived until the RPC exists) ------------
-
-export interface AttentionItem {
-  key: string;
-  icon: "eye-off" | "ticket" | "calendar-clock" | "users";
-  tone: "high" | "caution" | "primary";
-  title: string;
-  sub: string;
-  action: string;
-  to: "listing" | "members" | "classes" | "employees";
-}
-
-export function attentionItems(raw: DashRaw, now: Date): AttentionItem[] {
-  const out: AttentionItem[] = [];
-  const k = counts(raw, now);
-  if (raw.business && !raw.business.active) {
-    out.push({ key: "hidden", icon: "eye-off", tone: "high", title: "Your listing is hidden", sub: "Clients can't find you on Explore", action: "Turn on", to: "listing" });
-  }
-  const nowIso = now.toISOString();
-  const waiting = raw.codes.filter((c) => !c.redeemed && c.expiresAt > nowIso).length;
-  if (waiting > 0) {
-    out.push({ key: "codes", icon: "ticket", tone: "caution", title: "Member invites waiting", sub: `${waiting} ${waiting === 1 ? "code" : "codes"} not redeemed`, action: "View", to: "members" });
-  }
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  for (const d of [k.today, shiftDate(k.today, 1)]) {
-    for (const c of k.byDate[d] ?? []) {
-      if (d === k.today && (minutesOfDay(c.start) ?? 0) <= nowMin) continue;
-      const b = k.booked[c.id] ?? 0;
-      const f = c.cap > 0 ? b / c.cap : 1;
-      if (f >= 0.5) continue;
-      out.push({
-        key: `u-${c.id}`,
-        icon: "calendar-clock",
-        tone: "caution",
-        title: `${c.title} is ${Math.round(f * 100)}% booked`,
-        sub: `${dayLabel(d, k.today)} ${time12(c.start)} · ${b} of ${c.cap} spots`,
-        action: "Open",
-        to: "classes",
-      });
-    }
-  }
-  const s = raw.seats;
-  if (s && s.capacity > s.used) {
-    const free = s.capacity - s.used;
-    out.push({ key: "seats", icon: "users", tone: "primary", title: `${free} ${free === 1 ? "seat" : "seats"} unfilled`, sub: `${s.used} of ${s.capacity} seats used`, action: "Add", to: "employees" });
-  }
-  return out;
 }
 
 // ---- Finish setting up (DA2-003, OURS-DA-get-set-up-per-type) ---------------
@@ -585,8 +469,8 @@ export function setupSteps(kind: DashKind, raw: DashRaw): SetupStep[] {
       listing,
       { key: "product", label: "Add your first product", action: "Add", done: raw.productsCount > 0, to: "products" },
       { key: "delivery", label: "Set delivery or pickup", action: "Set up", done: raw.storeDeliveryOrPickup, to: "delivery" },
-      // First order: orders are BU4-05 (not on the stack), so it stays open.
-      { key: "order", label: "Get your first order", action: "View", done: false, to: "orders" },
+      // First order: B11 store_orders_page total_count (open while B11 is not on the database).
+      { key: "order", label: "Get your first order", action: "View", done: (raw.store?.totalOrders ?? 0) > 0, to: "orders" },
     ];
   }
   if (kind === "gym") {
@@ -598,3 +482,59 @@ export function setupSteps(kind: DashKind, raw: DashRaw): SetupStep[] {
 export const isClassBased = (kind: DashKind) => kind === "classes";
 
 export { DAY_SHORT, DAY_LONG };
+
+// ---- the store Today block (DA1-011 / DA1-013 / DA1-014, B11) ----------------
+
+const OPEN_ORDER = new Set(["placed", "packed", "out_for_delivery", "ready_for_pickup"]);
+const ORDER_PILL: Record<string, { text: string; tone: "good" | "warn" | "pale" }> = {
+  placed: { text: "To pack", tone: "warn" },
+  packed: { text: "Packed", tone: "pale" },
+  out_for_delivery: { text: "Out", tone: "pale" },
+  ready_for_pickup: { text: "Ready", tone: "good" },
+};
+/** DA1-013 #2: the early tip until the 10th order (COPY). */
+export const STORE_EARLY_ORDERS = 10;
+
+/**
+ * DA1-011: Orders today, To pack or deliver, Low stock (under 5 left); the
+ * open orders (newest first) and the low-stock products. The drawn "+3 vs
+ * usual" delta has no definition of "usual" (UNSPECIFIED), so it is not
+ * shown. No order ever (or B11 not on the database) = the DA1-014 empty card.
+ */
+export function storeToday(raw: DashRaw): TodayBlock {
+  const s = raw.store;
+  if (!s || s.totalOrders === 0) {
+    return { kind: "empty", icon: "package", title: "No orders yet", body: "Orders show here as soon as your first product is listed." };
+  }
+
+  const open = s.orders.filter((o) => OPEN_ORDER.has(o.status));
+  const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+  // B15: Orders today and Low stock are business_glance's (orders_today on the
+  // business's own day; low_stock under 5 left). "To pack or deliver" stays the
+  // open-order count of the list below it: glance's orders_to_pack is placed +
+  // packed only, and the drawn label also counts out for delivery / ready.
+  const g = raw.glance;
+  const fig = (f: GlanceFigure | undefined) => (f && f.value !== null ? Math.round(f.value) : null);
+  const boxes: NumberBox[] = [];
+  if (!g || g.orders_today) boxes.push({ value: fig(g?.orders_today) === null ? "–" : String(fig(g?.orders_today)), label: "Orders today" });
+  boxes.push({ value: String(open.length), label: "To pack or deliver" });
+  if (!g || g.low_stock) {
+    const low = fig(g?.low_stock);
+    boxes.push(low === null ? { value: "–", label: "Low stock" } : low > 0 ? { value: String(low), label: "Low stock", delta: "Under 5 left", tone: "warn" } : { value: "0", label: "Low stock" });
+  }
+  return {
+    kind: "store",
+    boxes,
+    orders: open.slice(0, 3).map((o) => ({
+      id: o.id,
+      glyph: o.fulfilment === "delivery" ? "truck" : "package",
+      title: `Order #${o.number}`,
+      detail: `${o.fulfilment === "delivery" ? "Delivery" : "Pickup"} · ${items(o.itemCount)} · ${o.label}`,
+      pill: ORDER_PILL[o.status],
+    })),
+    openCount: open.length,
+    low: s.lowStock.slice(0, 3).map((p) => ({ id: p.id, title: p.name, detail: p.category ?? "Other", value: `${p.stock} left` })),
+    lowCount: s.lowStock.length,
+    tip: s.totalOrders < STORE_EARLY_ORDERS ? "Sales trends appear after your first 10 orders." : null,
+  };
+}

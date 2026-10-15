@@ -46,7 +46,9 @@ export function KitLabel({ c, label, action, onAction }: { c: DashPalette; label
 
 /** Number boxes (DA1-003 #5): r 16, pad 12 × 10, value 24/800, label 11/600, delta 10.5/700. */
 export function NumberBoxes({ c, boxes, cols }: { c: DashPalette; boxes: NumberBox[]; cols?: number }) {
-  const tone = (t?: NumberBox["tone"]) => (t === "bad" ? c.high : t === "warn" ? c.warn : c.good);
+  const tone = (t?: NumberBox["tone"]) => (t === "bad" ? c.high : t === "warn" ? c.warn : t === "faint" ? c.faint : c.good);
+  // B15: a caller without the permission gets no glance metrics, so no boxes (not an empty grid).
+  if (boxes.length === 0) return null;
   return (
     <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols ?? boxes.length},minmax(0,1fr))`, gap: 8, marginBottom: 14 }}>
       {boxes.map((b) => (

@@ -9,11 +9,14 @@ import { readPassCache, writePassCache } from "./passCache";
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
 // checkout and the pass").
 //
-// VENUES ARE public.gyms, READ DIRECTLY. marketplace_venues (the Explore view)
-// predates 4a and carries none of its columns, so the gyms tab and the gym
-// page read the table itself. Its SELECT policies already hide a venue an
-// admin has hidden (gyms_select_public = hidden_at is null), so there is no
-// visibility filter here.
+// VENUES ARE public.gyms. marketplace_venues (the Explore view) carries none
+// of the 4a columns, so the gym page and the Gyms tab read the table itself.
+// B13: WHICH venues Explore lists is the view's decision, not the table's
+// RLS: gyms_select_public also shows a member the venue they use (hidden from
+// Explore or not, listed or not) and gyms_select_hidden_insider shows an
+// insider their hidden venue. So fetchVenues() takes the ids (and is_featured)
+// from marketplace_venues and reads only those rows; fetchVenue() (the gym
+// page) stays on the table, so a member can still open their own venue.
 //
 // PLANS ARE BUSINESS-LEVEL (the doc's "Read this first"): a gym shows its
 // business's membership_plans, and a business with two venues shows the same
@@ -58,6 +61,12 @@ export interface Venue {
    * business-logos). Any may 404: draw with the initials as the fallback.
    */
   logoUrls: string[];
+  /** B13 MK-02: gyms.amenities, amenity_vocabulary() keys. */
+  amenities: string[];
+  /** B13 MK-02: gyms.first_visit (≤300), or null. */
+  firstVisit: string | null;
+  /** B13 MK-06: a live featured week (marketplace_venues.is_featured); false on the gym page's own read. */
+  isFeatured: boolean;
 }
 
 export interface VenuePlan extends PlanLite {
@@ -107,6 +116,8 @@ type VenueRow = {
   timezone: string | null;
   cover_url: string | null;
   logo_url: string | null;
+  amenities: string[] | null;
+  first_visit: string | null;
 };
 
 type MembershipRow = {
@@ -131,10 +142,10 @@ type MembershipRow = {
 };
 
 const VENUE_COLUMNS =
-  "id, name, location, bio, lat, lng, business_id, venue_kind, public_phones, access_qr, access_nfc, access_bluetooth, timezone, cover_url, logo_url";
+  "id, name, location, bio, lat, lng, business_id, venue_kind, public_phones, access_qr, access_nfc, access_bluetooth, timezone, cover_url, logo_url, amenities, first_visit";
 
-/** A4's two buckets are public: an object's URL is built, not signed. */
-const publicUrl = (bucket: "business-logos" | "gym-covers", value: string | null): string | null => {
+/** A4's two buckets and B13's business-photos are public: an object's URL is built, not signed. */
+const publicUrl = (bucket: "business-logos" | "gym-covers" | "business-photos", value: string | null): string | null => {
   const path = storagePath(value);
   return path ? supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl : null;
 };
@@ -155,6 +166,9 @@ const toVenue = (r: VenueRow, businessLogos: Map<string, string>): Venue => ({
   timezone: r.timezone || "Asia/Beirut",
   coverUrl: publicUrl("gym-covers", r.cover_url),
   logoUrls: [hostedImageUrl(r.logo_url), r.business_id ? (businessLogos.get(r.business_id) ?? null) : null].filter((u): u is string => !!u),
+  amenities: r.amenities ?? [],
+  firstVisit: r.first_visit,
+  isFeatured: false,
 });
 
 type LogoQuery = {
@@ -190,6 +204,7 @@ async function businessLogos(rows: VenueRow[]): Promise<Map<string, string>> {
 type VenueQuery = {
   select: (cols: string) => VenueQuery & PromiseLike<{ data: VenueRow[] | null; error: PostgrestError | null }>;
   eq: (col: string, v: string) => VenueQuery & PromiseLike<{ data: VenueRow[] | null; error: PostgrestError | null }>;
+  in: (col: string, v: string[]) => VenueQuery & PromiseLike<{ data: VenueRow[] | null; error: PostgrestError | null }>;
   order: (col: string) => PromiseLike<{ data: VenueRow[] | null; error: PostgrestError | null }>;
 };
 // The 4a columns aren't in the production-generated types.
@@ -204,16 +219,81 @@ const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
   message: stage4Message(error.code, error.message, fallback),
 });
 
-/** Every visible venue, by name (MO1.4.2). */
+/**
+ * Every venue Explore lists (MO1.4.2): featured first, then by name. The ids
+ * and is_featured come from marketplace_venues (B13: no hidden venue, no
+ * unlisted business's venue, whoever is asking); the rows from public.gyms.
+ */
 export async function fetchVenues(): Promise<Result<Venue[]>> {
-  const { data, error } = await gymsTable().select(VENUE_COLUMNS).order("name");
+  type Listed = { venue_id: string; is_featured: boolean | null };
+  const listed = await (supabase as unknown as {
+    from: (v: "marketplace_venues") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: Listed[] | null; error: PostgrestError | null }> } };
+  })
+    .from("marketplace_venues")
+    .select("venue_id, is_featured")
+    .eq("kind", "gym");
+  if (listed.error) {
+    console.error("[venues] Could not read the listed venues:", listed.error.message);
+    return fail(listed.error, "Couldn't load gyms right now.");
+  }
+  const featured = new Map((listed.data ?? []).map((r) => [r.venue_id, r.is_featured === true]));
+  if (featured.size === 0) return { ok: true, value: [] };
+  const { data, error } = await gymsTable().select(VENUE_COLUMNS).in("id", [...featured.keys()]).order("name");
   if (error) {
     console.error("[venues] Could not read venues:", error.message);
     return fail(error, "Couldn't load gyms right now.");
   }
-  const rows = data ?? [];
+  const rows = (data ?? []).filter((r) => featured.has(r.id));
   const logos = await businessLogos(rows);
-  return { ok: true, value: rows.map((r) => toVenue(r, logos)) };
+  const venues = rows.map((r) => ({ ...toVenue(r, logos), isFeatured: featured.get(r.id) === true }));
+  return { ok: true, value: [...venues.filter((v) => v.isFeatured), ...venues.filter((v) => !v.isFeatured)] };
+}
+
+/** One approved photo of a venue (B13 MK-03), as a public URL. */
+export interface VenuePhoto {
+  id: string;
+  url: string;
+  caption: string | null;
+  position: number;
+}
+
+/**
+ * B13 MK-03: the venue's approved photos, by position: the business's photos
+ * for this venue and its business-wide ones (gym_id null). RLS shows the
+ * public only approved photos of a listed business (an insider would also
+ * see its own in-review ones, so the status is asked for explicitly). Files
+ * are in the PUBLIC business-photos bucket. A failed read costs only the
+ * photos: the hero keeps its cover.
+ */
+export async function fetchVenuePhotos(businessId: string, gymId: string): Promise<VenuePhoto[]> {
+  type Row = { id: string; path: string; caption: string | null; position: number; gym_id: string | null };
+  type Q = {
+    from: (t: "business_photos") => {
+      select: (c: string) => {
+        eq: (k: string, v: string) => {
+          eq: (k: string, v: string) => {
+            or: (f: string) => { order: (k: string) => PromiseLike<{ data: Row[] | null; error: PostgrestError | null }> };
+          };
+        };
+      };
+    };
+  };
+  const { data, error } = await (supabase as unknown as Q)
+    .from("business_photos")
+    .select("id, path, caption, position, gym_id")
+    .eq("business_id", businessId)
+    .eq("status", "approved")
+    // The id comes from the URL: only a UUID goes into the filter string.
+    .or(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gymId) ? `gym_id.is.null,gym_id.eq.${gymId}` : "gym_id.is.null")
+    .order("position");
+  if (error) {
+    console.warn("[venues] Could not read the venue's photos:", error.message);
+    return [];
+  }
+  return (data ?? []).flatMap((r) => {
+    const url = publicUrl("business-photos", r.path);
+    return url ? [{ id: r.id, url, caption: r.caption?.trim() || null, position: r.position }] : [];
+  });
 }
 
 /** One venue, or null when it doesn't exist or is hidden (MO1.4.2.1). */
@@ -300,6 +380,31 @@ export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> 
   }));
   if (uid) writePassCache(uid, value.filter((m) => m.status === "active"));
   return { ok: true, value };
+}
+
+/**
+ * B10: rotate_gym_pass_token(membership) → the new token. The member kills a
+ * leaked pass: the old code reads "not recognised" at the desk from then on.
+ * The device's offline copy (V6-30) takes the new token, keeping its age.
+ * A database without the function (PGRST202 / 42883) answers `missing`.
+ */
+export async function rotatePassToken(membershipId: string): Promise<Result<string> | { ok: false; missing: true; message: string }> {
+  const { data, error } = await rpc<string>("rotate_gym_pass_token", { p_membership_id: membershipId });
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42883") return { ok: false, missing: true, message: "Getting a new pass code is coming soon." };
+    console.error("[venues] Could not rotate a pass token:", error.message);
+    return fail(error, "Couldn't get a new pass code. Try again.");
+  }
+  if (!data) return { ok: false, message: "Couldn't get a new pass code. Try again." };
+  const uid = (await supabase.auth.getSession().catch(() => null))?.data.session?.user.id ?? null;
+  if (uid) {
+    const cached = readPassCache<GymMembership>(uid, (m) => m.expiresOn);
+    if (cached) {
+      const rows = cached.rows.map((m) => (m.id === membershipId ? { ...m, passToken: data } : m));
+      writePassCache(uid, rows, new Date(cached.savedAt));
+    }
+  }
+  return { ok: true, value: data };
 }
 
 /**
@@ -449,6 +554,10 @@ export interface GymReview {
   helpfulCount: number;
   viewerFoundHelpful: boolean;
   isMine: boolean;
+  /** B14: the business's public reply; null when there is none or Centium removed it. */
+  reply: { body: string; at: string } | null;
+  /** B14: the class the review was written from (write_class_review). */
+  classTitle: string | null;
 }
 
 /** The sorts gym_reviews_page() accepts; anything else is ATX93 ("With photos" isn't built). */
@@ -485,6 +594,9 @@ export async function fetchReviewsPage(gymId: string, sort: ReviewSort, limit = 
     helpful_count: number;
     viewer_found_helpful: boolean;
     is_mine: boolean;
+    reply_body: string | null;
+    reply_at: string | null;
+    class_title: string | null;
   };
   const { data, error } = await rpc<Row[]>("gym_reviews_page", { p_gym_id: gymId, p_sort: sort, p_limit: limit, p_offset: offset });
   if (error) {
@@ -505,6 +617,8 @@ export async function fetchReviewsPage(gymId: string, sort: ReviewSort, limit = 
       helpfulCount: r.helpful_count,
       viewerFoundHelpful: r.viewer_found_helpful,
       isMine: r.is_mine,
+      reply: r.reply_body && r.reply_at ? { body: r.reply_body, at: r.reply_at } : null,
+      classTitle: r.class_title?.trim() || null,
     })),
   };
 }
@@ -513,6 +627,58 @@ export async function fetchReviewsPage(gymId: string, sort: ReviewSort, limit = 
 export async function writeGymReview(gymId: string, rating: number, body: string): Promise<Result<string>> {
   const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() });
   if (error) return fail(error, "Couldn't post your review. Try again.");
+  return { ok: true, value: data ?? "" };
+}
+
+/** Whether a listed business has a venue Explore can show (write_business_review is for those without). Null: unknown. */
+export async function businessHasVenue(businessId: string): Promise<boolean | null> {
+  const { data, error } = await gymsTable().select("id").eq("business_id", businessId);
+  if (error) {
+    console.warn("[venues] Could not read the business's venues:", error.message);
+    return null;
+  }
+  return (data ?? []).length > 0;
+}
+
+/**
+ * B14 RP-01: a review of a business with no venue, once per person (ATX92);
+ * staff of the business are refused (ATX03). There is no public reader of a
+ * venue-less business's reviews yet, so the page only offers the write.
+ */
+export async function writeBusinessReview(businessId: string, rating: number, body: string): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() });
+  if (error) {
+    const own =
+      error.code === "ATX92"
+        ? "You've already reviewed this business."
+        : error.code === "ATX03"
+          ? "You can't review a business you work for."
+          : error.code === "ATX08"
+            ? "This business isn't listed on Explore right now."
+            : null;
+    return own ? { ok: false, code: error.code, message: own } : fail(error, "Couldn't post your review. Try again.");
+  }
+  return { ok: true, value: data ?? "" };
+}
+
+/**
+ * B14 RP-04 "Rate your visit": a review from a class booking, once the class
+ * has happened (ATX10). One review per person per venue (or business): an
+ * existing one is edited and tagged with this class and its instructor.
+ */
+export async function writeClassReview(bookingId: string, rating: number, body: string): Promise<Result<string>> {
+  const { data, error } = await rpc<string>("write_class_review", { p_booking_id: bookingId, p_rating: rating, p_body: body.trim() });
+  if (error) {
+    const own =
+      error.code === "ATX10"
+        ? "You can rate a class once it has happened."
+        : error.code === "ATX94"
+          ? "That booking couldn't be found."
+          : error.code === "22023"
+            ? "Write a few words, up to 2,000 characters."
+            : null;
+    return own ? { ok: false, code: error.code, message: own } : fail(error, "Couldn't post your review. Try again.");
+  }
   return { ok: true, value: data ?? "" };
 }
 

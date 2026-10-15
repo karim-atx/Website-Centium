@@ -19,6 +19,7 @@ import {
   toHoursWrite,
   toMyVenue,
   toRosterEntry,
+  canMarkBookingPaid,
   toVenueDashboard,
   toVenueMember,
   isMaskedLabel,
@@ -102,8 +103,29 @@ test("toVenueDashboard: money as numbers, missing counts as 0", () => {
   assert.equal(d.amountAwaitingPayment, 15);
   assert.equal(d.amountMarkedPaidThisMonth, 135);
   assert.equal(d.classesThisWeek, 0);
-  assert.equal(money(d.amountAwaitingPayment), "$15");
+  assert.equal(money(15), "$15");
   assert.equal(money(0), "$0");
+});
+
+test("toVenueDashboard: B15 money is null without revenue, never 0", () => {
+  const d = toVenueDashboard({
+    gym_id: GYM,
+    name: "Flex Gym",
+    is_open_now: null,
+    members_total: 2,
+    active_members: 2,
+    memberships_awaiting_payment: 1,
+    amount_awaiting_payment: null,
+    amount_marked_paid_this_month: null,
+    classes_this_week: 1,
+    bookings_this_week: 2,
+    waitlist_waiting: 0,
+    cancellations_this_week: 0,
+    reviews_count: 0,
+    reviews_average: null,
+  });
+  assert.equal(d.amountAwaitingPayment, null);
+  assert.equal(d.amountMarkedPaidThisMonth, null);
 });
 
 const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
@@ -184,6 +206,22 @@ test("roster: mapping and the booked / waitlist split", () => {
   assert.equal(waitlist[0].isMinor, true);
   assert.equal(waitlist[1].label, "Client");
   assert.equal(waitlist[1].isMinor, false);
+  // Without the CL-08 column, no row carries a booking id.
+  assert.equal(booked[0].bookingId, null);
+});
+
+test("roster CL-08: booking_id on booked rows only, and which rows can be marked paid", () => {
+  const base = { client_label: "Sam", client_is_minor: false, payment_method: "cash", price_agreed: 20, at: "t1" } as const;
+  const pending = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "pending", waitlist_position: null, booking_id: "b1" });
+  const paid = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "paid", waitlist_position: null, booking_id: "b2" });
+  const noId = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "pending", waitlist_position: null, booking_id: null });
+  const waiting = toRosterEntry({ ...base, entry_kind: "waitlist", payment_status: "pending", waitlist_position: 1, booking_id: "w1" });
+  assert.equal(pending.bookingId, "b1");
+  assert.equal(waiting.bookingId, null);
+  assert.equal(canMarkBookingPaid(pending), true);
+  assert.equal(canMarkBookingPaid(paid), false);
+  assert.equal(canMarkBookingPaid(noId), false);
+  assert.equal(canMarkBookingPaid(waiting), false);
 });
 
 // ---- hours editor

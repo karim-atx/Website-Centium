@@ -5,6 +5,7 @@ import { Avatar, Sk, Strip } from "./parts";
 import { SeatDonut, type DonutSeat } from "./SeatDonut";
 import { roleLabel, type Vocab } from "./vocab";
 import type { TeamState } from "./useTeam";
+import type { RatingsState } from "./useRatings";
 import type { TeamPerson } from "./teamData";
 import { errText, seatList, sentAgo } from "./helpers";
 
@@ -23,11 +24,16 @@ const TILE_META: Record<TileKey, { title: string; icon: LucideIcon; acc: string 
   pay: { title: "Pay", icon: Wallet, acc: "var(--an-pdark)" },
 };
 
+/** AN5-060 O1: the hero line under the blocks while seats are on their way. */
+const requestedLine = (n: number, live: boolean) =>
+  live ? `${n === 1 ? "1 seat block" : `${n} seat blocks`} awaiting payment` : n === 1 ? "1 seat block requested" : `${n} seat blocks requested`;
+
 const inRangePhrase = (r: AnalyticsRange) =>
   r.key === "week" ? "this week" : r.key === "4w" ? "in 4 weeks" : r.key === "12w" ? "in 12 weeks" : "in this range";
 
 export function TeamIndex({
   state,
+  ratings,
   range,
   vocab,
   onTile,
@@ -37,8 +43,12 @@ export function TeamIndex({
   onRequests,
   onPlan,
   requestedBlocks,
+  requestedLive = false,
+  canAddSeats = true,
 }: {
   state: TeamState;
+  /** B14 instructor ratings for the Ratings tile (AN5-001 row 24). */
+  ratings: RatingsState;
   range: AnalyticsRange;
   vocab: Vocab;
   onTile: (k: TileKey) => void;
@@ -48,6 +58,10 @@ export function TeamIndex({
   onRequests: () => void;
   onPlan: () => void;
   requestedBlocks: number;
+  /** B8 RV-06: requestedBlocks is a real order awaiting payment to Centium (else the email path's count). */
+  requestedLive?: boolean;
+  /** Add seats shows for the owner (RV-06 buying is the owner's); always on the email path. */
+  canAddSeats?: boolean;
 }) {
   const [sel, setSel] = useState(0);
   const seats = useMemo(() => seatList(state), [state]);
@@ -102,12 +116,15 @@ export function TeamIndex({
         {seatsInfo.planActive && (
           <div className="an5-blocks" style={{ marginTop: 12 }}>
             <span className="an5-blocks-t">{blocksLine}</span>
-            <button type="button" className="an5-addseats tap" onClick={onAddSeats}>
-              <Plus size={14} strokeWidth={2.4} aria-hidden />
-              Add seats
-            </button>
+            {canAddSeats && (
+              <button type="button" className="an5-addseats tap" onClick={onAddSeats}>
+                <Plus size={14} strokeWidth={2.4} aria-hidden />
+                Add seats
+              </button>
+            )}
           </div>
         )}
+        {requestedBlocks > 0 && <p className="an5-new-msg is-faint">{requestedLine(requestedBlocks, requestedLive)}</p>}
         {team.requests > 0 && <RequestsRow n={team.requests} onClick={onRequests} standalone />}
       </div>
     );
@@ -198,14 +215,14 @@ export function TeamIndex({
         </div>
         <div className="an5-blocks">
           <span className="an5-blocks-t">{blocksLine}</span>
-          <button type="button" className="an5-addseats tap" aria-label="Add seats" onClick={onAddSeats}>
-            <Plus size={14} strokeWidth={2.4} aria-hidden />
-            Add seats
-          </button>
+          {canAddSeats && (
+            <button type="button" className="an5-addseats tap" aria-label="Add seats" onClick={onAddSeats}>
+              <Plus size={14} strokeWidth={2.4} aria-hidden />
+              Add seats
+            </button>
+          )}
         </div>
-        {requestedBlocks > 0 && (
-          <p className="an5-new-msg is-faint">{requestedBlocks === 1 ? "1 seat block requested" : `${requestedBlocks} seat blocks requested`}</p>
-        )}
+        {requestedBlocks > 0 && <p className="an5-new-msg is-faint">{requestedLine(requestedBlocks, requestedLive)}</p>}
 
         {cur &&
           (cur.kind === "free" ? (
@@ -245,7 +262,7 @@ export function TeamIndex({
       </div>
       <p className="an5-hint">Tap a seat for who's in it.</p>
 
-      <Tiles state={state} onTile={onTile} />
+      <Tiles state={state} ratings={ratings} onTile={onTile} />
     </div>
   );
 }
@@ -266,7 +283,7 @@ const RequestsRow: React.FC<{ n: number; onClick: () => void; standalone?: boole
   </button>
 );
 
-function Tiles({ state, onTile }: { state: TeamState; onTile: (k: TileKey) => void }) {
+function Tiles({ state, ratings, onTile }: { state: TeamState; ratings: RatingsState; onTile: (k: TileKey) => void }) {
   const s = state.stats;
   const perf =
     s && s.studioFill !== null && !state.early && s.totalBookings >= 20
@@ -283,7 +300,13 @@ function Tiles({ state, onTile }: { state: TeamState; onTile: (k: TileKey) => vo
     repeat: { v: "–", s: "Needs 20 bookings each" },
     load,
     coverage: { v: String(n), s: n === 0 ? "No classes need attention" : n === 1 ? "class needs attention" : "classes need attention" },
-    ratings: { v: "–", s: "No reviews yet" },
+    // AN5-001 row 24 "4.7" + "team average · 48 reviews"; OURS R4 at 0; under 3 the count only.
+    ratings:
+      ratings.team.avg !== null
+        ? { v: ratings.team.avg.toFixed(1), s: `team average · ${ratings.team.count} reviews` }
+        : ratings.team.count > 0
+          ? { v: "–", s: `${ratings.team.count} ${ratings.team.count === 1 ? "review" : "reviews"} so far` }
+          : { v: "–", s: "No reviews yet" },
     pay: { v: "–", s: "No pay data yet" },
   };
   return (

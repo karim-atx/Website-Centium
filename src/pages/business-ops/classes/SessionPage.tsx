@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Activity, Bike, CalendarDays, Dumbbell, MessageCircle, Pencil, PersonStanding, Repeat2, Trash2, User, UserRound, Users } from "lucide-react";
+import { Activity, Bike, CalendarDays, CalendarX, Dumbbell, MessageCircle, Pencil, PersonStanding, Repeat2, Trash2, User, UserRound, Users } from "lucide-react";
+import { repeatLine } from "../../../services/business-classes/scheduleRules";
 import { ClassRosterSheet } from "../../../components/marketplace/ClassRosterSheet";
+import { useMarkBookingPaid } from "../../../components/marketplace/useMarkBookingPaid";
 import { fetchClassRoster } from "../../../services/venues/console";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useApp } from "../../../context/AppContext";
@@ -15,9 +17,12 @@ import { useSchedule } from "./useSchedule";
 import { addDays, dayHeading, dayWords, initialOf, isEnded, shortDate, todayIso } from "./scheduleModel";
 
 // The session page (OP1-083; OpsTabsV4 view=session). Route
-// /app/business/classes/:id. Tiles: Edit, Message (B7: shown, not available
-// yet), Substitute, and Delete only while nobody has booked (V6-55; Cancel
-// session arrives with cancel_class_session, B9). The live roster
+// /app/business/classes/:id. Tiles: Edit, Message (OP1-088), Substitute, and
+// Cancel (OP1-086, B9 cancel_class_session) once anyone has booked; while
+// nobody has, Delete (the server refuses deleting a booked class, ATXE1). A
+// repeating class shows its rule under the time (OP1-083 row 6, B9
+// class_series) with Stop repeating (OURS, end_class_series); a cancelled
+// one shows the Cancelled tag and its reason, and offers no actions. The live roster
 // (venue_class_roster) is the Booked members card; "See all" opens the
 // roster sheet (lead: ClassRosterSheet as Booked members / See all).
 
@@ -66,6 +71,12 @@ export default function SessionPage() {
   const rosterHidden = access.ready && !rosterAllowed;
   const actions = useSessionActions(api, {
     onDeleted: () => navigate("/app/business/classes", { replace: true }),
+  });
+  const pay = useMarkBookingPaid({
+    onDone: () => {
+      setTick((t) => t + 1);
+      actions.show("Marked as paid.");
+    },
   });
 
   const row = api.classes.find((x) => x.id === id) ?? null;
@@ -121,7 +132,9 @@ export default function SessionPage() {
   const { booked: bookedList, waitlist } = splitRoster(entries ?? []);
   const left = Math.max(0, session.maxCapacity - session.booked);
   const pct = session.maxCapacity ? Math.round((session.booked / session.maxCapacity) * 100) : 0;
-  const line = ended
+  const line = session.cancelled
+    ? "This class was cancelled."
+    : ended
     ? "This class has ended."
     : left === 0
       ? `Full. ${waitlist.length} on the waitlist.`
@@ -132,11 +145,11 @@ export default function SessionPage() {
   // The instructor's next other session (OP1-083 row 10 OURS rule).
   const next = session.professionalId
     ? api.sessions
-        .filter((s) => s.id !== session.id && s.professionalId === session.professionalId && (s.date > today || (s.date === today && !isEnded(s, now))))
+        .filter((s) => s.id !== session.id && !s.cancelled && s.professionalId === session.professionalId && (s.date > today || (s.date === today && !isEnded(s, now))))
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0]
     : undefined;
   const instructorName = session.professionalId ? api.nameOf(session.professionalId) : "";
-  // OP1-093 row 3: after a substitute is assigned (this visit; the stored exception is B9).
+  // OP1-093 row 3: after a substitute is assigned (this visit: the server marks the class as edited on its own, not whom it replaced).
   const coverFor = session.professionalId ? api.coveringFor(session.id) : null;
 
   type Tile = { key: string; label: string; icon: React.ReactNode; tone?: "high"; disabled?: boolean; aria?: string; onClick?: () => void };
@@ -150,16 +163,20 @@ export default function SessionPage() {
     aria: !actions.canMessage ? `Message ${people}, needs messages access` : session.booked === 0 ? `Message ${people}, nobody has booked yet` : `Message the ${session.booked} booked ${people}`,
     onClick: msgReady ? () => actions.openMessage(id) : undefined,
   };
-  const tiles: Tile[] = ended
-    ? [msgTile]
-    : [
-        { key: "edit", label: "Edit", icon: <Pencil size={17} strokeWidth={2.1} />, onClick: () => actions.openEdit(id), disabled: offline },
-        msgTile,
-        { key: "sub", label: "Substitute", icon: <Repeat2 size={17} strokeWidth={2.1} />, onClick: () => actions.openSubstitute(id), disabled: offline },
-        ...(session.booked === 0
-          ? [{ key: "delete", label: "Delete", icon: <Trash2 size={17} strokeWidth={2.1} />, tone: "high" as const, onClick: () => actions.openDelete(id), disabled: offline }]
-          : []),
-      ];
+  const cancelled = !!session.cancelled;
+  const series = api.seriesOf(session.seriesId);
+  const tiles: Tile[] = cancelled
+    ? []
+    : ended
+      ? [msgTile]
+      : [
+          { key: "edit", label: "Edit", icon: <Pencil size={17} strokeWidth={2.1} />, onClick: () => actions.openEdit(id), disabled: offline },
+          msgTile,
+          { key: "sub", label: "Substitute", icon: <Repeat2 size={17} strokeWidth={2.1} />, onClick: () => actions.openSubstitute(id), disabled: offline },
+          session.booked > 0
+            ? { key: "cancel", label: "Cancel", icon: <CalendarX size={17} strokeWidth={2.1} />, tone: "high" as const, onClick: () => actions.openCancel(id), disabled: offline }
+            : { key: "delete", label: "Delete", icon: <Trash2 size={17} strokeWidth={2.1} />, tone: "high" as const, onClick: () => actions.openDelete(id), disabled: offline },
+        ];
 
   const payTag = (e: RosterEntry) => {
     if (e.paymentStatus === "paid") return <Tag size="head" label="Paid" bg={c.dark ? "#192A20" : "#E3F3E9"} ink={c.good} />;
@@ -178,13 +195,30 @@ export default function SessionPage() {
         </span>
         <div className="flex-1 min-w-0">
           <p className="flex items-center flex-wrap" style={{ margin: 0, gap: 7 }}>
-            <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", lineHeight: linePx(27), color: c.ink }}>{session.title}</span>
-            <Tag size="head" label="Class" bg={c.pale} ink={c.pDark} />
+            <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", lineHeight: linePx(27), color: c.ink, textDecoration: cancelled ? "line-through" : "none" }}>{session.title}</span>
+            {cancelled ? <Tag size="head" label="Cancelled" bg={c.highBg} ink={c.high} /> : <Tag size="head" label="Class" bg={c.pale} ink={c.pDark} />}
             {session.classType && <Tag size="head" label={session.classType} bg={c.pale} ink={c.pDark} />}
           </p>
           <p style={{ margin: "3px 0 0", fontSize: textPx(13), lineHeight: linePx(18), color: c.inkSoft }}>
             {dayHeading(session.date, today)} · {time12(session.startTime)} to {time12(session.endTime)}
           </p>
+          {/* OP1-083 row 6 (B9 class_series): the repeat rule, 12/16 faint, 12-hour. */}
+          {series && !cancelled && (
+            <p className="flex items-baseline flex-wrap" style={{ margin: 0, columnGap: 8, fontSize: textPx(12), lineHeight: linePx(16), color: c.faint }}>
+              <span>{repeatLine(series, series.startTime)}</span>
+              {!ended && (
+                <button type="button" onClick={() => actions.openEndSeries(id)} disabled={offline} className="tap disabled:opacity-45" style={{ minHeight: 24, fontSize: textPx(12), fontWeight: 800, color: c.pDark }}>
+                  Stop repeating
+                </button>
+              )}
+            </p>
+          )}
+          {/* B9: the cancelled record (cancel_reason is the team's own note). */}
+          {cancelled && (
+            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(16), color: c.high, fontWeight: 600 }}>
+              {row.cancelReason ? `Cancelled: ${row.cancelReason}` : `Cancelled. Booked ${people} were told.`}
+            </p>
+          )}
           <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(16), color: c.faint }}>{row.price ? `${row.price} · Cash` : "Free"}</p>
           {offline && api.loadedAt && (
             <p style={{ margin: 0, fontSize: textPx(11.5), color: c.faint }}>
@@ -194,7 +228,7 @@ export default function SessionPage() {
         </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))`, gap: 6, marginTop: 16 }}>
+      {tiles.length > 0 && <div className="grid" style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))`, gap: 6, marginTop: 16 }}>
         {tiles.map((t) => (
           <button
             key={t.key}
@@ -220,7 +254,7 @@ export default function SessionPage() {
             {t.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       <FiguresCard
         c={c}
@@ -239,7 +273,7 @@ export default function SessionPage() {
         </div>
         <button
           type="button"
-          onClick={() => (session.professionalId ? navigate(`/app/business/employees/${session.professionalId}`) : actions.openSubstitute(id))}
+          onClick={() => (session.professionalId ? navigate(`/app/business/employees/${session.professionalId}`) : !session.cancelled && actions.openSubstitute(id))}
           className="tap w-full flex items-center text-left"
           style={{ gap: 10, padding: "10px 16px", minHeight: 54 }}
         >
@@ -300,8 +334,19 @@ export default function SessionPage() {
           <p style={{ margin: 0, padding: "10px 16px 14px", fontSize: textPx(13), color: c.faint }}>Nobody has booked yet.</p>
         ) : (
           <>
-            {bookedList.slice(0, 3).map((e, i) => (
-              <div key={`${e.label}-${e.at}-${i}`} className="flex items-center" style={{ gap: 10, padding: "10px 16px", minHeight: 55, borderTop: i ? `1px solid ${c.divider}` : "none" }}>
+            {bookedList.slice(0, 3).map((e, i) => {
+              // CL-08 (K2): a row awaiting payment opens "Mark as paid" for front desk.
+              const markable = pay.can(e);
+              const Row = markable ? "button" : "div";
+              return (
+              <Row
+                key={`${e.label}-${e.at}-${i}`}
+                {...(markable
+                  ? { type: "button" as const, onClick: (ev: React.MouseEvent<HTMLElement>) => pay.open(e, ev.currentTarget), disabled: pay.busy, "aria-label": `${e.label}, Awaiting payment. Actions` }
+                  : {})}
+                className={markable ? "tap w-full flex items-center text-left" : "flex items-center"}
+                style={{ gap: 10, padding: "10px 16px", minHeight: 55, borderTop: i ? `1px solid ${c.divider}` : "none" }}
+              >
                 {!isMaskedLabel(e.label) ? (
                   <span className="shrink-0 flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 999, background: c.tealPale, color: c.tealInk, fontSize: textPx(12), fontWeight: 800 }}>
                     {initialOf(e.label)}
@@ -321,8 +366,14 @@ export default function SessionPage() {
                   </p>
                 </div>
                 {payTag(e)}
-              </div>
-            ))}
+              </Row>
+              );
+            })}
+            {pay.error && (
+              <p role="alert" style={{ margin: 0, padding: "10px 16px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), fontWeight: 700, lineHeight: linePx(16), color: c.high }}>
+                {pay.error}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => setRosterOpen(true)}
@@ -335,7 +386,16 @@ export default function SessionPage() {
         )}
       </OpsCard>
 
-      <ClassRosterSheet classId={rosterOpen && rosterAllowed ? id : null} title={session.title} onClose={() => setRosterOpen(false)} />
+      <ClassRosterSheet
+        classId={rosterOpen && rosterAllowed ? id : null}
+        title={session.title}
+        onClose={() => setRosterOpen(false)}
+        onMarkedPaid={() => {
+          setTick((t) => t + 1);
+          actions.show("Marked as paid.");
+        }}
+      />
+      {pay.element}
       {actions.elements}
     </div>
   );

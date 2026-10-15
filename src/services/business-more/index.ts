@@ -299,11 +299,15 @@ export async function fetchSetupChecklist(businessId: string): Promise<Result<Ch
   return { ok: true, value: [...items, { item: SHOW_ON_EXPLORE_ITEM, done: !!(row.data as { active: boolean }).active, dismissed: false }] };
 }
 
-/** set_business_paused (B5): pausing also hides the listing; resuming does not re-list. */
+/** The B15 refusal of set_business_paused to anyone but the owner (42501, "ATXB8: only the owner can pause the business"). */
+export const PAUSE_OWNER_ONLY = "Only the owner can deactivate or reactivate the business.";
+
+/** set_business_paused (B5; owner only since B15): pausing also hides the listing; resuming does not re-list. */
 export async function setBusinessPaused(businessId: string, paused: boolean): Promise<Result<string | null>> {
   const { data, error } = await db.rpc("set_business_paused", { p_business_id: businessId, p_paused: paused });
   if (error) {
     console.error("[business-more] Could not change the pause:", error.message);
+    if (error.code === "42501" || /ATXB8/.test(error.message ?? "")) return { ok: false, code: error.code, message: PAUSE_OWNER_ONLY };
     return fail(error, paused ? "Couldn't deactivate your business. Try again." : "Couldn't reactivate your business. Try again.");
   }
   return { ok: true, value: (data as string | null) ?? null };
@@ -312,6 +316,9 @@ export async function setBusinessPaused(businessId: string, paused: boolean): Pr
 // ---------------------------------------------------------------------------
 // Store settings (B5 business_store_settings)
 
+
+/** B11: business_store_settings is writable only with the `store` permission. */
+const STORE_PERMISSION = "Changing store settings needs the Store permission.";
 
 const STORE_COLUMNS =
   "sells_products, offers_appointments, delivery_enabled, pickup_enabled, delivery_fee, free_delivery_over, delivery_time_text, returns_policy, allow_exchanges";
@@ -362,8 +369,12 @@ export async function saveStoreSettings(businessId: string, s: StoreSettings): P
     : await db.from("business_store_settings").insert({ business_id: businessId, ...row }).select(STORE_COLUMNS);
   if (res.error) {
     console.error("[business-more] Could not save store settings:", res.error.message);
+    // B11: only a seat with `store` may write (RLS 42501 on insert).
+    if (res.error.code === "42501") return { ok: false, code: res.error.code, message: STORE_PERMISSION };
     return fail(res.error, "Couldn't save. Try again.");
   }
+  // B11: an update RLS filters out changes nothing and says nothing; no row back = not allowed.
+  if (s.exists && Array.isArray(res.data) && res.data.length === 0) return { ok: false, code: "42501", message: STORE_PERMISSION };
   const back = await fetchStoreSettings(businessId);
   return back;
 }
@@ -569,15 +580,10 @@ export async function removeLocation(gymId: string): Promise<Result<null>> {
   return { ok: true, value: null };
 }
 
-/** The live per-venue cancellation window (gyms.default_cancellation_hours), for every venue at once. */
-export async function saveCancellationHours(gymIds: string[], hours: number): Promise<Result<null>> {
-  if (gymIds.length === 0) return { ok: true, value: null };
-  const { data, error } = await db.from("gyms").update({ default_cancellation_hours: hours }).in("id", gymIds).select("id");
-  if (error) return fail(error, "Couldn't save. Try again.");
-  // An RLS-refused UPDATE raises nothing: it just changes no rows.
-  if (!data || data.length === 0) return { ok: false, code: "42501", message: "You don't have access to change this. Ask the owner." };
-  return { ok: true, value: null };
-}
+// The cancellation window is the business default row of
+// business_booking_policies since B9 (services/business-classes/schedule
+// setBookingPolicy); the venue's gyms.default_cancellation_hours is only its
+// fallback, so the old write to every venue is gone.
 
 // ---------------------------------------------------------------------------
 // Team (business_employees, with B0's accepted_at)

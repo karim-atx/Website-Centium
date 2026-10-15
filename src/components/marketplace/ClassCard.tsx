@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 import type { MarketplaceClass } from "../../services/marketplace";
 import { time12Split } from "../../utils/time12";
+import { useKnownPosition } from "../../hooks/useKnownPosition";
+import { distanceKm } from "../../services/geo/distance";
+import { distanceText } from "../../services/marketplace/classBooking";
+import { FeaturedChip } from "./FeaturedChip";
 
 // v6 MO1.4 #37-#46 (Explore class card), shared by Explore › Classes and the
 // gym page's Classes tab (OURS-gym-classes-tab #3, venue line hidden there).
@@ -41,13 +45,20 @@ export function ClassCard({
   booked,
   onOpen,
   hideVenue,
+  onBook,
 }: {
   c: MarketplaceClass;
   booked: boolean;
   onOpen: (c: MarketplaceClass) => void;
+  /** B13 MK-07: Book was tapped (before it opens the class page), for book_tap. */
+  onBook?: (c: MarketplaceClass) => void;
   /** The gym page's Classes tab: the venue is the page itself. */
   hideVenue?: boolean;
 }) {
+  const here = useKnownPosition();
+  // The gym page's own tab is at that gym: no distance there.
+  const distance =
+    !hideVenue && here && c.venueLat != null && c.venueLng != null ? distanceText(distanceKm(here, { lat: c.venueLat, lng: c.venueLng })) : null;
   const free = !c.priceValue;
   const t = time12Split(c.startTime);
   const when = `${blockDay(c.date)} ${t ? `${t.time} ${t.meridiem}` : c.startTime}`;
@@ -79,13 +90,20 @@ export function ClassCard({
           {t && <span className="text-[9.5px] leading-[12px] font-bold text-charcoal-faint">{t.meridiem}</span>}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] leading-[21px] font-bold text-charcoal truncate">{c.title}</p>
+          {/* B13 MK-06: a live featured week, the chip after the title. */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="min-w-0 text-[14px] leading-[21px] font-bold text-charcoal truncate">{c.title}</p>
+            {c.isFeatured && <FeaturedChip />}
+          </div>
           {!hideVenue && (
             <p className="text-[12px] leading-[18px] font-semibold text-th-7d67d9 dark:text-primary-accent truncate">{c.businessName}</p>
           )}
-          {/* PB-O-50 (B9): "· 1.2 km" needs the class's venue coordinates;
-              until then the place alone. */}
-          {c.location && <p className="text-[11.5px] leading-[17.3px] text-charcoal-faint truncate">{c.location}</p>}
+          {/* #43 PB-O-50 (B9): the place, then "· 1.2 km" from the venue's
+              coordinates (marketplace_classes venue_lat / venue_lng) when the
+              device has already shared its position; place only otherwise. */}
+          {(c.location || distance) && (
+            <p className="text-[11.5px] leading-[17.3px] text-charcoal-faint truncate">{[c.location, distance].filter(Boolean).join(" · ")}</p>
+          )}
           <div className="flex items-center gap-1.5 mt-1.5">
             <span className="inline-flex items-center text-[11px] leading-[16.5px] font-bold rounded-full px-2 py-[2px] bg-th-e4f0ee text-th-2f5f58 dark:bg-teal-pale dark:text-teal-deep-text">
               {free ? "Free" : c.price}
@@ -113,6 +131,7 @@ export function ClassCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  onBook?.(c);
                   onOpen(c);
                 }}
                 aria-label={`Book ${c.title}`}

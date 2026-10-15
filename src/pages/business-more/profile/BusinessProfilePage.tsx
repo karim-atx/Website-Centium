@@ -23,8 +23,10 @@ import {
   type BusinessPatch,
 } from "../../../services/business-more";
 import { saveMyBusinessProfile } from "../../../services/business-profile";
+import { fetchBusinessPhotos } from "../../../services/business-market/listing";
+import type { BusinessPhoto } from "../../../services/business-market/listingLogic";
 import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../../services/avatar";
-import { fetchReviewSummary } from "../../../services/venues";
+import { fetchReviewMetrics } from "../../../services/reputation";
 import { dayValue, isoWeekdayIn, NOT_PUBLISHED } from "../../../services/venues/hours";
 import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet } from "./ProfileSheets";
 import { BusinessCard, type CardData } from "./BusinessCard";
@@ -80,6 +82,19 @@ export default function BusinessProfilePage() {
   const [toast, showToast] = useBizToast();
 
   const [locations, setLocations] = useState<BizLocation[] | null>(null);
+  // B13 MK-03: the business's own gallery (every status but "Not approved"); null = not read or absent.
+  const [gallery, setGallery] = useState<BusinessPhoto[] | null>(null);
+  const galleryFor = business?.id ?? null;
+  useEffect(() => {
+    if (!galleryFor) return;
+    let alive = true;
+    void fetchBusinessPhotos(galleryFor).then((r) => {
+      if (alive) setGallery(r.ok ? r.value.filter((x) => x.status !== "rejected") : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [galleryFor]);
   const [rating, setRating] = useState<{ average: number; total: number } | null>(null);
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [sheetKey, setSheetKey] = useState(0);
@@ -108,16 +123,13 @@ export default function BusinessProfilePage() {
   useEffect(() => {
     if (!bizId) return;
     let cancelled = false;
-    void fetchLocations(bizId).then(async (r) => {
+    void fetchLocations(bizId).then((r) => {
       if (cancelled) return;
-      const locs = r.ok ? r.value : [];
-      setLocations(locs);
-      // Rating (BU6-04): reviews are kept per venue today, so the business
-      // line reads its first venue's summary.
-      if (locs[0]) {
-        const s = await fetchReviewSummary(locs[0].id);
-        if (!cancelled && s.ok) setRating({ average: s.value.average, total: s.value.total });
-      }
+      setLocations(r.ok ? r.value : []);
+    });
+    // Rating (BU6-04, B14 RP-01): every review of the business, all its venues or none, all time.
+    void fetchReviewMetrics(bizId, "2000-01-01", null).then((m) => {
+      if (!cancelled && m.status === "ok") setRating({ average: m.value.average ?? 0, total: m.value.reviews });
     });
     return () => {
       cancelled = true;
@@ -424,10 +436,20 @@ export default function BusinessProfilePage() {
         )}
       </div>
 
-      {/* Photos (MO1B-011 rows 8, 9): the venue photos live in the venue console (K2). */}
+      {/* Photos (MO1B-011 rows 8, 9). B13 MK-03: the business gallery (business_photos), managed on
+          the Marketplace (Products for a store) Photos page. Before B13 (absent table) the venue
+          console placeholders stand. */}
       <BizLabel
         right={
-          locations && locations.length > 0 ? (
+          gallery !== null ? (
+            <button
+              type="button"
+              onClick={() => navigate(kindKnown && kind === "store" ? "/app/business/products/photos" : "/app/business/marketplace/photos")}
+              className="tap whitespace-nowrap text-[11.5px] font-bold leading-[14px] text-primary-dark"
+            >
+              Manage · {gallery.length}
+            </button>
+          ) : locations && locations.length > 0 ? (
             <button
               type="button"
               onClick={() => navigate("/app/business/more/locations")}
@@ -442,12 +464,14 @@ export default function BusinessProfilePage() {
       </BizLabel>
       <div className="grid grid-cols-4" style={{ gap: 6, marginBottom: 14 }}>
         {[0, 1, 2, 3].map((i) => {
-          const loc = locations?.[i];
+          const photo = gallery?.[i];
+          const loc = gallery === null ? locations?.[i] : undefined;
           return (
             <span key={i} className="relative overflow-hidden" style={{ aspectRatio: "1", borderRadius: 12, background: stripes }}>
-              {loc && (
+              {photo && <img src={photo.url} alt={photo.caption ?? ""} className="absolute inset-0 h-full w-full object-cover" />}
+              {(photo?.caption || loc) && (
                 <span className="absolute text-[8.5px] leading-[10px] text-charcoal-faint" style={{ left: 6, bottom: 5, right: 4 }}>
-                  {loc.name}
+                  {photo?.caption ?? loc?.name}
                 </span>
               )}
             </span>

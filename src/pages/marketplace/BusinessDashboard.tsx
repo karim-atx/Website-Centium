@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgePercent, CalendarPlus, ChevronRight, IdCard, MailPlus, Package, PackagePlus, ScanLine, Store, Ticket } from "lucide-react";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
@@ -15,21 +15,10 @@ import { dashPalette } from "../../components/business-dashboard/palette";
 import { GaugeCluster, type ClusterControl, type ClusterGauge } from "../../components/business-dashboard/GaugeCluster";
 import { dismissSetup, loadDashboard, type DashRaw } from "../../components/business-dashboard/dashboardData";
 import { saveListingActive } from "../../services/business-market";
-import {
-  activityEvents,
-  attentionItems,
-  dateKicker,
-  gaugeModels,
-  greeting,
-  kindOf,
-  setupSteps,
-  todayBlock,
-  toneColour,
-  weekItems,
-  weekTotals,
-  type AttentionItem,
-  type SetupStep,
-} from "../../components/business-dashboard/dashboardModel";
+import { counts, dateKicker, gaugeModels, greeting, kindOf, setupSteps, todayBlock, toneColour, weekItems, type SetupStep } from "../../components/business-dashboard/dashboardModel";
+import { attentionItems, type AttentionItem } from "../../components/business-dashboard/attention";
+import { activityEvents, weekTotals } from "../../components/business-dashboard/activityFeed";
+import { useActivityFeed } from "../../components/business-dashboard/useActivityFeed";
 import { DashLabel, ErrorRow, KitList } from "../../components/business-dashboard/parts";
 import { AttentionPanel, DashHeader, ListingSheet, SetupCard, VenueChip } from "../../components/business-dashboard/HeaderParts";
 import { TodayBlock, VenueBoxes } from "../../components/business-dashboard/TodayBlock";
@@ -54,8 +43,11 @@ import { textPx } from "../../theme/textSize";
 // link.
 //
 // ONLY REAL NUMBERS. Every figure is computed from rows on the local stack;
-// a figure whose table does not exist yet (check-ins, orders, renewals
-// linkage, payments: BU4-04..07) shows its drawn empty / unlit state.
+// a figure whose table does not exist yet shows its drawn empty / unlit state.
+//
+// B15: the Today boxes read business_glance, the bell business_attention,
+// and Recent activity business_activity (Realtime + business_recent_activity,
+// useActivityFeed). Each returns only what the caller may hold.
 
 const POLL_MS = 2 * 60 * 1000;
 
@@ -79,8 +71,6 @@ export default function BusinessDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
-  const seenKeys = useRef<Set<string> | null>(null);
 
   const load = useCallback(async () => {
     if (!authUserId) return;
@@ -95,13 +85,6 @@ export default function BusinessDashboard() {
     setError(null);
     setRaw(r.raw);
     setUpdatedAt(Date.now());
-    // OURS-DA-states #4: rows that arrived since the last read get the New tag for this session.
-    const keys = new Set(activityEvents(r.raw, new Date(), 7).map((e) => e.key));
-    if (seenKeys.current) {
-      const fresh = [...keys].filter((k) => !seenKeys.current?.has(k));
-      if (fresh.length) setNewKeys((prev) => new Set([...prev, ...fresh]));
-    }
-    seenKeys.current = keys;
   }, [authUserId, gymId]);
 
   useEffect(() => {
@@ -110,17 +93,24 @@ export default function BusinessDashboard() {
     const id = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(id);
   }, [profileReady, authUserId, load]);
-  // D2: a 2-minute poll while the page is visible (realtime is BU4-09, not on the stack).
+  // D2: the figures re-read every 2 minutes while the page is visible; Recent
+  // activity is live (Realtime) with its own 2-minute fallback poll.
   usePoll(() => void load(), POLL_MS, !!raw && online);
+  const feed = useActivityFeed(raw?.business?.id ?? null, online);
 
   const kind = kindOf(raw?.business?.type ?? user.businessType ?? null, (raw?.classes.length ?? 0) > 0);
   const today = localDayOf(now);
   const gauges = useMemo(() => (raw ? gaugeModels(kind, raw, now) : null), [kind, raw, now]);
-  const attention = useMemo(() => (raw ? attentionItems(raw, now) : []), [raw, now]);
+  // B15: null = business_attention failed (the panel offers Retry; no badge).
+  const attention = useMemo(() => (raw ? (raw.attention ? attentionItems(raw.attention) : null) : []), [raw]);
   const steps = useMemo(() => (raw ? setupSteps(kind, raw) : []), [kind, raw]);
-  const allActivity = useMemo(() => (raw ? activityEvents(raw, now, 30) : []), [raw, now]);
+  const venueNames = useMemo(() => Object.fromEntries(venues.map((v) => [v.gymId, v.name])), [venues]);
+  const allActivity = useMemo(
+    () => (raw && feed.rows ? activityEvents(feed.rows, { classes: raw.classes, booked: counts(raw, now).booked, venueNames, today: localDayOf(now) }, now, 30) : []),
+    [raw, feed.rows, venueNames, now]
+  );
   const weekActivity = useMemo(() => allActivity.filter((e) => e.day >= localDayOf(new Date(now.getTime() - 6 * 86_400_000))), [allActivity, now]);
-  const totals = useMemo(() => (raw ? weekTotals(kind, raw, now) : []), [kind, raw, now]);
+  const totals = useMemo(() => (raw && feed.totals ? weekTotals(kind === "classes", feed.totals, raw.classes, now) : null), [kind, raw, feed.totals, now]);
   const schedule = useMemo(() => (raw ? weekItems(raw, now) : null), [raw, now]);
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -149,8 +139,20 @@ export default function BusinessDashboard() {
 
   const onAttention = (a: AttentionItem) => {
     setPanelOpen(false);
-    if (a.to === "listing") openListing();
-    else go(a.to === "members" ? "/app/business/members" : a.to === "classes" ? "/app/business/classes" : "/app/business/employees");
+    if (a.to === "listing") return openListing();
+    const to: Record<Exclude<AttentionItem["to"], "listing">, string> = {
+      setup: "/app/business/setup",
+      subscription: "/app/business/more/subscription",
+      revenue: "/app/business/analytics/revenue",
+      classes: "/app/business/classes",
+      orders: "/app/business/orders",
+      products: "/app/business/products",
+      photos: kind === "store" ? "/app/business/products/photos" : "/app/business/marketplace/photos",
+      reputation: "/app/business/analytics/reputation",
+      join_requests: "/app/business/employees/requests",
+      seats: "/app/business/more/seats",
+    };
+    go(to[a.to]);
   };
   const onStep = (s: SetupStep) => {
     const to: Record<SetupStep["to"], string> = {
@@ -206,7 +208,7 @@ export default function BusinessDashboard() {
   if (activityOpen && raw) {
     return (
       <div style={{ color: c.ink }}>
-        <ActivityScreen c={c} events={allActivity} now={now} today={today} onBack={() => setActivityOpen(false)} classBased={classBased} />
+        <ActivityScreen c={c} events={allActivity} now={now} today={today} onBack={() => setActivityOpen(false)} newIds={feed.newIds} />
       </div>
     );
   }
@@ -220,14 +222,14 @@ export default function BusinessDashboard() {
         greeting={greeting(now)}
         name={business?.name || user.businessName || "Your business"}
         listed={listed}
-        attentionCount={attention.length}
+        attentionCount={attention?.length ?? 0}
         panelOpen={panelOpen}
         onBell={() => setPanelOpen(true)}
         onChip={openListing}
         bellRef={setBell}
         venueChip={<VenueChip c={c} venues={venues} selected={selected} onSelect={select} />}
       />
-      <AttentionPanel c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} />
+      <AttentionPanel c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} onRetry={() => void load()} />
 
       {error && !raw && <ErrorRow c={c} text={error} onRetry={() => void load()} />}
 
@@ -253,7 +255,7 @@ export default function BusinessDashboard() {
       <DashLabel c={c} label="At a glance" link="View analytics" onLink={() => go("/app/business/analytics")} mb={8} />
       <GaugeCluster c={c} gauges={clusterGauges} controls={controls} onGaugeTap={(label) => navigate("/app/business/analytics", { state: { section: label } })} ready={!!raw} reducedMotion={reducedMotion} />
 
-      {raw && <TodayBlock c={c} model={todayBlock(kind, raw, now)} onSeeAll={() => go("/app/business/classes")} onOpenClass={() => go("/app/business/classes")} />}
+      {raw && <TodayBlock c={c} model={todayBlock(kind, raw, now)} onSeeAll={() => go("/app/business/classes")} onOpenClass={() => go("/app/business/classes")} onOrders={() => go("/app/business/operations")} onOpenOrder={(id) => go(`/app/business/orders/${id}`)} onProducts={() => go("/app/business/products")} />}
       {gymId && <VenueBoxes c={c} gymId={gymId} />}
 
       {showSchedule && schedule && (
@@ -271,20 +273,27 @@ export default function BusinessDashboard() {
         />
       )}
 
-      {raw && (
-        <RecentActivityCard
-          c={c}
-          week={weekActivity}
-          totals={totals}
-          now={now}
-          today={today}
-          updatedAt={updatedAt}
-          online={online}
-          refreshing={refreshing}
-          onRefresh={() => void load()}
-          onSeeAll={() => setActivityOpen(true)}
-          newKeys={newKeys}
-        />
+      {raw && feed.rows === null && feed.error ? (
+        <ErrorRow c={c} text={feed.error} onRetry={feed.refresh} />
+      ) : (
+        raw && (
+          <RecentActivityCard
+            c={c}
+            week={weekActivity}
+            totals={totals}
+            now={now}
+            today={today}
+            updatedAt={feed.updatedAt ?? updatedAt}
+            online={online}
+            refreshing={refreshing || feed.refreshing}
+            onRefresh={() => {
+              void load();
+              feed.refresh();
+            }}
+            onSeeAll={() => setActivityOpen(true)}
+            newIds={feed.newIds}
+          />
+        )
       )}
 
       {selected && (

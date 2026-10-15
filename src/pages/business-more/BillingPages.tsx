@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
+import { Armchair, CalendarClock, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
 import { BizConfirm, BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton, SoonChip, LIST_BG } from "../../components/business-more/kit";
 import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
+import { useCentiumBilling } from "../../hooks/useCentiumBilling";
+import { blocksText, chargeStatusText, chargeTitle, chargeTone, pendingPlanCharge, type CentiumCharge } from "../../services/centium-billing";
 import { fetchPlanRenewal } from "../../services/business-more";
 import { fetchPaymentSettings, type PaymentSettings } from "../../services/business-revenue";
 import { useBusiness } from "../../components/business-more/useBusiness";
@@ -16,10 +18,12 @@ import { formatShortDate } from "../../utils/date";
 //
 // BEFORE WHISH (user rule; V6-42 "do not build payouts; show Coming soon"):
 // cash is the one method and is locked on, Whish is dimmed with a Soon chip,
-// payouts are an empty "coming" card. Receipts, VAT and billing history have
-// no backend (BU6-19, BU6-18), so their rows are dimmed under "Coming soon".
-// The plan reads subscription_states + subscription_tiers (V6-40); nothing
-// here shows a sample amount, and no money that isn't recorded.
+// payouts are an empty "coming" card. Receipts and VAT have no backend
+// (BU6-19), so their rows are dimmed under "Coming soon". The Centium plan
+// and its billing history are B8 RV-06 (business_plan_summary,
+// centium_billing_history: what the business pays Centium, paid by cash or
+// bank transfer and recorded by Centium); nothing here shows a sample amount,
+// and no money that isn't recorded.
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
@@ -114,50 +118,121 @@ export function TaxesPage() {
 
 const cancelMailto = () => `mailto:${UPGRADE_EMAIL}?subject=${encodeURIComponent("Cancel my Centium Business plan")}`;
 
+/** A charge's "15 Oct" from a date-only value, on the local calendar. */
+const fmtDay = (d: string) => fmt(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d);
+const VALUE_TONE = { due: "primary", settled: "good", void: "faint" } as const;
+
 export function SubscriptionPage() {
   const navigate = useNavigate();
   const { authUserId } = useApp();
-  const { plan, loading, error } = useBusinessPlan();
+  // B8 RV-06: the plan card reads business_plan_summary (prices from
+  // subscription_tiers), the history reads centium_billing_history: what this
+  // business pays Centium, never what members pay the business. Without RV-06
+  // on the database the earlier reads stay (pending rule).
+  const billing = useCentiumBilling();
+  const legacy = useBusinessPlan();
   const [renews, setRenews] = useState<string | null>(null);
   const [cancelAsk, setCancelAsk] = useState(false);
+  const [orderAsk, setOrderAsk] = useState<CentiumCharge | null>(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const live = billing.available;
 
   useEffect(() => {
-    if (!authUserId) return;
+    if (!authUserId || live) return;
     void fetchPlanRenewal(authUserId).then((r) => r.ok && setRenews(r.value));
-  }, [authUserId]);
+  }, [authUserId, live]);
 
-  const blocks = plan?.seatBlocks ?? 0;
+  const s = live ? billing.summary : null;
+  const plan = live ? null : legacy.plan;
+  const active = s ? s.active : !!plan?.active;
+  const renewsAt = s ? s.renewsAt : renews;
+  const blocks = s ? s.seatBlocks : (plan?.seatBlocks ?? 0);
+  const planPrice = s ? s.planPrice : (plan?.base?.monthlyPrice ?? null);
+  const planCharge = live && billing.history ? pendingPlanCharge(billing.history) : null;
+  const hidden = live && billing.ready && !billing.canSeePlan;
+  const error = live ? billing.summaryError : legacy.error;
+  const loading = !error && !hidden && (live ? !billing.ready || !s : legacy.loading);
+
+  const cancelOrder = async () => {
+    if (!orderAsk || orderBusy) return;
+    setOrderBusy(true);
+    setOrderError(null);
+    const r = await billing.cancel(orderAsk.id);
+    setOrderBusy(false);
+    setOrderAsk(null);
+    if (!r.ok && r.kind !== "final") setOrderError(r.message);
+    billing.reload();
+  };
+
   return (
     <BizPage title="Centium subscription">
-      {error && <LoadError message="Couldn't load your plan." onRetry={() => window.location.reload()} />}
+      {error && <LoadError message="Couldn't load your plan." onRetry={live ? billing.reload : () => window.location.reload()} />}
       {loading && <RowsSkeleton rows={2} label="Loading your plan" />}
-      {plan && (
+      {hidden && <BizNote>The business owner manages the Centium plan.</BizNote>}
+      {(s || plan) && (
         <>
-          {plan.active ? (
+          {active ? (
             <BizHero
               label="Your plan"
-              value={plan.base?.name ?? "Business"}
+              value={s ? s.planName : (plan?.base?.name ?? "Business")}
               sub={[
-                `${money(plan.monthlyTotal)} a month`,
-                renews ? `renews ${fmt(renews)}` : null,
-                `${blocks} seat block${blocks === 1 ? "" : "s"} (${plan.totalSeats} seats)`,
+                s ? (s.monthlyTotal !== null ? `${money(s.monthlyTotal)} a month` : null) : `${money(plan?.monthlyTotal ?? 0)} a month`,
+                renewsAt ? `renews ${fmt(renewsAt)}` : null,
+                `${blocks} seat block${blocks === 1 ? "" : "s"} (${s ? s.capacity : plan?.totalSeats} seats)`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
-              actions={[{ label: "Add seats", icon: Plus, primary: true, onClick: () => navigate("/app/business/more/seats") }]}
+              actions={!live || billing.isOwner ? [{ label: "Add seats", icon: Plus, primary: true, onClick: () => navigate("/app/business/more/seats") }] : []}
             />
           ) : (
             <BizHero
               label="Your plan"
               value="No plan yet"
-              sub={plan.base ? `The Business plan is ${money(plan.base.monthlyPrice)} a month.` : undefined}
-              actions={[{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+              sub={
+                planCharge
+                  ? `Your first month, ${money(planCharge.amount)}, is awaiting payment.`
+                  : planPrice !== null
+                    ? `The Business plan is ${money(planPrice)} a month.`
+                    : undefined
+              }
+              actions={planCharge ? [] : [{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
-          <BizSection label="Billing history">
-            <BizRow icon={CalendarClock} title="Nothing billed in the app yet" desc="Billing history shows here once your plan is billed in the app." />
-          </BizSection>
-          {plan.active && (
+          {s && s.pendingCharges > 0 && billing.canSeeBilling && (
+            <BizNote>
+              {money(s.pendingAmount)} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.
+            </BizNote>
+          )}
+          {(!live || billing.canSeeBilling) && (
+            <BizSection label="Billing history">
+              {live && billing.historyError && !billing.history ? (
+                <LoadError message="Couldn't load your billing history." onRetry={billing.reload} />
+              ) : live && billing.history && billing.history.length > 0 ? (
+                billing.history.map((c) => {
+                  const cancellable = billing.isOwner && c.product === "seat_block" && !c.isRenewal && c.status === "pending";
+                  const tone = chargeTone(c);
+                  return (
+                    <BizRow
+                      key={c.id}
+                      icon={c.product === "seat_block" ? Armchair : CalendarClock}
+                      title={chargeTitle(c)}
+                      desc={[c.periodStart && c.periodEnd ? `${fmtDay(c.periodStart)} to ${fmtDay(c.periodEnd)}` : fmt(c.createdAt), chargeStatusText(c)].join(" · ")}
+                      value={money(c.amount)}
+                      valueTone={VALUE_TONE[tone]}
+                      dim={tone === "void"}
+                      onClick={cancellable ? () => setOrderAsk(c) : undefined}
+                      ariaLabel={cancellable ? `${chargeTitle(c)}, ${money(c.amount)}, awaiting payment. Cancel order` : undefined}
+                    />
+                  );
+                })
+              ) : (
+                <BizRow icon={CalendarClock} title="Nothing billed in the app yet" desc="Billing history shows here once your plan is billed in the app." />
+              )}
+            </BizSection>
+          )}
+          {orderError && <BizNote>{orderError}</BizNote>}
+          {active && (!live || billing.isOwner) && (
             <>
               <BizSection label="Change or cancel">
                 <BizRow icon={Repeat} title="Change plan" desc="We'll help you switch" onClick={() => (window.location.href = upgradeMailto())} />
@@ -172,7 +247,7 @@ export function SubscriptionPage() {
         open={cancelAsk}
         icon={Trash2}
         title="Cancel Centium Business?"
-        body={`Your plan stays active until ${renews ? fmt(renews) : "the end of the period"}. Seats above the free plan stop working then.`}
+        body={`Your plan stays active until ${renewsAt ? fmt(renewsAt) : "the end of the period"}. Seats above the free plan stop working then.`}
         action="Cancel plan"
         cancel="Keep my plan"
         onCancel={() => setCancelAsk(false)}
@@ -180,6 +255,17 @@ export function SubscriptionPage() {
           setCancelAsk(false);
           window.location.href = cancelMailto();
         }}
+      />
+      <BizConfirm
+        open={!!orderAsk}
+        icon={XCircle}
+        title="Cancel this seat order?"
+        body={`${orderAsk ? blocksText(orderAsk.quantity) : "The seat blocks"} won't be added. You can order seats again any time.`}
+        action="Cancel order"
+        cancel="Keep order"
+        busy={orderBusy}
+        onCancel={() => setOrderAsk(null)}
+        onAction={() => void cancelOrder()}
       />
     </BizPage>
   );

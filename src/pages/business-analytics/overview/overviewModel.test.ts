@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildClock, f12, type ClockColours, type ClockInput, type ClockItem } from "./clockModel.ts";
-import { headline, headlineSize, insights, outcomes, revenueInsight, shareBody, type OvRaw } from "./overviewModel.ts";
+import { dayItems, headline, headlineSize, insights, outcomes, revenueInsight, sharedProgress, shareBody, type OvRaw } from "./overviewModel.ts";
 import { figuresFromRecorded, owed, type PaymentRecord } from "../../../services/business-revenue/model.ts";
 
 const C: ClockColours = {
@@ -147,7 +147,9 @@ const raw = (over: Partial<OvRaw>): OvRaw => ({
   nextClass: null,
   firstClassDate: null,
   bookings: [],
-  members: [],
+  stats: null,
+  activeNow: null,
+  day: null,
   productsCount: 0,
   discountsCount: 0,
   team: {},
@@ -155,11 +157,12 @@ const raw = (over: Partial<OvRaw>): OvRaw => ({
   reviews: null,
   ...over,
 });
+const R = { from: "2026-09-17", to: "2026-10-14", compare: true };
+const st = (value: number | null, previous: number | null, early = false) => ({ value, previous, early });
 
-test("new business: four '–' cells (AN1-061)", () => {
-  const cells = headline("gym", raw({}), { from: "2026-09-17", to: "2026-10-14", compare: true }, "2026-10-14");
+test("before the B15 reader: four '–' cells (AN1-061)", () => {
   assert.deepEqual(
-    cells.map((c) => [c.label, c.value, c.delta]),
+    headline("gym", raw({}), R).map((c) => [c.label, c.value, c.delta]),
     [
       ["Active members", "–", "No data yet"],
       ["Booked spots", "–", "No data yet"],
@@ -169,28 +172,49 @@ test("new business: four '–' cells (AN1-061)", () => {
   );
 });
 
-test("fill rate, booked spots and net members from rows", () => {
-  const classes = [
-    { id: "k1", title: "Spin", date: "2026-10-01", start: "18:00", end: "19:00", cap: 10, professionalId: null },
-    { id: "k0", title: "Spin", date: "2026-09-01", start: "18:00", end: "19:00", cap: 10, professionalId: null },
+test("headline from business_period_stats and member growth", () => {
+  const stats = {
+    members_joined: st(19, 12),
+    members_ended: st(8, 6),
+    members_net: st(11, 6),
+    class_bookings: st(642, 606),
+    average_fill_pct: st(72.4, 69.2),
+  };
+  const cells = headline("classes", raw({ stats, activeNow: 128, anyClass: true }), R);
+  assert.deepEqual(
+    cells.map((c) => [c.label, c.value, c.delta, c.dir]),
+    [
+      ["Active members", "128", "+11 vs prev.", "up"],
+      ["Booked spots", "642", "+6% vs prev.", "up"],
+      ["Class fill rate", "72%", "+3 pts vs prev.", "up"],
+      ["Net members", "+11", "19 joined, 8 ended", "none"],
+    ],
+  );
+  // Compare off: no deltas under the comparable cells.
+  assert.equal(headline("classes", raw({ stats, activeNow: 128, anyClass: true }), { ...R, compare: false })[1].delta, null);
+});
+
+test("early metrics say Nothing to compare yet; a missing metric has no cell (never 0)", () => {
+  const stats = { members_joined: st(3, 0, true), members_ended: st(1, 0, true), members_net: st(2, 0, true), class_bookings: st(2, 0, true), average_fill_pct: st(8, null, true) };
+  const cells = headline("gym", raw({ stats, activeNow: 2, anyClass: true }), R);
+  assert.deepEqual(cells.map((c) => c.delta), ["Nothing to compare yet", "Nothing to compare yet", "Nothing to compare yet", "3 joined, 1 ended"]);
+  // Schedule only (no members permission): the member cells are not drawn.
+  const sched = headline("gym", raw({ stats: { class_bookings: st(5, 4), average_fill_pct: st(null, null) }, anyClass: true }), R);
+  assert.deepEqual(sched.map((c) => [c.label, c.value]), [["Booked spots", "5"], ["Class fill rate", "–"]]);
+  // Nothing the caller may hold: no cells at all.
+  assert.deepEqual(headline("gym", raw({ stats: {}, anyClass: true }), R), []);
+  // Store keeps its listing cells.
+  assert.deepEqual(headline("store", raw({ stats: {}, productsCount: 4 }), R).map((c) => c.label), ["Live listings", "Live discounts"]);
+});
+
+test("the dial reads business_day: classes only, cancelled left off", () => {
+  const day = [
+    { kind: "class" as const, refId: "k1", startsAt: "2026-10-14T18:00:00", endsAt: "2026-10-14T19:00:00", title: "Spin", booked: 6, capacity: 10, staffFirstName: "Maya", clientLabel: null, clientIsMinor: false, cancelled: false },
+    { kind: "class" as const, refId: "k2", startsAt: "2026-10-14T07:00:00", endsAt: "2026-10-14T08:00:00", title: "Yoga", booked: 0, capacity: 10, staffFirstName: null, clientLabel: null, clientIsMinor: false, cancelled: true },
+    { kind: "appointment" as const, refId: "a1", startsAt: "2026-10-14T10:00:00", endsAt: "2026-10-14T10:30:00", title: "Massage", booked: 1, capacity: 1, staffFirstName: "Rana", clientLabel: "Member #0042", clientIsMinor: false, cancelled: false },
   ];
-  const bookings = [
-    ...Array.from({ length: 8 }, (_, i) => ({ classId: "k1", clientId: `c${i}`, createdAt: "2026-09-30T10:00:00Z", paymentStatus: null, priceAgreed: null })),
-    ...Array.from({ length: 4 }, (_, i) => ({ classId: "k0", clientId: `c${i}`, createdAt: "2026-08-30T10:00:00Z", paymentStatus: null, priceAgreed: null })),
-  ];
-  const members = [
-    { accepted: true, invitedAt: "2026-08-01T10:00:00Z", respondedAt: "2026-08-01T10:00:00Z", endedAt: null },
-    { accepted: true, invitedAt: "2026-10-02T10:00:00Z", respondedAt: "2026-10-02T10:00:00Z", endedAt: null },
-  ];
-  const cells = headline("classes", raw({ classes, bookings, members, anyClass: true, firstClassDate: "2026-08-01" }), { from: "2026-09-17", to: "2026-10-14", compare: true }, "2026-10-14");
-  assert.equal(cells[0].value, "2");
-  assert.equal(cells[0].delta, "+1 vs prev.");
-  assert.equal(cells[1].value, "8");
-  assert.equal(cells[1].delta, "+100% vs prev.");
-  assert.equal(cells[2].value, "80%");
-  assert.equal(cells[2].delta, "+40 pts vs prev.");
-  assert.equal(cells[3].value, "+1");
-  assert.equal(cells[3].delta, "1 joined, 0 ended");
+  const items = dayItems("gym", raw({ day }), "2026-10-14");
+  assert.deepEqual(items.map((i) => [i.key, i.ss, i.es, i.who, i.bk, i.cap]), [["c:k1", "18:00", "19:00", "Maya", 6, 10]]);
 });
 
 test("client outcomes: 21-day rule and payment owed, masked", () => {
@@ -288,4 +312,13 @@ test("client outcomes: the DI-07 share count leads the empty body, never below t
   assert.equal(shareBody(1), "1 client shares their progress with you so far. " + need);
   assert.equal(shareBody(3), "3 clients share their progress with you so far. " + need);
   assert.equal(shareBody(7), "7 clients share their progress with you. Their group outcomes are coming soon.");
+});
+
+test("Shared progress (DI-07): cohort averages from 5 sharers, nothing below", () => {
+  const base = { sharing: 6, enough: true, workoutsPerWeek: 2.46, dailySteps: 8123.4, restingBpm: 61.2, bookingsPerWeek: 1.25 };
+  const p = sharedProgress(base, "classes");
+  assert.deepEqual(p?.boxes.map((b) => b.value), ["2.5", "8,123", "61 bpm"]);
+  assert.equal(p?.note, "Averages of the 6 clients who share their progress with you, over the last 28 days. They book 1.3 classes a week.");
+  assert.equal(sharedProgress({ ...base, sharing: 3, enough: false }, "classes"), null);
+  assert.deepEqual(sharedProgress({ ...base, dailySteps: null }, "gym")?.boxes[1], { value: "–", label: "Daily steps" });
 });

@@ -101,10 +101,10 @@ export interface VenueDashboard {
   membersTotal: number;
   activeMembers: number;
   membershipsAwaitingPayment: number;
-  /** Agreed and unpaid. Not a payment record, and never "revenue". */
-  amountAwaitingPayment: number;
-  /** What staff marked as received this month. Not a payment record either. */
-  amountMarkedPaidThisMonth: number;
+  /** Agreed and unpaid. Not a payment record, and never "revenue". B15: null without the revenue permission. */
+  amountAwaitingPayment: number | null;
+  /** What staff marked as received this month. Not a payment record either. B15: null without revenue. */
+  amountMarkedPaidThisMonth: number | null;
   classesThisWeek: number;
   bookingsThisWeek: number;
   waitlistWaiting: number;
@@ -138,8 +138,10 @@ export function toVenueDashboard(r: VenueDashboardRow): VenueDashboard {
     membersTotal: int(r.members_total),
     activeMembers: int(r.active_members),
     membershipsAwaitingPayment: int(r.memberships_awaiting_payment),
-    amountAwaitingPayment: int(r.amount_awaiting_payment),
-    amountMarkedPaidThisMonth: int(r.amount_marked_paid_this_month),
+    // B15: venue_dashboard opens for any insider but nulls the money without
+    // "revenue"; a null stays null (hidden), never "$0".
+    amountAwaitingPayment: numOrNull(r.amount_awaiting_payment),
+    amountMarkedPaidThisMonth: numOrNull(r.amount_marked_paid_this_month),
     classesThisWeek: int(r.classes_this_week),
     bookingsThisWeek: int(r.bookings_this_week),
     waitlistWaiting: int(r.waitlist_waiting),
@@ -305,6 +307,11 @@ export interface RosterEntry {
   priceAgreed: number | null;
   at: string;
   waitlistPosition: number | null;
+  /**
+   * CL-08 (Database 20261121210000): the booking to pass to
+   * mark_class_booking_paid. Null on waitlist rows, and without the column.
+   */
+  bookingId: string | null;
 }
 
 export type RosterRow = {
@@ -317,6 +324,8 @@ export type RosterRow = {
   price_agreed: number | string | null;
   at: string;
   waitlist_position: number | null;
+  /** CL-08: appended as the last column; read by name. */
+  booking_id?: string | null;
 };
 
 export function toRosterEntry(r: RosterRow): RosterEntry {
@@ -330,7 +339,17 @@ export function toRosterEntry(r: RosterRow): RosterEntry {
     priceAgreed: numOrNull(r.price_agreed),
     at: r.at,
     waitlistPosition: r.waitlist_position,
+    // A waitlist row is never a booking, whatever the row carries.
+    bookingId: r.entry_kind === "booked" ? (r.booking_id ?? null) : null,
   };
+}
+
+/**
+ * CL-08: a booked row the desk may mark paid: payment pending, a booking id
+ * to pass (the column exists on this database), and never a waitlist row.
+ */
+export function canMarkBookingPaid(e: RosterEntry): boolean {
+  return e.kind === "booked" && e.paymentStatus === "pending" && !!e.bookingId;
 }
 
 /** The roster split as the sheet draws it; the server already orders each half. */

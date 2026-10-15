@@ -26,9 +26,9 @@ import { LiveNowCard } from "./LiveNowCard";
 // Replaces the embedded old BusinessAnalyticsTab (HANDOVER §5: Replaced);
 // V6-71: no prototype notice.
 //
-// ONLY REAL NUMBERS: every figure comes from rows on the stack (overviewData);
-// what needs B7 / B8 / B10 / B15 shows its drawn "–" / empty state. Live data
-// (D2): realtime is not on the stack (BU4-09 / DI-03, B15), so the page polls
+// ONLY REAL NUMBERS: the headline is B15's business_period_stats (a metric
+// the caller may not hold has no cell), the dial is business_day, the rest
+// comes from rows on the stack (overviewData). Live data (D2): the page polls
 // every 2 minutes while visible and re-reads on Retry.
 
 const POLL_MS = 2 * 60 * 1000;
@@ -100,7 +100,7 @@ export function OverviewSection() {
 
   // A new range reloads with the skeleton (OURS-AN1-custom-range-sheet #8).
   const loading = !raw || loadedFor !== rangeKey;
-  const cells = useMemo(() => (raw ? headline(kind, raw, range, today) : null), [raw, kind, range, today]);
+  const cells = useMemo(() => (raw ? headline(kind, raw, range) : null), [raw, kind, range]);
   const revFigures = recorded.figures;
   const ins = useMemo(
     () => (raw ? insights(raw, revFigures ? { records: revRecords, range, today, figures: revFigures } : null) : null),

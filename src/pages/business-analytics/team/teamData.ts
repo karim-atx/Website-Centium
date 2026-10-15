@@ -10,6 +10,7 @@ import {
   type BusinessRole as ServiceRole,
 } from "../../../services/business-team/team";
 import type { BusinessRole, ClassRow, SeatInfo, TeamData, TeamPerson } from "./teamTypes";
+import { fetchPlanSummary, seatFacts } from "../../../services/centium-billing";
 import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../../services/business-classes";
 
 // AN5 Team analytics: an adapter over the shared services this batch's Team
@@ -21,10 +22,13 @@ import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../
 // taught (the early-data rule) is read here.
 //
 // Not here because the backend does not exist yet (each screen draws its
-// pending state): scorecard readers and return rates (B15), instructor
-// reviews (B14, V6-85), a server-side assign / move with member notices (B9),
-// seat purchase (B8). Role, permission and pay changes live on the Team
-// person page (set_employee_terms).
+// pending state): scorecard readers and return rates (B15). Instructor
+// reviews are B14, read in useRatings.ts. Assign and move are B9's server calls (see below).
+// Role, permission and pay changes live on the Team person page
+// (set_employee_terms). Seats (B8 RV-06): business_plan_summary is the one
+// answer for capacity, blocks and the block price (gate members or revenue,
+// so it works for staff too); without it on the database, the B6
+// my_business_seat_capacity + subscription_tiers reads stay.
 
 const db = supabase;
 
@@ -42,19 +46,26 @@ const OFFLINE = (m: string | undefined) => !!m && /connection|reach the server/i
 
 export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
   try {
-    const [team, cap, price, reqs] = await Promise.all([
-      fetchTeam(businessId),
-      fetchSeatCapacity(),
-      fetchSeatBlockPrice(),
-      fetchJoinRequests(businessId),
-    ]);
+    const [team, summary, reqs] = await Promise.all([fetchTeam(businessId), fetchPlanSummary(businessId), fetchJoinRequests(businessId)]);
     if (!team.ok) return { ok: false, offline: OFFLINE(team.message) };
-    if (!cap.ok) return { ok: false, offline: OFFLINE(cap.message) };
+    let seats: SeatInfo;
+    if (summary.ok) {
+      seats = seatFacts(summary.value, 5);
+    } else {
+      const [cap, price] = await Promise.all([fetchSeatCapacity(), fetchSeatBlockPrice()]);
+      if (!cap.ok) return { ok: false, offline: OFFLINE(cap.message) };
+      seats = {
+        capacity: cap.value.capacity,
+        planActive: cap.value.capacity > 0,
+        blocks: cap.value.seatBlocks,
+        perBlock: cap.value.seatsPerUnit ?? (price.ok && price.value ? price.value.seatsPerUnit : 5),
+        blockPrice: price.ok && price.value ? price.value.monthly : null,
+      };
+    }
     const ordered = [...team.value].sort((a, b) => {
       if (!!a.acceptedAt !== !!b.acceptedAt) return a.acceptedAt ? -1 : 1;
       return (a.acceptedAt ?? a.invitedAt).localeCompare(b.acceptedAt ?? b.invitedAt);
     });
-    const perBlock = cap.value.seatsPerUnit ?? (price.ok && price.value ? price.value.seatsPerUnit : 5);
     return {
       ok: true,
       value: {
@@ -68,13 +79,7 @@ export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
           usesSeat: p.usesSeat,
           seat: i + 1,
         })),
-        seats: {
-          capacity: cap.value.capacity,
-          planActive: cap.value.capacity > 0,
-          blocks: cap.value.seatBlocks,
-          perBlock,
-          blockPrice: price.ok && price.value ? price.value.monthly : null,
-        },
+        seats,
         requests: reqs.ok ? reqs.value.length : 0,
       },
     };
@@ -168,29 +173,13 @@ export async function inviteEmployee(identifier: string, role: BusinessRole, bus
 }
 
 /**
- * Assign an instructor to one session (AN5-027) through the Classes service
- * (owner UPDATE on professional_id; the guard trigger refuses anyone not on
- * the team). The overlap re-check runs on the client just before (B9 adds the
- * server check and the instructor's notice).
+ * Assign an instructor to one session (AN5-027) through the Classes service:
+ * B9 assign_class_instructor(), which re-checks on the server that the person
+ * is on the team (ATX76) and free at that time in any business (ATXD9). The
+ * client's overlap check still runs first, to name the clash. A session's
+ * move is FixSheet → move_class_session (services/business-classes/schedule).
  */
 export async function assignInstructor(classId: string, professionalId: string): Promise<boolean> {
   const r = await assignViaClasses(classId, professionalId);
   return r.ok;
-}
-
-/**
- * Move a session with nobody booked (AN5-038). A session with bookings needs
- * the member notice and calendar move of B9's move_class_session, so the UI
- * never offers it for one; this re-checks the count before writing.
- */
-export async function moveEmptyClass(classId: string, start: string, end: string): Promise<"ok" | "booked" | "error"> {
-  try {
-    const b = await fetchClassBookings([classId]);
-    if (!b.ok) return "error";
-    if (b.bookings.length > 0) return "booked";
-    const { error } = await db.from("business_classes").update({ start_time: start, end_time: end }).eq("id", classId);
-    return error ? "error" : "ok";
-  } catch {
-    return "error";
-  }
 }

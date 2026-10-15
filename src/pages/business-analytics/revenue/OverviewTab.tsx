@@ -54,6 +54,7 @@ const STREAM_COL: Record<string, string> = {
   intro_offer: v("amber"),
   intro_week: v("week-bar"),
   delivery: v("pay-caution"),
+  appointment: v("pay-teal"),
   other: v("tert"),
 };
 const colOf = (k: string) => STREAM_COL[k] ?? v("tert");
