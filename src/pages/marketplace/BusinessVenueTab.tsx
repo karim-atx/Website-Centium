@@ -285,6 +285,7 @@ export default function BusinessVenueTab() {
         title={roster?.title ?? ""}
         session={roster ? { date: roster.date, startTime: roster.startTime, endTime: roster.endTime, maxCapacity: roster.maxCapacity } : null}
         onClose={() => setRoster(null)}
+        onMarkedPaid={() => showToast("Marked as paid.")}
       />
       {toast}
     </div>

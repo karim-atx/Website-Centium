@@ -4,7 +4,7 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import type { BizKind } from "../../components/business-more/kind";
 import { fetchSeatBlockPrice, inviteEmployee, roleUsesSeat, type BusinessRole } from "../../services/business-team/team";
-import { upgradeMailto } from "../../services/subscription-tiers/upgrade";
+import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import { roleOptions, type SeatCounts } from "./teamLogic";
 import { isOfflineNow } from "./parts";
 
@@ -252,29 +252,32 @@ export function InviteSheet({
 
 /**
  * All seats in use (OP1-070 invite context, OP1-127 approve context). The
- * price is read from subscription_tiers (V6-40). Buying seats before Whish is
- * the existing email request (V6-41; B8 has no Centium charge yet).
+ * price is read from subscription_tiers (V6-40). "Add seats" opens the AN5
+ * 057-060 Add seats flow (OP1-070 row 5, OP1-127 row 8), which places a B8
+ * RV-06 seat order (buy_seat_blocks, owner only) or, on a database without
+ * RV-06, keeps the email request.
  */
 export function SeatsFullSheet({
   open,
   onClose,
   counts,
   approveName,
-  mode = "full",
   onInviteNoSeat,
+  onChanged,
 }: {
   open: boolean;
   onClose: () => void;
   counts: SeatCounts;
-  /** "full": All seats in use (OP1-070 / 127). "add": the Add seats button with seats still free (OURS title). */
-  mode?: "full" | "add";
   /** Invite a role that needs no seat (front desk, manager) from a full business. */
   onInviteNoSeat?: () => void;
   /** Set when the sheet opened from approving a join request (OP1-127). */
   approveName?: string | null;
+  /** A seat order was placed or cancelled in the Add seats flow. */
+  onChanged?: () => void;
 }) {
   const [price, setPrice] = useState<{ monthly: number; seatsPerUnit: number } | null | undefined>(undefined);
   const [priceError, setPriceError] = useState(false);
+  const [buying, setBuying] = useState(false);
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -293,33 +296,41 @@ export function SeatsFullSheet({
   const per = price?.seatsPerUnit ?? 5;
   const priceText = price ? `$${price.monthly.toFixed(2)}` : null;
   const zero = counts.total === 0;
-  const tail = mode === "add" ? "" : approveName ? ` ${approveName} can join once a seat is free.` : " Send the invite again once a seat is free.";
+  const tail = approveName ? ` ${approveName} can join once a seat is free.` : " Send the invite again once a seat is free.";
   const note = priceText
     ? `Each seat block is ${priceText} a month and adds ${per} seats.${tail}`
     : `Each seat block adds ${per} seats.${tail}`;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={mode === "add" ? "Add seats" : "All seats in use"} {...SHEET}>
-      <div className="tm-vars">
-        <SeatTop
-          title={`${counts.used} of ${counts.total} seats used`}
-          sub={zero ? "Add a seat block to start inviting people." : mode === "add" ? `${counts.free} free. Add a seat block for ${per} more people.` : `Add a seat block for ${per} more people.`}
-        />
-        {priceError ? <p className="tm-sh-note">Couldn't load the seat price.</p> : <p className="tm-sh-note">{note}</p>}
-        <a className="tm-sh-btn" href={upgradeMailto()} style={{ textDecoration: "none" }}>
-          Add seats
-        </a>
-        <p className="tm-sh-err" style={{ color: "var(--tm-faint)" }}>
-          We'll add them and send you the bill. Paying with Whish is coming soon.
-        </p>
-        {onInviteNoSeat && mode === "full" && !approveName && (
-          <div style={{ textAlign: "center" }}>
-            <button type="button" className="tm-link tap" onClick={onInviteNoSeat}>
-            Invite someone who doesn't need a seat
+    <>
+      <BottomSheet open={open && !buying} onClose={onClose} title="All seats in use" {...SHEET}>
+        <div className="tm-vars">
+          <SeatTop title={`${counts.used} of ${counts.total} seats used`} sub={zero ? "Add a seat block to start inviting people." : `Add a seat block for ${per} more people.`} />
+          {priceError ? <p className="tm-sh-note">Couldn't load the seat price.</p> : <p className="tm-sh-note">{note}</p>}
+          <button type="button" className="tm-sh-btn tap" onClick={() => setBuying(true)}>
+            Add seats
           </button>
-          </div>
-        )}
-      </div>
-    </BottomSheet>
+          {onInviteNoSeat && !approveName && (
+            <div style={{ textAlign: "center" }}>
+              <button type="button" className="tm-link tap" onClick={onInviteNoSeat}>
+                Invite someone who doesn't need a seat
+              </button>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+      {open && buying && (
+        <SeatPurchaseSheet
+          used={counts.used}
+          pending={counts.invited}
+          fallback={{ capacity: counts.total, planActive: counts.total > 0, blocks: 0, perBlock: per, blockPrice: price?.monthly ?? null }}
+          onClose={() => {
+            setBuying(false);
+            onClose();
+          }}
+          onChanged={onChanged}
+        />
+      )}
+    </>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "../../services/business-team/team";
 import { shiftDate, todayLocal } from "../../utils/date";
 import { isAccepted, seatHolders, weekRange } from "./teamLogic";
+import { fetchPlanSummary, type PlanSummary } from "../../services/centium-billing";
 
 // One load for the Team screens: the team (accepted and invited), seat
 // capacity, pending join requests and the sessions from last Monday to two
@@ -26,8 +27,10 @@ import { isAccepted, seatHolders, weekRange } from "./teamLogic";
 // the team (business_employees SELECT widened to business_can(members)), but
 // business_employees writes stay the owner's, so the screens are read-only for
 // them (`readOnly`). my_business_seat_capacity() answers for the caller's OWN
-// business only, so staff get the seats counted from the team they can read
-// (no free seats are shown: adding seats is the owner's).
+// business only, so staff read the capacity from business_plan_summary (B8
+// RV-06, gate members or revenue) and count the seats in use from the team
+// they can read. Without RV-06 on the database: the seats in use and no free
+// ones, as before.
 
 export interface TeamData {
   businessId: string | null;
@@ -75,12 +78,14 @@ export function useTeamData(): TeamData {
     const from = weekRange(today, -1).from;
     const to = shiftDate(today, 21);
     const seats = readOnly ? Promise.resolve(null) : fetchSeatCapacity();
-    void Promise.all([fetchTeam(bizId), seats, fetchJoinRequests(bizId), fetchSessions(bizId, from, to)]).then(
-      ([team, capRes, req, sess]) => {
+    const plan = readOnly ? fetchPlanSummary(bizId) : Promise.resolve(null);
+    void Promise.all([fetchTeam(bizId), seats, fetchJoinRequests(bizId), fetchSessions(bizId, from, to), plan]).then(
+      ([team, capRes, req, sess, planRes]) => {
         if (cancelled) return;
         setLoading(false);
         if (team.ok) setPeople(team.value);
-        const cap = capRes ?? (team.ok ? { ok: true as const, value: staffSeats(team.value) } : { ok: false as const, message: team.message });
+        const summary = planRes && planRes.ok ? planRes.value : null;
+        const cap = capRes ?? (team.ok ? { ok: true as const, value: staffSeats(team.value, summary) } : { ok: false as const, message: team.message });
         if (cap.ok) setCapacity(cap.value);
         if (req.ok) {
           setRequests(req.value);
@@ -125,10 +130,14 @@ export function useTeamData(): TeamData {
   };
 }
 
-/** Staff can't read the owner's seat capacity: the seats in use, and no free ones. */
-function staffSeats(people: TeamPerson[]): SeatCapacity {
+/**
+ * Staff can't read my_business_seat_capacity: the capacity from the plan
+ * summary (RV-06), else the seats in use and no free ones.
+ */
+function staffSeats(people: TeamPerson[], summary: PlanSummary | null): SeatCapacity {
   const holders = seatHolders(people);
   const used = holders.filter(isAccepted).length;
   const invited = holders.length - used;
+  if (summary) return { capacity: summary.capacity, seatBlocks: summary.seatBlocks, seatsPerUnit: summary.seatsPerBlock, used, invited };
   return { capacity: used + invited, seatBlocks: 0, seatsPerUnit: null, used, invited };
 }

@@ -6,7 +6,8 @@ import { fetchClassRoster } from "../../services/venues/console";
 import { isMaskedLabel, methodLabel, money, splitRoster, type RosterEntry } from "../../services/venues/consoleLogic";
 import { range12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
-import { CARD, VAvatar, VCardError, VDetailRow, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
+import { CARD, DIVIDER, VAvatar, VCardError, VDetailRow, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
+import { useMarkBookingPaid } from "./useMarkBookingPaid";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -19,8 +20,9 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // members" card (the one roster language, Q-R1). No cap: the sheet is the
 // "See all".
 //
-// Mark as paid for a booking needs venue_class_roster to return the booking
-// id (BU2-21 / B8); it doesn't on the local stack, so the action is hidden.
+// CL-08: venue_class_roster returns booking_id, so a booked row awaiting
+// payment opens "Mark as paid" for a seat with front desk access
+// (useMarkBookingPaid, OP1-083 K2). Waitlist rows never do.
 
 const PAY: Record<string, { label: string; tone: PillTone }> = {
   paid: { label: "Paid", tone: "good" },
@@ -55,17 +57,26 @@ export function ClassRosterSheet({
   title,
   onClose,
   session,
+  onMarkedPaid,
 }: {
   classId: string | null;
   title: string;
   onClose: () => void;
   session?: RosterSession | null;
+  /** CL-08: a booking was marked paid (the caller toasts and reloads its own copy). */
+  onMarkedPaid?: () => void;
 }) {
   const online = useOnline();
   const [state, setState] = useState<{ classId: string; entries: RosterEntry[] } | null>(null);
   const [error, setError] = useState<{ classId: string; message: string } | null>(null);
   const [tab, setTab] = useState<"booked" | "waitlist">("booked");
   const [tick, setTick] = useState(0);
+  const pay = useMarkBookingPaid({
+    onDone: () => {
+      setTick((t) => t + 1);
+      onMarkedPaid?.();
+    },
+  });
 
   useEffect(() => {
     if (!classId) return;
@@ -99,7 +110,8 @@ export function ClassRosterSheet({
   const list = view === "booked" ? booked : waitlist;
 
   const row = (e: RosterEntry, i: number) => {
-    const pay = e.paymentStatus ? PAY[e.paymentStatus] : null;
+    const tag = e.paymentStatus ? PAY[e.paymentStatus] : null;
+    const markable = pay.can(e);
     const price = e.priceAgreed !== null ? (e.priceAgreed > 0 ? money(e.priceAgreed) : "Free") : null;
     const sub =
       e.kind === "booked"
@@ -112,7 +124,10 @@ export function ClassRosterSheet({
         title={e.label}
         titleExtra={e.isMinor && <VPill tone="pale" label="Under 18" />}
         sub={sub}
-        right={e.kind === "booked" && pay ? <VPill tone={pay.tone} label={pay.label} /> : undefined}
+        right={e.kind === "booked" && tag ? <VPill tone={tag.tone} label={tag.label} /> : undefined}
+        onClick={markable ? (ev) => pay.open(e, ev.currentTarget) : undefined}
+        ariaLabel={markable && tag ? `${e.label}, ${tag.label}. Actions` : undefined}
+        disabled={markable ? pay.busy : undefined}
       />
     );
   };
@@ -162,8 +177,14 @@ export function ClassRosterSheet({
           )}
           {entries && list.map(row)}
           {entries && view === "booked" && booked.length === 0 && <VDetailRow avatar={<VAvatar icon={Users} />} title="Nobody has booked yet." />}
+          {pay.error && (
+            <p className={`border-t ${DIVIDER} text-[11.5px] font-bold leading-[16px] text-status-high`} role="alert" style={{ padding: "10px 16px" }}>
+              {pay.error}
+            </p>
+          )}
         </div>
       </div>
+      {pay.element}
     </BottomSheet>
   );
 }

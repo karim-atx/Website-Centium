@@ -6,6 +6,7 @@ import { useOpenThread } from "../../components/messages/useOpenThread";
 import { fetchBooked, type ClassSession, type TeamPerson } from "../../services/business-team/team";
 import { Avatar, Notice, TeamCta, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { InviteSheet, SeatsFullSheet } from "./TeamSheets";
+import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import {
   teamTitle,
   firstWord,
@@ -32,8 +33,11 @@ import type { TeamData } from "./useTeamData";
 // capacity (B6 my_business_seat_capacity), join requests (B6), invite
 // (invite_employee), the business code (B5) with Copy and Share, remove
 // (person page, with a confirm), the load error, and the seat cap.
+// Add seats opens the AN5 057-060 flow (OP1-053 S4), which places a B8 RV-06
+// seat order to Centium (owner only; seats count once Centium records the
+// payment).
 // PENDING: cover requests (BU2-16 has no table: the card shows only with
-// data, so it never shows today) and paying for seats in the app (V6-41).
+// data, so it never shows today).
 
 const PER_BLOCK = 5;
 
@@ -44,7 +48,7 @@ export function TeamPage({ data }: { data: TeamData }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [fullOpen, setFullOpen] = useState(false);
-  const [addMode, setAddMode] = useState<"full" | "add">("full");
+  const [buying, setBuying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [offline, setOffline] = useState(isOfflineNow());
 
@@ -71,7 +75,6 @@ export function TeamPage({ data }: { data: TeamData }) {
 
   const invite = () => {
     if (counts.free > 0) return setInviteOpen(true);
-    setAddMode("full");
     setFullOpen(true);
   };
 
@@ -160,10 +163,7 @@ export function TeamPage({ data }: { data: TeamData }) {
             <p className="tm-team-s">{ready ? seatLine(counts) : "–"}</p>
           </div>
           {!readOnly && (
-          <button type="button" className="tm-outbtn tm-hit tap" disabled={offline} onClick={() => {
-              setAddMode(counts.free > 0 ? "add" : "full");
-              setFullOpen(true);
-            }}>
+          <button type="button" className="tm-outbtn tm-hit tap" disabled={offline} onClick={() => setBuying(true)}>
             <Plus size={14} strokeWidth={2.4} />
             Add seats
           </button>
@@ -177,7 +177,15 @@ export function TeamPage({ data }: { data: TeamData }) {
               <ul className="tm-grid" aria-label={`Block ${bi + 1}`}>
                 {block.map((seat) => (
                   <li key={seat.index} style={{ minWidth: 0 }}>
-                    {seat.kind === "free" ? (
+                    {seat.kind === "free" && readOnly ? (
+                      // B8 RV-06: staff see the real capacity (business_plan_summary); a free seat isn't theirs to fill.
+                      <span className="tm-seat" aria-label="Free seat">
+                        <span className="tm-av free">
+                          <Plus size={18} strokeWidth={2.2} />
+                        </span>
+                        <span className="tm-seat-n free">Free</span>
+                      </span>
+                    ) : seat.kind === "free" ? (
                       <button
                         type="button"
                         className="tm-seat tap"
@@ -273,7 +281,6 @@ export function TeamPage({ data }: { data: TeamData }) {
           }}
           onNoSeats={() => {
             setInviteOpen(false);
-            setAddMode("full");
             setFullOpen(true);
           }}
         />
@@ -282,12 +289,21 @@ export function TeamPage({ data }: { data: TeamData }) {
         open={fullOpen}
         onClose={() => setFullOpen(false)}
         counts={counts}
-        mode={addMode}
         onInviteNoSeat={() => {
           setFullOpen(false);
           setInviteOpen(true);
         }}
+        onChanged={data.reload}
       />
+      {buying && (
+        <SeatPurchaseSheet
+          used={counts.used}
+          pending={counts.invited}
+          fallback={{ capacity: total, planActive: total > 0, blocks: capacity?.seatBlocks ?? 0, perBlock: per, blockPrice: null }}
+          onClose={() => setBuying(false)}
+          onChanged={data.reload}
+        />
+      )}
       {toast}
     </TeamScope>
   );
