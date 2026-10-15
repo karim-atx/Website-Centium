@@ -1,28 +1,30 @@
 import React, { useMemo, useState } from "react";
 import clsx from "clsx";
 import { ScanLine, UserCheck } from "lucide-react";
-import type { EntriesResult } from "../../../services/front-desk";
-import { barHeights, BAR_AREA, entryFigures, entrySub, hourShort, type Entry } from "../../../services/front-desk/frontDeskLogic";
+import { barHeights, BAR_AREA, entrySub, hourBins, hourCounts, hourShort, isDeskMethod, type Entry } from "../../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../../utils/time12";
+import type { DeskState } from "./useFrontDesk";
 import { DeskLabel, DeskRow, EmptyCard, ErrorCard, LIST, ListCard, RULE, ListLine, NumberBoxes, NumberBoxesSkeleton, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
-// OP1-013 (Entries), OP1-016 (empty), OURS states O1-O10. Check-ins are B10
-// (BU2-07): until the stage is on the stack the read answers "not available"
-// and the tab shows OP1-016's empty card, which is true: no entry has ever
-// been recorded. Nothing below invents a number (data honesty, HANDOVER 1).
+// OP1-013 (Entries), OP1-016 (empty), OURS states O1-O10, on B10: the boxes
+// are desk_summary (entries since the venue's midnight, In now = people with
+// an entry in the last 90 minutes, denied today), the chart and the list are
+// desk_entries (first names: the check-in screen, Q-05). OP1-016's card shows
+// while this venue has never recorded a check-in, and on a database without
+// B10 (the pending rule). Nothing below invents a number (HANDOVER 1).
 
 const EMPTY_BODY = "Members scan their pass at the door, or you check them in here.";
 
 export const EntriesTab: React.FC<{
-  entries: EntriesResult | null;
-  loading: boolean;
+  desk: DeskState;
+  /** The venues' own load failed (my_venues). */
   error: string | null;
   onRetry: () => void;
   now: Date;
-}> = ({ entries, loading, error, onRetry, now }) => {
+}> = ({ desk, error, onRetry, now }) => {
   const [all, setAll] = useState(false);
 
-  if (loading && !entries) {
+  if (desk.loading && !desk.summary && desk.live !== false && !error) {
     return (
       <div aria-busy="true">
         <NumberBoxesSkeleton />
@@ -32,28 +34,39 @@ export const EntriesTab: React.FC<{
       </div>
     );
   }
-  if (error && !entries) return <ErrorCard title="Couldn't load entries" onRetry={onRetry} />;
-  if (!entries || !entries.available || !entries.everAny) {
+  if ((error || desk.error) && !desk.summary) return <ErrorCard title="Couldn't load entries" onRetry={onRetry} />;
+  if (desk.live !== true || !desk.summary || !desk.entries || desk.everAny === false) {
     return <EmptyCard icon={ScanLine} title="No entries yet" body={EMPTY_BODY} />;
   }
-  return <EntriesBody entries={entries.entries} hours={entries.hours} now={now} all={all} setAll={setAll} />;
+  return <EntriesBody desk={desk} now={now} all={all} setAll={setAll} />;
 };
 
+/** S6: "Updated {n} min ago" (11/600 faint). */
+function updatedLine(at: Date | null, now: Date): string | null {
+  if (!at) return null;
+  const min = Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60_000));
+  return min < 1 ? "Updated just now" : `Updated ${min} min ago`;
+}
+
 const EntriesBody: React.FC<{
-  entries: Entry[];
-  hours: { hour: number; count: number }[];
+  desk: DeskState;
   now: Date;
   all: boolean;
   setAll: (v: boolean) => void;
-}> = ({ entries, hours, now, all, setAll }) => {
-  const figures = useMemo(() => entryFigures(entries, now), [entries, now]);
-  const newest = useMemo(() => [...entries].sort((a, b) => b.at.localeCompare(a.at)), [entries]);
-  const quiet = newest.length === 0;
+}> = ({ desk, now, all, setAll }) => {
+  const entries = useMemo(() => desk.entries ?? [], [desk.entries]);
+  const summary = desk.summary!;
+  const quiet = entries.length === 0;
+  const hours = useMemo(() => {
+    const entryHours = [...new Set(entries.filter((e) => e.result === "in").map((e) => new Date(e.at).getHours()))];
+    return hourCounts(entries, hourBins(desk.todayHours, entryHours, now.getHours()));
+  }, [entries, desk.todayHours, now]);
+  const updated = updatedLine(desk.readAt, now);
 
   if (all) {
     // S3: today's full list, grouped by hour, newest first.
     const groups = new Map<number, Entry[]>();
-    for (const e of newest) {
+    for (const e of entries) {
       const h = new Date(e.at).getHours();
       groups.set(h, [...(groups.get(h) ?? []), e]);
     }
@@ -76,34 +89,47 @@ const EntriesBody: React.FC<{
     );
   }
 
+  const seeAll = !quiet && entries.length > 3;
   return (
     <div className="flex flex-col">
       <NumberBoxes
         items={[
-          { label: "Entries today", value: String(figures.today) },
-          { label: "In now", value: String(figures.inNow) },
-          { label: "Denied", value: String(figures.denied) },
+          { label: "Entries today", value: String(summary.entriesToday) },
+          { label: "In now", value: String(summary.inNow) },
+          { label: "Denied", value: String(summary.deniedToday) },
         ]}
       />
       <HourChart hours={hours} now={now} quiet={quiet} />
-      <DeskLabel action={quiet || newest.length <= 3 ? undefined : { label: "See all", onClick: () => setAll(true), ariaLabel: "See all entries today" }}>Recent</DeskLabel>
+      <DeskLabel
+        action={seeAll ? { label: "See all", onClick: () => setAll(true), ariaLabel: "See all entries today" } : undefined}
+        trailing={!seeAll && updated ? <UpdatedNote text={updated} /> : undefined}
+      >
+        Recent
+      </DeskLabel>
       {quiet ? (
         <ListLine>No entries yet today.</ListLine>
       ) : (
         <ListCard label="Recent entries">
-          {newest.slice(0, 3).map((e, i) => (
+          {entries.slice(0, 3).map((e, i) => (
             <EntryRow key={e.id} e={e} first={i === 0} />
           ))}
         </ListCard>
+      )}
+      {seeAll && updated && (
+        <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "-6px 2px 14px" }}>
+          {updated}
+        </p>
       )}
     </div>
   );
 };
 
+const UpdatedNote: React.FC<{ text: string }> = ({ text }) => <span className="text-[11px] font-semibold leading-[14px] text-charcoal-faint normal-case tracking-normal">{text}</span>;
+
 const EntryRow: React.FC<{ e: Entry; first: boolean }> = ({ e, first }) => (
   <DeskRow
-    icon={e.method === "qr" ? ScanLine : UserCheck}
-    title={e.memberLabel}
+    icon={isDeskMethod(e.method) ? UserCheck : ScanLine}
+    title={e.title}
     sub={entrySub(e)}
     first={first}
     trailing={e.result === "in" ? <StatusChip tone="good">In</StatusChip> : <StatusChip tone="high">Denied</StatusChip>}

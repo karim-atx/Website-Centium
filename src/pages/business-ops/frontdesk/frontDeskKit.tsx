@@ -1,7 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Plus, type LucideIcon } from "lucide-react";
+import { ChevronDown, Plus, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 
 // v6 Batch 4 · the BizTypeKit pieces the gym Front desk is drawn with
@@ -52,6 +52,26 @@ export const HeaderIconButton: React.FC<{ icon: LucideIcon; label: string; onCli
     style={{ width: 40, height: 40, marginInlineEnd: edge ? -8 : 0, marginTop: 6 }}
   >
     <Icon size={20} aria-hidden />
+  </button>
+);
+
+/**
+ * B10 (OURS, no frame): the venue this desk checks people in at, when the
+ * business has more than one. 12.5/700 inkSoft with a 14 chevron under the
+ * title, 44 hit box; opens a PopupMenu of the venues.
+ */
+export const VenueSwitch: React.FC<{ name: string; open: boolean; onOpen: (el: HTMLElement) => void }> = ({ name, open, onOpen }) => (
+  <button
+    type="button"
+    onClick={(e) => onOpen(e.currentTarget)}
+    aria-haspopup="listbox"
+    aria-expanded={open}
+    aria-label={`Checking in at ${name}. Change venue`}
+    className="tap inline-flex items-center text-[12.5px] font-bold leading-[18px] text-charcoal-soft"
+    style={{ gap: 4, minHeight: 32, margin: "-10px 0 8px" }}
+  >
+    At {name}
+    <ChevronDown size={14} strokeWidth={2.2} aria-hidden />
   </button>
 );
 

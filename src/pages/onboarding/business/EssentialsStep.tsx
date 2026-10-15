@@ -243,7 +243,7 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
             />
             <BizNums
               items={[
-                { key: "age", value: e.minAge, label: "Minimum age", min: 13, max: 21, onChange: (v) => set({ minAge: v }) },
+                { key: "age", value: e.minAge, label: "Minimum age", min: 16, max: 21, onChange: (v) => set({ minAge: v }) },
                 { key: "guests", value: e.guestPasses, label: "Guest passes a month", min: 0, max: 10, onChange: (v) => set({ guestPasses: v }) },
               ]}
             />

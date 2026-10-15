@@ -3,11 +3,13 @@ import { Banknote, CameraOff, CircleCheck, RotateCcw, ScanLine, UserCheck, WifiO
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useCameraCodeReader } from "../../../components/food/useCameraCodeReader";
-import { CHECK_INS_LIVE, markMembershipPaid, verifyPass } from "../../../services/front-desk";
+import { checkInWithPass, fetchDeskEntries, isMissingDesk, markMembershipPaid, verifyPass } from "../../../services/front-desk";
 import {
+  checkInView,
   normalizePassToken,
   scanResultView,
   VERIFY_FAILED_VIEW,
+  type CheckIn,
   type PassCheck,
   type ResultIcon,
   type ResultTone,
@@ -17,10 +19,14 @@ import { textPx } from "../../../theme/textSize";
 import { EmptyCard, StatusChip } from "./frontDeskKit";
 
 // OURS-OP1-front-desk-scan: the camera (zxing-wasm / BarcodeDetector, QR
-// format) and a hardware scanner both feed verify_gym_pass(); the result is
-// the BizTypeKit central pop-up (OP1-019 geometry). Before B10 nothing is
-// recorded, so a valid pass reads "{name}'s pass is valid" (R2). Mark as
-// paid (R4) is live: mark_gym_membership_paid(), then verify again.
+// format) and a hardware scanner both feed check_in_with_pass(desk venue,
+// token, 'qr') (B10), which decides AND records the entry, denials included;
+// the result is the BizTypeKit central pop-up (OP1-019 geometry): R1
+// "{name} is checked in", R4-R8 by the recorded reason, R9 "Already checked
+// in" (no second row). Mark as paid (R4): mark_gym_membership_paid(), then
+// the same pass is checked in again. THE PENDING RULE: on a database without
+// B10 the scan falls back to verify_gym_pass(), which records nothing, so a
+// valid pass reads "{name}'s pass is valid" (R2).
 
 const SAME_TOKEN_MS = 10_000;
 
@@ -41,15 +47,24 @@ const DISC: Record<ResultTone, { bg: string; ink: string }> = {
   soft: { bg: "rgb(var(--c-cream-soft))", ink: "rgb(var(--c-charcoal-faint))" },
 };
 
+/** What a scan hands the check-in sheet: the member, and whether to sell them a day pass. */
+export type CheckInPreset = { membershipId: string | null; firstName: string | null; dayPass: boolean };
+
 export const ScanSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   online: boolean;
-  onCheckInByName: (membershipId?: string | null) => void;
-  /** A pass was marked paid: the member lists reload. */
+  /** The venue this desk checks people in at. */
+  gymId: string | null;
+  /** B10 answers on this database (false: the verify-only fallback). */
+  live: boolean | null;
+  /** The business sells a day pass (R5's "Sell a day pass"). */
+  sellsDayPass: boolean;
+  onCheckInByName: (preset: CheckInPreset | null) => void;
+  /** An entry was recorded or a pass marked paid: the desk reloads. */
   onChanged: () => void;
-}> = ({ open, onClose, online, onCheckInByName, onChanged }) => {
-  const [result, setResult] = useState<{ view: ScanResultView; check: PassCheck | null } | null>(null);
+}> = ({ open, onClose, online, gymId, live, sellsDayPass, onCheckInByName, onChanged }) => {
+  const [result, setResult] = useState<{ view: ScanResultView; check: PassCheck | null; ci: CheckIn | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
@@ -61,17 +76,43 @@ export const ScanSheet: React.FC<{
     paused.current = !!result || busy;
   }, [result, busy]);
 
-  const check = useCallback(async (token: string) => {
-    setBusy(true);
-    const r = await verifyPass(token);
-    setBusy(false);
-    setPayError(false);
-    if (!r.ok) {
-      setResult({ view: VERIFY_FAILED_VIEW, check: null });
-      return;
-    }
-    setResult({ view: scanResultView(r.value, { checkInsLive: CHECK_INS_LIVE, sellsDayPass: false }), check: r.value });
-  }, []);
+  const check = useCallback(
+    async (token: string) => {
+      setBusy(true);
+      setPayError(false);
+      if (live !== false && gymId) {
+        const r = await checkInWithPass(gymId, token, "qr");
+        if (r.ok) {
+          const c = r.value;
+          let alreadyAt: string | null = null;
+          if (c.alreadyIn && c.checkInId) {
+            // R9's time: the earlier entry, from today's list.
+            const e = await fetchDeskEntries(gymId);
+            alreadyAt = e.ok ? e.value.find((x) => x.id === c.checkInId)?.at ?? null : null;
+          } else onChanged();
+          setBusy(false);
+          setResult({ view: checkInView(c, { sellsDayPass, alreadyAt }), check: null, ci: c });
+          return;
+        }
+        if (!isMissingDesk(r)) {
+          setBusy(false);
+          // ATXE6 (desk check-in off) and ATX03 say why; anything else is C4.
+          const why = r.code === "ATXE6" || r.code === "ATX03" ? r.message : null;
+          setResult({ view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: "Scan again" } : VERIFY_FAILED_VIEW, check: null, ci: null });
+          return;
+        }
+      }
+      // The pending rule: no B10 on this database, look only.
+      const r = await verifyPass(token);
+      setBusy(false);
+      if (!r.ok) {
+        setResult({ view: VERIFY_FAILED_VIEW, check: null, ci: null });
+        return;
+      }
+      setResult({ view: scanResultView(r.value, { checkInsLive: false, sellsDayPass: false }), check: r.value, ci: null });
+    },
+    [gymId, live, sellsDayPass, onChanged]
+  );
 
   /** A read from the camera or the hardware scanner; true when it was taken. */
   const take = useCallback(
@@ -117,17 +158,18 @@ export const ScanSheet: React.FC<{
 
   const onPrimary = async () => {
     if (!result) return;
-    const { view, check: c } = result;
-    if (view.primary === "mark-paid" && c?.membershipId) {
+    const { view, check: c, ci } = result;
+    const membershipId = ci?.membershipId ?? c?.membershipId ?? null;
+    if (view.primary === "mark-paid" && membershipId) {
       setBusy(true);
-      const r = await markMembershipPaid(c.membershipId);
+      const r = await markMembershipPaid(membershipId);
       if (!r.ok) {
         setBusy(false);
         setPayError(true);
         return;
       }
       onChanged();
-      // Verify the same pass again: it now reads valid (R1 / R2).
+      // Check the same pass in again: it is paid now (R1; R2 without B10).
       if (last.current) await check(last.current.token);
       else setBusy(false);
       return;
@@ -143,11 +185,10 @@ export const ScanSheet: React.FC<{
         onClose();
         return;
       case "check-in":
-      case "check-in-again":
       case "sell-day-pass": {
-        const id = result.check?.membershipId ?? null;
+        const src = result.ci ?? result.check;
         closeResult(false);
-        onCheckInByName(id);
+        onCheckInByName({ membershipId: src?.membershipId ?? null, firstName: src?.firstName ?? null, dayPass: result.view.secondary === "sell-day-pass" });
         return;
       }
       default:

@@ -2,12 +2,15 @@ import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, ScanLine } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
+import { usePoll } from "../../../hooks/usePoll";
+import { PopupMenu } from "../../../components/ui/PopupMenu";
+import { useBizToast } from "../../../components/business-more/useBizToast";
 import { clock12 } from "../../../utils/time12";
 import { CheckInSheet } from "./CheckInSheet";
 import { EntriesTab } from "./EntriesTab";
-import { DeskHeader, FixedCta, HeaderIconButton, TextTabs } from "./frontDeskKit";
+import { DeskHeader, FixedCta, HeaderIconButton, TextTabs, VenueSwitch } from "./frontDeskKit";
 import { PassesTab } from "./PassesTab";
-import { ScanSheet } from "./ScanSheet";
+import { ScanSheet, type CheckInPreset } from "./ScanSheet";
 import { useFrontDesk } from "./useFrontDesk";
 
 // v6 Batch 4 · Gym › Front desk (V6-54): the gym's navbar tab
@@ -18,6 +21,10 @@ import { useFrontDesk } from "./useFrontDesk";
 // returns to it (OP1-013 S1). A gym that runs classes (it has class rows)
 // gets a "Class schedule" button beside Scan: the Schedule at
 // /app/business/classes is otherwise reachable only by URL for a gym (OURS).
+// B10: a business with more than one venue picks the venue this desk checks
+// people in at ("At {venue}" under the title, OURS); entries, the summary and
+// day pass sales are that venue's. The Entries tab re-reads every 2 minutes
+// while visible (OP1-013 S6's polling fallback, usePoll).
 
 export type DeskTab = "entries" | "passes" | "memberships";
 const TABS: { key: DeskTab; label: string }[] = [
@@ -50,10 +57,19 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
   const online = useOnline();
   const data = useFrontDesk();
   const gymIds = useMemo(() => data.venues.map((v) => v.gymId), [data.venues]);
-  const [opened] = useState(() => new Date());
-  const now = data.loadedAt ?? opened;
-  const [checkIn, setCheckIn] = useState<{ open: boolean; membershipId: string | null }>({ open: false, membershipId: null });
+  // A minute clock: the current-hour bar and "Updated {n} min ago" (S6).
+  const [clock, setClock] = useState(() => new Date());
+  usePoll(() => setClock(new Date()), 60_000);
+  const [checkIn, setCheckIn] = useState<{ open: boolean; preset: CheckInPreset | null }>({ open: false, preset: null });
   const [scan, setScan] = useState(false);
+  const [venueMenu, setVenueMenu] = useState<HTMLElement | null>(null);
+  const [toast, showToast] = useBizToast();
+  const { refreshDesk } = data;
+  usePoll(refreshDesk, 120_000, online && tab === "entries" && data.desk.live === true);
+  // A fresh read moves the clock too, so "Updated" never reads ahead of it.
+  const readAt = data.desk.readAt;
+  const now = readAt && readAt > clock ? readAt : clock;
+  const deskVenue = data.venues.find((v) => v.gymId === data.deskGymId) ?? null;
 
   const offlineLine =
     !online && data.loadedAt && tab !== "memberships"
@@ -75,6 +91,9 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
           </div>
         }
       />
+      {deskVenue && data.venues.length > 1 && tab !== "memberships" && (
+        <VenueSwitch name={deskVenue.name} open={!!venueMenu} onOpen={setVenueMenu} />
+      )}
       <TextTabs tabs={TABS} value={tab} onChange={setTab} label="Front desk" />
       {offlineLine && (
         <p role="status" className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ margin: "-6px 2px 12px" }}>
@@ -82,35 +101,73 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
         </p>
       )}
       <div role="tabpanel" id={`fd-panel-${tab}`} aria-labelledby={`fd-tab-${tab}`}>
-        {tab === "entries" && <EntriesTab entries={data.entries} loading={data.loading} error={data.error} onRetry={data.reload} now={now} />}
-        {tab === "passes" && <PassesTab renewals={data.renewals} loading={data.loading} error={data.error} onRetry={data.reload} online={online} onChanged={data.reload} planTerms={data.planTerms} />}
+        {tab === "entries" && <EntriesTab desk={data.desk} error={data.error} onRetry={data.reload} now={now} />}
+        {tab === "passes" && (
+          <PassesTab
+            renewals={data.renewals}
+            loading={data.loading}
+            error={data.error}
+            onRetry={data.reload}
+            online={online}
+            onChanged={data.reload}
+            planTerms={data.planTerms}
+            desk={data.desk}
+            members={data.members}
+            sellsDayPass={data.dayPasses.length > 0}
+            onDeskChanged={refreshDesk}
+          />
+        )}
         {tab === "memberships" && memberships}
       </div>
 
-      {tab === "entries" && <FixedCta variant="kit" label="Check someone in" onClick={() => setCheckIn({ open: true, membershipId: null })} />}
+      {tab === "entries" && <FixedCta variant="kit" label="Check someone in" onClick={() => setCheckIn({ open: true, preset: null })} />}
 
       <CheckInSheet
         open={checkIn.open}
-        initialMembershipId={checkIn.membershipId}
-        onClose={() => setCheckIn({ open: false, membershipId: null })}
+        preset={checkIn.preset}
+        onClose={() => setCheckIn({ open: false, preset: null })}
+        gymId={data.deskGymId}
         gymIds={gymIds}
         members={data.members}
         online={online}
+        live={data.desk.live}
+        dayPasses={data.dayPasses}
         onScanInstead={() => {
-          setCheckIn({ open: false, membershipId: null });
+          setCheckIn({ open: false, preset: null });
           setScan(true);
+        }}
+        onDone={(message) => {
+          setCheckIn({ open: false, preset: null });
+          showToast(message);
+          refreshDesk();
         }}
       />
       <ScanSheet
         open={scan}
         onClose={() => setScan(false)}
         online={online}
-        onChanged={data.reload}
-        onCheckInByName={(id) => {
+        gymId={data.deskGymId}
+        live={data.desk.live}
+        sellsDayPass={data.desk.live === true && data.dayPasses.length > 0}
+        onChanged={refreshDesk}
+        onCheckInByName={(preset) => {
           setScan(false);
-          setCheckIn({ open: true, membershipId: id ?? null });
+          setCheckIn({ open: true, preset });
         }}
       />
+      <PopupMenu
+        open={!!venueMenu}
+        anchor={venueMenu}
+        onClose={() => setVenueMenu(null)}
+        heading="Checking in at"
+        selected={data.deskGymId}
+        options={data.venues.map((v) => ({ value: v.gymId, label: v.name }))}
+        onSelect={(id) => {
+          setVenueMenu(null);
+          data.setDeskGymId(id);
+        }}
+      />
+      {toast}
     </div>
   );
 };

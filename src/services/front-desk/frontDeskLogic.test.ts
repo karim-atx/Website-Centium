@@ -1,10 +1,32 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  alreadyInView,
   barHeights,
+  checkInView,
+  dayPassPlans,
   daysBetween,
-  entryFigures,
+  deniedLine,
+  deskMessage,
+  deskMoney,
   entrySub,
+  hourBins,
+  hourCounts,
+  isDeskMethod,
+  isoWeekday,
+  mondayOf,
+  peakHour,
+  rightNowLabel,
+  toBusyGrid,
+  toCheckIn,
+  toDeskSale,
+  toDeskSummary,
+  toEntry,
+  weekSales,
+  type CheckInRow,
+  type DeskSaleRow,
+  type EntryRow,
+  type PlanRow,
   hourShort,
   normalizePassToken,
   membershipActionMessage,
@@ -109,19 +131,128 @@ test("pass_state 'upcoming' is not in force; 'unknown' for a membership and vali
   assert.equal(scanResultView(c, { checkInsLive: false, sellsDayPass: false }).title, "Pass not active yet");
 });
 
-test("entries: today, in now (90 min, V6-29), denied; subs are 12-hour", () => {
-  const now = new Date(2026, 9, 14, 18, 0);
+test("entries (desk_entries): first names, guests, day passes; subs are 12-hour", () => {
   const at = (h: number, m: number) => new Date(2026, 9, 14, h, m).toISOString();
-  const entries: Entry[] = [
-    { id: "1", at: at(17, 0), method: "qr", result: "in", reason: null, memberLabel: "Mina" },
-    { id: "2", at: at(16, 0), method: "desk", result: "in", reason: null, memberLabel: "Member #4F2A" },
-    { id: "3", at: at(17, 30), method: "qr", result: "denied", reason: "expired", memberLabel: "Lina" },
-    { id: "4", at: new Date(2026, 9, 13, 23, 0).toISOString(), method: "qr", result: "in", reason: null, memberLabel: "x" },
-  ];
-  assert.deepEqual(entryFigures(entries, now), { today: 2, inNow: 1, denied: 1 });
-  assert.equal(entrySub(entries[0]), "QR pass · 5:00 PM");
-  assert.equal(entrySub(entries[1]), "Checked in at desk · 4:00 PM");
-  assert.equal(entrySub(entries[2]), "Expired · 5:30 PM");
+  const row = (o: Partial<EntryRow>): EntryRow => ({
+    check_in_id: "x",
+    at: at(17, 0),
+    result: "in",
+    deny_reason: null,
+    method: "qr",
+    person_id: "p",
+    member_first_name: "Mina",
+    member_is_minor: false,
+    guest_label: null,
+    host_first_name: null,
+    plan_name: "Monthly",
+    is_day_pass: false,
+    total_count: 1,
+    ...o,
+  });
+  assert.equal(entrySub(toEntry(row({}))), "QR pass · 5:00 PM");
+  assert.equal(entrySub(toEntry(row({ method: "manual", at: at(16, 0) }))), "Checked in at desk · 4:00 PM");
+  const denied = toEntry(row({ result: "denied", deny_reason: "expired", at: at(17, 30) }));
+  assert.equal(denied.reason, "expired");
+  assert.equal(entrySub(denied), "Expired · 5:30 PM");
+  const guest = toEntry(row({ person_id: null, member_first_name: null, guest_label: "Sam K", host_first_name: "Mina", method: "manual" }));
+  assert.equal(guest.title, "Sam K");
+  assert.equal(entrySub(guest), "Guest of Mina · 5:00 PM");
+  const walkIn = toEntry(row({ person_id: null, member_first_name: null, guest_label: "Rae", is_day_pass: true, method: "manual" }));
+  assert.equal(walkIn.isGuest, false);
+  assert.equal(entrySub(walkIn), "Day pass · 5:00 PM");
+  const unknown = toEntry(row({ person_id: null, member_first_name: null, result: "denied", deny_reason: null }));
+  assert.equal(unknown.title, "Unknown pass");
+  assert.equal(entrySub(unknown), "Not recognised · 5:00 PM");
+  assert.equal(isDeskMethod("manual"), true);
+  assert.equal(isDeskMethod("nfc"), false);
+});
+
+test("check-in rows: recorded in says checked in (R1); denials pick their pop-up; already in writes nothing (R9)", () => {
+  const base: CheckInRow = {
+    check_in_id: "c",
+    result: "in",
+    deny_reason: null,
+    already_in: false,
+    membership_id: "m",
+    member_first_name: " Mina ",
+    member_is_minor: false,
+    plan_name: "Monthly",
+    expires_on: "2026-12-01",
+    pass_state: "valid",
+  };
+  const v = (o: Partial<CheckInRow>, sells = false) => checkInView(toCheckIn({ ...base, ...o })!, { sellsDayPass: sells });
+  assert.equal(v({}).title, "Mina is checked in");
+  assert.equal(v({ result: "denied", deny_reason: "expired", pass_state: "expired" }, true).secondaryLabel, "Sell a day pass");
+  assert.equal(v({ result: "denied", deny_reason: "unpaid", pass_state: "awaiting_payment" }).primary, "mark-paid");
+  assert.equal(v({ result: "denied", deny_reason: "unpaid", pass_state: "refunded" }).title, "Pass refunded");
+  assert.equal(v({ result: "denied", deny_reason: "not_started", pass_state: "upcoming" }).title, "Pass not active yet");
+  assert.equal(v({ result: "denied", deny_reason: "no_pass", pass_state: "cancelled" }).title, "Membership cancelled");
+  const unknown = v({ result: "denied", deny_reason: "no_pass", membership_id: null, member_first_name: null, pass_state: "unknown" });
+  assert.equal(unknown.title, "Pass not recognised");
+  assert.equal(unknown.body.includes("Mina"), false);
+  assert.equal(v({ result: "denied", deny_reason: "other_venue" }).title, "Pass for another venue");
+  assert.equal(v({ result: "denied", deny_reason: "under_min_age", member_is_minor: true }).minor, false);
+  // A row that doesn't say exactly "in" is never admitted.
+  assert.equal(toCheckIn({ ...base, result: "weird" as "in" })!.result, "denied");
+  const again = checkInView(toCheckIn({ ...base, already_in: true })!, { sellsDayPass: false, alreadyAt: new Date(2026, 9, 14, 18, 5).toISOString() });
+  assert.equal(again.title, "Already checked in");
+  assert.equal(again.body, "Mina came in at 6:05 PM.");
+  assert.equal(again.secondaryLabel, "Done");
+  assert.equal(alreadyInView(null, null).body, "This member came in within the last 4 hours.");
+  assert.equal(deniedLine("guest_limit"), "Not checked in: no guest passes left this month.");
+});
+
+test("desk summary: numbers coerced; right_now null is 'Not enough data yet', never Quiet", () => {
+  const s = toDeskSummary({ entries_today: "12", denied_today: 1, in_now: 4, last_hour: 3, typical_hour: null, right_now: null, day_passes_this_week: 2, guest_passes_this_month: "0" });
+  assert.equal(s.entriesToday, 12);
+  assert.equal(s.rightNow, null);
+  assert.equal(s.typicalHour, null);
+  assert.equal(rightNowLabel(s.rightNow), "Not enough data yet");
+  assert.equal(rightNowLabel(toDeskSummary({ ...{ entries_today: 0, denied_today: 0, in_now: 0, last_hour: 0, typical_hour: "2.5", day_passes_this_week: 0, guest_passes_this_month: 0 }, right_now: "busy" }).rightNow), "Busy");
+  assert.equal(toDeskSummary(null).entriesToday, 0);
+});
+
+test("busy times: 168 cells into a 7 × 24 grid; the peak hour; Monday is 1", () => {
+  const rows = [];
+  for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) rows.push({ weekday: d, hour: h, average_entries: d === 2 && h === 18 ? "3.25" : "0.00" });
+  const g = toBusyGrid(rows);
+  assert.equal(g.length, 7);
+  assert.equal(g[1][18], 3.25);
+  assert.equal(peakHour(g[1]), 18);
+  assert.equal(peakHour(g[0]), null);
+  assert.equal(isoWeekday(new Date(2026, 9, 12)), 1); // a Monday
+  assert.equal(isoWeekday(new Date(2026, 9, 18)), 7);
+  assert.equal(mondayOf(new Date(2026, 9, 15)), "2026-10-12");
+});
+
+test("hour bins: one per opening hour (D3), entries outside still get a bar, no hours runs to now", () => {
+  const day = { closed: false, open_24h: false, opens_at: "06:00:00", closes_at: "22:00:00" };
+  assert.deepEqual(hourBins(day, [], 9), Array.from({ length: 16 }, (_, i) => 6 + i));
+  assert.equal(hourBins(day, [5], 9)[0], 5);
+  assert.equal(hourBins({ ...day, closes_at: "00:00:00" }, [], 9).at(-1), 23);
+  assert.equal(hourBins({ ...day, open_24h: true }, [], 9).length, 24);
+  assert.deepEqual(hourBins(null, [7, 9], 11), [7, 8, 9, 10, 11]);
+  assert.deepEqual(hourBins({ ...day, closed: true }, [], 11), []);
+  const e = (h: number, result: "in" | "denied" = "in"): Entry => ({ id: String(h) + result, at: new Date(2026, 9, 14, h, 10).toISOString(), method: "qr", result, reason: null, personId: null, title: "x", hostName: null, isGuest: false, isDayPass: false, planName: null });
+  assert.deepEqual(hourCounts([e(7), e(7), e(8, "denied")], [7, 8]), [{ hour: 7, count: 2 }, { hour: 8, count: 0 }]);
+});
+
+test("day passes: the server's test (day_pass type, daily, or 1 day) and on sale; week sales count all, sum the paid", () => {
+  const p = (o: Partial<PlanRow>): PlanRow => ({ id: "x", name: "Plan", price: "15.00", billing: "monthly", plan_type: "membership", status: "active", valid_for_days: null, ...o });
+  const plans = dayPassPlans([p({ id: "a", billing: "daily", name: "Day pass" }), p({ id: "b" }), p({ id: "c", plan_type: "day_pass", status: "paused" }), p({ id: "d", valid_for_days: 1, price: 10 })]);
+  assert.deepEqual(plans.map((x) => x.id), ["d", "a"]);
+  assert.equal(plans[1].price, 15);
+  const sale = (paid: boolean, amount: string): DeskSaleRow => ({ id: amount, gym_id: "g", plan_name: "Day pass", person_id: null, guest_label: "Rae", amount, payment_status: paid ? "paid" : "pending", sold_at: "2026-10-14T10:00:00Z", sold_on: "2026-10-14" });
+  assert.deepEqual(weekSales([sale(true, "15.00"), sale(false, "15.00"), sale(true, "12.50")].map(toDeskSale)), { sold: 3, revenue: 27.5 });
+  assert.equal(deskMoney(465), "$465");
+  assert.equal(deskMoney(27.5), "$27.50");
+});
+
+test("desk refusals: ATXE6 desk off, ATXE7 under age, ATXC4 paused; others fall back", () => {
+  assert.equal(deskMessage("ATXE6", "x"), "Check-in at the desk is turned off for this venue.");
+  assert.equal(deskMessage("ATXE7", "x"), "They're under this venue's minimum entry age.");
+  assert.equal(deskMessage("ATXC4", "x"), "This day pass is paused, so it can't be sold.");
+  assert.equal(deskMessage("PGRST999", "fallback"), "fallback");
 });
 
 test("bars are proportional to the busiest hour (D1) and hours read 6a / 12p", () => {

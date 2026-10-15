@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { startMemberThread } from "../../../services/messaging";
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { Banknote, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useBizToast } from "../../../components/business-more/useBizToast";
-import { endGymMembership, renewMembership } from "../../../services/front-desk";
-import { renewalSub, type RenewalDue } from "../../../services/front-desk/frontDeskLogic";
+import { endGymMembership, markDeskSalePaid, renewMembership } from "../../../services/front-desk";
+import { deskMoney, renewalSub, weekSales, type DeskSale, type FrontDeskMember, type RenewalDue } from "../../../services/front-desk/frontDeskLogic";
+import type { DeskState } from "./useFrontDesk";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, NumberBoxes, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
@@ -23,7 +24,12 @@ import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, Nu
 // - Remind = start_member_thread(business, person) (B7 MB-02), then the
 //   member's one thread opens in Messages to write the reminder. It needs
 //   the messages permission; without it the chip stays, unavailable.
-// Day pass sales are BU2-10: their boxes show "–".
+// Day passes this week (OP1-017 row 13, B10 OP-02): desk_sales at the desk
+// venue since Monday: Sold = every sale, Revenue = the paid ones' total;
+// "Joined after" needs a reader that links a day pass to a later membership
+// (not in B10): "–". A business with no day pass plan hides the section (O2).
+// Day passes sold "pay later" list under the boxes with Mark paid
+// (mark_desk_sale_paid; OURS, no frame), needing front_desk.
 
 
 export const PassesTab: React.FC<{
@@ -36,7 +42,15 @@ export const PassesTab: React.FC<{
   onChanged: () => void;
   /** Plan commitment lines by plan name, information only (never blocks ending). */
   planTerms?: Map<string, string[]>;
-}> = ({ renewals, loading, error, onRetry, online, onChanged, planTerms }) => {
+  /** The desk venue's B10 reads (this week's day pass sales). */
+  desk: DeskState;
+  /** The business has a day pass plan on sale. */
+  sellsDayPass: boolean;
+  /** The masked members list: a member's sale shows their label (Q-05). */
+  members: FrontDeskMember[];
+  /** A desk sale was marked paid. */
+  onDeskChanged: () => void;
+}> = ({ renewals, loading, error, onRetry, online, onChanged, planTerms, desk, sellsDayPass, members, onDeskChanged }) => {
   const [seeAll, setSeeAll] = useState(false);
   const [menuFor, setMenuFor] = useState<RenewalDue | null>(null);
   const [ending, setEnding] = useState<RenewalDue | null>(null);
@@ -59,6 +73,20 @@ export const PassesTab: React.FC<{
     setMenuFor(r);
   };
   const week = renewals.filter((r) => r.daysLeft <= 7);
+  const week2 = desk.live === true && desk.weekSales ? weekSales(desk.weekSales) : null;
+  const unpaid = desk.live === true ? (desk.weekSales ?? []).filter((x) => !x.paid) : [];
+  const canDesk = access.meets("front_desk");
+  const labelOf = new Map(members.filter((m) => m.personId).map((m) => [m.personId as string, m.label]));
+  const saleWho = (sale: DeskSale) => (sale.personId ? labelOf.get(sale.personId) ?? "Member" : sale.who);
+  const markSalePaid = async (sale: DeskSale) => {
+    if (busy || !canDesk) return;
+    setBusy(true);
+    const res = await markDeskSalePaid(sale.id);
+    setBusy(false);
+    if (!res.ok) return showToast(res.message);
+    showToast(`${saleWho(sale)}'s ${sale.planName} is marked as paid.`);
+    onDeskChanged();
+  };
   const later = renewals.filter((r) => r.daysLeft > 7);
 
   const renew = async (r: RenewalDue) => {
@@ -158,15 +186,44 @@ export const PassesTab: React.FC<{
       ) : (
         <ListCard label="Renewals due">{week.slice(0, 3).map(row)}</ListCard>
       )}
-      <DeskLabel>Day passes this week</DeskLabel>
-      {/* BU2-10: day pass sales are not recorded yet. "–" is the source's own no-value mark. */}
-      <NumberBoxes
-        items={[
-          { label: "Sold", value: "–" },
-          { label: "Revenue", value: "–" },
-          { label: "Joined after", value: "–" },
-        ]}
-      />
+      {(sellsDayPass || (desk.weekSales?.length ?? 0) > 0 || desk.live !== true) && (
+        <>
+          <DeskLabel>Day passes this week</DeskLabel>
+          {/* "–" is the source's own no-value mark: no B10, an unreadable list, or no reader (Joined after). */}
+          <NumberBoxes
+            items={[
+              { label: "Sold", value: week2 ? String(week2.sold) : "–" },
+              { label: "Revenue", value: week2 ? deskMoney(week2.revenue) : "–" },
+              { label: "Joined after", value: "–" },
+            ]}
+          />
+        </>
+      )}
+      {unpaid.length > 0 && (
+        <>
+          <DeskLabel>Day passes to collect</DeskLabel>
+          <ListCard label="Day passes to collect">
+            {unpaid.map((sale, i) => (
+              <DeskRow
+                key={sale.id}
+                icon={Banknote}
+                title={saleWho(sale)}
+                sub={`${sale.planName} · ${deskMoney(sale.amount)} · ${dayMonthYear(sale.soldOn)}`}
+                first={i === 0}
+                trailing={
+                  <ChipButton
+                    tone="warn"
+                    label="Mark paid"
+                    ariaLabel={`Mark ${saleWho(sale)}'s ${sale.planName} paid`}
+                    disabled={!online || busy || !canDesk}
+                    onClick={() => void markSalePaid(sale)}
+                  />
+                }
+              />
+            ))}
+          </ListCard>
+        </>
+      )}
       {overlays}
     </div>
   );

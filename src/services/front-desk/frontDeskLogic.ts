@@ -1,12 +1,13 @@
 // The gym Front desk's pure rules (v6 Batch 4 · OP1-013…OP1-036 and
 // OURS-OP1-front-desk-scan). No Supabase here, so node --test can load it.
 //
-// What exists on the local stack (checked 14 Oct 2026): verify_gym_pass(token)
-// (no entry is recorded, no plan name: V6-159 adds it), mark_gym_membership_paid(id),
-// my_venues(), venue_members(gym, status, limit, offset). Check-ins (B10,
-// BU2-07), renewal reminders and end-at-period-end (B9, BU2-09) and day pass
-// sales (BU2-10) are not there yet: each screen shows its pending state until
-// they land. The Memberships tab is the plan list (pages/business-ops/plans).
+// On the local stack (checked 15 Oct 2026): verify_gym_pass(token) (looks
+// only), mark_gym_membership_paid(id), my_venues(), venue_members(...), the
+// B7 renewals, and B10 (front desk): check_in_with_pass / check_in_member /
+// check_in_guest (decide and record), sell_day_pass, mark_desk_sale_paid,
+// desk_entries, desk_summary, venue_busy_times. A database without B10 keeps
+// the verify-only scan and the pending check-in note (the pending rule).
+// The Memberships tab is the plan list (pages/business-ops/plans).
 
 import { dayMonthYear, type PassState } from "../venues/venueLogic";
 import type { VenueMember } from "../venues/consoleLogic";
@@ -105,7 +106,7 @@ export type ResultTone = "good" | "warn" | "high" | "primary" | "soft";
 export type ResultIcon = "check" | "banknote" | "x" | "scan" | "user-check" | "retry";
 
 export interface ScanResultView {
-  kind: ScanState | "already" | "error";
+  kind: ScanState | "already" | "error" | "other_venue" | "under_min_age";
   tone: ResultTone;
   icon: ResultIcon;
   title: string;
@@ -114,7 +115,7 @@ export interface ScanResultView {
   primary: "scan-next" | "mark-paid" | "scan-again";
   primaryLabel: string;
   /** The text action under it. */
-  secondary: "done" | "not-now" | "check-in" | "check-in-again" | "sell-day-pass";
+  secondary: "done" | "not-now" | "check-in" | "sell-day-pass";
   secondaryLabel: string;
   /** R3: the Under 18 chip and its line. */
   minor: boolean;
@@ -122,8 +123,9 @@ export interface ScanResultView {
 
 /**
  * The scan result pop-up for a verify_gym_pass row (OURS-OP1-front-desk-scan
- * R1-R8). `checkInsLive` is B10: until it ships nothing is recorded, so a
- * valid pass says "{name}'s pass is valid" (R2), never "checked in".
+ * R1-R8). `checkInsLive`: a recorded check-in says "{name} is checked in"
+ * (R1); the verify-only fallback (a database without B10) records nothing,
+ * so a valid pass says "{name}'s pass is valid" (R2), never "checked in".
  */
 export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; sellsDayPass: boolean }): ScanResultView {
   const name = check.firstName ?? "This member";
@@ -229,21 +231,89 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
   }
 }
 
-/** R9 (B10): an entry in the last ALREADY_IN_HOURS (V6-29). */
-export function alreadyInView(firstName: string | null, at: Date | string): ScanResultView {
+/**
+ * R9 (B10): the same person entered this venue in the last 4 hours. The
+ * server writes no second row (HANDOVER_API B10), so the drawn text action
+ * "Check in again" would record nothing: it is "Done" here (flagged). The
+ * time is the earlier entry's, when today's list has it.
+ */
+export function alreadyInView(firstName: string | null, at: Date | string | null): ScanResultView {
   const name = firstName ?? "This member";
   return {
     kind: "already",
     tone: "primary",
     icon: "user-check",
     title: "Already checked in",
-    body: `${name} came in at ${clock12(at)}.`,
+    body: at ? `${name} came in at ${clock12(at)}.` : `${name} came in within the last ${ALREADY_IN_HOURS} hours.`,
     primary: "scan-next",
     primaryLabel: "Scan next",
-    secondary: "check-in-again",
-    secondaryLabel: "Check in again",
+    secondary: "done",
+    secondaryLabel: "Done",
     minor: false,
   };
+}
+
+/**
+ * The scan result for a recorded check-in (check_in_with_pass /
+ * check_in_member). Admitted: R1 "{name} is checked in". Denied: the reason
+ * picks the drawn pop-up (R4-R8); `other_venue` and `under_min_age` have no
+ * frame and are written in the same language (OURS, flagged).
+ */
+export function checkInView(c: CheckIn, opts: { sellsDayPass: boolean; alreadyAt?: string | null }): ScanResultView {
+  if (c.alreadyIn) return { ...alreadyInView(c.firstName, opts.alreadyAt ?? null), minor: c.isMinor };
+  const asCheck = (state: ScanState, valid = false): PassCheck => ({
+    valid,
+    state,
+    membershipId: c.membershipId,
+    gymId: null,
+    firstName: c.firstName,
+    isMinor: c.isMinor,
+    expiresOn: c.expiresOn,
+    planName: c.planName,
+  });
+  const live = { checkInsLive: true, sellsDayPass: opts.sellsDayPass };
+  if (c.result === "in") return scanResultView(asCheck("valid", true), live);
+  const name = c.firstName ?? "This member";
+  switch (c.denyReason) {
+    case "unpaid":
+      return scanResultView(asCheck(c.passState === "refunded" ? "refunded" : "awaiting_payment"), live);
+    case "expired":
+      return scanResultView(asCheck("expired"), live);
+    case "not_started":
+      return scanResultView(asCheck("upcoming"), live);
+    case "other_venue":
+      return {
+        kind: "other_venue",
+        tone: "high",
+        icon: "x",
+        title: "Pass for another venue",
+        body: `${possessive(name)} pass is for another of your venues.`,
+        primary: "scan-next",
+        primaryLabel: "Scan next",
+        secondary: opts.sellsDayPass ? "sell-day-pass" : "done",
+        secondaryLabel: opts.sellsDayPass ? "Sell a day pass" : "Done",
+        minor: c.isMinor,
+      };
+    case "under_min_age":
+      return {
+        kind: "under_min_age",
+        tone: "high",
+        icon: "x",
+        title: "Under the minimum age",
+        body: `${name} is under this venue's minimum entry age.`,
+        primary: "scan-next",
+        primaryLabel: "Scan next",
+        secondary: "done",
+        secondaryLabel: "Done",
+        minor: false,
+      };
+    default: {
+      // no_pass: a cancelled or refunded membership keeps its own pop-up; an
+      // unknown, foreign or made-up token reads "not recognised" (R8).
+      const st = c.membershipId && (c.passState === "cancelled" || c.passState === "refunded") ? c.passState : "unknown";
+      return scanResultView({ ...asCheck(st), membershipId: st === "unknown" ? null : c.membershipId }, live);
+    }
+  }
 }
 
 /** C4: the verify call itself failed. */
@@ -266,65 +336,375 @@ export function possessive(name: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Check-ins (B10 · BU2-07). V6-29: "In now" = check-ins in the last 90 minutes;
-// "Already checked in" window 4 hours. Not on the stack: the helpers below are
-// what the Entries tab will use once check_ins lands.
+// Check-ins (B10, migration 20261121250000). check_in_with_pass /
+// check_in_member decide AND record (denials included); desk_entries is the
+// day's list with first names (the check-in screen, Q-05); desk_summary the
+// boxes; venue_busy_times the 7 × 24 averages. V6-29: "In now" = people with
+// an entry in the last 90 minutes, counted by the server; "Already checked
+// in" = the same person at this venue in the last 4 hours.
 
-export const IN_NOW_MINUTES = 90;
 export const ALREADY_IN_HOURS = 4;
 
-export type EntryMethod = "qr" | "desk";
-export type DeniedReason = "expired" | "awaiting_payment" | "cancelled" | "refunded" | "unknown";
+export type CheckInMethod = "qr" | "manual" | "nfc" | "bluetooth";
+export type DenyReason = "no_pass" | "other_venue" | "expired" | "unpaid" | "not_started" | "under_min_age" | "guest_limit";
+
+export type CheckInRow = {
+  check_in_id: string | null;
+  result: "in" | "denied";
+  deny_reason: DenyReason | null;
+  already_in: boolean | null;
+  membership_id: string | null;
+  member_first_name: string | null;
+  member_is_minor: boolean | null;
+  plan_name: string | null;
+  expires_on: string | null;
+  pass_state: string | null;
+};
+
+export interface CheckIn {
+  checkInId: string | null;
+  result: "in" | "denied";
+  denyReason: DenyReason | null;
+  /** An entry in the last 4 hours: nothing new was written. */
+  alreadyIn: boolean;
+  membershipId: string | null;
+  /** A first name: the person is at the desk (Q-05). */
+  firstName: string | null;
+  isMinor: boolean;
+  planName: string | null;
+  expiresOn: string | null;
+  passState: string | null;
+}
+
+/** A row as the server sent it; never "in" unless it says exactly "in". */
+export function toCheckIn(row: CheckInRow | null | undefined): CheckIn | null {
+  if (!row) return null;
+  const result = row.result === "in" ? "in" : "denied";
+  return {
+    checkInId: row.check_in_id ?? null,
+    result,
+    denyReason: result === "denied" ? row.deny_reason ?? "no_pass" : null,
+    alreadyIn: row.already_in === true,
+    membershipId: row.membership_id ?? null,
+    firstName: row.member_first_name?.trim() || null,
+    isMinor: row.member_is_minor === true,
+    planName: row.plan_name?.trim() || null,
+    expiresOn: row.expires_on ?? null,
+    passState: row.pass_state ?? null,
+  };
+}
+
+/** The reason as the Entries row sub says it ("{reason} · {time}", OP1-013 row 19). */
+export const DENIED_LABEL: Record<DenyReason, string> = {
+  no_pass: "Not recognised",
+  other_venue: "Another venue's pass",
+  expired: "Expired",
+  unpaid: "Payment due",
+  not_started: "Not started yet",
+  under_min_age: "Under the minimum age",
+  guest_limit: "Guest limit reached",
+};
+
+/** The check-in sheet's line for a refusal it recorded (OP1-015 O4 slot). */
+export function deniedLine(reason: DenyReason): string {
+  switch (reason) {
+    case "expired":
+      return "Not checked in: the pass has expired.";
+    case "unpaid":
+      return "Not checked in: the membership isn't paid yet. Take the payment, then mark it as paid.";
+    case "not_started":
+      return "Not checked in: this pass hasn't started yet.";
+    case "other_venue":
+      return "Not checked in: this pass is for another of your venues.";
+    case "under_min_age":
+      return "Not checked in: they're under this venue's minimum entry age.";
+    case "guest_limit":
+      return "Not checked in: no guest passes left this month.";
+    default:
+      return "Not checked in: there's no valid pass.";
+  }
+}
+
+export type EntryRow = {
+  check_in_id: string;
+  at: string;
+  result: "in" | "denied";
+  deny_reason: DenyReason | null;
+  method: CheckInMethod;
+  person_id: string | null;
+  member_first_name: string | null;
+  member_is_minor: boolean | null;
+  guest_label: string | null;
+  host_first_name: string | null;
+  plan_name: string | null;
+  is_day_pass: boolean | null;
+  total_count: number | string | null;
+};
 
 export interface Entry {
   id: string;
   at: string;
-  method: EntryMethod;
+  method: CheckInMethod;
   result: "in" | "denied";
-  reason: DeniedReason | null;
-  /** Member name as the backend may show it (V6-27: "Member #code" until shared). */
-  memberLabel: string;
+  reason: DenyReason | null;
+  /** The member (null for a guest or an unknown pass): screens other than the desk mask by it. */
+  personId: string | null;
+  /** The first name (desk_entries, Q-05), the guest's label, or "Unknown pass". */
+  title: string;
+  /** A guest let in on a member's allowance: the host's first name. */
+  hostName: string | null;
+  isGuest: boolean;
+  isDayPass: boolean;
+  planName: string | null;
 }
 
-export const DENIED_LABEL: Record<DeniedReason, string> = {
-  expired: "Expired",
-  awaiting_payment: "Payment due",
-  cancelled: "Cancelled",
-  refunded: "Refunded",
-  unknown: "Not recognised",
-};
+export function toEntry(r: EntryRow): Entry {
+  const guest = !r.person_id && !!r.guest_label?.trim();
+  const title = r.member_first_name?.trim() || r.guest_label?.trim() || (r.person_id ? "Member" : "Unknown pass");
+  return {
+    id: r.check_in_id,
+    at: r.at,
+    method: r.method,
+    result: r.result === "in" ? "in" : "denied",
+    reason: r.result === "in" ? null : r.deny_reason ?? "no_pass",
+    personId: r.person_id ?? null,
+    title,
+    hostName: guest ? r.host_first_name?.trim() || null : null,
+    isGuest: guest && r.is_day_pass !== true,
+    isDayPass: r.is_day_pass === true,
+    planName: r.plan_name?.trim() || null,
+  };
+}
 
-/** OP1-013 row 19: "QR pass · 6:42 PM", "Checked in at desk · 6:42 PM", "Expired · 6:42 PM". */
+/** A desk entry (staff hand: user-check) or a reader (QR, NFC, Bluetooth: scan-line). */
+export const isDeskMethod = (m: CheckInMethod): boolean => m === "manual";
+
+/**
+ * OP1-013 row 19: "QR pass · 6:42 PM", "Checked in at desk · 6:42 PM",
+ * "{reason} · 6:42 PM"; OURS for the B10 kinds: "Day pass · 6:42 PM",
+ * "Guest of {host} · 6:42 PM".
+ */
 export function entrySub(e: Entry): string {
   const t = clock12(e.at);
-  if (e.result === "denied") return `${DENIED_LABEL[e.reason ?? "unknown"]} · ${t}`;
-  return e.method === "qr" ? `QR pass · ${t}` : `Checked in at desk · ${t}`;
+  if (e.result === "denied") return `${DENIED_LABEL[e.reason ?? "no_pass"]} · ${t}`;
+  if (e.isDayPass) return `Day pass · ${t}`;
+  if (e.isGuest) return e.hostName ? `Guest of ${e.hostName} · ${t}` : `Guest · ${t}`;
+  return isDeskMethod(e.method) ? `Checked in at desk · ${t}` : `QR pass · ${t}`;
 }
 
-export interface EntryFigures {
-  today: number;
+export type SummaryRow = {
+  entries_today: number | string | null;
+  denied_today: number | string | null;
+  in_now: number | string | null;
+  last_hour: number | string | null;
+  typical_hour: number | string | null;
+  right_now: string | null;
+  day_passes_this_week: number | string | null;
+  guest_passes_this_month: number | string | null;
+};
+
+export type RightNow = "quiet" | "steady" | "busy";
+
+export interface DeskSummary {
+  entriesToday: number;
+  deniedToday: number;
   inNow: number;
-  denied: number;
+  lastHour: number;
+  /** The 4-week median of this hour; null with no history. */
+  typicalHour: number | null;
+  /** Null with no history: "Not enough data yet", never "Quiet". */
+  rightNow: RightNow | null;
+  dayPassesThisWeek: number;
+  guestPassesThisMonth: number;
 }
 
-/** OP1-013 rows 7-8: entries since local midnight, admitted in the last 90 minutes, denied today. */
-export function entryFigures(entries: Entry[], now: Date): EntryFigures {
-  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const since = now.getTime() - IN_NOW_MINUTES * 60_000;
-  let today = 0;
-  let inNow = 0;
-  let denied = 0;
-  for (const e of entries) {
-    const t = new Date(e.at).getTime();
-    if (t < midnight || t > now.getTime()) continue;
-    if (e.result === "denied") {
-      denied++;
-      continue;
-    }
-    today++;
-    if (t >= since) inNow++;
+const num = (v: number | string | null | undefined): number => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? 0 : Number(v));
+
+export function toDeskSummary(r: SummaryRow | null | undefined): DeskSummary {
+  const rn = r?.right_now;
+  const typ = r?.typical_hour;
+  return {
+    entriesToday: num(r?.entries_today),
+    deniedToday: num(r?.denied_today),
+    inNow: num(r?.in_now),
+    lastHour: num(r?.last_hour),
+    typicalHour: typ === null || typ === undefined || typ === "" || !Number.isFinite(Number(typ)) ? null : Number(typ),
+    rightNow: rn === "quiet" || rn === "steady" || rn === "busy" ? rn : null,
+    dayPassesThisWeek: num(r?.day_passes_this_week),
+    guestPassesThisMonth: num(r?.guest_passes_this_month),
+  };
+}
+
+/** DA1-007 row 3: Quiet / Steady / Busy; null → "Not enough data yet" (HANDOVER_API B10). */
+export function rightNowLabel(r: RightNow | null): string {
+  return r === "quiet" ? "Quiet" : r === "steady" ? "Steady" : r === "busy" ? "Busy" : "Not enough data yet";
+}
+
+export type BusyRow = { weekday: number | string; hour: number | string; average_entries: number | string | null };
+
+/** venue_busy_times: weekday 1 (Monday) … 7 × hour 0-23 → grid[weekday - 1][hour]; a missing cell is 0. */
+export function toBusyGrid(rows: BusyRow[]): number[][] {
+  const grid = Array.from({ length: 7 }, () => Array<number>(24).fill(0));
+  for (const r of rows) {
+    const d = Number(r.weekday);
+    const h = Number(r.hour);
+    if (d >= 1 && d <= 7 && h >= 0 && h <= 23) grid[d - 1][h] = num(r.average_entries);
   }
-  return { today, inNow, denied };
+  return grid;
+}
+
+/** The busiest hour of a weekday's 24 averages, or null when every hour is 0. */
+export function peakHour(row: number[]): number | null {
+  let best = 0;
+  let at: number | null = null;
+  row.forEach((v, h) => {
+    if (v > best) {
+      best = v;
+      at = h;
+    }
+  });
+  return at;
+}
+
+/** Monday = 1 … Sunday = 7, as venue_busy_times numbers them. */
+export const isoWeekday = (d: Date): number => ((d.getDay() + 6) % 7) + 1;
+
+/**
+ * OP1-013 D3: one bar per opening hour. `day` is today's gym_hours row; with
+ * no published hours (or closed today) the bars run from the earliest entry
+ * to now. Open 24 hours draws 24 bars. An entry outside the published hours
+ * still gets its bar.
+ */
+export function hourBins(
+  day: { closed: boolean; open_24h: boolean; opens_at: string | null; closes_at: string | null } | null,
+  entryHours: number[],
+  nowHour: number
+): number[] {
+  const range = (a: number, b: number) => Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+  if (day && !day.closed) {
+    if (day.open_24h) return range(0, 23);
+    const h = (t: string | null) => (t ? Number(t.slice(0, 2)) + Number(t.slice(3, 5)) / 60 : NaN);
+    const o = h(day.opens_at);
+    let c = h(day.closes_at);
+    if (Number.isFinite(o) && Number.isFinite(c)) {
+      if (c <= o) c = 24; // closes at midnight (or after it)
+      const lo = Math.min(Math.floor(o), ...entryHours);
+      const hi = Math.max(Math.ceil(c) - 1, ...entryHours);
+      return range(lo, Math.min(hi, 23));
+    }
+  }
+  if (entryHours.length === 0) return [];
+  return range(Math.min(...entryHours), Math.max(nowHour, ...entryHours));
+}
+
+/** Today's admitted entries per bin hour (the device's clock). */
+export function hourCounts(entries: Entry[], bins: number[]): { hour: number; count: number }[] {
+  const by = new Map<number, number>();
+  for (const e of entries) {
+    if (e.result !== "in") continue;
+    const h = new Date(e.at).getHours();
+    by.set(h, (by.get(h) ?? 0) + 1);
+  }
+  return bins.map((hour) => ({ hour, count: by.get(hour) ?? 0 }));
+}
+
+// ---------------------------------------------------------------------------
+// Day passes (OP-02): sell_day_pass sells an active day-pass plan
+// (plan_type 'day_pass', billing 'daily' or valid_for_days 1) to a known
+// member or to a named guest (40 characters); the sale is the entry.
+
+export type PlanRow = { id: string; name: string; price: number | string; billing: string | null; plan_type: string | null; status: string | null; valid_for_days: number | null };
+
+export interface DayPassPlan {
+  id: string;
+  name: string;
+  price: number;
+}
+
+/** The server's own test (sell_day_pass): a day pass, and on sale. */
+export function dayPassPlans(rows: PlanRow[]): DayPassPlan[] {
+  return rows
+    .filter((p) => (p.status ?? "active") === "active" && (p.plan_type === "day_pass" || p.billing === "daily" || p.valid_for_days === 1))
+    .map((p) => ({ id: p.id, name: p.name.trim() || "Day pass", price: num(p.price) }))
+    .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name));
+}
+
+export const GUEST_LABEL_MAX = 40;
+
+/** "$15", "$42.50", "$1,240" (OP1-017 row 13 draws whole dollars: "$465"). */
+export function deskMoney(n: number): string {
+  return "$" + (Number.isInteger(n) ? n.toLocaleString("en-US") : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+}
+
+export type DeskSaleRow = {
+  id: string;
+  gym_id: string | null;
+  plan_name: string;
+  person_id: string | null;
+  guest_label: string | null;
+  amount: number | string;
+  payment_status: string;
+  sold_at: string;
+  sold_on: string;
+};
+
+export interface DeskSale {
+  id: string;
+  planName: string;
+  personId: string | null;
+  /** The guest's label; a member's sale reads "Member" until the screen maps it to their masked label. */
+  who: string;
+  amount: number;
+  paid: boolean;
+  soldAt: string;
+  soldOn: string;
+}
+
+export function toDeskSale(r: DeskSaleRow): DeskSale {
+  return {
+    id: r.id,
+    planName: r.plan_name?.trim() || "Day pass",
+    personId: r.person_id ?? null,
+    who: r.guest_label?.trim() || "Member",
+    amount: num(r.amount),
+    paid: r.payment_status === "paid",
+    soldAt: r.sold_at,
+    soldOn: r.sold_on,
+  };
+}
+
+/** OP1-017 row 13: Sold (every sale this week) and Revenue (the paid ones' total). */
+export function weekSales(sales: DeskSale[]): { sold: number; revenue: number } {
+  return { sold: sales.length, revenue: sales.filter((s) => s.paid).reduce((a, s) => a + s.amount, 0) };
+}
+
+/** The Monday of `d`'s week (DECIDED: weeks start Monday), YYYY-MM-DD. */
+export function mondayOf(d: Date): string {
+  return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (isoWeekday(d) - 1)));
+}
+
+// ---------------------------------------------------------------------------
+// Desk refusals (B10 codes) as the desk reads them.
+
+export function deskMessage(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case "ATXE6":
+      return "Check-in at the desk is turned off for this venue.";
+    case "ATXE7":
+      return "They're under this venue's minimum entry age.";
+    case "ATXC4":
+      return "This day pass is paused, so it can't be sold.";
+    case "ATX82":
+      return "That day pass isn't offered at this venue.";
+    case "ATX03":
+      return "You don't have access to the front desk here.";
+    case "ATX10":
+      return "This sale is already paid.";
+    case "ATX08":
+      return "That couldn't be found. Reload and try again.";
+    default:
+      return fallback;
+  }
 }
 
 /** OP1-013 row 11 (D1): bar height = value / max × 81; a zero hour draws nothing. */

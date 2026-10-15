@@ -319,6 +319,23 @@ export async function saveStarterPlan(businessId: string, plan: StarterPlan, exi
   return { ok: true, value: (ins.data as { id: string }).id };
 }
 
+/**
+ * Gym (B10, OB-259 "Entry and check-in"): the venue's minimum entry age
+ * (16-21), guest passes a month (0-10) and whether the front desk can check
+ * people in. gyms.access_qr stays on (one access method is required). A
+ * database without the columns (42703 / PGRST204) keeps them in the draft only.
+ */
+export async function saveEntrySettings(gymId: string, e: Essentials): Promise<Res<null>> {
+  const row = {
+    min_entry_age: Math.min(21, Math.max(16, Math.round(e.minAge))),
+    guest_passes_per_month: Math.min(10, Math.max(0, Math.round(e.guestPasses))),
+    front_desk_checkin: e.frontDeskCheckIn,
+  };
+  const { error } = await db.from("gyms").update(row).eq("id", gymId);
+  if (error && !["42703", "PGRST204"].includes(error.code)) return fail(error);
+  return { ok: true, value: null };
+}
+
 /** Classes: the venue's default cancellation window (gyms.default_cancellation_hours). */
 export async function saveClassDefaults(gymId: string, e: Essentials): Promise<Res<null>> {
   const { error } = await db.from("gyms").update({ default_cancellation_hours: e.cancelHours }).eq("id", gymId);
