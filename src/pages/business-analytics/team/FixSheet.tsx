@@ -6,14 +6,16 @@ import { todayLocal } from "../../../utils/date";
 import { formatMinutes12, range12, rangeMinutes12, time12 } from "../../../utils/time12";
 import { minutesOf, overlaps } from "./model";
 import { Buttons, LeadRow, RowsCard, Sheet } from "./parts";
-import { moveEmptyClass, type ClassRow, type TeamPerson } from "./teamData";
+import { moveClassSession } from "../../../services/business-classes/schedule";
+import type { ClassRow, TeamPerson } from "./teamData";
 import { dayDate, hhmmOf } from "./fmt";
 
 // AN5-033 (both sessions + choices), AN5-033 O2 (already sorted), AN5-036
 // (move time, 12-hour wheel), AN5-038 (confirm), OURS availability A7/A8.
-// Move: a session with nobody booked moves now (owner UPDATE grant on
-// start_time / end_time); one with bookings needs B9's move_class_session
-// (member message + calendar move), so its Move is disabled with "Soon".
+// Move (B9 CL-03): move_class_session for every session, booked or not: the
+// server re-checks the instructor is free in any business (ATXD9), moves the
+// members' calendar entries and what they owe, and tells them (a
+// "Class time changed" push). The toast says how many were told.
 
 type Step = "pair" | "time" | "confirm" | "failed" | "sorted";
 
@@ -45,6 +47,7 @@ export function FixSheet({
   const [end, setEnd] = useState(0);
   const [editing, setEditing] = useState<"start" | "end">("start");
   const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   // The overlap may be gone by the time the sheet opens (O2).
   const stillOverlaps = useMemo(() => {
@@ -61,6 +64,7 @@ export function FixSheet({
     setEnd(minutesOf(target.end));
     setEditing("start");
     setBusy(false);
+    setFailure(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.id, move]);
 
@@ -94,10 +98,15 @@ export function FixSheet({
 
   const save = async () => {
     setBusy(true);
-    const r = await moveEmptyClass(target.id, hhmmOf(start), hhmmOf(end));
+    const r = await moveClassSession(target.id, target.date, hhmmOf(start), hhmmOf(end));
     setBusy(false);
-    if (r === "ok") onDone(`${target.title} now runs ${rangeMinutes12(start, end)}.`);
-    else setStep("failed");
+    if (r.ok) {
+      const told = r.value;
+      onDone(`${target.title} now runs ${rangeMinutes12(start, end)}.${told > 0 ? ` ${told} ${told === 1 ? "member was" : "members were"} told.` : ""}`);
+      return;
+    }
+    setFailure(r.refusal === "network" ? null : r.message);
+    setStep("failed");
   };
 
   if (step === "sorted") {
@@ -115,7 +124,7 @@ export function FixSheet({
     return (
       <Sheet open={open} onClose={onClose} title={`Couldn't move ${target.title}`}>
         <LeadRow icon={WifiOff} tone="high">
-          Check your connection and try again. Nothing was changed.
+          {failure ?? "Check your connection and try again. Nothing was changed."}
         </LeadRow>
         <Buttons alt={{ label: "Cancel", onClick: onClose }} primary={{ label: "Try again", onClick: () => void save(), busy }} marginTop={16} />
       </Sheet>
@@ -129,7 +138,7 @@ export function FixSheet({
         <LeadRow>
           {n === 0
             ? "Nobody is booked yet."
-            : `${n === 1 ? "1 member is" : `${n} members are`} booked. Moving a booked class sends each of them a message, which is coming soon.`}
+            : `${n === 1 ? "1 member is" : `${n} members are`} booked. They'll get a message about the new time.`}
         </LeadRow>
         <RowsCard
           rows={[
@@ -144,8 +153,7 @@ export function FixSheet({
             label: busy ? "Moving…" : "Move class",
             onClick: () => void save(),
             busy,
-            disabled: n > 0 || !online,
-            trailing: n > 0 ? <span className="an5-soon">Soon</span> : undefined,
+            disabled: !online,
           }}
           marginTop={16}
         />

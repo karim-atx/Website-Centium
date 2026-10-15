@@ -17,4 +17,14 @@ export interface BusinessClassRow {
   paymentType: string | null;
   /** business_classes.cancellation_hours (null = the venue default, else 12). */
   cancellationHours?: number | null;
+  /** B9 EX-01 details (writable): about (≤1000), level, what to bring (≤10 × 60), cover URL (class-covers). */
+  about?: string | null;
+  level?: "all_levels" | "beginner" | "intermediate" | "advanced" | null;
+  whatToBring?: string[];
+  coverUrl?: string | null;
+  /** B9 read-only: the repeating series this class belongs to, edited on its own, cancelled. */
+  seriesId?: string | null;
+  seriesException?: boolean;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
 }

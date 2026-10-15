@@ -29,7 +29,6 @@ import {
   fetchPolicy,
   fetchStoreSettings,
   publishPolicyVersion,
-  saveCancellationHours,
   saveStoreSettings,
   type BizLocation,
   type PolicyDoc,
@@ -38,18 +37,22 @@ import {
 } from "../../services/business-more";
 import { composeReturns, DELIVERY_TIMES, dollars, parseReturns, RETURN_WINDOWS, type ReturnCondition, type ReturnWindow } from "./storePolicyText";
 import { formatShortDate } from "../../utils/date";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import { fetchBookingPolicies, setBookingPolicy } from "../../services/business-classes/schedule";
+import { daysAhead, effectiveRules, minutesBefore, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../services/business-classes/scheduleRules";
 
 // MO1B-001 / -003 / -005 and OURS-MO1B-booking-policies, -waiver-editor,
 // -store-policies-edit. One sub-page row for all of them (V6-109: BizMoreV8's
 // 12/700; BizTypeKit drew 13.5/700 for its three policy frames).
 //
-// WHAT IS LIVE: the cancellation window (gyms.default_cancellation_hours per
-// venue), every policy document with versions and acceptances (B5
-// policy_documents / policy_versions / policy_acceptances), and the store's
-// returns, exchanges, delivery and pickup (B5 business_store_settings).
-// BACKEND BU6-15: booking window, late-cancel rules, waitlist settings and
-// class reminders have no columns yet; their rows are shown, dimmed, with
-// "Coming soon" and do nothing. No sample values ($5, 14 days, 5 people) ship.
+// WHAT IS LIVE: the cancellation window, booking window, booking close and
+// waitlist size (B9 business_booking_policies, the business default row),
+// every policy document with versions and acceptances (B5 policy_documents /
+// policy_versions / policy_acceptances), and the store's returns, exchanges,
+// delivery and pickup (B5 business_store_settings). Still without columns:
+// late-cancel counting and fees, offering freed spots automatically and
+// class reminders; those rows are shown, dimmed, with "Coming soon" and do
+// nothing. No sample values ($5) ship.
 
 const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
@@ -121,26 +124,67 @@ function useLocations(bizId: string | null) {
 }
 
 // ---------------------------------------------------------------------------
+// B9 (CL-05) · business_booking_policies: the business default row
+// (class_type null). Public to read on a listed business, written with the
+// `schedule` permission. The cancellation window used to be written to every
+// venue's gyms.default_cancellation_hours; the default row now outranks the
+// venue (class → type → default → venue → 12 h), so it is written there and
+// the venue's value is only shown as the fallback when no default is set.
+
+function usePolicyDefault(bizId: string | null) {
+  const [rows, setRows] = useState<BookingPolicy[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!bizId) return;
+    let cancelled = false;
+    void fetchBookingPolicies(bizId).then((r) => {
+      if (cancelled) return;
+      if (r.ok) {
+        setRows(r.value);
+        setError(null);
+      } else setError(r.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bizId, tick]);
+  return { rows, setRows, error, reload: () => setTick((t) => t + 1) };
+}
+
+// ---------------------------------------------------------------------------
 // MO1B-001 / -003 · Booking policies (Gym: Entry rules) summary
 
 export function BookingPoliciesPage() {
   const navigate = useNavigate();
   const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
+  const pol = usePolicyDefault(business?.id ?? null);
   const gym = kind === "gym";
-  const hours = locs?.[0]?.cancellationHours ?? null;
+  const venueHours = locs?.[0]?.cancellationHours ?? null;
+  const own = pol.rows ? policyFor(pol.rows, null)?.cancellationHours ?? null : null;
+  const hours = own ?? venueHours;
+  const loadError = error ?? pol.error;
   return (
     <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"}>
-      {error && <LoadError message="Couldn't load your policies." onRetry={reload} />}
-      {!locs && !error ? (
+      {loadError && (
+        <LoadError
+          message="Couldn't load your policies."
+          onRetry={() => {
+            reload();
+            pol.reload();
+          }}
+        />
+      )}
+      {(!locs || !pol.rows) && !loadError ? (
         <RowsSkeleton rows={3} label="Loading your policies" />
       ) : (
         <>
           <BizSection label="Cancellations">
             <BizRow
               icon={CalendarX}
-              title={hours === null ? "Not set yet" : `Free until ${hours} hours before`}
-              desc={hours === null ? "Add a location to set your cancellation window" : "After that it counts as used"}
+              title={hours === null ? "Free until 12 hours before" : `Free until ${hours} hours before`}
+              desc="After that it counts as used"
               onClick={() => navigate("/app/business/more/policies/edit?section=cancellations")}
             />
           </BizSection>
@@ -164,59 +208,82 @@ export function BookingPoliciesPage() {
 // OURS-MO1B-booking-policies · the full editor
 
 const WINDOWS = [12, 24, 2];
+/** OURS picker values (BizMoreV8 draws only the values 14 days / 30 min before / 5 people). */
+const AHEAD = [7, 14, 21, 30, 60, 90];
+const CLOSES = [0, 15, 30, 60, 120];
+const WAITLIST = [3, 5, 10, 20];
+
+type PolicyMenu = "ahead" | "closes" | "size" | null;
 
 export function BookingPoliciesEditor() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
+  const pol = usePolicyDefault(business?.id ?? null);
+  const access = useConsoleAccess();
   const [toast, showToast] = useBizToast();
   const [busy, setBusy] = useState(false);
+  const [menu, setMenu] = useState<PolicyMenu>(null);
   const gym = kind === "gym";
-  const current = locs?.[0]?.cancellationHours ?? null;
+  const venueHours = locs?.[0]?.cancellationHours ?? null;
+  const row = pol.rows ? policyFor(pol.rows, null) : null;
+  const eff = effectiveRules(pol.rows ?? [], null, venueHours);
+  const current = row?.cancellationHours ?? venueHours ?? POLICY_FALLBACK.cancellationHours;
+  // Writing needs `schedule` (the table's RLS); the owner always has it.
+  const canWrite = access.ready ? access.meets("schedule") : false;
+  const ready = !!locs && !!pol.rows;
+  const loadError = error ?? pol.error;
 
   // ?section= scrolls to the section a More row opened.
   const section = new URLSearchParams(search).get("section");
   useEffect(() => {
-    if (!section || !locs) return;
+    if (!section || !ready) return;
     document.getElementById(`pol-${section}`)?.scrollIntoView({ block: "start" });
-  }, [section, locs]);
+  }, [section, ready]);
 
-  const pick = async (h: number) => {
-    if (!locs || locs.length === 0 || busy || h === current) return;
+  const write = async (field: PolicyField, value: number, done: string) => {
+    if (!business?.id || !pol.rows || busy) return;
     setBusy(true);
-    const r = await saveCancellationHours(
-      locs.map((l) => l.id),
-      h
-    );
+    setMenu(null);
+    const r = await setBookingPolicy(business.id, row, null, field, value);
     setBusy(false);
     if (!r.ok) {
       showToast(r.message);
       return;
     }
-    reload();
-    showToast("Cancellation window saved.");
+    pol.setRows([...pol.rows.filter((p) => p.id !== r.value.id && p.classType !== null), r.value]);
+    showToast(done);
   };
 
   const soon = "Coming soon";
+  const off = !canWrite || busy;
   return (
     <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"} sub="Applied to every class unless a class type overrides it.">
-      {error && <LoadError message="Couldn't load your policies." onRetry={reload} />}
-      {!locs && !error && <RowsSkeleton rows={4} label="Loading your policies" />}
-      {locs && (
+      {loadError && (
+        <LoadError
+          message="Couldn't load your policies."
+          onRetry={() => {
+            reload();
+            pol.reload();
+          }}
+        />
+      )}
+      {!ready && !loadError && <RowsSkeleton rows={4} label="Loading your policies" />}
+      {ready && (
         <>
-          <BizSection id="pol-cancellations" label="Cancellations" footer={locs.length === 0 ? "Add a location first. Each location keeps this window." : undefined}>
+          <BizSection id="pol-cancellations" label="Cancellations" footer={access.ready && !canWrite ? "Only staff who manage the schedule can change these." : undefined}>
             {WINDOWS.map((h) => (
               <BizRow
                 key={h}
                 title={`Free until ${h} hours before`}
                 desc={h === 12 ? "After that, the booking counts as used" : undefined}
                 radio={{ selected: current === h }}
-                onClick={() => void pick(h)}
-                disabled={locs.length === 0 || busy}
+                onClick={() => current !== h && void write("cancellationHours", h, "Cancellation window saved.")}
+                disabled={off}
               />
             ))}
-            {current !== null && !WINDOWS.includes(current) && <BizRow title={`Free until ${current} hours before`} radio={{ selected: true }} />}
+            {!WINDOWS.includes(current) && <BizRow title={`Free until ${current} hours before`} radio={{ selected: true }} />}
           </BizSection>
           {!gym && (
             <>
@@ -224,14 +291,45 @@ export function BookingPoliciesEditor() {
                 <BizRow title="Count a late cancel as a used class" desc="For packs and limited memberships" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
                 <BizRow title="Charge a late-cancel fee" desc="Paid with the next booking" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
               </BizSection>
-              <BizSection id="pol-window" label="Booking window" footer={soon}>
-                <BizRow title="How far ahead clients can book" dim />
-                <BizRow title="Booking closes" dim />
+              <BizSection id="pol-window" label="Booking window">
+                <BizRow title="How far ahead clients can book" value={daysAhead(eff.bookingWindowDays)} drop onClick={() => setMenu(menu === "ahead" ? null : "ahead")} disabled={off} />
+                {menu === "ahead" && (
+                  <BizDropdown
+                    label="How far ahead clients can book"
+                    options={(AHEAD.includes(eff.bookingWindowDays) ? AHEAD : [...AHEAD, eff.bookingWindowDays].sort((a, b) => a - b)).map((d) => ({ value: String(d), label: daysAhead(d) }))}
+                    value={String(eff.bookingWindowDays)}
+                    onPick={(v) => void write("bookingWindowDays", Number(v), "Booking window saved.")}
+                  />
+                )}
+                <BizRow title="Booking closes" value={minutesBefore(eff.closesMinutesBefore)} drop onClick={() => setMenu(menu === "closes" ? null : "closes")} disabled={off} />
+                {menu === "closes" && (
+                  <BizDropdown
+                    label="Booking closes"
+                    options={(CLOSES.includes(eff.closesMinutesBefore) ? CLOSES : [...CLOSES, eff.closesMinutesBefore].sort((a, b) => a - b)).map((m) => ({ value: String(m), label: minutesBefore(m) }))}
+                    value={String(eff.closesMinutesBefore)}
+                    onPick={(v) => void write("closesMinutesBefore", Number(v), "Booking window saved.")}
+                  />
+                )}
               </BizSection>
-              <BizSection id="pol-waitlist" label="Waitlist" footer={soon}>
-                <BizRow title="Waitlist when a class is full" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+              <BizSection id="pol-waitlist" label="Waitlist" footer="Offering freed spots automatically is coming soon.">
+                <BizRow
+                  title="Waitlist when a class is full"
+                  toggle={{ checked: eff.waitlistCap > 0, onChange: (v) => void write("waitlistCap", v ? POLICY_FALLBACK.waitlistCap : 0, v ? "Waitlist turned on." : "Waitlist turned off."), disabled: off }}
+                />
                 <BizRow title="Offer freed spots automatically" desc="The first person has 30 minutes to accept" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
-                <BizRow title="Waitlist size" dim />
+                {eff.waitlistCap > 0 && (
+                  <>
+                    <BizRow title="Waitlist size" value={`${eff.waitlistCap} ${eff.waitlistCap === 1 ? "person" : "people"}`} drop onClick={() => setMenu(menu === "size" ? null : "size")} disabled={off} />
+                    {menu === "size" && (
+                      <BizDropdown
+                        label="Waitlist size"
+                        options={(WAITLIST.includes(eff.waitlistCap) ? WAITLIST : [...WAITLIST, eff.waitlistCap].sort((a, b) => a - b)).map((n) => ({ value: String(n), label: `${n} people` }))}
+                        value={String(eff.waitlistCap)}
+                        onPick={(v) => void write("waitlistCap", Number(v), "Waitlist size saved.")}
+                      />
+                    )}
+                  </>
+                )}
               </BizSection>
               <BizSection id="pol-reminders" label="Reminders" footer={soon}>
                 <BizRow title="Remind clients before class" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />

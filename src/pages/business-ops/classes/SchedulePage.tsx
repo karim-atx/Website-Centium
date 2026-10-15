@@ -92,7 +92,8 @@ export default function SchedulePage() {
     }
   };
 
-  const issues = useMemo(() => findIssues(api.sessions, now), [api.sessions, now]);
+  // B9: the double-booked pairs are class_instructor_conflicts() when it answered.
+  const issues = useMemo(() => findIssues(api.sessions, now, api.clashes), [api.sessions, now, api.clashes]);
   const fig = useMemo(() => figures(api.sessions, today), [api.sessions, today]);
   const week = useMemo(() => api.sessions.filter((s) => s.date >= today && s.date <= addDays(today, 6)), [api.sessions, today]);
   const days = useMemo(() => {
@@ -113,6 +114,9 @@ export default function SchedulePage() {
     menuSession && actions.canMessage && menuSession.booked > 0
       ? { value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline, note: offline ? "You're offline" : undefined }
       : null;
+  // B9: a booked session offers Cancel session (OURS-AN3 C1, OpsTabsV4 l.447);
+  // one nobody booked keeps Delete class; a repeating one adds Stop repeating
+  // (OURS); a cancelled one has no actions (its ⋮ is not drawn).
   const menuOptions: PopupMenuOption<string>[] = menuSession
     ? isEnded(menuSession, now)
       ? msgOption
@@ -122,7 +126,8 @@ export default function SchedulePage() {
           { value: "edit", label: "Edit" },
           ...(msgOption ? [msgOption] : []),
           { value: "sub", label: "Request a substitute" },
-          ...(menuSession.booked === 0 ? [{ value: "delete", label: "Delete class", destructive: true }] : []),
+          ...(menuSession.seriesId ? [{ value: "end", label: "Stop repeating" }] : []),
+          menuSession.booked > 0 ? { value: "cancel", label: "Cancel session", destructive: true } : { value: "delete", label: "Delete class", destructive: true },
         ]
     : [];
 
@@ -279,6 +284,7 @@ export default function SchedulePage() {
                       flag={flagOf(s, issues)}
                       isNew={newIds.includes(s.id)}
                       who={s.professionalId ? api.nameOf(s.professionalId) : ""}
+                      people={people}
                       onOpen={() => navigate(`/app/business/classes/${s.id}`)}
                       onMenu={(anchor) => setMenuFor({ id: s.id, anchor })}
                       menuDisabled={offline}
@@ -322,6 +328,8 @@ export default function SchedulePage() {
           if (v === "sub") actions.openSubstitute(id);
           if (v === "msg") actions.openMessage(id);
           if (v === "delete") actions.openDelete(id);
+          if (v === "cancel") actions.openCancel(id);
+          if (v === "end") actions.openEndSeries(id);
         }}
         width={200}
       />
@@ -350,6 +358,7 @@ function SessionRow({
   flag,
   isNew,
   who,
+  people,
   onOpen,
   onMenu,
   menuDisabled,
@@ -361,6 +370,7 @@ function SessionRow({
   flag: ReturnType<typeof flagOf>;
   isNew: boolean;
   who: string;
+  people: "clients" | "members";
   onOpen: () => void;
   onMenu: (anchor: HTMLElement) => void;
   menuDisabled: boolean;
@@ -368,12 +378,20 @@ function SessionRow({
   const ended = isEnded(s, now);
   const full = isFull(s);
   const low = isLowSoon(s, now);
-  const flagT = flag === "noinst" ? "No instructor" : flag === "double" ? "Double-booked" : flag === "low" ? "Under 40%" : "";
-  const st = flagT || (isNew ? "New" : full ? "Full" : "");
-  const tagBg = flagT ? c.highBg : isNew ? c.tealPale : c.pale;
-  const tagInk = flagT ? c.high : isNew ? c.tealInk : c.pDark;
+  // OP1-087 row 3 / OURS-AN3 C10 (OpsTabsV4 sesRow l.441-447): a cancelled
+  // session stays as a record: struck title, "Cancelled" pill highBg / high,
+  // "Cancelled · {who} · {people} notified", no fill bar, opacity 0.75.
+  const cancelled = !!s.cancelled;
+  const flagT = cancelled ? "" : flag === "noinst" ? "No instructor" : flag === "double" ? "Double-booked" : flag === "low" ? "Under 40%" : "";
+  const st = flagT || (isNew ? "New" : cancelled ? "Cancelled" : full ? "Full" : "");
+  const tagBg = flagT || cancelled ? c.highBg : isNew ? c.tealPale : c.pale;
+  const tagInk = flagT || cancelled ? c.high : isNew ? c.tealInk : c.pDark;
   const pct = s.maxCapacity ? Math.min(100, Math.round((s.booked / s.maxCapacity) * 100)) : 0;
-  const whoText = who ? `With ${who}${ended ? " · ended" : ""}` : "No instructor yet";
+  const whoText = cancelled
+    ? `Cancelled · ${who || "No instructor"} · ${people} notified`
+    : who
+      ? `With ${who}${ended ? " · ended" : ""}`
+      : "No instructor yet";
   const menuRef = useRef<HTMLButtonElement | null>(null);
   return (
     <div
@@ -384,14 +402,14 @@ function SessionRow({
         columnGap: 10,
         padding: "10px 6px 10px 12px",
         borderTop: first ? "none" : `1px solid ${c.divider}`,
-        opacity: ended ? 0.6 : 1,
+        opacity: cancelled ? 0.75 : ended ? 0.6 : 1,
         boxShadow: isNew ? `inset 0 0 0 2px ${c.teal}` : "none",
         transition: "box-shadow .3s ease",
         position: "relative",
       }}
     >
       {/* The whole row opens the session (OP1-074 row 12); the ⋮ sits above it. */}
-      <button type="button" onClick={onOpen} aria-label={`${s.title}, ${time12(s.startTime)} to ${time12(s.endTime)}, ${s.booked} of ${s.maxCapacity} booked`} className="absolute inset-0 w-full" style={{ zIndex: 0 }} />
+      <button type="button" onClick={onOpen} aria-label={`${s.title}, ${time12(s.startTime)} to ${time12(s.endTime)}, ${cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}`} className="absolute inset-0 w-full" style={{ zIndex: 0 }} />
       <div style={{ position: "relative", pointerEvents: "none" }}>
         <p className="tabular-nums whitespace-nowrap" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 800, color: c.deep }}>
           {time12(s.startTime)}
@@ -403,32 +421,36 @@ function SessionRow({
       <span aria-hidden className="self-stretch" style={{ borderRadius: 999, background: c.primary, position: "relative", pointerEvents: "none", outline: c.hc ? `1px solid ${c.primary}` : undefined }} />
       <div className="min-w-0" style={{ position: "relative", pointerEvents: "none" }}>
         <p className="flex items-center flex-wrap min-w-0" style={{ margin: 0, gap: 6, rowGap: 2 }}>
-          <span className="min-w-0 truncate" style={{ fontSize: textPx(13.5), fontWeight: 800, lineHeight: linePx(17), color: c.ink, maxWidth: "100%" }}>
+          <span className="min-w-0 truncate" style={{ fontSize: textPx(13.5), fontWeight: 800, lineHeight: linePx(17), color: c.ink, maxWidth: "100%", textDecoration: cancelled ? "line-through" : "none" }}>
             {s.title}
           </span>
           {st && <Tag label={st} bg={tagBg} ink={tagInk} />}
         </p>
-        <p style={{ margin: "1px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: who ? c.faint : c.high }}>{whoText}</p>
-        <div className="flex items-center" style={{ gap: 8, marginTop: 5 }}>
+        <p style={{ margin: "1px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: who || cancelled ? c.faint : c.high }}>{whoText}</p>
+        {!cancelled && <div className="flex items-center" style={{ gap: 8, marginTop: 5 }}>
           <div className="flex-1 overflow-hidden" style={{ height: 5, borderRadius: 999, background: c.track, border: c.hc ? `1px solid ${c.border}` : undefined }}>
             <div style={{ height: "100%", borderRadius: 999, width: `${pct}%`, background: low ? c.caution : c.primary }} />
           </div>
           <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(11), fontWeight: 800, color: low ? c.caution : c.ink }}>
             {s.booked}/{s.maxCapacity}
           </span>
-        </div>
+        </div>}
       </div>
-      <button
-        ref={menuRef}
-        type="button"
-        aria-label={`Actions for ${s.title} at ${time12(s.startTime)}`}
-        disabled={menuDisabled}
-        onClick={() => menuRef.current && onMenu(menuRef.current)}
-        className="tap flex items-center justify-center disabled:opacity-45"
-        style={{ width: 44, height: 44, color: c.faint, position: "relative", zIndex: 1 }}
-      >
-        <EllipsisVertical size={17} />
-      </button>
+      {cancelled ? (
+        <span aria-hidden style={{ width: 44, height: 44 }} />
+      ) : (
+        <button
+          ref={menuRef}
+          type="button"
+          aria-label={`Actions for ${s.title} at ${time12(s.startTime)}`}
+          disabled={menuDisabled}
+          onClick={() => menuRef.current && onMenu(menuRef.current)}
+          className="tap flex items-center justify-center disabled:opacity-45"
+          style={{ width: 44, height: 44, color: c.faint, position: "relative", zIndex: 1 }}
+        >
+          <EllipsisVertical size={17} />
+        </button>
+      )}
     </div>
   );
 }

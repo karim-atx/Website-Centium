@@ -1,12 +1,27 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, Minus, Plus, Repeat, RotateCw, WifiOff } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, ImagePlus, Minus, Plus, Repeat, RotateCw, WifiOff, X } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
-import { SoonChip } from "../../../components/business-more/kit";
 import { fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "../../../components/calendar/calendarTime";
+import { DAY_LETTERS, DAY_LONG } from "../../../utils/week";
+import {
+  ABOUT_MAX,
+  BRING_MAX_CHARS,
+  BRING_MAX_ITEMS,
+  CLASS_LEVELS,
+  bringList,
+  isoWeekday,
+  nextLine,
+  repeatSummary,
+  seriesDates,
+  shortDay,
+  slashDate,
+  type RepeatRule,
+} from "../../../services/business-classes/scheduleRules";
+import type { SeriesRow } from "../../../services/business-classes/schedule";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -22,17 +37,26 @@ import {
   type Instructor,
 } from "../../../services/business-classes";
 import { useOps, type OpsColors } from "./opsTheme";
-import { normalisePrice, type ClassForm } from "./classForm";
-import { conflictsFor, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, shortDate, type SessionLite } from "./scheduleModel";
+import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
+import { conflictsFor, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, shortDate, type SessionLite } from "./scheduleModel";
 
 // The New Class / Edit class sheet (OP1-146 … 155, AN3-010 … 070, OURS-AN3
 // edit). ClassFlowsV6 is the base (lead, V6-164 notes): the field values,
 // errors, banner, spinner, conflict and discard dialogs are its markup. The
 // Cancel / Save row is pinned (HANDOVER §2.2, OP1-147 "Footer").
 //
-// Repeat is read-only "Does not repeat" until class series exist (V6-164,
-// B9). The payment type is the single-method mode (AN3-028): no payment
-// setting exists yet and cash is always on; Card is gone and Whish is "Soon".
+// B9 (CL-01): Repeat is live on a new class (AN3-041 … 048: menu, "On" day
+// chips Monday first per X-13, Ends never / on a date / after N, summary and
+// "Next:" box); one save_class_series call makes every class 12 weeks ahead.
+// Editing "This and all future sessions" (OP1-085) shows the series' rule
+// read-only and keeps the date (the split point); "Only this session" hides
+// Repeat (OURS-AN3 A3). A booked class can now change date and time: members
+// are told (move_class_session / edit_class), so the old lock is gone and the
+// A5 line says so. The instructor clash is refused by the server in any
+// business (ATXD9), so the AN3-066 dialog no longer offers "Save anyway".
+// B9 (EX-01): the class page's cover, About, Level and What to bring (OURS
+// layout: no business frame draws them). The payment type is the
+// single-method mode (AN3-028): cash is always on; Whish is "Soon".
 
 /** The Run by menu value of "No one yet" (clears the choice). */
 const NO_ONE = "__none";
@@ -56,9 +80,20 @@ function textScale(): number {
 
 type Banner = { kind: "fields" | "fail" | "offline" | "permission"; text: string } | null;
 
+const REPEAT_LABEL: Record<RepeatKind, string> = { none: "Does not repeat", daily: "Daily", weekly: "Weekly", biweekly: "Every 2 weeks", custom: "Custom" };
+const REPEAT_ORDER: RepeatKind[] = ["none", "daily", "weekly", "biweekly", "custom"];
+/** The dates a new series is checked against for clashes: its first 12 weeks (the horizon save_class_series makes). */
+const SERIES_CHECK_DAYS = 84;
+
 export interface ClassSheetProps {
   open: boolean;
   mode: "create" | "edit";
+  /** Edit only: one session, or this and every later one of its series (OP1-085). */
+  scope?: "this" | "future";
+  /** The series of the session being edited, for the read-only Repeat line. */
+  series?: SeriesRow | null;
+  /** B9 EX-01: uploads a cover to class-covers and returns its public URL. */
+  onUploadCover?: (file: File) => Promise<{ ok: true; url: string } | { ok: false; message: string }>;
   /** The session being edited. */
   editing?: BusinessClassRow | null;
   /** Booked count of the session being edited (capacity floor, date/time lock). */
@@ -72,7 +107,8 @@ export interface ClassSheetProps {
   online: boolean;
   people: "clients" | "members";
   onClose: () => void;
-  onSave: (draft: ClassDraft) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" }>;
+  /** `rule` is the repeat a new class asks for (null: one class). */
+  onSave: (draft: ClassDraft, rule: RepeatRule | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
   /** Run by's "Add an employee": leave for Team with the draft kept. */
   onAddEmployee: (form: ClassForm) => void;
 }
@@ -94,6 +130,9 @@ export function ClassSheet(props: ClassSheetProps) {
 function SheetBody({
   open,
   mode,
+  scope = "this",
+  series,
+  onUploadCover,
   editing,
   bookedCount = 0,
   initial,
@@ -120,7 +159,19 @@ function SheetBody({
   const [typeOpen, setTypeOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
-  const [conflict, setConflict] = useState<SessionLite[] | null>(null);
+  const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string } | null>(null);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [untilOpen, setUntilOpen] = useState(false);
+  const [levelOpen, setLevelOpen] = useState(false);
+  const [repeatErr, setRepeatErr] = useState<string | null>(null);
+  const [bringDraft, setBringDraft] = useState("");
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverErr, setCoverErr] = useState<string | null>(null);
+  const [repeatEl, setRepeatEl] = useState<HTMLButtonElement | null>(null);
+  const [repeatGroupEl, setRepeatGroupEl] = useState<HTMLDivElement | null>(null);
+  const [levelEl, setLevelEl] = useState<HTMLButtonElement | null>(null);
+  const coverInput = useRef<HTMLInputElement | null>(null);
+  const countRef = useRef<HTMLInputElement | null>(null);
   const [capFocus, setCapFocus] = useState<"focus" | "typing" | null>(null);
   const [lastValidCap, setLastValidCap] = useState(initial.capacity);
   // OP1-147 A1: above 1.3x text the type / name row stacks to one column.
@@ -137,7 +188,10 @@ function SheetBody({
   const startRef = useRef<HTMLButtonElement | null>(null);
 
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
-  const locked = mode === "edit" && bookedCount > 0;
+  // B9: a booked class may move (members are told); only a series edit keeps
+  // its date, which is where the series splits (edit_class 'future').
+  const dateLocked = mode === "edit" && scope === "future";
+  const moved = mode === "edit" && (form.date !== initial.date || form.startTime !== initial.startTime || form.endTime !== initial.endTime);
   const capFloor = mode === "edit" ? Math.max(CAPACITY_MIN, bookedCount) : CAPACITY_MIN;
 
   const draftOf = (f: ClassForm): ClassDraft => ({
@@ -152,6 +206,10 @@ function SheetBody({
     notes: f.notes.trim() || undefined,
     price: normalisePrice(f.price) ?? "x",
     paymentType: f.paymentType,
+    about: f.about.trim() || null,
+    level: f.level || null,
+    whatToBring: bringList(f.bring),
+    coverUrl: f.coverUrl || null,
   });
 
   const validate = (f: ClassForm) => {
@@ -169,6 +227,7 @@ function SheetBody({
   const update = (patch: Partial<ClassForm>) => {
     setForm((prev) => {
       const next = { ...prev, ...patch };
+      if (checked && mode === "create") setRepeatErr(repeatProblem(next));
       if (checked) {
         const e = validate(next);
         setErrors((old) => {
@@ -203,9 +262,14 @@ function SheetBody({
     setSaving(true);
     setFailed(false);
     const timeout = new Promise<{ ok: false; message: string }>((r) => window.setTimeout(() => r({ ok: false, message: CLASS_SAVE_FAILED }), 15_000));
-    const r = await Promise.race([onSave(draftOf(form)), timeout]);
+    const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null), timeout]);
     setSaving(false);
     if (r.ok) return; // the page closes the sheet and shows the toast
+    if ("code" in r && r.code === "busy") {
+      // ATXD9: the server's clash check, any business (AN3-066 O3: never says where).
+      setConflict({ hits: [], dates: 1, elsewhere: r.message });
+      return;
+    }
     if ("code" in r && r.code === "capacity") {
       setErrors({ capacity: `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.` });
       setChecked(true);
@@ -234,13 +298,34 @@ function SheetBody({
       scrollToFirst(e);
       return;
     }
+    const rp = mode === "create" ? repeatProblem(form) : null;
+    setRepeatErr(rp);
+    if (rp) {
+      setBanner({ kind: "fields", text: "Fix 1 field to save: repeat." });
+      repeatGroupEl?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      return;
+    }
     setErrors({});
     if (banner?.kind === "fields") setBanner(null);
-    // Conflict check (CL-02 / V6-164: every venue of the business). On the
-    // client until class_instructor_conflicts (B9) lands.
-    const hits = conflictsFor({ ...form, professionalId: form.professionalId || null }, sessions, editing?.id);
+    // Conflict check (CL-02 / V6-164: every venue of the business), named from
+    // the schedule so the dialog can say which class. The server refuses any
+    // clash too, in any business (ATXD9), which comes back from the save. A
+    // new series is checked on every date of its first 12 weeks (AN3-066 O2).
+    const rule = mode === "create" ? ruleOf(form) : null;
+    const dates = rule ? seriesDates({ ...rule, untilOn: rule.untilOn ?? addDays(form.date, SERIES_CHECK_DAYS) }, 200, SERIES_CHECK_DAYS) : [form.date];
+    const pid = form.professionalId || null;
+    // A series edit carries its new times to later dates; checking this date is the drawn rule.
+    let hits: SessionLite[] = [];
+    let clashDates = 0;
+    for (const d of dates) {
+      const h = conflictsFor({ date: d, startTime: form.startTime, endTime: form.endTime, professionalId: pid }, sessions, editing?.id);
+      if (h.length) {
+        clashDates += 1;
+        hits = hits.concat(h);
+      }
+    }
     if (hits.length) {
-      setConflict(hits);
+      setConflict({ hits, dates: clashDates });
       return;
     }
     await doSave();
@@ -249,7 +334,7 @@ function SheetBody({
   const nameOf = (id: string) => instructors.find((i) => i.professionalId === id)?.firstName ?? "";
   const weekFrom = mondayOf(form.date || today);
   const weekTo = addDays(weekFrom, 6);
-  const classesThisWeek = (id: string) => sessions.filter((s) => s.professionalId === id && s.date >= weekFrom && s.date <= weekTo && s.id !== editing?.id).length;
+  const classesThisWeek = (id: string) => running(sessions as (SessionLite & { cancelled?: boolean })[]).filter((s) => s.professionalId === id && s.date >= weekFrom && s.date <= weekTo && s.id !== editing?.id).length;
 
   const runOptions: PopupMenuOption<string>[] = [
     ...instructors.map((i) => {
@@ -272,6 +357,35 @@ function SheetBody({
 
   const blankUntouched = mode === "create" && !dirty;
   const editUnchanged = mode === "edit" && !dirty;
+
+  // Repeat (AN3-041 … 048). Weekly / Every 2 weeks / Custom pre-select the
+  // Date field's weekday (AN3-043 O1); a day chip toggles, at least one stays on.
+  const rp = form.repeat;
+  const rule = mode === "create" ? ruleOf(form) : null;
+  const pickRepeat = (k: RepeatKind) => {
+    const weekdays = rp.weekdays.length ? rp.weekdays : form.date ? [isoWeekday(form.date)] : [];
+    update({ repeat: { ...rp, kind: k, weekdays, interval: k === "custom" ? Math.max(1, rp.interval) : rp.interval } });
+  };
+  const toggleDay = (w: number) => {
+    const on = rp.weekdays.includes(w);
+    if (on && rp.weekdays.length === 1) return;
+    update({ repeat: { ...rp, weekdays: on ? rp.weekdays.filter((x) => x !== w) : [...rp.weekdays, w].sort((a, b) => a - b) } });
+  };
+  const levelLabel = CLASS_LEVELS.find((l) => l.value === form.level)?.label ?? "";
+  const addBring = () => {
+    const next = bringList([...form.bring, bringDraft]);
+    if (next.length !== form.bring.length) update({ bring: next });
+    setBringDraft("");
+  };
+  const pickCover = async (file: File | undefined) => {
+    if (!file || !onUploadCover) return;
+    setCoverBusy(true);
+    setCoverErr(null);
+    const r = await onUploadCover(file);
+    setCoverBusy(false);
+    if (r.ok) update({ coverUrl: r.url });
+    else setCoverErr(r.message);
+  };
 
   const setStart = (hhmm: string) => {
     // Ends follows, keeping the class length (EventComposeSheet rule, OP1-149 S2).
@@ -376,7 +490,6 @@ function SheetBody({
         <button
           ref={which === "start" ? startRef : undefined}
           type="button"
-          disabled={locked}
           onClick={() => setOpenWheel(isOpen ? null : which)}
           aria-expanded={isOpen}
           aria-label={`${lbl}, ${time12(value)}`}
@@ -524,7 +637,7 @@ function SheetBody({
             {label("Date")}
             <button
               type="button"
-              disabled={locked}
+              disabled={dateLocked}
               onClick={() => setDateOpen(true)}
               aria-label={`Date, ${longDate(form.date)}`}
               aria-invalid={!!errors.date || undefined}
@@ -535,6 +648,11 @@ function SheetBody({
               <CalendarIcon size={16} strokeWidth={1.75} style={{ color: c.faint }} className="shrink-0" />
             </button>
             {errLine(errors.date, `${uid}-date`)}
+            {dateLocked && (
+              <p style={{ margin: "6px 0 0", fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
+                The change starts from this date. Earlier sessions keep their details.
+              </p>
+            )}
           </div>
 
           {/* Starts / Ends */}
@@ -544,21 +662,170 @@ function SheetBody({
               {timeField("end")}
             </div>
             {errLine(errors.times, `${uid}-times`)}
-            {locked && (
-              <p style={{ margin: "6px 0 0", fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
-                {bookedCount === 1 ? `1 ${people === "clients" ? "client" : "member"} is booked` : `${bookedCount} ${people} are booked`}, so the date and time stay as they are for now.
+            {/* OURS-AN3 A5: a booked class moved, its people are told. */}
+            {moved && bookedCount > 0 && (
+              <p style={{ margin: "8px 0 0", borderRadius: 12, background: c.soft, padding: "10px 12px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
+                {bookedCount} booked {bookedCount === 1 ? people.slice(0, -1) : people} {bookedCount === 1 ? "gets" : "get"} a message about the change.
               </p>
             )}
           </div>
 
-          {/* Repeat: read-only until series exist (V6-164, B9) */}
+          {/* Repeat (AN3-041 … 048, B9 CL-01): new classes; a series edit shows its rule. */}
           {mode === "create" && (
+            <div ref={setRepeatGroupEl} style={{ scrollMarginTop: 20 }}>
+              {label("Repeat")}
+              <button
+                ref={setRepeatEl}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={repeatOpen}
+                aria-label={`Repeat, ${REPEAT_LABEL[rp.kind]}`}
+                onClick={() => setRepeatOpen(true)}
+                className="tap text-left"
+                style={fieldBox(false, {
+                  justifyContent: "flex-start",
+                  border: `1px solid ${repeatOpen || rp.kind !== "none" ? c.pDark : c.inputBd}`,
+                  boxShadow: repeatOpen ? c.focusRing : "none",
+                })}
+              >
+                <Repeat size={15} strokeWidth={1.9} style={{ color: c.faint }} className="shrink-0" aria-hidden />
+                <span className="flex-1 min-w-0 truncate">{REPEAT_LABEL[rp.kind]}</span>
+                <ChevronDown size={16} style={{ color: c.faint }} className="shrink-0" />
+              </button>
+              {rp.kind !== "none" && rule && (
+                <div className="flex flex-col" style={{ marginTop: 10, borderRadius: 16, border: `1px solid ${c.inputBd}`, padding: 12, gap: 12 }}>
+                  {rp.kind === "custom" && (
+                    <div className="flex items-center" style={{ gap: 8, fontSize: textPx(12.5), fontWeight: 600, color: c.ink }}>
+                      <span>Every</span>
+                      <span className="inline-flex items-center" style={{ height: 34, borderRadius: 10, background: c.soft, border: `1px solid ${c.inputBd}` }}>
+                        <button type="button" aria-label="Fewer weeks" disabled={rp.interval <= 1} onClick={() => update({ repeat: { ...rp, interval: rp.interval - 1 } })} className="tap h-full flex items-center justify-center disabled:opacity-30" style={{ width: 34, color: c.pDark }}>
+                          <Minus size={14} strokeWidth={2.4} />
+                        </button>
+                        <span aria-live="polite" className="tabular-nums text-center" style={{ minWidth: 20, fontWeight: 800 }}>
+                          {rp.interval}
+                        </span>
+                        <button type="button" aria-label="More weeks" disabled={rp.interval >= 4} onClick={() => update({ repeat: { ...rp, interval: rp.interval + 1 } })} className="tap h-full flex items-center justify-center disabled:opacity-30" style={{ width: 34, color: c.pDark }}>
+                          <Plus size={14} strokeWidth={2.4} />
+                        </button>
+                      </span>
+                      <span>{rp.interval === 1 ? "week" : "weeks"}</span>
+                    </div>
+                  )}
+                  {rp.kind !== "daily" && (
+                    <div>
+                      <p style={{ margin: "0 0 6px", fontSize: textPx(11), fontWeight: 700, color: c.faint }}>On</p>
+                      <div role="group" aria-label="Repeat on" className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4 }}>
+                        {DAY_LETTERS.map((t, i) => {
+                          const w = i + 1;
+                          const on = rp.weekdays.includes(w);
+                          return (
+                            <button
+                              key={w}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={on}
+                              aria-label={DAY_LONG[i]}
+                              onClick={() => toggleDay(w)}
+                              className="tap flex items-center justify-center"
+                              style={{
+                                aspectRatio: "1",
+                                maxHeight: 40,
+                                minHeight: 34,
+                                borderRadius: 10,
+                                fontSize: textPx(12.5),
+                                fontWeight: on ? 800 : 600,
+                                background: on ? (c.dark ? "#A991FE" : "#AB9ED7") : c.soft,
+                                // AN3-043 row 4: white on #AB9ED7 · #A991FE (ClassFlowsV6 `ink`), both modes.
+                                color: on ? "#FFFFFF" : c.inkSoft,
+                                border: `1px solid ${on ? (c.dark ? "#A991FE" : "#AB9ED7") : c.dark ? "#393C44" : c.inputBd}`,
+                              }}
+                            >
+                              {t}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div role="radiogroup" aria-label="Ends">
+                    <p style={{ margin: "0 0 4px", fontSize: textPx(11), fontWeight: 700, color: c.faint }}>Ends</p>
+                    {(
+                      [
+                        ["never", "Never"],
+                        ["date", "On a date"],
+                        ["count", "After"],
+                      ] as const
+                    ).map(([k, t], i) => {
+                      const on = rp.ends === k;
+                      return (
+                        <div key={k} className="flex items-center" style={{ gap: 10, minHeight: 44, borderTop: i ? `1px solid ${c.inputBd}` : "none" }}>
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => {
+                              update({ repeat: { ...rp, ends: k, until: k === "date" && !rp.until ? addDays(form.date || today, 56) : rp.until } });
+                              if (k === "date") setUntilOpen(true);
+                              if (k === "count") window.setTimeout(() => countRef.current?.focus(), 30);
+                            }}
+                            className="tap flex flex-1 items-center text-left"
+                            style={{ gap: 10, minHeight: 44 }}
+                          >
+                            <span className="shrink-0 flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${on ? c.pDark : c.tert}` }}>
+                              <span style={{ width: 8, height: 8, borderRadius: 999, background: on ? c.pDark : "transparent" }} />
+                            </span>
+                            <span style={{ fontSize: textPx(13), fontWeight: on ? 700 : 500, color: c.ink }}>{t}</span>
+                          </button>
+                          {k === "date" && (
+                            <button
+                              type="button"
+                              aria-label={rp.until ? `Last date, ${longDate(rp.until)}` : "Choose the last date"}
+                              onClick={() => {
+                                update({ repeat: { ...rp, ends: "date", until: rp.until || addDays(form.date || today, 56) } });
+                                setUntilOpen(true);
+                              }}
+                              className="tap inline-flex items-center tabular-nums whitespace-nowrap"
+                              style={{ height: 34, padding: "0 10px", borderRadius: 10, background: c.soft, border: `1px solid ${on ? c.pDark : c.inputBd}`, fontSize: textPx(12.5), fontWeight: 700, color: c.ink }}
+                            >
+                              {rp.until ? slashDate(rp.until) : "Choose"}
+                            </button>
+                          )}
+                          {k === "count" && (
+                            <span className="inline-flex items-center whitespace-nowrap" style={{ height: 34, padding: "0 10px", borderRadius: 10, background: c.soft, border: `1px solid ${on ? c.pDark : c.inputBd}`, gap: 4, fontSize: textPx(12.5), fontWeight: 700, color: c.ink }}>
+                              <input
+                                ref={countRef}
+                                inputMode="numeric"
+                                aria-label="Number of sessions"
+                                value={rp.count}
+                                onFocus={() => rp.ends !== "count" && update({ repeat: { ...rp, ends: "count" } })}
+                                onChange={(e) => update({ repeat: { ...rp, ends: "count", count: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
+                                className="class-sheet-input bg-transparent text-right tabular-nums focus:outline-none"
+                                style={{ width: 30, border: 0, fontWeight: 700, color: c.ink, fontSize: textPx(12.5) }}
+                              />
+                              sessions
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ borderRadius: 12, background: c.dark ? "rgba(169,145,254,0.10)" : "#F7F6FD", padding: "10px 12px" }}>
+                    <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: c.ink }}>{repeatSummary(rule, form.startTime)}</p>
+                    {nextLine(rule) && (
+                      <p style={{ margin: "3px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: c.inkSoft }}>Next: {nextLine(rule)}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {errLine(repeatErr ?? undefined, `${uid}-repeat`)}
+            </div>
+          )}
+          {mode === "edit" && scope === "future" && series && (
             <div>
               {label("Repeat")}
-              <div aria-label="Repeat, Does not repeat" role="group" style={fieldBox(false, { justifyContent: "flex-start" })}>
+              <div role="group" aria-label={`Repeat, ${repeatSummary(series, series.startTime)}`} style={fieldBox(false, { justifyContent: "flex-start", height: "auto", minHeight: 40, padding: "9px 12px" })}>
                 <Repeat size={15} strokeWidth={1.9} style={{ color: c.faint }} className="shrink-0" aria-hidden />
-                <span className="flex-1 min-w-0 truncate">Does not repeat</span>
-                <SoonChip />
+                <span className="flex-1 min-w-0" style={{ lineHeight: linePx(20) }}>{repeatSummary(series, series.startTime)}</span>
               </div>
             </div>
           )}
@@ -735,6 +1002,144 @@ function SheetBody({
               }}
             />
           </div>
+
+          {/* B9 EX-01: what the class page shows (OURS layout and strings; no business frame). */}
+          <div className="flex flex-col" style={{ gap: 16, borderTop: `1px solid ${c.divider}`, paddingTop: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink }}>On the class page</p>
+              <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>Optional. {people === "clients" ? "Clients" : "Members"} see these on Explore.</p>
+            </div>
+            <div>
+              {label("Cover photo")}
+              <input
+                ref={coverInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  void pickCover(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {form.coverUrl ? (
+                <div className="relative overflow-hidden" style={{ borderRadius: 14, border: `1px solid ${c.inputBd}`, aspectRatio: "16 / 9", background: c.soft }}>
+                  <img src={form.coverUrl} alt="Class cover" className="w-full h-full object-cover" />
+                  <div className="absolute flex" style={{ right: 8, bottom: 8, gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => coverInput.current?.click()}
+                      disabled={coverBusy}
+                      className="tap inline-flex items-center"
+                      style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800 }}
+                    >
+                      {coverBusy ? "Uploading…" : "Change"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Remove the cover photo"
+                      onClick={() => update({ coverUrl: "" })}
+                      disabled={coverBusy}
+                      className="tap inline-flex items-center justify-center"
+                      style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF" }}
+                    >
+                      <X size={16} strokeWidth={2.4} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => coverInput.current?.click()}
+                  disabled={coverBusy || !onUploadCover}
+                  className="tap w-full flex items-center justify-center disabled:opacity-60"
+                  style={{ minHeight: 64, gap: 8, borderRadius: 14, border: `1px dashed ${c.hc ? c.border : c.tert}`, background: c.soft, fontSize: textPx(13), fontWeight: 700, color: c.pDark }}
+                >
+                  <ImagePlus size={17} strokeWidth={2} aria-hidden />
+                  {coverBusy ? "Uploading…" : "Add a cover photo"}
+                </button>
+              )}
+              <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: coverErr ? c.high : c.faint }}>
+                {coverErr ?? "JPEG, PNG or WebP, up to 5 MB."}
+              </span>
+            </div>
+            <div>
+              {label("About this class", `${uid}-about`)}
+              <textarea
+                id={`${uid}-about`}
+                value={form.about}
+                maxLength={ABOUT_MAX}
+                onChange={(e) => update({ about: e.target.value })}
+                placeholder="What it's like and who it's for"
+                rows={3}
+                className="class-sheet-input block w-full resize-none focus:outline-none"
+                style={{ minHeight: 76, borderRadius: 12, background: c.soft, border: `1px solid ${c.inputBd}`, padding: "10px 12px", fontSize: textPx(14), lineHeight: linePx(20), color: c.ink, caretColor: c.pDark }}
+              />
+            </div>
+            <div className="relative">
+              {label("Level")}
+              <button
+                ref={setLevelEl}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={levelOpen}
+                aria-label={levelLabel ? `Level, ${levelLabel}` : "Level, not chosen"}
+                onClick={() => setLevelOpen(true)}
+                className="tap text-left"
+                style={fieldBox(false)}
+              >
+                <span className="truncate" style={{ color: levelLabel ? c.ink : c.faint }}>
+                  {levelLabel || "Not set"}
+                </span>
+                <ChevronDown size={14} style={{ color: c.faint }} className="shrink-0" />
+              </button>
+            </div>
+            <div>
+              {label("What to bring", `${uid}-bring`)}
+              {form.bring.length > 0 && (
+                <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }}>
+                  {form.bring.map((b) => (
+                    <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, padding: "0 4px 0 10px", borderRadius: 999, background: c.pale, color: c.pDark, fontSize: textPx(12), fontWeight: 700 }}>
+                      {b}
+                      <button type="button" aria-label={`Remove ${b}`} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="tap inline-flex items-center justify-center" style={{ width: 28, height: 28 }}>
+                        <X size={13} strokeWidth={2.6} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {form.bring.length < BRING_MAX_ITEMS && (
+                <div className="flex" style={{ gap: 8 }}>
+                  <input
+                    id={`${uid}-bring`}
+                    value={bringDraft}
+                    maxLength={BRING_MAX_CHARS}
+                    onChange={(e) => setBringDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addBring();
+                      }
+                    }}
+                    placeholder="e.g. Water bottle"
+                    className="class-sheet-input min-w-0 flex-1 focus:outline-none"
+                    style={{ ...fieldBox(false), caretColor: c.pDark }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addBring}
+                    disabled={!bringDraft.trim()}
+                    className="tap shrink-0 disabled:opacity-45"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 12, border: `1px solid ${c.border}`, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+              <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
+                Up to {BRING_MAX_ITEMS} items.
+              </span>
+            </div>
+          </div>
         </div>
         <style>{`.class-sheet-input::placeholder { color: ${c.hc ? "rgb(var(--c-charcoal-soft))" : "rgb(var(--c-charcoal-faint))"}; opacity: 1; }`}</style>
       </BottomSheet>
@@ -783,6 +1188,50 @@ function SheetBody({
         heading="Run by"
         backdrop={false}
       />
+      <PopupMenu
+        open={repeatOpen}
+        onClose={() => setRepeatOpen(false)}
+        anchor={repeatEl}
+        matchWidth={repeatGroupEl}
+        options={REPEAT_ORDER.map((k) => ({ value: k, label: REPEAT_LABEL[k] }))}
+        selected={rp.kind}
+        onSelect={(v) => {
+          pickRepeat(v as RepeatKind);
+          setRepeatOpen(false);
+          repeatEl?.focus();
+        }}
+        heading="Repeat"
+        backdrop={false}
+      />
+      <PopupMenu
+        open={levelOpen}
+        onClose={() => setLevelOpen(false)}
+        anchor={levelEl}
+        options={[...CLASS_LEVELS.map((l) => ({ value: l.value as string, label: l.label })), { value: "", label: "Not set" }]}
+        selected={form.level}
+        clampTo={bodyEl?.parentElement ?? null}
+        onSelect={(v) => {
+          update({ level: v as ClassForm["level"] });
+          setLevelOpen(false);
+          levelEl?.focus();
+        }}
+        heading="Level"
+        align="left"
+        width={200}
+      />
+      <CalendarPickerSheet
+        open={untilOpen}
+        onClose={() => setUntilOpen(false)}
+        selectedDate={rp.until || form.date}
+        today={today}
+        minDate={form.date || today}
+        title="Date"
+        dayInk="ink"
+        onSelect={(d) => {
+          update({ repeat: { ...rp, ends: "date", until: d } });
+          setUntilOpen(false);
+        }}
+      />
       <CalendarPickerSheet
         open={dateOpen}
         onClose={() => setDateOpen(false)}
@@ -796,19 +1245,31 @@ function SheetBody({
           setDateOpen(false);
         }}
       />
+      {/* AN3-066 (+ O1 / O2 / O3). B9: the server refuses any clash (ATXD9),
+          so the confirm is "Choose someone else" (opens Run by), not "Save anyway". */}
       <ConfirmCard
         open={!!conflict}
         layout="decision"
-        title={conflict ? `${nameOf(form.professionalId) || "This instructor"} is already teaching then` : ""}
+        title={
+          conflict
+            ? conflict.dates > 1
+              ? `${nameOf(form.professionalId) || "This instructor"} is already teaching at ${conflict.dates} of these times`
+              : `${nameOf(form.professionalId) || "This instructor"} is already teaching then`
+            : ""
+        }
         subtitle={
           conflict
-            ? conflict.length === 1
-              ? `${conflict[0].title}, ${shortDate(conflict[0].date)}, ${time12(conflict[0].startTime)} to ${time12(conflict[0].endTime)}, overlaps this class. Clients could book both.`
-              : `${conflict[0].title} and ${conflict.length - 1} more overlap this class. Clients could book both.`
+            ? conflict.elsewhere
+              ? conflict.elsewhere
+              : conflict.dates > 1
+                ? `First: ${conflict.hits[0].title}, ${shortDay(conflict.hits[0].date)}, ${time12(conflict.hits[0].startTime)} to ${time12(conflict.hits[0].endTime)}. Choose someone else or another time.`
+                : conflict.hits.length === 1
+                  ? `${conflict.hits[0].title}, ${shortDate(conflict.hits[0].date)}, ${time12(conflict.hits[0].startTime)} to ${time12(conflict.hits[0].endTime)}, overlaps this class. Choose someone else or another time.`
+                  : `${conflict.hits[0].title} and ${conflict.hits.length - 1} more overlap this class. Choose someone else or another time.`
             : undefined
         }
         cancelLabel="Change time"
-        confirmLabel="Save anyway"
+        confirmLabel="Choose someone else"
         onCancel={() => {
           setConflict(null);
           fieldRefs.current.times?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
@@ -816,7 +1277,8 @@ function SheetBody({
         }}
         onConfirm={() => {
           setConflict(null);
-          void doSave();
+          runGroupEl?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+          window.setTimeout(() => setRunOpen(true), reduced ? 0 : 250);
         }}
       />
       <ConfirmCard

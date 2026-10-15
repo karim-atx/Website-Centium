@@ -13,9 +13,10 @@ import type { Vocab } from "./vocab";
 // reassign: saves straight away), OURS availability A1 (off that day, from
 // B6 instructor_unavailable_dates), A2, A6, A9, A10, A11.
 //
-// Saving writes business_classes.professional_id (owner UPDATE grant) after a
-// fresh read of that day's sessions, so a person booked meanwhile is refused
-// (A11). The server-side check and the instructor's notice are B9.
+// Saving goes through assign_class_instructor() (B9) after a fresh read of
+// that day's sessions, so a person booked meanwhile is refused (A11); the
+// server re-checks the team and any clash in any business (ATXD9). No
+// instructor push exists (AN5-027 row 6: the lead promises none).
 
 type Step = "list" | "confirm" | "failed";
 

@@ -4,19 +4,26 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
-import { fetchInstructorAvailability, type AvailabilityData, type Instructor } from "../../../services/business-classes";
+import { fetchInstructorAvailability, type Instructor } from "../../../services/business-classes";
+import { instructorsFreeFor, type FreeInstructor } from "../../../services/business-classes/schedule";
 import { useOps } from "./opsTheme";
 import { Avatar } from "./ClassSheet";
-import { overlaps, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
+import { overlaps, running, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
 
 // Request a substitute (OP1-089 … 093). Assigning names someone else on THIS
-// session only (business_classes.professional_id; the guard trigger refuses
-// anyone not on the team). Who is free is worked out here until
-// instructors_free_for() (B9): busy = another session of this business at an
-// overlapping time, or an unavailable date, or availability rows that do not
-// cover the slot (B6 instructor_availability). Telling the booked members
-// and the substitute needs business→member messages (B7): until then the
-// note line is left out and the toast says only who now teaches.
+// session only, through assign_class_instructor() (B9 CL-04): the server
+// re-checks that the person is on the team and free in ANY business (ATXD9),
+// and tells the booked members ("New instructor", never naming anyone).
+//
+// WHO IS FREE is instructors_free_for() (B9): is_busy is a plain yes / no
+// across every business, never where; marked_unavailable is a date they took
+// off; within_availability is false both outside their hours and when they
+// set none, so their B6 availability rows (readable by the owner) tell the
+// two apart: none set reads "No availability set" and stays choosable. A busy
+// teammate on one of THIS business's sessions is named from the schedule
+// ("Teaching {class} at {time}", OP1-090); elsewhere it's "Busy at that time"
+// (OURS-AN5 A12). The note to the substitute (OP1-089 row 4) still has no
+// destination (the call carries none) and stays out.
 
 export function SubstituteSheet({
   open,
@@ -26,6 +33,7 @@ export function SubstituteSheet({
   businessId,
   nameOf,
   today,
+  people,
   onClose,
   onAssign,
 }: {
@@ -36,16 +44,19 @@ export function SubstituteSheet({
   businessId: string | null;
   nameOf: (id: string | null) => string;
   today: string;
+  people: "clients" | "members";
   onClose: () => void;
-  onAssign: (professionalId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  onAssign: (professionalId: string) => Promise<{ ok: true } | { ok: false; message: string; busy?: boolean }>;
 }) {
   const c = useOps();
   const [pick, setPick] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [avail, setAvail] = useState<AvailabilityData | null>(null);
-  const [availLoaded, setAvailLoaded] = useState(false);
+  const [free, setFree] = useState<FreeInstructor[] | null>(null);
+  const [hasHours, setHasHours] = useState<Set<string> | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [tick, setTick] = useState(0);
   const [pickerEl, setPickerEl] = useState<HTMLButtonElement | null>(null);
   const [groupEl, setGroupEl] = useState<HTMLDivElement | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
@@ -54,81 +65,92 @@ export function SubstituteSheet({
     if (open) {
       setPick("");
       setError(null);
-      setAvailLoaded(false);
+      setFree(null);
+      setLoadFailed(false);
     }
   }
 
+  const sessionId = session?.id ?? null;
   useEffect(() => {
-    if (!open || !businessId) return;
+    if (!open || !sessionId) return;
     let alive = true;
-    void fetchInstructorAvailability(businessId).then((r) => {
+    void Promise.all([instructorsFreeFor(sessionId), businessId ? fetchInstructorAvailability(businessId) : Promise.resolve({ ok: false as const })]).then(([r, a]) => {
       if (!alive) return;
-      setAvail(r.ok ? r.value : null);
-      setAvailLoaded(true);
+      if (!r.ok) {
+        setLoadFailed(true);
+        return;
+      }
+      setLoadFailed(false);
+      setFree(r.value);
+      setHasHours(a.ok ? new Set(a.value.windows.map((w) => w.professionalId)) : null);
     });
     return () => {
       alive = false;
     };
-  }, [open, businessId]);
+  }, [open, sessionId, businessId, tick]);
 
   if (!session) return null;
 
-  const others = instructors.filter((i) => i.professionalId !== session.professionalId);
-  const busyWith = (id: string): SessionLite | null =>
-    sessions.find((s) => s.id !== session.id && s.professionalId === id && overlaps(s, session)) ?? null;
-  const unavailable = (id: string): boolean => {
-    if (!avail) return false;
-    if (avail.offDates.some((d) => d.professionalId === id && d.date === session.date)) return true;
-    const rows = avail.windows.filter((w) => w.professionalId === id);
-    if (rows.length === 0) return false; // no hours set yet: not counted against them
-    const wd = ((new Date(`${session.date}T00:00:00`).getDay() + 6) % 7) + 1; // ISO weekday
-    return !rows.some((w) => w.weekday === wd && w.startsAt <= session.startTime && w.endsAt >= session.endTime);
-  };
+  const live = running(sessions as (SessionLite & { cancelled?: boolean })[]);
+  const here = (id: string): SessionLite | null => live.find((s) => s.id !== session.id && s.professionalId === id && overlaps(s, session)) ?? null;
   const usualType = (id: string) => {
     const counts = new Map<string, number>();
-    for (const s of sessions) if (s.professionalId === id && s.classType) counts.set(s.classType, (counts.get(s.classType) ?? 0) + 1);
+    for (const s of live) if (s.professionalId === id && s.classType) counts.set(s.classType, (counts.get(s.classType) ?? 0) + 1);
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   };
-  const rows = others
-    .map((i) => {
-      const clash = busyWith(i.professionalId);
-      const off = !clash && unavailable(i.professionalId);
-      const type = usualType(i.professionalId);
-      return {
-        i,
-        free: !clash && !off,
-        sub: clash ? `Teaching ${clash.title} at ${time12(clash.startTime)}` : off ? "Not available then" : type ? `Free · teaches ${type}` : "Free",
-      };
+  const rows = (free ?? [])
+    .filter((f) => !f.isCurrent)
+    .map((f) => {
+      const clash = f.isBusy ? here(f.professionalId) : null;
+      const noHours = !f.withinAvailability && hasHours !== null && !hasHours.has(f.professionalId);
+      const outside = !f.withinAvailability && !noHours;
+      const ok = !f.isBusy && !f.markedUnavailable && !outside;
+      const type = usualType(f.professionalId);
+      const sub = f.isBusy
+        ? clash
+          ? `Teaching ${clash.title} at ${time12(clash.startTime)}`
+          : "Busy at that time"
+        : f.markedUnavailable || outside
+          ? "Not available then"
+          : noHours
+            ? "No availability set"
+            : type
+              ? `Free · teaches ${type}`
+              : "Free";
+      return { f, free: ok, sub };
     })
     // Free first, then busy (OP1-090 row 6); by name inside each.
-    .sort((a, b) => Number(b.free) - Number(a.free) || a.i.firstName.localeCompare(b.i.firstName));
+    .sort((a, b) => Number(b.free) - Number(a.free) || a.f.firstName.localeCompare(b.f.firstName));
 
   const options: PopupMenuOption<string>[] = rows.map((r) => ({
-    value: r.i.professionalId,
-    label: r.i.firstName,
+    value: r.f.professionalId,
+    label: r.f.firstName,
     note: r.sub,
     disabled: !r.free,
-    icon: <Avatar c={c} name={r.i.firstName} size={28} />,
+    icon: <Avatar c={c} name={r.f.firstName} size={28} />,
   }));
 
   // OP1-090 O2: everyone busy → one line under the heading instead of the rows.
   const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
   const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
-  const chosen = pick ? nameOf(pick) : "";
+  const chosen = pick ? rows.find((r) => r.f.professionalId === pick)?.f.firstName || nameOf(pick) : "";
+  const teamSize = instructors.filter((i) => i.professionalId !== session.professionalId).length;
 
   const assign = async () => {
     if (!pick || busy) return;
-    // Still free? (OP1-092 O3)
-    if (busyWith(pick)) {
-      setError(`${chosen} is no longer free at ${time12(session.startTime)}. Choose someone else.`);
-      setMenuOpen(true);
-      return;
-    }
     setBusy(true);
     setError(null);
     const r = await onAssign(pick);
     setBusy(false);
-    if (!r.ok) setError("Couldn't assign. Check your connection and try again.");
+    if (!r.ok) {
+      // OP1-092 O3: no longer free (the server's re-check, ATXD9) reopens the list.
+      if (r.busy) {
+        setError(`${chosen} is no longer free at ${time12(session.startTime)}. Choose someone else.`);
+        setPick("");
+        setTick((t) => t + 1);
+        setMenuOpen(true);
+      } else setError(r.message);
+    }
   };
 
   const fieldLabel = (t: string) => (
@@ -162,9 +184,16 @@ export function SubstituteSheet({
 
         <div ref={setGroupEl} style={{ marginBottom: 14 }}>
           {fieldLabel("Who covers it?")}
-          {!availLoaded ? (
+          {loadFailed ? (
+            <p style={{ margin: 0, minHeight: 48, display: "flex", alignItems: "center", gap: 10, fontSize: textPx(12.5), fontWeight: 600, color: c.high }}>
+              Couldn't check who's free.
+              <button type="button" onClick={() => setTick((t) => t + 1)} className="tap" style={{ minHeight: 44, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}>
+                Retry
+              </button>
+            </p>
+          ) : !free ? (
             <p style={{ margin: 0, minHeight: 48, display: "flex", alignItems: "center", fontSize: textPx(14), fontWeight: 700, color: c.faint }}>Finding who's free…</p>
-          ) : others.length === 0 ? (
+          ) : rows.length === 0 && teamSize === 0 ? (
             <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>Nobody else is on your team yet. Invite an instructor in Team and access.</p>
           ) : (
             <button
@@ -194,6 +223,13 @@ export function SubstituteSheet({
           )}
         </div>
 
+        {/* OP1-072 row 6: the booked are told (assign_class_instructor p_tell_members). */}
+        {session.booked > 0 && (
+          <p style={{ margin: "0 0 14px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
+            Booked {people} get a message with the new instructor.
+          </p>
+        )}
+
         <button
           type="button"
           onClick={() => void assign()}
@@ -211,7 +247,7 @@ export function SubstituteSheet({
         )}
       </BottomSheet>
       <PopupMenu
-        open={menuOpen}
+        open={menuOpen && !!free}
         onClose={() => setMenuOpen(false)}
         anchor={pickerEl}
         matchWidth={groupEl}
@@ -236,4 +272,3 @@ export function SubstituteSheet({
     </>
   );
 }
-

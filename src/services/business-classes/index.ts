@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { resolveMyBusinessId } from "../business-profile";
 import { formatPrice, parsePrice } from "../../utils/price";
 import type { BusinessClassRow } from "./types";
+import { assignClassInstructor, type ClassFields } from "./schedule";
 export type { BusinessClassRow } from "./types";
 
 // A business's scheduled classes: the real business_classes rows.
@@ -48,12 +49,17 @@ export interface ClassDraft {
   notes?: string;
   price?: string;
   paymentType?: string;
+  /** B9 EX-01 (optional; left out of the write when undefined). */
+  about?: string | null;
+  level?: BusinessClassRow["level"];
+  whatToBring?: string[];
+  coverUrl?: string | null;
 }
 
 /** v6 V6-164: the six fixed class types (ClassFlowsV6 `typeOpts`). */
 export const CLASS_TYPES = ["HIIT", "Yoga", "Spin", "Strength", "Pilates", "Mobility"] as const;
 
-/** v6 AN3-036 … 040: capacity is 1 to 200 (the 200 cap is the form's until B9's CHECK). */
+/** v6 AN3-036 … 040: capacity is 1 to 200 (B9: business_classes_capacity_range enforces it on the server too). */
 export const CAPACITY_MIN = 1;
 export const CAPACITY_MAX = 200;
 
@@ -95,7 +101,7 @@ export type ClassesResult =
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours";
+  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours, about, level, what_to_bring, cover_url, series_id, series_exception, cancelled_at, cancel_reason";
 
 type Row = {
   id: string;
@@ -110,6 +116,15 @@ type Row = {
   price: number | string | null;
   payment_type: string | null;
   cancellation_hours?: number | null;
+  // B9 (absent from my_class_schedule, so optional).
+  about?: string | null;
+  level?: BusinessClassRow["level"];
+  what_to_bring?: string[] | null;
+  cover_url?: string | null;
+  series_id?: string | null;
+  series_exception?: boolean | null;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
 };
 
 /**
@@ -129,6 +144,10 @@ type WriteRow = {
   notes: string | null;
   price: number | null;
   payment_type: string | null;
+  about?: string | null;
+  level?: BusinessClassRow["level"];
+  what_to_bring?: string[];
+  cover_url?: string | null;
 };
 
 // Times arrive as HH:MM:SS from a `time` column; every input and comparison in
@@ -149,6 +168,14 @@ const toClass = (r: Row): BusinessClassRow => ({
   price: formatPrice(r.price),
   paymentType: r.payment_type,
   cancellationHours: r.cancellation_hours ?? null,
+  about: r.about ?? null,
+  level: r.level ?? null,
+  whatToBring: r.what_to_bring ?? [],
+  coverUrl: r.cover_url ?? null,
+  seriesId: r.series_id ?? null,
+  seriesException: !!r.series_exception,
+  cancelledAt: r.cancelled_at ?? null,
+  cancelReason: r.cancel_reason ?? null,
 });
 
 /**
@@ -186,6 +213,40 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
       // Only meaningful alongside a price, and both screens already treat it
       // that way — a payment type on a free class is noise in the column.
       payment_type: price.value === null ? null : draft.paymentType ?? null,
+      // B9 EX-01: only what the sheet sent, so an older caller writes nothing new.
+      ...(draft.about !== undefined ? { about: draft.about?.trim() || null } : null),
+      ...(draft.level !== undefined ? { level: draft.level ?? null } : null),
+      ...(draft.whatToBring !== undefined ? { what_to_bring: draft.whatToBring } : null),
+      ...(draft.coverUrl !== undefined ? { cover_url: draft.coverUrl ?? null } : null),
+    },
+  };
+}
+
+/**
+ * B9: a draft as save_class_series / edit_class fields (class_fields_check
+ * keys only: no event_date, which a series rule or move_class_session sets).
+ * Free reads as price 0 (the column is NOT NULL, default 0).
+ */
+export function classFieldsOf(draft: ClassDraft): { ok: true; fields: ClassFields } | { ok: false; message: string } {
+  const built = toRow(draft);
+  if (!built.ok) return built;
+  const r = built.row;
+  return {
+    ok: true,
+    fields: {
+      title: r.title,
+      class_type: r.class_type,
+      start_time: r.start_time,
+      end_time: r.end_time,
+      max_capacity: r.max_capacity,
+      professional_id: r.professional_id,
+      price: r.price ?? 0,
+      payment_type: r.payment_type,
+      notes: r.notes,
+      ...(r.about !== undefined ? { about: r.about } : null),
+      ...(r.level !== undefined ? { level: r.level } : null),
+      ...(r.what_to_bring !== undefined ? { what_to_bring: r.what_to_bring } : null),
+      ...(r.cover_url !== undefined ? { cover_url: r.cover_url } : null),
     },
   };
 }
@@ -232,6 +293,8 @@ export async function fetchClassesAssignedToMe(
     .from("business_classes")
     .select(COLUMNS + ", business_profiles!inner(business_name)")
     .eq("professional_id", userId)
+    // B9: a cancelled session is the venue's record, not a class to teach.
+    .is("cancelled_at", null)
     .order("event_date", { ascending: true });
 
   if (error) {
@@ -261,7 +324,8 @@ export async function createClass(
 
   const { data, error } = await supabase
     .from("business_classes")
-    .insert({ business_id: businessId, ...(draft.id ? { id: draft.id } : null), ...built.row })
+    // The B9 columns are newer than database.types.ts.
+    .insert({ business_id: businessId, ...(draft.id ? { id: draft.id } : null), ...built.row } as never)
     .select(COLUMNS)
     .single();
 
@@ -281,48 +345,33 @@ export async function createClass(
 /** AN3-068 row 1 (ClassFlowsV6 `sheet-fail`). */
 export const CLASS_SAVE_FAILED = "Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.";
 
-/**
- * Changes one session (OURS-AN3 A9: the owner's UPDATE policy and grant cover
- * every column written here). A capacity under the booked count is refused
- * by business_classes_guard_capacity_reduction (ATX13); `code: "capacity"`
- * lets the sheet show it as the capacity error.
- */
-export async function updateClass(
-  classId: string,
-  draft: ClassDraft
-): Promise<{ ok: true; updated: BusinessClassRow } | { ok: false; message: string; code?: "capacity" | "permission" }> {
-  const built = toRow(draft);
-  if (!built.ok) return built;
-  const { data, error } = await supabase.from("business_classes").update(built.row).eq("id", classId).select(COLUMNS).maybeSingle();
-  if (error || !data) {
-    console.error("[business-classes] Could not update the class:", error?.message);
-    if (error?.code === "ATX13") return { ok: false, message: error.message, code: "capacity" };
-    if (!error && !data) return { ok: false, message: "Couldn't save your changes. Only the business owner can change classes right now.", code: "permission" };
-    return { ok: false, message: "Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept." };
-  }
-  return { ok: true, updated: toClass(data as unknown as Row) };
-}
+// updateClass (a direct UPDATE of one session) is gone: B9 edits go through
+// edit_class / move_class_session (services/business-classes/schedule.ts), so
+// a series class is marked as edited on its own and a booked class tells its
+// members when it moves.
 
 /**
  * Names (or clears) who teaches one session: the Substitute sheet's Assign
- * (OP1-089 to 093). Only professional_id is written; the guard trigger
- * refuses anyone not on this business's team (ATX76).
+ * (OP1-089 to 093) and AN5's Assign / Fix. B9: through
+ * assign_class_instructor(), which re-checks on the server that the person is
+ * on the team (ATX76) and free at that time in ANY business (ATXD9), marks a
+ * series class as edited on its own, and, with `tellMembers`, sends the booked
+ * members a "New instructor" notice (never naming them). `told` is how many
+ * were told. The row is read back for the screens.
  */
 export async function assignInstructor(
   classId: string,
-  professionalId: string | null
-): Promise<{ ok: true; updated: BusinessClassRow } | { ok: false; message: string }> {
-  const { data, error } = await supabase
-    .from("business_classes")
-    .update({ professional_id: professionalId })
-    .eq("id", classId)
-    .select(COLUMNS)
-    .maybeSingle();
+  professionalId: string | null,
+  tellMembers = false
+): Promise<{ ok: true; updated: BusinessClassRow; told: number } | { ok: false; message: string; busy?: boolean }> {
+  const r = await assignClassInstructor(classId, professionalId, tellMembers);
+  if (!r.ok) return { ok: false, message: r.message, busy: r.refusal === "busy" };
+  const { data, error } = await supabase.from("business_classes").select(COLUMNS).eq("id", classId).maybeSingle();
   if (error || !data) {
-    console.error("[business-classes] Could not assign the instructor:", error?.message);
+    console.error("[business-classes] Could not read the assigned class back:", error?.message);
     return { ok: false, message: "Couldn't assign. Check your connection and try again." };
   }
-  return { ok: true, updated: toClass(data as unknown as Row) };
+  return { ok: true, updated: toClass(data as unknown as Row), told: r.value };
 }
 
 /** One booking as the owner sees it (business_class_bookings_select_business_owner). */
@@ -404,8 +453,9 @@ export interface AvailabilityData {
 
 /**
  * Who said they can teach when (B6, readable by the owner through
- * business_can(schedule)). Used to grey out busy instructors in the
- * substitute picker until instructors_free_for() (B9) answers it server-side.
+ * business_can(schedule)). The substitute picker asks instructors_free_for()
+ * (B9) who is free, and reads these only to tell "No availability set" from
+ * "outside their hours" (the function reports both as not within).
  */
 export async function fetchInstructorAvailability(businessId: string): Promise<{ ok: true; value: AvailabilityData } | { ok: false }> {
   type Q<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
@@ -451,10 +501,16 @@ export async function fetchVenueCancellationDefault(businessId: string): Promise
   return v ?? null;
 }
 
-export async function deleteClass(classId: string): Promise<{ ok: boolean; message?: string }> {
+/**
+ * Deletes a class nobody booked. B9: a class WITH bookings is refused by the
+ * server (ATXE1, business_classes_guard_delete): it has to be cancelled
+ * (cancel_class_session) so the people booked are told. `booked` says so.
+ */
+export async function deleteClass(classId: string): Promise<{ ok: boolean; message?: string; booked?: boolean }> {
   const { error } = await supabase.from("business_classes").delete().eq("id", classId);
   if (error) {
     console.error("[business-classes] Could not delete the class:", error.message);
+    if (error.code === "ATXE1") return { ok: false, booked: true, message: "Someone has booked this class, so it can't be deleted. Cancel it instead." };
     return { ok: false, message: "Couldn't delete the class. Try again." };
   }
   return { ok: true };

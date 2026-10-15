@@ -94,7 +94,7 @@ export function WeekGrid({
                     key={s.id}
                     type="button"
                     onClick={() => onOpen(s.id)}
-                    aria-label={`${s.title}, ${shortDate(d)} ${time12(s.startTime)}, ${s.booked} of ${s.maxCapacity} booked`}
+                    aria-label={`${s.title}, ${shortDate(d)} ${time12(s.startTime)}, ${s.cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}`}
                     className="absolute overflow-hidden"
                     style={{
                       top: (mins(s.startTime) - h0) * PX,
@@ -102,13 +102,14 @@ export function WeekGrid({
                       left: `${(idx * 100) / n}%`,
                       width: `calc(${100 / n}% - ${n > 1 ? 1 : 0}px)`,
                       borderRadius: 6,
-                      background: c.blockBg,
-                      borderLeft: `2.5px solid ${c.primary}`,
-                      opacity: ended ? 0.6 : 1,
+                      // B9: a cancelled session stays on the grid in the cancelled pill colours (OURS, as the list row).
+                      background: s.cancelled ? c.highBg : c.blockBg,
+                      borderLeft: `2.5px solid ${s.cancelled ? c.high : c.primary}`,
+                      opacity: s.cancelled ? 0.75 : ended ? 0.6 : 1,
                       outline: c.hc ? `1px solid ${c.primary}` : undefined,
                     }}
                   >
-                    <span aria-hidden className="absolute left-0 bottom-0 w-full" style={{ height: `${fill}%`, background: c.primary, opacity: 0.28 }} />
+                    {!s.cancelled && <span aria-hidden className="absolute left-0 bottom-0 w-full" style={{ height: `${fill}%`, background: c.primary, opacity: 0.28 }} />}
                     {flagged && <span aria-hidden className="absolute" style={{ top: 2, right: 2, width: 6, height: 6, borderRadius: 999, background: c.high }} />}
                   </button>
                 );

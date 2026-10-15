@@ -51,3 +51,17 @@ test("figures compare with the 7 days before; nothing ahead is the empty card", 
   assert.equal(figures([S({ date: "2026-10-10" })], "2026-10-14").empty, true);
   assert.deepEqual(weekHours([S({ startTime: "06:00", endTime: "22:30" })]), { h0: 6, h1: 23 });
 });
+
+test("B9: cancelled sessions never count; the server's clash pairs replace the local check", () => {
+  const now = new Date("2026-10-14T01:00:00");
+  const d1 = S({ id: "d1", startTime: "09:00", endTime: "10:00" });
+  const d2 = S({ id: "d2", startTime: "09:30", endTime: "10:00" });
+  // A cancelled twin is neither a clash nor a session this week.
+  assert.equal(findIssues([d1, { ...d2, cancelled: true }], now).some((i) => i.kind === "double"), false);
+  assert.equal(figures([d1, { ...d2, cancelled: true }], "2026-10-14").sessions, 1);
+  assert.equal(conflictsFor({ date: d1.date, startTime: "09:15", endTime: "09:45", professionalId: "p1" }, [{ ...d1, cancelled: true }]).length, 0);
+  // An empty answer from class_instructor_conflicts() means no double-booking, whatever the local times say.
+  assert.equal(findIssues([d1, d2], now, []).some((i) => i.kind === "double"), false);
+  const pairs = findIssues([d1, d2, S({ id: "x", startTime: "12:00", endTime: "13:00" })], now, [{ classId: "d1", otherClassId: "x" }]).find((i) => i.kind === "double");
+  assert.deepEqual(pairs?.sessions.map((s) => s.id), ["d1", "x"]);
+});

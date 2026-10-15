@@ -20,7 +20,14 @@ export interface SessionLite {
 
 export interface Session extends SessionLite {
   booked: number;
+  /** B9: cancelled by the venue (business_classes.cancelled_at): kept as a record, never bookable. */
+  cancelled?: boolean;
+  /** B9: the repeating series it belongs to (class_series), or null. */
+  seriesId?: string | null;
 }
+
+/** The sessions still running (not cancelled): every count, flag and conflict reads these. */
+export const running = <T extends { cancelled?: boolean }>(list: T[]): T[] => list.filter((s) => !s.cancelled);
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -131,17 +138,22 @@ const byStart = (a: SessionLite, b: SessionLite) => a.date.localeCompare(b.date)
  * Needs attention (OP1-142 S5), for sessions in the next 7 days that have not
  * started: no instructor (professional_id null with bookings), the same
  * instructor on two overlapping sessions, under 40% booked within 48 hours.
- * In that order; empty kinds left out.
+ * In that order; empty kinds left out. Cancelled sessions never count.
+ *
+ * B9: `clashes` is class_instructor_conflicts() (the server compares real
+ * times in each venue's zone); when given, the double-booked sessions are its
+ * pairs, else the local overlap check (back-to-back is fine).
  */
-export function findIssues(sessions: Session[], now: Date): Issue[] {
+export function findIssues(sessions: Session[], now: Date, clashes?: { classId: string; otherClassId: string }[] | null): Issue[] {
   const today = todayIso(now);
   const end = addDays(today, 6);
-  const live = sessions.filter((s) => s.date >= today && s.date <= end && !hasStarted(s, now)).sort(byStart);
+  const live = running(sessions).filter((s) => s.date >= today && s.date <= end && !hasStarted(s, now)).sort(byStart);
   const noinst = live.filter((s) => !s.professionalId && s.booked > 0);
   const double: Session[] = [];
+  const clashIds = clashes ? new Set(clashes.flatMap((x) => [x.classId, x.otherClassId])) : null;
   for (const s of live) {
     if (!s.professionalId) continue;
-    if (live.some((o) => o.id !== s.id && o.professionalId === s.professionalId && overlaps(o, s))) double.push(s);
+    if (clashIds ? clashIds.has(s.id) : live.some((o) => o.id !== s.id && o.professionalId === s.professionalId && overlaps(o, s))) double.push(s);
   }
   const low = live.filter((s) => isLowSoon(s, now));
   return [
@@ -170,7 +182,7 @@ export interface Figures {
 
 /** "Sessions this week" and "Spots booked" for the next 7 days vs the 7 before (OP1-074 row 5). */
 export function figures(sessions: Session[], today: string): Figures {
-  const inRange = (from: string, to: string) => sessions.filter((s) => s.date >= from && s.date <= to);
+  const inRange = (from: string, to: string) => running(sessions).filter((s) => s.date >= from && s.date <= to);
   const now = inRange(today, addDays(today, 6));
   const prev = inRange(addDays(today, -7), addDays(today, -1));
   const pct = (list: Session[]) => {
@@ -201,7 +213,7 @@ export function figuresLine(f: Figures, sessions: Session[], issues: Issue[], to
   if (f.empty) return "Create a class and it shows here with bookings.";
   if (f.early && f.sessions > 0) return "Your first week of classes. Comparisons start next week.";
   const need = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
-  const full = sessions
+  const full = running(sessions)
     .filter((s) => s.date >= today && s.date <= addDays(today, 6) && !hasStarted(s, now) && isFull(s))
     .sort(byStart)[0];
   const parts: string[] = [];
@@ -243,11 +255,13 @@ export function issueText(i: Issue, nameOf: (id: string | null) => string, peopl
 /** Which classes a draft overlaps for the same instructor, every venue of the business (V6-164). */
 export function conflictsFor(
   draft: Pick<SessionLite, "date" | "startTime" | "endTime" | "professionalId">,
-  sessions: SessionLite[],
+  sessions: (SessionLite & { cancelled?: boolean })[],
   excludeId?: string
 ): SessionLite[] {
   if (!draft.professionalId) return [];
-  return sessions.filter((s) => s.id !== excludeId && s.professionalId === draft.professionalId && overlaps(s, draft)).sort(byStart);
+  return running(sessions)
+    .filter((s) => s.id !== excludeId && s.professionalId === draft.professionalId && overlaps(s, draft))
+    .sort(byStart);
 }
 
 /** The week grid's hour range (OP1-076 O1: at least 7 AM to 9 PM, wider when a session needs it). */
