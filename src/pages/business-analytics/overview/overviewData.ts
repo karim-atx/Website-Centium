@@ -20,8 +20,9 @@ import { addDays, type OvBooking, type OvClass, type OvRaw, type OvReviews, type
 // business, venues or none) for Reputation, the owner's calendar_events for today's events, and the team
 // names for "Class with …".
 //
-// Realtime (B15 business_activity) feeds the dashboard's activity list; this
-// page polls every 2 minutes instead (D2).
+// Realtime (B15 business_activity, DI-03) feeds the dashboard's activity list
+// and, in OverviewSection, triggers a re-read of everything here (AN1-034 S6);
+// the 2-minute poll while visible stays as the fallback (D2).
 
 type Err = { message: string } | null;
 const db = supabase;
@@ -96,7 +97,8 @@ export async function loadOverview(userId: string, range: Range, today: string):
     fetchPeriodStats(bid, range.from, range.to, range.compare),
     fetchMemberGrowth(bid, Math.min(52, Math.max(1, growthWeeks))),
     fetchBusinessDay(bid, today),
-    db.from("business_offerings").select("id").eq("business_id", bid),
+    // Live listings = products shown on Explore (business_offerings.visible; the column is newer than the generated types).
+    db.from("business_offerings").select("id").eq("business_id", bid).eq("visible" as never, true as never),
     // promotions is newer than the generated types.
     (db as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: unknown[] | null; error: Err }> } } })
       .from("promotions")

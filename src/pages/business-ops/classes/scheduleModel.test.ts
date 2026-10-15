@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { conflictsFor, dayHeading, figures, findIssues, hourLabel, isLowSoon, longDate, mondayOf, shortDate, weekHours, type Session } from "./scheduleModel";
+import { conflictsFor, dayHeading, figures, findIssues, hourLabel, isLowSoon, longDate, mondayOf, seriesCards, shortDate, weekHours, type Session } from "./scheduleModel";
 
 const S = (o: Partial<Session>): Session => ({
   id: o.id ?? Math.random().toString(36),
@@ -64,4 +64,30 @@ test("B9: cancelled sessions never count; the server's clash pairs replace the l
   assert.equal(findIssues([d1, d2], now, []).some((i) => i.kind === "double"), false);
   const pairs = findIssues([d1, d2, S({ id: "x", startTime: "12:00", endTime: "13:00" })], now, [{ classId: "d1", otherClassId: "x" }]).find((i) => i.kind === "double");
   assert.deepEqual(pairs?.sessions.map((s) => s.id), ["d1", "x"]);
+});
+
+test("series cards: one per series, next session and the count still to come (AN3-055 rows 1-3)", () => {
+  const now = new Date("2026-10-06T12:00:00");
+  const list = [
+    S({ id: "a", seriesId: "x", classType: "HIIT", date: "2026-10-07", startTime: "07:00", endTime: "08:00" }),
+    S({ id: "b", seriesId: "x", classType: "HIIT", date: "2026-10-09", startTime: "07:00", endTime: "08:00" }),
+    S({ id: "c", seriesId: "x", classType: "HIIT", date: "2026-10-05", startTime: "07:00", endTime: "08:00" }),
+    S({ id: "d", seriesId: "x", classType: "HIIT", date: "2026-10-14", startTime: "07:00", endTime: "08:00", cancelled: true }),
+    S({ id: "e", seriesId: "y", classType: "Yoga", date: "2026-10-08", startTime: "11:30", endTime: "12:45" }),
+    S({ id: "f", seriesId: null }),
+  ];
+  const cards = seriesCards(
+    list,
+    [
+      { id: "x", weekdays: [5, 3], intervalWeeks: 1, untilOn: "2026-11-30", count: null },
+      { id: "y", weekdays: [4], intervalWeeks: 2, untilOn: null, count: null },
+    ],
+    now
+  );
+  assert.equal(cards.length, 2);
+  assert.equal(cards[0].next.id, "a");
+  assert.equal(cards[0].typeLine, "HIIT · Repeats every Wed and Fri");
+  assert.equal(cards[0].whenLine, "Next: 2026-10-07 · 7:00–8:00 AM · 2 sessions");
+  assert.equal(cards[1].typeLine, "Yoga · Repeats every 2 weeks on Thu");
+  assert.equal(cards[1].whenLine, "Next: 2026-10-08 · 11:30 AM–12:45 PM · weekly");
 });

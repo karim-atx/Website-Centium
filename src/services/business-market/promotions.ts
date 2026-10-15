@@ -49,6 +49,32 @@ export async function fetchPromotionStats(businessId: string): Promise<Result<Ma
   }
 }
 
+/**
+ * promotion_redemptions since a day (RLS select: marketing or revenue): which
+ * promotion was used, and when. Newest first; at most 5000 rows.
+ */
+export async function fetchPromotionRedemptions(businessId: string, sinceIso: string): Promise<Result<{ promotionId: string; redeemedAt: string }[]>> {
+  try {
+    const out: { promotionId: string; redeemedAt: string }[] = [];
+    for (let from = 0; from < 5000; from += 1000) {
+      const { data, error } = await db
+        .from("promotion_redemptions")
+        .select("promotion_id, redeemed_at")
+        .eq("business_id", businessId)
+        .gte("redeemed_at", sinceIso)
+        .order("redeemed_at", { ascending: false })
+        .range(from, from + 999);
+      if (error) return fail(error, "Couldn't load your promotions.");
+      const rows = (data ?? []) as { promotion_id: string; redeemed_at: string }[];
+      for (const r of rows) out.push({ promotionId: r.promotion_id, redeemedAt: r.redeemed_at });
+      if (rows.length < 1000) break;
+    }
+    return { ok: true, value: out };
+  } catch (e) {
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load your promotions." };
+  }
+}
+
 export interface PromotionInput {
   name: string;
   targetKind: DbPromoTarget;

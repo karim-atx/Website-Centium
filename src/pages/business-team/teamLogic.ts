@@ -4,6 +4,7 @@ import { personUsesSeat, professionLabel } from "../../services/business-team/se
 import { range12 } from "../../utils/time12";
 import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
 import { localDayOf, shiftDate } from "../../utils/date";
+import type { PublicDetails } from "../../services/business-team/types";
 
 // v6 Batch 4 · Team. Pure rules for the team page, person page and sheets
 // (OpsTabsV4 logic lines 462-481, 499-545, 605-611), with the sample data
@@ -275,4 +276,63 @@ export function requestedWhen(iso: string, today: string): string {
     return `Requested today at ${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
   }
   return `Requested ${dayDate(local)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Public profile rows (OP1-132 C1, C2, C5, C6; OP1-124 9c), from what the
+// professional lists publicly. OpsTabsV4 logic 509-510 for the words.
+
+/** Whole years since the earliest job started (OP1-132 C1 OURS rule: no column holds it); null without jobs. */
+export function yearsOfExperience(details: Pick<PublicDetails, "experience">, today: string): number | null {
+  const starts = details.experience.map((e) => e.startMonth).filter((m): m is string => !!m && /^\d{4}-\d{2}/.test(m)).sort();
+  if (!starts.length) return null;
+  const [y, m] = starts[0].split("-").map(Number);
+  const [ty, tm] = today.split("-").map(Number);
+  const months = (ty - y) * 12 + (tm - m);
+  return months >= 12 ? Math.floor(months / 12) : null;
+}
+
+const yearsText = (n: number) => `${n} ${n === 1 ? "year's" : "years'"} experience`;
+
+/** C1: "Spin and strength · 6 years' experience"; either half alone; null with neither. */
+export function specialtySub(details: PublicDetails, today: string): string | null {
+  const years = yearsOfExperience(details, today);
+  const parts = [details.specialty, years ? yearsText(years) : null].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** C2: "{title}, {organisation}" / "{start year} to {end year or now}". */
+export function jobRow(job: PublicDetails["experience"][number]): { title: string; sub: string | null } {
+  const from = job.startMonth?.slice(0, 4) ?? null;
+  const to = job.endMonth ? job.endMonth.slice(0, 4) : "now";
+  return { title: job.organisation ? `${job.title}, ${job.organisation}` : job.title, sub: from ? `${from} to ${to}` : null };
+}
+
+/** 9c: "{discipline} · {specialty or experience}"; null when neither is known. */
+export function requestLine(details: PublicDetails | null, today: string): string | null {
+  if (!details) return null;
+  const discipline = professionLabel({ subtype: details.subtype });
+  const years = yearsOfExperience(details, today);
+  const what = details.specialty ?? (years ? yearsText(years) : null);
+  const parts = [discipline, what].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** C6 values and their external link (S2), or null when the value can't be a safe link. */
+export function profileLink(kind: "website" | "instagram" | "x", raw: string): { text: string; href: string | null } {
+  const v = raw.trim();
+  if (kind === "website") {
+    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
+    let href: string | null = null;
+    try {
+      const u = new URL(withScheme);
+      href = u.protocol === "https:" || u.protocol === "http:" ? u.href : null;
+    } catch {
+      href = null;
+    }
+    return { text: v.replace(/^https?:\/\//i, "").replace(/\/$/, ""), href };
+  }
+  const handle = v.replace(/^https?:\/\/(www\.)?(instagram\.com|x\.com|twitter\.com)\//i, "").replace(/^@/, "").replace(/\/.*$/, "");
+  const ok = /^[A-Za-z0-9._]{1,30}$/.test(handle);
+  return { text: `@${handle}`, href: ok ? (kind === "instagram" ? `https://www.instagram.com/${handle}/` : `https://x.com/${handle}`) : null };
 }

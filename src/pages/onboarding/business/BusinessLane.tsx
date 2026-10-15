@@ -13,6 +13,7 @@ import type { LaneStepProps } from "./laneTypes";
 import {
   saveBusinessBasics,
   saveClassDefaults,
+  saveOfferPlans,
   saveEntrySettings,
   savePolicyDrafts,
   saveStarterPlan,
@@ -98,12 +99,17 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
           const r = await saveStoreSettings(d.businessId, d.essentials);
           if (!r.ok) return r;
         } else if (d.lane === "classes" && d.gymId) {
-          const r = await saveClassDefaults(d.gymId, d.essentials);
+          const r = await saveClassDefaults(d.businessId, d.gymId, d.essentials);
           if (!r.ok) return r;
         }
         if (d.lane === "gym" && d.gymId) {
           // B10: minimum entry age, guest passes, front desk check-in.
           const r = await saveEntrySettings(d.gymId, d.essentials);
+          if (!r.ok) return r;
+        }
+        if (d.lane === "classes" || d.lane === "gym") {
+          // OURS-essentials-additions 4 / 5: Intro offer (classes) and Day pass (gym) plans.
+          const r = await saveOfferPlans(d.businessId, d.lane, d.essentials);
           if (!r.ok) return r;
         }
         if (d.lane === "gym" && d.essentials.starterPlan) {

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { PopupMenu } from "../ui/PopupMenu";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import { startMemberThread } from "../../services/messaging";
 import { initials } from "../professionals/typeColour";
 import { fetchClassRoster } from "../../services/venues/console";
 import { isMaskedLabel, methodLabel, money, splitRoster, type RosterEntry } from "../../services/venues/consoleLogic";
@@ -23,6 +27,11 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // CL-08: venue_class_roster returns booking_id, so a booked row awaiting
 // payment opens "Mark as paid" for a seat with front desk access
 // (useMarkBookingPaid, OP1-083 K2). Waitlist rows never do.
+//
+// OURS-AN4-member-rosters #28 (B7 MB-02): a booked row opens the same
+// PopupMenu with "Message" for a seat with `messages`: start_member_thread
+// with venue_class_roster's person_id (customers count as own customers),
+// then the thread (VenueMembersRoster's pattern). One menu holds both actions.
 
 const PAY: Record<string, { label: string; tone: PillTone }> = {
   paid: { label: "Paid", tone: "good" },
@@ -77,6 +86,23 @@ export function ClassRosterSheet({
       onMarkedPaid?.();
     },
   });
+  const navigate = useNavigate();
+  const access = useConsoleAccess();
+  const canMessage = access.ready && access.meets("messages") && !!access.businessId;
+  const [menu, setMenu] = useState<{ entry: RosterEntry; anchor: HTMLElement } | null>(null);
+  const [msgBusy, setMsgBusy] = useState(false);
+  const [msgError, setMsgError] = useState<string | null>(null);
+  const messageable = (e: RosterEntry) => canMessage && e.kind === "booked" && !!e.personId;
+  const message = async (e: RosterEntry) => {
+    setMenu(null);
+    if (msgBusy || !access.businessId || !e.personId) return;
+    setMsgBusy(true);
+    setMsgError(null);
+    const r = await startMemberThread(access.businessId, e.personId);
+    setMsgBusy(false);
+    if (!r.ok) return setMsgError(r.message);
+    navigate("/app/messages", { state: { threadId: r.threadId } });
+  };
 
   useEffect(() => {
     if (!classId) return;
@@ -112,6 +138,7 @@ export function ClassRosterSheet({
   const row = (e: RosterEntry, i: number) => {
     const tag = e.paymentStatus ? PAY[e.paymentStatus] : null;
     const markable = pay.can(e);
+    const actionable = markable || messageable(e);
     const price = e.priceAgreed !== null ? (e.priceAgreed > 0 ? money(e.priceAgreed) : "Free") : null;
     const sub =
       e.kind === "booked"
@@ -125,9 +152,16 @@ export function ClassRosterSheet({
         titleExtra={e.isMinor && <VPill tone="pale" label="Under 18" />}
         sub={sub}
         right={e.kind === "booked" && tag ? <VPill tone={tag.tone} label={tag.label} /> : undefined}
-        onClick={markable ? (ev) => pay.open(e, ev.currentTarget) : undefined}
-        ariaLabel={markable && tag ? `${e.label}, ${tag.label}. Actions` : undefined}
-        disabled={markable ? pay.busy : undefined}
+        onClick={
+          actionable
+            ? (ev) => {
+                setMsgError(null);
+                setMenu({ entry: e, anchor: ev.currentTarget });
+              }
+            : undefined
+        }
+        ariaLabel={actionable ? `${e.label}${tag ? `, ${tag.label}` : ""}. Actions` : undefined}
+        disabled={actionable ? pay.busy || msgBusy : undefined}
       />
     );
   };
@@ -177,13 +211,37 @@ export function ClassRosterSheet({
           )}
           {entries && list.map(row)}
           {entries && view === "booked" && booked.length === 0 && <VDetailRow avatar={<VAvatar icon={Users} />} title="Nobody has booked yet." />}
-          {pay.error && (
+          {(pay.error || msgError) && (
             <p className={`border-t ${DIVIDER} text-[11.5px] font-bold leading-[16px] text-status-high`} role="alert" style={{ padding: "10px 16px" }}>
-              {pay.error}
+              {pay.error ?? msgError}
             </p>
           )}
         </div>
       </div>
+      <PopupMenu
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        variant="field"
+        width={204}
+        heading={menu?.entry.label}
+        options={[
+          ...(menu && pay.can(menu.entry)
+            ? [
+                { value: "paid", label: "Mark as paid", disabled: !online },
+                { value: "ref", label: "Add a reference", disabled: !online },
+              ]
+            : []),
+          ...(menu && messageable(menu.entry) ? [{ value: "message", label: "Message", disabled: !online }] : []),
+        ]}
+        onSelect={(v) => {
+          if (!menu) return;
+          const e = menu.entry;
+          setMenu(null);
+          if (v === "ref") return pay.openReference(e);
+          void (v === "message" ? message(e) : pay.run(e));
+        }}
+      />
       {pay.element}
     </BottomSheet>
   );

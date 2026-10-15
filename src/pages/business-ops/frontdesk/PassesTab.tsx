@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { startMemberThread } from "../../../services/messaging";
-import { Banknote, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { Banknote, CheckCircle2, CircleAlert, RefreshCw, XCircle } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useBizToast } from "../../../components/business-more/useBizToast";
@@ -12,6 +12,8 @@ import { offerPromotionUsed } from "../../../components/promotions/promotionUsed
 import { deskMoney, renewalSub, weekSales, type DeskSale, type FrontDeskMember, type RenewalDue } from "../../../services/front-desk/frontDeskLogic";
 import type { DeskState } from "./useFrontDesk";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
+import { todayLocal } from "../../../utils/date";
+import { expiredRows, expiredSub, type ExpiredRow } from "./expiredRows";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, NumberBoxes, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
 // OP1-017 (Passes and renewals) and OP1-019 (End membership?), on B7 MB-05:
@@ -26,6 +28,10 @@ import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, Nu
 // - Remind = start_member_thread(business, person) (B7 MB-02), then the
 //   member's one thread opens in Messages to write the reminder. It needs
 //   the messages permission; without it the chip stays, unavailable.
+// Expired (OP1-017 row 11): memberships that lapsed in the last 7 days and
+// weren't renewed, from the venue_members rows the desk already reads
+// (expiredRows.ts; the cut-off is UNSPECIFIED, the renewals window). A status,
+// not an action: highBg / high chip, no menu.
 // Day passes this week (OP1-017 row 13, B10 OP-02): desk_sales at the desk
 // venue since Monday: Sold = every sale, Revenue = the paid ones' total;
 // "Joined after" needs a reader that links a day pass to a later membership
@@ -91,6 +97,10 @@ export const PassesTab: React.FC<{
     onDeskChanged();
   };
   const later = renewals.filter((r) => r.daysLeft > 7);
+  const expired = expiredRows(members, todayLocal());
+  const dueNow: (RenewalDue | ExpiredRow)[] = [...week, ...expired];
+  const isExpired = (r: RenewalDue | ExpiredRow): r is ExpiredRow => "daysAgo" in r;
+  const anyRow = (r: RenewalDue | ExpiredRow, i: number) => (isExpired(r) ? expiredRow(r, i) : row(r, i));
 
   const renew = async (r: RenewalDue) => {
     if (busy) return;
@@ -135,6 +145,10 @@ export const PassesTab: React.FC<{
     />
   );
 
+  const expiredRow = (r: ExpiredRow, i: number) => (
+    <DeskRow key={r.membershipId} icon={CircleAlert} title={r.label} sub={expiredSub(r.daysAgo)} first={i === 0} trailing={<StatusChip tone="high">Expired</StatusChip>} />
+  );
+
   const overlays = (
     <>
       <RenewalMenu
@@ -168,7 +182,7 @@ export const PassesTab: React.FC<{
       <div className="flex flex-col">
         <DeskLabel action={{ label: "Back", onClick: () => setSeeAll(false), ariaLabel: "Back to passes and renewals" }}>Renewals in the next 30 days</DeskLabel>
         <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>This week</p>
-        {week.length ? <ListCard label="This week">{week.map(row)}</ListCard> : <ListLine>None due</ListLine>}
+        {dueNow.length ? <ListCard label="This week">{dueNow.map(anyRow)}</ListCard> : <ListLine>None due</ListLine>}
         <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>Later</p>
         {later.length ? <ListCard label="Later">{later.map(row)}</ListCard> : <ListLine>None due</ListLine>}
         {overlays}
@@ -179,15 +193,15 @@ export const PassesTab: React.FC<{
   return (
     <div className="flex flex-col">
       <PassCard />
-      <DeskLabel action={week.length > 3 || later.length > 0 ? { label: "See all", onClick: () => setSeeAll(true), ariaLabel: "See all renewals" } : undefined}>Renewals due</DeskLabel>
+      <DeskLabel action={dueNow.length > 3 || later.length > 0 ? { label: "See all", onClick: () => setSeeAll(true), ariaLabel: "See all renewals" } : undefined}>Renewals due</DeskLabel>
       {loading && renewals.length === 0 ? (
         <RowsSkeleton />
       ) : error && renewals.length === 0 ? (
         <ErrorCard title="Couldn't load renewals" onRetry={onRetry} />
-      ) : week.length === 0 ? (
+      ) : dueNow.length === 0 ? (
         <ListLine>None due</ListLine>
       ) : (
-        <ListCard label="Renewals due">{week.slice(0, 3).map(row)}</ListCard>
+        <ListCard label="Renewals due">{dueNow.slice(0, 3).map(anyRow)}</ListCard>
       )}
       {(sellsDayPass || (desk.weekSales?.length ?? 0) > 0 || desk.live !== true) && (
         <>

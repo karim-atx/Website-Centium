@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { isOpen, returnGroup } from "../../../services/store/orderSteps";
 import { completedBucket } from "../../../services/store/format";
 import { EmptyCard, ErrorCard, ListCard, ListSkeleton, OpsHeader, P_DARK } from "./opsKit";
-import { useLive, useStoreBusiness } from "./storeShared";
+import { ORDER_KINDS, useLive, useStoreBusiness } from "./storeShared";
 import { CompletedRow, OrderRow, ReturnRow, loadOrdersData } from "./StoreOrdersPage";
 import { Package } from "lucide-react";
 
@@ -17,7 +17,7 @@ export default function OrdersListPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { businessId, ready } = useStoreBusiness();
-  const live = useLive(businessId ? () => loadOrdersData(businessId) : null);
+  const live = useLive(businessId ? () => loadOrdersData(businessId) : null, 120000, "", { businessId, kinds: ORDER_KINDS });
   const [shown, setShown] = useState(PAGE);
   const s = live.state;
 

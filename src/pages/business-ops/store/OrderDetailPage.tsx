@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Banknote, CircleX, MapPin, MessageSquare, Package, Truck } from "lucide-react";
+import { Banknote, CircleX, MapPin, MessageCircle, MessageSquare, Package, Truck } from "lucide-react";
 import { advanceOrder, cancelOrder, fetchStoreOrder, markOrderPaid } from "../../../services/store/orders";
 import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
 
@@ -11,13 +11,15 @@ import { fetchStoreInfo, type StoreInfo } from "../../../services/store/customer
 import { clock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextButton, useOpsToast } from "./opsKit";
-import { STEP_CHIP, STEP_ICON, customerLabel, customerWho, methodWord, useLive } from "./storeShared";
+import { STEP_CHIP, STEP_ICON, customerLabel, customerWho, methodWord, useLive, useMessagePerson } from "./storeShared";
 
 // OP1-005 / OP1-007 · Order detail, every step (OURS-OP1-store-order-steps)
 // and the cancel confirm (OP1-004, entry = the "Cancel order" text button).
 // B11: advance_order_status (pushes the customer), cancel_order (stock back;
 // a paid order stays paid and its refund is recorded in Revenue),
 // mark_order_paid (the store records the cash; Centium processes no money).
+// Row 13: "Message {customer}" in the Delivery / Pickup card opens the
+// business's thread with them (start_member_thread, gate messages).
 
 export default function OrderDetailPage() {
   const { orderId = "" } = useParams();
@@ -28,6 +30,7 @@ export default function OrderDetailPage() {
   const [stepError, setStepError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const msg = useMessagePerson();
   const [store, setStore] = useState<StoreInfo | null>(null);
 
   const s = live.state;
@@ -157,7 +160,15 @@ export default function OrderDetailPage() {
           <KitRow icon={MapPin} title={store?.location ?? store?.name ?? "Your store"} sub={["Pickup", customerWho(order)].join(" · ")} />
         )}
         {order.note && <KitRow icon={MessageSquare} title="Note from the customer" sub={order.note} subWrap />}
+        {msg.can && order.customerId && (
+          <KitRow icon={MessageCircle} title={`Message ${customer}`} onClick={() => void msg.open(order.customerId!)} disabled={!online || msg.busy} />
+        )}
       </ListCard>
+      {msg.error && (
+        <p role="alert" className="text-[11.5px] font-bold text-status-high text-center" style={{ margin: "-6px 0 10px" }}>
+          {msg.error}
+        </p>
+      )}
 
       <NumberBoxes
         items={[

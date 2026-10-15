@@ -7,7 +7,7 @@ import { ageLabel, completedBucket, completedWhen, money } from "../../../servic
 import { fetchStoreInfo } from "../../../services/store/customer";
 import type { Load } from "../../../services/store/backend";
 import { EmptyCard, ErrorCard, KitLabel, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextTabs } from "./opsKit";
-import { customerLabel, customerWho, methodWord, useLive, useStoreBusiness } from "./storeShared";
+import { ORDER_KINDS, customerLabel, customerWho, methodWord, useLive, useStoreBusiness } from "./storeShared";
 import { AppointmentsPanel } from "../appointments/AppointmentsPage";
 
 // OP1-001 / OP1-003 · Store › Orders (the Orders navbar tab root, V6-54):
@@ -117,7 +117,7 @@ export default function StoreOrdersPage({ title = "Orders" }: { title?: string }
   const tab: TabKey = raw && tabs.some((t) => t.key === raw) ? raw : "fulfil";
   const setTab = (k: TabKey) => setParams(k === "fulfil" ? {} : { tab: k }, { replace: true });
 
-  const live = useLive(businessId ? () => loadOrdersData(businessId) : null);
+  const live = useLive(businessId ? () => loadOrdersData(businessId) : null, 120000, "", { businessId, kinds: ORDER_KINDS });
   const s = live.state;
 
   const data = s.status === "ok" ? s.value : null;

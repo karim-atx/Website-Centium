@@ -95,3 +95,21 @@ test("a featured target: a class, a product, else the business", () => {
   assert.deepEqual(placementTarget("plan", "m1", "b1"), { kind: "business", id: "b1" });
   assert.deepEqual(placementTarget("offer", "offer:10% off", "b1"), { kind: "business", id: "b1" });
 });
+
+test("promotion starts become discount markers on the bucket holding the start day", async () => {
+  const { promoStartMarkers } = await import("./promoLogic.ts");
+  const weeks = ["2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12"];
+  const rows = [
+    { startsOn: "2026-09-30", t: "a" },
+    { startsOn: "2026-10-12", t: "b" },
+    { startsOn: "2026-10-13", t: "same week" },
+    { startsOn: "2026-09-01", t: "before" },
+    { startsOn: "2026-10-20", t: "scheduled" },
+  ];
+  const m = promoStartMarkers(rows, weeks, "2026-10-18", (p) => p.t, "2026-10-15");
+  assert.deepEqual(m, [
+    { i: 1, t: "a", kind: "discount" },
+    { i: 3, t: "b", kind: "discount" },
+  ]);
+  assert.deepEqual(promoStartMarkers(rows, [], "2026-10-18", (p) => p.t, "2026-10-15"), []);
+});

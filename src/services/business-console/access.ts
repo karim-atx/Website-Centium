@@ -75,8 +75,10 @@ export interface EmploymentRow {
  * The seats from the two reads. The owned business wins: an owner who is also
  * on somebody else's team keeps their own console (the business account's
  * whole app is built around it). Staff seats need an ACCEPTED employment (B6:
- * an unaccepted one is no key to anything) and at least one permission (a
- * "staff" role with none has nothing to open).
+ * an unaccepted one is no key to anything). A seat with no permissions is
+ * kept (it opens nothing, but the console's no-access card can then name the
+ * business and send the person to its owner); a seat that opens something is
+ * preferred when none was chosen.
  */
 export function buildAccess(
   owned: OwnedRow | null,
@@ -91,11 +93,10 @@ export function buildAccess(
   for (const e of employments) {
     if (!e.accepted_at || e.business_id === owned?.id) continue;
     const permissions = cleanPermissions(e.permissions);
-    if (permissions.length === 0) continue;
     const n = names.get(e.business_id);
     seats.push({ businessId: e.business_id, businessName: n?.name ?? "A business", isOwner: false, permissions, role: e.role, businessType: n?.type ?? null });
   }
-  const current = owned ? seats[0] : (seats.find((s) => s.businessId === chosen) ?? seats[0] ?? null);
+  const current = owned ? seats[0] : (seats.find((s) => s.businessId === chosen) ?? seats.find((s) => s.permissions.length > 0) ?? seats[0] ?? null);
   return { current, seats };
 }
 

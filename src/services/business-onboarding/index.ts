@@ -9,6 +9,8 @@ import { uploadWithProgress } from "../storage";
 import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "../business-more/cover";
 import { OB_STRINGS } from "../../pages/onboarding/shell/flow";
 import { looksBlurry } from "./blurCheck";
+import { fetchBookingPolicies, setBookingPolicy } from "../business-classes/schedule";
+import { POLICY_RANGE, type BookingPolicy, type PolicyField } from "../business-classes/scheduleRules";
 import {
   amenityKeysOf,
   businessTypeFor,
@@ -321,6 +323,47 @@ export async function saveStarterPlan(businessId: string, plan: StarterPlan, exi
 }
 
 /**
+ * OURS-essentials-additions rows 4 and 5 (B7 MB-03 plan_type): the Classes
+ * lane's Intro offer and the Gym lane's Day pass become membership_plans
+ * rows, shaped as the Plans editor writes them (PlanSheet / planModel
+ * billingForKind): Day pass = plan_type day_pass, billing daily; Intro offer
+ * = plan_type intro_offer, valid 7 days (the editor's default length),
+ * billing monthly; "First class free" is price 0. Idempotent without a
+ * stored id: the business's one plan of that type (only onboarding has
+ * written one while the lane runs) is updated, else one is inserted. Turned
+ * off again, that plan is archived, never deleted. A Day pass or Intro pack
+ * without a valid price stays in the draft until it has one.
+ */
+export async function saveOfferPlans(businessId: string, lane: BizLane, e: Essentials): Promise<Res<null>> {
+  const want =
+    lane === "classes"
+      ? {
+          type: "intro_offer" as const,
+          on: e.introOn,
+          row: e.introKind === "first_free" ? { name: "First class free", price: 0 } : { name: "Intro pack", price: money2(e.introPrice) },
+          extra: { billing: "monthly", valid_for_days: 7 },
+        }
+      : lane === "gym"
+        ? { type: "day_pass" as const, on: e.dayPassOn, row: { name: "Day pass", price: money2(e.dayPassPrice) }, extra: { billing: "daily", valid_for_days: null } }
+        : null;
+  if (!want) return { ok: true, value: null };
+  const found = await db.from("membership_plans").select("id").eq("business_id", businessId).eq("plan_type", want.type).order("created_at", { ascending: true }).limit(1);
+  if (found.error) return fail(found.error);
+  const existing = ((found.data ?? []) as { id: string }[])[0]?.id ?? null;
+  if (!want.on) {
+    if (!existing) return { ok: true, value: null };
+    const off = await db.from("membership_plans").update({ status: "archived" }).eq("id", existing);
+    return off.error ? fail(off.error) : { ok: true, value: null };
+  }
+  if (want.row.price == null) return { ok: true, value: null };
+  const row = { name: want.row.name, price: want.row.price, billing: want.extra.billing, valid_for_days: want.extra.valid_for_days, plan_type: want.type, status: "active" };
+  const r = existing
+    ? await db.from("membership_plans").update(row).eq("id", existing)
+    : await db.from("membership_plans").insert({ business_id: businessId, ...row });
+  return r.error ? fail(r.error) : { ok: true, value: null };
+}
+
+/**
  * Gym (B10, OB-259 "Entry and check-in"): the venue's minimum entry age
  * (16-21), guest passes a month (0-10) and whether the front desk can check
  * people in. gyms.access_qr stays on (one access method is required). A
@@ -339,10 +382,34 @@ export async function saveEntrySettings(gymId: string, e: Essentials): Promise<R
   return { ok: true, value: null };
 }
 
-/** Classes: the venue's default cancellation window (gyms.default_cancellation_hours). */
-export async function saveClassDefaults(gymId: string, e: Essentials): Promise<Res<null>> {
+/**
+ * Classes (B9 CL-05): the business default row of business_booking_policies
+ * (class_type null) with the essentials' cancellation window, booking window,
+ * closes-before, class size and waitlist, plus the venue's
+ * gyms.default_cancellation_hours. Values are clamped to the table's CHECK
+ * ranges (POLICY_RANGE). Writing needs business_can(schedule); the owner has it.
+ * The picked class TYPES have no storage yet and stay in the draft only.
+ */
+export async function saveClassDefaults(businessId: string, gymId: string, e: Essentials): Promise<Res<null>> {
   const { error } = await db.from("gyms").update({ default_cancellation_hours: e.cancelHours }).eq("id", gymId);
   if (error) return fail(error);
+  const read = await fetchBookingPolicies(businessId);
+  if (!read.ok) return { ok: false, message: SAVE_FAIL };
+  let row: BookingPolicy | null = read.value.find((p) => p.classType === null) ?? null;
+  const clamp = (f: PolicyField, v: number) => Math.min(POLICY_RANGE[f][1], Math.max(POLICY_RANGE[f][0], Math.round(v)));
+  const want: [PolicyField, number][] = [
+    ["cancellationHours", clamp("cancellationHours", e.cancelHours)],
+    ["bookingWindowDays", clamp("bookingWindowDays", e.bookAheadDays)],
+    ["closesMinutesBefore", clamp("closesMinutesBefore", e.closesBeforeMin)],
+    ["defaultCapacity", clamp("defaultCapacity", e.spots)],
+    ["waitlistCap", clamp("waitlistCap", e.waitlist)],
+  ];
+  for (const [field, value] of want) {
+    if (row && row[field] === value) continue;
+    const r = await setBookingPolicy(businessId, row, null, field, value);
+    if (!r.ok) return typeof navigator !== "undefined" && !navigator.onLine ? { ok: false, offline: true, message: OFFLINE_MESSAGE } : { ok: false, message: SAVE_FAIL };
+    row = r.value;
+  }
   return { ok: true, value: null };
 }
 

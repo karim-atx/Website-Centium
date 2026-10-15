@@ -67,6 +67,9 @@ export const professionalSidebarNavItems: NavItem[] = [
   // with the Professional badge. Removed for an under-18 in Sidebar.
   { to: "/app/forum", label: "Forum", icon: MessageSquare },
   { to: "/app/marketplace", label: "Explore", icon: Store },
+  // B7: the teams this professional is on, their invites and the console
+  // areas each team opens (MyBusinessesPage); the bar reaches it from More.
+  { to: "/app/businesses", label: "Your businesses", icon: Building2 },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];
 

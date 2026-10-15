@@ -9,6 +9,7 @@ import { useApp } from "../../../context/AppContext";
 import { fetchClassRoster } from "../../../services/venues/console";
 import { splitRoster } from "../../../services/venues/consoleLogic";
 import { uploadClassCover } from "../../../services/business-classes/schedule";
+import { sendMessage, startThread } from "../../../services/messaging";
 import { cancelBody, cancelledToast, dayMonth, repeatsSentence, seriesToast, toldTail } from "../../../services/business-classes/scheduleRules";
 import { ClassSheet } from "./ClassSheet";
 import { blankForm, carryOf, formOf, type ClassForm } from "./classForm";
@@ -237,14 +238,16 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         today={today}
         people={people}
         onClose={() => setSubFor(null)}
-        onAssign={async (pid) => {
+        onAssign={async (pid, note) => {
           if (!subSession) return { ok: false, message: "" };
           // OP1-072 row 6: booked members get a message with the new instructor.
           const r = await api.assign(subSession.id, pid, subSession.booked > 0);
           if (!r.ok) return r;
+          // OP1-092 S1: the note goes to the substitute, in the owner's thread with them, after the assignment landed.
+          const noteSent = note && authUserId ? await sendNote(pid, authUserId, note) : true;
           setSubFor(null);
           // OP1-073 T4 (12-hour day words), "{n} {people} were told." only when the notice went out.
-          show(`${api.nameOf(pid)} now teaches ${subSession.title} ${dayWords(subSession.date, today)}.${toldTail(r.told, people)}`);
+          show(`${api.nameOf(pid)} now teaches ${subSession.title} ${dayWords(subSession.date, today)}.${toldTail(r.told, people)}${noteSent ? "" : " Couldn't send your note."}`);
           return { ok: true };
         }}
       />
@@ -399,3 +402,11 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
 }
 
 export type SessionActions = ReturnType<typeof useSessionActions>;
+
+/** The substitute's note (OP1-089 row 4): their direct thread with the sender, opened or found. */
+async function sendNote(professionalId: string, senderId: string, note: string): Promise<boolean> {
+  const t = await startThread(professionalId);
+  if (!t.ok) return false;
+  const m = await sendMessage(t.threadId, senderId, note);
+  return m.ok;
+}

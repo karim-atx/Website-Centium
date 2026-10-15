@@ -29,10 +29,18 @@ export function ConsoleGate({ need, children }: { need: ConsoleNeed | ConsoleNee
       </div>
     );
   }
-  return <NoAccess needs={needs} businessName={access.current?.businessName ?? null} failed={access.failed} onRetry={access.retry} />;
+  return (
+    <NoAccess
+      needs={needs}
+      businessName={access.current?.businessName ?? null}
+      nothingOn={!!access.current && !access.current.isOwner && access.current.permissions.length === 0}
+      failed={access.failed}
+      onRetry={access.retry}
+    />
+  );
 }
 
-function NoAccess({ needs, businessName, failed, onRetry }: { needs: ConsoleNeed[]; businessName: string | null; failed: boolean; onRetry: () => void }) {
+function NoAccess({ needs, businessName, nothingOn, failed, onRetry }: { needs: ConsoleNeed[]; businessName: string | null; nothingOn: boolean; failed: boolean; onRetry: () => void }) {
   const navigate = useNavigate();
   const labels = needs.map(needLabel).filter((l): l is string => !!l);
   const ownerOnly = labels.length === 0;
@@ -41,7 +49,9 @@ function NoAccess({ needs, businessName, failed, onRetry }: { needs: ConsoleNeed
     ? "Check your connection and try again."
     : !businessName
       ? "Join a business's team and ask the owner for access. Your businesses lists the teams you're on."
-      : ownerOnly
+      : nothingOn
+        ? `${businessName}'s owner hasn't turned on anything you can do in their business console yet. Ask them for access.`
+        : ownerOnly
         ? `Only ${businessName}'s owner can use this page.`
         : `Ask ${businessName}'s owner to turn on ${labels.map((l) => `"${l}"`).join(" or ")} for you.`;
   return (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Banknote, CalendarCheck, CircleX, Clock, FileWarning, Tag, User } from "lucide-react";
+import { Banknote, CalendarCheck, CircleX, Clock, FileWarning, MessageCircle, Tag, User } from "lucide-react";
 import { apptChip, cancelAppointment, fetchDiaryDetail, markAppointment, markAppointmentPaid, payWords } from "../../../services/appointments";
 import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
 
@@ -8,10 +8,11 @@ import { dayClock, dayTitle, money } from "../../../services/store/format";
 import { rangeClock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, ListCard, ListSkeleton, OpsHeader, TextButton, useOpsToast } from "../store/opsKit";
-import { useLive } from "../store/storeShared";
+import { useLive, useMessagePerson } from "../store/storeShared";
 
-// OURS-OP1-appointments-detail rows 1-14 (OP1-005 pattern). The Message row
-// (row 6) waits on business-to-client messaging (BU2-19) and is not shown.
+// OURS-OP1-appointments-detail rows 1-14 (OP1-005 pattern). Row 6: "Message
+// {client}" opens the business's thread with them (B7 start_member_thread,
+// gate messages; own clients only, which an appointment makes them).
 //
 // B12: the appointment is the business_appointments row of its day (masked
 // label); mark_appointment(completed | no_show) after the start (schedule);
@@ -34,6 +35,7 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const msg = useMessagePerson();
   const s = live.state;
   const a = s.status === "ok" ? s.value : null;
 
@@ -129,7 +131,13 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
         <KitRow icon={User} title={client} sub={a.bookedAt ? `Booked ${dayClock(a.bookedAt)}` : undefined} />
         {/* B12 follow-up: a desk booking isn't blocked by the waiver; it says when it is still owed. */}
         {a.waiverPending && <KitRow icon={FileWarning} title="Terms not accepted yet" sub={`${client} accepts them in the app before the visit.`} chip={{ label: "Waiver", tone: "warn" }} />}
+        {msg.can && a.clientId && <KitRow icon={MessageCircle} title={`Message ${client}`} onClick={() => void msg.open(a.clientId!)} disabled={!online || msg.busy} />}
       </ListCard>
+      {msg.error && (
+        <p role="alert" className="text-[11.5px] font-bold text-status-high text-center" style={{ margin: "-6px 0 10px" }}>
+          {msg.error}
+        </p>
+      )}
 
       <KitLabel label="Details" />
       <ListCard label="Details">

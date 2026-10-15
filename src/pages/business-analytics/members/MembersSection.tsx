@@ -1,13 +1,12 @@
 import { useEffect, useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { MailPlus, Users } from "lucide-react";
 import { useOnline } from "../../../hooks/useOnline";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useAnalytics } from "../analyticsContext";
-import { AnCard, AnEmptyCard, AnHint, AnIndexRow, AnIndexSkeleton, AnStrip } from "./anKit";
-import { indexValue, pageView, pagesOf, vocabOf } from "./membersModel";
+import { AnCard, AnEarlyHint, AnHint, AnIndexRow, AnIndexSkeleton, AnStrip } from "./anKit";
+import { EARLY_LINE, indexValue, isEarly, pageView, pagesOf, vocabOf } from "./membersModel";
 import { useMembersFigures } from "./useMembersFigures";
-import { DeltaText } from "./MembersPage";
+import { DeltaText, MembersEmptyCard } from "./MembersPage";
 import { isoOf, rangeWords } from "../analyticsRange";
 import { liveCodes, useMembersData } from "./useMembersData";
 import { MembersPage } from "./MembersPage";
@@ -32,11 +31,14 @@ export function MembersSection() {
   const online = useOnline();
   const data = useMembersData();
   const access = useConsoleAccess();
-  const vocab = vocabOf(kind);
-  const pages = useMemo(() => pagesOf(kind), [kind]);
+  const vocab = useMemo(() => vocabOf(kind), [kind]);
+  // OURS-AN4-classes-variant row 7: no plans and no members (once both are read) → no Plans row, "of 4".
+  const hidePlans = kind === "classes" && !data.loading && !data.plansLoading && data.members !== null && data.plans.length === 0 && data.memberTotal === 0;
+  const pages = useMemo(() => pagesOf(kind, { hidePlans }), [kind, hidePlans]);
   // B15: each page's boxes and lead from the readers (membersModel pageView).
   const today = isoOf(new Date());
   const fig = useMembersFigures(kind === "store" ? null : data.businessId, range, today);
+  const early = isEarly(vocab, fig.figures);
   const views = useMemo(() => {
     const ctx = { planCount: data.plans.length, rangeKey: range.key, rangeWords: rangeWords(range, today), compare: range.compare };
     return new Map(pages.map((p) => [p.key, pageView(p, vocab, fig.figures, ctx)]));
@@ -48,7 +50,9 @@ export function MembersSection() {
   // has ever had (pending, active, declined, ended), so "none ever" is real now.
   const anyMembers = data.memberTotal > 0 || (data.members?.length ?? 0) > 0 || data.venues.some((v) => v.activeMembers > 0 || v.membershipsAwaitingPayment > 0);
   const known = !data.loading && !data.venuesLoading && (data.members !== null || !data.businessId) && (fig.loaded || !data.businessId);
-  const empty = kind !== "classes" && known && !anyMembers;
+  // Classes (OURS-AN4-classes-variant rows 15-16): no client ever booked
+  // (business_people_summary class_clients) and no member ever.
+  const empty = known && !anyMembers && (kind !== "classes" || fig.figures.summary?.class_clients === 0);
 
   // Export CSV: the index rows as they are ("–" exports as an empty cell, never 0).
   useEffect(() => {
@@ -79,7 +83,7 @@ export function MembersSection() {
   if (sub) {
     const page = pages.find((p) => p.key === sub);
     if (!page) return <Navigate to={BASE} replace />;
-    return <MembersPage page={page} pages={pages} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} />;
+    return <MembersPage page={page} pages={pages} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} early={known && early} />;
   }
 
   const codesLine = waiting === null ? "Create a code for each new member." : waiting > 0 ? `${waiting} waiting to be used` : "Create a code for each new member.";
@@ -89,20 +93,17 @@ export function MembersSection() {
       {(data.error || fig.error) && <AnStrip offline={!online} text={online ? `Couldn't load your ${vocab.people}. Check your connection and try again.` : `You're offline. Showing ${vocab.people} as of your last visit.`} onRetry={() => { data.reload(); fig.reload(); }} />}
 
       {empty ? (
-        <AnEmptyCard
-          icon={Users}
-          title={`No ${vocab.people} yet`}
-          body="Invite members with a code. Growth, first-90-day health, engagement and plans appear once people join."
-          button={{ label: "Invite members", icon: MailPlus, onClick: () => navigate(`${BASE}/codes?create=1`) }}
-        >
+        <MembersEmptyCard vocab={vocab}>
           {!!waiting && (
             <button type="button" onClick={() => navigate(`${BASE}/codes`)} className="tap min-h-[44px] text-[12px] leading-[17px] text-charcoal-faint underline-offset-2 hover:underline">
               {waiting === 1 ? "1 code waiting to be used." : `${waiting} codes waiting to be used.`}
             </button>
           )}
-        </AnEmptyCard>
+        </MembersEmptyCard>
       ) : (
         <>
+          {/* AN4-044 rows 10-11: the early hint, the card 12 under it. */}
+          {known && early && <AnEarlyHint>{EARLY_LINE}</AnEarlyHint>}
           <AnCard label={`${vocab.label} sections`}>
             {!known ? (
               <AnIndexSkeleton rows={pages.length} />

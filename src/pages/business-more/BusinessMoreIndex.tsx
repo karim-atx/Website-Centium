@@ -47,6 +47,8 @@ import {
 import { returnsSummary } from "./storePolicyText";
 import { formatShortDate } from "../../utils/date";
 import { fetchJoinRequests } from "../../services/business-team/team";
+import { fetchBookingPolicies } from "../../services/business-classes/schedule";
+import { daysAhead, effectiveRules, policyFor, type BookingPolicy } from "../../services/business-classes/scheduleRules";
 
 // MO1B-007 / -009 / -010 · the business More (BizMoreV8 screen="index",
 // template lines 24 to 26, rows 168 to 175). The client More format with
@@ -80,7 +82,9 @@ export default function BusinessMoreIndex() {
   const [referralOpen, setReferralOpen] = useState(false);
 
   const [team, setTeam] = useState<{ accepted: number; total: number } | null>(null);
-  const [cancelHours, setCancelHours] = useState<number | null | undefined>(undefined);
+  const [venueHours, setVenueHours] = useState<number | null | undefined>(undefined);
+  // B9 (CL-05) business_booking_policies: the business default row outranks the venue's window.
+  const [policies, setPolicies] = useState<BookingPolicy[] | null | undefined>(undefined);
   const [returnsLine, setReturnsLine] = useState<string | null | undefined>(undefined);
   const [checklist, setChecklist] = useState<ChecklistItem[] | null>(null);
   const [renews, setRenews] = useState<string | null>(null);
@@ -94,7 +98,10 @@ export default function BusinessMoreIndex() {
       if (!cancelled && r.ok) setTeam({ accepted: r.value.filter((t) => t.acceptedAt).length, total: r.value.length });
     });
     void fetchLocations(bizId).then((r) => {
-      if (!cancelled) setCancelHours(r.ok && r.value.length > 0 ? r.value[0].cancellationHours : null);
+      if (!cancelled) setVenueHours(r.ok && r.value.length > 0 ? r.value[0].cancellationHours : null);
+    });
+    void fetchBookingPolicies(bizId).then((r) => {
+      if (!cancelled) setPolicies(r.ok ? r.value : null);
     });
     void fetchStoreSettings(bizId).then((r) => {
       if (!cancelled) setReturnsLine(r.ok ? returnsSummary(r.value) : null);
@@ -115,6 +122,12 @@ export default function BusinessMoreIndex() {
     if (!authUserId) return;
     void fetchPlanRenewal(authUserId).then((r) => r.ok && setRenews(r.value));
   }, [authUserId]);
+
+  // The values the Booking policies screen (PoliciesPages) edits; undefined while loading.
+  const rules = policies === undefined || venueHours === undefined ? undefined : effectiveRules(policies ?? [], null, venueHours);
+  const cancelHours = rules === undefined ? undefined : (policies ? policyFor(policies, null)?.cancellationHours : null) ?? venueHours;
+  const windowLine = rules === undefined ? PLACEHOLDER : `Up to ${daysAhead(rules.bookingWindowDays)} ahead`;
+  const waitlistLine = rules === undefined ? PLACEHOLDER : rules.waitlistCap > 0 ? `On · up to ${rules.waitlistCap} ${rules.waitlistCap === 1 ? "person" : "people"}` : "Off";
 
   const go = (to: string) => () => navigate(to);
   const sub = (p: string) => go(`/app/business/more/${p}`);
@@ -225,8 +238,8 @@ export default function BusinessMoreIndex() {
               desc={cancelHours === undefined ? PLACEHOLDER : cancelHours === null ? "Set when you add a location" : `Free until ${cancelHours} hours before`}
               onClick={sub("policies/edit?section=cancellations")}
             />
-            <BizRow well="index" icon={CalendarRange} title="Booking window" desc="Coming soon" onClick={sub("policies/edit?section=window")} />
-            <BizRow well="index" icon={ListOrdered} title="Waitlist" desc="Coming soon" onClick={sub("policies/edit?section=waitlist")} />
+            <BizRow well="index" icon={CalendarRange} title="Booking window" desc={windowLine} onClick={sub("policies/edit?section=window")} />
+            <BizRow well="index" icon={ListOrdered} title="Waitlist" desc={waitlistLine} onClick={sub("policies/edit?section=waitlist")} />
             <BizRow well="index" icon={BellRing} title="Class reminders" desc="Coming soon" onClick={sub("policies/edit?section=reminders")} />
             <BizRow well="index" icon={FileCheck} title="Terms and waivers" desc="Clients accept when booking" onClick={sub("policies")} />
           </BizCard>

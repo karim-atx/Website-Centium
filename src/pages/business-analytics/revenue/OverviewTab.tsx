@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchBusinessTimezone, fetchSalesSummary, type SalesSummary } from "../../../services/store/orders";
+import { fetchBusinessTimezone, fetchSalesSummary, fetchTopProducts, type SalesSummary, type TopProduct } from "../../../services/store/orders";
+import { fetchPromotions, promoStartMarkers, type Promotion } from "../../../services/business-market/promotions";
+import { promoText } from "../../business-market/promoModel";
 import {
   ScrubChart,
   type ScrubCfg,
@@ -91,6 +93,37 @@ export const OverviewTab: React.FC = () => {
     };
   }, [store, businessId, range, salesKey]);
   const storeSales = sales && sales.key === salesKey ? sales.value : null;
+  // AN14-011 row 4: the store's top products for the range (B11
+  // store_top_products, order value), ranked by sales. Hidden until it answers.
+  const [top, setTop] = useState<{ key: string; value: TopProduct[] } | null>(null);
+  useEffect(() => {
+    if (!store || !businessId) return;
+    let alive = true;
+    void (async () => {
+      const r = businessRange(range, await fetchBusinessTimezone(businessId));
+      const t = await fetchTopProducts(businessId, r.from, r.to, 50);
+      if (alive && t.status === "ok")
+        setTop({ key: salesKey, value: [...t.value].sort((a, b) => b.sales - a.sales || b.units - a.units).slice(0, 5) });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [store, businessId, range, salesKey]);
+  const topProducts = top && top.key === salesKey ? top.value : null;
+  // AN14-001 row 7d: discount markers on the chart from promotions.starts_on
+  // (B13, any insider reads them). The plan-price markers have no reader yet
+  // (B8 keeps no plan price-change log).
+  const [promos, setPromos] = useState<Promotion[] | null>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    void fetchPromotions(businessId).then((r) => {
+      if (alive && r.ok) setPromos(r.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId]);
   const rec = useRecordedRevenue(range, data?.records ?? null, { plans: false });
   const f = rec.figures;
 
@@ -315,10 +348,17 @@ export const OverviewTab: React.FC = () => {
         tips,
       });
   }
+  // Markers sit on the bucket holding the start: a day, or a store's week.
+  const buckets = store ? [...new Set(days.map(mondayOf))] : days;
+  const markers =
+    promos && days.length
+      ? promoStartMarkers(promos, buckets, days[days.length - 1], (p) => promoText(kind, p.type, p.value).chip, today)
+      : [];
   const cfg: ScrubCfg = {
     vh: 140,
     labels,
     xl,
+    markers,
     aria: store ? "Sales per week" : "Revenue per day",
     caption:
       "Drag across to read each day, tap to pin one. Tap the legend to show or hide a series.",
@@ -534,6 +574,92 @@ export const OverviewTab: React.FC = () => {
           </div>
         )}
       </RCard>
+
+      {store && topProducts && topProducts.length > 0 && (
+        <TopProducts rows={topProducts} />
+      )}
     </div>
+  );
+};
+
+/**
+ * AN14-011 row 4 "Top products" (COPY store revenue): the AN11 "What's
+ * selling?" rows (OURS-AN11-products-index row 4: rank 22, name 13/800,
+ * 8px bar, value 15/800 + 10/700 caption) ranked by sales, under the chart.
+ */
+const TopProducts: React.FC<{ rows: TopProduct[] }> = ({ rows }) => {
+  const mx = Math.max(1, ...rows.map((r) => r.sales));
+  return (
+    <>
+      <SecLabel>Top products</SecLabel>
+      <RCard className="pt-[10px] px-[16px] pb-[12px]">
+        <div role="list" aria-label="Top products">
+          {rows.map((r, i) => (
+            <div
+              key={r.offeringId ?? r.name}
+              role="listitem"
+              aria-label={`${i + 1}. ${r.name}, ${money(r.sales)}, ${r.units} sold`}
+              className="grid items-center min-h-[52px] py-[6px]"
+              style={{
+                gridTemplateColumns: "22px minmax(0,1fr) auto",
+                columnGap: 10,
+                borderTop: i ? `1px solid ${v("divider")}` : "none",
+              }}
+            >
+              <span
+                aria-hidden
+                className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-extrabold"
+                style={{
+                  background: i === 0 ? v("fill") : v("soft"),
+                  color: i === 0 ? v("on-fill") : v("ink-soft"),
+                }}
+              >
+                {i + 1}
+              </span>
+              <span className="min-w-0" aria-hidden>
+                <span
+                  className="block text-[13px] font-extrabold leading-[17px] truncate"
+                  style={{ color: v("ink") }}
+                >
+                  {r.name}
+                </span>
+                <span
+                  className="block h-[8px] rounded-full mt-[6px] overflow-hidden"
+                  style={{ background: v("track") }}
+                >
+                  <span
+                    className="block h-full rounded-full"
+                    style={{
+                      width: `${((r.sales / mx) * 100).toFixed(1)}%`,
+                      background: i === 0 ? v("pdark") : v("primary"),
+                    }}
+                  />
+                </span>
+              </span>
+              <span className="text-right" aria-hidden>
+                <span
+                  className="block text-[15px] font-extrabold leading-[18px] rv-num"
+                  style={{ color: v("ink") }}
+                >
+                  {money(r.sales)}
+                </span>
+                <span
+                  className="block text-[10px] font-bold leading-[12px] whitespace-nowrap"
+                  style={{ color: v("faint") }}
+                >
+                  {r.units} sold
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <p
+          className="text-[11px] leading-[15px] mt-[6px]"
+          style={{ color: v("faint") }}
+        >
+          Ranked by sales. Sales here are the value of orders placed and not cancelled, paid or not.
+        </p>
+      </RCard>
+    </>
   );
 };

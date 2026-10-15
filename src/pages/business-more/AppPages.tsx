@@ -14,6 +14,9 @@ import { formatShortDate } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
 import { fetchBusinessFamilies, setBusinessFamily, type BusinessFamily, type BusinessFamilyPrefs } from "../../services/business-more/notifications";
+import { CustomRangeSheet } from "../business-analytics/CustomRangeSheet";
+import { dayMonth, isoOf } from "../business-analytics/analyticsRange";
+import { buildExport, exportFileName, presetExportRange, saveCsv, type ExportKind, type ExportRange } from "./exportReports";
 
 // OURS-MO1B-notifications, -export, -security, -deactivate, -business-terms
 // (BizMoreV8 screen="notifications" / "export" / "security" / "account").
@@ -113,31 +116,57 @@ export function BusinessNotificationsPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Export reports (BACKEND BU6-21: no export readers yet)
+// Export reports (OURS-MO1B-export; DI-06: built in the browser from the
+// existing readers, exportReports.ts). Bookings (no bookings list reader) and
+// the PDF summary are not offered.
 
 export function ExportPage() {
-  const { kind, laneSettled } = useBusiness();
+  const { business, kind, laneSettled } = useBusiness();
+  const online = useOnline();
+  const [toast, showToast] = useBizToast();
   const store = kind === "store";
-  const reports = store
+  const reports: [ExportKind, string, string][] = store
     ? [
-        ["Orders", "Every order with products, date and status"],
-        ["Customers", "Join dates and order counts"],
-        ["Transactions", "Payments, refunds and methods"],
+        ["orders", "Orders", "Every order with products, date and status"],
+        ["customers", "Customers", "Join dates and order counts"],
+        ["transactions", "Transactions", "Payments, refunds and methods"],
       ]
     : [
-        ["Bookings", "Every booking with class, date and status"],
-        ["Members", "Plans, join dates and status"],
-        ["Transactions", "Payments, refunds and methods"],
+        ["members", "Members", "Plans, join dates and status"],
+        ["transactions", "Transactions", "Payments, refunds and methods"],
       ];
   const [report, setReport] = useState(0);
   const [range, setRange] = useState(0);
-  const [format, setFormat] = useState(0);
+  const [custom, setCustom] = useState<ExportRange | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const picked = reports[Math.min(report, reports.length - 1)];
+  const chosenRange: ExportRange | null = range === 0 ? presetExportRange("30d") : range === 1 ? presetExportRange("year") : custom;
+  const canDownload = laneSettled && !!business && !!chosenRange && online && !busy;
+
+  const download = async () => {
+    if (!canDownload || !business || !chosenRange) return;
+    setBusy(true);
+    setFailed(false);
+    const r = await buildExport(business.id, picked[0], chosenRange);
+    setBusy(false);
+    if (!r.ok) {
+      setFailed(true);
+      return;
+    }
+    const file = exportFileName(picked[0], chosenRange);
+    saveCsv(file, r.rows);
+    showToast(`${file} downloaded.`);
+  };
+
+  const today = isoOf(new Date());
   return (
-    <BizPage title="Export reports" sub="Download a spreadsheet of your data.">
+    <BizPage title="Export reports" sub="Download a spreadsheet of your data." offline>
       {laneSettled ? (
         <BizSection label="Report">
-          {reports.map(([t, d], i) => (
-            <BizRow key={t} title={t} desc={d} radio={{ selected: report === i }} onClick={() => setReport(i)} />
+          {reports.map(([k, t, d], i) => (
+            <BizRow key={k} title={t} desc={d} radio={{ selected: report === i }} onClick={() => setReport(i)} />
           ))}
         </BizSection>
       ) : (
@@ -149,18 +178,34 @@ export function ExportPage() {
       )}
       <BizSection label="Range">
         {["Last 30 days", "This year", "Custom range"].map((t, i) => (
-          <BizRow key={t} title={t} radio={{ selected: range === i }} onClick={() => setRange(i)} />
+          <BizRow
+            key={t}
+            title={t}
+            desc={i === 2 && custom ? `${dayMonth(custom.from, today)} to ${dayMonth(custom.to, today)}` : undefined}
+            radio={{ selected: range === i }}
+            onClick={() => {
+              setRange(i);
+              // Custom range: the AN1 range sheet.
+              if (i === 2) setSheetOpen(true);
+            }}
+          />
         ))}
       </BizSection>
       <BizSection label="Format">
-        {["CSV (Excel, Google Sheets)", "PDF summary"].map((t, i) => (
-          <BizRow key={t} title={t} radio={{ selected: format === i }} onClick={() => setFormat(i)} />
-        ))}
+        <BizRow title="CSV (Excel, Google Sheets)" radio={{ selected: true }} />
       </BizSection>
-      <BizButton label="Download report" disabled />
-      <p className="text-center text-[11px] leading-[16px] text-charcoal-faint" style={{ marginTop: 8 }}>
-        Downloads are coming soon.
-      </p>
+      {failed && <LoadError onRetry={() => void download()} />}
+      <BizButton label="Download report" busy={busy} disabled={!canDownload} onClick={() => void download()} />
+      <CustomRangeSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        initial={{ key: "custom", ...(custom ?? presetExportRange("30d")), compare: false }}
+        onApply={(r) => {
+          setCustom({ from: r.from, to: r.to });
+          setSheetOpen(false);
+        }}
+      />
+      {toast}
     </BizPage>
   );
 }

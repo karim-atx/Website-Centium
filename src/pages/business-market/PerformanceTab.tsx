@@ -4,6 +4,7 @@ import { ArrowDown, ChevronRight } from "lucide-react";
 import { useMarket } from "./MarketContext";
 import { ScrubChart, type ScrubChartConfig } from "../../components/charts/ScrubChart";
 import { fetchListingPerformance, type ListingPerformance } from "../../services/business-market/listing";
+import { fetchPromotions, promoStartMarkers, type Promotion } from "../../services/business-market/promotions";
 import {
   funnelLine,
   funnelStages,
@@ -31,7 +32,8 @@ import type { MarketPalette } from "./palette";
 // cover 12 weeks only, so there is no previous period: no deltas and no
 // dashed "12 weeks before" line. by_source splits impressions only, so the
 // source chips narrow the first stage. While the readers are absent (probe
-// "pending") the no-data state stands.
+// "pending") the no-data state stands. Promotion starts (promotions.starts_on,
+// B13) mark the chart: tag "Offer on" with the discount kind (V6-104).
 
 export function PerformanceTab() {
   const m = useMarket();
@@ -44,6 +46,17 @@ export function PerformanceTab() {
   const [tick, setTick] = useState(0);
   const live = m.backend.events === "live";
   const businessId = business?.id ?? null;
+  const [promos, setPromos] = useState<Promotion[] | null>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    void fetchPromotions(businessId).then((r) => {
+      if (alive && r.ok) setPromos(r.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId]);
 
   useEffect(() => {
     if (!live || !businessId) return;
@@ -92,6 +105,7 @@ export function PerformanceTab() {
     earlyText: "The trend starts after 2 weeks on Explore.",
     emptyText: `${v.chartModes[0]} and ${doneWord} start once your listing is seen.`,
     curLabel: "This period",
+    markers: promos ? promoStartMarkers(promos, weeks, addDays(weeks[weeks.length - 1], 6), () => "Offer on", isoOf(new Date())) : [],
     modes: [
       {
         t: v.chartModes[0],

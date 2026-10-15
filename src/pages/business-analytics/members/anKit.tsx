@@ -1,5 +1,6 @@
 import React from "react";
 import clsx from "clsx";
+import { useIsDark } from "../../../hooks/useIsDark";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, UserRound, WifiOff, type LucideIcon } from "lucide-react";
 
 // AN4 (AnMembersV6) parts, literal values from AN4-001 / -005 / -025 / -043 /
@@ -291,3 +292,97 @@ export const AnIndexSkeleton: React.FC<{ rows: number }> = ({ rows }) => (
     ))}
   </div>
 );
+
+/**
+ * AN4-024 row 1 / AN4-044 row 10 · the early-data hint: r12 #F5F5F6 · #242730
+ * (c.soft), padding 9 12, 11.5/16 #5B5349 · #B8B3C7, 12 above the card.
+ */
+export const AnEarlyHint: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const dark = useIsDark();
+  return (
+    <p data-early-hint className="text-[11.5px] leading-[16px] text-charcoal-soft rounded-[12px] mb-[12px]" style={{ padding: "9px 12px", background: dark ? "#242730" : "#F5F5F6" }}>
+      {children}
+    </p>
+  );
+};
+
+/**
+ * AN4-005 row 34 / S7 · the collapsible section (AnMembersV6 `sec()`, l.192-196):
+ * divider, padding 14 20; header min-h 24 (44 hit), title 12.5/800 line 17,
+ * chevron-down 16 tert rotating 180° in 0.3s cubic-bezier(0.22,1,0.36,1); line
+ * 11.5/16 inkSoft mt 3; body grid-template-rows 0fr → 1fr, same easing; intro
+ * 11/15 faint margin 10 0 10; 4 px spacer under the body. Collapsed by default.
+ */
+export const AnSection: React.FC<{ title: string; line: React.ReactNode; intro: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, line, intro, children, defaultOpen = false }) => {
+  const [open, setOpen] = React.useState(defaultOpen);
+  const id = React.useId();
+  const ease = "cubic-bezier(0.22,1,0.36,1)";
+  return (
+    <div data-an-section className={clsx("border-t", DIV)} style={{ padding: "14px 20px" }}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((o) => !o)}
+        className="relative w-full flex items-center gap-[8px] min-h-[24px] text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark rounded-[8px]"
+      >
+        <span aria-hidden className="absolute inset-x-0 -inset-y-[10px]" />
+        <span className="flex-1 min-w-0 text-[12.5px] leading-[17px] font-extrabold text-charcoal">{title}</span>
+        <ChevronDown size={16} aria-hidden className="text-charcoal-tertiary shrink-0 motion-reduce:!transition-none" style={{ transform: open ? "rotate(180deg)" : "none", transition: `transform 0.3s ${ease}` }} />
+      </button>
+      <p className="text-[11.5px] leading-[16px] text-charcoal-soft mt-[3px]">{line}</p>
+      <div id={id} className="grid motion-reduce:!transition-none" style={{ gridTemplateRows: open ? "1fr" : "0fr", transition: `grid-template-rows 0.3s ${ease}` }} inert={!open}>
+        <div className="overflow-hidden min-h-0">
+          <p className="text-[11px] leading-[15px] text-charcoal-faint" style={{ margin: "10px 0 10px" }}>
+            {intro}
+          </p>
+          {children}
+          <div style={{ height: 4 }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** One row of a section's rows body (AnMembersV6 l.204-212). `n` null reads "–" (tert). */
+export interface AnSectionRow {
+  key: string;
+  n: string | null;
+  /** The dash / stack colour (light, dark). */
+  col: [string, string];
+  t: string;
+  s?: string;
+  /** Stack share (0 or null: not in the stacked bar). */
+  share?: number | null;
+}
+
+/**
+ * The rows body: optional stacked bar (h12, gap 2, mb 4, radius by position)
+ * and rows grid 16 34 1fr gap 10, padding 10 0: dash h4 r999 mt 9, number
+ * 18/800 line 20, title 12/700 16, sub 11.5/16 inkSoft mt 2.
+ */
+export const AnSectionRows: React.FC<{ rows: AnSectionRow[]; stack?: boolean; dark: boolean }> = ({ rows, stack, dark }) => {
+  const seg = rows.filter((r) => (r.share ?? 0) > 0);
+  const rad = (i: number, a: unknown[]) => (a.length === 1 ? "999px" : i === 0 ? "999px 3px 3px 999px" : i === a.length - 1 ? "3px 999px 999px 3px" : "3px");
+  return (
+    <>
+      {stack && seg.length > 0 && (
+        <div aria-hidden style={{ display: "flex", height: 12, gap: 2, marginBottom: 4 }}>
+          {seg.map((r, i) => (
+            <span key={r.key} style={{ flex: r.share ?? 0, background: r.col[dark ? 1 : 0], borderRadius: rad(i, seg) }} />
+          ))}
+        </div>
+      )}
+      {rows.map((r, i) => (
+        <div key={r.key} className={clsx("grid", i > 0 && "border-t", DIV)} style={{ gridTemplateColumns: "16px 34px minmax(0,1fr)", gap: 10, padding: "10px 0" }}>
+          <span aria-hidden style={{ height: 4, borderRadius: 999, background: r.col[dark ? 1 : 0], marginTop: 9 }} />
+          <span className={clsx("text-[18px] leading-[20px] font-extrabold tabular-nums", r.n === null ? "text-charcoal-tertiary" : "text-charcoal")}>{r.n ?? "–"}</span>
+          <div className="min-w-0">
+            <p className="text-[12px] leading-[16px] font-bold text-charcoal">{r.t}</p>
+            {r.s && <p className="text-[11.5px] leading-[16px] text-charcoal-soft mt-[2px]">{r.s}</p>}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+};

@@ -30,7 +30,7 @@ import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
 import { ThreadLiveProvider } from "../../context/ThreadLiveContext";
 import { useUnread } from "../../context/UnreadContext";
-import { fetchThreads, migrateLegacyStars, startThread, threadForPush, type MessageThread } from "../../services/messaging";
+import { fetchThreads, migrateLegacyStars, startMemberThread, startThread, threadForPush, type MessageThread } from "../../services/messaging";
 import { fetchGroupInvitations, type GroupInvitation } from "../../services/messaging/groups";
 import { fetchBroadcastLists, fetchBroadcasts, type BroadcastList } from "../../services/messaging/broadcasts";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
@@ -347,6 +347,17 @@ export default function Messages() {
     setNewChatBusy(false);
     if (!r.ok) return setNewChatError(r.message);
     setNewChatOpen(false);
+    setBizNewOpen(false);
+    await load(r.threadId);
+  };
+
+  /** OP1-190 S2 / MO1.7 K13: a business opens (or reuses) its thread with one of its members or customers. */
+  const startMemberChat = async (businessId: string, personId: string) => {
+    setNewChatBusy(true);
+    setNewChatError(null);
+    const r = await startMemberThread(businessId, personId);
+    setNewChatBusy(false);
+    if (!r.ok) return setNewChatError(r.message);
     setBizNewOpen(false);
     await load(r.threadId);
   };
@@ -765,6 +776,9 @@ export default function Messages() {
           error={newChatError}
           onPick={(id) => {
             if (!newChatBusy) void startChatWith(id);
+          }}
+          onPickMember={(bid, personId) => {
+            if (!newChatBusy) void startMemberChat(bid, personId);
           }}
         />
       </div>

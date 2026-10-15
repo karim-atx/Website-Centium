@@ -106,6 +106,8 @@ export interface DashRaw {
   members: DashMember[];
   plansCount: number;
   productsCount: number;
+  /** Products shown on Explore (business_offerings.visible), for Live listings. */
+  liveProductsCount: number;
   discountsCount: number;
   seats: DashSeats | null;
   team: Record<string, string>;

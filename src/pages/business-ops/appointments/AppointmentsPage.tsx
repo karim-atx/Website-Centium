@@ -9,7 +9,7 @@ import { DAY_SHORT, mondayIndex } from "../../../utils/week";
 import { fetchTeam } from "../../../services/business-team/team";
 import { useOnline } from "../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, PALE, P_DARK, useOpsToast } from "../store/opsKit";
-import { useLive, useStoreBusiness } from "../store/storeShared";
+import { APPT_KINDS, useLive, useStoreBusiness } from "../store/storeShared";
 import { AddAppointmentSheet } from "./AddAppointmentSheet";
 import { serviceTitle, time, todaySub } from "./apptShared";
 
@@ -117,7 +117,7 @@ export function AppointmentsPanel({ embedded }: { embedded?: boolean }) {
   const online = useOnline();
   const { businessId, ready, loadError, reload: reloadBiz } = useStoreBusiness();
   const today = isoDate(new Date());
-  const live = useLive(businessId ? () => loadDay(businessId, today) : null);
+  const live = useLive(businessId ? () => loadDay(businessId, today) : null, 120000, "", { businessId, kinds: APPT_KINDS });
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
   const items = useMemo(() => (d ? merge(d) : []), [d]);
@@ -195,7 +195,7 @@ export function AppointmentsDayPage() {
   const { businessId } = useStoreBusiness();
   const now = new Date();
   const date = params.get("date") ?? isoDate(now);
-  const live = useLive(businessId ? () => loadDay(businessId, date) : null, 120000, date);
+  const live = useLive(businessId ? () => loadDay(businessId, date) : null, 120000, date, { businessId, kinds: APPT_KINDS });
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
   const items = useMemo(() => (d ? merge(d) : []), [d]);

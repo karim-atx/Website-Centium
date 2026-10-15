@@ -17,7 +17,17 @@ import {
   type PlanKind,
   type PlanMember,
 } from "../../../services/membership-plans";
+import { fetchPlanFigures } from "../../../services/business-analytics";
+import { todayLocal } from "../../../utils/date";
 import { sharedNames } from "./planModel";
+
+/**
+ * "This period" for the plan rows' sold / used line (OP1-022 row 16, OP1-036
+ * row 3). UNSPECIFIED in the handover (Q5): the calendar month to date.
+ */
+export function planPeriod(today: string): { from: string; to: string } {
+  return { from: `${today.slice(0, 7)}-01`, to: today };
+}
 
 /**
  * The last read, kept for this session so the plan page opens at once from the
@@ -30,6 +40,7 @@ let cache: {
   classTypes: string[] | null;
   members: Map<string, PlanMember[]> | null | undefined;
   offered: PlanKind[] | null;
+  sold: Map<string, number> | null;
 } | null = null;
 
 export type WriteOutcome = { ok: true; plan: MembershipPlanRow } | { ok: false; message: string };
@@ -53,6 +64,8 @@ export function usePlans() {
   const [classTypes, setClassTypes] = useState<string[] | null>(warm?.classTypes ?? null);
   const [members, setMembers] = useState<Map<string, PlanMember[]> | null | undefined>(warm?.members);
   const [offered, setOffered] = useState<PlanKind[] | null>(warm?.offered ?? null);
+  /** B15 business_plan_figures: new sales this period by plan id; null while unknown or unreadable. */
+  const [sold, setSold] = useState<Map<string, number> | null>(warm?.sold ?? null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -74,10 +87,12 @@ export function usePlans() {
       setBusinessId(r.businessId);
       setPlans(r.plans);
       if (r.businessId) {
-        const [m, o] = await Promise.all([fetchMembersByPlanName(r.businessId), fetchOfferedPlanTypes(r.businessId)]);
+        const period = planPeriod(todayLocal());
+        const [m, o, f] = await Promise.all([fetchMembersByPlanName(r.businessId), fetchOfferedPlanTypes(r.businessId), fetchPlanFigures(r.businessId, period.from, period.to)]);
         if (cancelled) return;
         setMembers(m);
         setOffered(o.types);
+        if (f.ok) setSold(new Map(f.value.map((x) => [x.planId, x.sold])));
       } else {
         setMembers(new Map());
       }
@@ -89,8 +104,8 @@ export function usePlans() {
 
   // Keep the session copy current with every change on screen.
   useEffect(() => {
-    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members, offered };
-  }, [authUserId, loading, plans, businessId, classTypes, members, offered]);
+    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members, offered, sold };
+  }, [authUserId, loading, plans, businessId, classTypes, members, offered, sold]);
 
   const reload = useCallback(() => {
     setLoading(true);
@@ -186,6 +201,8 @@ export function usePlans() {
     runsClasses,
     membersLoaded: members !== undefined,
     membersOf,
+    /** New sales this period (B15), or null when unknown. */
+    soldOf: (planId: string): number | null => (sold ? sold.get(planId) ?? 0 : null),
     counts,
     totalMembers,
     firstStarted,

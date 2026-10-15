@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronRight, Star, UserRound } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, EllipsisVertical, Flag, Star, UserRound } from "lucide-react";
+import { PopupMenu } from "../../../components/ui/PopupMenu";
+import { Toast } from "../../../components/ui/Toast";
 import type { BizReview } from "../../../services/reputation";
 import { ago } from "../reputation/reputationModel";
+import { ReportSheet } from "../reputation/ReviewSheets";
 import { MIN_REVIEWS, sortReviews, type ReviewSort } from "./ratingsModel";
 import { Sheet, Stars } from "./parts";
 
@@ -9,6 +12,9 @@ import { Sheet, Stars } from "./parts";
 // Ratings page and sm in the scorecard's Ratings box), the scorecard
 // snippets (AN5-045 row 11) and the reviews sheet (TeamFlowsV4 rev-emp /
 // rev-team: AN5-051, -053, -054, -055, OURS-AN5-ratings-empty R7-R9, R16).
+// AN5-051 K1: each review's name line has a ⋮ "Report" menu (decision 23,
+// as ProfessionalReviews) opening the Reputation "Report this review" sheet
+// (report_review).
 
 /** mkRatG: average, five clipped stars, count; distribution bars when the rows add up. */
 export function RatingGraphic({
@@ -131,6 +137,10 @@ export function ReviewsSheet({
   const [shown, setShown] = useState(PAGE);
   const [hl, setHl] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const [menuFor, setMenuFor] = useState<{ review: BizReview; anchor: HTMLElement } | null>(null);
+  const [report, setReport] = useState<BizReview | null>(null);
+  const [reported, setReported] = useState<Set<string>>(() => new Set());
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -243,14 +253,29 @@ export function ReviewsSheet({
                     <span className="an5-rev-who">{r.label}</span>
                     <span className="an5-rev-meta">{[ago(r.createdAt), team ? r.instructor : r.classTitle].filter(Boolean).join(" · ")}</span>
                   </span>
-                  {!r.redacted && r.rating !== null && (
-                    <span className="an5-rev-r" aria-label={`${r.rating} out of 5 stars`}>
-                      <span style={{ display: "flex", color: "var(--an-gold)" }}>
-                        <Star size={14} fill="currentColor" stroke="none" aria-hidden />
+                  <span className="flex items-center" style={{ gap: 2 }}>
+                    {!r.redacted && !reported.has(r.id) && (
+                      <button
+                        type="button"
+                        aria-label={`Options for the review by ${r.label}`}
+                        aria-haspopup="menu"
+                        aria-expanded={menuFor?.review.id === r.id}
+                        onClick={(e) => setMenuFor({ review: r, anchor: e.currentTarget })}
+                        className="tap flex items-center justify-center rounded-full"
+                        style={{ width: 44, height: 44, margin: "-14px -6px -14px -12px", color: "var(--an-faint)" }}
+                      >
+                        <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />
+                      </button>
+                    )}
+                    {!r.redacted && r.rating !== null && (
+                      <span className="an5-rev-r" aria-label={`${r.rating} out of 5 stars`}>
+                        <span style={{ display: "flex", color: "var(--an-gold)" }}>
+                          <Star size={14} fill="currentColor" stroke="none" aria-hidden />
+                        </span>
+                        <span aria-hidden>{r.rating}</span>
                       </span>
-                      <span aria-hidden>{r.rating}</span>
-                    </span>
-                  )}
+                    )}
+                  </span>
                 </div>
                 {r.redacted ? (
                   <p className="an5-rev-t is-removed">A moderator removed this review. It no longer counts toward the rating.</p>
@@ -275,6 +300,29 @@ export function ReviewsSheet({
           </div>
         </>
       )}
+      <PopupMenu
+        open={!!menuFor}
+        anchor={menuFor?.anchor ?? null}
+        onClose={() => setMenuFor(null)}
+        align="right"
+        options={[{ value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> }]}
+        onSelect={() => {
+          if (menuFor) setReport(menuFor.review);
+          setMenuFor(null);
+        }}
+      />
+      <ReportSheet
+        open={!!report}
+        review={report}
+        tag={report ? [report.instructor, report.classTitle].filter(Boolean).join(" · ") || null : null}
+        onClose={() => setReport(null)}
+        onDone={(msg) => {
+          if (report) setReported((s) => new Set(s).add(report.id));
+          setReport(null);
+          setToast(msg);
+        }}
+      />
+      <Toast open={!!toast} message={toast ?? ""} variant="business" duration={4000} onExpire={() => setToast(null)} />
     </Sheet>
   );
 }

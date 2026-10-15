@@ -22,8 +22,9 @@ import { overlaps, running, weekdayShort, type Session, type SessionLite } from 
 // two apart: none set reads "No availability set" and stays choosable. A busy
 // teammate on one of THIS business's sessions is named from the schedule
 // ("Teaching {class} at {time}", OP1-090); elsewhere it's "Busy at that time"
-// (OURS-AN5 A12). The note to the substitute (OP1-089 row 4) still has no
-// destination (the call carries none) and stays out.
+// (OURS-AN5 A12). The note to the substitute (OP1-072 row 5, OP1-089 row 4,
+// OP1-092 row 2) goes to the substitute in the owner's direct thread with
+// them (B7 messaging) once the assignment has landed; see SessionActions.
 
 export function SubstituteSheet({
   open,
@@ -46,10 +47,12 @@ export function SubstituteSheet({
   today: string;
   people: "clients" | "members";
   onClose: () => void;
-  onAssign: (professionalId: string) => Promise<{ ok: true } | { ok: false; message: string; busy?: boolean }>;
+  /** The note is trimmed; empty when none was written. */
+  onAssign: (professionalId: string, note: string) => Promise<{ ok: true } | { ok: false; message: string; busy?: boolean }>;
 }) {
   const c = useOps();
   const [pick, setPick] = useState<string>("");
+  const [note, setNote] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export function SubstituteSheet({
     setPrevOpen(open);
     if (open) {
       setPick("");
+      setNote("");
       setError(null);
       setFree(null);
       setLoadFailed(false);
@@ -140,7 +144,7 @@ export function SubstituteSheet({
     if (!pick || busy) return;
     setBusy(true);
     setError(null);
-    const r = await onAssign(pick);
+    const r = await onAssign(pick, note.trim());
     setBusy(false);
     if (!r.ok) {
       // OP1-092 O3: no longer free (the server's re-check, ATXD9) reopens the list.
@@ -221,6 +225,35 @@ export function SubstituteSheet({
               <ChevronDown size={16} style={{ color: c.faint }} />
             </button>
           )}
+        </div>
+
+        {/* OP1-089 row 4 / OP1-092 row 2 (OpsTabsV4 l.614 F(): h 84, align top, padding 12 14; label 12/700 inkSoft mb 6; value 14/600/20 ink; placeholder faint 500). */}
+        <div style={{ marginBottom: 14 }}>
+          <label htmlFor="sub-note" className="block whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: c.inkSoft }}>
+            Note for them (optional)
+          </label>
+          <style>{`.sub-note::placeholder { color: ${c.faint}; font-weight: 500; opacity: 1; }`}</style>
+          <textarea
+            id="sub-note"
+            value={note}
+            maxLength={1000}
+            disabled={busy}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Anything they should know"
+            className="sub-note w-full block resize-none focus:outline-none"
+            style={{
+              minHeight: 84,
+              borderRadius: 14,
+              background: c.input,
+              border: `1px solid ${c.border}`,
+              padding: "12px 14px",
+              fontSize: textPx(14),
+              lineHeight: linePx(20),
+              fontWeight: 600,
+              color: c.ink,
+              caretColor: c.pDark,
+            }}
+          />
         </div>
 
         {/* OP1-072 row 6: the booked are told (assign_class_instructor p_tell_members). */}

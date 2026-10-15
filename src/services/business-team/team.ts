@@ -1,5 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import type { PublicDetails } from "./types";
+
+export type { PublicDetails } from "./types";
 
 // v6 Batch 4 · Team (OP1-053…073, 112…139): B0 consent and B6 roles, seats
 // and join requests, read and written as the owner of a business.
@@ -300,6 +303,40 @@ export async function fetchCredentials(businessId: string): Promise<Result<Crede
       noExpiry: !!r.no_expiry,
       verified: !!r.verified,
     })),
+  };
+}
+
+const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
+
+/**
+ * What a professional shows the public (OP1-132 C1, C2, C5, C6; OP1-124 9c):
+ * public_professional_directory (specialty, bio, website, instagram, x) and
+ * public_professional_experience. Both views read listed_publicly
+ * professionals only: an unlisted one (and affiliating with a business turns
+ * listing off) answers null, and the person page leaves those rows out.
+ */
+export async function fetchPublicDetails(professionalId: string): Promise<Result<PublicDetails | null>> {
+  const [dir, exp] = await Promise.all([
+    db.from("public_professional_directory").select("professional_subtype, specialty, bio, website, instagram, x").eq("profile_id", professionalId).maybeSingle(),
+    db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position"),
+  ]);
+  if (dir.error) return fail(dir.error, "Couldn't load their profile.");
+  if (!dir.data) return { ok: true, value: null };
+  const d = dir.data as { professional_subtype: string | null; specialty: string | null; bio: string | null; website: string | null; instagram: string | null; x: string | null };
+  const rows = (exp.error ? [] : exp.data ?? []) as { title: string | null; organisation: string | null; start_month: string | null; end_month: string | null }[];
+  return {
+    ok: true,
+    value: {
+      subtype: d.professional_subtype ?? null,
+      specialty: clean(d.specialty),
+      bio: clean(d.bio),
+      website: clean(d.website),
+      instagram: clean(d.instagram),
+      x: clean(d.x),
+      experience: rows
+        .filter((r) => clean(r.title))
+        .map((r) => ({ title: (r.title as string).trim(), organisation: clean(r.organisation), startMonth: r.start_month, endMonth: r.end_month })),
+    },
   };
 }
 

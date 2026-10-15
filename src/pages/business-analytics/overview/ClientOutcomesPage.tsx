@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
@@ -11,7 +12,9 @@ import { isoDay, outcomes, sharedProgress, shareBody, type OvRaw } from "./overv
 import { anPalette, type AnPalette } from "./palette";
 import { useBusiness } from "../../../components/business-more/useBusiness";
 import { fetchOutcomeShareCount } from "../../../services/business-members";
-import { fetchClientOutcomes, type ClientOutcomes } from "../../../services/business-analytics";
+import { fetchClientOutcomes, fetchPeopleSummary, type ClientOutcomes } from "../../../services/business-analytics";
+import { startMemberThread } from "../../../services/messaging";
+import { useBizToast } from "../../../components/business-more/useBizToast";
 
 // Analytics › Client outcomes (OURS-AN1-client-outcomes, V6-28): the kept
 // Client Outcomes feature in the AN1 / BizTypeKit language, opened from the
@@ -27,8 +30,12 @@ import { fetchClientOutcomes, type ClientOutcomes } from "../../../services/busi
 // the business's own booking data and ships now: Bookings a week and Need a
 // check-in (no booking in 21 days) from business_class_bookings; "Attending
 // 80%+" and the spread need attendance (check-ins B10 / the cancellations
-// reader), so they show "–". Clients are masked ("Client #code") until the
-// profile-sharing consent exists (B7). Safety wording kept verbatim.
+// reader), so they show "–". Gym "Visits a week" is business_people_summary
+// visits_per_week_4w (its own 4-week window, as on Members › Visits). Clients
+// are masked ("Client #code") until the profile-sharing consent exists (B7).
+// A review row opens the business's thread with that client (row 13, B7 MB-02
+// start_member_thread; the server allows current members and anyone with a
+// booking or membership in the last 90 days). Safety wording kept verbatim.
 
 export const SAFETY = "Flags are based on visible signals (attendance, bookings, payments), not a diagnosis or a black-box score.";
 /**
@@ -78,6 +85,30 @@ export function ClientOutcomesPage() {
     };
   }, [business?.id]);
   const progress = shared ? sharedProgress(shared, kind) : null;
+  // Row 5 (Gym): visits a week from business_people_summary (null: not read, or not readable).
+  const [visits, setVisits] = useState<number | null>(null);
+  useEffect(() => {
+    if (!business?.id || kind !== "gym") return;
+    let alive = true;
+    void fetchPeopleSummary(business.id).then((r) => {
+      if (alive) setVisits(r.ok ? (r.value.visits_per_week_4w ?? null) : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [business?.id, kind]);
+  // Row 13: a row opens the chat with that client.
+  const navigate = useNavigate();
+  const [toast, showToast] = useBizToast();
+  const [opening, setOpening] = useState<string | null>(null);
+  const openChat = async (clientId: string) => {
+    if (!business?.id || opening) return;
+    setOpening(clientId);
+    const res = await startMemberThread(business.id, clientId);
+    setOpening(null);
+    if (!res.ok) return showToast(res.message);
+    navigate("/app/messages", { state: { threadId: res.threadId } });
+  };
 
   useEffect(() => setExport("", null), [setExport]);
 
@@ -119,7 +150,7 @@ export function ClientOutcomesPage() {
             c={c}
             boxes={[
               { value: "–", label: "Attending 80%+" },
-              { value: classes && m.perWeek !== null ? m.perWeek.toFixed(1) : "–", label: classes ? "Bookings a week" : "Visits a week" },
+              { value: classes ? (m.perWeek !== null ? m.perWeek.toFixed(1) : "–") : visits !== null ? visits.toFixed(1) : "–", label: classes ? "Bookings a week" : "Visits a week" },
               { value: m.needCheckIn === null ? "–" : String(m.needCheckIn), label: "Need a check-in" },
             ]}
           />
@@ -141,10 +172,11 @@ export function ClientOutcomesPage() {
       {!loading && rows.length > 0 && (
         <>
           <KitLabel c={c} label="Clients needing review" action={rows.length > 3 ? (all ? "Show less" : "See all") : undefined} onAction={() => setAll((v) => !v)} />
-          <KitList c={c} rows={shown.map((r) => ({ key: r.id, Icon: User, title: r.label, detail: r.detail, pill: r.pill }))} />
+          <KitList c={c} rows={shown.map((r) => ({ key: r.id, Icon: User, title: r.label, detail: r.detail, pill: r.pill, onClick: () => void openChat(r.id) }))} />
         </>
       )}
       <KitTip c={c} text={`${SAFETY} ${CLINICIAN_REVIEW}`} />
+      {toast}
     </div>
   );
 }

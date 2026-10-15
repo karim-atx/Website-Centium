@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarPlus, CalendarRange, ChevronDown, EllipsisVertical, List, MessageCircle, Settings2, TriangleAlert } from "lucide-react";
+import { CalendarPlus, CalendarRange, ChevronDown, Clock, EllipsisVertical, List, MessageCircle, Settings2, Ticket, TriangleAlert, Users } from "lucide-react";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { startThread } from "../../../services/messaging";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
+import { PLANS_ROUTE } from "../plans";
 import { useOps, type OpsColors } from "./opsTheme";
 import { BackRow, Bone, ErrorCard, FiguresCard, FixedCta, OpsCard, Tag } from "./parts";
 import { WeekGrid } from "./WeekGrid";
@@ -22,10 +24,12 @@ import {
   isFull,
   isLowSoon,
   issueText,
+  seriesCards,
   signed,
   sortDay,
   todayIso,
   type Issue,
+  type SeriesCard,
   type Session,
 } from "./scheduleModel";
 
@@ -57,6 +61,10 @@ export default function SchedulePage() {
   const [newIds, setNewIds] = useState<string[]>([]);
   const [menuFor, setMenuFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const classesType = api.kind === "classes";
+  // A Classes business has no Front desk, so its plans (/app/business/gym)
+  // get an entry here (OURS, Release 2 gate), for whoever may open them.
+  const access = useConsoleAccess();
+  const showPlans = classesType && access.ready && access.meets("members");
   const people = api.people;
 
   const actions = useSessionActions(api, {
@@ -102,6 +110,8 @@ export default function SchedulePage() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([day, list]) => ({ day, list: sortDay(list, newIds) }));
   }, [week, newIds]);
   const shownDays = seeAll ? days : days.slice(0, 2);
+  // AN3-055 rows 1-3: one card per repeating series, next session and the count to come.
+  const series = useMemo(() => seriesCards(api.sessions, api.series, now), [api.sessions, api.series, now]);
   const later = useMemo(() => api.sessions.filter((s) => s.date > addDays(today, 6)).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0], [api.sessions, today]);
 
   const noBusiness = !api.loading && !api.error && !api.businessId;
@@ -219,6 +229,17 @@ export default function SchedulePage() {
             );
           })}
         </div>
+        {showPlans && (
+          <button
+            type="button"
+            aria-label="Plans"
+            onClick={() => navigate(PLANS_ROUTE)}
+            className="tap flex items-center justify-center shrink-0"
+            style={{ width: 44, height: 44, borderRadius: 14, border: `1px solid ${c.border}`, color: c.inkSoft }}
+          >
+            <Ticket size={17} />
+          </button>
+        )}
         <button
           type="button"
           aria-label="Waitlist and late cancels"
@@ -305,6 +326,28 @@ export default function SchedulePage() {
             </button>
           ) : null}
         </>
+      )}
+
+      {view === "list" && !firstLoad && !api.error && !noBusiness && series.length > 0 && (
+        <section aria-label="Repeating classes">
+          <div className="flex items-baseline justify-between flex-wrap" style={{ margin: "16px 4px 8px", columnGap: 10 }}>
+            <p style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: c.faint }}>Repeating classes</p>
+          </div>
+          {series.map((card, i) => {
+            const row = api.classes.find((x) => x.id === card.next.id);
+            return (
+              <SeriesCardView
+                key={card.seriesId}
+                c={c}
+                card={card}
+                first={i === 0}
+                who={card.next.professionalId ? api.nameOf(card.next.professionalId) : ""}
+                price={row ? (row.price ? `${row.price} · ${row.paymentType || "Cash"}` : "Free") : null}
+                onOpen={() => navigate(`/app/business/classes/${card.next.id}`)}
+              />
+            );
+          })}
+        </section>
       )}
 
       <FixedCta
@@ -452,6 +495,42 @@ function SessionRow({
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * AN3-055 / AN3-053 card (ClassFlowsV7 oneClass l.33-45, series branch l.221):
+ * r 24, card fill, 1px border, padding 20; title 14/600/20; type line
+ * 12/500/16 pDark; when line clock 11, gap 4, 12/18 faint, margin-top 4, the
+ * clock kept on the first line when it wraps (O4); capacity users 11 and
+ * price 12/600, margin-top 2. No QR tile (AN3-053 row 4: the Schedule keeps
+ * the app rule) and no trash (O8: a series stops from its session menu). The
+ * card opens the next session.
+ */
+function SeriesCardView({ c, card, first, who, price, onOpen }: { c: OpsColors; card: SeriesCard; first: boolean; who: string; price: string | null; onOpen: () => void }) {
+  const s = card.next;
+  const line = { display: "flex", alignItems: "flex-start", gap: 4, fontSize: textPx(12), lineHeight: linePx(18), color: c.faint } as const;
+  const icon = { flexShrink: 0, marginTop: `calc((${linePx(18)} - 11px) / 2)` } as const;
+  return (
+    <button
+      type="button"
+      id={`series-${card.seriesId}`}
+      onClick={onOpen}
+      className="tap w-full text-left block"
+      style={{ marginTop: first ? 0 : 10, background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, padding: 20 }}
+    >
+      <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 600, lineHeight: linePx(20), color: c.ink }}>{s.title}</p>
+      <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 500, lineHeight: linePx(16), color: c.pDark }}>{card.typeLine}</p>
+      <p style={{ ...line, margin: "4px 0 0" }}>
+        <Clock size={11} aria-hidden style={icon} />
+        <span className="min-w-0">{card.whenLine}</span>
+      </p>
+      <p style={{ ...line, margin: "2px 0 0" }}>
+        <Users size={11} aria-hidden style={icon} />
+        <span className="min-w-0">{`Max ${s.maxCapacity}${who ? ` · ${who}` : ""}`}</span>
+      </p>
+      {price && <p style={{ margin: "2px 0 0", fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(18), color: c.ink }}>{price}</p>}
+    </button>
   );
 }
 

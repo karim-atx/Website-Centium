@@ -237,7 +237,9 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
           <>
             <BizRows
               rows={[
-                { key: "qr", title: "Check in with a QR code", desc: "Shown in the member's app", toggle: { on: e.qrCheckIn, onChange: (v) => set({ qrCheckIn: v }) } },
+                { key: "qr", title: "Check in with a QR code", desc: "Shown in the member's app", // QR stays on: gyms.access_qr is the fallback access method and the
+                // database requires one (gyms_access_method_check), so it is not switchable.
+                toggle: { on: true, onChange: () => {} } },
                 { key: "desk", title: "Front desk can check people in", toggle: { on: e.frontDeskCheckIn, onChange: (v) => set({ frontDeskCheckIn: v }) } },
               ]}
             />

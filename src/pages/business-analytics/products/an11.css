@@ -5,6 +5,11 @@
 .pa {
   font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   color: var(--an-ink);
+  /* Source c.axis: L #A79E93, D #B8B3C7 (chart axis, dashed ghost, expired uses bar). */
+  --pa-axis: #a79e93;
+}
+html.dark .pa {
+  --pa-axis: #b8b3c7;
 }
 .pa-early {
   margin-bottom: 12px;
@@ -866,6 +871,245 @@ html.dark .pa-pill.is-low {
   text-align: left;
   display: block;
 }
+/* dInfo: ending soon = caution border; expired = opacity 0.85, footer soft. */
+.pa-drowcard.is-soon {
+  border-color: var(--an-caution);
+}
+.pa-drowcard.is-ended {
+  opacity: 0.85;
+}
+.pa-drowcard.is-ended .pa-dfoot {
+  background: var(--an-soft);
+}
+/* Amount chip 12/800 pDark on pale, r8, padding 3 8; chips row gap 6, margin-top 6. */
+.pa-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.pa-amt {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--an-pdark);
+  background: var(--an-pale);
+  border-radius: 8px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+/* Tag / calendar rows: grid 16px 1fr, gap 6 8, margin-top 10, 12/16 inkSoft, 14px glyphs faint. */
+.pa-dmeta {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--an-ink-soft);
+  text-wrap: pretty;
+}
+.pa-dmeta-g {
+  display: flex;
+  color: var(--an-faint);
+  padding-top: 1px;
+}
+.pa-dmeta-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+/* Days-left pill 10.5/800 r999 padding 1 7 (dl tones). */
+.pa-dl {
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.pa-dl.is-soon {
+  background: #f6e9c9;
+  color: var(--an-caution);
+}
+html.dark .pa-dl.is-soon {
+  background: rgba(224, 179, 96, 0.18);
+}
+.pa-dl.is-normal {
+  background: var(--an-soft);
+  color: var(--an-ink-soft);
+}
+.pa-dl.is-scheduled {
+  background: var(--an-pale);
+  color: var(--an-pdark);
+}
+.pa-dl.is-ended {
+  background: var(--an-soft);
+  color: var(--an-faint);
+}
+/* Uses: label 11/700 faint + value 12/800; bar 6 r999 track, fill primary (caution at 80%, axis expired). */
+.pa-uses {
+  margin-top: 12px;
+}
+.pa-uses-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.pa-uses-h span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--an-faint);
+}
+.pa-uses-h b {
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--an-ink);
+}
+.pa-uses-t {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--an-track);
+  overflow: hidden;
+}
+.pa-uses-f {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--an-primary);
+}
+.pa-uses-f.is-caution {
+  background: var(--an-caution);
+}
+.pa-uses-f.is-ended {
+  background: var(--pa-axis);
+}
+/* Footer flag pills 10.5/800 r999 padding 2 8, 11/2.4 glyph. */
+.pa-fpill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.pa-fpill.is-soon {
+  color: var(--an-caution);
+  background: #f6e9c9;
+}
+html.dark .pa-fpill.is-soon {
+  background: rgba(224, 179, 96, 0.18);
+}
+.pa-fpill.is-unused {
+  color: var(--an-pdark);
+  background: var(--an-pale);
+}
+/* Flags card: margin-top 12, padding 4 16; rows grid 3px 46px 1fr, gap 12, padding 14 0. */
+.pa-flags {
+  margin-top: 12px;
+  padding: 4px 16px;
+}
+.pa-flag-row {
+  display: grid;
+  grid-template-columns: 3px 46px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 14px 0;
+}
+.pa-flag-rail {
+  border-radius: 999px;
+}
+.pa-flag-n {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 30px;
+  font-variant-numeric: tabular-nums;
+}
+.pa-flag-t {
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 18px;
+}
+.pa-flag-s {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--an-ink-soft);
+  margin-top: 2px;
+  text-wrap: pretty;
+}
+/* Headline cells (H): padding 18 8 16, value + "of {limit}" 11/800 faint. */
+.pa-dhead {
+  padding: 18px 8px 16px;
+  text-align: center;
+  min-width: 0;
+}
+.pa-dhead > p:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pa-dhead-d {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--an-faint);
+}
+.pa-dhead-sep {
+  background: var(--an-divider);
+  margin: 14px 0;
+}
+/* mkChart (Discount use / Uses by week): legend 10.5 faint gap 12, svg 300×118, y labels 9.5/700, x labels 10. */
+.pa-wk {
+  margin-top: 8px;
+}
+.pa-wk-leg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10.5px;
+  color: var(--an-faint);
+  margin-bottom: 6px;
+}
+.pa-wk-leg > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.pa-wk-sq {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--an-primary);
+}
+.pa-wk-dash {
+  width: 14px;
+  border-top: 1.5px dashed var(--pa-axis);
+}
+.pa-wk-y {
+  position: absolute;
+  left: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--an-faint);
+}
+.pa-wk-x {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 24px;
+  font-size: 10px;
+  color: var(--an-faint);
+  margin-top: 2px;
+}
 .pa-drowcard:focus-visible {
   outline: none;
   box-shadow: var(--an-ring);
@@ -902,6 +1146,18 @@ html.dark .pa-pill.is-low {
 }
 html.dark .pa-status {
   background: rgba(127, 199, 156, 0.16);
+}
+.pa-status.is-scheduled,
+html.dark .pa-status.is-scheduled {
+  background: var(--an-pale);
+  color: var(--an-pdark);
+}
+.pa-status.is-ended,
+.pa-status.is-paused,
+html.dark .pa-status.is-ended,
+html.dark .pa-status.is-paused {
+  background: var(--an-soft);
+  color: var(--an-faint);
 }
 .pa-status > i {
   width: 6px;
@@ -978,7 +1234,53 @@ html.larger-text .pa-dact {
   height: 8px;
   border-radius: 999px;
   background: var(--an-track);
+  margin-top: 12px;
+}
+/* ddv: elapsed fill primary; today marker 2×16 r2 ink, top -4, centred (translateX -1). */
+.pa-vbar-f {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--an-primary);
+}
+.pa-vbar-m {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--an-ink);
+  transform: translateX(-1px);
+}
+.pa-vdl {
+  font-weight: 800;
+}
+.pa-vdl.is-soon {
+  color: var(--an-caution);
+}
+.pa-vdl.is-normal {
+  color: var(--an-ink-soft);
+}
+.pa-vdl.is-scheduled {
+  color: var(--an-pdark);
+}
+.pa-vdl.is-ended {
+  color: var(--an-faint);
+}
+/* Applies to: divider, padding-top 12, tag 14 faint + 12/17 inkSoft. */
+.pa-vapplies {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
   margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--an-divider);
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--an-ink-soft);
+  text-wrap: pretty;
 }
 .pa-vdates {
   display: flex;

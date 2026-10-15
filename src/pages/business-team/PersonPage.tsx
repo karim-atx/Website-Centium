@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Award, CalendarClock, CalendarDays, FileBadge, MessageCircle, Repeat2, TriangleAlert, UserMinus, UserX } from "lucide-react";
+import { AtSign, Award, Briefcase, CalendarClock, CalendarDays, Dumbbell, FileBadge, Globe, MessageCircle, Quote, Repeat2, TriangleAlert, UserMinus, UserX } from "lucide-react";
+import { InstagramGlyph } from "../../components/business-more/InstagramGlyph";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { useSchedule } from "../business-ops/classes/useSchedule";
+import { useSessionActions } from "../business-ops/classes/SessionActions";
+import { isEnded, shortDate } from "../business-ops/classes/scheduleModel";
+import { time12 } from "../../utils/time12";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { removeTeamMember } from "../../services/business-team";
-import { fetchBooked, fetchCredentials, type Credential } from "../../services/business-team/team";
+import { fetchBooked, fetchCredentials, fetchPublicDetails, type Credential, type PublicDetails } from "../../services/business-team/team";
 import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchReviewsFor } from "../../services/professional-reviews";
 import { MIN_REVIEWS_FOR_AVERAGE } from "../../services/professional-reviews/rules";
@@ -13,7 +19,8 @@ import { localDayOf } from "../../utils/date";
 import { AvailabilityCard } from "./AvailabilityCard";
 import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
-import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
+import { Avatar, BackRow, DCard, LinkRow, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
+import { jobRow, profileLink, specialtySub } from "./teamLogic";
 import { ROLE_LABEL, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
@@ -22,10 +29,14 @@ import type { TeamData } from "./useTeamData";
 // row, header, actions, Role, Credentials, Upcoming sessions, Availability,
 // What they can do, Remove from team.
 //
-// PENDING: changing a role or permissions (B6 has no write path: the picker
-// is shown disabled and the "What they can do" card stays hidden, V6-84);
-// Cover (BU2-16); specialty, experience, bio and links (owner-only today,
-// BU2-14: only the licence fields of employee_credentials are readable).
+// Cover (OP1-061 S3, OP1-130 S3): "Request a substitute" (the Schedule's
+// SubstituteSheet, B9 assign_class_instructor) for this person's next
+// session; with more than one to come, a session picker first.
+//
+// Specialty, jobs, bio and links (OP1-132 C1, C2, C5, C6) come from what the
+// professional lists publicly (public_professional_directory /
+// public_professional_experience). An unlisted professional (affiliating
+// turns listing off) shows none of those rows: only their licences.
 
 export function PersonPage({ data }: { data: TeamData }) {
   const { id = "" } = useParams();
@@ -40,11 +51,22 @@ export function PersonPage({ data }: { data: TeamData }) {
   const [creds, setCreds] = useState<Credential[] | null>(null);
   const [credError, setCredError] = useState(false);
   const [rating, setRating] = useState<string | null>(null);
+  const [details, setDetails] = useState<PublicDetails | null>(null);
   const [booked, setBooked] = useState<Record<string, number | null>>({});
   const { open: openChat, busy: chatBusy, error: chatError } = useOpenThread(id);
   const offline = isOfflineNow();
   const accepted = !!person && isAccepted(person);
   const back = () => navigate("/app/business/employees");
+  // Cover: the Schedule's store and actions (the same sheet, toast and assign as the Schedule).
+  const schedule = useSchedule();
+  const sessionActions = useSessionActions(schedule);
+  const [coverMenu, setCoverMenu] = useState<HTMLElement | null>(null);
+  const toCover = useMemo(() => {
+    const now = new Date();
+    return schedule.sessions
+      .filter((s) => s.professionalId === id && !s.cancelled && !isEnded(s, now))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  }, [schedule.sessions, id]);
 
   useEffect(() => {
     if (!businessId || !accepted) return;
@@ -53,6 +75,9 @@ export function PersonPage({ data }: { data: TeamData }) {
       if (cancelled) return;
       if (r.ok) setCreds(r.value.filter((c) => c.professionalId === id));
       else setCredError(true);
+    });
+    void fetchPublicDetails(id).then((r) => {
+      if (!cancelled && r.ok) setDetails(r.value);
     });
     void fetchReviewsFor(id).then((r) => {
       if (cancelled || !r.ok) return;
@@ -110,7 +135,17 @@ export function PersonPage({ data }: { data: TeamData }) {
     ? [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
         { t: "Schedule", i: <CalendarDays size={17} strokeWidth={2.1} />, on: () => navigate("/app/business/classes"), dis: false, red: false },
-        { t: "Cover", i: <Repeat2 size={17} strokeWidth={2.1} />, on: () => showToast("Finding cover is coming soon."), dis: false, red: false },
+        {
+          t: "Cover",
+          i: <Repeat2 size={17} strokeWidth={2.1} />,
+          on: (el: HTMLElement) => {
+            if (toCover.length === 0) showToast(`${first} has no upcoming sessions to cover.`);
+            else if (toCover.length === 1) sessionActions.openSubstitute(toCover[0].id);
+            else setCoverMenu(el);
+          },
+          dis: offline || schedule.loading,
+          red: false,
+        },
       ]
     : [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
@@ -161,7 +196,7 @@ export function PersonPage({ data }: { data: TeamData }) {
 
       <div className="tm-acts" style={{ gridTemplateColumns: `repeat(${acts.length}, minmax(0, 1fr))` }}>
         {acts.map((a) => (
-          <button key={a.t} type="button" className={a.red ? "tm-act red tap" : "tm-act tap"} disabled={a.dis} onClick={a.on}>
+          <button key={a.t} type="button" className={a.red ? "tm-act red tap" : "tm-act tap"} disabled={a.dis} onClick={(e) => a.on(e.currentTarget)} aria-haspopup={a.t === "Cover" && toCover.length > 1 ? "menu" : undefined}>
             {a.i}
             {a.t}
           </button>
@@ -180,6 +215,12 @@ export function PersonPage({ data }: { data: TeamData }) {
 
       <DCard title="Credentials" right={`From ${first}'s profile`}>
         {!accepted && <Row icon={<FileBadge size={16} />} title="Certification" sub={`Shows once ${first} accepts the invite.`} />}
+        {accepted && details && specialtySub(details, today) && <Row icon={<Dumbbell size={16} />} title="Specialty" sub={specialtySub(details, today)!} />}
+        {accepted &&
+          details?.experience.map((job, i) => {
+            const j = jobRow(job);
+            return <Row key={`job-${i}`} icon={<Briefcase size={16} />} title={j.title} sub={j.sub ?? undefined} />;
+          })}
         {accepted && credError && <Row title="Couldn't load credentials." />}
         {accepted && !credError && creds === null && <Row title="Loading…" />}
         {accepted &&
@@ -204,6 +245,25 @@ export function PersonPage({ data }: { data: TeamData }) {
                 />
               ))
           ))}
+        {accepted && details?.bio && <Row icon={<Quote size={16} />} title="Bio" sub={details.bio} />}
+        {accepted &&
+          details &&
+          (
+            [
+              ["website", "Website", <Globe key="g" size={16} />],
+              ["instagram", "Instagram", <InstagramGlyph key="i" size={16} />],
+              ["x", "X", <AtSign key="x" size={16} />],
+            ] as const
+          ).map(([k, title, icon]) => {
+            const raw = details[k];
+            if (!raw) return null;
+            const l = profileLink(k, raw);
+            return l.href ? (
+              <LinkRow key={k} icon={icon} title={title} sub={l.text} href={l.href} label={`${title}: ${l.text} (opens in a new tab)`} />
+            ) : (
+              <Row key={k} icon={icon} title={title} sub={l.text} />
+            );
+          })}
         <p className="tm-note">{`Added by ${name} in their professional profile. Only they can change it.`}</p>
       </DCard>
 
@@ -275,6 +335,24 @@ export function PersonPage({ data }: { data: TeamData }) {
         }}
         onConfirm={() => void doRemove()}
       />
+      {/* Cover with more than one session to come: which one (OURS, the source sheet assumes one). */}
+      <PopupMenu
+        open={!!coverMenu}
+        anchor={coverMenu}
+        onClose={() => setCoverMenu(null)}
+        heading="Which session?"
+        width={240}
+        options={toCover.slice(0, 8).map((s) => ({
+          value: s.id,
+          label: s.title,
+          note: `${s.date === today ? "Today" : shortDate(s.date)} · ${time12(s.startTime)}`,
+        }))}
+        onSelect={(v) => {
+          setCoverMenu(null);
+          sessionActions.openSubstitute(v);
+        }}
+      />
+      {sessionActions.elements}
       <SeatsFullSheet open={full} onClose={() => setFull(false)} counts={seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity)} />
       {toast}
     </TeamScope>

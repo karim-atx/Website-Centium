@@ -911,6 +911,12 @@ html.high-contrast .tm-switch[aria-checked="false"] {
   font-weight: 800;
   line-height: 18px;
 }
+/* OP1-124 9c: the requester's discipline and specialty, 12/16 inkSoft. */
+.tm-rq-s {
+  font-size: 12px;
+  color: var(--tm-ink-soft);
+  line-height: 16px;
+}
 .tm-rq-w {
   font-size: 11px;
   color: var(--tm-faint);

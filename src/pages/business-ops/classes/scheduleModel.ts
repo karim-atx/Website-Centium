@@ -2,7 +2,7 @@
 // node --test can load it. Every count is computed from the business's own
 // business_classes rows and the bookings on them; nothing is sample data.
 
-import { minutesOfDay, time12 } from "../../../utils/time12";
+import { minutesOfDay, range12, time12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
 
 export interface SessionLite {
@@ -307,4 +307,70 @@ export function initialOf(name: string): string {
 export function joinAnd(items: string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+// ---------------------------------------------------------------------------
+// Series cards (AN3-055 rows 1-3, O4): one card per repeating series, with the
+// next session and how many are still to come.
+
+export interface SeriesRuleLite {
+  id: string;
+  /** ISO weekdays, 1 = Monday. */
+  weekdays: number[];
+  intervalWeeks: number;
+  untilOn: string | null;
+  count: number | null;
+}
+
+export interface SeriesCard {
+  seriesId: string;
+  /** The next session still to come (opens on tap). */
+  next: Session;
+  /** Sessions of the series still to come (not cancelled, not ended). */
+  remaining: number;
+  /** "HIIT · Repeats every Wed and Fri" (row 2). */
+  typeLine: string;
+  /** "Next: 2026-10-07 · 7:00–8:00 AM · 12 sessions" (row 3). */
+  whenLine: string;
+}
+
+/** "Wed", "Wed and Fri", "Mon, Wed and Fri"; seven days "day" (OURS, as repeatSummary's "Every day"). */
+function repeatDays(weekdays: number[]): string {
+  const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
+  if (ws.length === 7) return "day";
+  return joinAnd(ws.map((w) => DAY_SHORT[w - 1]));
+}
+
+/** ISO weekday of a day, 1 = Monday. */
+const isoWeekdayOf = (day: string) => mondayIndex(at(day).getDay()) + 1;
+
+/**
+ * One card per series that still has a session to come, soonest first. The
+ * rule comes from class_series; when it couldn't be read, the weekdays come
+ * from the sessions themselves and the count stands.
+ */
+export function seriesCards(sessions: Session[], rules: SeriesRuleLite[], now: Date): SeriesCard[] {
+  const bySeries = new Map<string, Session[]>();
+  for (const s of sessions) {
+    if (!s.seriesId || s.cancelled || isEnded(s, now)) continue;
+    bySeries.set(s.seriesId, [...(bySeries.get(s.seriesId) ?? []), s]);
+  }
+  const cards: SeriesCard[] = [];
+  for (const [seriesId, list] of bySeries) {
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+    const next = sorted[0];
+    const rule = rules.find((r) => r.id === seriesId) ?? null;
+    const weekdays = rule?.weekdays.length ? rule.weekdays : sorted.map((s) => isoWeekdayOf(s.date));
+    const interval = rule?.intervalWeeks ?? 1;
+    const days = repeatDays(weekdays);
+    const every = interval > 1 ? `${interval} weeks on ${days === "day" ? joinAnd(DAY_SHORT) : days}` : days;
+    const type = (next.classType || "").trim();
+    const typeLine = `${type ? `${type} · ` : ""}Repeats every ${every}`;
+    // AN3-055 row 3 OURS: a series that never ends reads "weekly" for the count.
+    const never = !!rule && !rule.untilOn && !rule.count;
+    const tail = never ? "weekly" : `${sorted.length} ${sorted.length === 1 ? "session" : "sessions"}`;
+    const whenLine = `Next: ${next.date} · ${range12(next.startTime, next.endTime, "–")} · ${tail}`;
+    cards.push({ seriesId, next, remaining: sorted.length, typeLine, whenLine });
+  }
+  return cards.sort((a, b) => a.next.date.localeCompare(b.next.date) || a.next.startTime.localeCompare(b.next.startTime));
 }

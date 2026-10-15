@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchFirst90Days,
+  fetchInvitesFunnel,
   fetchMemberGrowth,
   fetchPeopleSummary,
   fetchPeriodStats,
@@ -28,16 +29,19 @@ export function useMembersFigures(businessId: string | null, range: AnalyticsRan
     if (!businessId) return;
     let cancelled = false;
     const weeks = growthWeeksFor(range.from, today);
+    // business_invites_funnel counts codes created in the last p_days: the days since the range began.
+    const days = Math.min(366, Math.max(1, Math.round((Date.parse(today) - Date.parse(range.from)) / 86_400_000) + 1));
     void Promise.all([
       fetchPeopleSummary(businessId),
       fetchFirst90Days(businessId),
       fetchPlanFigures(businessId, range.from, range.to),
       fetchPeriodStats(businessId, range.from, range.to, range.compare),
       fetchMemberGrowth(businessId, weeks.ask),
-    ]).then(([summary, first90, plans, stats, growth]) => {
+      fetchInvitesFunnel(businessId, days),
+    ]).then(([summary, first90, plans, stats, growth, funnel]) => {
       if (cancelled) return;
       const val = <T,>(r: Read<T>): T | null => (r.ok ? r.value : null);
-      const broken = ([summary, first90, plans, stats, growth] as Read<unknown>[]).find((r) => !r.ok && !r.pending && !r.denied);
+      const broken = ([summary, first90, plans, stats, growth, funnel] as Read<unknown>[]).find((r) => !r.ok && !r.pending && !r.denied);
       setState({
         key: `${businessId}|${range.from}|${range.to}|${range.compare}|${today}`,
         error: broken && !broken.ok ? broken.message : null,
@@ -47,6 +51,7 @@ export function useMembersFigures(businessId: string | null, range: AnalyticsRan
           plans: val(plans),
           stats: val(stats),
           growth: growth.ok ? growthSeries(growth.value, weeks.shown) : null,
+          funnel: val(funnel),
         },
       });
     });

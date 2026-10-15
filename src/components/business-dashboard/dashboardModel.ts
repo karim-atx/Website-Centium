@@ -195,7 +195,7 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
         target: newEmpty ? null : n,
         format: String,
       },
-      { spec: { kind: "blank" }, empty: raw.productsCount === 0, label: "Live listings", sub: "On Explore", subTone: "faint", target: raw.productsCount === 0 ? null : raw.productsCount, format: String },
+      { spec: { kind: "blank" }, empty: raw.liveProductsCount === 0, label: "Live listings", sub: "On Explore", subTone: "faint", target: raw.liveProductsCount === 0 ? null : raw.liveProductsCount, format: String },
       { spec: { kind: "blank" }, empty: raw.discountsCount === 0, label: "Live discounts", sub: "On listing", subTone: "faint", target: raw.discountsCount === 0 ? null : raw.discountsCount, format: String },
     ];
   }

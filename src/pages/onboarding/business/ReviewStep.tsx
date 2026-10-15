@@ -31,7 +31,7 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
       : lane === "gym"
       ? [
           e.amenities.join(", ").toLowerCase().replace(/^./, (m) => m.toUpperCase()) || "No facilities yet",
-          [e.qrCheckIn ? "QR check-in" : "Front desk check-in", e.starterPlan ? `${e.starterPlan.name} $${e.starterPlan.price}` : null].filter(Boolean).join(" · "),
+          ["QR check-in", e.starterPlan ? `${e.starterPlan.name} $${e.starterPlan.price}` : null].filter(Boolean).join(" · "),
         ]
       : [
           biz.categories.join(", ") || "Nothing picked yet",

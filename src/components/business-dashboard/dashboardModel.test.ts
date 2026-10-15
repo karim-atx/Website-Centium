@@ -10,6 +10,7 @@ const raw = (over: Partial<DashRaw> = {}): DashRaw => ({
   members: [],
   plansCount: 0,
   productsCount: 0,
+  liveProductsCount: 0,
   discountsCount: 0,
   seats: null,
   team: {},

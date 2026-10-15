@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Inbox, UserX } from "lucide-react";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { copyText } from "../../components/business-more/share";
-import { respondJoinRequest, type JoinRequest } from "../../services/business-team/team";
+import { fetchPublicDetails, respondJoinRequest, type JoinRequest, type PublicDetails } from "../../services/business-team/team";
 import { Avatar, BackRow, Notice, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { SeatsFullSheet } from "./TeamSheets";
-import { requestedWhen, seatCounts, teamTitle } from "./teamLogic";
+import { requestLine, requestedWhen, seatCounts, teamTitle } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-123 / 124 (requests), 126 (deny confirm), 127 (approve with no free
 // seat), 128 (approved toast), 129 (no requests). B6: respond_join_request
 // checks the seat first (ATXC0) and approval adds an UNACCEPTED employment,
-// so the professional still accepts in their own app (B0).
+// so the professional still accepts in their own app (B0). 9c: the
+// specialty line comes from the requester's public listing
+// (public_professional_directory / _experience); an unlisted requester has
+// none and the line is left out.
 
 export function JoinRequestsPage({ data }: { data: TeamData }) {
   const navigate = useNavigate();
@@ -25,6 +28,19 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
   const counts = seatCounts(people ?? [], capacity?.capacity ?? 0);
   const list = requests ?? [];
   const n = list.length;
+  const [details, setDetails] = useState<Record<string, PublicDetails | null>>({});
+  const ids = list.map((r) => r.professionalId).join();
+  useEffect(() => {
+    if (!ids) return;
+    let cancelled = false;
+    void Promise.all(ids.split(",").map(async (pid) => [pid, await fetchPublicDetails(pid)] as const)).then((pairs) => {
+      if (cancelled) return;
+      setDetails(Object.fromEntries(pairs.map(([pid, r]) => [pid, r.ok ? r.value : null])));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ids]);
 
   const answer = async (r: JoinRequest, approve: boolean) => {
     if (busy) return;
@@ -100,6 +116,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                 <Avatar name={r.name} url={r.avatarUrl} className="tm-av" />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="tm-rq-n">{r.name}</p>
+                  {requestLine(details[r.professionalId] ?? null, today) && <p className="tm-rq-s">{requestLine(details[r.professionalId] ?? null, today)}</p>}
                   <p className="tm-rq-w">{requestedWhen(r.createdAt, today)}</p>
                 </div>
               </div>

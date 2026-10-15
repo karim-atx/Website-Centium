@@ -95,9 +95,9 @@ function SettingsHub() {
   } = useApp();
   const navigate = useNavigate();
 
-  // Cycle tracking moved to the profile in R15 (C6): Safety & content for a
-  // customer, Health tracking on a professional's Profile, and the Business
-  // Profile for a business (components/profile/CycleTrackingRow).
+  // Cycle tracking is not on this page: components/profile/CycleTrackingRow
+  // sits on the Profile (pages/profile/Profile.tsx) and, for a business, on
+  // More › Settings (pages/business-more/BusinessSettings.tsx).
 
   // The cycle tracker's Settings tab links to /app/settings#timezone, and
   // #devices lands on Connected devices (MO1.8 N1).

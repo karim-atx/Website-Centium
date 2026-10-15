@@ -101,6 +101,33 @@ export function liveOnListing(rows: readonly Pick<PromotionRow, "starts_on" | "e
  */
 export const offerLocked = (status: PromoStatus): boolean => status !== "scheduled";
 
+/**
+ * Chart markers for promotion starts (V6-104 kind "discount"; AN14-001 7d,
+ * MA1-005 / MA1-054 7d): each promotion that started inside the chart's
+ * buckets marks the bucket holding its starts_on (one tag per bucket, the
+ * first promotion's text). `buckets` are the chart's
+ * days or week starts (YYYY-MM-DD, ascending); `last` is the last day the
+ * final bucket covers. Scheduled promotions (not started) are left out.
+ */
+export function promoStartMarkers<T extends Pick<Promotion, "startsOn">>(
+  rows: readonly T[],
+  buckets: readonly string[],
+  last: string,
+  text: (p: T) => string,
+  today: string,
+): { i: number; t: string; kind: "discount" }[] {
+  if (!buckets.length) return [];
+  const out: { i: number; t: string; kind: "discount" }[] = [];
+  for (const p of rows) {
+    if (p.startsOn > today || p.startsOn < buckets[0] || p.startsOn > last) continue;
+    let i = 0;
+    while (i + 1 < buckets.length && buckets[i + 1] <= p.startsOn) i++;
+    out.push({ i, t: text(p), kind: "discount" });
+  }
+  // One tag per bucket (tags on the same bucket would sit on top of each other).
+  return out.sort((a, b) => a.i - b.i).filter((m, k, a) => !k || a[k - 1].i !== m.i);
+}
+
 /** promotion_stats(p_business_id) row. */
 export interface PromoStatRow {
   promotion_id: string;

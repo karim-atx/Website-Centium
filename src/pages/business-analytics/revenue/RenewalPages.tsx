@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, CalendarRange, SlidersHorizontal } from "lucide-react";
+import { CalendarCheck, CalendarRange, MessageCircle, SlidersHorizontal } from "lucide-react";
 import {
   Navigate,
   useNavigate,
@@ -17,6 +17,8 @@ import {
   sum,
   today as todayIso,
 } from "../../../services/business-revenue";
+import { startMemberThread } from "../../../services/messaging";
+import { Toast } from "../../../components/ui/Toast";
 import { ErrorLine, OfflineLine, PayHeader, Skel, v, whoOf } from "./kit";
 import {
   PayBoxes,
@@ -26,15 +28,17 @@ import {
   PayGroupHead,
   PayList,
 } from "./PayKit";
-import { REVENUE_BASE } from "./payModel";
+import { paidHistRows, REVENUE_BASE } from "./payModel";
+import { usePaidHistory } from "./usePaidHistory";
 import { useRevenue } from "./revenueContext";
 
 // Renewals by week (AN14-062 to -067, -070 to -072: PaySeeAllV2 kind
 // "renewals") and the plan detail (AN14-068). A renewal is an active
 // membership whose period ends in the next 30 days (gym_memberships.
 // expires_on), at its agreed price. Weeks are Monday to Sunday (user rule).
-// Not yet: "Message member" (B7), bookings or visits this month (B9 / B10),
-// last payments (paid dates are not shared yet, B8).
+// The detail shows the member's last paid payments (business_payments, B8)
+// and "Message member" (start_member_thread, B7). Not yet: bookings or
+// visits this month (B9 / B10).
 
 /** Plan dot colours in plan order (Monthly #AEA1DC, 12 months #6F9993, pack #C9922E). */
 const PLAN_DOTS = [v("primary"), v("pay-teal"), v("amber")];
@@ -194,11 +198,28 @@ export const RenewalsPage: React.FC = () => {
 };
 
 export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
-  const { data, loading, error, reload } = useRevenue();
+  const { data, loading, error, reload, businessId } = useRevenue();
   const navigate = useNavigate();
   const back = `${REVENUE_BASE}/payments/renewals`;
   const rec =
     data?.records.find((r) => r.key === recKey) ?? null;
+  // B7 venue_renewals_due names the member (null on a guest or an older database).
+  const personId =
+    (rec && data?.renewalsDue.find((d) => d.membershipId === rec.id)?.personId) ?? null;
+  const paid = usePaidHistory(businessId, personId, 3);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const message = async () => {
+    if (!businessId || !personId || busy) return;
+    setBusy(true);
+    const t = await startMemberThread(businessId, personId);
+    setBusy(false);
+    if (!t.ok) {
+      setToast(t.message);
+      return;
+    }
+    navigate("/app/messages", { state: { threadId: t.threadId } });
+  };
   if (error && !data)
     return (
       <div className="pt-[12px] pb-[120px]">
@@ -241,7 +262,28 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
           { l: "Payment method", v: rec.method === "whish" ? "Whish" : "Cash" },
           { l: "Current period ends", v: dddDMon(rec.expiresOn) },
         ]}
-        actions={[]}
+        histTitle="Last payments"
+        hist={paid ? paidHistRows(paid, "renewal") : undefined}
+        actions={
+          personId
+            ? [
+                {
+                  t: "Message member",
+                  icon: MessageCircle,
+                  disabled: busy,
+                  onClick: () => void message(),
+                },
+              ]
+            : []
+        }
+      />
+      <Toast
+        open={!!toast}
+        message={toast ?? ""}
+        variant="business"
+        shape="market"
+        duration={4000}
+        onExpire={() => setToast(null)}
       />
     </div>
   );

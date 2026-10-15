@@ -116,13 +116,24 @@ export const plansCount = (n: number): string => `${n} ${n === 1 ? "plan" : "pla
 /**
  * The row's third line (OP1-022 row 16): memberships "{n} active members",
  * packs "{n} active packs"; day passes, drop-ins and intro offers "{n} active"
- * (OURS until "sold / used this period", BU2-12).
+ * (OURS: the fallback while business_plan_figures is unread; periodLine wins).
  */
 export function membersLine(kind: PlanKind, n: number): string {
   if (kind === "class_pack") return `${n} active ${n === 1 ? "pack" : "packs"}`;
   if (kind === "day_pass") return `${n} active ${n === 1 ? "pass" : "passes"}`;
   if (kind === "membership") return `${n} active ${n === 1 ? "member" : "members"}`;
   return `${n} active`;
+}
+
+/**
+ * OP1-022 row 16 / OP1-036 row 3 (B15 MB-04 business_plan_figures .sold, new
+ * sales not renewals): day passes and drop-ins "{n} sold this period", intro
+ * offers "{n} used this period". Null for the kinds that keep membersLine.
+ */
+export function periodLine(kind: PlanKind, sold: number): string | null {
+  if (kind === "day_pass" || kind === "drop_in") return `${sold} sold this period`;
+  if (kind === "intro_offer") return `${sold} used this period`;
+  return null;
 }
 
 /** Status pill label (logic 403). */

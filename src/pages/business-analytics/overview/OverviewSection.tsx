@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../../../../lib/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, HeartPulse, Star, Wallet, type LucideIcon } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
@@ -28,10 +29,18 @@ import { LiveNowCard } from "./LiveNowCard";
 //
 // ONLY REAL NUMBERS: the headline is B15's business_period_stats (a metric
 // the caller may not hold has no cell), the dial is business_day, the rest
-// comes from rows on the stack (overviewData). Live data (D2): the page polls
-// every 2 minutes while visible and re-reads on Retry.
+// comes from rows on the stack (overviewData). Live data (AN1-034 S6, D2):
+// a Realtime channel on B15 business_activity (the same feed as the
+// dashboard's useActivityFeed, filtered by business_id; RLS limits each kind
+// to a caller with its permission) re-reads the page shortly after a new
+// booking, join or payment lands; the 2-minute poll while visible stays as the
+// fallback for a silent socket; pull-to-refresh (the Meal Prep / Health
+// gesture and 70 px threshold) and Retry re-read on demand.
 
 const POLL_MS = 2 * 60 * 1000;
+/** Realtime bursts (a class booked by several people) collapse into one re-read. */
+const LIVE_DEBOUNCE_MS = 1500;
+const PULL_THRESHOLD = 70;
 
 const tint = (col: string, a: number) =>
   col.startsWith("#")
@@ -88,15 +97,62 @@ export function OverviewSection() {
   const recorded = useRecordedRevenue(range, revRecords, { plans: false, series: false });
   const reloadRev = rev.reload;
   const reloadRecorded = recorded.reload;
-  usePoll(
-    () => {
-      void load();
+  const refreshAll = useCallback(() => {
+    void load();
+    reloadRev();
+    reloadRecorded();
+  }, [load, reloadRev, reloadRecorded]);
+  usePoll(refreshAll, POLL_MS, !!raw && online);
+
+  // B15 business_activity INSERTs (DI-03) trigger the re-read.
+  const bizId = raw?.business?.id ?? null;
+  const refreshRef = useRef(refreshAll);
+  useEffect(() => {
+    refreshRef.current = refreshAll;
+  });
+  useEffect(() => {
+    if (!bizId || !online) return;
+    let timer: number | null = null;
+    const channel = supabase
+      .channel(`analytics-overview:${bizId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "business_activity", filter: `business_id=eq.${bizId}` }, () => {
+        if (timer !== null) window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          timer = null;
+          refreshRef.current();
+        }, LIVE_DEBOUNCE_MS);
+      })
+      .subscribe();
+    return () => {
+      if (timer !== null) window.clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [bizId, online]);
+
+  // Pull-to-refresh at the top of the page (MealPrepPanel's gesture).
+  const [pullY, setPullY] = useState(0);
+  const [pulling, setPulling] = useState(false);
+  const pullStartY = useRef<number | null>(null);
+  const pullStart = (clientY: number, target: EventTarget) => {
+    if (pulling || window.scrollY > 0 || (target as Element).closest?.("[data-readout]")) return;
+    pullStartY.current = clientY;
+  };
+  const pullMove = (clientY: number) => {
+    if (pullStartY.current === null || pulling) return;
+    const delta = clientY - pullStartY.current;
+    if (delta > 0) setPullY(Math.min(delta, 100));
+  };
+  const pullEnd = () => {
+    if (pullStartY.current === null) return;
+    pullStartY.current = null;
+    if (pullY >= PULL_THRESHOLD && online) {
+      setPulling(true);
+      void load().finally(() => setPulling(false));
       reloadRev();
       reloadRecorded();
-    },
-    POLL_MS,
-    !!raw && online,
-  );
+    }
+    setPullY(0);
+  };
 
   // A new range reloads with the skeleton (OURS-AN1-custom-range-sheet #8).
   const loading = !raw || loadedFor !== rangeKey;
@@ -126,7 +182,20 @@ export function OverviewSection() {
   const can = (key: string) => (pushed ?? []).includes(key);
 
   return (
-    <div data-an1-overview>
+    <div
+      data-an1-overview
+      onTouchStart={(e) => pullStart(e.touches[0].clientY, e.target)}
+      onTouchMove={(e) => pullMove(e.touches[0].clientY)}
+      onTouchEnd={pullEnd}
+      onTouchCancel={pullEnd}
+    >
+      {(pullY > 0 || pulling) && (
+        <div data-pull style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", height: pulling ? 28 : pullY }}>
+          <p style={{ fontSize: textPx(10), fontWeight: 600, color: c.faint, margin: 0 }}>
+            {pulling ? "Refreshing…" : pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+          </p>
+        </div>
+      )}
       {error && (
         <ErrorRow
           c={c}

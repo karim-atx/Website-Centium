@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import type { ClassSession, TeamPerson } from "../../services/business-team/types";
 import { professionLabel } from "../../services/business-team/seats";
-import { clashOf, initials, noSeatPeople, roleAndProfession, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, teamBoxes, weekRange } from "./teamLogic";
+import { clashOf, initials, jobRow, noSeatPeople, profileLink, requestLine, roleAndProfession, roleOptions, roleShort, seatBlocks, seatCounts, seatHint, seatLine, specialtySub, teamBoxes, weekRange, yearsOfExperience } from "./teamLogic";
 
 const person = (id: string, name: string, accepted: boolean, invitedAt = "2026-09-01T10:00:00Z", role: TeamPerson["role"] = "instructor"): TeamPerson => ({
   employmentId: "e-" + id,
@@ -118,4 +118,30 @@ test("profession next to the role; the server's seat answer wins (B6 follow-up)"
   assert.equal(roleAndProfession(person("b", "John", true)), "Instructor");
   // A server answer of false keeps an instructor out of the seat grid.
   assert.deepEqual(seatCounts([{ ...person("c", "C", true), usesSeat: false }], 5), { used: 0, invited: 0, total: 5, free: 5 });
+});
+
+test("public profile rows (OP1-132 C1, C2, C6; OP1-124 9c)", () => {
+  const d = {
+    subtype: "trainer",
+    specialty: "Spin and strength",
+    bio: null,
+    website: "karimtrains.com",
+    instagram: "@john.trains",
+    x: "https://x.com/karimtrains",
+    experience: [
+      { title: "Head coach", organisation: "Northside Fitness", startMonth: "2023-01", endMonth: null },
+      { title: "Personal trainer", organisation: "Pulse Gym", startMonth: "2019-09", endMonth: "2023-01" },
+    ],
+  };
+  assert.equal(yearsOfExperience(d, "2026-10-15"), 7);
+  assert.equal(specialtySub(d, "2026-10-15"), "Spin and strength · 7 years' experience");
+  assert.deepEqual(jobRow(d.experience[0]), { title: "Head coach, Northside Fitness", sub: "2023 to now" });
+  assert.deepEqual(jobRow(d.experience[1]), { title: "Personal trainer, Pulse Gym", sub: "2019 to 2023" });
+  assert.deepEqual(profileLink("website", d.website), { text: "karimtrains.com", href: "https://karimtrains.com/" });
+  assert.equal(profileLink("website", "javascript:alert(1)").href, null);
+  assert.deepEqual(profileLink("instagram", d.instagram), { text: "@john.trains", href: "https://www.instagram.com/john.trains/" });
+  assert.deepEqual(profileLink("x", d.x), { text: "@karimtrains", href: "https://x.com/karimtrains" });
+  assert.equal(requestLine(d, "2026-10-15"), "Personal trainer · Spin and strength");
+  assert.equal(requestLine({ ...d, subtype: null, specialty: null }, "2026-10-15"), "7 years' experience");
+  assert.equal(requestLine(null, "2026-10-15"), null);
 });

@@ -18,7 +18,7 @@ import { checkStoreActions, useHealthCheckStore, type CheckReminder } from "../.
 import { PREGNANCY_CHECKS_COPY, PREGNANCY_SCHEDULE, pregnancyChecksDone, pregnancyComingUp } from "../../services/pregnancy/checks";
 import { gestationOn } from "../../services/pregnancy/weeks";
 import * as PG from "../../services/pregnancy/guidance";
-import { localDayOf, todayLocal } from "../../utils/date";
+import { formatShortDate, localDayOf, todayLocal } from "../../utils/date";
 import { fetchNotificationPrefs } from "../../services/preferences";
 import { hairAt, isoDay } from "../health/log/LogSheetParts";
 import { CheckTile, InfoBox } from "./HealthCheckParts";
@@ -190,7 +190,7 @@ export function GeneralPlan() {
                 )}
                 {c.id === "every" && (
                   <span className="whitespace-nowrap tabular-nums text-charcoal-faint" style={sub}>
-                    {latestBpDay ? SCREENING_COPY.lastChecked(new Date(`${latestBpDay}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })) : SCREENING_COPY.notYet}
+                    {latestBpDay ? SCREENING_COPY.lastChecked(formatShortDate(new Date(`${latestBpDay}T00:00:00`), { day: "numeric", month: "short", year: "numeric" })) : SCREENING_COPY.notYet}
                   </span>
                 )}
               </div>

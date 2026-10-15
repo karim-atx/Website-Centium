@@ -5,6 +5,7 @@ import {
   initials,
   isEarly,
   membersLine,
+  periodLine,
   payWith,
   planIcon,
   previewLines,
@@ -127,4 +128,12 @@ test("archive and pause copy", () => {
   assert.equal(archiveBody(6), "It's removed from Explore and can't be bought. The 6 current members keep it until it ends.");
   assert.equal(archivedToast("Student monthly", 1), "Student monthly archived. 1 member keeps it until it ends.");
   assert.equal(statusLine("paused"), "Paused: nobody new can buy it. Members keep their plan and renewals continue.");
+});
+
+test("period line: sold / used this period for passes, drop-ins and intro offers (OP1-022 row 16, OP1-036 row 3)", () => {
+  assert.equal(periodLine("day_pass", 31), "31 sold this period");
+  assert.equal(periodLine("drop_in", 0), "0 sold this period");
+  assert.equal(periodLine("intro_offer", 12), "12 used this period");
+  assert.equal(periodLine("membership", 4), null);
+  assert.equal(periodLine("class_pack", 4), null);
 });

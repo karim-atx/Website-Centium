@@ -718,6 +718,24 @@ async function latestMessages(threadIds: string[]): Promise<Map<string, Latest>>
 }
 
 /**
+ * AN4-051 O5: whether the member in one of the business's threads is under 18
+ * (business_member_threads.is_minor; my_conversations does not carry it).
+ * Pages through the business's threads until the one asked for is found.
+ */
+export async function memberThreadIsMinor(businessId: string, threadId: string): Promise<boolean> {
+  const PAGE = 200;
+  for (let offset = 0; offset < 2000; offset += PAGE) {
+    const r = await loose().rpc("business_member_threads", { p_business_id: businessId, p_limit: PAGE, p_offset: offset });
+    if (r.error) return false;
+    const rows = (r.data ?? []) as BizThreadRow[];
+    const hit = rows.find((t) => t.thread_id === threadId);
+    if (hit) return !!hit.is_minor;
+    if (rows.length < PAGE) return false;
+  }
+  return false;
+}
+
+/**
  * Opens (or finds) the business's thread with one member. Idempotent on
  * (business, member): every employee gets the same thread. ATX96: not a
  * current member, nor one who left in the last 90 days.

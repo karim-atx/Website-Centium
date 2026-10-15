@@ -450,7 +450,7 @@ export function essentialsSummaries(lane: BizLane, e: Essentials, categories: st
     };
   }
   if (lane === "gym") {
-    const checks = [e.qrCheckIn ? "QR check-in" : null, `${e.minAge} and over`].filter(Boolean).join(" · ");
+    const checks = ["QR check-in", `${e.minAge} and over`].filter(Boolean).join(" · ");
     return {
       a: list(e.amenities).replace(/(^|, )\w/g, (m) => m.toLowerCase()).replace(/^./, (m) => m.toUpperCase()),
       b: checks,

@@ -19,6 +19,7 @@ import {
   joinAnd,
   limitLabel,
   membersLine,
+  periodLine,
   planIcon,
   plansCount,
   priceLine,
@@ -163,6 +164,8 @@ const PlanRow: React.FC<{
   open: boolean;
   onToggle: () => void;
   count: number | null;
+  /** B15: new sales this period; null when unknown (the row keeps the active count). */
+  sold: number | null;
   runsClasses: boolean;
   onEdit: () => void;
   onAction: (action: PlanAction) => void;
@@ -170,7 +173,7 @@ const PlanRow: React.FC<{
   onOpenPage: () => void;
   offline: boolean;
   rowRef?: (el: HTMLDivElement | null) => void;
-}> = ({ plan, first, open, onToggle, count, runsClasses, onEdit, onAction, nameOf, onOpenPage, offline, rowRef }) => {
+}> = ({ plan, first, open, onToggle, count, sold, runsClasses, onEdit, onAction, nameOf, onOpenPage, offline, rowRef }) => {
   const reduced = useReducedMotion();
   const Icon = ICONS[planIcon(plan)];
   const panelId = `plan-panel-${plan.id}`;
@@ -198,11 +201,16 @@ const PlanRow: React.FC<{
           <span className="block text-[12px] leading-[16px] text-charcoal-soft" style={{ marginTop: 2 }}>
             {priceLine(plan)}
           </span>
-          {count !== null && (
-            <span className="block text-[11px] leading-[15px] text-charcoal-faint" style={{ marginTop: 1 }}>
-              {membersLine(plan.kind, count)}
-            </span>
-          )}
+          {(() => {
+            // OP1-022 row 16 / OP1-036 row 3: day passes, drop-ins and intro offers count this period's sales.
+            const period = sold !== null ? periodLine(plan.kind, sold) : null;
+            const text = period ?? (count !== null ? membersLine(plan.kind, count) : null);
+            return text ? (
+              <span className="block text-[11px] leading-[15px] text-charcoal-faint" style={{ marginTop: 1 }}>
+                {text}
+              </span>
+            ) : null;
+          })()}
         </span>
         <ChevronDown
           size={18}
@@ -453,6 +461,7 @@ const MembershipsList: React.FC = () => {
                         open={openId === p.id}
                         onToggle={() => setOpenId(openId === p.id ? null : p.id)}
                         count={m ? m.length : null}
+                        sold={ctx.soldOf(p.id)}
                         runsClasses={runsClasses}
                         offline={!online}
                         onEdit={() => setSheet({ open: true, editing: p })}

@@ -51,7 +51,9 @@ import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptDocumentsFor, acceptFor } from "../../services/storage";
+import { MemberTag } from "../marketplace/MemberTag";
 import {
+  memberThreadIsMinor,
   clearPin,
   describeMessage,
   describeRemoval,
@@ -280,6 +282,22 @@ export const ThreadView: React.FC<{
   // B7 MB-02: the member may block a business (its owner is the target;
   // the block covers everyone there). The business side has no Block.
   const safetyApplies = !departed && (thread.kind === "peer" || (thread.kind === "business" && !!thread.business?.memberSide));
+  // AN4-051 O5: the business side tags an under-18 member "Under 18" (muted
+  // MemberTag, gap 6) beside the name; is_minor comes from business_member_threads.
+  const bizSide = thread.kind === "business" && !!thread.business && !thread.business.memberSide;
+  const [minor, setMinor] = useState<{ id: string; is: boolean } | null>(null);
+  const bizSideId = bizSide ? (thread.business?.id ?? null) : null;
+  useEffect(() => {
+    if (!bizSideId) return;
+    let cancelled = false;
+    void memberThreadIsMinor(bizSideId, thread.id).then((is) => {
+      if (!cancelled) setMinor({ id: thread.id, is });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bizSideId, thread.id]);
+  const isMinor = bizSide && minor?.id === thread.id && minor.is;
   // Reporting a message works in a direct chat and in a group alike.
   const canReport = !departed && thread.kind !== "official_support";
   const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
@@ -1398,7 +1416,14 @@ export const ThreadView: React.FC<{
           )}
           <span className="flex flex-col min-w-0">
             {/* MO1.2.1.3 #9: 14.5/700 in the deep primary ink (a no-decision item: the handover's look, theme token). */}
-            <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
+            {isMinor ? (
+              <span data-minor-row className="flex items-center min-w-0" style={{ gap: 6 }}>
+                <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
+                <MemberTag label="Under 18" tone="muted" />
+              </span>
+            ) : (
+              <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
+            )}
             {isGroup ? (
               typingName ? (
                 <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
@@ -1580,7 +1605,7 @@ export const ThreadView: React.FC<{
             <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-1">
               {thread.kind === "official_support"
                 ? "You're chatting with the Centium team. We usually reply within an hour."
-                : thread.venue
+                : thread.venue || bizSide
                   ? "Only you and this member can read this chat."
                   : thread.otherRole && thread.otherRole !== "official" && thread.otherRole !== "gym"
                     ? `Messages with your team are private. ${thread.participantName.split(" ")[0]} sees your business name.`

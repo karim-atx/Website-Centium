@@ -24,10 +24,21 @@ describe("console access (B7)", () => {
     assert.equal(a.seats.length, 2);
   });
 
-  it("an unaccepted employment, or one with no permissions, is no seat", () => {
-    const a = buildAccess(null, [emp({ accepted_at: null }), emp({ business_id: "b2", permissions: [] })], names, null);
+  it("an unaccepted employment is no seat", () => {
+    const a = buildAccess(null, [emp({ accepted_at: null })], names, null);
     assert.equal(a.current, null);
     assert.deepEqual(a.seats, []);
+  });
+
+  it("a seat with no permissions is kept, opens nothing, and a seat that opens something wins by default", () => {
+    const none = buildAccess(null, [emp({ business_id: "b2", permissions: [] })], names, null);
+    assert.equal(none.current?.businessId, "b2");
+    assert.equal(none.current?.permissions.length, 0);
+    assert.ok(!seatCan(none.current, "members"));
+    assert.deepEqual(staffAreas(none.current!), []);
+    const both = buildAccess(null, [emp({ business_id: "b2", permissions: [] }), emp()], names, null);
+    assert.equal(both.current?.businessId, "b1");
+    assert.equal(both.seats.length, 2);
   });
 
   it("staff get the chosen seat, else the first, with only their permissions", () => {

@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { money, sum } from "../../../services/business-revenue";
+import { fetchBusinessTimezone, fetchTopProducts } from "../../../services/store/orders";
+import { fetchStoreProducts } from "../../../services/store/products";
 import { useAnalytics } from "../analyticsContext";
+import { businessRange, type AnalyticsRange } from "../analyticsRange";
 import { ErrorLine, RCard, SecLabel, Skel, v } from "./kit";
 import { useRevenue } from "./revenueContext";
 import { useRecordedRevenue } from "./useRecordedRevenue";
@@ -70,9 +73,29 @@ const Collapsible: React.FC<{
   </RCard>
 );
 
+/**
+ * AN14-018 row 3: the Products stream's lines by the store's own categories
+ * (BU6-01): B11 store_top_products for the range (order value, up to 50
+ * products) joined to business_offerings.category_id → product_categories.
+ */
+async function salesByCategory(businessId: string, range: AnalyticsRange): Promise<{ label: string; value: number }[] | null> {
+  const r = businessRange(range, await fetchBusinessTimezone(businessId));
+  const [top, prods] = await Promise.all([fetchTopProducts(businessId, r.from, r.to, 50), fetchStoreProducts(businessId)]);
+  if (top.status !== "ok" || prods.status !== "ok") return null;
+  const cat = new Map(prods.value.products.map((p) => [p.id, p.category]));
+  const by = new Map<string, number>();
+  for (const t of top.value) {
+    const k = (t.offeringId && cat.get(t.offeringId)) || "No category";
+    by.set(k, (by.get(k) ?? 0) + t.sales);
+  }
+  return [...by.entries()].map(([label, value]) => ({ label, value })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
+}
+
 export const StreamsTab: React.FC = () => {
   const { range, kind } = useAnalytics();
-  const { data } = useRevenue();
+  const { data, businessId } = useRevenue();
+  const [cats, setCats] = useState<{ key: string; value: { label: string; value: number }[] } | null>(null);
+  const catKey = `${businessId}|${range.key}|${range.from}|${range.to}`;
   const navigate = useNavigate();
   const [aOpen, setAOpen] = useState(false);
   const [bOpen, setBOpen] = useState(false);
@@ -86,6 +109,18 @@ export const StreamsTab: React.FC = () => {
   const total = sum(rows.map((r) => r.value));
   const mx = Math.max(1, ...rows.map((r) => r.value));
   const planMx = Math.max(1, ...plans.map((p) => p.value));
+  const hasProducts = rows.some((r) => r.key === "product");
+  useEffect(() => {
+    if (!hasProducts || !businessId) return;
+    let alive = true;
+    void salesByCategory(businessId, range).then((v) => {
+      if (alive && v) setCats({ key: catKey, value: v });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [hasProducts, businessId, range, catKey]);
+  const catLines = cats && cats.key === catKey ? cats.value : null;
 
   if (rec.error && !f)
     return <ErrorLine message="Couldn't load revenue." onRetry={rec.reload} />;
@@ -206,6 +241,30 @@ export const StreamsTab: React.FC = () => {
                         </span>
                       </span>
                     ))}
+                    {r.key === "product" && catLines && catLines.length > 0 && (
+                      <>
+                        <span
+                          className="text-[10.5px] font-bold mt-[4px]"
+                          style={{ color: v("faint") }}
+                        >
+                          By category, from orders placed
+                        </span>
+                        {catLines.map((c) => (
+                          <span
+                            key={c.label}
+                            className="flex justify-between text-[11.5px]"
+                          >
+                            <span style={{ color: v("ink-soft") }}>{c.label}</span>
+                            <span
+                              className="font-extrabold rv-num"
+                              style={{ color: v("ink") }}
+                            >
+                              {money(c.value)}
+                            </span>
+                          </span>
+                        ))}
+                      </>
+                    )}
                   </span>
                 )}
               </button>

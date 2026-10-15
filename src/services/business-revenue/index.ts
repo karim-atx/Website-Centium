@@ -277,17 +277,24 @@ export async function fetchRevenue(
   };
 }
 
-/** Mark Paid at the desk: the existing functions, nothing else (Stage 5). */
-export async function markPaid(rec: {
-  kind: PayKind;
-  id: string;
-}): Promise<Result<true>> {
+/**
+ * Mark Paid at the desk: the existing functions, nothing else (Stage 5). A
+ * class booking may carry a reference (OURS-OP1-class-roster row 10;
+ * mark_class_booking_paid p_reference, a second call corrects it).
+ */
+export async function markPaid(
+  rec: {
+    kind: PayKind;
+    id: string;
+  },
+  reference: string | null = null
+): Promise<Result<true>> {
   const { error } =
     rec.kind === "membership"
       ? await rpc<null>("mark_gym_membership_paid", { p_membership_id: rec.id })
       : await rpc<null>("mark_class_booking_paid", {
           p_booking_id: rec.id,
-          p_reference: null,
+          p_reference: reference?.trim() || null,
         });
   if (error) {
     console.error("[revenue] Could not mark paid:", error.message);
@@ -738,4 +745,65 @@ export async function fetchPaymentSources(
       out.set(x.id as string, { sourceKind: x.source_kind as string, sourceId: x.source_id as string });
   }
   return { ok: true, value: out };
+}
+
+/** One of a person's paid ledger payments (business_payments, status paid). */
+export interface PaidEntry {
+  id: string;
+  amount: number;
+  method: PayMethod;
+  dueOn: string | null;
+  /** The business's own day of paid_at. */
+  paidOn: string;
+}
+
+/**
+ * AN14-044 B1 / AN14-068 row 4: a person's latest paid payments at this
+ * business (business_payments payer_id, status 'paid', newest paid_at first;
+ * the revenue SELECT policy). Days in the business's timezone.
+ */
+export async function fetchPaidHistory(
+  businessId: string,
+  personId: string,
+  limit = 3,
+): Promise<Result<PaidEntry[]>> {
+  const loose = supabase as unknown as {
+    from: (t: string) => {
+      select: (c: string) => {
+        eq: (c: string, v: string) => {
+          eq: (c: string, v: string) => {
+            eq: (c: string, v: string) => {
+              order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Res<Record<string, unknown>[]> };
+            };
+          };
+        };
+      };
+    };
+  };
+  const p = await loose
+    .from("business_payments")
+    .select("id, amount, method, due_on, paid_at")
+    .eq("business_id", businessId)
+    .eq("payer_id", personId)
+    .eq("status", "paid")
+    .order("paid_at", { ascending: false })
+    .limit(limit);
+  if (p.error) {
+    console.error("[revenue] Could not read the paid history:", p.error.message);
+    return fail(p.error, "Couldn't load the recent payments.");
+  }
+  const b = await db.from("business_profiles").select("timezone").eq("id", businessId);
+  const tz = (!b.error && (b.data?.[0]?.timezone as string | null)) || "UTC";
+  return {
+    ok: true,
+    value: (p.data ?? [])
+      .filter((x) => !!x.paid_at)
+      .map((x) => ({
+        id: x.id as string,
+        amount: Number(x.amount),
+        method: x.method as PayMethod,
+        dueOn: (x.due_on as string | null) ?? null,
+        paidOn: dayIn(x.paid_at as string, tz),
+      })),
+  };
 }

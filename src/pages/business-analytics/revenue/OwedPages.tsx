@@ -54,9 +54,10 @@ import {
   type DetailAction,
   type HistRow,
 } from "./PayKit";
-import { owedChip, REVENUE_BASE } from "./payModel";
+import { owedChip, paidHistRows, REVENUE_BASE } from "./payModel";
 import { useRevenue } from "./revenueContext";
 import { useMoneyOwed } from "./useMoneyOwed";
+import { usePaidHistory } from "./usePaidHistory";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 
 // Money owed (AN14-035 / -037 to -043, PaySeeAllV2 kind "owed"), the owed
@@ -73,7 +74,8 @@ import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 // offers "Open chat". Both need the revenue permission; Mark as paid needs
 // front_desk. While money_owed is missing on the database the list is the
 // client-side one and Undo / reminders stay off (the pending rule). Not yet:
-// "+1 vs last" (needs history), recent paid history, Whish (Soon).
+// "+1 vs last" (needs history), Whish (Soon). Recent payments (AN14-044 B1)
+// are the person's latest paid business_payments rows (usePaidHistory).
 
 const PAY_CHIP = (o: OwedItem) => {
   const c = owedChip(o);
@@ -590,6 +592,8 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
     });
   });
   const remind = useSendReminder(owed.reload);
+  const { businessId: revBusiness } = useRevenue();
+  const paidHist = usePaidHistory(access.businessId ?? revBusiness, o?.personId ?? null, 2);
 
   if (owed.error && !o)
     return (
@@ -637,6 +641,7 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
           },
         ]
       : [];
+  if (paidHist) hist.push(...paidHistRows(paidHist, "owed"));
   const subject = subjectOf(o);
   const actions: DetailAction[] = [
     // Recording cash is a desk action (mark_*_paid need front_desk,

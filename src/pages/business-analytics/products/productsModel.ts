@@ -330,3 +330,194 @@ export function sortRows(
     );
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Discounts (AN11-009 to -020; AnStoreOfferingsV2 dInfo / ddv / mkChart):
+// the B13 promotions rows, their promotion_stats uses and the
+// promotion_redemptions days. Promotions are recorded against payments, not
+// taken off prices, so "Discount given" stays "–" (B8_B16_REVIEW #24); there
+// is no code field (#15), so the code chip never shows, and a row without a
+// use limit reads "{n} used · no limit" (dInfo's own words).
+
+/** The promotion fields the discount views read. */
+export interface DiscountFacts {
+  status: "scheduled" | "live" | "paused" | "ended";
+  startsOn: string;
+  endsOn: string | null;
+  endedAt: string | null;
+  useLimit: number | null;
+  /** promotion_stats uses; null when the seat can't read it. */
+  uses: number | null;
+  showOnListing: boolean;
+  audience: "new" | "everyone";
+}
+
+export type DaysLeftTone = "soon" | "normal" | "scheduled" | "ended";
+
+export interface DiscountView {
+  /** Live and ends within 7 days (the "Ends soon" flag, caution border). */
+  soon: boolean;
+  /** Live 30 days or more with no use in the last 30 days (the "Unused" flag). */
+  unused: boolean;
+  /** Days since the last use (or the start when never used); null when the last use is older than the window read. */
+  idleDays: number | null;
+  daysLeft: string;
+  dlTone: DaysLeftTone;
+  /** "1 Sep to 31 Dec" / "From 1 Sep". */
+  dates: string;
+  from: string;
+  to: string;
+  /** The real end day: the day it was ended early, else ends_on. */
+  end: string | null;
+  /** Validity bar fill, 0 to 100. */
+  elapsed: number;
+  /** The today marker (only while Active). */
+  marker: boolean;
+  /** "11 of 30 used" / "23 used · no limit"; null when uses are not readable. */
+  use: string | null;
+  /** Uses bar width, 0 to 100. */
+  usePct: number;
+  /** caution at 80% of the limit or more, axis once ended, else primary. */
+  useTone: "primary" | "caution" | "ended";
+}
+
+const nWord = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** The day it really ended: ended_at's day when earlier than ends_on. */
+export function discountEnd(f: Pick<DiscountFacts, "endsOn" | "endedAt">): string | null {
+  if (f.endedAt) {
+    const d = dayOf(f.endedAt);
+    return f.endsOn && f.endsOn < d ? f.endsOn : d;
+  }
+  return f.endsOn;
+}
+
+/**
+ * One discount's row / detail values (dInfo). `lastUse` is the newest
+ * redemption day inside the window read (null when none there);
+ * `windowFrom` is that window's first day.
+ */
+export function discountView(f: DiscountFacts, today: string, lastUse: string | null, windowFrom: string): DiscountView {
+  const end = discountEnd(f);
+  const left = f.endsOn ? daysBetween(today, f.endsOn) : null;
+  const soon = f.status === "live" && left !== null && left >= 0 && left <= 7;
+  const age = daysBetween(f.startsOn, today);
+  const idleDays = lastUse ? daysBetween(lastUse, today) : f.uses === 0 || windowFrom <= f.startsOn ? age : null;
+  const unused = f.status === "live" && f.uses !== null && age >= 30 && (!lastUse || daysBetween(lastUse, today) >= 30);
+  let daysLeft: string;
+  let dlTone: DaysLeftTone;
+  if (f.status === "scheduled") {
+    daysLeft = `Starts in ${nWord(daysBetween(today, f.startsOn), "day", "days")}`;
+    dlTone = "scheduled";
+  } else if (f.status === "ended") {
+    daysLeft = `Ended ${dm(end ?? today)}`;
+    dlTone = "ended";
+  } else if (left === null) {
+    daysLeft = "No end date";
+    dlTone = "normal";
+  } else {
+    daysLeft = left <= 0 ? "Ends today" : `${nWord(left, "day", "days")} left`;
+    dlTone = soon ? "soon" : "normal";
+  }
+  let elapsed = 0;
+  if (f.status === "ended") elapsed = 100;
+  else if (f.status !== "scheduled" && f.endsOn) elapsed = Math.max(0, Math.min(100, (age / Math.max(1, daysBetween(f.startsOn, f.endsOn))) * 100));
+  const lim = f.useLimit;
+  const pctU = lim && f.uses !== null ? f.uses / lim : 0;
+  return {
+    soon,
+    unused,
+    idleDays,
+    daysLeft,
+    dlTone,
+    dates: end ? `${dm(f.startsOn)} to ${dm(end)}` : `From ${dm(f.startsOn)}`,
+    from: dm(f.startsOn),
+    to: end ? dm(end) : "No end date",
+    end,
+    elapsed,
+    marker: f.status === "live" && !!f.endsOn,
+    use: f.uses === null ? null : lim ? `${f.uses} of ${lim} used` : `${f.uses} used · no limit`,
+    usePct: f.uses === null ? 0 : lim ? Math.min(100, pctU * 100) : f.uses ? 100 : 0,
+    useTone: f.status === "ended" ? "ended" : pctU >= 0.8 ? "caution" : "primary",
+  };
+}
+
+/** "about 4 times a week" from the uses over the weeks it has run. */
+export function usesPerWeek(f: Pick<DiscountFacts, "uses" | "startsOn" | "endsOn" | "endedAt">, today: string): string {
+  const end = discountEnd(f);
+  const last = end && end < today ? end : today;
+  const weeks = Math.max(1, (daysBetween(f.startsOn, last) + 1) / 7);
+  const k = Math.round((f.uses ?? 0) / weeks);
+  return k < 1 ? "less than once a week" : k === 1 ? "about once a week" : `about ${k} times a week`;
+}
+
+/** The detail's lead (ddv.lead, computed). `audienceNew` is the type's "New customers only". */
+export function discountLead(f: DiscountFacts, view: DiscountView, today: string, audienceNew: string): string {
+  if (f.status === "ended") return `It ended on ${dm(view.end ?? today)}. Duplicate it to run it again.`;
+  if (f.status === "scheduled") return f.showOnListing ? `It goes live on ${dm(f.startsOn)} and shows on your listing then.` : `It goes live on ${dm(f.startsOn)}.`;
+  if (f.status === "paused") return "It's paused, so it can't be used now. Resume it in Products, Promotions.";
+  if (f.uses === null) return "Uses show here for people with the Marketing or Revenue permission.";
+  if (f.uses === 0)
+    return f.showOnListing
+      ? `No one has used it yet. It shows on your listing to ${f.audience === "new" ? audienceNew.toLowerCase() : "everyone"}.`
+      : "No one has used it yet. It isn't shown on your listing.";
+  const rate = usesPerWeek(f, today);
+  if (view.soon) {
+    const left = f.endsOn ? daysBetween(today, f.endsOn) : 0;
+    return `It ends ${left <= 0 ? "today" : `in ${nWord(left, "day", "days")}`} and is used ${rate}.`;
+  }
+  return `Used ${rate}.`;
+}
+
+/** The `n` Mondays ending with this week's. */
+export function weekStarts(today: string, n: number): string[] {
+  const end = mondayOf(today);
+  return Array.from({ length: n }, (_, i) => addDays(end, (i - n + 1) * 7));
+}
+
+/** Uses per week for each Monday in `weeks` (a day counts in the week it falls in). */
+export function weeklyUses(days: readonly string[], weeks: readonly string[]): number[] {
+  const out = weeks.map(() => 0);
+  for (const d of days) {
+    const i = weeks.indexOf(mondayOf(d));
+    if (i >= 0) out[i] += 1;
+  }
+  return out;
+}
+
+export interface WeekBars {
+  bars: { x: number; y: number; w: number; h: number; last: boolean }[];
+  ghost: string;
+  ymax: number;
+  ymid: number;
+}
+
+/** mkChart: bars in a 300×118 box (plot x 24 to 300, base y 100, top y 10), the previous weeks as a dashed path. */
+export function weekBars(vals: readonly number[], prev: readonly number[]): WeekBars {
+  const mx = Math.max(...vals, ...prev, 1);
+  const topv = Math.ceil(mx / 2) * 2;
+  const n = vals.length;
+  const step = 276 / n;
+  const bw = step * 0.56;
+  const yy = (v: number) => 100 - (v / topv) * 90;
+  const r1 = (v: number) => Math.round(v * 10) / 10;
+  return {
+    bars: vals.map((v, i) => ({ x: r1(24 + i * step + (step - bw) / 2), y: r1(yy(v)), w: r1(bw), h: r1(Math.max(0, 100 - yy(v))), last: i === n - 1 })),
+    ghost: prev.map((v, i) => `${i ? "L" : "M"}${(24 + i * step + step / 2).toFixed(1)},${yy(v).toFixed(1)}`).join(" "),
+    ymax: topv,
+    ymid: topv / 2,
+  };
+}
+
+/** Order (AN11-011 row 1, OURS): live by end date, then paused, scheduled by start, then ended, latest end first. */
+export function sortDiscounts<T extends { f: Pick<DiscountFacts, "status" | "startsOn" | "endsOn" | "endedAt"> }>(rows: readonly T[]): T[] {
+  const rank = { live: 0, paused: 1, scheduled: 2, ended: 3 } as const;
+  const far = "9999-12-31";
+  return [...rows].sort((a, b) => {
+    const r = rank[a.f.status] - rank[b.f.status];
+    if (r) return r;
+    if (a.f.status === "scheduled") return a.f.startsOn.localeCompare(b.f.startsOn);
+    if (a.f.status === "ended") return (discountEnd(b.f) ?? "").localeCompare(discountEnd(a.f) ?? "");
+    return (a.f.endsOn ?? far).localeCompare(b.f.endsOn ?? far);
+  });
+}

@@ -29,6 +29,7 @@ import {
 } from "../../../services/business-classes/schedule";
 import type { RepeatRule } from "../../../services/business-classes/scheduleRules";
 import type { Session } from "./scheduleModel";
+import { useActivityRefresh } from "../useActivityRefresh";
 
 // The Schedule's data: this business's classes, the bookings on them, the
 // team that can teach them and (B9) the repeating series and the instructor
@@ -36,8 +37,10 @@ import type { Session } from "./scheduleModel";
 // session page and the class rules, so moving between them shows the last
 // answer at once and refreshes behind it (OP1-083 O1).
 //
-// LIVE DATA (OP1-074 S9): realtime on bookings is BACKEND (B15); until then a
-// 2-minute poll while the page is visible, the HANDOVER §2.3 fallback.
+// LIVE DATA (OP1-074 S9): B15 realtime, a business_id-filtered
+// business_activity channel; a booking or a member's cancel re-reads the
+// schedule. The 2-minute poll while the page is visible stays as the
+// fallback (HANDOVER §2.3), and catches changes the channel doesn't carry.
 //
 // B9 WRITES go through the server functions (save_class_series, edit_class,
 // move_class_session, assign_class_instructor, cancel_class_session,
@@ -140,6 +143,9 @@ const sortRows = (rows: BusinessClassRow[]) =>
 
 type Fail = { ok: false; message: string; code?: "capacity" | "permission" | "busy" };
 
+/** business_activity kinds that change the schedule (bookings, a member's cancel). */
+const SCHEDULE_KINDS = ["booking", "cancel"] as const;
+
 
 export function useSchedule() {
   const { authUserId, profileReady } = useApp();
@@ -169,6 +175,8 @@ export function useSchedule() {
   }, [uid]);
 
   const data = snap.uid === uid ? snap : EMPTY;
+
+  useActivityRefresh(uid ? data.businessId : null, SCHEDULE_KINDS, reload);
 
   const sessions: Session[] = useMemo(() => {
     const counts = new Map<string, number>();
