@@ -8,6 +8,7 @@ import { FixedHeader } from "../../components/ui/FixedHeader";
 import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
+import { RateClassSheet } from "../../components/marketplace/RateClassSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
@@ -184,6 +185,8 @@ export default function ClientCalendarTab() {
   /** The invitee's own reminder being saved (PB-O-65), and a failure toast. */
   const [alertSaving, setAlertSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // B14 RP-04: Rate this class from a booked class that has ended.
+  const [rate, setRate] = useState<{ bookingId: string; title: string; businessName: string } | null>(null);
   const online = useOnline();
 
   // Populate on launch, and keep whatever is on screen if the read fails —
@@ -1243,6 +1246,8 @@ export default function ClientCalendarTab() {
         // An overlay row's notes start "Booked with …" for the cards; the
         // sheet says that in its status line, so it shows the class's own.
         const overlay = detail ? bookedById.get(detail.id) : undefined;
+        const booking = detail ? bookingOf(detail) : null;
+        const ended = !!detail && new Date(`${detail.date}T${detail.endTime ?? detail.startTime ?? "23:59"}`).getTime() < Date.now();
         return (
           <EventDetailSheet
             event={detail && overlay ? { ...detail, notes: overlay.notes || undefined } : detail}
@@ -1255,11 +1260,27 @@ export default function ClientCalendarTab() {
             onOpenAttachment={(path) => void openAttachment(path)}
             bookingMade={!!detail?.sourceKind}
             onViewBooking={classId ? () => navigate(`/app/marketplace/class?id=${encodeURIComponent(classId)}`) : undefined}
+            onRate={
+              booking && ended && detail
+                ? () => {
+                    setRate({ bookingId: booking.bookingId, title: detail.title, businessName: booking.businessName });
+                    setDetailId(null);
+                  }
+                : undefined
+            }
             onInviteAlert={(alert) => detail && void saveInviteAlert(detail, alert)}
             alertSaving={alertSaving}
           />
         );
       })()}
+
+      <RateClassSheet
+        open={!!rate}
+        bookingId={rate?.bookingId ?? null}
+        classTitle={rate?.title ?? ""}
+        businessName={rate?.businessName ?? ""}
+        onClose={() => setRate(null)}
+      />
 
       {/* MO1.6 K10: a failed invitation answer, the shared toast with the
           danger icon (#C0392B / #F09A8E). */}

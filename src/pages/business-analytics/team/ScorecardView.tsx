@@ -6,6 +6,9 @@ import { classesRangeLabel, type AnalyticsRange } from "../shell/range";
 import { MIN_BOOKINGS, MIN_SESSIONS, TARGET } from "./model";
 import { Avatar, PageHeader, Strip } from "./parts";
 import { dayDate, weekday } from "./fmt";
+import { MIN_REVIEWS, distOf, vsTeam } from "./ratingsModel";
+import { RatingGraphic, ReviewsSheet, Snippets } from "./RatingsParts";
+import type { RatingsState } from "./useRatings";
 import type { TeamState } from "./useTeam";
 import { roleLabel } from "./vocab";
 
@@ -14,12 +17,14 @@ import { roleLabel } from "./vocab";
 // AN5-044 / AN5-047 / AN5-050 tap states as :focus-visible. Land-on-Ratings
 // scroll (row 15): the box top 84 below the scroller, smooth (instant under
 // Reduce motion), retried at 60 / 400 / 1000 ms, focus moved to its heading.
-// Ratings box: B14 is not on the local stack, so every instructor is New with
-// "None yet" (OURS-AN5-ratings-empty R5); the snippets and See all row are
-// hidden with no reviews.
+// Ratings box on B14 (instructor_ratings, V6-85): the team-average line, the
+// small graphic or New with "{n} so far", the two newest snippets (a tap
+// opens the reviews sheet on that review) and "See all {n} reviews"
+// (AN5-051); snippets and See all show while New too (AN5-049 row 5).
 
 export function ScorecardView({
   state,
+  ratings,
   range,
   personId,
   focusRatings,
@@ -28,6 +33,7 @@ export function ScorecardView({
   onBack,
 }: {
   state: TeamState;
+  ratings: RatingsState;
   range: AnalyticsRange;
   personId: string;
   focusRatings: boolean;
@@ -39,6 +45,8 @@ export function ScorecardView({
   const ratRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef<HTMLParagraphElement | null>(null);
   const [allUp, setAllUp] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  const [focusRev, setFocusRev] = useState<string | null>(null);
   const st = state.stats?.perPerson.find((p) => p.person.id === personId);
   const studio = state.stats?.studioFill ?? null;
 
@@ -65,6 +73,12 @@ export function ScorecardView({
 
   const p = st.person;
   const types = [...new Set(st.taught.map((c) => c.classType || c.title))].slice(0, 2);
+  // Ratings box on B14 (AN5-045 rows 9-12, AN5-049, OURS R5 / R6): all time, from instructor_ratings and the matched reviews.
+  const myRow = ratings.all.find((r) => r.professionalId === p.id);
+  const myCount = myRow?.reviews ?? 0;
+  const myAvg = myCount >= MIN_REVIEWS && myRow?.average != null ? Math.round(myRow.average * 10) / 10 : null;
+  const mine = ratings.byPerson.get(p.id) ?? [];
+  const vs = vsTeam(myAvg, ratings.team.avg);
   const fillCaution = st.fill !== null && st.fill < TARGET;
   const fillCap =
     st.fill === null
@@ -189,11 +203,38 @@ export function ScorecardView({
             <p ref={headRef} tabIndex={-1} className="an5-metric-l" style={{ outline: "none" }}>
               Ratings
             </p>
+            {vs && (
+              <p style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", color: vs.good ? "var(--an-good)" : "var(--an-faint)" }}>{vs.text}</p>
+            )}
           </div>
-          <div className="an5-newline">
-            <b>New</b>
-            <span>Shows a rating after 3 reviews. None yet.</span>
-          </div>
+          {myAvg !== null ? (
+            <RatingGraphic size="sm" avg={myAvg} count={myCount} countText={`${myCount} reviews`} dist={distOf(mine, myCount)} />
+          ) : (
+            <div className="an5-newline">
+              <b>New</b>
+              <span>Shows a rating after 3 reviews. {myCount === 0 ? "None yet." : `${myCount} so far.`}</span>
+            </div>
+          )}
+          <Snippets
+            list={mine}
+            onOpen={(id) => {
+              setFocusRev(id);
+              setSheet(true);
+            }}
+          />
+          {mine.length > 0 && (
+            <button
+              type="button"
+              className="an5-more tap"
+              onClick={() => {
+                setFocusRev(null);
+                setSheet(true);
+              }}
+            >
+              See all {myCount} {myCount === 1 ? "review" : "reviews"}
+              <ChevronRight size={14} aria-hidden />
+            </button>
+          )}
         </div>
 
         <div className="an5-metric">
@@ -224,6 +265,19 @@ export function ScorecardView({
         </div>
       </div>
       <p className="an5-foot">Based on bookings in this period. Ratings come from Centium reviews.</p>
+      <ReviewsSheet
+        open={sheet}
+        onClose={() => setSheet(false)}
+        title={`${p.name}'s reviews`}
+        lead={`${types.length ? types.join(", ") + " · " : ""}all time`}
+        list={mine}
+        count={myCount}
+        avg={myAvg}
+        team={false}
+        businessName={state.businessName || "Your business"}
+        emptyText={`Reviews appear here after members rate ${p.name}.`}
+        focusId={focusRev}
+      />
     </div>
   );
 }

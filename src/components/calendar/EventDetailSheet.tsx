@@ -45,10 +45,12 @@ export const EventDetailSheet: React.FC<{
   bookingMade?: boolean;
   /** "View booking" (#13): opens the class page, where the booking is changed or cancelled. */
   onViewBooking?: () => void;
+  /** B14 RP-04: a booked class that has ended can be rated (write_class_review). */
+  onRate?: () => void;
   /** The invitee's own reminder (B3, PB-O-65), shown once they have accepted. */
   onInviteAlert?: (alert: EventAlert) => void;
   alertSaving?: boolean;
-}> = ({ event, onClose, dark, booked, responding, online, onRespond, onOpenAttachment, bookingMade, onViewBooking, onInviteAlert, alertSaving }) => {
+}> = ({ event, onClose, dark, booked, responding, online, onRespond, onOpenAttachment, bookingMade, onViewBooking, onRate, onInviteAlert, alertSaving }) => {
   const [alertAnchor, setAlertAnchor] = useState<HTMLElement | null>(null);
   const e = event;
   if (!e) return null;
@@ -208,6 +210,11 @@ export const EventDetailSheet: React.FC<{
             className="tap min-h-11 self-start text-[13px] font-bold text-primary-deep-text"
           >
             View booking
+          </button>
+        )}
+        {onRate && (
+          <button type="button" onClick={onRate} className="tap min-h-11 self-start text-[13px] font-bold text-primary-deep-text">
+            Rate this class
           </button>
         )}
       </div>

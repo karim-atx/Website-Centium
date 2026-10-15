@@ -4,32 +4,34 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useOnline } from "../../../hooks/useOnline";
 import {
+  REPORT_NOTE_MAX,
   REPORT_REASONS,
   editReply,
-  messageReviewer,
   postReply,
   reportReview,
+  reputationError,
   type BizReview,
-  type ReviewReply,
 } from "../../../services/reputation";
-import { ago, reviewerLabel } from "./reputationModel";
-import { INJURY_MESSAGE_NOTE, INJURY_REPLY_NOTE } from "./parts";
+import { ago } from "./reputationModel";
+import { INJURY_REPLY_NOTE } from "./parts";
 
 // AN13 sheets (InsightFlowsV2): Reply to review (AN13-027), Post a reply on
-// an injury-flagged review (AN13-023 / -024, safety note verbatim), Message
-// privately (AN13-019, safety note verbatim), Edit reply (AN13-024 O3), the
-// discard dialog (AN13-028) and Report this review (OURS-AN13-flag-queue
-// row 5). Sheet shell = BottomSheet tone business (AN11-001 rows 1 to 6):
-// header 53, closes by X only (HANDOVER 2.3), so X / Back with text asks first.
+// a flagged review (AN13-022 / -023; the injury note verbatim when a flag
+// says injury), Edit reply (AN13-024 O3), the discard dialog (AN13-028) and
+// Report this review (OURS-AN13-flag-queue row 5), on B14: reply_to_review,
+// edit_review_reply, report_review. Message privately (AN13-018 / -019) is
+// not here: B14 masks the reviewer and has no call that reaches them, so the
+// flag card offers Report to Centium instead (X-28). Sheet shell =
+// BottomSheet tone business (AN11-001 rows 1 to 6): header 53, closes by X
+// only (HANDOVER 2.3), so X / Back with text asks first.
 
 export const LIMIT = 500;
 
-export type ComposerMode = "reply" | "flag-reply" | "message" | "edit";
+export type ComposerMode = "reply" | "flag-reply" | "edit";
 
 const TITLE: Record<ComposerMode, string> = {
   reply: "Reply to review",
   "flag-reply": "Post a reply",
-  message: "Message privately",
   edit: "Edit reply",
 };
 
@@ -37,16 +39,15 @@ const ReviewContext: React.FC<{ review: BizReview; tag?: string | null }> = ({
   review,
   tag,
 }) => {
-  const who = reviewerLabel(review);
   const r = review.rating ?? 0;
   return (
     <div className="rp-ctx">
       <div className="rp-ctx-top">
         <span className="rp-ctx-av" aria-hidden>
-          {who.masked ? <UserRound size={15} /> : who.initials}
+          <UserRound size={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="rp-ctx-who">{who.who}</p>
+          <p className="rp-ctx-who">{review.label}</p>
           <p className="rp-ctx-meta">
             <span className="rp-ctx-stars" aria-label={`${r} of 5 stars`}>
               {[1, 2, 3, 4, 5].map((i) => (
@@ -77,54 +78,34 @@ export const ReviewComposer: React.FC<{
   mode: ComposerMode;
   review: BizReview | null;
   tag?: string | null;
-  reply?: ReviewReply | null;
-  /** Injury-flagged review: the handover's safety note shows (KEEP-SAFETY). */
+  /** Injury-flagged review: the handover's safety note shows (KEEP-SAFETY). B14 sends no flag reason yet. */
   injury?: boolean;
   businessName: string;
   onClose: () => void;
   onDone: (message: string) => void;
-}> = ({
-  open,
-  mode,
-  review,
-  tag,
-  reply,
-  injury,
-  businessName,
-  onClose,
-  onDone,
-}) => {
+}> = ({ open, mode, review, tag, injury, businessName, onClose, onDone }) => {
   const online = useOnline();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [discard, setDiscard] = useState(false);
   const area = useRef<HTMLTextAreaElement | null>(null);
+  const replyBody = review?.reply?.body ?? "";
 
   useEffect(() => {
     if (!open) return;
-    setText(mode === "edit" && reply ? reply.body : "");
+    setText(mode === "edit" ? replyBody : "");
     setErr(null);
     setBusy(false);
     setDiscard(false);
-  }, [open, mode, reply]);
+  }, [open, mode, replyBody]);
 
   if (!review) return null;
-  const message = mode === "message";
   const over = text.length > LIMIT;
   const changed =
-    mode === "edit"
-      ? text.trim() !== (reply?.body ?? "")
-      : text.trim().length > 0;
+    mode === "edit" ? text.trim() !== replyBody : text.trim().length > 0;
   const canSend = text.trim().length > 0 && !over && online && changed;
-  const note = injury
-    ? message
-      ? INJURY_MESSAGE_NOTE
-      : mode === "flag-reply"
-        ? INJURY_REPLY_NOTE
-        : null
-    : null;
-  const who = reviewerLabel(review).who;
+  const note = injury && mode === "flag-reply" ? INJURY_REPLY_NOTE : null;
 
   const close = () => {
     if (busy) return;
@@ -136,43 +117,36 @@ export const ReviewComposer: React.FC<{
     if (!canSend) return;
     setBusy(true);
     setErr(null);
-    const r = message
-      ? await messageReviewer(review.id, text)
-      : mode === "edit" && reply
-        ? await editReply(reply.id, text)
+    const r =
+      mode === "edit"
+        ? await editReply(review.id, text)
         : await postReply(review.id, text);
     setBusy(false);
     if (!r.ok) {
-      // A pending stage never reaches here (the entry is hidden until B14 / B7 answer), but say so plainly if it does.
       setErr(
         r.pending
           ? "This isn't available yet."
-          : message
-            ? "Couldn't send. Check your connection and try again."
-            : "Couldn't post your reply. Try again.",
+          : (reputationError(r.code) ??
+              (mode === "edit"
+                ? "Couldn't save your reply. Try again."
+                : "Couldn't post your reply. Try again.")),
       );
       return;
     }
     onDone(
-      message
-        ? `Message sent to ${who}.`
-        : mode === "edit"
-          ? "Reply saved."
-          : "Reply posted. Members see it under the review.",
+      mode === "edit"
+        ? "Reply saved."
+        : "Reply posted. Members see it under the review.",
     );
   };
 
   const cta = busy
-    ? message
-      ? "Sending…"
-      : mode === "edit"
-        ? "Saving…"
-        : "Posting…"
-    : message
-      ? "Send message"
-      : mode === "edit"
-        ? "Save reply"
-        : "Post reply";
+    ? mode === "edit"
+      ? "Saving…"
+      : "Posting…"
+    : mode === "edit"
+      ? "Save reply"
+      : "Post reply";
 
   return (
     <>
@@ -213,7 +187,7 @@ export const ReviewComposer: React.FC<{
           )}
           <ReviewContext review={review} tag={tag} />
           <label className="rp-field-l" htmlFor="rp-compose">
-            {message ? "Private message to the member" : "Your public reply"}
+            Your public reply
           </label>
           <textarea
             id="rp-compose"
@@ -227,11 +201,7 @@ export const ReviewComposer: React.FC<{
             autoFocus
           />
           <p className="rp-hint" id="rp-compose-hint">
-            <span>
-              {message
-                ? "Opens your Centium message thread with this member. Only they see it."
-                : "Members see your reply under the review."}
-            </span>
+            <span>Members see your reply under the review.</span>
             <span className={over ? "is-over" : undefined}>
               {text.length} / {LIMIT}
             </span>
@@ -242,7 +212,7 @@ export const ReviewComposer: React.FC<{
               Keep it under 500 characters.
             </p>
           )}
-          {!message && text.trim() && (
+          {text.trim() && (
             <>
               <p className="rp-prev-l">How it appears publicly</p>
               <div className="rp-prev">
@@ -272,7 +242,7 @@ export const ReviewComposer: React.FC<{
       <ConfirmCard
         open={open && discard}
         tone="destructive"
-        title={message ? "Discard this message?" : "Discard this reply?"}
+        title="Discard this reply?"
         subtitle="You'll lose what you've written."
         confirmLabel="Discard"
         cancelLabel="Keep editing"
@@ -300,7 +270,7 @@ export const ReviewComposer: React.FC<{
   );
 };
 
-/** OURS-AN13-flag-queue row 5: Report this review. */
+/** OURS-AN13-flag-queue row 5: Report this review (report_review). */
 export const ReportSheet: React.FC<{
   open: boolean;
   review: BizReview | null;
@@ -330,7 +300,8 @@ export const ReportSheet: React.FC<{
       setErr(
         r.pending
           ? "This isn't available yet."
-          : "Couldn't send. Check your connection and try again.",
+          : (reputationError(r.code) ??
+              "Couldn't send. Check your connection and try again."),
       );
       return;
     }
@@ -402,7 +373,7 @@ export const ReportSheet: React.FC<{
           id="rp-report-note"
           className="rp-area"
           value={note}
-          onChange={(e) => setNote(e.target.value.slice(0, LIMIT))}
+          onChange={(e) => setNote(e.target.value.slice(0, REPORT_NOTE_MAX))}
           rows={3}
           placeholder="Optional"
         />

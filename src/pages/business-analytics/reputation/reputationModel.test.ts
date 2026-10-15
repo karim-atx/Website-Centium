@@ -1,16 +1,21 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import type { BizReview, ReviewReply } from "../../../services/reputation/types";
+import type {
+  BizReview,
+  ReviewMetrics,
+} from "../../../services/reputation/types";
 import { presetRange } from "../analyticsRange.ts";
 import {
   ago,
   allReviewsLine,
   distLines,
   filterReviews,
+  flagLine,
+  instructorsOf,
   heroLead,
   metricsOf,
   replyTimeTone,
-  reviewerLabel,
+  reviewTag,
   weekSeries,
 } from "./reputationModel.ts";
 
@@ -26,21 +31,38 @@ const rv = (
   gymName: "Flex Gym",
   rating,
   body: "Text",
-  authorName: null,
-  authorIsMember: false,
+  label: "Member #" + id.toUpperCase(),
   createdAt: `${day}T10:00:00Z`,
+  editedAt: null,
   redacted: false,
+  classTitle: null,
+  instructor: null,
+  reply: null,
+  flagged: false,
   ...extra,
+});
+const met = (p: Partial<ReviewMetrics>): ReviewMetrics => ({
+  reviews: 0,
+  average: null,
+  previousAverage: null,
+  previousReviews: 0,
+  distribution: [0, 0, 0, 0, 0],
+  replyRate: null,
+  averageHoursToReply: null,
+  flagged: 0,
+  ...p,
 });
 const range = presetRange("4w", TODAY);
 const vocab = { people: "members", rateWhat: "their classes or your business" };
 
-test("reputation: masked label is Member # plus 4 characters of the review id", () => {
-  assert.equal(
-    reviewerLabel({ id: "9e21abcd-0000", authorName: null }).who,
-    "Member #9E21",
-  );
-  assert.equal(reviewerLabel({ id: "x", authorName: "Taylor" }).who, "Taylor");
+test("reputation: the row tag is class · instructor, led by the venue with several venues", () => {
+  const r = rv("a", 5, "2026-10-01", {
+    classTitle: "Lunch HIIT",
+    instructor: "Jane",
+  });
+  assert.equal(reviewTag(r, false), "Lunch HIIT · Jane");
+  assert.equal(reviewTag(r, true), "Flex Gym · Lunch HIIT · Jane");
+  assert.equal(reviewTag(rv("b", 4, "2026-10-01"), false), null);
 });
 
 test("reputation: no reviews gives dashes and the per-type empty lead", () => {
@@ -73,9 +95,15 @@ test("reputation: early data under 4 weeks hides deltas", () => {
     rv("b", 4, "2026-10-02"),
     rv("c", 5, "2026-10-03"),
   ];
-  const m = metricsOf(list, range, null, TODAY);
+  const m = metricsOf(
+    list,
+    range,
+    { cur: met({ replyRate: 50 }), prev: met({ replyRate: 20 }) },
+    TODAY,
+  );
   assert.equal(m.early, true);
   assert.equal(m.ratingDelta, null);
+  assert.equal(m.replyRateDelta, null);
   assert.equal(
     heroLead(m, vocab),
     "Your first reviews came in less than 4 weeks ago. Trends start after a full period.",
@@ -99,42 +127,64 @@ test("reputation: rating delta against the period before, lead from numbers only
   );
 });
 
-test("reputation: reply rate and hours come from replies only", () => {
-  const list = [rv("a", 5, "2026-10-01"), rv("b", 4, "2026-10-02")];
-  const replies = new Map<string, ReviewReply>([
-    [
-      "a",
-      {
-        id: "r",
-        reviewId: "a",
-        body: "Thanks",
-        createdAt: "2026-10-01T20:00:00Z",
-        editedAt: null,
-      },
-    ],
-  ]);
-  const m = metricsOf(list, range, replies, TODAY);
-  assert.equal(m.replyRate, 50);
+test("reputation: reply rate and time come from business_review_metrics; replied from the rows", () => {
+  const list = [
+    rv("a", 5, "2026-07-01", {
+      reply: { body: "Thanks", at: "2026-07-01T20:00:00Z", redacted: false },
+    }),
+    rv("b", 4, "2026-07-02"),
+  ];
+  const m = metricsOf(
+    list,
+    range,
+    {
+      cur: met({ replyRate: 66.7, averageHoursToReply: 9.6 }),
+      prev: met({ replyRate: 50, averageHoursToReply: 20 }),
+    },
+    TODAY,
+  );
+  assert.equal(m.replyRate, 67);
+  assert.equal(m.replyRateDelta, 17);
   assert.equal(m.replyHours, 10);
-  assert.equal(metricsOf(list, range, null, TODAY).replyRate, null);
+  assert.equal(m.replyHoursDelta, -10);
+  assert.equal(m.replied, 1);
+  assert.equal(m.recentReplied, 1);
+  const none = metricsOf(list, range, { cur: met({}), prev: null }, TODAY);
+  assert.equal(none.replyRate, null);
+  assert.equal(none.replyRateDelta, null);
 });
 
-test("reputation: weeks start on Monday and the chart is 12 weeks", () => {
-  const ws = weekSeries([rv("a", 5, "2026-10-13")], range, null, TODAY);
+test("reputation: weeks start on Monday, the chart is 12 weeks, 3 replies in a week make a marker", () => {
+  const at = { body: "x", at: "2026-10-13T09:00:00Z", redacted: false };
+  const ws = weekSeries(
+    [
+      rv("a", 5, "2026-10-13", { reply: at }),
+      rv("b", 5, "2026-10-12", { reply: at }),
+      rv("c", 4, "2026-10-12", { reply: at }),
+    ],
+    range,
+    TODAY,
+  );
   assert.equal(ws.labels.length, 12);
   assert.equal(ws.labels[11], "Week of 12 Oct");
-  assert.equal(ws.count[11], 1);
+  assert.equal(ws.count[11], 3);
   assert.equal(ws.early, true);
+  assert.deepEqual(ws.markers, [{ i: 11, t: "Replied to 3", kind: "reply" }]);
 });
 
-test("reputation: filters, lines and reply-time tone", () => {
+test("reputation: filters, lines, flag line and reply-time tone", () => {
   const list = [
     rv("a", 5, "2026-10-01"),
     rv("b", 2, "2026-10-02"),
-    rv("c", 5, "2026-10-03"),
+    rv("c", 5, "2026-10-03", {
+      reply: { body: "Thanks", at: "2026-10-03T12:00:00Z", redacted: false },
+    }),
   ];
-  assert.equal(filterReviews(list, "low", null).length, 1);
-  assert.equal(filterReviews(list, "unreplied", null).length, 0);
+  assert.equal(filterReviews(list, "low").length, 1);
+  assert.equal(filterReviews(list, "unreplied").length, 2);
+  const tagged = [rv("x", 5, "2026-10-01", { instructor: "Jane" }), rv("y", 4, "2026-10-01", { instructor: "Sam" }), rv("z", 3, "2026-10-01", { instructor: "Jane" })];
+  assert.deepEqual(instructorsOf(tagged), [{ name: "Jane", n: 2 }, { name: "Sam", n: 1 }]);
+  assert.equal(filterReviews(tagged, "inst:Jane").length, 2);
   assert.equal(
     allReviewsLine(list, range),
     "Mostly 5 stars this period, from 3 new reviews.",
@@ -142,6 +192,14 @@ test("reputation: filters, lines and reply-time tone", () => {
   assert.equal(
     distLines(metricsOf(list, range, null, TODAY)).insight,
     "67% are 5 stars. 1 of 3 are 2 stars or lower.",
+  );
+  assert.equal(
+    flagLine("2026-10-08T09:00:00Z"),
+    "You reported this to Centium on 8 Oct. We're reviewing it.",
+  );
+  assert.equal(
+    flagLine(null),
+    "Centium is reviewing this review. You can still reply.",
   );
   assert.equal(replyTimeTone(19), "good");
   assert.equal(replyTimeTone(60), "caution");

@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
-  MessageCircle,
   Reply,
   Star,
 } from "lucide-react";
@@ -28,20 +27,18 @@ import type { BizKind } from "../../../components/business-more/kind";
 import { useOnline } from "../../../hooks/useOnline";
 import { clock12 } from "../../../utils/time12";
 import {
+  deleteReply,
   fetchBusinessReviews,
-  fetchFlags,
-  fetchReplies,
-  markFlagHandled,
-  withdrawReply,
+  fetchMyReports,
+  fetchReviewMetrics,
+  reputationError,
   type BizReview,
   type BizReviews,
-  type ReviewFlag,
-  type ReviewReply,
+  type MyReport,
 } from "../../../services/reputation";
 import {
-  dayMonth,
-  isoOf,
   presetRange,
+  previousOf,
   rangeLine,
   type AnalyticsRange,
   type RangeKey,
@@ -50,20 +47,23 @@ import { CustomRangeSheet } from "../CustomRangeSheet";
 import { useOpsToast } from "../../business-ops/store/opsKit";
 import {
   MIN_FOR_RATING,
-  ago,
   allReviewsLine,
   distLines,
   filterReviews,
+  flagLine,
   healthLines,
   heroLead,
+  instructorsOf,
   metricsOf,
   replyTimeTone,
+  reviewTag,
   signed,
   starsText,
   weekSeries,
   type FilterKey,
+  type ServerMetrics,
 } from "./reputationModel";
-import { FlagLine, INJURY_LINE, ReviewRow, Stars } from "./parts";
+import { FlagLine, ReviewRow, Stars } from "./parts";
 import { ReportSheet, ReviewComposer, type ComposerMode } from "./ReviewSheets";
 import "../shell/analytics.css";
 import "./an13.css";
@@ -71,10 +71,12 @@ import "./an13.css";
 // AN13 · Analytics › Reputation (AnInsightsV3 page="reputation"): its own
 // page with Back to Analytics (not the shell chrome), range tabs, Metrics /
 // Reviews & replies, the ScrubChart, the collapsibles, the review list with
-// the flag queue and the reply / message / report sheets. Real rows only:
-// gym_reviews across the business's venues today; replies, flags, reports
-// and private messages are B14 / B7 (services/reputation) and stay hidden
-// until the server answers for them.
+// the flag queue and the reply / report sheets. Real rows only, on B14
+// (services/reputation): business_reviews_page (every review of the
+// business, masked reviewer, class, instructor, reply, flag) and
+// business_review_metrics (reply rate and time for the range and the period
+// before). Gate: marketing (SECTION_NEED). Message privately and Mark as
+// handled have no B14 call and are not shown.
 
 const RANGE_TABS: { key: RangeKey; label: string }[] = [
   { key: "week", label: "This week" },
@@ -91,6 +93,7 @@ type Stage<T> =
   | { status: "loading" }
   | { status: "ok"; value: T }
   | { status: "pending" }
+  | { status: "denied" }
   | { status: "error"; offline: boolean };
 
 function vocabOf(kind: BizKind) {
@@ -122,17 +125,14 @@ function vocabOf(kind: BizKind) {
   };
 }
 
-function useReputation(businessId: string | null) {
+function useReputation(businessId: string | null, range: AnalyticsRange) {
   const [reviews, setReviews] = useState<Stage<BizReviews>>({
     status: "loading",
   });
-  const [replies, setReplies] = useState<Stage<Map<string, ReviewReply>>>({
-    status: "loading",
-  });
-  const [flags, setFlags] = useState<Stage<ReviewFlag[]>>({
-    status: "loading",
-  });
+  const [reports, setReports] = useState<Map<string, MyReport>>(new Map());
+  const [server, setServer] = useState<ServerMetrics | null>(null);
   const [loadedAt, setLoadedAt] = useState<Date | null>(null);
+  const [tick, setTick] = useState(0);
   const run = useRef(0);
   const load = useCallback(
     async (quiet = false) => {
@@ -150,23 +150,41 @@ function useReputation(businessId: string | null) {
       }
       setReviews(r);
       setLoadedAt(new Date());
-      const [rp, fl] = await Promise.all([
-        fetchReplies(r.value.reviews.map((x) => x.id)),
-        fetchFlags(businessId),
-      ]);
+      setTick((t) => t + 1);
+      // Our own reports name the flag line; a failed read only drops that detail.
+      const flagged = r.value.reviews.filter((x) => x.flagged).map((x) => x.id);
+      const rep = await fetchMyReports(flagged);
       if (me !== run.current) return;
-      setReplies(rp as Stage<Map<string, ReviewReply>>);
-      setFlags(fl as Stage<ReviewFlag[]>);
+      setReports(rep.status === "ok" ? rep.value : new Map());
     },
     [businessId],
   );
   useEffect(() => {
     void load();
   }, [load]);
+  // Reply rate and time for the range and the period before (business_review_metrics), again after every change.
+  useEffect(() => {
+    if (!businessId || tick === 0) return;
+    let alive = true;
+    const prev = previousOf(range);
+    void Promise.all([
+      fetchReviewMetrics(businessId, range.from, range.to),
+      fetchReviewMetrics(businessId, prev.from, prev.to),
+    ]).then(([c, p]) => {
+      if (!alive) return;
+      setServer({
+        cur: c.status === "ok" ? c.value : null,
+        prev: p.status === "ok" ? p.value : null,
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId, range, tick]);
   return {
     reviews,
-    replies,
-    flags,
+    reports,
+    server,
     loadedAt,
     reload: () => void load(),
     refresh: () => void load(true),
@@ -184,15 +202,14 @@ export default function ReputationPage() {
   const [range, setRange] = useState<AnalyticsRange>(() => presetRange("4w"));
   const [customOpen, setCustomOpen] = useState(false);
   const [sub, setSub] = useState<"metrics" | "reviews">("metrics");
-  const data = useReputation(business?.id ?? null);
+  const data = useReputation(business?.id ?? null, range);
   const [toast, showToast] = useOpsToast();
 
   const loaded = data.reviews.status === "ok" ? data.reviews.value : null;
   const list = useMemo(() => loaded?.reviews ?? [], [loaded]);
   const venues = useMemo(() => loaded?.venues ?? [], [loaded]);
-  const replies = data.replies.status === "ok" ? data.replies.value : null;
   const tagOf = useCallback(
-    (r: BizReview) => (venues.length > 1 ? r.gymName : null),
+    (r: BizReview) => reviewTag(r, venues.length > 1),
     [venues.length],
   );
 
@@ -201,11 +218,16 @@ export default function ReputationPage() {
       ? `Offline. Showing what was loaded at ${clock12(data.loadedAt)}.`
       : rangeLine(range);
   const m = useMemo(
-    () => metricsOf(list, range, replies),
-    [list, range, replies],
+    () => metricsOf(list, range, data.server),
+    [list, range, data.server],
   );
   const loading = data.reviews.status === "loading" || (!business && !bizError);
-  const failed = data.reviews.status === "error" || (!business && !!bizError);
+  // Pending (B14 not on this database) and denied (no marketing permission) read as a failed load.
+  const failed =
+    data.reviews.status === "error" ||
+    data.reviews.status === "pending" ||
+    data.reviews.status === "denied" ||
+    (!business && !!bizError);
 
   return (
     <div className="rp an-scope pb-6">
@@ -267,20 +289,13 @@ export default function ReputationPage() {
       ) : loading ? (
         <Skeleton sub={sub} />
       ) : sub === "metrics" ? (
-        <Metrics
-          list={list}
-          range={range}
-          replies={replies}
-          m={m}
-          vocab={vocab}
-        />
+        <Metrics list={list} range={range} m={m} vocab={vocab} />
       ) : (
         <Reviews
           list={list}
           range={range}
-          replies={replies}
-          repliesPending={data.replies.status === "pending"}
-          flags={data.flags.status === "ok" ? data.flags.value : null}
+          reports={data.reports}
+          byInstructor={kind !== "store"}
           vocab={vocab}
           tagOf={tagOf}
           businessName={business?.name || "Your business"}
@@ -387,18 +402,14 @@ const Skeleton: React.FC<{ sub: string }> = ({ sub }) => (
 const Metrics: React.FC<{
   list: BizReview[];
   range: AnalyticsRange;
-  replies: Map<string, ReviewReply> | null;
   m: ReturnType<typeof metricsOf>;
   vocab: ReturnType<typeof vocabOf>;
-}> = ({ list, range, replies, m, vocab }) => {
+}> = ({ list, range, m, vocab }) => {
   const [distOpen, setDistOpen] = useState(false);
   const [healthOpen, setHealthOpen] = useState(false);
-  const ws = useMemo(
-    () => weekSeries(list, range, replies),
-    [list, range, replies],
-  );
+  const ws = useMemo(() => weekSeries(list, range), [list, range]);
   const none = m.total === 0;
-  const hasReplies = !!replies && m.replied > 0;
+  const hasReplies = m.replied > 0;
   const gold = "rgb(var(--c-star-business))";
   const cfg: ScrubChartConfig = {
     vh: 120,
@@ -594,7 +605,7 @@ const Metrics: React.FC<{
         </section>
       )}
 
-      {/* HANDOVER 3.10: Response health stays hidden until replies exist (B14). */}
+      {/* HANDOVER 3.10: Response health stays hidden until the business has replied. */}
       {!none && hasReplies && (
         <section className="rp-card rp-coll">
           <button
@@ -674,100 +685,78 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "low", label: "3 stars or lower" },
 ];
 
-const REASON_LINE: Record<ReviewFlag["reason"], (f: ReviewFlag) => string> = {
-  injury: () => INJURY_LINE,
-  harassment: () =>
-    "Mentions harassment or threats. Read it yourself before replying.",
-  reported: (f) =>
-    `You reported this to Centium on ${f.reportedAt ? dayMonth(isoOf(new Date(f.reportedAt))) : dayMonth(isoOf(new Date()))}. We're reviewing it.`,
-  centium_review: () =>
-    "Centium is reviewing this review. You can still reply.",
-  kept: () => "Centium reviewed this and kept it up.",
-};
-
 const Reviews: React.FC<{
   list: BizReview[];
   range: AnalyticsRange;
-  replies: Map<string, ReviewReply> | null;
-  repliesPending: boolean;
-  flags: ReviewFlag[] | null;
+  /** This account's own reports, by review (the flag line's "You reported this"). */
+  reports: Map<string, MyReport>;
+  /** AN13-014 row 4: Classes and Gym only (a store has no instructors). */
+  byInstructor: boolean;
   vocab: ReturnType<typeof vocabOf>;
   tagOf: (r: BizReview) => string | null;
   businessName: string;
   onChanged: (toast: string | null) => void;
-}> = ({
-  list,
-  range,
-  replies,
-  repliesPending,
-  flags,
-  vocab,
-  tagOf,
-  businessName,
-  onChanged,
-}) => {
+}> = ({ list, range, reports, byInstructor, vocab, tagOf, businessName, onChanged }) => {
   const online = useOnline();
   const [fk, setFk] = useState<FilterKey>("all");
   const [fOpen, setFOpen] = useState(false);
+  const [instLevel, setInstLevel] = useState(false);
   const [allOpen, setAllOpen] = useState<boolean | null>(null);
   const [allShown, setAllShown] = useState(3);
   const [needAll, setNeedAll] = useState(false);
   const [composer, setComposer] = useState<{
     mode: ComposerMode;
     review: BizReview;
-    injury: boolean;
   } | null>(null);
   const [report, setReport] = useState<BizReview | null>(null);
   const [menu, setMenu] = useState<{
     review: BizReview;
     el: HTMLElement;
   } | null>(null);
-  const [delReply, setDelReply] = useState<ReviewReply | null>(null);
+  const [delReply, setDelReply] = useState<BizReview | null>(null);
   const [busy, setBusy] = useState(false);
 
   const total = list.filter((r) => !r.redacted).length;
-  const repliesOn = !!replies;
-  const reportsOn = !!flags;
-  const flagMap = new Map(
-    (flags ?? []).filter((f) => !f.handledAt).map((f) => [f.reviewId, f]),
+  const openReport = (r: BizReview) => {
+    const x = reports.get(r.id);
+    return x && x.status === "open" ? x : null;
+  };
+  const flagged = list.filter((r) => r.flagged && !r.redacted);
+  const need = list.filter(
+    (r) => !r.redacted && r.rating !== null && !r.reply && !r.flagged,
   );
-  const flagged = list.filter((r) => flagMap.has(r.id) && !r.redacted);
-  const need = repliesOn
-    ? list.filter(
-        (r) =>
-          !r.redacted &&
-          r.rating !== null &&
-          !replies!.has(r.id) &&
-          !flagMap.has(r.id),
-      )
-    : [];
-  const options = FILTERS.filter((f) => f.key !== "unreplied" || repliesOn);
   const countOf = (k: FilterKey) =>
-    filterReviews(list, k, replies).filter((r) => !r.redacted).length;
-  const shown = filterReviews(list, fk, replies);
+    filterReviews(list, k).filter((r) => !r.redacted).length;
+  const shown = filterReviews(list, fk);
   const open = allOpen ?? fk !== "all";
-  const filterLabel = options.find((o) => o.key === fk)?.label ?? "All reviews";
+  const instructors = byInstructor ? instructorsOf(list) : [];
+  const filterLabel = fk.startsWith("inst:")
+    ? fk.slice(5)
+    : (FILTERS.find((o) => o.key === fk)?.label ?? "All reviews");
+  const choose = (k: FilterKey) => {
+    setFk(k);
+    setFOpen(false);
+    setInstLevel(false);
+    setAllOpen(null);
+    setAllShown(3);
+  };
   const empty = total === 0;
+  // A reply Centium removed can't be edited or deleted (ATX10).
+  const ownReply = (r: BizReview) => !!r.reply && !r.reply.redacted;
 
   // The row menu holds Edit / Delete reply and Report to Centium; a flagged row reports from its own button.
   const menuFor = (r: BizReview) =>
-    (repliesOn && replies!.has(r.id)) || (reportsOn && !flagMap.has(r.id))
+    ownReply(r) || !r.flagged
       ? (el: HTMLElement) => setMenu({ review: r, el })
       : undefined;
-  const replyAction = (r: BizReview) =>
-    repliesOn
-      ? {
-          label: "Reply",
-          onClick: () =>
-            setComposer({ mode: "reply", review: r, injury: false }),
-        }
-      : null;
+  const replyAction = (r: BizReview) => ({
+    label: "Reply",
+    onClick: () => setComposer({ mode: "reply", review: r }),
+  });
 
   const head = empty
     ? "No reviews yet"
-    : repliesOn
-      ? `${total} ${total === 1 ? "review" : "reviews"} · ${need.length + flagged.filter((r) => !replies!.has(r.id)).length} need a reply`
-      : `${total} ${total === 1 ? "review" : "reviews"}`;
+    : `${total} ${total === 1 ? "review" : "reviews"} · ${need.length + flagged.filter((r) => !r.reply).length} need a reply`;
 
   return (
     <>
@@ -787,7 +776,10 @@ const Reviews: React.FC<{
           aria-expanded={fOpen}
           aria-label={`Filter reviews: ${filterLabel}`}
           disabled={empty}
-          onClick={() => setFOpen(!fOpen)}
+          onClick={() => {
+            setFOpen(!fOpen);
+            setInstLevel(false);
+          }}
         >
           <span>{filterLabel}</span>
           <span className={"rp-chev" + (fOpen ? " is-open" : "")}>
@@ -797,33 +789,73 @@ const Reviews: React.FC<{
       </div>
       {fOpen && (
         <div role="listbox" aria-label="Filter reviews" className="rp-list">
-          {options.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              role="option"
-              aria-selected={o.key === fk}
-              className="rp-opt tap"
-              onClick={() => {
-                setFk(o.key);
-                setFOpen(false);
-                setAllOpen(null);
-                setAllShown(3);
-              }}
-            >
-              <span className="rp-opt-t">{o.label}</span>
-              <span className="rp-opt-n">{countOf(o.key)}</span>
-              {o.key === fk && (
-                <span className="rp-opt-check">
-                  <Check size={15} strokeWidth={2.6} aria-hidden />
-                </span>
+          {instLevel ? (
+            <>
+              <button
+                type="button"
+                className="rp-opt tap"
+                onClick={() => setInstLevel(false)}
+              >
+                <ChevronLeft size={14} aria-hidden />
+                <span className="rp-opt-t">All filters</span>
+              </button>
+              {instructors.map((x) => {
+                const k = `inst:${x.name}` as FilterKey;
+                return (
+                  <button
+                    key={x.name}
+                    type="button"
+                    role="option"
+                    aria-selected={k === fk}
+                    className="rp-opt tap"
+                    onClick={() => choose(k)}
+                  >
+                    <span className="rp-opt-t">{x.name}</span>
+                    <span className="rp-opt-n">{x.n}</span>
+                    {k === fk && (
+                      <span className="rp-opt-check">
+                        <Check size={15} strokeWidth={2.6} aria-hidden />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <>
+              {FILTERS.map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  role="option"
+                  aria-selected={o.key === fk}
+                  className="rp-opt tap"
+                  onClick={() => choose(o.key)}
+                >
+                  <span className="rp-opt-t">{o.label}</span>
+                  <span className="rp-opt-n">{countOf(o.key)}</span>
+                  {o.key === fk && (
+                    <span className="rp-opt-check">
+                      <Check size={15} strokeWidth={2.6} aria-hidden />
+                    </span>
+                  )}
+                </button>
+              ))}
+              {instructors.length > 0 && (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={fk.startsWith("inst:")}
+                  className="rp-opt tap"
+                  onClick={() => setInstLevel(true)}
+                >
+                  <span className="rp-opt-t">By instructor</span>
+                  <ChevronRight size={14} aria-hidden />
+                </button>
               )}
-            </button>
-          ))}
+            </>
+          )}
         </div>
-      )}
-      {repliesPending && !empty && (
-        <p className="rp-note">Replying to reviews is coming soon.</p>
       )}
 
       {fk === "all" && flagged.length > 0 && (
@@ -833,98 +865,52 @@ const Reviews: React.FC<{
             {flagged.length === 1 && (
               <FlagLine
                 place="top"
-                text={REASON_LINE[flagMap.get(flagged[0].id)!.reason](
-                  flagMap.get(flagged[0].id)!,
-                )}
+                text={flagLine(openReport(flagged[0])?.reportedAt ?? null)}
               />
             )}
             {flagged.map((r) => {
-              const f = flagMap.get(r.id)!;
-              const reply = replies?.get(r.id) ?? null;
-              const injury = f.reason === "injury";
-              const acted = !!f.messagedAt || !!reply;
+              const mine = openReport(r);
               return (
                 <ReviewRow
                   key={r.id}
                   review={r}
                   tag={tagOf(r)}
-                  reply={reply}
                   menu={menuFor(r)}
                   top={
                     flagged.length > 1 ? (
-                      <FlagLine place="row" text={REASON_LINE[f.reason](f)} />
+                      <FlagLine
+                        place="row"
+                        text={flagLine(mine?.reportedAt ?? null)}
+                      />
                     ) : undefined
                   }
                 >
                   <div className="rp-acts">
-                    {f.mayMessage ? (
-                      <button
-                        type="button"
-                        className="rp-act is-high tap"
-                        disabled={!online}
-                        onClick={() =>
-                          setComposer({ mode: "message", review: r, injury })
-                        }
-                      >
-                        <MessageCircle
-                          size={14}
-                          strokeWidth={2.4}
-                          aria-hidden
-                        />
-                        Message privately
-                      </button>
-                    ) : (
-                      // X-28: not this business's member or customer, so no private message.
-                      <button
-                        type="button"
-                        className="rp-act is-high tap"
-                        disabled={!online || f.reason === "reported"}
-                        onClick={() => setReport(r)}
-                      >
-                        <Flag size={14} strokeWidth={2.4} aria-hidden />
-                        Report to Centium
-                      </button>
-                    )}
+                    {/* X-28: B14 never names the reviewer, so there is no private message; Report to Centium instead. */}
+                    <button
+                      type="button"
+                      className="rp-act is-high tap"
+                      disabled={!online || !!reports.get(r.id)}
+                      onClick={() => setReport(r)}
+                    >
+                      <Flag size={14} strokeWidth={2.4} aria-hidden />
+                      Report to Centium
+                    </button>
                     <button
                       type="button"
                       className="rp-act is-line tap"
-                      disabled={!online || !repliesOn}
+                      disabled={!online || (!!r.reply && r.reply.redacted)}
                       onClick={() =>
                         setComposer({
-                          mode: reply ? "edit" : "flag-reply",
+                          mode: r.reply ? "edit" : "flag-reply",
                           review: r,
-                          injury,
                         })
                       }
                     >
                       <Reply size={14} strokeWidth={2.4} aria-hidden />
-                      {reply ? "Edit reply" : "Post a reply"}
+                      {r.reply ? "Edit reply" : "Post a reply"}
                     </button>
                   </div>
-                  {f.messagedAt && (
-                    <p className="rp-messaged">
-                      Messaged privately · {ago(f.messagedAt)}
-                    </p>
-                  )}
-                  {acted && (
-                    <button
-                      type="button"
-                      className="rp-link tap"
-                      disabled={busy || !online}
-                      onClick={async () => {
-                        setBusy(true);
-                        const res = await markFlagHandled(r.id);
-                        setBusy(false);
-                        onChanged(
-                          res.ok
-                            ? "Marked as handled."
-                            : "Couldn't save. Try again.",
-                        );
-                      }}
-                    >
-                      Mark as handled
-                    </button>
-                  )}
                 </ReviewRow>
               );
             })}
@@ -995,7 +981,6 @@ const Reviews: React.FC<{
                 key={r.id}
                 review={r}
                 tag={tagOf(r)}
-                reply={replies?.get(r.id) ?? null}
                 menu={r.redacted ? undefined : menuFor(r)}
               />
             ))}
@@ -1038,24 +1023,20 @@ const Reviews: React.FC<{
           anchor={menu.el}
           onClose={() => setMenu(null)}
           items={[
-            ...(replies?.get(menu.review.id)
+            ...(ownReply(menu.review)
               ? [
                   {
                     label: "Edit reply",
                     onClick: () =>
-                      setComposer({
-                        mode: "edit",
-                        review: menu.review,
-                        injury: false,
-                      }),
+                      setComposer({ mode: "edit", review: menu.review }),
                   },
                   {
                     label: "Delete reply",
-                    onClick: () => setDelReply(replies.get(menu.review.id)!),
+                    onClick: () => setDelReply(menu.review),
                   },
                 ]
               : []),
-            ...(reportsOn && !flagMap.has(menu.review.id)
+            ...(!menu.review.flagged && !reports.get(menu.review.id)
               ? [
                   {
                     label: "Report to Centium",
@@ -1072,8 +1053,6 @@ const Reviews: React.FC<{
         mode={composer?.mode ?? "reply"}
         review={composer?.review ?? null}
         tag={composer ? tagOf(composer.review) : null}
-        reply={composer ? (replies?.get(composer.review.id) ?? null) : null}
-        injury={composer?.injury}
         businessName={businessName}
         onClose={() => setComposer(null)}
         onDone={(msg) => {
@@ -1103,11 +1082,14 @@ const Reviews: React.FC<{
         onConfirm={async () => {
           if (!delReply) return;
           setBusy(true);
-          const r = await withdrawReply(delReply.id);
+          const r = await deleteReply(delReply.id);
           setBusy(false);
           setDelReply(null);
           onChanged(
-            r.ok ? "Reply deleted." : "Couldn't delete your reply. Try again.",
+            r.ok
+              ? "Reply deleted."
+              : (reputationError(r.code) ??
+                  "Couldn't delete your reply. Try again."),
           );
         }}
       />

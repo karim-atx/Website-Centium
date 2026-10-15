@@ -1,4 +1,4 @@
-import type { BizReview, ReviewReply } from "../../../services/reputation/types";
+import type { BizReview, ReviewMetrics } from "../../../services/reputation/types";
 import {
   addDays,
   dateOf,
@@ -45,23 +45,21 @@ export const counted = (list: BizReview[]) =>
 /** HANDOVER 3.10: the rating shows from 3 reviews. */
 export const MIN_FOR_RATING = 3;
 
-/** "Member #9E21": 4 characters of the review id, never a stable per-person code (RP-04). */
-export function reviewerLabel(r: Pick<BizReview, "id" | "authorName">): {
-  who: string;
-  masked: boolean;
-  initials: string;
-} {
-  if (r.authorName)
-    return {
-      who: r.authorName,
-      masked: false,
-      initials: r.authorName.slice(0, 1).toUpperCase(),
-    };
-  return {
-    who: "Member #" + r.id.replace(/-/g, "").slice(0, 4).toUpperCase(),
-    masked: true,
-    initials: "",
-  };
+/**
+ * The row's tag (AN13-011 row 4b, "Lunch HIIT · Jane"): the class and its
+ * instructor from write_class_review, led by the venue when the business has
+ * more than one.
+ */
+export function reviewTag(
+  r: Pick<BizReview, "gymName" | "classTitle" | "instructor">,
+  manyVenues: boolean,
+): string | null {
+  const parts = [
+    manyVenues ? r.gymName : null,
+    r.classTitle,
+    r.instructor,
+  ].filter((x): x is string => !!x);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 /** "Today", "1 day ago", "3 days ago", "1 week ago", "3 weeks ago", then "8 Sep" / "8 Sep 2025". */
@@ -97,35 +95,24 @@ export interface Metrics {
   recentReplied: number;
 }
 
-function replyStats(
-  list: (BizReview & { rating: number })[],
-  replies: Map<string, ReviewReply> | null,
-) {
-  if (!replies || !list.length)
-    return {
-      rate: null as number | null,
-      hours: null as number | null,
-      replied: 0,
-    };
-  const withReply = list.filter((r) => replies.has(r.id));
-  const hours = withReply.map((r) =>
-    Math.max(
-      0,
-      (Date.parse(replies.get(r.id)!.createdAt) - Date.parse(r.createdAt)) /
-        3_600_000,
-    ),
-  );
-  return {
-    rate: Math.round((withReply.length / list.length) * 100),
-    hours: hours.length ? Math.round(mean(hours)!) : null,
-    replied: withReply.length,
-  };
+/** business_review_metrics for the range and the period before it (reply rate and time). */
+export interface ServerMetrics {
+  cur: ReviewMetrics | null;
+  prev: ReviewMetrics | null;
 }
+
+const hasReply = (r: BizReview) => !!r.reply;
+const rateOf = (x: ReviewMetrics | null | undefined) =>
+  x && x.replyRate !== null ? Math.round(x.replyRate) : null;
+const hoursOf = (x: ReviewMetrics | null | undefined) =>
+  x && x.averageHoursToReply !== null
+    ? Math.round(x.averageHoursToReply)
+    : null;
 
 export function metricsOf(
   all: BizReview[],
   range: AnalyticsRange,
-  replies: Map<string, ReviewReply> | null,
+  server: ServerMetrics | null,
   today: string = isoOf(new Date()),
 ): Metrics {
   const c = counted(all);
@@ -134,9 +121,6 @@ export function metricsOf(
   const upToPrev = c.filter((r) => dayOf(r.createdAt) <= prev.to);
   const inRange = c.filter(
     (r) => dayOf(r.createdAt) >= range.from && dayOf(r.createdAt) <= range.to,
-  );
-  const inPrev = c.filter(
-    (r) => dayOf(r.createdAt) >= prev.from && dayOf(r.createdAt) <= prev.to,
   );
   const first = c.length
     ? c.reduce((m, r) => (r.createdAt < m ? r.createdAt : m), c[0].createdAt)
@@ -153,8 +137,10 @@ export function metricsOf(
   const dist: [number, number, number, number, number] = [5, 4, 3, 2, 1].map(
     (s) => upTo.filter((r) => r.rating === s).length,
   ) as never;
-  const now = replyStats(inRange.length ? inRange : upTo, replies);
-  const before = replyStats(inPrev, replies);
+  const nowRate = rateOf(server?.cur);
+  const prevRate = rateOf(server?.prev);
+  const nowHours = hoursOf(server?.cur);
+  const prevHours = hoursOf(server?.prev);
   const recent = [...upTo]
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .slice(0, 18);
@@ -168,19 +154,19 @@ export function metricsOf(
         : null,
     early,
     dist,
-    replyRate: now.rate,
+    replyRate: nowRate,
     replyRateDelta:
-      !early && now.rate !== null && before.rate !== null
-        ? now.rate - before.rate
+      !early && nowRate !== null && prevRate !== null
+        ? nowRate - prevRate
         : null,
-    replyHours: now.hours,
+    replyHours: nowHours,
     replyHoursDelta:
-      !early && now.hours !== null && before.hours !== null
-        ? now.hours - before.hours
+      !early && nowHours !== null && prevHours !== null
+        ? nowHours - prevHours
         : null,
-    replied: replies ? c.filter((r) => replies.has(r.id)).length : 0,
+    replied: c.filter(hasReply).length,
     recentN: recent.length,
-    recentReplied: replies ? recent.filter((r) => replies.has(r.id)).length : 0,
+    recentReplied: recent.filter(hasReply).length,
   };
 }
 
@@ -271,7 +257,6 @@ export const WEEKS = 12;
 export function weekSeries(
   all: BizReview[],
   range: AnalyticsRange,
-  replies: Map<string, ReviewReply> | null,
   today: string = isoOf(new Date()),
 ): WeekSeries {
   const c = counted(all);
@@ -297,15 +282,15 @@ export function weekSeries(
   );
   const markers: WeekSeries["markers"] = [];
   starts.forEach((s, i) => {
-    if (replies) {
-      const n = [...replies.values()].filter(
-        (rp) =>
-          dayOf(rp.createdAt) >= s && dayOf(rp.createdAt) <= addDays(s, 6),
-      ).length;
-      if (n >= 3) {
-        markers.push({ i, t: `Replied to ${n}`, kind: "reply" });
-        return;
-      }
+    const n = all.filter(
+      (r) =>
+        !!r.reply &&
+        dayOf(r.reply.at) >= s &&
+        dayOf(r.reply.at) <= addDays(s, 6),
+    ).length;
+    if (n >= 3) {
+      markers.push({ i, t: `Replied to ${n}`, kind: "reply" });
+      return;
     }
     const a = rating[i];
     const b = i ? rating[i - 1] : null;
@@ -342,21 +327,36 @@ export const starsText = (v: number) =>
 // ---------------------------------------------------------------------------
 // Reviews & replies (AN13-011 to -017)
 
-export type FilterKey = "all" | "unreplied" | "5" | "4" | "low";
+/** "inst:{first name}" is the By instructor second level (AN13-014 row 4, OURS). */
+export type FilterKey = "all" | "unreplied" | "5" | "4" | "low" | `inst:${string}`;
 
-export function filterReviews(
-  list: BizReview[],
-  key: FilterKey,
-  replies: Map<string, ReviewReply> | null,
-): BizReview[] {
+/** The instructors named on reviews (write_class_review tags), A to Z, with counts. */
+export function instructorsOf(list: BizReview[]): { name: string; n: number }[] {
+  const m = new Map<string, number>();
+  for (const r of list) if (r.instructor && !r.redacted) m.set(r.instructor, (m.get(r.instructor) ?? 0) + 1);
+  return [...m.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function filterReviews(list: BizReview[], key: FilterKey): BizReview[] {
   return list.filter((r) => {
     if (key === "all") return true;
     if (r.redacted || r.rating === null) return false;
-    if (key === "unreplied") return !!replies && !replies.has(r.id);
+    if (key === "unreplied") return !r.reply;
+    if (key.startsWith("inst:")) return r.instructor === key.slice(5);
     if (key === "5") return r.rating === 5;
     if (key === "4") return r.rating === 4;
     return r.rating <= 3;
   });
+}
+
+/**
+ * OURS-AN13-flag-queue row 4, on what B14 says: a flag has no reason, so the
+ * line is "reported by you" (our own open report) or "Centium is reviewing".
+ */
+export function flagLine(reportedAt: string | null): string {
+  return reportedAt
+    ? `You reported this to Centium on ${dm(dayOf(reportedAt))}. We're reviewing it.`
+    : "Centium is reviewing this review. You can still reply.";
 }
 
 /** AN13-011 row 6: numbers only (V6-37). */

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Star, ThumbsUp, User } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { CtaButton, PinnedCta } from "../ui/PinnedCta";
+import { PinnedCta } from "../ui/PinnedCta";
 import { MemberTag } from "./MemberTag";
+import { ReviewForm } from "./ReviewForm";
 import {
   deleteGymReview,
   editGymReview,
@@ -30,7 +31,10 @@ import { reviewAge } from "../../services/venues/venueLogic";
 //   removed."
 // - Sorts are recent / highest / lowest. "With photos" is not implemented
 //   (review photos need storage and moderation; the function refuses it with
-//   ATX93), so it isn't offered. Photos and the gym's reply aren't stored.
+//   ATX93), so it isn't offered. Photos aren't stored.
+// - B14 (RP-02): the business's public reply shows under its review
+//   ("{name} replied", AN13-024 row 6 style; AN13-001 K2), and a review
+//   written from a class booking names the class after its age.
 
 const SORTS: { key: ReviewSort; label: string }[] = [
   { key: "recent", label: "Most recent" },
@@ -38,7 +42,6 @@ const SORTS: { key: ReviewSort; label: string }[] = [
   { key: "lowest", label: "Lowest" },
 ];
 const PAGE = 20;
-const BODY_MAX = 2000;
 
 function Stars({ value, size }: { value: number; size: number }) {
   return (
@@ -204,11 +207,19 @@ export function GymReviews({
                         <span className="text-[11px] text-charcoal-faint">
                           {reviewAge(r.createdAt)}
                           {r.editedAt ? " · edited" : ""}
+                          {r.classTitle ? ` · ${r.classTitle}` : ""}
                         </span>
                       </span>
                     </span>
                   </div>
                   {r.body && <p className="mt-2.5 mb-0 text-[13px] leading-[1.55] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{r.body}</p>}
+                  {/* AN13-024 row 6: border-left 2 #AEA1DC · #A991FE, padding-left 10; head 11/800 #7D6BB5 · #C3B3FB; text 12/17 margin-top 2. */}
+                  {r.reply && (
+                    <div className="mt-2.5 border-l-2 border-[#AEA1DC] dark:border-[#A991FE] pl-2.5">
+                      <p className="m-0 text-[11px] font-extrabold text-[#7D6BB5] dark:text-[#C3B3FB]">{gymName} replied</p>
+                      <p className="mt-0.5 mb-0 text-[12px] leading-[17px] text-charcoal whitespace-pre-wrap [overflow-wrap:anywhere]">{r.reply.body}</p>
+                    </div>
+                  )}
                   <div className="mt-2.5 flex items-center gap-3">
                     <button
                       type="button"
@@ -249,7 +260,7 @@ export function GymReviews({
       />
 
       <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={`Rate ${gymName}`}>
-        <ReviewForm
+        <GymReviewForm
           key={mine?.id ?? "new"}
           gymName={gymName}
           existing={mine}
@@ -266,83 +277,30 @@ export function GymReviews({
   );
 }
 
-/** MO1.2.1.2's flow for a gym: 34 pt stars on a 44 pitch, the text, Submit. */
-function ReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
-  const [rating, setRating] = useState(existing?.rating ?? 5);
-  const [text, setText] = useState(existing?.body ?? "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const over = text.length > BODY_MAX;
-  const empty = !text.trim();
-
-  const submit = async () => {
-    if (busy || over || empty) return;
-    setBusy(true);
-    const r = existing ? await editGymReview(existing.id, rating, text) : await writeGymReview(gymId, rating, text);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.message);
-      return;
-    }
-    await onDone();
-  };
-
-  const remove = async () => {
-    if (!existing || busy) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
-    setBusy(true);
-    const r = await deleteGymReview(existing.id);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.message);
-      return;
-    }
-    await onDone();
-  };
-
+/** MO1.2.1.2's flow for a gym: write, or edit / delete your own. */
+function GymReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
-        {Array.from({ length: 5 }, (_, i) => (
-          <button key={i} type="button" role="radio" aria-checked={rating === i + 1} onClick={() => setRating(i + 1)} aria-label={`${i + 1} star${i === 0 ? "" : "s"}`} className="tap">
-            <Star size={34} strokeWidth={1.5} className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-          </button>
-        ))}
-      </div>
-      <label className="block">
-        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">Your review</span>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={`How has ${gymName} been?`}
-          rows={5}
-          aria-invalid={over || undefined}
-          className="w-full h-[209px] rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-        />
-      </label>
-      {over && <p className="m-0 text-xs font-semibold text-status-high">A review can be up to {BODY_MAX.toLocaleString("en")} characters.</p>}
-      {error && (
-        <p role="alert" className="m-0 text-xs font-semibold text-status-high">
-          {error}
-        </p>
-      )}
-      <CtaButton
-        size="page"
-        label={existing ? "Save changes" : "Submit review"}
-        loading={busy}
-        disabled={over || empty}
-        onClick={() => void submit()}
-        className="!bg-fill-pinned !text-on-primary-fill"
-      />
-      {existing && (
-        <button type="button" onClick={() => void remove()} disabled={busy} className="tap min-h-[44px] w-full text-xs font-semibold text-status-high">
-          {confirmDelete ? "Tap again to delete your review" : "Delete review"}
-        </button>
-      )}
-    </div>
+    <ReviewForm
+      initialRating={existing?.rating ?? 5}
+      initialText={existing?.body ?? ""}
+      placeholder={`How has ${gymName} been?`}
+      submitLabel={existing ? "Save changes" : "Submit review"}
+      onSubmit={async (rating, text) => {
+        const r = existing ? await editGymReview(existing.id, rating, text) : await writeGymReview(gymId, rating, text);
+        if (!r.ok) return r.message;
+        await onDone();
+        return null;
+      }}
+      onDelete={
+        existing
+          ? async () => {
+              const r = await deleteGymReview(existing.id);
+              if (!r.ok) return r.message;
+              await onDone();
+              return null;
+            }
+          : undefined
+      }
+    />
   );
 }

@@ -384,3 +384,59 @@ html.high-contrast .an5-sess { border-color: var(--an-border); }
 .an5-textbtn { height: 44px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 800; margin-top: 8px; }
 .an5-textbtn.is-danger { color: var(--an-high); }
 .an5-help { font-size: 11px; line-height: 15px; color: var(--an-faint); margin-top: 6px; }
+
+/* Ratings on B14 (AN5-040 rows 12-16, AN5-045 rows 11-12, AN5-051 / -053 / -055) */
+.an5-rate-val { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.an5-rate-cnt { font-size: 11px; font-weight: 600; color: var(--an-faint); }
+.an5-rate-star { display: flex; color: var(--an-gold); }
+.an5-rate-v { font-size: 24px; font-weight: 800; line-height: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--an-ink); }
+.an5-pp { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; min-height: 62px; padding: 10px 0; }
+.an5-pp + .an5-pp { border-top: 1px solid var(--an-divider); }
+.an5-pp-av { width: 36px; height: 36px; border-radius: 999px; background: var(--an-soft); color: var(--an-ink-soft); display: flex; align-items: center; justify-content: center; }
+.an5-pp-name { font-size: 13px; font-weight: 700; line-height: 17px; color: var(--an-ink); }
+.an5-pp-fact { font-size: 11.5px; line-height: 16px; color: var(--an-faint); margin-top: 1px; text-wrap: pretty; overflow-wrap: anywhere; }
+.an5-pp-r { font-size: 12px; font-weight: 800; color: var(--an-faint); white-space: nowrap; }
+.an5-pp-more { margin-top: 0; }
+.an5-snips { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.an5-snip { display: block; width: 100%; text-align: start; border-radius: 14px; background: var(--an-soft); padding: 10px 12px; }
+.an5-snip:focus-visible, .an5-snip:active { box-shadow: 0 0 0 3px var(--an-pdark); outline: none; }
+.an5-snip-line { display: flex; align-items: center; gap: 8px; }
+.an5-snip-stars { display: flex; gap: 1px; color: var(--an-gold); }
+.an5-snip-who { font-size: 11px; font-weight: 700; color: var(--an-ink-soft); min-width: 0; white-space: nowrap; }
+.an5-snip-when { margin-inline-start: auto; font-size: 10.5px; color: var(--an-faint); white-space: nowrap; }
+.an5-snip-t { font-size: 12px; line-height: 17px; color: var(--an-ink); margin-top: 5px; text-wrap: pretty; overflow-wrap: anywhere; }
+.an5-more:focus-visible, .an5-more:active { box-shadow: 0 0 0 3px var(--an-pdark); outline: none; }
+.an5-revsum b.is-new { color: var(--an-faint); }
+.an5-sortwrap { margin-inline-start: auto; position: relative; }
+.an5-sortwrap .an5-sortbtn { margin-inline-start: 0; position: relative; }
+.an5-sortbtn::after { content: ""; position: absolute; inset: -2px 0; }
+.an5-sortbtn:disabled { opacity: 0.5; }
+.an5-sortlist { position: absolute; right: 0; top: 46px; width: 180px; z-index: 5; background: var(--an-card); border: 1px solid rgba(174, 161, 220, 0.5); border-radius: 14px; box-shadow: 0 12px 32px rgba(95, 80, 147, 0.18); padding: 8px; }
+.an5-sortlist-l { margin: 2px 4px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--an-faint); }
+.an5-sortopt { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; border-radius: 8px; padding: 0 10px; border: 1px solid #e5e6eb; background: #fafafb; font-size: 13px; font-weight: 600; color: var(--an-ink); text-align: start; }
+.an5-sortopt + .an5-sortopt { margin-top: 6px; }
+.an5-sortopt[aria-selected="true"] { background: var(--an-pale); border-color: var(--an-primary); font-weight: 800; }
+.an5-sortopt-chk { margin-inline-start: auto; display: flex; color: var(--an-pdark); }
+html.dark .an5-sortopt { border-color: #31343c; background: #262932; }
+html.dark .an5-sortopt[aria-selected="true"] { background: var(--an-pale); border-color: var(--an-primary); }
+.an5-revlist { background: var(--an-card); border-radius: 18px; border: 1px solid var(--an-border); padding: 0 14px; }
+.an5-rev { padding: 12px 0; transition: background 0.6s; }
+.an5-rev + .an5-rev { border-top: 1px solid var(--an-divider); }
+.an5-rev.is-hl { background: var(--an-pale); margin: 0 -14px; padding: 12px 14px; }
+.an5-rev-head { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; }
+.an5-rev-av { width: 32px; height: 32px; border-radius: 999px; background: var(--an-soft); color: var(--an-ink-soft); display: flex; align-items: center; justify-content: center; }
+.an5-rev-who { display: block; font-size: 12.5px; font-weight: 700; color: var(--an-ink); }
+.an5-rev-meta { display: block; font-size: 11px; color: var(--an-faint); }
+.an5-rev-r { display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 800; color: var(--an-ink); }
+.an5-rev-t { font-size: 12.5px; line-height: 18px; color: var(--an-ink); margin-top: 8px; text-wrap: pretty; overflow-wrap: anywhere; }
+.an5-rev-t.is-removed { font-style: italic; color: var(--an-faint); }
+.an5-rev-reply { margin-top: 8px; border-left: 2px solid var(--an-primary); padding: 4px 0 4px 10px; }
+.an5-rev-reply-l { font-size: 10.5px; font-weight: 800; color: var(--an-pdark); }
+.an5-rev-reply-t { font-size: 12px; line-height: 17px; color: var(--an-ink-soft); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .an5-rev { transition: none; } }
+html.larger-text .an5-rev-head { grid-template-columns: 32px minmax(0, 1fr); }
+html.larger-text .an5-rev-r { grid-column: 2; }
+/* AN5-040 O6 high contrast: count and meta #5B5349; gold stars get a 1px #8A5A00 outline. O7 larger text: the rating line wraps under the name. */
+html.high-contrast:not(.dark) .an5-rate-cnt, html.high-contrast:not(.dark) .an5-rat-cnt, html.high-contrast:not(.dark) .an5-barrow .an5-meta { color: #5b5349; }
+html.high-contrast .an5-star svg, html.high-contrast .an5-rate-star svg { stroke: #8a5a00; stroke-width: 1px; }
+html.larger-text .an5-barrow-head { grid-template-columns: minmax(0, 1fr); }
