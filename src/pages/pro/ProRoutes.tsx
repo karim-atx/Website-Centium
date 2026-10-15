@@ -8,6 +8,7 @@ import InviteClients from "./InviteClients";
 import Clients from "./Clients";
 import ClientPage from "./ClientPage";
 import Calendar from "./Calendar";
+import CalendarAvailability from "./CalendarAvailability";
 import Library from "./Library";
 import MealPlans from "./MealPlans";
 import Insights from "./Insights";
@@ -41,6 +42,7 @@ export default function ProRoutes() {
       <Route path="clients" element={<Clients />} />
       <Route path="clients/:id/:tab?" element={<ClientPage />} />
       <Route path="calendar" element={<Calendar />} />
+      <Route path="calendar/availability" element={<CalendarAvailability />} />
       <Route path="library/:tab?" element={<LaneSlot area="library"><Library /></LaneSlot>} />
       <Route path="meal-plans/:tab?" element={<LaneSlot area="meal-plans"><MealPlans /></LaneSlot>} />
       <Route path="insights/:tab?" element={<LaneSlot area="insights"><Insights /></LaneSlot>} />

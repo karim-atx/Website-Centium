@@ -314,10 +314,14 @@ export default function Home() {
         return;
       case "appointment":
       case "booking":
-      case "session":
+      case "session": {
         setHubOpen(false);
-        navigate(PRO_ROUTES.calendar);
+        // W4: a booking (request) opens its day, where Requests has Accept / Decline.
+        const at = typeof n.payload.starts_at === "string" ? new Date(n.payload.starts_at) : null;
+        const day = at && !Number.isNaN(at.getTime()) ? localIso(at) : null;
+        navigate(day ? `${PRO_ROUTES.calendar}?day=${day}` : PRO_ROUTES.calendar);
         return;
+      }
       case "review":
         setHubOpen(false);
         navigate(`${PRO_ROUTES.more}/reviews`);
@@ -336,7 +340,8 @@ export default function Home() {
   };
 
   const openSession = async (s: RangeSession, action: "open" | "reschedule" | "message") => {
-    if (action !== "message" || !s.client) return navigate(PRO_ROUTES.calendar);
+    // W4: open / reschedule land on that session's day in the calendar.
+    if (action !== "message" || !s.client) return navigate(`${PRO_ROUTES.calendar}?day=${s.date}`);
     const r = await startThread(s.client.userId);
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setPageToast({ text: r.message });

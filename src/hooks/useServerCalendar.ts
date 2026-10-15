@@ -13,8 +13,9 @@ import {
   type InviteeRow,
 } from "../services/calendar";
 
-// The server-backed calendar, shared by the professional's tab and the
-// business's.
+// The server-backed calendar for the business's calendar screen (the
+// professional's calendar, Release 3 pages/pro/Calendar, reads the same service
+// directly).
 //
 // A HOOK RATHER THAN THE SAME 150 LINES TWICE. Both screens need the identical
 // plumbing — hydrate, create, edit, delete, diff the invitee list, attach a

@@ -18,10 +18,10 @@ import type { ExceptionMap, OccurrenceOverride } from "../../components/calendar
 // when calendar_events was written and said so in the migration; this is the
 // client half of the join table that replaced it.
 //
-// SCOPED TO THE CLIENT TAB ON PURPOSE. The professional's CalendarTab writes
-// the same local store and is Phase 2, so nothing here touches AppContext's
-// `calendarEvents`. Wiring both surfaces to the server at once would mean
-// changing a screen this phase has no mandate to test.
+// SCOPED TO THE CALENDAR'S OWN ROWS. AppContext's local `calendarEvents`
+// store is read only by the client calendar's one-time upload of events made
+// before the server existed; the professional's calendar (Release 3
+// pages/pro/Calendar.tsx) reads the server through this service too.
 //
 // UPDATE IS COLUMN-SCOPED, which decides the shape of saveEvent below.
 // `authenticated` holds UPDATE on eleven columns only — not owner_id, not

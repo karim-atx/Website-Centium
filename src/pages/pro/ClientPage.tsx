@@ -120,7 +120,8 @@ export default function ClientPage() {
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setToast(r.message);
   };
-  const schedule = () => navigate(PRO_ROUTES.calendar);
+  // W4: Add session opens on the calendar with this client chosen.
+  const schedule = () => navigate(`${PRO_ROUTES.calendar}?new=1&client=${encodeURIComponent(id)}`);
   const ask = async (c: AccessCategory) => {
     if (asked.includes(c)) return setToast(`You've already asked. It's waiting for ${data.firstName}.`);
     const r = await askToShare(id, c);

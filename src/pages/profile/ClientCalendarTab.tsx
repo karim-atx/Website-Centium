@@ -134,10 +134,8 @@ const HOUR_PX = 56;
 // migration and calendar_event_invitees was added for exactly this; both were
 // unused by any client code.
 //
-// THE SHARED LOCAL STORE IS LEFT ALONE. The professional's CalendarTab writes
-// the same `calendarEvents` state and is Phase 2. Reading it here as well
-// would put two sources behind one screen; it is used below for one thing
-// only — carrying pre-existing local events up to the server once.
+// THE LOCAL STORE IS READ FOR ONE THING ONLY: carrying pre-existing local
+// events up to the server once (below). Nothing else writes it any more.
 export default function ClientCalendarTab() {
   const back = useBack();
   const navigate = useNavigate();
