@@ -50,6 +50,10 @@ export interface ClassFields {
   what_to_bring?: string[];
   cover_url?: string | null;
   cancellation_hours?: number | null;
+  /** B13 MK-04 (accepted since 20261121390000; the series and its later splits keep them): null = no separate limit. */
+  centium_spots?: number | null;
+  /** B13 MK-04: false = members only. */
+  listed_on_explore?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,45 +120,6 @@ export async function fetchSeries(businessId: string): Promise<{ ok: true; serie
       startTime: String(r.start_time ?? "").slice(0, 5),
     })),
   };
-}
-
-// ---------------------------------------------------------------------------
-// Open spots on Centium (B13 MK-04)
-
-export interface ClassExplore {
-  /** Total places for people from Centium, including ones already booked; null = no separate limit. */
-  centiumSpots: number | null;
-  /** False = members only: off Explore, members can still book. */
-  listedOnExplore: boolean;
-}
-
-/**
- * Writes business_classes.centium_spots / listed_on_explore (UPDATE granted,
- * business_classes_update_insider = Schedule). save_class_series and
- * edit_class refuse both keys (class_fields_check, 22023), so the class sheet
- * writes them here after the save: one class, or every class of a series
- * from a date on that wasn't edited on its own (what edit_class "future"
- * changes). Returns the classes changed. The CHECK keeps centium_spots within
- * 0 to max_capacity.
- */
-export async function setClassExplore(target: { classId: string } | { seriesId: string; fromDate: string; alsoClassId?: string }, v: ClassExplore): Promise<Done<number>> {
-  type Q = PromiseLike<{ data: { id: string }[] | null; error: DbError | null }> & {
-    eq: (k: string, val: unknown) => Q;
-    gte: (k: string, val: string) => Q;
-    or: (f: string) => Q;
-    is: (k: string, val: null) => Q;
-    select: (c: string) => Q;
-  };
-  const db = supabase as unknown as { from: (t: "business_classes") => { update: (row: Record<string, unknown>) => Q } };
-  let q = db.from("business_classes").update({ centium_spots: v.centiumSpots, listed_on_explore: v.listedOnExplore });
-  if ("classId" in target) q = q.eq("id", target.classId);
-  else {
-    q = q.eq("series_id", target.seriesId).gte("event_date", target.fromDate).is("cancelled_at", null);
-    q = target.alsoClassId ? q.or(`series_exception.eq.false,id.eq.${target.alsoClassId}`) : q.eq("series_exception", false);
-  }
-  const { data, error } = await q.select("id");
-  if (error) return fail("edit", error);
-  return { ok: true, value: data?.length ?? 0 };
 }
 
 // ---------------------------------------------------------------------------

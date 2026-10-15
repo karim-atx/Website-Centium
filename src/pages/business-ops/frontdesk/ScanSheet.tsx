@@ -4,6 +4,8 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useCameraCodeReader } from "../../../components/food/useCameraCodeReader";
 import { checkInWithPass, fetchDeskEntries, isMissingDesk, markMembershipPaid, verifyPass } from "../../../services/front-desk";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
+
 import {
   checkInView,
   normalizePassToken,
@@ -168,6 +170,7 @@ export const ScanSheet: React.FC<{
         setPayError(true);
         return;
       }
+      offerPromotionUsed({ kind: "membership", sourceId: membershipId });
       onChanged();
       // Check the same pass in again: it is paid now (R1; R2 without B10).
       if (last.current) await check(last.current.token);

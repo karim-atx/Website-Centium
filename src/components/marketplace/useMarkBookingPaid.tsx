@@ -3,6 +3,8 @@ import { PopupMenu } from "../ui/PopupMenu";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { useOnline } from "../../hooks/useOnline";
 import { markPaid } from "../../services/business-revenue";
+import { offerPromotionUsed } from "../../components/promotions/promotionUsed";
+
 import { canMarkBookingPaid, type RosterEntry } from "../../services/venues/consoleLogic";
 
 // CL-08 · Mark as paid on a class booking (OP1-083 K2): tapping a booked row
@@ -41,6 +43,7 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
       return;
     }
     onDone(entry);
+    offerPromotionUsed({ kind: "class_booking", sourceId: entry.bookingId });
   };
 
   const element = (

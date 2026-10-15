@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   REPORT_REASONS,
+  inFlagQueue,
   mapBizReview,
   mapInstructorRating,
   mapMetrics,
@@ -46,6 +47,11 @@ test("B14 mapping: business_reviews_page row, with the reply, tags and flag", ()
   assert.equal(r.flagged, true);
   assert.equal(r.instructorId, "p1");
   assert.equal(r.flagKind, "injury");
+  assert.equal(r.handledAt, null);
+  assert.equal(inFlagQueue(r), true);
+  const handled = mapBizReview({ ...row, handled_at: "2026-10-03T10:00:00Z" }, venues);
+  assert.equal(handled.handledAt, "2026-10-03T10:00:00Z");
+  assert.equal(inFlagQueue(handled), false);
   assert.equal(mapBizReview({ ...row, flag_kind: "weird" }, venues).flagKind, null);
   assert.equal(mapBizReview({ ...row, flagged: false }, venues).flagKind, null);
 });

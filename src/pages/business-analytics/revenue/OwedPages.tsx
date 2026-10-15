@@ -12,6 +12,7 @@ import {
 } from "react-router-dom";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { Toast } from "../../../components/ui/Toast";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
 import {
   dated,
   dayOf,
@@ -179,6 +180,7 @@ export function useMarkPaid(
         }
         const done = rec;
         setRec(null);
+        offerPromotionUsed({ kind: done.target.kind === "membership" ? "membership" : "class_booking", sourceId: done.target.id });
         onDone(
           done,
           `${money(done.amount)} from ${done.label} marked as paid. Removed from Money owed.`,

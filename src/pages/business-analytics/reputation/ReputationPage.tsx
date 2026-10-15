@@ -33,6 +33,8 @@ import {
   fetchBusinessReviews,
   fetchMyReports,
   fetchReviewMetrics,
+  inFlagQueue,
+  markReviewHandled,
   reputationError,
   type BizReview,
   type BizReviews,
@@ -73,6 +75,25 @@ import { FlagLine, INJURY_LINE, ReviewRow, Stars } from "./parts";
  * (KEEP-SAFETY); harassment the OURS line; otherwise our own report, or
  * "Centium is reviewing".
  */
+const MESSAGED_KEY = "centium.reputation.messaged";
+/** Reviews messaged privately in this tab session (OURS-AN13-flag-queue row 7's "once messaged"). */
+function readMessaged(): Set<string> {
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem(MESSAGED_KEY) ?? "[]") as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function rememberMessaged(id: string): Set<string> {
+  const next = readMessaged().add(id);
+  try {
+    sessionStorage.setItem(MESSAGED_KEY, JSON.stringify([...next]));
+  } catch {
+    /* the button then shows after a reply only */
+  }
+  return next;
+}
+
 function flagText(r: BizReview, reportedAt: string | null): string {
   if (r.flagKind === "injury") return INJURY_LINE;
   if (r.flagKind === "harassment" && !reportedAt) return "Mentions harassment or threats. Read it yourself before replying.";
@@ -221,6 +242,8 @@ export default function ReputationPage() {
   // B14 follow-up: Message privately needs the messages permission (start_reviewer_thread).
   const access = useConsoleAccess();
   const canMessage = access.isOwner || (!access.isStaff && !!business) || access.can("messages");
+  // mark_review_handled is gated marketing.
+  const canHandle = access.isOwner || (!access.isStaff && !!business) || access.can("marketing");
 
   const loaded = data.reviews.status === "ok" ? data.reviews.value : null;
   const list = useMemo(() => loaded?.reviews ?? [], [loaded]);
@@ -317,6 +340,7 @@ export default function ReputationPage() {
           tagOf={tagOf}
           businessName={business?.name || "Your business"}
           canMessage={canMessage}
+          canHandle={canHandle}
           onThread={(threadId) => navigate("/app/messages", { state: { threadId } })}
           onChanged={(msg) => {
             if (msg) showToast(msg, false);
@@ -716,10 +740,23 @@ const Reviews: React.FC<{
   businessName: string;
   /** The messages permission: Message privately on a flagged review (start_reviewer_thread). */
   canMessage: boolean;
+  /** The marketing permission: Mark as handled (mark_review_handled). */
+  canHandle: boolean;
   /** A private message was sent: open its thread. */
   onThread: (threadId: string) => void;
   onChanged: (toast: string | null) => void;
-}> = ({ list, range, reports, byInstructor, vocab, tagOf, businessName, canMessage, onThread, onChanged }) => {
+}> = ({ list, range, reports, byInstructor, vocab, tagOf, businessName, canMessage, canHandle, onThread, onChanged }) => {
+  // OURS-AN13-flag-queue row 7: "Mark as handled" shows once the business has
+  // replied or messaged privately. A private message opens the thread (the
+  // page is left), so the reviews messaged are remembered for this tab session.
+  const [messaged, setMessaged] = useState<Set<string>>(() => readMessaged());
+  const [handling, setHandling] = useState<string | null>(null);
+  const markHandled = async (r: BizReview) => {
+    setHandling(r.id);
+    const x = await markReviewHandled(r.id, true);
+    setHandling(null);
+    onChanged(x.ok ? "Marked as handled. It's back with your other reviews." : (reputationError(x.code) ?? "Couldn't mark it as handled. Try again."));
+  };
   // Reviews whose author start_reviewer_thread refused (ATX96): Report to Centium instead (X-28).
   const [noThread, setNoThread] = useState<Set<string>>(new Set());
   const online = useOnline();
@@ -746,9 +783,11 @@ const Reviews: React.FC<{
     const x = reports.get(r.id);
     return x && x.status === "open" ? x : null;
   };
-  const flagged = list.filter((r) => r.flagged && !r.redacted);
+  // The queue is flagged and not yet handled (mark_review_handled); a handled
+  // review moves into the normal lists (row 7).
+  const flagged = list.filter(inFlagQueue);
   const need = list.filter(
-    (r) => !r.redacted && r.rating !== null && !r.reply && !r.flagged,
+    (r) => !r.redacted && r.rating !== null && !r.reply && !inFlagQueue(r),
   );
   const countOf = (k: FilterKey) =>
     filterReviews(list, k).filter((r) => !r.redacted).length;
@@ -950,6 +989,17 @@ const Reviews: React.FC<{
                       {r.reply ? "Edit reply" : "Post a reply"}
                     </button>
                   </div>
+                  {/* OURS-AN13-flag-queue row 7: 12.5/800 #7D6BB5 text button, min-height 44, under the actions. */}
+                  {canHandle && (!!r.reply || messaged.has(r.id)) && (
+                    <button
+                      type="button"
+                      className="rp-handled tap"
+                      disabled={!online || handling === r.id}
+                      onClick={() => void markHandled(r)}
+                    >
+                      Mark as handled
+                    </button>
+                  )}
                 </ReviewRow>
               );
             })}
@@ -1100,6 +1150,8 @@ const Reviews: React.FC<{
           onChanged(msg);
         }}
         onMessaged={(threadId) => {
+          const id = composer?.review.id;
+          if (id) setMessaged(rememberMessaged(id));
           setComposer(null);
           onThread(threadId);
         }}

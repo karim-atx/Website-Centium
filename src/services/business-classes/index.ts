@@ -55,10 +55,8 @@ export interface ClassDraft {
   whatToBring?: string[];
   coverUrl?: string | null;
   /**
-   * B13 MK-04 (optional; left out of the write when undefined). Not
-   * save_class_series / edit_class keys (class_fields_check refuses them):
-   * a series or an edit writes them with a direct update afterwards
-   * (schedule.ts setClassExplore).
+   * B13 MK-04 (optional; left out of the write when undefined): in the
+   * insert, and save_class_series / edit_class keys since 20261121390000.
    */
   centiumSpots?: number | null;
   listedOnExplore?: boolean;
@@ -233,7 +231,7 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
       ...(draft.level !== undefined ? { level: draft.level ?? null } : null),
       ...(draft.whatToBring !== undefined ? { what_to_bring: draft.whatToBring } : null),
       ...(draft.coverUrl !== undefined ? { cover_url: draft.coverUrl ?? null } : null),
-      // B13 MK-04: only an insert (createClass) sends these; classFieldsOf leaves them out.
+      // B13 MK-04 (the insert, and classFieldsOf for the series calls).
       ...(draft.centiumSpots !== undefined ? { centium_spots: draft.centiumSpots } : null),
       ...(draft.listedOnExplore !== undefined ? { listed_on_explore: draft.listedOnExplore } : null),
     },
@@ -265,6 +263,8 @@ export function classFieldsOf(draft: ClassDraft): { ok: true; fields: ClassField
       ...(r.level !== undefined ? { level: r.level } : null),
       ...(r.what_to_bring !== undefined ? { what_to_bring: r.what_to_bring } : null),
       ...(r.cover_url !== undefined ? { cover_url: r.cover_url } : null),
+      ...(r.centium_spots !== undefined ? { centium_spots: r.centium_spots } : null),
+      ...(r.listed_on_explore !== undefined ? { listed_on_explore: r.listed_on_explore } : null),
     },
   };
 }

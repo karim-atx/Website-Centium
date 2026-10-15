@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Banknote, CircleX, MapPin, MessageSquare, Package, Truck } from "lucide-react";
 import { advanceOrder, cancelOrder, fetchStoreOrder, markOrderPaid } from "../../../services/store/orders";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
+
 import { nextAction, orderSteps, stepToast } from "../../../services/store/orderSteps";
 import { storeErrorText } from "../../../services/store/mapping";
 import { dayClock, money, moneyShort } from "../../../services/store/format";
@@ -103,6 +105,7 @@ export default function OrderDetailPage() {
       return;
     }
     showToast(`Order #${order.number} marked as paid in cash.`, action !== null);
+    offerPromotionUsed({ kind: "order", sourceId: order.id });
     await live.refresh();
   };
 

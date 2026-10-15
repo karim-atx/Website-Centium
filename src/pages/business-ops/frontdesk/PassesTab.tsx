@@ -7,6 +7,8 @@ import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useBizToast } from "../../../components/business-more/useBizToast";
 import { endGymMembership, markDeskSalePaid, renewMembership } from "../../../services/front-desk";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
+
 import { deskMoney, renewalSub, weekSales, type DeskSale, type FrontDeskMember, type RenewalDue } from "../../../services/front-desk/frontDeskLogic";
 import type { DeskState } from "./useFrontDesk";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
@@ -85,6 +87,7 @@ export const PassesTab: React.FC<{
     setBusy(false);
     if (!res.ok) return showToast(res.message);
     showToast(`${saleWho(sale)}'s ${sale.planName} is marked as paid.`);
+    offerPromotionUsed({ kind: "day_pass", sourceId: sale.id });
     onDeskChanged();
   };
   const later = renewals.filter((r) => r.daysLeft > 7);

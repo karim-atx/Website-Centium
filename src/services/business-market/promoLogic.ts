@@ -7,6 +7,9 @@
 // is a CENTIUM CHARGE to the business (centium_charges, B8); nothing here
 // moves members' money.
 
+/** business_payment_for()'s source kinds (Follow-up 20261121390000; day_pass takes the desk sale id). */
+export type PaymentSourceKind = "class_booking" | "membership" | "order" | "appointment" | "day_pass";
+
 /** promo_type (the DB enum). */
 export type DbPromoType = "percent_off" | "first_free" | "first_n_free" | "bring_friend" | "free_delivery";
 /** promo_target. */

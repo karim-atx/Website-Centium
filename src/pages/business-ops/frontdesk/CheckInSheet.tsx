@@ -5,6 +5,8 @@ import { ChevronDown, Search } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { checkInGuest, checkInMember, deskFindMember, sellDayPass } from "../../../services/front-desk";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
+
 import { ALREADY_IN_HOURS, deniedLine, deskMoney, GUEST_LABEL_MAX, type DayPassPlan, type DeskMember, type FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
 import { memberNumberLabel } from "../../../services/business-members";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
@@ -137,6 +139,8 @@ export const CheckInSheet: React.FC<{
       setBusy(false);
       if (!r.ok) return setProblem({ text: r.message, tone: "high" });
       onDone(paid ? `${who} is checked in with a day pass.` : `${who} is checked in. The day pass is in Money owed.`);
+      // Optional "Promotion used" (never blocks the sale); an unpaid sale is offered when it's marked paid.
+      if (paid) offerPromotionUsed({ kind: "day_pass", sourceId: r.value });
       return;
     }
     if (isGuest && picked) {

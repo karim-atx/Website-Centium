@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { PopupMenu } from "../ui/PopupMenu";
 import { initials } from "../professionals/typeColour";
 import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/console";
+import { offerPromotionUsed } from "../../components/promotions/promotionUsed";
+
 import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
@@ -118,6 +120,7 @@ export function VenueMembersRoster({
       return;
     }
     onToast?.(`Marked as paid. ${m.label}'s pass is valid now.`);
+    offerPromotionUsed({ kind: "membership", sourceId: m.membershipId });
     setTick((t) => t + 1);
     onChanged?.();
   };

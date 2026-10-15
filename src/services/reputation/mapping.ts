@@ -52,6 +52,7 @@ export function mapBizReview(r: Row, venues: Map<string, string>): BizReview {
     flagged: r.flagged === true,
     instructorId: s(r.instructor_id),
     flagKind: r.flagged === true ? flagKindOf(r.flag_kind) : null,
+    handledAt: s(r.handled_at),
   };
 }
 
@@ -96,6 +97,9 @@ export function mapMyReport(r: Row): MyReport {
     status: STATUSES.includes(st) ? st : "open",
   };
 }
+
+/** In the business's "Flagged for you" queue: flagged and not marked handled (business_reviews_page p_flagged_only). */
+export const inFlagQueue = (r: Pick<BizReview, "flagged" | "redacted" | "handledAt">): boolean => r.flagged && !r.redacted && !r.handledAt;
 
 /** The reasons report_review takes (review_report_reason), in the sheet's order. */
 export const REPORT_REASONS: { key: string; label: string }[] = [

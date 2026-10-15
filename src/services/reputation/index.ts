@@ -24,7 +24,7 @@ export type {
   MyReport,
   ReviewMetrics,
 } from "./types";
-export { REPORT_NOTE_MAX, REPORT_REASONS, reputationError } from "./mapping";
+export { REPORT_NOTE_MAX, REPORT_REASONS, inFlagQueue, reputationError } from "./mapping";
 
 // AN13 Reputation and AN5 Ratings on Database stage B14 (HANDOVER_API "B14 ·
 // Reputation", 20261121310000). Business side, gate `marketing` unless said:
@@ -185,6 +185,17 @@ export async function startReviewerThread(reviewId: string): Promise<Write<strin
   const { data, error } = await db.rpc("start_reviewer_thread", { p_review_id: reviewId });
   if (error) return writeFail(error, "Could not open the thread");
   return { ok: true, value: String(data ?? "") };
+}
+
+/**
+ * Follow-up 20261121390000: takes a flagged review out of (handled = true) or
+ * back into (false) the business's own queue. Gate marketing. Not a
+ * moderation decision; Centium's report queue is unchanged.
+ */
+export async function markReviewHandled(reviewId: string, handled = true): Promise<Write<null>> {
+  const { error } = await db.rpc("mark_review_handled", { p_review_id: reviewId, p_handled: handled });
+  if (error) return writeFail(error, "Could not mark the review");
+  return { ok: true, value: null };
 }
 
 export async function reportReview(

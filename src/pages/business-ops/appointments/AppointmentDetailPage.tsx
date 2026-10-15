@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Banknote, CalendarCheck, CircleX, Clock, FileWarning, Tag, User } from "lucide-react";
 import { apptChip, cancelAppointment, fetchDiaryDetail, markAppointment, markAppointmentPaid, payWords } from "../../../services/appointments";
+import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
+
 import { dayClock, dayTitle, money } from "../../../services/store/format";
 import { rangeClock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
@@ -85,6 +87,7 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
     setBusy(false);
     if (status === "no_show") showToast("Marked as no-show.", false);
     else showToast(p && !p.ok ? "Marked as done. Couldn't record the payment." : "Marked as done.", false);
+    if (p?.ok) offerPromotionUsed({ kind: "appointment", sourceId: a.id });
     await live.refresh();
   };
 
@@ -99,6 +102,7 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
       return;
     }
     showToast("Payment recorded.", booked && started);
+    offerPromotionUsed({ kind: "appointment", sourceId: a.id });
     await live.refresh();
   };
 

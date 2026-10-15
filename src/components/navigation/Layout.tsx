@@ -9,6 +9,7 @@ import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
 import { CallSurface } from "../calls/CallSurface";
 import { AchievementUnlockToast } from "../mind/AchievementUnlockToast";
+import { PromotionUsedHost } from "../promotions/PromotionUsedHost";
 import { ActiveWorkoutBar } from "../workout/ActiveWorkoutBar";
 import { useApp } from "../../context/AppContext";
 
@@ -145,6 +146,8 @@ export const Layout: React.FC = () => {
           belongs on that screen rather than waiting for somebody to next open
           the Mind tab. Renders nothing while the queue is empty. */}
       <AchievementUnlockToast />
+      {/* The optional "Promotion used" picker after a payment is recorded (business consoles: owners and staff). */}
+      {!isClient && <PromotionUsedHost />}
       </CallProvider>
     </UnreadProvider>
   );

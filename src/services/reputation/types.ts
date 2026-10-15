@@ -34,6 +34,11 @@ export interface BizReview {
   instructorId?: string | null;
   /** B14 follow-up: why it's flagged (the first report's reason, or keyword); null when not flagged. */
   flagKind?: FlagKind | null;
+  /**
+   * When the business marked the flag handled (mark_review_handled); null while
+   * it is in the business's queue. A new report or keyword flag reopens it.
+   */
+  handledAt?: string | null;
   reply: BizReply | null;
   /** Reported, or caught by the blocked-terms list (RP-03). */
   flagged: boolean;

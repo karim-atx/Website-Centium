@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typed } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Result } from "./index";
-import { promoErrorMessage, toPromotion, toStats, type DbPromoTarget, type DbPromoType, type PromoAudience, type PromoStatRow, type PromoStats, type Promotion, type PromotionRow } from "./promoLogic";
+import { promoErrorMessage, toPromotion, toStats, type DbPromoTarget, type DbPromoType, type PaymentSourceKind, type PromoAudience, type PromoStatRow, type PromoStats, type Promotion, type PromotionRow } from "./promoLogic";
 
 export * from "./promoLogic";
 
@@ -129,10 +129,26 @@ export async function cancelPromotion(id: string): Promise<Result<null>> {
 }
 
 /**
+ * The ledger payment (business_payments.id) behind a class booking,
+ * membership, order, appointment or desk sale (day_pass takes the desk sale
+ * id). Gate revenue, front_desk or store.
+ */
+export async function businessPaymentFor(kind: PaymentSourceKind, sourceId: string): Promise<Result<string>> {
+  try {
+    const { data, error } = await db.rpc("business_payment_for", { p_source_kind: kind, p_source_id: sourceId });
+    if (error) return fail(error, "Couldn't record the promotion. Try again.");
+    if (!data) return { ok: false, message: "Couldn't record the promotion. Try again." };
+    return { ok: true, value: String(data) };
+  } catch (e) {
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't record the promotion. Try again." };
+  }
+}
+
+/**
  * record_promotion_redemption: "this payment used that offer" (one per
- * payment). The price stays what the business charged. No caller in the
- * Marketplace slice: payments are recorded at the front desk, store and
- * revenue screens.
+ * payment). The price stays what the business charged. Called from the
+ * "Promotion used" picker after a payment is recorded
+ * (components/promotions/PromotionUsedHost), with business_payment_for's id.
  */
 export async function recordPromotionRedemption(promotionId: string, paymentId: string): Promise<Result<string>> {
   try {
