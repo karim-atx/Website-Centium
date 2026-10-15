@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CalendarClock, Check, ChevronDown, ChevronRight, Eye, EyeOff, Ticket, Users, X } from "lucide-react";
+import { Banknote, Bell, CalendarClock, CalendarX, Check, ChevronDown, ChevronRight, Eye, EyeOff, ImageOff, Package, PackageMinus, Receipt, ShieldAlert, Star, TriangleAlert, UserPlus, Users, UserX, X } from "lucide-react";
 import type { DashPalette } from "./palette";
-import type { AttentionItem, SetupStep } from "./dashboardModel";
+import type { SetupStep } from "./dashboardModel";
+import type { AttentionIcon, AttentionItem } from "./attention";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { PopupMenu } from "../ui/PopupMenu";
@@ -197,10 +198,28 @@ export function VenueChip({ c, venues, selected, onSelect }: { c: DashPalette; v
   );
 }
 
-const ATT_ICON = { "eye-off": EyeOff, ticket: Ticket, "calendar-clock": CalendarClock, users: Users } as const;
+const ATT_ICON: Record<AttentionIcon, typeof EyeOff> = {
+  "eye-off": EyeOff,
+  "shield-alert": ShieldAlert,
+  receipt: Receipt,
+  banknote: Banknote,
+  "calendar-clock": CalendarClock,
+  "user-x": UserX,
+  "calendar-x": CalendarX,
+  package: Package,
+  "package-minus": PackageMinus,
+  "image-off": ImageOff,
+  star: Star,
+  "user-plus": UserPlus,
+  users: Users,
+};
 
-/** DA1-015 S1 · "Needs your attention" (anchored popup, w 300, r 14, dim 0.18). */
-export function AttentionPanel({ c, open, items, anchor, onClose, onAction }: { c: DashPalette; open: boolean; items: AttentionItem[]; anchor: HTMLElement | null; onClose: () => void; onAction: (item: AttentionItem) => void }) {
+/**
+ * DA1-015 S1 · "Needs your attention" (anchored popup, w 300, r 14, dim 0.18).
+ * B15: `items` is business_attention's (attention.ts); null = the read failed,
+ * shown as a retry row rather than "You're all caught up".
+ */
+export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRetry }: { c: DashPalette; open: boolean; items: AttentionItem[] | null; anchor: HTMLElement | null; onClose: () => void; onAction: (item: AttentionItem) => void; onRetry: () => void }) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   useEffect(() => {
     if (!open || !anchor) return;
@@ -243,7 +262,7 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction }: { 
         }}
       >
         <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
-        {items.map((a, n) => {
+        {(items ?? []).map((a, n) => {
           const Icon = ATT_ICON[a.icon];
           return (
             <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 8, padding: "9px 10px", marginTop: n ? 6 : 0, border: `1px solid ${c.option}`, background: c.raised }}>
@@ -265,7 +284,26 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction }: { 
             </div>
           );
         })}
-        {items.length === 0 && (
+        {items === null && (
+          <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised }}>
+            <span style={{ display: "flex", color: c.high }}>
+              <TriangleAlert size={15} aria-hidden />
+            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
+              Couldn't check this right now
+              <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>What needs your attention shows here once it loads.</span>
+            </span>
+            <button
+              type="button"
+              className="hit"
+              onClick={onRetry}
+              style={{ height: 26, padding: "0 10px", borderRadius: 8, background: c.fill, color: c.onFill, display: "flex", alignItems: "center", fontSize: textPx(11), fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, border: 0 }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {items !== null && items.length === 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 9, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised }}>
             <span style={{ display: "flex", color: c.good }}>
               <Check size={15} strokeWidth={2.6} aria-hidden />

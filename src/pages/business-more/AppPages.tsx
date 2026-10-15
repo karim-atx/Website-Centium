@@ -8,7 +8,8 @@ import { ChangePasswordSheet } from "../../components/profile/ChangePasswordShee
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { getMfaStatus } from "../../services/mfa";
 import { getRecoveryStatus } from "../../services/recoveryCodes";
-import { setBusinessPaused, signOutOtherSessions } from "../../services/business-more";
+import { PAUSE_OWNER_ONLY, setBusinessPaused, signOutOtherSessions } from "../../services/business-more";
+import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { formatShortDate } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
@@ -262,6 +263,9 @@ export function DeactivatePage() {
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const paused = !!business?.deactivatedAt;
+  // B15: set_business_paused is the owner's only. Staff see the state, not the control.
+  const access = useConsoleAccess();
+  const owner = access.isOwner || (!access.isStaff && !!business);
 
   const apply = async () => {
     if (!business) return;
@@ -286,19 +290,19 @@ export function DeactivatePage() {
           <BizRow
             icon={Eye}
             title="Reactivate business"
-            desc={`Deactivated ${fmtDate(business!.deactivatedAt!)}. Bookings resume; turn Show on Explore back on to be listed.`}
-            value="Reactivate"
+            desc={owner ? `Deactivated ${fmtDate(business!.deactivatedAt!)}. Bookings resume; turn Show on Explore back on to be listed.` : `Deactivated ${fmtDate(business!.deactivatedAt!)}. ${PAUSE_OWNER_ONLY}`}
+            value={owner ? "Reactivate" : undefined}
             onClick={() => setAsk(true)}
-            disabled={!business}
+            disabled={!business || !owner}
           />
         ) : (
           <BizRow
             icon={EyeOff}
             title="Deactivate business"
-            desc="Hide your listing and pause bookings. Your data stays."
-            value="Deactivate"
+            desc={owner ? "Hide your listing and pause bookings. Your data stays." : PAUSE_OWNER_ONLY}
+            value={owner ? "Deactivate" : undefined}
             onClick={() => setAsk(true)}
-            disabled={!business}
+            disabled={!business || !owner}
           />
         )}
       </BizSection>

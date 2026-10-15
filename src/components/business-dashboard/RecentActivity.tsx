@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { CalendarCheck, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, ListFilter, RefreshCw, UserMinus, UserPlus, UserRound, type LucideIcon } from "lucide-react";
+import { Banknote, CalendarCheck, CalendarClock, CalendarPlus, CalendarX, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Package, RefreshCw, ScanLine, Star, UserMinus, UserPlus, UserRound, type LucideIcon } from "lucide-react";
 import type { DashPalette } from "./palette";
-import type { ActivityEvent, ActivityType, WeekTotal } from "./dashboardModel";
+import type { ActivityKind } from "./dashboardTypes";
+import type { ActivityEvent, TotalType, WeekTotal } from "./activityFeed";
 import { dayLabel, whenLabel } from "./dashboardModel";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
@@ -9,11 +10,44 @@ import { linePx, textPx } from "../../theme/textSize";
 // DA1-015 #29-#31 · Recent activity (BizSummaryV27), OURS-DA-states #3-#6:
 // live line, refresh, collapsed 3 rows, expanded with this week's totals, the
 // offline line and the "See all activity" screen.
+//
+// B15: the rows are business_activity's (activityFeed.ts), labelled by the
+// server and never named by the client, so every avatar is the masked one
+// (the drawn staff-initial avatar belonged to "class scheduled" rows, which
+// are not person events and are not in the feed). Badges: joined / ended /
+// booked / Classes as drawn; cancel, check-in, order, payment, appointment
+// and review are OURS (flagged in the B15 report).
 
-const TYPE_ICON: Record<ActivityType, LucideIcon> = { joined: UserPlus, ended: UserMinus, booked: CalendarCheck, created: CalendarPlus };
+const TYPE_ICON: Record<ActivityKind | TotalType, LucideIcon> = {
+  join: UserPlus,
+  end: UserMinus,
+  booking: CalendarCheck,
+  created: CalendarPlus,
+  cancel: CalendarX,
+  check_in: ScanLine,
+  order: Package,
+  payment: Banknote,
+  appointment: CalendarClock,
+  review: Star,
+};
 
-function badgeOf(c: DashPalette, t: ActivityType) {
-  return t === "joined" ? c.good : t === "ended" ? c.high : t === "booked" ? (c.dark ? "#7F6BD8" : c.pDark) : c.tealDark;
+function badgeOf(c: DashPalette, t: ActivityKind | TotalType) {
+  switch (t) {
+    case "join":
+    case "payment":
+      return c.good;
+    case "end":
+      return c.high;
+    case "cancel":
+      return c.caution;
+    case "booking":
+    case "appointment":
+      return c.dark ? "#7F6BD8" : c.pDark;
+    case "review":
+      return c.warn;
+    default:
+      return c.tealDark;
+  }
 }
 
 const rgbaOf = (col: string, a: number) => {
@@ -46,8 +80,8 @@ function Row({ c, e, now, isNew }: { c: DashPalette; e: ActivityEvent; now: Date
             width: 36,
             height: 36,
             borderRadius: 999,
-            background: e.initial ? c.tealPale : c.maskBg,
-            color: e.initial ? c.tealInk : c.maskInk,
+            background: c.maskBg,
+            color: c.maskInk,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -55,7 +89,7 @@ function Row({ c, e, now, isNew }: { c: DashPalette; e: ActivityEvent; now: Date
             fontWeight: 800,
           }}
         >
-          {e.initial ?? <UserRound size={16} aria-hidden />}
+          <UserRound size={16} aria-hidden />
         </span>
         <span
           style={{
@@ -83,7 +117,7 @@ function Row({ c, e, now, isNew }: { c: DashPalette; e: ActivityEvent; now: Date
             <span style={{ fontSize: textPx(9), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: c.onFill, background: c.fill, borderRadius: 999, padding: "1px 6px" }}>New</span>
           )}
         </span>
-        <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: c.faint }}>{e.sub}</span>
+        {(e.sub || e.isMinor) && <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: c.faint }}>{[e.sub, e.isMinor ? "Under 18" : ""].filter(Boolean).join(" · ")}</span>}
       </span>
       <span style={{ fontSize: textPx(10.5), color: c.faint, whiteSpace: "nowrap", paddingTop: 2 }}>{whenLabel(e.at, now)}</span>
     </div>
@@ -102,14 +136,14 @@ function groupByDay(events: ActivityEvent[], today: string) {
 
 const EMPTY_TEXT = "Joins, bookings, ended memberships and new classes show here as they happen.";
 
-function Groups({ c, events, now, today, newKeys }: { c: DashPalette; events: ActivityEvent[]; now: Date; today: string; newKeys: Set<string> }) {
+function Groups({ c, events, now, today, newIds }: { c: DashPalette; events: ActivityEvent[]; now: Date; today: string; newIds: Set<number> }) {
   return (
     <>
       {groupByDay(events, today).map((g) => (
         <div key={g.day}>
           <p style={{ fontSize: textPx(10), fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: c.faint, padding: "12px 0 2px", margin: 0 }}>{g.label}</p>
           {g.items.map((e) => (
-            <Row key={e.key} c={c} e={e} now={now} isNew={newKeys.has(e.key)} />
+            <Row key={e.key} c={c} e={e} now={now} isNew={newIds.has(e.id)} />
           ))}
         </div>
       ))}
@@ -189,12 +223,13 @@ export function RecentActivityCard({
   refreshing,
   onRefresh,
   onSeeAll,
-  newKeys,
+  newIds,
 }: {
   c: DashPalette;
   /** The last 7 days, newest first. */
   week: ActivityEvent[];
-  totals: WeekTotal[];
+  /** null while unread or when the read failed (no tiles rather than zeros). */
+  totals: WeekTotal[] | null;
   now: Date;
   today: string;
   updatedAt: number | null;
@@ -202,7 +237,7 @@ export function RecentActivityCard({
   refreshing: boolean;
   onRefresh: () => void;
   onSeeAll: () => void;
-  newKeys: Set<string>;
+  newIds: Set<number>;
 }) {
   const [open, setOpen] = useState(false);
   const shown = useMemo(() => (open ? week : week.slice(0, 3)), [open, week]);
@@ -241,9 +276,9 @@ export function RecentActivityCard({
           <ChevronDown size={16} strokeWidth={2.2} aria-hidden />
         </button>
       </div>
-      {open && <Totals c={c} totals={totals} />}
+      {open && totals && <Totals c={c} totals={totals} />}
       <div style={{ padding: "0 16px 6px", borderTop: `1px solid ${c.divider}` }}>
-        {week.length === 0 ? <EmptyLine c={c} /> : <Groups c={c} events={shown} now={now} today={today} newKeys={newKeys} />}
+        {week.length === 0 ? <EmptyLine c={c} /> : <Groups c={c} events={shown} now={now} today={today} newIds={newIds} />}
       </div>
       {week.length > 0 && (
         <button
@@ -259,22 +294,29 @@ export function RecentActivityCard({
   );
 }
 
-type Filter = "all" | ActivityType;
+type Filter = "all" | ActivityKind;
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "booked", label: "Bookings" },
-  { value: "joined", label: "Joins" },
-  { value: "ended", label: "Ended" },
-  { value: "created", label: "Classes" },
+  { value: "booking", label: "Bookings" },
+  { value: "cancel", label: "Cancellations" },
+  { value: "join", label: "Joins" },
+  { value: "end", label: "Ended" },
+  { value: "check_in", label: "Check-ins" },
+  { value: "order", label: "Orders" },
+  { value: "payment", label: "Payments" },
+  { value: "appointment", label: "Appointments" },
+  { value: "review", label: "Reviews" },
 ];
 
 /** OURS-DA-states #6: the "See all activity" screen (last 30 days, filter). */
-export function ActivityScreen({ c, events, now, today, onBack, classBased }: { c: DashPalette; events: ActivityEvent[]; now: Date; today: string; onBack: () => void; classBased: boolean }) {
+export function ActivityScreen({ c, events, now, today, onBack, newIds }: { c: DashPalette; events: ActivityEvent[]; now: Date; today: string; onBack: () => void; newIds: Set<number> }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const shown = filter === "all" ? events : events.filter((e) => e.type === filter);
-  const options = FILTERS.filter((f) => classBased || (f.value !== "booked" && f.value !== "created"));
+  // Only the kinds this caller receives (each kind is gated by its permission on the server).
+  const kinds = new Set(events.map((e) => e.type));
+  const options = FILTERS.filter((f) => f.value === "all" || kinds.has(f.value));
   return (
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
@@ -299,7 +341,7 @@ export function ActivityScreen({ c, events, now, today, onBack, classBased }: { 
       </div>
       <PopupMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchor={anchor} options={options} selected={filter} onSelect={(v) => setFilter(v)} align="right" width={180} />
       <div style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, padding: "0 16px 6px" }}>
-        {shown.length === 0 ? <EmptyLine c={c} /> : <Groups c={c} events={shown} now={now} today={today} newKeys={new Set()} />}
+        {shown.length === 0 ? <EmptyLine c={c} /> : <Groups c={c} events={shown} now={now} today={today} newIds={newIds} />}
       </div>
     </div>
   );

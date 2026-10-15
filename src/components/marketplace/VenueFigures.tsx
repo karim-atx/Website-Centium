@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { canSeeVenueMoney, fetchMyVenues, fetchVenueDashboard } from "../../services/venues/console";
+import { fetchVenueDashboard } from "../../services/venues/console";
 import { money, type VenueDashboard } from "../../services/venues/consoleLogic";
 import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 
@@ -15,30 +15,16 @@ import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 // the venue's own (computed in gyms.timezone). "–" only while loading; a real
 // 0 shows "0".
 //
-// WHO SEES THE MONEY CARD (OURS-OP1-venue-figures rows 12-13): B6 roles.
-// business_can(business, 'revenue'): the owner always, an accepted employee
-// only with the revenue permission ("See Revenue"). Until the answer is in,
-// the card is left out rather than shown to the wrong person.
+// WHO SEES THE MONEY CARD (OURS-OP1-venue-figures rows 12-13): B15 moved the
+// gate into venue_dashboard itself. Any insider reads the venue; the two money
+// figures come back null without "revenue" (the owner always has it; an
+// employee only with "See Revenue"). Null = the card is left out, never "$0";
+// while loading it is left out too, rather than shown to the wrong person.
 
 export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: string; timezone: string; refreshKey?: number }) {
   const [data, setData] = useState<{ gymId: string; value: VenueDashboard | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [moneyGate, setMoney] = useState<{ gymId: string; ok: boolean } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const v = await fetchMyVenues();
-      const businessId = v.ok ? v.value.find((x) => x.gymId === gymId)?.businessId : undefined;
-      const ok = businessId ? await canSeeVenueMoney(businessId) : false;
-      if (!cancelled) setMoney({ gymId, ok });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [gymId, refreshKey]);
-  const showMoney = moneyGate?.gymId === gymId && moneyGate.ok;
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +45,7 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
 
   const d = data?.gymId === gymId ? data.value : null;
   const n = (v: number | undefined) => (d && v !== undefined ? v.toLocaleString() : null);
+  const showMoney = !!d && d.amountAwaitingPayment !== null && d.amountMarkedPaidThisMonth !== null;
 
   return (
     <section aria-label="This venue">
@@ -84,8 +71,8 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
           />
           {showMoney && <VNumberCard
             boxes={[
-              { label: "Agreed, not yet paid", value: d ? money(d.amountAwaitingPayment) : null },
-              { label: "Marked paid this month", value: d ? money(d.amountMarkedPaidThisMonth) : null },
+              { label: "Agreed, not yet paid", value: d && d.amountAwaitingPayment !== null ? money(d.amountAwaitingPayment) : null },
+              { label: "Marked paid this month", value: d && d.amountMarkedPaidThisMonth !== null ? money(d.amountMarkedPaidThisMonth) : null },
             ]}
             line="Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid."
           />}
