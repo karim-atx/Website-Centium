@@ -11,8 +11,6 @@ import {
   markOwnerItemDismissed,
   markOwnerItemDone,
 } from "../../services/professional-onboarding";
-import { PaymentsSheet } from "../profile/PaymentsSheet";
-import { PublicListingSheet } from "../profile/PublicListingSheet";
 import type { LicenceStatus } from "../../services/professional-cv";
 import { GO_LIVE_ON_VERIFICATION, isRegulated, proKindOf } from "../../pages/onboarding/pro/proModel";
 import "../../pages/onboarding/shell/onboarding.css";
@@ -56,8 +54,6 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
     availability: boolean;
     licence: LicenceStatus | null;
   } | null>(null);
-  const [payments, setPayments] = useState(false);
-  const [listing, setListing] = useState(false);
   const kind = user.professionalSubtype;
   const regulated = isRegulated(proKindOf(kind));
 
@@ -121,7 +117,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
   const todo: Item[] = [
     { key: "client", icon: UserPlus, title: "Add your first client", desc: "Share a client code", done: professionalClients.length > 0, onClick: onAddClient },
     { key: "plans", icon: Package, title: "Add packages and prices", desc: descByKind, done: data.plans > 0, onClick: onPlans },
-    { key: "rates", icon: Banknote, title: "Set your rates and payment methods", desc: "Whish and cash", done: data.rates, onClick: () => setPayments(true) },
+    { key: "rates", icon: Banknote, title: "Set your rates and payment methods", desc: "Cash and card", done: data.rates, onClick: () => navigate("/app/more/services") },
     {
       key: "availability",
       icon: CalendarClock,
@@ -139,7 +135,8 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
       title: "Choose who can find you",
       desc: licenceDone ? "Your public listing" : `Once your ${regulated ? "licence" : "certificate"} is checked`,
       done: data.listed,
-      onClick: () => setListing(true),
+      // Release 3 W6: the listing switch lives in Settings › Practice.
+      onClick: () => navigate("/app/more/practice/listing"),
     },
   ];
   const doneRows: Item[] = [
@@ -217,20 +214,6 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
           );
         })}
       </section>
-      <PaymentsSheet
-        open={payments}
-        onClose={() => {
-          setPayments(false);
-          void load();
-        }}
-      />
-      <PublicListingSheet
-        open={listing}
-        onClose={() => {
-          setListing(false);
-          void load();
-        }}
-      />
     </div>
   );
 };

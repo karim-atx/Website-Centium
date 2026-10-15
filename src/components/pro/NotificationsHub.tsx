@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   Banknote,
@@ -121,6 +122,7 @@ export const NotificationsHub: React.FC<{
   onBusinesses: () => void;
 }> = (p) => {
   const dark = useIsDark();
+  const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
   useBackCloses(p.open, p.onClose);
 
@@ -161,6 +163,19 @@ export const NotificationsHub: React.FC<{
     <span aria-hidden className="shrink-0" style={{ width: 8, height: 8, borderRadius: 9999, background: on ? INK.pr : "transparent", marginTop: 6 }} />
   );
 
+  // W6: a sent form (pro.form.submitted / pro.form.flagged, subject form_response)
+  // opens its review (HO20 for a check-in, CL10 for an intake) at
+  // /app/more/forms/responses/{id}; every other row goes to the page's onOpen.
+  const openRow = (n: ProNotification) => {
+    if (n.subjectType === "form_response" && n.subjectId) {
+      void inbox.markRead([n.id]);
+      p.onClose();
+      navigate(`/app/more/forms/responses/${n.subjectId}`);
+      return;
+    }
+    p.onOpen(n);
+  };
+
   const notificationRow = (n: ProNotification, i: number, list: ProNotification[], withAction?: string) => {
     const t = notificationText(n, inbox.names);
     const Icon = ICONS[t.icon];
@@ -170,7 +185,7 @@ export const NotificationsHub: React.FC<{
       <button
         key={n.id}
         type="button"
-        onClick={() => p.onOpen(n)}
+        onClick={() => openRow(n)}
         className="tap w-full flex text-left"
         style={{ alignItems: withAction ? "center" : "flex-start", gap: 10, padding: "11px 0", borderBottom: last ? "none" : `1px solid ${INK.b06}` }}
       >
@@ -267,7 +282,7 @@ export const NotificationsHub: React.FC<{
               {e.message && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>"{e.message}"</p>}
               {requestButtons(() => p.onInvitation(e, false), () => p.onInvitation(e, true), p.invitationBusy === e.businessId, `${e.businessName}'s invitation`)}
               <button type="button" onClick={p.onBusinesses} className="tap" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-                Your businesses
+                Businesses
               </button>
             </div>
           </div>

@@ -20,6 +20,7 @@ import { ChevronRight } from "lucide-react";
 import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { CaloriesMacrosChart, MicronutrientsBlock, RpeChart, StrengthChart, VolumeChart, WeightTrendChart } from "../insights/ProgressCharts";
 import type { AccessCategory } from "../../../services/pro/access";
+import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -35,8 +36,11 @@ import type { AccessCategory } from "../../../services/pro/access";
  *   and sleep averages; Biomarkers: client_biomarker_flags;
  * - W5: Strength, Volume, RPE, the weight trend, Calories and macros over
  *   time and Micronutrients are the Insights charts (insights/
- *   ProgressCharts.tsx); Sleep stages (wearable stage data) and Check-ins
- *   (Forms, W6) stay Coming soon, never sample data;
+ *   ProgressCharts.tsx); Sleep stages (wearable stage data)
+ *   stays Coming soon, never sample data;
+ * - W6: Check-ins (Full coaching and Nutrition; HANDOVER d "Check-ins: Full")
+ *   is CL11, the client's check-in answers over time with the safety flag
+ *   banner (forms/CheckInsProgress.tsx); not fetched for Clinical overview;
  * - W5: the top row opens Client insights (Full coaching, Nutrition) or
  *   this patient in Insights (Clinical overview).
  * Each group is gated by its switch: LockLine when off.
@@ -69,6 +73,9 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   const [perDay, setPerDay] = useState<{ day: string; planned: number; completed: number }[] | null | undefined>(undefined);
   const [flags, setFlags] = useState<BiomarkerFlag[] | null | undefined>(undefined);
   const [loggedDays, setLoggedDays] = useState<string[] | null | undefined>(undefined);
+  const [chkNonce, setChkNonce] = useState(0);
+  const checkIns = useClientCheckIns(clientId, lane !== "clinical_overview", chkNonce);
+  const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
   const labsVisible = access.has("lab_results") || (access.access?.resultSharedCount ?? 0) > 0;
 
   useEffect(() => {
@@ -148,7 +155,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       adherenceGroup("Workouts vs planned", "workouts"),
       { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? "Effort per session" : "Not shared", body: access.has("workout_activity") ? <RpeChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
       bodyGroup,
-      { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: "Answers over time", body: soon("Check-in answers arrive with Forms.") },
+      checkInsGroup,
     ];
     if (stage?.nutritionCoaching !== false)
       groups.push({
@@ -178,6 +185,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <p style={{ fontSize: textPx(13), color: INK.ch }}>{logged == null ? "Loading…" : `Logged food on ${logged} of ${days.length} days.`}</p>,
       },
       bodyGroup,
+      checkInsGroup,
     ];
   } else {
     const bp = rel?.bloodPressure ?? [];

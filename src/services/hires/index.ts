@@ -11,8 +11,6 @@ import {
   type Plan,
   type PlanRow,
 } from "./clientLogic";
-import { createPlan, updatePlan, type PlanWriteResult } from "./pro";
-import type { PlanDraft } from "./proLogic";
 
 // A3 · Hiring a professional: THE ONE SERVICE for every A3 function and
 // table (a3-shared.md). Contract: "Stage A3" in ../Database/docs/HANDOVER_API.md.
@@ -23,7 +21,7 @@ import type { PlanDraft } from "./proLogic";
 //   cancel_hire(id, reason)      either party; was_free picks the wording
 //   professional_pending_hires() the professional's console (A3-pro, ./pro.ts)
 //   confirm_hire_payment(id)     the professional confirms receipt (./pro.ts)
-//   professional_plans           the plan editor, direct writes (./pro.ts)
+//   professional_plans           the own-plans read (./pro.ts); writes in services/pro/profile
 //   post_plans_card(thread, ids) MO1.2.1.3.7, the professional's composer
 //
 // professional_hires itself is unreadable by any client role; these
@@ -35,16 +33,11 @@ export * from "./clientLogic";
 export {
   cancelHire,
   confirmHirePayment,
-  createPlan,
   fetchMyPlans,
   fetchPendingHires,
-  setPlanActive,
-  setPlanPosition,
-  updatePlan,
   type CancelResult,
   type ConfirmResult,
   type PendingHire,
-  type PlanWriteResult,
   type ProPlan,
 } from "./pro";
 
@@ -104,15 +97,6 @@ export async function fetchMyHires(): Promise<{ ok: true; hires: MyHire[] } | { 
   } catch (e) {
     return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : LOAD_HIRES_FAILED };
   }
-}
-
-/**
- * The plan editor's one save: an existing plan (with `id`) is updated, a new
- * one inserted at `position`. professional_id goes on INSERT only; it is
- * outside the UPDATE grant.
- */
-export function savePlan(plan: { id?: string | null; userId: string; draft: PlanDraft; position: number }): Promise<PlanWriteResult> {
-  return plan.id ? updatePlan(plan.id, plan.draft) : createPlan(plan.userId, plan.draft, plan.position);
 }
 
 export type PlansCardResult = { ok: true; messageId: string } | { ok: false; code?: string; message: string };

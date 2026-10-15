@@ -789,51 +789,6 @@ export function cvIsEmpty(cv: PublicCv, skills: string[]) {
   return skills.length === 0 && Object.values(cv).every((rows) => (rows as unknown[]).length === 0);
 }
 
-/**
- * The professional's own CV as a client would see it, for "Preview as a
- * client". The SAME filters the public views apply: licences their owner has
- * not published, unnamed ones and expired ones not opted in are dropped, verified follows the database's rule,
- * and volunteering appears only when switched on.
- */
-export function previewAsClient(cv: MyCv, today: string): PublicCv {
-  return {
-    licences: cv.licences
-      .filter((l) => l.publishedAt && l.name && (!l.expires || l.noExpiry || `${l.expires}-01` >= today || l.showWhenExpired))
-      .map((l) => ({
-        id: l.id,
-        name: l.name!,
-        issuingBody: l.issuingBody,
-        issued: l.issued,
-        expires: l.noExpiry ? null : l.expires,
-        noExpiry: l.noExpiry,
-        credentialUrl: l.credentialUrl,
-        verified: licenceStatus(l, cv.reviews).kind === "verified",
-        expired: !l.noExpiry && !!l.expires && `${l.expires}-01` < today,
-      })),
-    experience: cv.experience,
-    education: cv.education,
-    languages: cv.languages,
-    awards: cv.awards,
-    publications: cv.publications,
-    volunteering: cv.profile.showVolunteering ? cv.volunteering : [],
-    links: cv.links,
-  };
-}
-
-/**
- * Whether "Preview as a client" draws the Verified check beside the name: the
- * rule professional_has_verified_licence() applies, which counts a verified
- * licence whether or not it is published (the badge and the listing are
- * separate by design, 20261120150000) but never one that expired and is hidden.
- */
-export function previewShowsVerified(cv: MyCv, today: string): boolean {
-  return cv.licences.some(
-    (l) =>
-      licenceStatus(l, cv.reviews).kind === "verified" &&
-      (!l.expires || l.noExpiry || `${l.expires}-01` >= today || l.showWhenExpired)
-  );
-}
-
 /** Whether a licence the owner published is hidden only because it has expired. */
 export function licenceHiddenByExpiry(l: Licence, today: string): boolean {
   return !l.noExpiry && !!l.expires && `${l.expires}-01` < today && !l.showWhenExpired;

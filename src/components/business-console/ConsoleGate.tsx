@@ -48,7 +48,7 @@ function NoAccess({ needs, businessName, nothingOn, failed, onRetry }: { needs: 
   const body = failed
     ? "Check your connection and try again."
     : !businessName
-      ? "Join a business's team and ask the owner for access. Your businesses lists the teams you're on."
+      ? "Join a business's team and ask the owner for access. Businesses lists the teams you're on."
       : nothingOn
         ? `${businessName}'s owner hasn't turned on anything you can do in their business console yet. Ask them for access.`
         : ownerOnly
@@ -64,10 +64,10 @@ function NoAccess({ needs, businessName, nothingOn, failed, onRetry }: { needs: 
         <p className="mt-[6px] text-[12.5px] leading-[18px] text-charcoal-soft [text-wrap:pretty]">{body}</p>
         <button
           type="button"
-          onClick={() => (failed ? onRetry() : navigate("/app/businesses"))}
+          onClick={() => (failed ? onRetry() : navigate("/app/more/businesses"))}
           className="tap mt-[16px] h-[44px] px-[18px] rounded-[14px] bg-primary-fill text-on-primary-fill text-[13px] font-bold"
         >
-          {failed ? "Try again" : "Your businesses"}
+          {failed ? "Try again" : "Businesses"}
         </button>
       </div>
     </div>

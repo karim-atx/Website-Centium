@@ -6,6 +6,7 @@
 
 import type { ProNotification } from "../../../services/pro/notifications";
 import { CATEGORY_LABEL } from "./categoryLabels";
+import { topicsPhrase } from "../forms/formModel";
 
 export type NotificationTone = "pr" | "req" | "att" | "act" | "done";
 
@@ -54,9 +55,12 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: who, line: `Finished ${str(p.routine) ?? "a workout"}`, icon: "activity", tone: "pr" };
     case "pro.form.submitted":
     case "pro.notify.check_in_submitted":
-      return { title: who, line: "Sent a check-in", icon: "clipboard", tone: "pr" };
-    case "pro.form.flagged":
-      return { title: who, line: "Check-in flagged: talk to a doctor follow-up", icon: "clipboard", tone: "att" };
+      return { title: who, line: "Sent you a form", icon: "clipboard", tone: "pr" };
+    case "pro.form.flagged": {
+      // W6: the payload carries the marked topics (save_form_response); FINAL_PLAN 3 §6.2 wording.
+      const topics = Array.isArray(p.safety_topics) ? p.safety_topics.filter((t): t is string => typeof t === "string") : [];
+      return { title: who, line: topics.length ? `Check-in flagged: answers mention ${topicsPhrase(topics)}` : "Check-in flagged", icon: "clipboard", tone: "att" };
+    }
     case "pro.result.shared":
     case "pro.notify.result_shared":
       return { title: who, line: str(p.marker) ? `Shared a result: ${str(p.marker)}` : "Shared a result with you", icon: "share", tone: "pr" };

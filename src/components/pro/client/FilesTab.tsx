@@ -1,22 +1,28 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ClipboardList, FileText, Image as ImageIcon, Lock, Plus, ShieldCheck } from "lucide-react";
+import { ClipboardList, FileText, HeartPulse, Image as ImageIcon, Lock, Plus, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
 import { FileViewerSheet } from "../../health/FileViewerSheet";
 import { INK } from "../proInk";
-import { ComingSoonPill } from "../ComingSoon";
 import { ProCardSkeleton, ProError } from "../states";
 import { ListCard, SectionHead, SoftLine } from "./kit";
 import { fmtDay } from "./clientFormat";
 import type { ClientPageData } from "./useClientPage";
 import { fetchClientFiles, fetchTermsAcceptance, uploadClientFile, type ClientFile } from "../../../services/pro/clientPage";
 import { acceptFor, validateFileFor } from "../../../services/storage";
+import { fetchLatestIntake, type FormResponse } from "../../../services/pro/forms";
+import { getMedicalHistory } from "../../../services/medical-history";
+import { FORMS_PATH } from "../forms/formsList";
 
 /**
  * Release 3 · CL2 v3 Tab 6 Files (source gen/r6b.js cpTab6 'Files'):
- * - Intake and health history: the intake form (Forms, W6: Coming soon) and
+ * - Intake and health history: the intake form (W6: the latest intake
+ *   response, "Completed {date} · {n} answers", opening CL10; none yet opens
+ *   Forms to send one), Health history (W6: conditions and medications
+ *   behind the Medical history switch; a count, never the records) and
  *   Consent "Signed {date} · coaching terms" (coaching_terms_acceptances);
  * - Documents: client_files of kind document, from either side, "Added by
  *   you" or "Added by {name}"; open in FileViewerSheet (client-files);
@@ -37,16 +43,29 @@ export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const input = useRef<HTMLInputElement | null>(null);
+  const navigate = useNavigate();
+  const [intake, setIntake] = useState<FormResponse | null | undefined>(undefined);
+  const [history, setHistory] = useState<{ conditions: number; medications: number } | null | undefined>(undefined);
+  const historyOn = access.has("medical_history");
 
   useEffect(() => {
     if (!authUserId) return;
     let live = true;
     void fetchClientFiles(authUserId, clientId).then((r) => live && setFiles(r.ok ? { list: r.data, error: false } : { list: null, error: true }));
     void fetchTermsAcceptance(authUserId, clientId).then((r) => live && setTerms(r.ok ? r.data : null));
+    void fetchLatestIntake(authUserId, clientId).then((r) => live && setIntake(r.ok ? r.data : null));
     return () => {
       live = false;
     };
   }, [authUserId, clientId, nonce]);
+  useEffect(() => {
+    if (!historyOn) return;
+    let live = true;
+    void getMedicalHistory(clientId).then((r) => live && setHistory(r.ok ? { conditions: r.history.comorbidities.length, medications: r.history.medications.length } : null));
+    return () => {
+      live = false;
+    };
+  }, [clientId, historyOn, nonce]);
 
   const onPick = async (file: File | undefined) => {
     if (!file) return;
@@ -72,7 +91,16 @@ export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
       <SectionHead label="Intake and health history" />
       <ListCard
         rows={[
-          { key: "intake", icon: ClipboardList, title: "Intake form", meta: "Answers carried into the profile", trailing: <ComingSoonPill /> },
+          intake
+            ? { key: "intake", icon: ClipboardList, title: "Intake form", meta: `Completed ${fmtDay(intake.submittedAt)} · ${Object.keys(intake.answers).length} answer${Object.keys(intake.answers).length === 1 ? "" : "s"}`, onClick: () => navigate(`${FORMS_PATH}/responses/${intake.id}`) }
+            : { key: "intake", icon: ClipboardList, title: "Intake form", meta: intake === undefined ? "Loading…" : "No intake form answered yet", onClick: () => navigate(FORMS_PATH) },
+          {
+            key: "history",
+            icon: HeartPulse,
+            title: "Health history",
+            meta: !historyOn ? `${firstName} hasn't shared medical history` : history === undefined ? "Loading…" : history === null ? "Couldn't load" : `${history.conditions} condition${history.conditions === 1 ? "" : "s"} · ${history.medications} medication${history.medications === 1 ? "" : "s"}`,
+            trailing: historyOn ? undefined : <Lock size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />,
+          },
           {
             key: "consent",
             icon: ShieldCheck,

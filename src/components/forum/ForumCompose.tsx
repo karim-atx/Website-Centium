@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, ImagePlus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ImagePlus, Send, X } from "lucide-react";
+import { textPx } from "../../theme/textSize";
 import { DangerLine } from "./parts";
 import { useNavigate } from "react-router-dom";
 import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
@@ -39,6 +40,7 @@ export function ForumCompose({
   recoveryOn,
   recoveryPending,
   onClose,
+  postingAs,
 }: {
   onClose: () => void;
   userId: string;
@@ -48,6 +50,13 @@ export function ForumCompose({
   categories: ForumCategory[];
   recoveryOn: boolean;
   recoveryPending: boolean;
+  /**
+   * Release 3 · W6 MO18 v2 "new post" (professionals): the "Posting as {name},
+   * {title}" row (r12 soft, pad 10 12, gap 10, 28 avatar, 12.5 text.soft with
+   * the name 700), the title "New post" and the CTA "Post" with send. Unset
+   * (clients) leaves the sheet exactly as it was.
+   */
+  postingAs?: { name: string; title: string };
 }) {
   const navigate = useNavigate();
   const dark = useIsDark();
@@ -178,8 +187,14 @@ export function ForumCompose({
     <BottomSheet
       open
       onClose={onClose}
-      title="New Post"
-      footer={<CtaButton label={busy ? "Posting…" : "Post to forum"} onClick={() => void post()} disabled={!ready} loading={busy} />}
+      title={postingAs ? "New post" : "New Post"}
+      footer={
+        postingAs ? (
+          <CtaButton label={busy ? "Posting…" : "Post"} icon={<Send size={15} strokeWidth={2} aria-hidden />} onClick={() => void post()} disabled={!ready} loading={busy} />
+        ) : (
+          <CtaButton label={busy ? "Posting…" : "Post to forum"} onClick={() => void post()} disabled={!ready} loading={busy} />
+        )
+      }
     >
       {/* Frame check: 14 between the sections (measured), not 16. */}
       <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
@@ -322,6 +337,23 @@ export function ForumCompose({
           {error?.field === "body" && <DangerLine>{error.message}</DangerLine>}
         </div>
 
+        {postingAs && (
+          <div className="flex items-center rounded-xl" style={{ gap: 10, background: "rgb(var(--c-cream-soft))", padding: "10px 12px" }}>
+            <span
+              aria-hidden
+              className="flex items-center justify-center shrink-0 rounded-full"
+              style={{ width: 28, height: 28, background: "rgb(var(--c-primary-pale))", color: "rgb(var(--c-primary-deep-text))", fontSize: 9, fontWeight: 800 }}
+            >
+              {postingAs.name.trim().charAt(0).toUpperCase()}
+            </span>
+            <span className="min-w-0" style={{ fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
+              Posting as{" "}
+              <b style={{ color: "rgb(var(--c-charcoal))" }}>
+                {postingAs.name}, {postingAs.title}
+              </b>
+            </span>
+          </div>
+        )}
         <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
           Posts with links are checked by a moderator before they appear.
         </span>

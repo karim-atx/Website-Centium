@@ -69,7 +69,7 @@ export default function ProVerification() {
       if (r.status !== "needs_verification") await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);
     }
     // Verified but switched off (or never switched on): don't claim clients can find them.
-    if (verified && !notListed && lane.ok && !listedNow) notListed = "You're not on Explore right now. Turn it on in Choose who can find you.";
+    if (verified && !notListed && lane.ok && !listedNow) notListed = "You're not on Explore right now. Turn it on in Settings › Practice › Public listing.";
     setLicences(cv.ok ? cv.cv.licences : []);
     setState({
       status,
@@ -104,13 +104,13 @@ export default function ProVerification() {
       notListed={state.notListed}
       preview={{ initials: initials(name), avatarUrl: user.avatarUrl ?? null, name, label: PRO_LABEL[kind], tags: state.tags, line: state.line }}
       onPrimary={() => navigate("/app/pro")}
-      onFix={() => navigate("/app/profile/cv")}
+      onFix={() => navigate("/app/more/edit-profile")}
       onRetry={() => void load()}
       extra={
         <ProLicencePublish
           licences={licences}
           onChanged={(l) => setLicences((ls) => ls.map((x) => (x.id === l.id ? l : x)))}
-          unnamedHint="Add its name in My CV to show it on your profile."
+          unnamedHint="Add its name in Edit public profile to show it on your profile."
           margin="18px 2px 4px"
         />
       }

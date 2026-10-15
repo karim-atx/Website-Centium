@@ -1,8 +1,15 @@
 import React, { useEffect, useState, type ReactNode } from "react";
 import {
   AtSign,
+  Banknote,
   Bell,
   CalendarCheck,
+  CalendarClock,
+  ClipboardCheck,
+  Receipt,
+  Send,
+  Star,
+  UserPlus,
   CalendarDays,
   ChevronDown,
   Clock,
@@ -46,6 +53,7 @@ import { fromParts, minuteOptions, toParts, type Meridiem } from "../../componen
 import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
+import { fetchGoneQuietDays } from "../../services/pro/practice";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
 // every group and row the frame draws, Quiet hours included.
@@ -80,7 +88,7 @@ import { HealthChecksNotificationRow } from "../../components/health-checks/Heal
 // As drawn, the rows carry no subtitles; what each switch does is read to
 // screen readers instead.
 
-type Row = { key: NotificationToggleKey; label: string; desc: string; icon: typeof Bell };
+type Row = { key: NotificationToggleKey; label: string; desc: string; icon: typeof Bell; sub?: string };
 type Group = { label: string; rows: Row[] };
 
 const QUIET = "Quiet hours";
@@ -127,6 +135,49 @@ const GROUPS: Group[] = [
     ],
   },
 ];
+
+// Release 3 W6 · MO12 v2 (source/gen board12.js notifications12): a
+// professional's groups as drawn, first (the seven notification_pro_*
+// switches, Messages and New reviews). Their own-tracking groups follow, as
+// before, without the client "Professionals" group: its Messages row is in
+// "Messages and reviews" and Calendar events joins Account.
+const PRO_GROUPS = (goneQuietDays: number | null): Group[] => [
+  {
+    label: "Clients",
+    rows: [
+      { key: "proRequests", label: "New hire and booking requests", desc: "When someone asks to hire you or book a session", icon: UserPlus },
+      { key: "proBookingChanges", label: "Booking changes and cancellations", desc: "When a client moves or cancels a session", icon: CalendarClock },
+      { key: "proSubmissions", label: "Check-ins and food journals submitted", desc: "When a client sends a check-in or replies on their food journal", icon: ClipboardCheck },
+      {
+        key: "proGoneQuiet",
+        label: "Clients gone quiet",
+        desc: "When a client has had no activity for a while",
+        icon: Moon,
+        sub: goneQuietDays === null ? undefined : `After ${goneQuietDays} days with no activity`,
+      },
+    ],
+  },
+  {
+    label: "Messages and reviews",
+    rows: [
+      { key: "professionalMessages", label: "Messages", desc: "“New message from …” when someone writes to you. Never the message itself.", icon: MessageCircle },
+      { key: "reviews", label: "New reviews", desc: "When a client reviews you", icon: Star },
+      { key: "proCareNetwork", label: "Care network", desc: "Referrals and requests from colleagues", icon: Send },
+    ],
+  },
+  {
+    label: "Payments",
+    rows: [
+      { key: "proPayments", label: "Payments received", desc: "When a payment is marked received", icon: Banknote },
+      { key: "proUnpaidSessions", label: "Unpaid sessions", desc: "A reminder about sessions not marked paid", icon: Receipt, sub: "Day after the session" },
+    ],
+  },
+];
+
+/** A professional's own-tracking groups: GROUPS without "Professionals", Calendar events in Account. */
+const PRO_OWN_GROUPS: Group[] = GROUPS.filter((g) => g.label !== "Professionals").map((g) =>
+  g.label === "Account" ? { ...g, rows: [{ key: "calendarEvents", label: "Calendar events", desc: "Reminders for events in your calendar", icon: CalendarDays }, ...g.rows] } : g
+);
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
@@ -232,7 +283,18 @@ function ErrorLine({ children }: { children: ReactNode }) {
 }
 
 export default function NotificationsPage() {
-  const { authUserId } = useApp();
+  const { authUserId, user } = useApp();
+  const isPro = user.accountType === "professional";
+  const [goneQuietDays, setGoneQuietDays] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isPro || !authUserId) return;
+    let live = true;
+    void fetchGoneQuietDays(authUserId).then((d) => live && setGoneQuietDays(d));
+    return () => {
+      live = false;
+    };
+  }, [isPro, authUserId]);
+  const groups = isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS;
 
   // --- the account's values (app_preferences) --------------------------------
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -482,13 +544,14 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      {GROUPS.map((g) => (
+      {groups.map((g) => (
         <SettingsSection key={g.label} label={g.label}>
           {g.rows.map((r) => (
             <React.Fragment key={r.key}>
               <SettingsRow
                 icon={r.icon}
                 title={r.label}
+                subtitle={r.sub}
                 srDescription={r.desc}
                 dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
                 toggle={{

@@ -121,12 +121,12 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           eyebrow="Set up"
           eyebrowColor="var(--ob-accent)"
           title="Add a certificate to go live"
-          body="Clients find you on Explore once we've checked a certificate. Add one in My CV. You can set up your services now."
+          body="Clients find you on Explore once we've checked a certificate. Add one in Edit public profile. You can set up your services now."
         />
         <Timeline
           items={[
             submittedRow,
-            { title: "Certificate", desc: "Add one in My CV", value: "Now", state: "now" },
+            { title: "Certificate", desc: "Add one in Edit public profile", value: "Now", state: "now" },
             { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
           ]}
         />

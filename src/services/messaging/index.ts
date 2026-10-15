@@ -3,6 +3,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { uploadPrivateFile, validateFileFor } from "../storage";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { parseCard, type MessageCard } from "./cards";
+import { parseShareCard, type ShareCard } from "./shareCards";
 import { loadConsoleAccess } from "../business-console";
 
 // Two-party messaging, against the real tables.
@@ -254,6 +255,12 @@ export interface Message {
    * fallback, and stays what search, previews and quotes use. See cards.ts.
    */
   card: MessageCard | null;
+  /**
+   * Release 3 · DB-7: a programme or session a professional shared
+   * (send_group_card). Drawn only on the professional's side (ThreadView's
+   * `pro` prop); everyone else reads the message text, as before.
+   */
+  shareCard?: ShareCard | null;
 }
 
 /** How long after sending a message can be edited or unsent. Enforced server-side. */
@@ -837,6 +844,7 @@ const toMessage = (m: MessageRow): Message => ({
   editedAt: m.edited_at ?? null,
   deletedAt: m.deleted_at ?? null,
   card: parseCard(m.message_cards),
+  shareCard: parseShareCard(m.message_cards),
 });
 
 /** Messages per page. A thread opens on its newest page; scrolling up loads the next. */

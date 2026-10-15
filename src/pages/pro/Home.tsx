@@ -30,7 +30,6 @@ import { Toast } from "../../components/ui/Toast";
 import { ProGetSetUpCard } from "../../components/professionals/ProGetSetUpCard";
 import { TwoFactorNudge } from "../../components/profile/TwoFactorNudge";
 import { HireAvailabilityNotice } from "../../components/hire-pro/HireAvailabilityNotice";
-import { PlanEditorSheet } from "../../components/hire-pro/PlanEditorSheet";
 import { hireGate } from "../../services/hires/proLogic";
 import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
 import { dateKicker, greeting } from "../../components/business-dashboard/dashboardModel";
@@ -57,8 +56,8 @@ import type { ProNotification } from "../../services/pro/notifications";
  * - one card, collapsed (programmes ending soon, Full coaching; meal plans
  *   ending soon, Nutrition (W5); Clinical overview's is wired in W6), or "Ways to add" with
  *   no clients yet.
- * The roster list moved to Clients (W3); the hire plans editor stays reachable
- * from Get set up until More (W6) gives it a row.
+ * The roster list moved to Clients (W3); hire plans are edited in More ›
+ * Services and pricing (MO5, W6), where Get set up sends you.
  */
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -220,7 +219,6 @@ export default function Home() {
   const { plan, refresh: refreshPlan } = useMyProfessionalPlan();
   const gate = hireGate({ mayConnectClients: plan ? plan.mayConnectClients : null, maxClients: myTier?.tier.maxClients, clientCount: professionalClients.length });
   const planLabel = myTier ? effectiveTierLabel(myTier) : null;
-  const [plansOpen, setPlansOpen] = useState(false);
 
   // ---- inbox, hub, add client ----
   const inbox = useProInbox();
@@ -462,7 +460,7 @@ export default function Home() {
       </div>
 
       <TwoFactorNudge />
-      <ProGetSetUpCard onAddClient={() => openAdd()} onPlans={() => setPlansOpen(true)} className="mb-4" />
+      <ProGetSetUpCard onAddClient={() => openAdd()} onPlans={() => navigate("/app/more/services")} className="mb-4" />
       {gate && (
         <HireAvailabilityNotice gate={gate} planLabel={planLabel} capLine={myTier ? capLabel(myTier.tier, professionalClients.length) : null} className="mb-4" />
       )}
@@ -613,7 +611,6 @@ export default function Home() {
         onPendingRequests={() => openHub("requests")}
         onOfflineAdded={(name, note) => setPageToast({ text: note ? `${name} added. ${note}` : `${name} added.` })}
       />
-      <PlanEditorSheet open={plansOpen} onClose={() => setPlansOpen(false)} />
       <Toast open={!!pageToast} message={pageToast?.text ?? ""} action={pageToast?.action} onExpire={() => setPageToast(null)} />
     </div>
   );

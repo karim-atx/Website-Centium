@@ -3,19 +3,16 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import {
   describeCancelError,
   describeConfirmError,
-  describePlanWriteError,
   sortByPosition,
-  validatePlanDraft,
   type HirePaymentMethod,
   type PlanBilling,
-  type PlanDraft,
 } from "./proLogic";
 
 // A3, the professional's side of hiring (A3-pro). Written as its own file
 // because src/services/hires/index.ts (A3-client's) did not exist yet when
 // this was built — see a3-shared.md; the lead merges.
 //
-//   professional_plans           the plan editor, direct table writes
+//   professional_plans           the professional's own plans (read; writes: services/pro/profile)
 //   professional_pending_hires() what is waiting to be confirmed
 //   confirm_hire_payment()       the professional confirms receipt
 //   cancel_hire()                either party; was_free picks the wording
@@ -117,69 +114,6 @@ export async function fetchMyPlans(userId: string): Promise<{ ok: true; plans: P
     return { ok: true, plans: sortByPosition((data ?? []).map(toPlan)) };
   } catch (e) {
     return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : LOAD_PLANS_FAILED };
-  }
-}
-
-export type PlanWriteResult = { ok: true; plan: ProPlan } | { ok: false; message: string };
-
-/**
- * Adds a plan at the end of the list. professional_id is sent on INSERT only
- * (the insert policy requires it to be the caller); it is outside the UPDATE
- * grant, so an edit can never move a plan to another profile.
- */
-export async function createPlan(userId: string, draft: PlanDraft, position: number): Promise<PlanWriteResult> {
-  const built = validatePlanDraft(draft);
-  if (!built.ok) return built;
-  try {
-    const { data, error } = await plansTable()
-      .insert({ professional_id: userId, ...built.row, position })
-      .select(PLAN_COLUMNS)
-      .single();
-    if (error || !data) {
-      if (error) console.error("[hires/pro] Could not create the plan:", error.message);
-      return { ok: false, message: describePlanWriteError(error, isOffline(error)) };
-    }
-    return { ok: true, plan: toPlan(data) };
-  } catch (e) {
-    return { ok: false, message: describePlanWriteError(null, isOffline(e)) };
-  }
-}
-
-/**
- * Edits a plan in place: name, price, billing, features, active and
- * updated_at only — exactly the column UPDATE grant. Filtered by id alone; the
- * update policy is what restricts it to the caller's own plans.
- */
-export async function updatePlan(planId: string, draft: PlanDraft): Promise<PlanWriteResult> {
-  const built = validatePlanDraft(draft);
-  if (!built.ok) return built;
-  return writePlan(planId, { ...built.row });
-}
-
-/** The active switch on its own, from the list. */
-export function setPlanActive(planId: string, active: boolean): Promise<PlanWriteResult> {
-  return writePlan(planId, { active });
-}
-
-/** One plan's position, from the reorder arrows. */
-export function setPlanPosition(planId: string, position: number): Promise<PlanWriteResult> {
-  return writePlan(planId, { position });
-}
-
-async function writePlan(planId: string, row: Record<string, unknown>): Promise<PlanWriteResult> {
-  try {
-    const { data, error } = await plansTable()
-      .update({ ...row, updated_at: new Date().toISOString() })
-      .eq("id", planId)
-      .select(PLAN_COLUMNS)
-      .single();
-    if (error || !data) {
-      if (error) console.error("[hires/pro] Could not update the plan:", error.message);
-      return { ok: false, message: describePlanWriteError(error, isOffline(error)) };
-    }
-    return { ok: true, plan: toPlan(data) };
-  } catch (e) {
-    return { ok: false, message: describePlanWriteError(null, isOffline(e)) };
   }
 }
 

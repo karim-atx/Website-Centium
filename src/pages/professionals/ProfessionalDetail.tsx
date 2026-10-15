@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
-import { PinnedCta } from "../../components/ui/PinnedCta";
+import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { goldPill, initials, pinGround, typeColours } from "../../components/professionals/typeColour";
 import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
@@ -40,8 +40,31 @@ import { useBack } from "../../hooks/useBack";
 // testimony, rendered identically to the real thing, about a real person.
 // The list reads professional_reviews now and shows what is there.
 
-export default function ProfessionalDetail() {
-  const { id } = useParams();
+/**
+ * Optional props (Release 3 W6, MO3 public profile preview): the page as a
+ * client sees it, for the professional themselves. Unset, the page is the
+ * client directory profile exactly as before.
+ */
+export interface ProfessionalDetailPreview {
+  /** Whose profile, in place of the route id. */
+  profileId: string;
+  /** Used when the directory has no row (not listed yet): the page still shows what a client would. */
+  fallbackListing: DirectoryListing | null;
+  /** Top right of the back row (MO3 "Preview as client", Share). */
+  headerRight?: ReactNode;
+  /** Under the back row (HireAvailabilityNotice, a toast). */
+  above?: ReactNode;
+  /** The pinned bar in place of Message and Hire (MO3 Hire and Book a session). */
+  pinned?: ReactNode;
+  /** Where the reviews pill goes (the directory reviews page needs a listing). */
+  reviewsHref?: string;
+}
+
+export default function ProfessionalDetail({ preview }: { preview?: ProfessionalDetailPreview } = {}) {
+  const params = useParams();
+  const id = preview?.profileId ?? params.id;
+  const isPreview = !!preview;
+  const fallbackListing = preview?.fallbackListing ?? null;
   const navigate = useNavigate();
   const back = useBack();
   const { authUserId } = useApp();
@@ -63,13 +86,13 @@ export default function ProfessionalDetail() {
     void (async () => {
       const found = await fetchListing(id);
       if (cancelled) return;
-      setListing(found);
+      setListing(found ?? fallbackListing);
       setListingLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, fallbackListing]);
 
   // One shape for the page. `isReal` used to gate what only a real account
   // could do, back when a seeded entry could reach this screen; every listing
@@ -119,7 +142,7 @@ export default function ProfessionalDetail() {
     realProfessionalId !== null && checked.id === realProfessionalId ? checked.active : null;
 
   useEffect(() => {
-    if (!realProfessionalId) return;
+    if (!realProfessionalId || isPreview) return;
     let cancelled = false;
     void isActiveClientOf(realProfessionalId).then((yes) => {
       if (!cancelled) setChecked({ id: realProfessionalId, active: yes });
@@ -127,7 +150,7 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId]);
+  }, [realProfessionalId, isPreview]);
 
   // The CV, from the public views (listed professionals are readable by
   // anyone; a connected client can always read their own professional's).
@@ -184,7 +207,7 @@ export default function ProfessionalDetail() {
   const [requestSending, setRequestSending] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   useEffect(() => {
-    if (!realProfessionalId || !authUserId) return;
+    if (!realProfessionalId || !authUserId || isPreview) return;
     let cancelled = false;
     void fetchMyHireRequest(realProfessionalId).then((res) => {
       if (cancelled || res.status !== "ok") return;
@@ -193,7 +216,7 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, authUserId]);
+  }, [realProfessionalId, authUserId, isPreview]);
   const sendRequest = async () => {
     if (!realProfessionalId || !authUserId || requestSending) return;
     setRequestSending(true);
@@ -217,7 +240,7 @@ export default function ProfessionalDetail() {
   };
 
   useEffect(() => {
-    if (!realProfessionalId || !authUserId) return;
+    if (!realProfessionalId || !authUserId || isPreview) return;
     let cancelled = false;
     void fetchMyHires().then((r) => {
       if (!cancelled && r.ok) setHiresState({ id: realProfessionalId, hires: r.hires });
@@ -225,7 +248,7 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, authUserId]);
+  }, [realProfessionalId, authUserId, isPreview]);
 
   // The hire sheet (MO1.2.1.5), and the ?hire=<planId> deep link from a chat
   // plans card's Hire: the sheet opens on that plan's checkout while it is
@@ -287,7 +310,7 @@ export default function ProfessionalDetail() {
     canReview,
     save: saveReview,
     withdraw: withdrawReview,
-  } = useProfessionalReviews(realProfessionalId);
+  } = useProfessionalReviews(preview ? null : realProfessionalId);
 
   /**
    * Re-reads the listing so the headline average moves with the write.
@@ -373,7 +396,8 @@ export default function ProfessionalDetail() {
   const isOwnProfile = realProfessionalId !== null && realProfessionalId === authUserId;
 
   return (
-    <div className={showPinned ? "pb-[172px]" : ""}>
+    <div className={showPinned || preview?.pinned ? (preview?.pinned ? "pb-[228px]" : "pb-[172px]") : ""}>
+      <div className={preview?.headerRight ? "flex items-start justify-between gap-2" : undefined}>
       <button
         onClick={back}
         aria-label="Back"
@@ -384,6 +408,9 @@ export default function ProfessionalDetail() {
             at y 44; the avatar starts at y 70. */}
         <ChevronLeft size={18} />
       </button>
+      {preview?.headerRight}
+      </div>
+      {preview?.above}
 
       {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
           Avatar 96 (measured on the frame). */}
@@ -440,7 +467,7 @@ export default function ProfessionalDetail() {
             three reviews count toward an average. */}
         <button
           type="button"
-          onClick={() => navigate(`/app/professionals/${professional.id}/reviews`)}
+          onClick={() => navigate(preview?.reviewsHref ?? `/app/professionals/${professional.id}/reviews`)}
           // #13 / #14: 28 tall, 8 under the pills, padding 0 12, 11.5/17.3 700,
           // a 1.1px border (#D9A441, dark #E0B360), Star 13 6 to the label.
           className="tap mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11.5px] leading-[17.3px] font-bold"
@@ -481,7 +508,7 @@ export default function ProfessionalDetail() {
           together — which `isConnected` would have hidden. The card also shows
           for an existing review regardless, so a past client can still edit or
           remove what they wrote. */}
-      {(canReview === true || myReview) && (
+      {!preview && (canReview === true || myReview) && (
         <section className="mb-5 animate-fade-slide-up" aria-label="My review">
           {sectionLabel("My review")}
           <MyReviewCard
@@ -575,7 +602,8 @@ export default function ProfessionalDetail() {
           top of an existing relationship is ordinary (the contract). */}
       {/* Your own profile (user decision, 7 October 2026): no Hire — you
           cannot hire yourself — so Message stands alone. */}
-      {showPinned && isOwnProfile && <PinnedCta size="base" primary={{
+      {preview?.pinned && <PinnedSlot>{preview.pinned}</PinnedSlot>}
+      {!preview && showPinned && isOwnProfile && <PinnedCta size="base" primary={{
             label: "Message",
             icon: <MessageCircle size={15} />,
             loading: threadBusy,
@@ -584,7 +612,7 @@ export default function ProfessionalDetail() {
               ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
               : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
           }} />}
-      {showPinned && !isOwnProfile && (
+      {!preview && showPinned && !isOwnProfile && (
         <PinnedCta
           size="base"
           secondary={{
@@ -606,7 +634,7 @@ export default function ProfessionalDetail() {
         />
       )}
 
-      {isReal && (
+      {isReal && !preview && (
         <HireSheet
           open={hireSheetOpen}
           onClose={closeHire}

@@ -8,7 +8,6 @@ import {
   hireGate,
   paymentMethodLabel,
   planPriceLine,
-  reorderPlans,
   sortByPosition,
   validatePlanDraft,
   type PlanDraft,
@@ -43,29 +42,6 @@ test("validatePlanDraft mirrors the table checks", () => {
   assert.equal(validatePlanDraft(draft({ features: Array.from({ length: 10 }, (_, i) => `f${i}`) })).ok, true);
   const eleven = validatePlanDraft(draft({ features: Array.from({ length: 11 }, (_, i) => `f${i}`) }));
   assert.deepEqual(eleven, { ok: false, message: "A plan can list up to 10 features." });
-});
-
-test("reorderPlans rewrites positions 0..n-1 and returns only the changed ones", () => {
-  const plans = [
-    { id: "a", position: 0 },
-    { id: "b", position: 0 },
-    { id: "c", position: 0 },
-  ];
-  assert.deepEqual(reorderPlans(plans, "c", "up"), [
-    { id: "c", position: 1 },
-    { id: "b", position: 2 },
-  ]);
-  const tidy = [
-    { id: "a", position: 0 },
-    { id: "b", position: 1 },
-  ];
-  assert.deepEqual(reorderPlans(tidy, "a", "down"), [
-    { id: "b", position: 0 },
-    { id: "a", position: 1 },
-  ]);
-  assert.deepEqual(reorderPlans(tidy, "a", "up"), []);
-  assert.deepEqual(reorderPlans(tidy, "b", "down"), []);
-  assert.deepEqual(reorderPlans(tidy, "zz", "up"), []);
 });
 
 test("sortByPosition breaks ties by creation, like professional_plans_for", () => {

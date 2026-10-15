@@ -16,20 +16,10 @@ import { textPx } from "../../theme/textSize";
 import { useBack } from "../../hooks/useBack";
 
 export default function Marketplace() {
-  const { user, pointsSummary, pointTiers, noteFeatureMilestone, accessibility } = useApp();
-  const navigate = useNavigate();
+  const { user, noteFeatureMilestone } = useApp();
   const back = useBack();
-  const dark = useIsDark();
-  const reduced = useReducedMotion();
   // S2: Discover reports when its tabs and rail are pinned under the header.
   const [tabsPinned, setTabsPinned] = useState(false);
-  // O-LOAD: the card skeleton shows while the summary loads, not for ever.
-  const [pointsGaveUp, setPointsGaveUp] = useState(false);
-  useEffect(() => {
-    if (pointsSummary) return;
-    const id = window.setTimeout(() => setPointsGaveUp(true), 6000);
-    return () => window.clearTimeout(id);
-  }, [pointsSummary]);
 
   // Explorer milestone: "Out and about". Recorded once per account for ever —
   // a repeat is a primary-key conflict the service treats as the success it
@@ -43,10 +33,10 @@ export default function Marketplace() {
   if (user.accountType === "business") {
     return <BusinessDashboard />;
   }
-  // V7 (QA 7.0): a professional's Explore is job postings + affiliation,
-  // not the consumer rewards/marketplace browse experience.
+  // Release 3 (MO17 v2 / v3): a professional's Explore is its own screen
+  // (businesses, classes, colleagues) with the same points card.
   if (user.accountType === "professional") {
-    return <ProfessionalExplore />;
+    return <ProfessionalExplore pointsCard={<PointsCard />} />;
   }
 
   // NOTHING IS COMPUTED HERE ANY MORE, and that is the point of the change.
@@ -101,94 +91,7 @@ export default function Marketplace() {
           from their own colour (light: colourSet's 5% fill; dark: #262932
           with the tier lifted to 4.5:1). */}
       <div className="mt-4">
-        {pointsSummary ? (
-          (() => {
-            const card = tierCard(pointsSummary.tierName, dark, !!accessibility.highContrast);
-            return (
-              <button
-                type="button"
-                onClick={() => navigate("/app/mind/achievements")}
-                aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString()} points. Open Achievements`}
-                data-points-card=""
-                className="tap w-full text-left rounded-[20px] px-4 py-3.5 mb-3 border-[0.5px]"
-                style={{ background: card.fill, borderColor: card.border }}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  {/* #7-#9: label 10/15 800 ls 1.4 uppercase, figure 22/33 800,
-                      "pts" 11/16.5 600, 6 apart. */}
-                  <p className="flex items-baseline gap-1.5 min-w-0">
-                    <span className="text-[10px] leading-[15px] font-extrabold uppercase tracking-[1.4px]" style={{ color: card.ink }}>
-                      {pointsSummary.tierName}
-                    </span>
-                    <span className="text-[22px] font-extrabold leading-[33px] text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
-                    <span className="text-[11px] leading-[16.5px] font-semibold text-charcoal-faint">pts</span>
-                  </p>
-                  {/* #10 / K6: pad 3 9, 10.5/15.8 700, the tier on its 12% tint. */}
-                  <span
-                    className="shrink-0 text-[10.5px] leading-[15.8px] font-bold rounded-full px-[9px] py-[3px] whitespace-nowrap"
-                    style={{ background: card.pill, color: card.ink }}
-                  >
-                    {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
-                      ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
-                      : "Highest tier"}
-                  </span>
-                </div>
-                {/* #11 / #12: 5 tall, 10 under, tier@14% track, tier fill; the
-                    width eases 0.7 s (none under Reduce motion, O-RM). */}
-                <div className="h-[5px] rounded-full overflow-hidden mt-2.5" style={{ background: card.track }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${tierProgress(pointsSummary) * 100}%`,
-                      background: card.solid,
-                      transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)",
-                    }}
-                  />
-                </div>
-                <div className="mt-2.5 flex items-center justify-between gap-3">
-                  {/* #13 / K5: 11/16.5 400 #8C8378 / #B8B3C7. */}
-                  <p className="min-w-0 text-[11px] leading-[16.5px] text-charcoal-faint">
-                    {pointsSummary.achievementPoints.toLocaleString()} from achievements · {pointsSummary.referralPoints.toLocaleString()} from referrals
-                    {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString()} other` : ""}
-                  </p>
-                  {/* #14-#23: the tiers from point_tiers, 22 discs 5 apart. The
-                      current one filled in the tier with a white Medal 11;
-                      the others a 1.1px ring at tier@50% with the icon at
-                      tier@70% (dark: the app's lifted ring and ink, where the
-                      literal 70% would fall under 3:1, V6-92). */}
-                  {pointTiers.length > 0 && (
-                    <span className="flex gap-[5px] shrink-0" aria-hidden>
-                      {pointTiers.map((t) => {
-                        const current = t.name === pointsSummary.tierName;
-                        const th = tierHex(t.name);
-                        const own = colourSet(th, true);
-                        const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
-                        return (
-                          <span
-                            key={t.name}
-                            data-tier-disc={current ? "current" : ""}
-                            className="w-[22px] h-[22px] rounded-full flex items-center justify-center"
-                            style={{
-                              background: current ? th : "transparent",
-                              border: `1.1px solid ${current ? th : dark ? own.border : `${th}80`}`,
-                            }}
-                          >
-                            <Icon size={11} strokeWidth={1.75} style={{ color: current ? "#FFFFFF" : dark ? own.ink : `${th}B3` }} />
-                          </span>
-                        );
-                      })}
-                    </span>
-                  )}
-                </div>
-                {/* #24: 10.5/15.8 400, 8 under. */}
-                <p className="mt-2 text-[10.5px] leading-[15.8px] text-charcoal-faint">Rewards for your points are coming soon.</p>
-              </button>
-            );
-          })()
-        ) : (
-          // O-LOAD (OURS): the card's skeleton while my_points_summary loads.
-          !pointsGaveUp && <div aria-hidden className="mb-3 h-[143.8px] rounded-[20px] bg-cream-soft animate-skeleton-pulse" />
-        )}
+        <PointsCard />
       </div>
 
       {/* MO8.1 reward row (K4), in the handover's design, shown ONLY for a
@@ -202,6 +105,116 @@ export default function Marketplace() {
 
       <Discover onPinnedChange={setTabsPinned} />
     </div>
+  );
+}
+
+/**
+ * The points card (my_points_summary), shared by the client's Explore and,
+ * Release 3 (MO17), the professional's. Moved out of Marketplace unchanged.
+ */
+function PointsCard() {
+  const { pointsSummary, pointTiers, accessibility } = useApp();
+  const navigate = useNavigate();
+  const dark = useIsDark();
+  const reduced = useReducedMotion();
+  // O-LOAD: the card skeleton shows while the summary loads, not for ever.
+  const [pointsGaveUp, setPointsGaveUp] = useState(false);
+  useEffect(() => {
+    if (pointsSummary) return;
+    const id = window.setTimeout(() => setPointsGaveUp(true), 6000);
+    return () => window.clearTimeout(id);
+  }, [pointsSummary]);
+  return (
+    <>
+    {pointsSummary ? (
+      (() => {
+        const card = tierCard(pointsSummary.tierName, dark, !!accessibility.highContrast);
+        return (
+          <button
+            type="button"
+            onClick={() => navigate("/app/mind/achievements")}
+            aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString()} points. Open Achievements`}
+            data-points-card=""
+            className="tap w-full text-left rounded-[20px] px-4 py-3.5 mb-3 border-[0.5px]"
+            style={{ background: card.fill, borderColor: card.border }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              {/* #7-#9: label 10/15 800 ls 1.4 uppercase, figure 22/33 800,
+                  "pts" 11/16.5 600, 6 apart. */}
+              <p className="flex items-baseline gap-1.5 min-w-0">
+                <span className="text-[10px] leading-[15px] font-extrabold uppercase tracking-[1.4px]" style={{ color: card.ink }}>
+                  {pointsSummary.tierName}
+                </span>
+                <span className="text-[22px] font-extrabold leading-[33px] text-charcoal tabular-nums">{pointsSummary.balance.toLocaleString()}</span>
+                <span className="text-[11px] leading-[16.5px] font-semibold text-charcoal-faint">pts</span>
+              </p>
+              {/* #10 / K6: pad 3 9, 10.5/15.8 700, the tier on its 12% tint. */}
+              <span
+                className="shrink-0 text-[10.5px] leading-[15.8px] font-bold rounded-full px-[9px] py-[3px] whitespace-nowrap"
+                style={{ background: card.pill, color: card.ink }}
+              >
+                {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
+                  ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
+                  : "Highest tier"}
+              </span>
+            </div>
+            {/* #11 / #12: 5 tall, 10 under, tier@14% track, tier fill; the
+                width eases 0.7 s (none under Reduce motion, O-RM). */}
+            <div className="h-[5px] rounded-full overflow-hidden mt-2.5" style={{ background: card.track }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${tierProgress(pointsSummary) * 100}%`,
+                  background: card.solid,
+                  transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)",
+                }}
+              />
+            </div>
+            <div className="mt-2.5 flex items-center justify-between gap-3">
+              {/* #13 / K5: 11/16.5 400 #8C8378 / #B8B3C7. */}
+              <p className="min-w-0 text-[11px] leading-[16.5px] text-charcoal-faint">
+                {pointsSummary.achievementPoints.toLocaleString()} from achievements · {pointsSummary.referralPoints.toLocaleString()} from referrals
+                {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString()} other` : ""}
+              </p>
+              {/* #14-#23: the tiers from point_tiers, 22 discs 5 apart. The
+                  current one filled in the tier with a white Medal 11;
+                  the others a 1.1px ring at tier@50% with the icon at
+                  tier@70% (dark: the app's lifted ring and ink, where the
+                  literal 70% would fall under 3:1, V6-92). */}
+              {pointTiers.length > 0 && (
+                <span className="flex gap-[5px] shrink-0" aria-hidden>
+                  {pointTiers.map((t) => {
+                    const current = t.name === pointsSummary.tierName;
+                    const th = tierHex(t.name);
+                    const own = colourSet(th, true);
+                    const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
+                    return (
+                      <span
+                        key={t.name}
+                        data-tier-disc={current ? "current" : ""}
+                        className="w-[22px] h-[22px] rounded-full flex items-center justify-center"
+                        style={{
+                          background: current ? th : "transparent",
+                          border: `1.1px solid ${current ? th : dark ? own.border : `${th}80`}`,
+                        }}
+                      >
+                        <Icon size={11} strokeWidth={1.75} style={{ color: current ? "#FFFFFF" : dark ? own.ink : `${th}B3` }} />
+                      </span>
+                    );
+                  })}
+                </span>
+              )}
+            </div>
+            {/* #24: 10.5/15.8 400, 8 under. */}
+            <p className="mt-2 text-[10.5px] leading-[15.8px] text-charcoal-faint">Rewards for your points are coming soon.</p>
+          </button>
+        );
+      })()
+    ) : (
+      // O-LOAD (OURS): the card's skeleton while my_points_summary loads.
+      !pointsGaveUp && <div aria-hidden className="mb-3 h-[143.8px] rounded-[20px] bg-cream-soft animate-skeleton-pulse" />
+    )}
+    </>
   );
 }
 

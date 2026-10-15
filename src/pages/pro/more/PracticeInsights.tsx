@@ -1,12 +1,11 @@
-import { ProComingSoonPage } from "../ProComingSoonPage";
+import { PracticeInsightsScreen } from "../../../components/pro/insights/practice/PracticeInsightsScreen";
 
 /**
- * Release 3 · Practice insights (/app/more/practice-insights, MO19), which
- * replaces the old Health metrics row. Owned by W6, which replaces this file
- * (practice_insights()). W5 removed the Health metrics page that used to be
- * mounted here: its per-client data lives on the client page (W3) and its
- * notes were imported into private Notes (J4); none of it was practice-level.
+ * Release 3 · Practice insights (/app/more/practice-insights, MO19 v3), which
+ * replaces the old Health metrics row: practice_insights() and the practice's
+ * own readers (components/pro/insights/practice). The W5 Coming soon page
+ * that stood here is gone.
  */
 export default function PracticeInsights() {
-  return <ProComingSoonPage title="Practice insights" showBack />;
+  return <PracticeInsightsScreen />;
 }

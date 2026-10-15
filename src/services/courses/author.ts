@@ -100,17 +100,6 @@ const toAuthored = (r: AuthoredRow): AuthoredCourse => ({
   updatedAt: r.updated_at,
 });
 
-/** Every course this professional has written, newest activity first. */
-export async function fetchMyCourses(userId: string): Promise<Result<AuthoredCourse[]>> {
-  const { data, error } = await supabase
-    .from("courses")
-    .select(AUTHORED_COLUMNS)
-    .eq("author_id", userId)
-    .order("updated_at", { ascending: false });
-  if (error) return fail(error, "read");
-  return { ok: true, value: (data ?? []).map(toAuthored) };
-}
-
 export async function fetchMyCourse(courseId: string): Promise<Result<AuthoredCourse | null>> {
   const { data, error } = await supabase.from("courses").select(AUTHORED_COLUMNS).eq("id", courseId).maybeSingle();
   if (error) return fail(error, "read");

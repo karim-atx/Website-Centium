@@ -1,14 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AlertCircle, Archive, CheckCheck, Megaphone, MessageCircle, MessageSquarePlus, Plus, Search, Star, Users } from "lucide-react";
+import { AlertCircle, Archive, CheckCheck, MessageCircle, Search, Star, Users } from "lucide-react";
 import { ThreadList, type ChatListItem, type RowActions } from "../../components/messages/ThreadList";
-import { BottomSheet } from "../../components/ui/BottomSheet";
 import { FixedHeader } from "../../components/ui/FixedHeader";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { Toast } from "../../components/ui/Toast";
-import { ClientPicker, type PickableClient } from "../../components/messages/ClientPicker";
-import { NewGroup } from "../../components/messages/NewGroup";
-import { BroadcastEditor } from "../../components/messages/BroadcastEditor";
 import { GroupInvitationView } from "../../components/messages/GroupInvitationView";
 import { ThreadView } from "../../components/messages/ThreadView";
 import { MessagesHeader } from "../../components/messages/MessagesHeader";
@@ -28,11 +24,11 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 import { StarredMessages } from "../../components/messages/StarredMessages";
 import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
+import ProMessages from "../pro/messages/ProMessages";
 import { ThreadLiveProvider } from "../../context/ThreadLiveContext";
 import { useUnread } from "../../context/UnreadContext";
 import { fetchThreads, migrateLegacyStars, startMemberThread, startThread, threadForPush, type MessageThread } from "../../services/messaging";
 import { fetchGroupInvitations, type GroupInvitation } from "../../services/messaging/groups";
-import { fetchBroadcastLists, fetchBroadcasts, type BroadcastList } from "../../services/messaging/broadcasts";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import {
   CONVERSATION_DELETE_READY,
@@ -64,13 +60,10 @@ import {
  * Delete both kept).
  *
  * PHASE 2B (screens 4 and 5): groups sit in the same list as direct chats,
- * invitations waiting for an answer sit at the top, and a professional's
- * broadcast lists appear as their own rows. The Groups and Broadcasts filters
- * narrow to those; Broadcasts is a professional's filter only, because a
- * client receives a broadcast as an ordinary message in their direct chat.
- * The "+" button (professionals) starts a chat, a group or a broadcast. A
- * business has no "new chat" yet: it may only message its own members or
- * customers, which needs PB-O-43 (K13).
+ * and invitations waiting for an answer sit at the top. The Groups filter
+ * narrows to those. A client receives a broadcast as an ordinary message in
+ * their direct chat. A business starts a chat from its own new-message sheet
+ * with its members or customers (K13).
  *
  * SEARCH COVERS CHATS AND MESSAGES. Chats are matched here by name and latest
  * message; messages through the database's search (Database 20261002070000),
@@ -81,27 +74,28 @@ import {
  * returning from a thread, which is the moment it is actually stale.
  */
 
-type Filter = "all" | "unread" | "groups" | "broadcasts";
+type Filter = "all" | "unread" | "groups";
 const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
 
+/**
+ * Release 3 (W6): a professional's Messages is its own screen
+ * (pages/pro/messages/ProMessages.tsx: Clients, Groups with broadcasts,
+ * Enquiries, Businesses). Clients and businesses read the screen below,
+ * unchanged.
+ */
 export default function Messages() {
-  const { authUserId, user, professionalClients } = useApp();
+  const { user } = useApp();
+  return user.accountType === "professional" ? <ProMessages /> : <ClientAndBusinessMessages />;
+}
+
+function ClientAndBusinessMessages() {
+  const { authUserId, user } = useApp();
   const unread = useUnread();
-  const isProfessional = user.accountType === "professional";
   /** OP1-190: a business reads the list in ClientChatV2's language (BusinessList.tsx). */
   const biz = user.accountType === "business";
   const online = useOnline();
   const [bizNewOpen, setBizNewOpen] = useState(false);
   const c = useListColors();
-  // The professional's connected clients, for every picker in 2B. Only these
-  // can be invited, added to a list or messaged first.
-  const clients: PickableClient[] = useMemo(
-    () =>
-      professionalClients
-        .filter((cl) => cl.clientId)
-        .map((cl) => ({ userId: cl.clientId!, name: cl.name, avatarUrl: cl.avatarUrl ?? null })),
-    [professionalClients]
-  );
   const location = useLocation();
   const navigate = useNavigate();
   const [threads, setThreads] = useState<MessageThread[]>([]);
@@ -115,17 +109,11 @@ export default function Messages() {
   const [hitsMore, setHitsMore] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "archived" | "starred" | "newGroup" | "broadcast" | "invitation">("list");
+  const [view, setView] = useState<"list" | "archived" | "starred" | "invitation">("list");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
-  const [lists, setLists] = useState<BroadcastList[]>([]);
-  /** The newest broadcast's "Sent to N" per list. */
-  const [lastSent, setLastSent] = useState<Record<string, number>>({});
-  const [openList, setOpenList] = useState<BroadcastList | null>(null);
   const [openInvitation, setOpenInvitation] = useState<GroupInvitation | null>(null);
-  const [newOpen, setNewOpen] = useState(false);
-  const [newChatOpen, setNewChatOpen] = useState(false);
   const [newChatBusy, setNewChatBusy] = useState(false);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,14 +168,6 @@ export default function Messages() {
     const [result, s, invites] = await Promise.all([fetchThreads(), fetchThreadSettings(), fetchGroupInvitations()]);
     setSettings(s);
     setInvitations(invites);
-    if (isProfessional) {
-      void Promise.all([fetchBroadcastLists(), fetchBroadcasts(100)]).then(([ls, sent]) => {
-        setLists(ls ?? []);
-        const latest: Record<string, number> = {};
-        for (const b of sent) if (b.listId && !(b.listId in latest)) latest[b.listId] = b.sentCount;
-        setLastSent(latest);
-      });
-    }
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
@@ -307,7 +287,7 @@ export default function Messages() {
 
   /**
    * The rows on screen. Invitations first (they are waiting on an answer),
-   * then pinned chats, then chats and broadcast lists newest first.
+   * then pinned chats, then chats newest first.
    */
   const items: ChatListItem[] = useMemo(() => {
     if (view === "archived") return archived.map((thread) => ({ type: "thread", thread }));
@@ -317,28 +297,15 @@ export default function Messages() {
             .filter((i) => !q || i.groupName.toLowerCase().includes(q))
             .map((invitation) => ({ type: "invite", invitation }))
         : [];
-    const bcRows =
-      isProfessional && (filter === "all" || filter === "broadcasts")
-        ? lists
-            .filter((l) => !q || l.name.toLowerCase().includes(q))
-            .map((list) => ({
-              at: list.lastSentAt ?? list.createdAt,
-              item: { type: "broadcast", list, lastSentCount: lastSent[list.id] ?? null } as ChatListItem,
-            }))
-        : [];
-    if (filter === "broadcasts") return bcRows.sort((a, b) => b.at.localeCompare(a.at)).map((x) => x.item);
     const pinned = active
       .filter((t) => settings[t.id]?.pinnedAt)
       .sort((a, b) => (settings[b.id]?.pinnedAt ?? "").localeCompare(settings[a.id]?.pinnedAt ?? ""));
-    const rest = [
-      ...active.filter((t) => !settings[t.id]?.pinnedAt).map((thread) => ({
-        at: thread.lastMessageAt ?? "",
-        item: { type: "thread", thread } as ChatListItem,
-      })),
-      ...bcRows,
-    ].sort((a, b) => b.at.localeCompare(a.at));
+    const rest = active
+      .filter((t) => !settings[t.id]?.pinnedAt)
+      .map((thread) => ({ at: thread.lastMessageAt ?? "", item: { type: "thread", thread } as ChatListItem }))
+      .sort((a, b) => b.at.localeCompare(a.at));
     return [...invites, ...pinned.map((thread) => ({ type: "thread", thread }) as ChatListItem), ...rest.map((x) => x.item)];
-  }, [view, archived, active, invitations, lists, lastSent, isProfessional, filter, q, settings]);
+  }, [view, archived, active, invitations, filter, q, settings]);
 
   const startChatWith = async (clientId: string) => {
     setNewChatBusy(true);
@@ -346,7 +313,6 @@ export default function Messages() {
     const r = await startThread(clientId);
     setNewChatBusy(false);
     if (!r.ok) return setNewChatError(r.message);
-    setNewChatOpen(false);
     setBizNewOpen(false);
     await load(r.threadId);
   };
@@ -485,31 +451,6 @@ export default function Messages() {
     );
   }
 
-  if (view === "newGroup") {
-    return live(
-      <NewGroup
-        clients={clients}
-        onBack={() => setView("list")}
-        onCreated={(threadId) => void load(threadId)}
-      />
-    );
-  }
-
-  if (view === "broadcast") {
-    return live(
-      <BroadcastEditor
-        key={openList?.id ?? "new"}
-        list={openList}
-        clients={clients}
-        onBack={() => {
-          setOpenList(null);
-          setView("list");
-        }}
-        onChanged={() => void load()}
-      />
-    );
-  }
-
   if (view === "invitation" && openInvitation) {
     return live(
       <GroupInvitationView
@@ -562,7 +503,6 @@ export default function Messages() {
     // K4: no count on "Unread" (the frame draws none; the rows' badges say it).
     { key: "unread", label: "Unread" },
     { key: "groups", label: "Groups" },
-    ...(isProfessional ? [{ key: "broadcasts", label: "Broadcasts" }] : []),
   ];
   // #11: the active sub-tab is the theme secondary with white; dark keeps the
   // literal #79A8A1 in Centium (V6-94). High contrast (O7): a teal that holds
@@ -575,8 +515,8 @@ export default function Messages() {
   // MO1.7.e: no conversation at all (archived ones aside: their row still
   // shows above, D1); only after a successful load (O1, O2).
   const noConversations =
-    !loading && !error && view === "list" && activeTotal === 0 && invitations.length === 0 && lists.length === 0;
-  const hasAnything = threads.length > 0 || invitations.length > 0 || lists.length > 0;
+    !loading && !error && view === "list" && activeTotal === 0 && invitations.length === 0;
+  const hasAnything = threads.length > 0 || invitations.length > 0;
   const listEmpty = !loading && !error && hasAnything && !noConversations && items.length === 0 && !searchingMessages;
 
   const searchBlock = (
@@ -605,7 +545,6 @@ export default function Messages() {
             items={tabs}
             activeKey={filter}
             onChange={(k) => setFilter(k as Filter)}
-            scroll={isProfessional}
             light={tealLight}
             activeFillDark={tealDark}
           />
@@ -650,10 +589,8 @@ export default function Messages() {
         setOpenInvitation(inv);
         setView("invitation");
       }}
-      onOpenBroadcast={(list) => {
-        setOpenList(list);
-        setView("broadcast");
-      }}
+      // Broadcast lists are a professional's (ProMessages); none reach this list.
+      onOpenBroadcast={() => undefined}
       readState={readState}
       delivered={delivered}
       authUserId={authUserId}
@@ -863,11 +800,7 @@ export default function Messages() {
           c={c}
           icon={<MessageCircle size={26} aria-hidden />}
           title="No conversations yet"
-          helper={
-            isProfessional
-              ? "Chats with your clients and groups show up here. Tap + to start one."
-              : "Chats with your professionals, gyms and groups show up here."
-          }
+          helper="Chats with your professionals, gyms and groups show up here."
           frame
         />
       )}
@@ -887,10 +820,8 @@ export default function Messages() {
             c={c}
             icon={<Users size={26} aria-hidden />}
             title="No groups yet"
-            helper={isProfessional ? "Tap + to start one." : "A professional can invite you to one."}
+            helper="A professional can invite you to one."
           />
-        ) : filter === "broadcasts" ? (
-          <EmptyState c={c} icon={<Megaphone size={26} aria-hidden />} title="No broadcast lists yet" helper="Tap + to send one." />
         ) : (
           <EmptyState c={c} icon={<MessageCircle size={26} aria-hidden />} title="No chats here" />
         ))}
@@ -899,69 +830,6 @@ export default function Messages() {
 
       {hitsSection}
 
-      {/* NEW CHAT, GROUP OR BROADCAST (K5): the handover's FAB, 56 round on the
-          primary fill (#AEA1DC / #A991FE), Plus 22, shadow in light only.
-          Professionals only: a client's chats start from a professional's
-          profile, and clients cannot make groups or lists. */}
-      {isProfessional && view === "list" && (
-        <button
-          type="button"
-          onClick={() => setNewOpen(true)}
-          aria-label="New chat, group or broadcast"
-          data-fab=""
-          className="tap fixed z-30 right-4 lg:right-8 bottom-[calc(env(safe-area-inset-bottom)+80px)] lg:bottom-8 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-fab dark:shadow-none"
-        >
-          <Plus size={22} aria-hidden />
-        </button>
-      )}
-
-      <BottomSheet open={newOpen} onClose={() => setNewOpen(false)} title="New">
-        <div className="flex flex-col animate-fade-slide-up">
-          {(
-            [
-              { icon: MessageSquarePlus, label: "New chat", sub: "Message one of your clients", go: () => setNewChatOpen(true) },
-              { icon: Users, label: "New group", sub: "Invite clients to a group chat", go: () => setView("newGroup") },
-              { icon: Megaphone, label: "New broadcast", sub: "One message to several clients, each privately", go: () => { setOpenList(null); setView("broadcast"); } },
-            ] as const
-          ).map((o) => (
-            <button
-              key={o.label}
-              type="button"
-              onClick={() => {
-                setNewOpen(false);
-                o.go();
-              }}
-              className="tap w-full flex items-center gap-3 px-1 min-h-[60px] text-left border-b border-charcoal/[0.06] last:border-b-0"
-            >
-              {/* K5: the settings row pattern, a 36 r11 tile. */}
-              <span className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: c.primaryTint }}>
-                <o.icon size={18} style={{ color: c.primaryInk }} aria-hidden />
-              </span>
-              <span>
-                <span className="block text-[14px] leading-[19px] font-semibold" style={{ color: c.ink }}>
-                  {o.label}
-                </span>
-                <span className="block text-[12px] leading-[16px] font-normal" style={{ color: c.muted }}>
-                  {o.sub}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </BottomSheet>
-
-      <BottomSheet open={newChatOpen} onClose={() => setNewChatOpen(false)} title="New chat">
-        <div className="animate-fade-slide-up">
-          {newChatError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2 mb-2">{newChatError}</p>}
-          <ClientPicker
-            clients={clients}
-            selected={new Set()}
-            onToggle={(id) => {
-              if (!newChatBusy) void startChatWith(id);
-            }}
-          />
-        </div>
-      </BottomSheet>
     </div>
   );
 }

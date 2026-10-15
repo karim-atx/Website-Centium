@@ -28,6 +28,16 @@ export type NotificationPrefs = {
   referralRewards: boolean;
   /** B4: pauses every health-check reminder without deleting them (MO1.8.3 #31-#36). */
   healthChecks: boolean;
+  /** Release 3 W6 · MO12 v2 (professionals): new reviews (the review work's column). */
+  reviews: boolean;
+  /** MO12 v2 · the seven notification_pro_* switches (Database DB-2). */
+  proRequests: boolean;
+  proBookingChanges: boolean;
+  proSubmissions: boolean;
+  proGoneQuiet: boolean;
+  proCareNetwork: boolean;
+  proPayments: boolean;
+  proUnpaidSessions: boolean;
   quietHoursEnabled: boolean;
   /** "HH:MM", 24-hour, in the person's own timezone (profiles.timezone). */
   quietHoursFrom: string;
@@ -55,6 +65,14 @@ export const NOTIFICATION_COLUMNS = {
   memberships: "notification_memberships",
   referralRewards: "notification_referral_rewards",
   healthChecks: "notification_health_checks",
+  reviews: "notification_reviews",
+  proRequests: "notification_pro_requests",
+  proBookingChanges: "notification_pro_booking_changes",
+  proSubmissions: "notification_pro_submissions",
+  proGoneQuiet: "notification_pro_gone_quiet",
+  proCareNetwork: "notification_pro_care_network",
+  proPayments: "notification_pro_payments",
+  proUnpaidSessions: "notification_pro_unpaid_sessions",
   quietHoursEnabled: "quiet_hours_enabled",
   quietHoursFrom: "quiet_hours_from",
   quietHoursTo: "quiet_hours_to",

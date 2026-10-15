@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
-import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
-import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
 import {
   formatPrice,
   yearlySaving,
@@ -17,6 +15,7 @@ import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription
 import { BillingToggle, PlanRow, PlanSkeleton } from "./PlanRows";
 import { useBack } from "../../hooks/useBack";
 import { CentiumLockup } from "../../components/icons/CentiumMark";
+import ProSubscription from "../pro/more/ProSubscription";
 import {
   ChevronLeft,
   Mic,
@@ -29,7 +28,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
-// The subscription screen, for all three account types.
+// The subscription screen, for client and business accounts (professionals:
+// pages/pro/more/ProSubscription, MO24 v3).
 //
 // READ-ONLY THROUGHOUT, AND THAT IS NOT A SIMPLIFICATION. Two of these three
 // screens used to let somebody pick a plan, walk a payment sheet and "confirm"
@@ -178,71 +178,6 @@ function ClientSubscription() {
 
 // ---------------------------------------------------------------------------
 
-function ProfessionalSubscription() {
-  const back = useBack();
-  const { professionalClients } = useApp();
-  const { tiers, loading, error } = useSubscriptionTiers("professional");
-  const { effective, loading: planLoading, error: planError } = useEffectiveProfessionalTier();
-  const [period, setPeriod] = useState<BillingPeriod>("yearly");
-
-  const current = effective?.tier ?? null;
-  // The top of the ladder has nothing to upgrade to, so it is the one plan
-  // that gets no upgrade prompt. Price ascending is the service's own order.
-  const isTopTier = !!current && tiers.length > 0 && tiers[tiers.length - 1].id === current.id;
-
-  return (
-    <div>
-      <BackButton onClick={back} />
-      <Masthead
-        title="Grow your client roster."
-        blurb="Centium for professionals scales with how many clients you manage."
-      />
-
-      <div className="rounded-2xl bg-primary-pale px-4 py-3.5 mb-6 text-center">
-        {planLoading ? (
-          <p className="text-sm text-primary-dark">Checking your plan…</p>
-        ) : planError ? (
-          <p className="text-sm font-semibold text-status-high">{planError}</p>
-        ) : effective ? (
-          <>
-            <p className="text-sm text-primary-dark">
-              You're on <span className="font-bold">{effectiveTierLabel(effective)}</span>
-            </p>
-            <p className="text-xs text-primary-dark/80 mt-0.5">
-              {capLabel(effective.tier, professionalClients.length)}
-            </p>
-            {/* WHOSE PLAN IT IS matters here in a way it does not elsewhere: a
-                seated professional keeps this plan only while the affiliation
-                lasts, which is not something to discover when it ends. */}
-            {effective.source === "business_seat" && (
-              <p className="text-[11px] text-primary-dark/70 mt-1">
-                This plan comes with your business seat.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-primary-dark">Your plan couldn't be identified.</p>
-        )}
-      </div>
-
-      <BillingToggle period={period} onChange={setPeriod} bestSaving={bestSavingAmong(tiers)} />
-
-      {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
-
-      <div className="space-y-2.5 mb-6">
-        {loading && <PlanSkeleton rows={4} />}
-        {tiers.map((t) => (
-          <PlanRow key={t.id} tier={t} period={period} isCurrent={current?.id === t.id} />
-        ))}
-      </div>
-
-      <UpgradeFooter show={!isTopTier} />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
 function BusinessSubscription() {
   const back = useBack();
   const { team: businessEmployees } = useBusinessTeam();
@@ -361,7 +296,8 @@ function BusinessSubscription() {
 
 export default function Subscription() {
   const { user } = useApp();
-  if (user.accountType === "professional") return <ProfessionalSubscription />;
+  // Release 3 W6 · MO24 v3: the professional screen lives in pages/pro/more.
+  if (user.accountType === "professional") return <ProSubscription />;
   if (user.accountType === "business") return <BusinessSubscription />;
   return <ClientSubscription />;
 }

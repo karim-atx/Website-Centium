@@ -5,16 +5,13 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
-import { ProfessionalBioCard } from "../../components/profile/ProfessionalBioCard";
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
-import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
-import { ReviewsAboutMeCard } from "../../components/professionals/ReviewsAboutMeCard";
 import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
@@ -39,8 +36,6 @@ import {
   Image,
   Trash2,
   Crown,
-  BadgeCheck,
-  FileText,
   Award,
   Flag,
   Gauge,
@@ -58,6 +53,7 @@ import { CredentialsPopup } from "../../components/profile/CredentialsPopup";
 import { ProfessionalCodeCard } from "../../components/profile/ProfessionalCodeCard";
 import { CycleTrackingRow } from "../../components/profile/CycleTrackingRow";
 import { initials } from "../../components/professionals/typeColour";
+import { ProProfile } from "../../components/pro/profile/ProProfile";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -65,7 +61,16 @@ const accountTypeLabel: Record<string, string> = {
   business: "Business",
 };
 
+/**
+ * Profile. A professional gets MO26 (components/pro/profile/ProProfile,
+ * Release 3 W6); clients and businesses keep this page unchanged.
+ */
 export default function Profile() {
+  const { user } = useApp();
+  return user.accountType === "professional" ? <ProProfile /> : <ClientProfile />;
+}
+
+function ClientProfile() {
   const {
     user,
     updateProfile,
@@ -81,7 +86,6 @@ export default function Profile() {
   const [justToggledRecovery, setJustToggledRecovery] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [activityLevelOpen, setActivityLevelOpen] = useState(false);
-  const [certOpen, setCertOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   // V8 (QA 8.0) made each of age/height/weight editable by tapping the card
   // itself. That still holds — what changed is where the edit happens and
@@ -433,37 +437,6 @@ export default function Profile() {
           )}
       </div>
 
-      {/* QA 12.0: "The bio should be first followed by rating/reviews then
-          certification." */}
-      {user.accountType === "professional" && <ProfessionalBioCard />}
-      {/* V7 (QA 7.0): the ratings and reviews clients left. */}
-      {user.accountType === "professional" && <ReviewsAboutMeCard className="mb-6 animate-fade-slide-up" />}
-      {/* My CV (licences, experience, education and the rest), then
-          certification (V8, QA 8.0). Decision 23 (item 103): both as the
-          MO1.5.1 Join row: r18, a 32 r10 #F0EDF9 tile with a 16/1.75 glyph,
-          15/600, ChevronRight 15, 8 between the rows. */}
-      {user.accountType === "professional" && (
-        <div className="mb-6 space-y-2 animate-fade-slide-up">
-          {[
-            { icon: FileText, label: "My CV", onClick: () => navigate("/app/profile/cv") },
-            { icon: BadgeCheck, label: "Certification", onClick: () => setCertOpen(true) },
-          ].map((r) => (
-            <button
-              key={r.label}
-              type="button"
-              onClick={r.onClick}
-              className="tap w-full flex items-center gap-3 rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
-            >
-              <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-                <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
-              </span>
-              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Task R: right under the sex tile, because switching to female or
           other is when a tracker somebody never chose to switch off is found
           off. Also on Health, where the Cycle card would be. */}
@@ -695,17 +668,6 @@ export default function Profile() {
         </section>
       )}
 
-      {/* Cycle tracking for a professional: same switch, same rule as it had
-          in Settings (every account type), in its own section here (C6). */}
-      {user.accountType === "professional" && (
-        <section className="mb-6">
-          {sectionLabel("Health tracking")}
-          <Card>
-            <CycleTrackingRow />
-          </Card>
-        </section>
-      )}
-
       {/* Sign Out as a text link (MO1.5). A 48 block (MO1.5 row 10: 358 ×
           48), 24 under the section above. Decision 23: neutral #5B5349
           (charcoal-soft) as MO1.5, MO1.5.1 and MO1.5.4 draw it (item 97), and
@@ -739,10 +701,6 @@ export default function Profile() {
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
-      {user.accountType === "professional" && (
-        <CertificationSheet key={certOpen ? "cert-open" : "cert-closed"} open={certOpen} onClose={() => setCertOpen(false)} />
-      )}
-
       {/* Keyed on open, so every opening starts from what is saved: tapping
           outside discards the edits (C10). */}
       {user.accountType === "customer" && (
