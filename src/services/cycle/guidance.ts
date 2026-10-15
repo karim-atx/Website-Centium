@@ -528,9 +528,6 @@ export const SHARE_PHASE_DESCRIPTION = "Only the phase name, e.g. Luteal";
 export const SHARE_PREGNANCY_LABEL = "Pregnancy";
 export const SHARE_PREGNANCY_DESCRIPTION = "Only 'Pregnant' and the trimester";
 
-export const PHASE_NOT_SHARED = "Not sharing cycle phase.";
-export const PREGNANCY_NOT_SHARED = "Not sharing pregnancy status.";
-
 /**
  * What the professional sees when the function returns `unavailable`.
  *

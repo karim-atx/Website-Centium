@@ -67,7 +67,14 @@ type ThreadScopedBucket = "message-attachments";
  */
 type EventScopedBucket = "calendar-attachments";
 
-export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket | EventScopedBucket;
+/**
+ * Release 3 (DB-6): a bucket whose path the database hands out. create_client_file
+ * registers the row and returns `<uploader_id>/<file_id>/<name>`; the insert
+ * policy only accepts that exact registered path, so nothing here builds it.
+ */
+type RegisteredPathBucket = "client-files";
+
+export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket | EventScopedBucket | RegisteredPathBucket;
 
 /**
  * Mirrors the bucket definitions in the storage migration.
@@ -109,6 +116,22 @@ const BUCKETS: Record<
   // Owner AND invitees may read and write, per the bucket's two policies —
   // which is why it is here rather than in the owner-scoped group despite
   // being a single file on a single row.
+  // Release 3 client files (CL2 Files tab): 25 MB, images, PDF and Word,
+  // matching the client-files bucket (HEIC left out: nothing renders it).
+  "client-files": {
+    maxBytes: 25 * 1024 * 1024,
+    mimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    label: "file",
+    accepts: "an image, a PDF or a Word document",
+    refused: "That file couldn't be shared with this person.",
+  },
   "calendar-attachments": {
     maxBytes: 10 * 1024 * 1024,
     mimeTypes: [

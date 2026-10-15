@@ -218,19 +218,6 @@ export const FIRST_TRIMESTER_GAIN_KG = { min: 0.5, max: 2 };
  * picked by the PRE-pregnancy BMI and says how much gain is expected by this
  * week. So this points there rather than just hiding something.
  */
-/**
- * What a professional sees, and the whole of it.
- *
- * ORDINAL, BECAUSE IT READS AS A STAGE RATHER THAN A COUNT. "trimester 2" is
- * an index; "2nd trimester" is how it is said out loud and in a note. There is
- * no week number here on purpose — the grant covers a stage, not a due date.
- */
-export const TRIMESTER_ORDINAL: Record<1 | 2 | 3, string> = {
-  1: "1st trimester",
-  2: "2nd trimester",
-  3: "3rd trimester",
-};
-
 export const BMI_NOT_USED =
   "BMI isn't used during pregnancy. See your weight-gain range in Pregnancy.";
 

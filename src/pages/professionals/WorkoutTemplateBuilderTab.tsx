@@ -327,10 +327,10 @@ export default function WorkoutTemplateBuilderTab() {
                           and entirely invented. A professional reading "avg
                           RPE 8, mood 7/10" had no way to know none of it had
                           happened, and would coach against it.
-                          The four states are the roster's, for the reason
-                          utils/workoutDisplay spells out: a client who has
-                          not shared workout activity must never be reported
-                          as one who did not train. */}
+                          The four states are the roster's (not shared,
+                          loading, none, data): a client who has not shared
+                          workout activity must never be reported as one who
+                          did not train. */}
                       <div className="space-y-2">
                         {clients.map((c) => {
                           const sessions = c.access.workoutActivity

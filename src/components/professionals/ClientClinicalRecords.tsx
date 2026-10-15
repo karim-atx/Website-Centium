@@ -15,8 +15,12 @@ export interface ClinicalFileRequest {
 // The client's own clinical records, as a professional sees them: medical
 // history, blood work, and imaging.
 //
+// Release 3 W3: ClientDetailSheet is gone (the client page's Health records
+// tab replaced it); HealthMetricsTab is the last reader, and this file goes
+// with it when Insights / Practice insights replace that page (W5, W6).
+//
 // ONE COMPONENT, TWO SURFACES. ClientDetailSheet and HealthMetricsTab both
-// show this, and medical history was already duplicated across the two before
+// showed this, and medical history was already duplicated across the two before
 // labs and imaging existed. Adding two more domains that way would have meant
 // three blocks maintained twice, drifting independently -- so the markup moved
 // here rather than being copied a second time.

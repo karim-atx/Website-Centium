@@ -21,7 +21,14 @@ export const ImagingTab: React.FC<{
   onShare: (r: ImagingRecord) => void;
   onEdit: (r: ImagingRecord) => void;
   onDelete: (r: ImagingRecord) => void;
-}> = ({ records, loading, error, writeError, onRetry, onView, onShare, onEdit, onDelete }) => {
+  /**
+   * Release 3 (W3): a professional viewing the scans a client shared, one by
+   * one (imaging_shares). No swipe and no ⋮ menu: tap opens the file. The
+   * empty and error lines speak about the client. Omitted (the default) keeps
+   * the client's Imaging tab exactly as it was.
+   */
+  readOnly?: { emptyTitle: string; emptyBody: string };
+}> = ({ records, loading, error, writeError, onRetry, onView, onShare, onEdit, onDelete, readOnly }) => {
   const { dark, hc } = useHealthMode();
   const [menuFor, setMenuFor] = useState<ImagingRecord | null>(null);
   const anchors = useRef(new Map<string, HTMLButtonElement | null>());
@@ -41,10 +48,33 @@ export const ImagingTab: React.FC<{
       </ListCard>
     );
   }
-  if (error && records.length === 0) return <RetryCard message="Couldn't load your imaging." onRetry={onRetry} />;
-  if (records.length === 0) return <EmptyCard icon={ScanLine} title="No imaging yet." body="Add a scan or test result to keep it with your records." />;
+  if (error && records.length === 0) return <RetryCard message={readOnly ? "Couldn't load the imaging." : "Couldn't load your imaging."} onRetry={onRetry} />;
+  if (records.length === 0) return <EmptyCard icon={ScanLine} title={readOnly?.emptyTitle ?? "No imaging yet."} body={readOnly?.emptyBody ?? "Add a scan or test result to keep it with your records."} />;
 
   const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  if (readOnly) {
+    return (
+      <ListCard>
+        {sorted.map((r, i) => (
+          <div key={r.id} style={{ borderTop: i ? rowRule(dark, hc) : undefined }}>
+            <button
+              type="button"
+              onClick={() => r.filePath && onView(r)}
+              disabled={!r.filePath}
+              className="tap w-full flex items-center text-left"
+              style={{ minHeight: 66, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}
+            >
+              <RowTile icon={ScanLine} />
+              <RowText title={r.type} meta={r.note ? `${fmtDate(r.date)} · ${r.note}` : fmtDate(r.date)} />
+              <span className="shrink-0" style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: INK_FAINT }}>
+                {r.filePath ? "Scan" : "Typed"}
+              </span>
+            </button>
+          </div>
+        ))}
+      </ListCard>
+    );
+  }
   return (
     <>
       <ListCard>

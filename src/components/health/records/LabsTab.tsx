@@ -52,7 +52,13 @@ export const LabsTab: React.FC<{
   onView: (r: LabReport) => void;
   onEdit: (r: LabReport) => void;
   onDelete: (r: LabReport) => void;
-}> = ({ reports, results, loading, error, onRetry, onView, onEdit, onDelete }) => {
+  /**
+   * Release 3 (W3): a professional viewing a client's shared reports. No
+   * swipe Edit / Delete, and the empty and error lines speak about the
+   * client. Omitted (the default) keeps the client's Labs tab as it was.
+   */
+  readOnly?: { emptyTitle: string; emptyBody: string };
+}> = ({ reports, results, loading, error, onRetry, onView, onEdit, onDelete, readOnly }) => {
   const { dark, hc } = useHealthMode();
   if (loading && reports.length === 0) {
     return (
@@ -69,13 +75,21 @@ export const LabsTab: React.FC<{
       </ListCard>
     );
   }
-  if (error && reports.length === 0) return <RetryCard message="Couldn't load your reports." onRetry={onRetry} />;
-  if (reports.length === 0) return <EmptyCard icon={FileText} title="No lab reports yet." body="Upload a report and its results appear under Biomarkers." />;
+  if (error && reports.length === 0) return <RetryCard message={readOnly ? "Couldn't load the reports." : "Couldn't load your reports."} onRetry={onRetry} />;
+  if (reports.length === 0) return <EmptyCard icon={FileText} title={readOnly?.emptyTitle ?? "No lab reports yet."} body={readOnly?.emptyBody ?? "Upload a report and its results appear under Biomarkers."} />;
   return (
     <ListCard>
       {reports.map((r, i) => {
         const n = results.filter((x) => x.panelId === r.id).length;
         const meta = [fmtDate(r.date), plural(n, "marker"), fileKind(r.filePath)].join(" · ");
+        const row = (
+          <button type="button" onClick={() => onView(r)} className="tap w-full flex items-center text-left" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
+            <RowTile icon={FileText} />
+            <RowText title={r.name ?? REPORT_NAME_DEFAULT} meta={meta} />
+            <ChevronRight size={16} style={{ color: INK_FAINT }} aria-hidden />
+          </button>
+        );
+        if (readOnly) return <div key={r.id} style={{ borderTop: i ? rowRule(dark, hc) : undefined }}>{row}</div>;
         return (
           <div key={r.id} style={{ borderTop: i ? rowRule(dark, hc) : undefined }}>
             <SwipeActions
@@ -89,11 +103,7 @@ export const LabsTab: React.FC<{
                 { key: "delete", label: "Delete", icon: <Trash2 size={16} />, destructive: true, onClick: () => onDelete(r) },
               ]}
             >
-              <button type="button" onClick={() => onView(r)} className="tap w-full flex items-center text-left" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
-                <RowTile icon={FileText} />
-                <RowText title={r.name ?? REPORT_NAME_DEFAULT} meta={meta} />
-                <ChevronRight size={16} style={{ color: INK_FAINT }} aria-hidden />
-              </button>
+              {row}
             </SwipeActions>
           </div>
         );

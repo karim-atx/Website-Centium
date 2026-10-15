@@ -58,7 +58,14 @@ export const BiomarkersTab: React.FC<{
   onOpen: (m: BloodMarker) => void;
   confirmation: { count: number; name: string } | null;
   highlight: Set<string>;
-}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight }) => {
+  /**
+   * Release 3 (W3): a professional reading a client's shared results, read
+   * only. The signed-in person's own pregnancy and health-check flags never
+   * apply, and the empty state speaks about the client. Omitted (the default)
+   * keeps the client's own Records exactly as before.
+   */
+  professional?: { emptyTitle: string; emptyBody: string };
+}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight, professional }) => {
   const { dark, hc } = useHealthMode();
   const reduced = useReducedMotion();
   const pregnancyFlags = usePregnancyFlags();
@@ -85,12 +92,12 @@ export const BiomarkersTab: React.FC<{
       </div>
     );
   }
-  if (error && markers.length === 0) return <RetryCard message="Couldn't load your results." onRetry={onRetry} />;
+  if (error && markers.length === 0) return <RetryCard message={professional ? "Couldn't load the results." : "Couldn't load your results."} onRetry={onRetry} />;
   if (markers.length === 0) {
     return (
       <div style={{ marginTop: 2 }}>
         {confirmation && <Confirmation {...confirmation} />}
-        <EmptyCard icon={Stethoscope} title="No lab results yet." body="Add a result, or scan a report, and its markers appear here." />
+        <EmptyCard icon={Stethoscope} title={professional?.emptyTitle ?? "No lab results yet."} body={professional?.emptyBody ?? "Add a result, or scan a report, and its markers appear here."} />
       </div>
     );
   }
@@ -109,7 +116,7 @@ export const BiomarkersTab: React.FC<{
       {(
         <div style={{ margin: "2px 0 12px", borderRadius: 14, padding: "12px 14px", background: dark ? "rgb(var(--c-primary) / 0.12)" : "rgb(var(--th-9a8cd6) / 0.12)" }}>
           <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>{`Latest results from ${fmtDate(latestDate)} · ${plural(markers.length, "marker")}`}</p>
-          <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>Reference ranges come from your lab report and can differ between labs.</p>
+          <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>{professional ? "Reference ranges come from the lab report and can differ between labs." : "Reference ranges come from your lab report and can differ between labs."}</p>
           {sharedLine && (
             <p className="flex items-center flex-wrap" style={{ marginTop: 5, gap: 5, fontSize: textPx(11), lineHeight: linePx(16.5), color: INK_SOFT }}>
               <Lock size={11} aria-hidden />
@@ -139,8 +146,8 @@ export const BiomarkersTab: React.FC<{
             {rows.map((m, i) => {
               const threshold = isThreshold(m);
               const remark = remarkFor(m);
-              const pFlag = pregnancyFlags.lab(m);
-              const cFlag = pFlag ? null : checkFlags.lab(m);
+              const pFlag = professional ? null : pregnancyFlags.lab(m);
+              const cFlag = pFlag || professional ? null : checkFlags.lab(m);
               const lit = !reduced && highlight.has(resultKey(m));
               return (
                 <div
