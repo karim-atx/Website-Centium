@@ -31,7 +31,7 @@ export default function OrdersListPage() {
   if (s.status === "ok") {
     const d = s.value;
     if (which === "returns") {
-      rows = d.returns.filter((r) => !filter || returnGroup(r.status) === filter).map((r) => <ReturnRow key={r.id} r={r} onOpen={() => navigate(`/app/business/orders/returns/${r.id}`)} />);
+      rows = d.returns.filter((r) => !filter || returnGroup(r.status, r.kind) === filter).map((r) => <ReturnRow key={r.id} r={r} onOpen={() => navigate(`/app/business/orders/returns/${r.id}`)} />);
     } else if (which === "completed") {
       rows = d.orders
         .filter((o) => !isOpen(o.status) && (!filter || completedBucket(o.completedAt ?? o.cancelledAt ?? o.placedAt) === filter))

@@ -5,9 +5,9 @@ import clsx from "clsx";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Toast } from "../../components/ui/Toast";
 import { useApp } from "../../context/AppContext";
-import { cancelOrder, fetchMyReturns, fetchOrder, type StoreOrder, type StoreReturn } from "../../services/store/orders";
+import { cancelOrder, fetchMyOrder, type StoreReturn } from "../../services/store/orders";
+import { storeErrorText } from "../../services/store/mapping";
 import { orderSteps } from "../../services/store/orderSteps";
-import type { Load } from "../../services/store/backend";
 import { dayClock, money } from "../../services/store/format";
 import { clock12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
@@ -27,19 +27,13 @@ const RETURN_WORDS: Record<StoreReturn["status"], { label: string; tone: ClientT
   rejected: { label: "Declined", tone: "bad", line: "The store declined this return." },
 };
 
-async function loadMine(orderId: string, uid: string): Promise<Load<{ order: StoreOrder | null; ret: StoreReturn | null }>> {
-  const [o, r] = await Promise.all([fetchOrder(orderId), fetchMyReturns(uid)]);
-  if (o.status !== "ok") return o;
-  return { status: "ok", value: { order: o.value, ret: r.status === "ok" ? r.value.find((x) => x.orderId === orderId) ?? null : null } };
-}
-
 export default function MyOrderPage() {
   const { orderId = "" } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const online = useOnline();
   const { authUserId } = useApp();
-  const live = useLive(authUserId ? () => loadMine(orderId, authUserId) : null, 120000, orderId);
+  const live = useLive(authUserId ? () => fetchMyOrder(orderId) : null, 120000, orderId);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +69,11 @@ export default function MyOrderPage() {
     const r = await cancelOrder(o.id, null);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Cancelling orders is coming soon." : "Couldn't cancel the order. Try again.");
+      setError(r.pending ? "Cancelling orders is coming soon." : storeErrorText(r, "Couldn't cancel the order. Try again."));
       return;
     }
     setCancelOpen(false);
-    setToast("Order cancelled.");
+    setToast(r.value.paidToRefund ? "Order cancelled. The store will give your cash back." : "Order cancelled.");
     await live.refresh();
   };
 
@@ -126,7 +120,7 @@ export default function MyOrderPage() {
       <Section label="Items">
         <ClientCard label="Items">
           {o.items.map((i) => (
-            <ClientRow key={i.id} icon={Package} title={i.name} sub={i.variant ? `${i.variant} · qty ${i.qty}` : `qty ${i.qty}`} value={money(i.lineTotal)} />
+            <ClientRow key={i.id} icon={Package} title={i.name} sub={`qty ${i.qty}`} value={money(i.lineTotal)} />
           ))}
           {delivery && <ClientRow title="Delivery" value={o.deliveryFee === 0 ? "Free" : money(o.deliveryFee)} />}
           <ClientRow title={<span className="font-bold">Total</span>} value={money(o.total)} />
@@ -143,7 +137,7 @@ export default function MyOrderPage() {
           <ClientRow
             icon={Banknote}
             title={o.paymentMethod === "whish" ? "Whish" : "Cash"}
-            sub={o.paidAt ? "Paid" : delivery ? "Pay when it's delivered" : "Pay when you pick it up"}
+            sub={o.paymentStatus === "refunded" ? "Refunded" : o.paymentStatus === "paid" ? "Paid" : delivery ? "Pay when it's delivered" : "Pay when you pick it up"}
           />
         </ClientCard>
       </Section>
@@ -151,18 +145,18 @@ export default function MyOrderPage() {
       {d?.ret && (
         <Section label="Return">
           <ClientCard>
-            <ClientRow icon={RotateCcw} title={d.ret.reason} sub={RETURN_WORDS[d.ret.status].line} pill={{ label: RETURN_WORDS[d.ret.status].label, tone: RETURN_WORDS[d.ret.status].tone }} />
+            <ClientRow icon={RotateCcw} title={d.ret.reason} sub={d.ret.kind === "exchange" && d.ret.status === "received" ? "The store has the item. Your exchange is done." : RETURN_WORDS[d.ret.status].line} pill={{ label: RETURN_WORDS[d.ret.status].label, tone: RETURN_WORDS[d.ret.status].tone }} />
           </ClientCard>
         </Section>
       )}
 
       <div style={{ marginTop: 18 }}>
-        {o.status === "placed" && (
+        {o.canCancel && (
           <button type="button" onClick={() => setCancelOpen(true)} disabled={!online} className="tap w-full text-[14px] font-bold text-status-high disabled:opacity-40" style={{ minHeight: 44 }}>
             Cancel order
           </button>
         )}
-        {o.status === "completed" && !d?.ret && (
+        {o.canReturn && (
           <button
             type="button"
             onClick={() => navigate(`/app/store/orders/${o.id}/return`)}
@@ -174,14 +168,14 @@ export default function MyOrderPage() {
           </button>
         )}
       </div>
-      {o.status === "completed" && !d?.ret && (
+      {o.canReturn && (
         <p className="text-[12px] font-medium text-charcoal-faint text-center">The store's returns policy applies.</p>
       )}
 
       <ClientConfirm
         open={cancelOpen}
         title={`Cancel order #${o.number}?`}
-        body="The store is told. This can't be undone."
+        body="The store sees it as cancelled. This can't be undone."
         keep="Keep order"
         confirm="Cancel order"
         destructive

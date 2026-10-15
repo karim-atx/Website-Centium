@@ -24,11 +24,18 @@ export const STEP_CHIP = {
   later: { label: "Later", tone: "soft" },
 } as const;
 
-/** The customer as this store sees them: the name for its own orders, else "Customer #4F2A" (§4 masking pattern). */
-export function customerLabel(o: { customerName: string | null; customerId?: string | null }): string {
-  if (o.customerName) return o.customerName;
-  const id = (o.customerId ?? "").replace(/-/g, "");
-  return id ? `Customer #${id.slice(0, 4).toUpperCase()}` : "Customer";
+/**
+ * The customer as this store sees them: the server's label, rendered as sent
+ * (B11 store_orders_page: "Member #0042" unless the name is shared, a first
+ * name, or "Guest" for a desk sale). Never formatted here.
+ */
+export function customerLabel(o: { customerLabel: string | null }): string {
+  return o.customerLabel ?? "Customer";
+}
+
+/** The label plus the safeguarding flag for list subs ("Member #0042 · Under 18"). */
+export function customerWho(o: { customerLabel: string | null; customerIsMinor?: boolean }): string {
+  return o.customerIsMinor ? `${customerLabel(o)} · Under 18` : customerLabel(o);
 }
 
 export const methodWord = (o: Pick<StoreOrder, "fulfilment">) => (o.fulfilment === "delivery" ? "Delivery" : "Pickup");

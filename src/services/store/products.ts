@@ -1,46 +1,34 @@
-import { db, isMissingColumn, loadFail, num, str, writeFail, type Load, type Write } from "./backend";
+import { db, isMissingColumn, loadFail, writeFail, type Load, type Write } from "./backend";
+import { toCategory, toProduct, type Row } from "./mapping";
+import { prepareForumPhoto } from "../forum/photo";
 
-// Store products on business_offerings (V6-50: the model the app already
-// reads; ST-01 / B11 extends it). One editor for OP1 Products and AN11
-// listings (V6-157): name, price and description are live today; stock,
-// visibility, photo and product category are B11 columns, read when present
-// and otherwise reported as pending so the editor shows them as "Coming soon".
+// Store products on business_offerings (V6-50 / Q-07: the product table).
+// One editor for OP1 Products and AN11 listings (V6-157). B11 added stock
+// (null = not tracked), visible (default true; hidden = gone from the public,
+// still seen by the business), image_url and category_id
+// (product_categories). Writing them needs `store` or `marketing`.
 //
-// GRANTS (local stack, 14 Oct): INSERT business_id, category, title, price,
-// description (+ id, timestamps); UPDATE title, price, description, category.
-// B11 adds stock, visible, image_path and a product category. Their WRITE
-// path (column grants or functions) is not in HANDOVER_API.md yet, so none of
-// them is ever sent from here (npm run audit:grants): the editor shows them
-// as "Coming soon" until B11 is wired (STOCK_WRITES below).
+// GRANTS (local stack, 15 Oct): business_offerings INSERT business_id,
+// category, category_id, description, image_url, price, stock, title,
+// visible; UPDATE category, category_id, description, image_url, price,
+// stock, title, visible. product_categories INSERT business_id, glyph, name,
+// position; UPDATE glyph, name, position (npm run audit:grants).
+//
+// Production may not have B11 yet: a read that names a B11 column falls back
+// to the base columns and reports `stockShipped: false`, and the editor shows
+// the B11 fields as "Coming soon" there (never sent).
 
-/** B11 stock / visibility / category / photo writes are wired (flip with B11). */
-export const STOCK_WRITES = false;
-
-import type { OfferingCategory, Product } from "./types";
-export type { OfferingCategory, Product } from "./types";
+import type { OfferingCategory, Product, ProductCategory } from "./types";
+export type { OfferingCategory, Product, ProductCategory } from "./types";
 
 export interface ProductsLoad {
   products: Product[];
-  /** B11's stock / visible / category columns exist. */
+  /** B11's stock / visible / category / photo columns exist. */
   stockShipped: boolean;
 }
 
 const BASE = "id, title, price, description, category, created_at";
-const B11 = ", stock, visible, image_path, product_categories(name)";
-
-type Row = Record<string, unknown>;
-
-const toProduct = (r: Row): Product => ({
-  id: String(r.id),
-  name: String(r.title ?? ""),
-  price: r.price === null || r.price === undefined ? null : num(r.price),
-  description: String(r.description ?? ""),
-  marketCategory: r.category as OfferingCategory,
-  stock: r.stock === null || r.stock === undefined ? null : num(r.stock),
-  visible: r.visible === undefined || r.visible === null ? true : r.visible !== false,
-  category: str((r.product_categories as Row | null)?.name),
-  imagePath: str(r.image_path),
-});
+const B11 = ", stock, visible, image_url, category_id, product_categories(name, glyph)";
 
 async function readProducts(filter: (q: unknown) => unknown): Promise<Load<ProductsLoad>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose B11 builder
@@ -53,13 +41,13 @@ async function readProducts(filter: (q: unknown) => unknown): Promise<Load<Produ
   return { status: "ok", value: { products: ((base.data ?? []) as Row[]).map(toProduct), stockShipped: false } };
 }
 
-/** This store's products (owner screens). */
+/** This store's products (owner screens; hidden ones included). */
 export function fetchStoreProducts(businessId: string): Promise<Load<ProductsLoad>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose builder
   return readProducts((q) => (q as any).eq("business_id", businessId));
 }
 
-/** One product (customer product page). */
+/** One product (customer product page). RLS hides a hidden product from the public. */
 export async function fetchProduct(productId: string): Promise<Load<{ product: Product; businessId: string } | null>> {
   const full = await db.from("business_offerings").select(BASE + ", business_id" + B11).eq("id", productId).maybeSingle();
   let res = full;
@@ -93,11 +81,14 @@ export interface ProductDraft {
   name: string;
   price: number;
   description: string;
-  /** Sent only once B11's stock column exists. */
-  stock?: number | null;
+  /** B11 fields, sent only when `stockShipped`. stock null = not tracked. */
+  stock: number | null;
+  visible: boolean;
+  categoryId: string | null;
+  imageUrl: string | null;
 }
 
-export async function createProduct(businessId: string, businessType: string | null, d: ProductDraft, _stockShipped: boolean): Promise<Write<Product>> {
+export async function createProduct(businessId: string, businessType: string | null, d: ProductDraft, stockShipped: boolean): Promise<Write<Product>> {
   const payload: Row = {
     business_id: businessId,
     title: d.name.trim(),
@@ -105,22 +96,42 @@ export async function createProduct(businessId: string, businessType: string | n
     price: d.price,
     description: d.description.trim() || null,
   };
+  if (stockShipped) {
+    payload.stock = d.stock;
+    payload.visible = d.visible;
+    payload.category_id = d.categoryId;
+    payload.image_url = d.imageUrl;
+  }
   const { data, error } = await db.from("business_offerings").insert(payload).select(BASE).single();
   if (error || !data) return writeFail(error, "Could not create the product");
   return { ok: true, value: toProduct(data as Row) };
 }
 
-export async function updateProduct(id: string, d: ProductDraft, _stockShipped: boolean): Promise<Write<null>> {
-  const { error } = await db
-    .from("business_offerings")
-    .update({ title: d.name.trim(), price: d.price, description: d.description.trim() || null }).eq("id", id);
+export async function updateProduct(id: string, d: ProductDraft, stockShipped: boolean): Promise<Write<null>> {
+  // Two literal payloads (not a conditional) so npm run audit:grants checks both.
+  const { error } = stockShipped
+    ? await db
+        .from("business_offerings")
+        .update({
+          title: d.name.trim(),
+          price: d.price,
+          description: d.description.trim() || null,
+          stock: d.stock,
+          visible: d.visible,
+          category_id: d.categoryId,
+          image_url: d.imageUrl,
+        })
+        .eq("id", id)
+    : await db.from("business_offerings").update({ title: d.name.trim(), price: d.price, description: d.description.trim() || null }).eq("id", id);
   if (error) return writeFail(error, "Could not save the product");
   return { ok: true, value: null };
 }
 
-/** B11 visibility (Hide from the store / Show in the store): pending until B11's write path is in HANDOVER_API.md. */
-export async function setProductVisible(_id: string, _visible: boolean): Promise<Write<null>> {
-  return { ok: false, pending: true };
+/** Hide from the store / Show in the store (a hidden product disappears from the public). */
+export async function setProductVisible(id: string, visible: boolean): Promise<Write<null>> {
+  const { error } = await db.from("business_offerings").update({ visible }).eq("id", id);
+  if (error) return writeFail(error, "Could not change the product's visibility");
+  return { ok: true, value: null };
 }
 
 export async function deleteProduct(id: string): Promise<Write<null>> {
@@ -128,6 +139,48 @@ export async function deleteProduct(id: string): Promise<Write<null>> {
   if (error) return writeFail(error, "Could not delete the product");
   return { ok: true, value: null };
 }
+
+// ---------------------------------------------------------------------------
+// Product categories (the store's own groups; name ≤ 40, unique per business
+// ignoring case)
+
+export async function fetchCategories(businessId: string): Promise<Load<ProductCategory[]>> {
+  const { data, error } = await db.from("product_categories").select("id, name, glyph, position").eq("business_id", businessId).order("position").order("name");
+  if (error) return loadFail(error, "Could not read the categories");
+  return { status: "ok", value: ((data ?? []) as Row[]).map(toCategory) };
+}
+
+export const CATEGORY_MAX = 40;
+
+export async function createCategory(businessId: string, name: string, glyph: string | null, position: number): Promise<Write<ProductCategory>> {
+  const { data, error } = await db.from("product_categories").insert({ business_id: businessId, name: name.trim(), glyph, position }).select("id, name, glyph, position").single();
+  if (error || !data) return writeFail(error, "Could not add the category");
+  return { ok: true, value: toCategory(data as Row) };
+}
+
+// ---------------------------------------------------------------------------
+// Product photos: public bucket product-images, <uid>/<business_id>/<file>,
+// 5 MB, JPEG / PNG / WebP (re-encoded as JPEG, metadata dropped).
+
+const PHOTO_BUCKET = "product-images";
+
+export async function uploadProductPhoto(businessId: string, file: File): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  const { data: auth } = await db.auth.getUser();
+  const uid = auth?.user?.id as string | undefined;
+  if (!uid) return { ok: false, message: "Sign in again to add a photo." };
+  const prepared = await prepareForumPhoto(file);
+  if (!prepared.ok) return { ok: false, message: prepared.message };
+  if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
+  const path = `${uid}/${businessId}/${crypto.randomUUID()}.jpg`;
+  const up = await db.storage.from(PHOTO_BUCKET).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
+  if (up.error) {
+    console.warn("[store] product photo upload refused:", up.error.message);
+    return { ok: false, message: "Couldn't upload the photo. Check your connection and try again." };
+  }
+  return { ok: true, url: db.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl as string };
+}
+
+// ---------------------------------------------------------------------------
 
 /** Stock chip (OP1-008 row 9): Low 1 to 4, Out at 0, none at 5 or more or untracked; Hidden (OURS). */
 export function stockChip(p: Product): { label: string; tone: "warn" | "bad" | "soft" } | null {

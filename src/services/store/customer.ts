@@ -17,6 +17,8 @@ export interface StoreInfo {
   freeDeliveryOver: number | null;
   deliveryTime: string | null;
   returnsPolicy: string | null;
+  /** Exchanges are offered (request_return p_kind "exchange"). */
+  allowExchanges: boolean;
 }
 
 type Row = Record<string, unknown>;
@@ -45,6 +47,7 @@ export async function fetchStoreInfo(businessId: string): Promise<Load<StoreInfo
       freeDeliveryOver: st && st.free_delivery_over !== null && st.free_delivery_over !== undefined ? num(st.free_delivery_over) : null,
       deliveryTime: st ? str(st.delivery_time_text) : null,
       returnsPolicy: st ? str(st.returns_policy) : null,
+      allowExchanges: st ? st.allow_exchanges === true : false,
     },
   };
 }

@@ -111,7 +111,7 @@ export default function StoreProductsPage() {
     body = <EmptyCard icon={ShoppingBag} title="No products yet" body="Add your first product with a photo, price and stock." />;
   } else {
     const c = productCounts(data.products);
-    // Pending B11: stock is not tracked yet, so the two stock boxes show a dash.
+    // A database without B11 has no stock column: the two stock boxes show a dash.
     const stockBox = (n: number) => (data.stockShipped ? String(n) : "–");
     body = (
       <>

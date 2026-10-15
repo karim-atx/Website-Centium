@@ -7,6 +7,7 @@ import {
   headlineOf,
   productSeries,
   sortRows,
+  withServerSales,
 } from "./productsModel.ts";
 
 const TODAY = "2026-10-14";
@@ -24,8 +25,10 @@ const prod = (
   marketCategory: "supplements",
   stock: null,
   visible,
+  categoryId: null,
   category: null,
-  imagePath: null,
+  categoryGlyph: null,
+  imageUrl: null,
 });
 const order = (
   day: string,
@@ -39,7 +42,6 @@ const order = (
       id: "i" + i,
       offeringId: id,
       name: id,
-      variant: null,
       qty,
       unitPrice: unit,
       lineTotal: qty * unit,
@@ -123,4 +125,35 @@ test("products: sort by price and newest", () => {
     ).map((r) => r.product.id),
     ["b", "a"],
   );
+});
+
+test("products: B11's summary and top products win for the headline and What's selling", () => {
+  const products = [prod("a", "Whey", 58), prod("b", "Bars", 24)];
+  const orders = [order("2026-08-01", [["a", 1, 58]]), order("2026-10-10", [["a", 2, 58]])];
+  const h = headlineOf(products, orders, range, TODAY);
+  const s = withServerSales(
+    h,
+    {
+      now: { units: 7, sales: 300 },
+      prev: { units: 5, sales: 200 },
+      top: [
+        { offeringId: "b", units: 4, sales: 96 },
+        { offeringId: null, units: 3, sales: 30 },
+        { offeringId: "a", units: 2, sales: 116 },
+      ],
+    },
+    range,
+  );
+  assert.equal(s.sold, 7);
+  assert.equal(s.sales, 300);
+  assert.equal(s.soldDelta, 2);
+  assert.equal(s.salesDeltaPct, 50);
+  // A deleted product (offering_id null) has no row to open, so it is skipped.
+  assert.deepEqual(s.top.map((r) => [r.product.id, r.units, r.revenue]), [
+    ["b", 4, 96],
+    ["a", 2, 116],
+  ]);
+  // Pending stays pending: no server figures turn "–" into numbers.
+  const pending = headlineOf(products, null, range, TODAY);
+  assert.equal(withServerSales(pending, { now: { units: 1, sales: 1 }, prev: null, top: [] }, range).sold, null);
 });

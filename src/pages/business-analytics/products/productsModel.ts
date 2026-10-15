@@ -156,6 +156,44 @@ export function headlineOf(
   };
 }
 
+/**
+ * B11's own figures for the index: store_sales_summary (units, sales) for the
+ * range and the period before, and store_top_products (ranked by units, then
+ * sales). They count days in the business's time zone, so they win over the
+ * per-order sums for the headline and "What's selling?"; the per-product rows
+ * and the detail chart stay on the order lines.
+ */
+export interface ServerSales {
+  now: { units: number; sales: number };
+  prev: { units: number; sales: number } | null;
+  top: { offeringId: string | null; units: number; sales: number }[];
+}
+
+export function withServerSales(
+  h: Headline,
+  s: ServerSales | null,
+  range: AnalyticsRange,
+): Headline {
+  if (!s || h.sold === null) return h;
+  const showDelta = !h.early && range.compare && s.prev !== null;
+  const byId = new Map(h.rows.map((r) => [r.product.id, r]));
+  const top = s.top
+    .filter((t) => t.units > 0 && t.offeringId && byId.has(t.offeringId))
+    .slice(0, 5)
+    .map((t) => ({ ...byId.get(t.offeringId!)!, units: t.units, revenue: t.sales }));
+  return {
+    ...h,
+    sold: s.now.units,
+    soldDelta: showDelta ? s.now.units - s.prev!.units : null,
+    sales: s.now.sales,
+    salesDeltaPct:
+      showDelta && s.prev!.sales > 0
+        ? Math.round(((s.now.sales - s.prev!.sales) / s.prev!.sales) * 100)
+        : null,
+    top,
+  };
+}
+
 export function money(v: number): string {
   return (
     (v < 0 ? "−" : "") +

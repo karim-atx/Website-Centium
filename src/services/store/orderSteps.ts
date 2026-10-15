@@ -1,4 +1,4 @@
-import type { OrderStatus, ReturnStatus, StoreOrder, StoreReturn } from "./types";
+import type { OrderStatus, ReturnKind, ReturnStatus, StoreOrder, StoreReturn } from "./types";
 
 // The fulfilment and return step models (OURS-OP1-store-order-steps,
 // OURS-OP1-store-return-detail). Pure, so the screens and the tests share it.
@@ -59,15 +59,17 @@ export function orderSteps(o: StoreOrder): Step[] {
   if (o.status === "cancelled") {
     return [placed, { key: "cancelled", glyph: "x-circle", title: "Cancelled", at: o.cancelledAt, hint: null, tone: "bad" }];
   }
+  // B11 records packed_at and completed_at only: the Out for delivery and
+  // Ready for pickup rows show no time once done.
   const defs: { key: string; glyph: StepGlyph; title: string; at: string | null; hint: string }[] = delivery
     ? [
         { key: "packed", glyph: "package", title: "Packed", at: o.packedAt, hint: "Tap when it's packed" },
-        { key: "out", glyph: "truck", title: "Out for delivery", at: o.outAt, hint: "Tap when it leaves the store" },
+        { key: "out", glyph: "truck", title: "Out for delivery", at: null, hint: "Tap when it leaves the store" },
         { key: "delivered", glyph: "home", title: "Delivered", at: o.completedAt, hint: "Tap when it's delivered" },
       ]
     : [
         { key: "packed", glyph: "package", title: "Packed", at: o.packedAt, hint: "Tap when it's packed" },
-        { key: "ready", glyph: "store", title: "Ready for pickup", at: o.readyAt, hint: "Tap when it's ready to collect" },
+        { key: "ready", glyph: "store", title: "Ready for pickup", at: null, hint: "Tap when it's ready to collect" },
         { key: "picked", glyph: "hand", title: "Picked up", at: o.completedAt, hint: "Tap when it's collected" },
       ];
   return [
@@ -99,16 +101,22 @@ export function nextAction(o: Pick<StoreOrder, "status" | "fulfilment">): StepAc
   }
 }
 
-/** The toast after a step (OP1-007 row 3 and OURS row 14). */
-export function stepToast(a: StepAction, customer: string, notified: boolean): string {
+/**
+ * The toast after a step (OP1-007 row 3 and OURS row 14). B11's
+ * advance_order_status sends the customer's push itself and answers void, so
+ * there is no "couldn't message" case to show.
+ */
+export function stepToast(a: StepAction, customer: string): string {
   if (a.quiet) return a.done;
-  return notified ? `${a.done} ${customer} has been told.` : `${a.done} We couldn't message ${customer}.`;
+  return `${a.done} ${customer} has been told.`;
 }
 
 // ---------------------------------------------------------------------------
 // Returns
 
-export function returnChip(s: ReturnStatus): { label: string; tone: "warn" | "good" | "pale" | "soft" | "bad" } {
+export function returnChip(s: ReturnStatus, kind: ReturnKind = "refund"): { label: string; tone: "warn" | "good" | "pale" | "soft" | "bad" } {
+  // An exchange ends at Received (OURS: "Exchanged", the finished soft tone).
+  if (s === "received" && kind === "exchange") return { label: "Exchanged", tone: "soft" };
   switch (s) {
     case "requested":
       return { label: "Approve", tone: "pale" };
@@ -123,20 +131,28 @@ export function returnChip(s: ReturnStatus): { label: string; tone: "warn" | "go
   }
 }
 
-export function returnGroup(s: ReturnStatus): "needs" | "progress" | "done" {
+export function returnGroup(s: ReturnStatus, kind: ReturnKind = "refund"): "needs" | "progress" | "done" {
+  if (s === "received" && kind === "exchange") return "done";
   return s === "requested" ? "needs" : s === "approved" || s === "received" ? "progress" : "done";
 }
 
 const RET_RANK: Record<ReturnStatus, number> = { requested: 0, approved: 1, received: 2, refunded: 3, rejected: -1 };
 
+/**
+ * B11 keeps created_at and resolved_at only: Requested shows its time, and
+ * the last step (Refunded, Denied, or an exchange's Received) shows the
+ * resolved time. An exchange ends at Received (respond_return refunds only a
+ * refund return).
+ */
 export function returnSteps(r: StoreReturn): Step[] {
   const requested: Step = { key: "requested", glyph: "check", title: "Requested", at: r.requestedAt, hint: null, tone: "done" };
-  if (r.status === "rejected") return [requested, { key: "denied", glyph: "x-circle", title: "Denied", at: r.rejectedAt, hint: null, tone: "bad" }];
+  if (r.status === "rejected") return [requested, { key: "denied", glyph: "x-circle", title: "Denied", at: r.resolvedAt, hint: null, tone: "bad" }];
   const rank = RET_RANK[r.status];
+  const exchange = r.kind === "exchange";
   const defs = [
-    { key: "approved", glyph: "rotate-ccw" as StepGlyph, title: "Approved", at: r.approvedAt, hint: "Tap when you approve it" },
-    { key: "received", glyph: "package" as StepGlyph, title: "Received", at: r.receivedAt, hint: "Tap when it's back in the store" },
-    { key: "refunded", glyph: "banknote" as StepGlyph, title: "Refunded", at: r.refundedAt, hint: "Tap when you've refunded it" },
+    { key: "approved", glyph: "rotate-ccw" as StepGlyph, title: "Approved", at: null, hint: "Tap when you approve it" },
+    { key: "received", glyph: "package" as StepGlyph, title: "Received", at: exchange ? r.resolvedAt : null, hint: "Tap when it's back in the store" },
+    ...(exchange ? [] : [{ key: "refunded", glyph: "banknote" as StepGlyph, title: "Refunded", at: r.resolvedAt, hint: "Tap when you've refunded it" }]),
   ];
   return [
     requested,
@@ -150,9 +166,9 @@ export function returnSteps(r: StoreReturn): Step[] {
   ];
 }
 
-export function returnAction(s: ReturnStatus): { to: ReturnStatus; label: string } | null {
+export function returnAction(s: ReturnStatus, kind: ReturnKind = "refund"): { to: ReturnStatus; label: string } | null {
   if (s === "requested") return { to: "approved", label: "Approve return" };
   if (s === "approved") return { to: "received", label: "Mark as received" };
-  if (s === "received") return { to: "refunded", label: "Mark as refunded" };
+  if (s === "received" && kind === "refund") return { to: "refunded", label: "Mark as refunded" };
   return null;
 }

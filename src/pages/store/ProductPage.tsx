@@ -72,10 +72,14 @@ export default function ProductPage() {
   return (
     <div>
       <PageHeader title={d.store?.name ?? "Store"} showBack sub />
-      {/* No product photos yet (B11 image_path): the store-product placeholder. */}
-      <div aria-hidden className="flex items-center justify-center rounded-[18px] bg-primary-pale text-th-7d67d9 dark:text-primary-accent" style={{ height: 200 }}>
-        <ShoppingBag size={48} strokeWidth={1.5} />
-      </div>
+      {/* B11 image_url (product-images bucket); without one, the store-product placeholder. */}
+      {p.imageUrl ? (
+        <img src={p.imageUrl} alt={p.name} className="w-full rounded-[18px] object-cover bg-primary-pale" style={{ height: 200 }} />
+      ) : (
+        <div aria-hidden className="flex items-center justify-center rounded-[18px] bg-primary-pale text-th-7d67d9 dark:text-primary-accent" style={{ height: 200 }}>
+          <ShoppingBag size={48} strokeWidth={1.5} />
+        </div>
+      )}
       <h2 className="text-[22px] font-extrabold leading-[28px] tracking-[-0.01em] text-charcoal break-words" style={{ marginTop: 16 }}>
         {p.name}
       </h2>

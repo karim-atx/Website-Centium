@@ -7,14 +7,16 @@ import { ageLabel, completedBucket, completedWhen, money } from "../../../servic
 import { fetchStoreInfo } from "../../../services/store/customer";
 import type { Load } from "../../../services/store/backend";
 import { EmptyCard, ErrorCard, KitLabel, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextTabs } from "./opsKit";
-import { customerLabel, methodWord, useLive, useStoreBusiness } from "./storeShared";
+import { customerLabel, customerWho, methodWord, useLive, useStoreBusiness } from "./storeShared";
 import { AppointmentsPanel } from "../appointments/AppointmentsPage";
 
 // OP1-001 / OP1-003 · Store › Orders (the Orders navbar tab root, V6-54):
 // text tabs To fulfil · Completed · Returns (OURS-OP1-store-orders-completed,
 // -returns), plus Appointments for a Wellness Service that also sells
-// products (O11). Pending B11: the store has no orders to read, so every tab
-// shows its empty state (BACKEND_REQUIREMENTS-v6 B11 "Orders tab empty state").
+// products (O11). B11: orders and their items are read with `store`, the
+// customer labels come from store_orders_page (masked, as the server sends
+// them). A database without B11 answers "pending" and every tab shows its
+// empty state.
 
 type TabKey = "fulfil" | "completed" | "returns" | "appointments";
 const CAP = 3;
@@ -29,11 +31,15 @@ export async function loadOrdersData(businessId: string): Promise<Load<OrdersDat
   const [o, r] = await Promise.all([fetchStoreOrders(businessId), fetchStoreReturns(businessId)]);
   if (o.status === "error") return o;
   if (r.status === "error") return r;
+  const orders = o.status === "ok" ? o.value : [];
+  // A return carries its order's label (the same server label).
+  const byId = new Map(orders.map((x) => [x.id, x]));
+  const returns = (r.status === "ok" ? r.value : []).map((x) => ({ ...x, customerLabel: byId.get(x.orderId)?.customerLabel ?? null }));
   return {
     status: "ok",
     value: {
-      orders: o.status === "ok" ? o.value : [],
-      returns: r.status === "ok" ? r.value : [],
+      orders,
+      returns,
       pending: o.status === "pending",
     },
   };
@@ -45,7 +51,7 @@ export function OrderRow({ o, onOpen }: { o: StoreOrder; onOpen: () => void }) {
     <KitRow
       icon={o.fulfilment === "delivery" ? Truck : Package}
       title={`Order #${o.number}`}
-      sub={`${methodWord(o)} · ${customerLabel(o)} · ${ageLabel(o.placedAt)}`}
+      sub={`${methodWord(o)} · ${customerWho(o)} · ${ageLabel(o.placedAt)}`}
       chip={chip}
       onClick={onOpen}
       ariaLabel={`Order #${o.number}, ${methodWord(o)}, ${customerLabel(o)}, ${chip.label}`}
@@ -61,7 +67,7 @@ export function CompletedRow({ o, onOpen }: { o: StoreOrder; onOpen: () => void 
     <KitRow
       icon={o.fulfilment === "delivery" ? Truck : Package}
       title={`Order #${o.number}`}
-      sub={`${what} · ${customerLabel(o)}${when ? ` · ${completedWhen(when)}` : ""}`}
+      sub={`${what} · ${customerWho(o)}${when ? ` · ${completedWhen(when)}` : ""}`}
       chip={chip}
       value={money(o.total)}
       onClick={onOpen}
@@ -70,7 +76,7 @@ export function CompletedRow({ o, onOpen }: { o: StoreOrder; onOpen: () => void 
 }
 
 export function ReturnRow({ r, onOpen }: { r: StoreReturn; onOpen: () => void }) {
-  const chip = returnChip(r.status);
+  const chip = returnChip(r.status, r.kind);
   return (
     <KitRow
       icon={RotateCcw}
@@ -209,7 +215,7 @@ export default function StoreOrdersPage({ title = "Orders" }: { title?: string }
         { key: "progress", label: "In progress" },
         { key: "done", label: "Done" },
       ]
-        .map((g) => ({ ...g, list: returns.filter((r) => returnGroup(r.status) === g.key) }))
+        .map((g) => ({ ...g, list: returns.filter((r) => returnGroup(r.status, r.kind) === g.key) }))
         .filter((g) => g.list.length > 0);
       body = groups.map((g) => (
         <section key={g.key}>

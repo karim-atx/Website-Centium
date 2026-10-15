@@ -25,11 +25,13 @@ import { Toggle } from "../../../components/ui/Toggle";
 import { useOnline } from "../../../hooks/useOnline";
 import { clock12 } from "../../../utils/time12";
 import {
+  fetchSalesSummary,
   fetchStoreOrders,
+  fetchTopProducts,
   type StoreOrder,
 } from "../../../services/store/orders";
+import type { Load } from "../../../services/store/backend";
 import {
-  STOCK_WRITES,
   deleteProduct,
   fetchStoreProducts,
   setProductVisible,
@@ -39,7 +41,7 @@ import {
 import { db } from "../../../services/store/backend";
 import { deleteDiscount } from "../../../services/business-discounts";
 import { useAnalytics } from "../analyticsContext";
-import { dayMonth, isoOf } from "../analyticsRange";
+import { dayMonth, isoOf, previousOf, type AnalyticsRange } from "../analyticsRange";
 import { AnHeaderRow, AnNumberBoxes } from "../members/anKit";
 import {
   CtaSpacer,
@@ -60,7 +62,9 @@ import {
   price,
   productSeries,
   sortRows,
+  withServerSales,
   type Headline,
+  type ServerSales,
   type ProductRow,
   type SortKey,
 } from "./productsModel";
@@ -85,6 +89,32 @@ const BASE = "/app/business/analytics/products";
 // says what they count (OURS).
 const ORDER_VALUE_NOTE =
   "Sales here are the value of orders placed and not cancelled, paid or not.";
+
+/** B11 store_sales_summary (range + the period before) and store_top_products for the index. */
+async function loadServerSales(
+  businessId: string,
+  range: AnalyticsRange,
+): Promise<Load<ServerSales>> {
+  const p = previousOf(range);
+  const [now, prev, top] = await Promise.all([
+    fetchSalesSummary(businessId, range.from, range.to),
+    range.compare ? fetchSalesSummary(businessId, p.from, p.to) : null,
+    fetchTopProducts(businessId, range.from, range.to, 5),
+  ]);
+  if (now.status !== "ok") return now;
+  if (top.status !== "ok") return top;
+  return {
+    status: "ok",
+    value: {
+      now: { units: now.value.units, sales: now.value.sales },
+      prev:
+        prev && prev.status === "ok"
+          ? { units: prev.value.units, sales: prev.value.sales }
+          : null,
+      top: top.value,
+    },
+  };
+}
 
 interface DiscountRow {
   id: string;
@@ -134,6 +164,11 @@ export default function ProductsSection() {
     businessId ? () => fetchStoreOrders(businessId) : null,
     0,
   );
+  const server = useLive<ServerSales>(
+    businessId ? () => loadServerSales(businessId, range) : null,
+    0,
+    `${range.from}:${range.to}:${range.compare}`,
+  );
   const discounts = useLive<DiscountRow[]>(
     businessId ? () => fetchDiscounts(businessId) : null,
     0,
@@ -156,8 +191,15 @@ export default function ProductsSection() {
   const orderList = orders.state.status === "ok" ? orders.state.value : null;
   const salesPending = orders.state.status === "pending";
   const h = useMemo(
-    () => (data ? headlineOf(data.products, orderList, range) : null),
-    [data, orderList, range],
+    () =>
+      data
+        ? withServerSales(
+            headlineOf(data.products, orderList, range),
+            server.state.status === "ok" ? server.state.value : null,
+            range,
+          )
+        : null,
+    [data, orderList, range, server.state],
   );
   useEffect(() => {
     if (p.status === "ok") setLoadedAt(new Date());
@@ -257,6 +299,8 @@ export default function ProductsSection() {
           void products.refresh();
           navigate(BASE, { replace: true });
         }}
+        writable={data!.stockShipped}
+        onChanged={() => void products.refresh()}
       />
     );
   } else if (sub === "discounts" || sub.startsWith("discounts/")) {
@@ -918,7 +962,10 @@ const ProductDetail: React.FC<{
   onEdit: () => void;
   onDuplicate: () => void;
   onDeleted: (msg: string) => void;
-}> = ({ row, orders, onEdit, onDuplicate, onDeleted }) => {
+  /** B11 visible is writable here (false on a database without B11). */
+  writable: boolean;
+  onChanged: () => void;
+}> = ({ row, orders, onEdit, onDuplicate, onDeleted, writable, onChanged }) => {
   const online = useOnline();
   const { range } = useAnalytics();
   const p = row.product;
@@ -1005,6 +1052,7 @@ const ProductDetail: React.FC<{
   };
   const hideShow = async () => {
     const r = await setProductVisible(p.id, !p.visible);
+    if (r.ok) onChanged();
     showToast(
       r.ok
         ? p.visible
@@ -1023,7 +1071,7 @@ const ProductDetail: React.FC<{
       icon: p.visible ? EyeOff : Eye,
       t: p.visible ? "Hide" : "Show",
       onClick: hideShow,
-      disabled: !online || !STOCK_WRITES,
+      disabled: !online || !writable,
     },
     {
       icon: Trash2,
@@ -1070,7 +1118,7 @@ const ProductDetail: React.FC<{
             </button>
           ))}
         </div>
-        {!STOCK_WRITES && (
+        {!writable && (
           <p className="pa-note" style={{ marginTop: 0, marginBottom: 8 }}>
             Hide and show are coming soon.
           </p>
@@ -1139,7 +1187,7 @@ const ProductDetail: React.FC<{
               {p.visible ? "Visible on Explore" : "Hidden from Explore"}
             </span>
             <span className="pa-drow-s">
-              {STOCK_WRITES
+              {writable
                 ? p.visible
                   ? "Clients can find and buy it."
                   : "Only you can see it."
@@ -1150,7 +1198,7 @@ const ProductDetail: React.FC<{
             size="business-lg"
             checked={p.visible}
             onChange={() => void hideShow()}
-            disabled={!STOCK_WRITES || !online}
+            disabled={!writable || !online}
             label="Visible on Explore"
           />
         </div>

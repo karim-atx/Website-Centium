@@ -1,22 +1,29 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Banknote, CircleX, MessageSquare, Package, RotateCcw } from "lucide-react";
-import { fetchReturn, setReturnStatus, type ReturnStatus } from "../../../services/store/orders";
+import { fetchStoreReturn, respondReturn, type ReturnStatus } from "../../../services/store/orders";
 import { returnAction, returnSteps } from "../../../services/store/orderSteps";
+import { storeErrorText } from "../../../services/store/mapping";
 import { dayClock, dayWord, money } from "../../../services/store/format";
 import { clock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, KitTip, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextButton, useOpsToast } from "./opsKit";
 import { STEP_CHIP, STEP_ICON, customerLabel, useLive } from "./storeShared";
 
 // OURS-OP1-store-return-detail · Requested > Approved > Received > Refunded,
-// or Denied. Refund in cash today; Whish refunds shown as coming (DECIDED).
+// or Denied (B11 respond_return). Received puts the stock back. The Refunded
+// step records the refund in Revenue (record_refund), so it needs `revenue`
+// as well as `store`; without it the CTA is off and a tip says why. Refund in
+// cash today; Whish refunds shown as coming (DECIDED). An exchange ends at
+// Received.
 
 export default function ReturnDetailPage() {
   const { returnId = "" } = useParams();
   const navigate = useNavigate();
   const online = useOnline();
-  const live = useLive(() => fetchReturn(returnId), 120000, returnId);
+  const access = useConsoleAccess();
+  const live = useLive(() => fetchStoreReturn(returnId), 120000, returnId);
   const [toast, showToast] = useOpsToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,28 +59,30 @@ export default function ReturnDetailPage() {
   }
 
   const customer = customerLabel(ret);
-  const action = returnAction(ret.status);
+  const action = returnAction(ret.status, ret.kind);
   const whish = ret.paymentMethod === "whish";
+  const exchange = ret.kind === "exchange";
+  const canRefund = access.meets("revenue");
+  const refundBlocked = action?.to === "refunded" && !canRefund;
 
   const move = async (to: ReturnStatus) => {
     setBusy(true);
     setError(null);
-    const r = await setReturnStatus(ret.id, to);
+    const r = await respondReturn(ret.id, to, to === "refunded" ? ret.refundAmount : null);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Return updates are coming soon." : "Couldn't update the return. Try again.");
+      setError(r.pending ? "Return updates are coming soon." : storeErrorText(r, "Couldn't update the return. Try again."));
       return false;
     }
-    const told = r.value.notified;
     const msg =
       to === "approved"
-        ? told ? `Return approved. ${customer} has been told.` : `Return approved. We couldn't message ${customer}.`
+        ? `Return approved. ${customer} has been told.`
         : to === "received"
           ? "Marked as received."
           : to === "refunded"
-            ? told ? `Refund recorded. ${customer} has been told.` : `Refund recorded. We couldn't message ${customer}.`
-            : told ? `Return denied. ${customer} has been told.` : `Return denied. We couldn't message ${customer}.`;
-    showToast(msg, returnAction(to) !== null);
+            ? `Refund recorded. ${customer} has been told.`
+            : `Return denied. ${customer} has been told.`;
+    showToast(msg, returnAction(to, ret.kind) !== null);
     setPop(null);
     await live.refresh();
     return true;
@@ -85,20 +94,22 @@ export default function ReturnDetailPage() {
     else void move(action.to);
   };
 
+  const units = ret.items.reduce((a, i) => a + i.qty, 0);
+
   return (
     <div>
       <OpsHeader back kicker="Returns" title={`Return on #${ret.orderNumber ?? ""}`} sub={`Requested ${dayClock(ret.requestedAt)}`} />
 
       <KitLabel label="Items" />
       <ListCard label="Items">
-        {ret.items.map((i, k) => (
-          <KitRow key={k} icon={Package} title={i.name} sub={i.variant ? `${i.variant} · qty ${i.qty}` : `qty ${i.qty}`} value={money(i.amount)} />
+        {ret.items.map((i) => (
+          <KitRow key={i.itemId} icon={Package} title={i.name} sub={`qty ${i.qty}`} value={money(i.amount)} />
         ))}
         {ret.orderNumber !== null && (
           <KitRow
             icon={Package}
             title={`Order #${ret.orderNumber}`}
-            sub={ret.orderPlacedAt ? `Placed ${dayWord(ret.orderPlacedAt)}` : undefined}
+            sub={[customer, ret.orderPlacedAt ? `Placed ${dayWord(ret.orderPlacedAt)}` : null].filter(Boolean).join(" · ")}
             onClick={() => navigate(`/app/business/orders/${ret.orderId}`)}
           />
         )}
@@ -106,16 +117,26 @@ export default function ReturnDetailPage() {
 
       <KitLabel label="Reason" />
       <ListCard label="Reason">
-        <KitRow icon={MessageSquare} title={ret.reason} sub={ret.note ?? undefined} subWrap />
+        <KitRow icon={MessageSquare} title={ret.reason} sub={exchange ? "Asked for an exchange" : "Asked for a refund"} subWrap />
       </ListCard>
 
-      <NumberBoxes
-        items={[
-          { v: money(ret.refundAmount), l: "Refund" },
-          whish ? { v: "Whish", l: "Refund by", d: "Coming soon", dTone: "warn" } : { v: "Cash", l: "Refund by" },
-        ]}
-      />
-      {whish && <KitTip>Whish refunds are coming soon. For now, refund in cash and mark it here.</KitTip>}
+      {exchange ? (
+        <NumberBoxes
+          items={[
+            { v: String(units), l: units === 1 ? "Item" : "Items" },
+            { v: "Exchange", l: "Asked for" },
+          ]}
+        />
+      ) : (
+        <NumberBoxes
+          items={[
+            { v: money(ret.refundAmount), l: "Refund" },
+            whish ? { v: "Whish", l: "Refund by", d: "Coming soon", dTone: "warn" } : { v: "Cash", l: "Refund by" },
+          ]}
+        />
+      )}
+      {whish && !exchange && <KitTip>Whish refunds are coming soon. For now, refund in cash and mark it here.</KitTip>}
+      {refundBlocked && <KitTip>Recording a refund needs the Revenue permission. Ask the owner to mark it refunded.</KitTip>}
 
       <KitLabel label="Status" />
       <ListCard label="Status">
@@ -135,7 +156,7 @@ export default function ReturnDetailPage() {
       {action && (
         <>
           <CtaSpacer />
-          <FixedCta label={action.label} onClick={onCta} busy={busy && pop === null} disabled={!online} error={pop === null ? error : null} />
+          <FixedCta label={action.label} onClick={onCta} busy={busy && pop === null} disabled={!online || refundBlocked} error={pop === null ? error : null} />
         </>
       )}
 
@@ -159,7 +180,7 @@ export default function ReturnDetailPage() {
         tone="primary"
         icon={Banknote}
         title={`Refund ${money(ret.refundAmount)} in cash?`}
-        body={`Hand the money back, then confirm. ${customer} is told by message.`}
+        body={`Hand the money back, then confirm. It's recorded in Revenue and ${customer} is told by message.`}
         action="Mark as refunded"
         keep="Not yet"
         busy={busy}

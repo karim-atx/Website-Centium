@@ -10,8 +10,8 @@ import { dayWord, money } from "../../services/store/format";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RetryLine, SkeletonCards, type ClientTone } from "./clientKit";
 
-// OURS-customer-store-orders · order history (Designed by us). Entry:
-// Profile › My orders; after checkout.
+// OURS-customer-store-orders · order history (Designed by us), B11 my_orders.
+// Entry: Profile › My orders; after checkout.
 
 /** The customer's words for an order's status. */
 export function customerStatus(o: Pick<StoreOrder, "status" | "fulfilment">): { label: string; tone: ClientTone } {
@@ -37,7 +37,7 @@ export default function MyOrdersPage() {
   const navigate = useNavigate();
   const { authUserId } = useApp();
   const [tab, setTab] = useState<"active" | "past">("active");
-  const live = useLive(authUserId ? () => fetchMyOrders(authUserId) : null, 120000, authUserId ?? "");
+  const live = useLive(authUserId ? () => fetchMyOrders() : null, 120000, authUserId ?? "");
   const s = live.state;
   const list = s.status === "ok" ? s.value.filter((o) => (tab === "active" ? isOpen(o.status) : !isOpen(o.status))) : [];
 

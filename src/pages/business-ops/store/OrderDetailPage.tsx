@@ -1,22 +1,26 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Banknote, CircleX, MapPin, Package, Truck } from "lucide-react";
-import { advanceOrder, cancelOrder, fetchOrder } from "../../../services/store/orders";
+import { Banknote, CircleX, MapPin, MessageSquare, Package, Truck } from "lucide-react";
+import { advanceOrder, cancelOrder, fetchStoreOrder, markOrderPaid } from "../../../services/store/orders";
 import { nextAction, orderSteps, stepToast } from "../../../services/store/orderSteps";
+import { storeErrorText } from "../../../services/store/mapping";
 import { dayClock, money, moneyShort } from "../../../services/store/format";
 import { fetchStoreInfo, type StoreInfo } from "../../../services/store/customer";
 import { clock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextButton, useOpsToast } from "./opsKit";
-import { STEP_CHIP, STEP_ICON, customerLabel, methodWord, useLive } from "./storeShared";
+import { STEP_CHIP, STEP_ICON, customerLabel, customerWho, methodWord, useLive } from "./storeShared";
 
 // OP1-005 / OP1-007 · Order detail, every step (OURS-OP1-store-order-steps)
 // and the cancel confirm (OP1-004, entry = the "Cancel order" text button).
+// B11: advance_order_status (pushes the customer), cancel_order (stock back;
+// a paid order stays paid and its refund is recorded in Revenue),
+// mark_order_paid (the store records the cash; Centium processes no money).
 
 export default function OrderDetailPage() {
   const { orderId = "" } = useParams();
   const online = useOnline();
-  const live = useLive(() => fetchOrder(orderId), 120000, orderId);
+  const live = useLive(() => fetchStoreOrder(orderId), 120000, orderId);
   const [toast, showToast] = useOpsToast();
   const [busy, setBusy] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -71,6 +75,7 @@ export default function OrderDetailPage() {
   const action = nextAction(order);
   const steps = orderSteps(order);
   const openish = action !== null;
+  const paid = order.paymentStatus === "paid";
   const subParts = [`${methodWord(order)} · placed ${dayClock(order.placedAt)}`];
   if (order.status === "completed" && order.completedAt) subParts.push(`completed ${clock12(order.completedAt)}`);
 
@@ -81,10 +86,23 @@ export default function OrderDetailPage() {
     const r = await advanceOrder(order.id, action.to);
     setBusy(false);
     if (!r.ok) {
-      setStepError(r.pending ? "Order updates are coming soon." : "Couldn't update the order. Try again.");
+      setStepError(r.pending ? "Order updates are coming soon." : storeErrorText(r, "Couldn't update the order. Try again."));
       return;
     }
-    showToast(stepToast(action, customer, r.value.notified), nextAction({ ...order, status: action.to }) !== null);
+    showToast(stepToast(action, customer), nextAction({ ...order, status: action.to }) !== null);
+    await live.refresh();
+  };
+
+  const doPaid = async () => {
+    setBusy(true);
+    setStepError(null);
+    const r = await markOrderPaid(order.id);
+    setBusy(false);
+    if (!r.ok) {
+      setStepError(r.pending ? "Marking orders paid is coming soon." : storeErrorText(r, "Couldn't mark the order paid. Try again."));
+      return;
+    }
+    showToast(`Order #${order.number} marked as paid in cash.`, action !== null);
     await live.refresh();
   };
 
@@ -94,23 +112,25 @@ export default function OrderDetailPage() {
     const r = await cancelOrder(order.id, null);
     setBusy(false);
     if (!r.ok) {
-      setCancelError(r.pending ? "Cancelling orders is coming soon." : "Couldn't cancel the order. Try again.");
+      setCancelError(r.pending ? "Cancelling orders is coming soon." : storeErrorText(r, "Couldn't cancel the order. Try again."));
       return;
     }
     setCancelOpen(false);
-    showToast(r.value.notified ? `Order #${order.number} cancelled. ${customer} has been told.` : `Order #${order.number} cancelled. We couldn't message ${customer}.`, false);
+    showToast(
+      r.value.paidToRefund ? `Order #${order.number} cancelled. ${customer} has been told. Record the cash refund in Revenue.` : `Order #${order.number} cancelled. ${customer} has been told.`,
+      false
+    );
     await live.refresh();
   };
 
-  // OP1-004 #5: the body by payment state.
-  const cancelBody =
-    order.paymentMethod === "whish"
-      ? `${customer} is told by message. Whish refunds are coming soon, so refund in cash for now. This can't be undone.`
-      : order.paidAt
-        ? `${customer} is refunded and told by message. This can't be undone.`
-        : `${customer} is told by message. This can't be undone.`;
+  // OP1-004 #5: the body by payment state. B11 refunds nothing itself: a paid
+  // order stays paid and the store records the cash it hands back.
+  const cancelBody = paid
+    ? `${customer} is told by message. It's paid, so hand back the cash and record the refund in Revenue. This can't be undone.`
+    : `${customer} is told by message. This can't be undone.`;
 
   const feeRule = store?.freeDeliveryOver != null ? `Free over ${moneyShort(store.freeDeliveryOver)}` : store?.deliveryTime ?? "Delivery";
+  const payLabel = order.paymentStatus === "refunded" ? "Refunded" : paid ? "Paid" : delivery ? "On delivery" : "At pickup";
 
   return (
     <div>
@@ -119,7 +139,7 @@ export default function OrderDetailPage() {
       <KitLabel label="Items" />
       <ListCard label="Items">
         {order.items.map((i) => (
-          <KitRow key={i.id} icon={Package} title={i.name} sub={i.variant ? `${i.variant} · qty ${i.qty}` : `qty ${i.qty}`} value={money(i.lineTotal)} />
+          <KitRow key={i.id} icon={Package} title={i.name} sub={`qty ${i.qty}`} value={money(i.lineTotal)} />
         ))}
       </ListCard>
 
@@ -127,26 +147,24 @@ export default function OrderDetailPage() {
       <ListCard label={delivery ? "Delivery" : "Pickup"}>
         {delivery ? (
           <>
-            <KitRow
-              icon={MapPin}
-              title={order.deliveryAddress ?? "Address removed"}
-              sub={[customer, order.customerPhone].filter(Boolean).join(" · ")}
-            />
+            <KitRow icon={MapPin} title={order.deliveryAddress ?? "Address removed"} sub={customerWho(order)} />
             <KitRow icon={Truck} title="Delivery fee" sub={feeRule} value={money(order.deliveryFee)} />
           </>
         ) : (
-          <KitRow icon={MapPin} title={store?.location ?? store?.name ?? "Your store"} sub={["Pickup", customer, order.customerPhone].filter(Boolean).join(" · ")} />
+          <KitRow icon={MapPin} title={store?.location ?? store?.name ?? "Your store"} sub={["Pickup", customerWho(order)].join(" · ")} />
         )}
+        {order.note && <KitRow icon={MessageSquare} title="Note from the customer" sub={order.note} subWrap />}
       </ListCard>
 
       <NumberBoxes
         items={[
           { v: money(order.total), l: "Total" },
-          order.paymentMethod === "whish"
-            ? { v: "Whish", l: "Paid" }
-            : { v: "Cash", l: order.paidAt ? "Paid" : delivery ? "On delivery" : "At pickup" },
+          order.paymentMethod === "whish" ? { v: "Whish", l: payLabel } : { v: "Cash", l: payLabel },
         ]}
       />
+      {order.status !== "cancelled" && order.paymentStatus === "pending" && (
+        <TextButton label="Mark as paid in cash" onClick={() => void doPaid()} disabled={busy || !online} />
+      )}
 
       <KitLabel label="Status" />
       <ListCard label="Status">
@@ -155,12 +173,12 @@ export default function OrderDetailPage() {
           const chip = st.tone === "bad" ? { label: "Cancelled", tone: "bad" as const } : STEP_CHIP[st.tone];
           return <KitRow key={st.key} icon={Icon} title={st.title} sub={st.at ? clock12(st.at) : st.hint ?? undefined} chip={chip} />;
         })}
-        {order.status === "cancelled" && (order.refundAmount !== null || order.paymentMethod === "whish") && (
+        {order.status === "cancelled" && order.paymentStatus !== "pending" && (
           <KitRow
             icon={Banknote}
             title="Refund"
-            sub={order.refundMethod === "whish" || order.paymentMethod === "whish" ? "Whish, coming soon" : `Cash${order.refundedAt ? `, ${clock12(order.refundedAt)}` : ""}`}
-            value={money(order.refundAmount ?? order.total)}
+            sub={order.paymentStatus === "refunded" ? "Recorded in Revenue" : "Paid in cash · record the refund in Revenue"}
+            value={money(order.total)}
           />
         )}
       </ListCard>
@@ -172,6 +190,11 @@ export default function OrderDetailPage() {
           <CtaSpacer />
           <FixedCta label={action.label} onClick={doStep} busy={busy && !cancelOpen} disabled={!online} error={stepError} />
         </>
+      )}
+      {!action && stepError && (
+        <p role="alert" className="text-[12px] font-semibold text-status-high" style={{ marginTop: 8 }}>
+          {stepError}
+        </p>
       )}
 
       <KitPop

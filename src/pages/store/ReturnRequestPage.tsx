@@ -1,29 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Package, Square, SquareCheck } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { PinnedCta } from "../../components/ui/PinnedCta";
-import { fetchOrder, RETURN_REASONS, requestReturn } from "../../services/store/orders";
+import { fetchMyOrder, RETURN_REASONS, requestReturn, type ReturnKind } from "../../services/store/orders";
+import { fetchStoreInfo } from "../../services/store/customer";
+import { storeErrorText } from "../../services/store/mapping";
 import { money } from "../../services/store/format";
 import { useOnline } from "../../hooks/useOnline";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, QtyStepper, RadioRow, RetryLine, Section, SkeletonCards, Tile } from "./clientKit";
 
 // OURS-customer-store-return-request (Designed by us). Pick the items and how
-// many, a reason from our short list (V6-158), an optional note.
+// many, a reason from our short list (V6-158), an optional note. B11
+// request_return(p_order_id, [{item_id, quantity}], p_kind, p_reason): the
+// note is sent inside the reason ("Damaged: {note}", 300 at most); Refund or
+// Exchange is asked only when the store allows exchanges. Only an order
+// completed in the last 30 days with no open return can be returned.
 
 export default function ReturnRequestPage() {
   const { orderId = "" } = useParams();
   const navigate = useNavigate();
   const online = useOnline();
-  const live = useLive(() => fetchOrder(orderId), 0, orderId);
+  const live = useLive(() => fetchMyOrder(orderId), 0, orderId);
+  const [kind, setKind] = useState<ReturnKind>("refund");
+  const [exchanges, setExchanges] = useState(false);
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const s = live.state;
-  const o = s.status === "ok" ? s.value : null;
+  const o = s.status === "ok" ? s.value?.order ?? null : null;
+
+  useEffect(() => {
+    if (!o?.businessId) return;
+    let alive = true;
+    void fetchStoreInfo(o.businessId).then((r) => alive && r.status === "ok" && setExchanges(!!r.value?.allowExchanges));
+    return () => {
+      alive = false;
+    };
+  }, [o?.businessId]);
 
   if (s.status === "loading") {
     return (
@@ -33,11 +50,11 @@ export default function ReturnRequestPage() {
       </div>
     );
   }
-  if (!o || o.status !== "completed") {
+  if (!o || !o.canReturn) {
     return (
       <div>
         <PageHeader title="Request a return" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this order." onRetry={live.reload} /> : <ClientEmpty icon={Package} title="Returns aren't open for this order" line="You can ask for a return once an order is delivered or picked up." />}
+        {s.status === "error" ? <RetryLine text="Couldn't load this order." onRetry={live.reload} /> : <ClientEmpty icon={Package} title="Returns aren't open for this order" line="You can ask for a return within 30 days of an order being delivered or picked up, one return at a time." />}
       </div>
     );
   }
@@ -50,10 +67,11 @@ export default function ReturnRequestPage() {
     if (!reason) return;
     setBusy(true);
     setError(null);
-    const r = await requestReturn(o.id, items.map(([orderItemId, qty]) => ({ orderItemId, qty })), reason, note);
+    const text = note.trim() ? `${reason}: ${note.trim()}`.slice(0, 300) : reason;
+    const r = await requestReturn(o.id, items.map(([itemId, qty]) => ({ itemId, qty })), exchanges ? kind : "refund", text);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Returns are coming soon." : "Couldn't send your request. Try again.");
+      setError(r.pending ? "Returns are coming soon." : storeErrorText(r, "Couldn't send your request. Try again."));
       return;
     }
     navigate(`/app/store/orders/${o.id}?returned=1`, { replace: true });
@@ -91,6 +109,17 @@ export default function ReturnRequestPage() {
         </ClientCard>
       </Section>
 
+      {exchanges && (
+        <Section label="Refund or exchange?">
+          <ClientCard>
+            <div role="radiogroup" aria-label="Refund or exchange">
+              <RadioRow selected={kind === "refund"} onSelect={() => setKind("refund")} title="Refund" sub="Your money back, in cash at the store" />
+              <RadioRow selected={kind === "exchange"} onSelect={() => setKind("exchange")} title="Exchange" sub="Swap it at the store" />
+            </div>
+          </ClientCard>
+        </Section>
+      )}
+
       <Section label="Why?">
         <ClientCard>
           <div role="radiogroup" aria-label="Reason">
@@ -114,7 +143,7 @@ export default function ReturnRequestPage() {
         />
       </Section>
 
-      {amount > 0 && (
+      {amount > 0 && kind === "refund" && (
         <p className="text-[12.5px] font-medium text-charcoal-faint" style={{ marginTop: 12 }}>
           {`Refund if approved: ${money(amount)}, in cash at the store.`}
         </p>
