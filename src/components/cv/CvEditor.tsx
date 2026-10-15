@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronRight, FileText, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { LicenceStatusBadge, RejectionNote } from "./CvBadges";
+import { LicencePublishRow } from "./LicencePublish";
 import {
   AwardSheet,
   EducationSheet,
@@ -27,9 +28,9 @@ import {
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 import { checkText } from "../../services/professional-cv/validate";
 
-// The professional's CV editor, shared by onboarding ("Your professional
-// background": headline, licences, experience, education, skills and
-// languages) and Profile › My CV (every section). Each section lists what is
+// The professional's CV editor, Profile › My CV (every section). Onboarding's
+// "Your professional background" builds its collapsibles from the same sheets
+// (pages/onboarding/pro/ProBackgroundStep). Each section lists what is
 // stored; tapping an entry edits it, "+ Add" adds one, and every change is
 // written as it is made.
 
@@ -111,8 +112,7 @@ const HeadlineField: React.FC<{
   userId: string;
   cv: MyCv;
   setCv: React.Dispatch<React.SetStateAction<MyCv | null>>;
-  compactLabel?: boolean;
-}> = ({ userId, cv, setCv, compactLabel }) => {
+}> = ({ userId, cv, setCv }) => {
   const [value, setValue] = useState(cv.profile.headline ?? "");
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -160,14 +160,7 @@ const HeadlineField: React.FC<{
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <label
-          htmlFor="cv-headline"
-          className={
-            compactLabel
-              ? "text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em]"
-              : "text-[15px] font-bold text-charcoal"
-          }
-        >
+        <label htmlFor="cv-headline" className="text-[15px] font-bold text-charcoal">
           Headline
         </label>
         {state !== "idle" && (
@@ -203,7 +196,8 @@ const HeadlineField: React.FC<{
 };
 
 export const CvEditor: React.FC<{
-  variant: "onboarding" | "full";
+  /** Profile › My CV. (The onboarding variant was replaced by the v6 Background step, pro/ProBackgroundStep.) */
+  variant: "full";
   userId: string;
   cv: MyCv;
   setCv: React.Dispatch<React.SetStateAction<MyCv | null>>;
@@ -212,7 +206,6 @@ export const CvEditor: React.FC<{
   const [open, setOpen] = useState<Open>(null);
   const [list, setList] = useState<ListKey | null>(null);
   const [volError, setVolError] = useState<string | null>(null);
-  const full = variant === "full";
   const close = () => setOpen(null);
 
   // A saved or deleted row replaces or leaves the list; a licence also brings
@@ -233,6 +226,8 @@ export const CvEditor: React.FC<{
     setCv((c) => (c ? { ...c, [key]: (c[key] as { id: string }[]).filter((r) => r.id !== id) } : c));
 
   const licences = cv.licences;
+  const licenceChanged = (l: Licence) =>
+    setCv((c) => (c ? { ...c, licences: c.licences.map((x) => (x.id === l.id ? l : x)) } : c));
   const experience = byRecency(cv.experience, true);
   const education = byRecency(cv.education, false);
 
@@ -257,37 +252,17 @@ export const CvEditor: React.FC<{
 
   return (
     <div className="space-y-3.5">
-      <HeadlineField userId={userId} cv={cv} setCv={setCv} compactLabel={!full} />
+      <HeadlineField userId={userId} cv={cv} setCv={setCv} />
 
       {/* Licences & certifications */}
       <section className={clsx(CARD, "space-y-2.5")}>
         <SectionHead
           title="Licences & certifications"
           addLabel="Add licence"
-          onAdd={full ? () => setOpen({ kind: "licence", entry: null }) : undefined}
-          count={!full && licences.length > 0 ? `${licences.length} added` : undefined}
+          onAdd={() => setOpen({ kind: "licence", entry: null })}
         />
         {licences.map((l, i) => {
           const status = licenceStatus(l, cv.reviews);
-          if (!full) {
-            return (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() => setOpen({ kind: "licence", entry: l })}
-                className="tap w-full min-h-[56px] flex items-center gap-2.5 rounded-xl bg-cream-soft px-3 py-2.5 text-left"
-              >
-                <span className="w-9 h-9 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0">
-                  <FileText size={18} className="text-primary-deep-text" />
-                </span>
-                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-[13.5px] font-semibold text-charcoal break-words">{licenceTitle(l)}</span>
-                  <span className="text-xs text-charcoal-soft break-words">{licenceLine(l)}</span>
-                </span>
-                <LicenceStatusBadge status={status} />
-              </button>
-            );
-          }
           return (
             <EntryRow
               key={l.id}
@@ -296,21 +271,21 @@ export const CvEditor: React.FC<{
               sub={licenceLine(l)}
               onClick={() => setOpen({ kind: "licence", entry: l })}
               right={<LicenceStatusBadge status={status} />}
-              after={status.kind === "rejected" ? <RejectionNote reason={status.reason} /> : undefined}
+              after={
+                <div className="flex flex-col gap-2">
+                  {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
+                  <LicencePublishRow licence={l} onChanged={licenceChanged} />
+                </div>
+              }
             />
           );
         })}
-        {full && licences.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
-        {!full && (
-          <button type="button" onClick={() => setOpen({ kind: "licence", entry: null })} className={ADD_DASHED}>
-            + Add licence
-          </button>
-        )}
+        {licences.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
       </section>
 
       {/* Experience */}
       <section className={clsx(CARD, "space-y-2.5")}>
-        <SectionHead title="Experience" addLabel="Add experience" onAdd={full ? () => setOpen({ kind: "experience", entry: null }) : undefined} />
+        <SectionHead title="Experience" addLabel="Add experience" onAdd={() => setOpen({ kind: "experience", entry: null })} />
         {experience.map((e, i) => (
           <EntryRow
             key={e.id}
@@ -320,17 +295,12 @@ export const CvEditor: React.FC<{
             onClick={() => setOpen({ kind: "experience", entry: e })}
           />
         ))}
-        {full && experience.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
-        {!full && (
-          <button type="button" onClick={() => setOpen({ kind: "experience", entry: null })} className={ADD_DASHED}>
-            + Add experience
-          </button>
-        )}
+        {experience.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
       </section>
 
       {/* Education */}
       <section className={clsx(CARD, "space-y-2.5")}>
-        <SectionHead title="Education" addLabel="Add education" onAdd={full ? () => setOpen({ kind: "education", entry: null }) : undefined} />
+        <SectionHead title="Education" addLabel="Add education" onAdd={() => setOpen({ kind: "education", entry: null })} />
         {education.map((e, i) => {
           const title = [e.degree, e.field].filter(Boolean).join(" ");
           return (
@@ -343,12 +313,7 @@ export const CvEditor: React.FC<{
             />
           );
         })}
-        {full && education.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
-        {!full && (
-          <button type="button" onClick={() => setOpen({ kind: "education", entry: null })} className={ADD_DASHED}>
-            + Add education
-          </button>
-        )}
+        {education.length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
       </section>
 
       {/* Skills and languages */}
@@ -376,7 +341,7 @@ export const CvEditor: React.FC<{
         </button>
       </section>
 
-      {full && (
+      {variant === "full" && (
         <section className={clsx(CARD, "!py-1")}>
           {(
             [

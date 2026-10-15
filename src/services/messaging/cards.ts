@@ -1,6 +1,9 @@
-// The two chat cards of Stage A3 (Database 20261101010000_hire_chat_cards):
+// The chat cards: Stage A3's two (Database 20261101010000_hire_chat_cards),
 // MO1.2.1.3.7 "Rami's plans" (plans_offer) and MO1.2.1.3.8 "Plan confirmed"
-// (hire_confirmed). Pure, so it is tested without a database (cards.test.ts).
+// (hire_confirmed), and B8's payment_reminder (send_payment_reminder, sent as
+// the business into the member's business thread; payload names the
+// business so it reads as from the gym). Pure, so it is tested without a
+// database (cards.test.ts).
 //
 // A CARD IS A DECORATION ON AN ORDINARY MESSAGE. Every card row has a real
 // message beside it carrying plain text ("I have some plans that might suit
@@ -36,6 +39,18 @@ export type MessageCard =
       billing: CardBilling;
       /** "2026-10-31", or null for a plan with no end date. */
       expiresOn: string | null;
+    }
+  | {
+      kind: "payment_reminder";
+      businessName: string;
+      amount: number;
+      /** ISO 4217, e.g. "USD". */
+      currency: string;
+      /** "cash", "card", … (venue_payment_method), or null. */
+      method: string | null;
+      /** "2026-10-01": the due date (a snapshot; the overdue count is not shown, it would go stale). */
+      dueOn: string;
+      sourceKind: string | null;
     };
 
 const BILLINGS: readonly string[] = ["daily", "monthly", "annually"];
@@ -96,7 +111,31 @@ export function parseCard(raw: unknown): MessageCard | null {
     const expiresOn = typeof p.expires_on === "string" && /^\d{4}-\d{2}-\d{2}/.test(p.expires_on) ? p.expires_on.slice(0, 10) : null;
     return { kind: "hire_confirmed", hireId, planName, price, billing, expiresOn };
   }
+  if (row.kind === "payment_reminder") {
+    const amount = asPrice(p.amount);
+    const dueOn = typeof p.due_on === "string" && /^\d{4}-\d{2}-\d{2}/.test(p.due_on) ? p.due_on.slice(0, 10) : null;
+    if (amount === null || !dueOn) return null;
+    return {
+      kind: "payment_reminder",
+      businessName: asText(p.business_name) ?? "Your gym or studio",
+      amount,
+      currency: asText(p.currency)?.toUpperCase() ?? "USD",
+      method: asText(p.method),
+      dueOn,
+      sourceKind: asText(p.source_kind),
+    };
+  }
   return null;
+}
+
+/** "$95" / "$12.50" in the payment's own currency; an unknown code falls back to "95 XYZ". */
+export function cardMoney(amount: number, currency: string): string {
+  const digits = Number.isInteger(amount) ? 0 : 2;
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(amount);
+  } catch {
+    return `${amount.toFixed(digits)} ${currency}`;
+  }
 }
 
 /** "$120/mo" (MO1.2.1.3.7's own sample): the same label the hire sheet uses, so the two cannot disagree. */
@@ -126,6 +165,7 @@ export function cardDate(isoOrDate: string): string {
  *   the record of a confirmed payment and is posted by the server.
  */
 export function cardAllows(card: MessageCard): { copy: boolean; forward: boolean; edit: boolean; unsend: boolean } {
+  // A payment reminder is the business's record of a chase: nothing to copy, forward, edit or withdraw.
   return { copy: false, forward: false, edit: false, unsend: card.kind === "plans_offer" };
 }
 

@@ -8,16 +8,20 @@ import {
   type PublicOffering,
 } from "../../services/business-offerings";
 import { fetchMarketplaceVenues, type MarketplaceVenue } from "../../services/marketplace";
+import { recordListingEvent } from "../../services/marketplace/listingEvents";
+import { parseListingSource } from "../../services/marketplace/listingLogic";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, type LucideIcon } from "lucide-react";
+import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, ShoppingBag, type LucideIcon } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
 import { initials } from "../../components/professionals/typeColour";
 import { TYPE_CATEGORY, typeLabel } from "./venueTypes";
 import { ClassPage } from "./ClassPage";
+import { GymReviews } from "../../components/marketplace/GymReviews";
+import { businessHasVenue } from "../../services/venues";
 import { GymPage } from "./GymPage";
 
 type FilterMode = "rating" | "proximity" | "discount";
@@ -37,7 +41,7 @@ const filterOptions: { value: FilterMode; label: string }[] = [
 export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
   const [params] = useSearchParams();
-  if (category === "business") return <BusinessPage key={params.get("id") ?? ""} businessId={params.get("id") ?? ""} />;
+  if (category === "business") return <BusinessPage key={params.get("id") ?? ""} businessId={params.get("id") ?? ""} source={params.get("src")} />;
   // Handover-complete pass: the class page (MO1.4.4) and the gym page
   // (MO1.4.2.1) on the same route, as the business page.
   if (category === "class") return <ClassPage key={params.get("id") ?? ""} classId={params.get("id") ?? ""} />;
@@ -217,13 +221,17 @@ function OfferingCard({
  * category page each of its listings — or its business type — belongs to, so
  * every category page stays reachable now the "More categories" grid is gone.
  *
- * NOT HERE, because nothing stores it: a logo, ratings or reviews, opening
- * hours, contact details, distance (B25, B26).
+ * NOT HERE, because nothing stores it: a logo, opening hours, contact
+ * details, distance (B25, B26). Reviews: a business with no venue lists its
+ * own here (B14 follow-up business_reviews_public, the gym reviews' card
+ * and language); a business with a venue is reviewed on its venue's page.
  */
-function BusinessPage({ businessId }: { businessId: string }) {
+function BusinessPage({ businessId, source }: { businessId: string; source: string | null }) {
   const [venue, setVenue] = useState<MarketplaceVenue | null | undefined>(undefined);
   const [offerings, setOfferings] = useState<Offering[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // B14 RP-01: a business with no venue is reviewed here (write_business_review).
+  const [venueLess, setVenueLess] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,15 +244,21 @@ function BusinessPage({ businessId }: { businessId: string }) {
         setVenue(null);
       } else {
         // Businesses only: a gym has no listings and its page waits on MO1.4.2.1.
-        setVenue(v.venues.find((x) => x.kind === "business" && x.venueId === businessId) ?? null);
+        const found = v.venues.find((x) => x.kind === "business" && x.venueId === businessId) ?? null;
+        setVenue(found);
+        // B13 MK-07: the profile opened, with where it was opened from
+        // (&src=…; a link from anywhere else is 'direct'). Once per session.
+        if (found) recordListingEvent({ businessId: found.venueId, kind: "profile_open", source: parseListingSource(source) });
       }
       setOfferings(o.ok ? o.offerings : []);
       if (!o.ok && v.ok) setError("Couldn't load this business's listings right now.");
+      const has = await businessHasVenue(businessId);
+      if (!cancelled) setVenueLess(has === false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [businessId]);
+  }, [businessId, source]);
 
   if (venue === undefined) {
     return (
@@ -311,6 +325,24 @@ function BusinessPage({ businessId }: { businessId: string }) {
         </p>
       )}
 
+      {/* v6 Batch 4 (V6-49, designed by us): a store's shop, cart and checkout,
+          and booking for a Wellness Service (the storefront links to it). */}
+      {TYPE_CATEGORY[venue.venueType] && (
+        <Link
+          to={`/app/store/${venue.venueId}`}
+          className="tap mb-4 flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 no-underline"
+        >
+          <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
+            <ShoppingBag size={17} className="text-primary-dark" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-charcoal truncate">Shop</span>
+            <span className="block text-[12px] text-charcoal-faint truncate">{venue.venueType === "wellness_service" ? "Products and appointments" : "Products, pickup and delivery"}</span>
+          </span>
+          <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
+        </Link>
+      )}
+
       <p className="section-label text-charcoal-faint pt-2 mb-2.5">Listings</p>
       <div className="space-y-2.5 mb-4">
         {offerings === null ? (
@@ -323,6 +355,18 @@ function BusinessPage({ businessId }: { businessId: string }) {
           ))
         )}
       </div>
+
+      {/* B14 RP-01 + follow-up: a venue-less business's reviews (business_reviews_public,
+          signed out too) in the gym reviews' card and language; the author's own
+          is edited (my_reviews, edit_gym_review / delete_gym_review). */}
+      {venueLess && (
+        <>
+          <p className="section-label text-charcoal-faint pt-2 mb-0">Reviews</p>
+          <div className="mb-4">
+            <GymReviews businessId={venue.venueId} gymName={venue.name} summary={null} onChanged={() => undefined} pinned={false} />
+          </div>
+        </>
+      )}
 
       {categoryIds.length > 0 && (
         <>

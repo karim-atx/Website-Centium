@@ -1,7 +1,10 @@
-﻿import React, { useId } from "react";
+import React, { useContext, useId } from "react";
 import clsx from "clsx";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Toggle } from "./Toggle";
+import { BizRow } from "../business-more/kit";
+
+import { SettingsRowVariant } from "./settingsRowVariant";
 
 // Mobile v5.1 handover, MO1.8 Settings and its sub-pages (Foundations 2.3,
 // 2.4), restyled to the v6 Part B MO1.8 table (the user's colour rule
@@ -137,6 +140,25 @@ export const SettingsRow: React.FC<RowProps> = ({
   toggle,
   iconTone = "accent",
 }) => {
+  const variant = useContext(SettingsRowVariant);
+  if (variant === "business") {
+    return (
+      <BizRow
+        id={id}
+        className={className}
+        icon={Icon}
+        title={title}
+        desc={subtitle}
+        ariaLabel={srDescription ? `${title}. ${srDescription}` : undefined}
+        value={value ?? undefined}
+        onClick={onClick}
+        toggle={toggle}
+        danger={destructive}
+        dim={dimmed}
+        chevron={onClick ? value === undefined || value === null : undefined}
+      />
+    );
+  }
   const body = (
     <>
       {(Icon || tile) && (

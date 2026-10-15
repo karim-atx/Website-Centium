@@ -1,6 +1,25 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Copy, MapPin, Navigation } from "lucide-react";
+import {
+  Accessibility,
+  Baby,
+  Bath,
+  ChevronLeft,
+  Coffee,
+  Copy,
+  Droplet,
+  Flame,
+  Lock,
+  MapPin,
+  Navigation,
+  ParkingCircle,
+  Shirt,
+  ShowerHead,
+  Waves,
+  Wifi,
+  type LucideIcon,
+} from "lucide-react";
+import { AMENITY_LABELS, knownAmenities, type AmenityKey } from "../../services/marketplace/listingLogic";
 import { VenueImage } from "../../components/marketplace/VenueImage";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
@@ -79,18 +98,25 @@ export const LOGO_SHADOW = "dark:shadow-none shadow-[0_2px_12px_rgba(0,0,0,0.12)
  * over the whole hero; with none, or one that fails to load, the hero draws
  * its placeholder picture. The page's 24 pt top padding and the safe area are
  * cancelled so the hero starts at y 0.
+ *
+ * B13 (MK-03, PB-O-56): a gym page passes `photos` instead (the cover first,
+ * then its approved photos): they swipe across the hero, and with two or more
+ * the pager shows (MO1.4.2.1 #9-10).
  */
 export function DetailHero({
   height,
   onBack,
   colors,
   coverUrl = null,
+  photos,
   children,
 }: {
   height: 200 | 240;
   onBack: () => void;
   colors: { base: string; band: string };
   coverUrl?: string | null;
+  /** B13: the hero's pictures in order; when given, replaces `coverUrl`. */
+  photos?: string[];
   children?: React.ReactNode;
 }) {
   return (
@@ -99,7 +125,7 @@ export function DetailHero({
       style={{ height: `calc(env(safe-area-inset-top) + ${height}px)` }}
     >
       <HeroPlaceholder height={height} base={colors.base} band={colors.band} />
-      <VenueImage srcs={[coverUrl]} className="absolute inset-0 w-full h-full" />
+      {photos ? <HeroGallery photos={photos} /> : <VenueImage srcs={[coverUrl]} className="absolute inset-0 w-full h-full" />}
       <button
         type="button"
         onClick={onBack}
@@ -110,6 +136,101 @@ export function DetailHero({
       </button>
       {children}
     </div>
+  );
+}
+
+/**
+ * MO1.4.2.1 #9-10 (PB-O-56, B13 MK-03): the hero's photos side by side,
+ * swiped with scroll snapping, and the pager centred 12 above the hero's
+ * foot: the current photo a 16 × 6 pill, the others 6 × 6 dots, 5 apart,
+ * r9999; pill #FFFFFF (dark #1C1F28, the card colour), dots #FFFFFF@55%
+ * (the frame's dark #FFFFFF@8% is flagged *: kept at 55%). Hidden with one
+ * photo. A photo that fails to load drops out; with none left the
+ * placeholder underneath shows.
+ */
+function HeroGallery({ photos }: { photos: string[] }) {
+  const [failed, setFailed] = useState<string[]>([]);
+  const [index, setIndex] = useState(0);
+  const list = photos.filter((u) => !failed.includes(u));
+  const at = Math.min(index, Math.max(0, list.length - 1));
+  if (list.length === 0) return null;
+  return (
+    <>
+      <div
+        data-hero-gallery=""
+        className="absolute inset-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const i = el.clientWidth ? Math.round(el.scrollLeft / el.clientWidth) : 0;
+          if (i !== index) setIndex(i);
+        }}
+      >
+        {list.map((u) => (
+          <img
+            key={u}
+            src={u}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            draggable={false}
+            onError={() => setFailed((f) => (f.includes(u) ? f : [...f, u]))}
+            className="w-full h-full shrink-0 snap-start object-cover"
+          />
+        ))}
+      </div>
+      {list.length > 1 && (
+        <div aria-hidden data-photo-pager="" className="absolute inset-x-0 bottom-3 flex justify-center gap-[5px] pointer-events-none">
+          {list.map((u, i) => (
+            <span key={u} className={`h-1.5 rounded-full ${i === at ? "w-4 bg-cream-card" : "w-1.5 bg-white/55"}`} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** One Lucide icon per amenity_vocabulary() key (the frame's list for showers, lockers, parking, sauna, Wi-Fi; OURS for the rest). */
+const AMENITY_ICON: Record<AmenityKey, LucideIcon> = {
+  showers: ShowerHead,
+  lockers: Lock,
+  changing_rooms: Shirt,
+  towels: Bath,
+  parking: ParkingCircle,
+  wifi: Wifi,
+  water: Droplet,
+  cafe: Coffee,
+  sauna: Flame,
+  pool: Waves,
+  childcare: Baby,
+  accessible: Accessibility,
+};
+
+/**
+ * MO1.4.2.1 #35-36 (PB-O-51, B13 MK-02): the venue's amenities as chips that
+ * wrap, 6 apart both ways. Chip 32 tall, pad 0 11, r10, 12/18 600 #241F1B on
+ * #F7F7FA (dark #F5F3FA on #242730, the frame's dark fill * being the light
+ * value, O3); icon 14 / 1.75 #7D67D9 (dark #9A8CD6) 6 before the label.
+ * Nothing renders for a venue with none.
+ */
+export function AmenityChips({ values, className = "" }: { values: readonly string[]; className?: string }) {
+  const keys = knownAmenities(values);
+  if (keys.length === 0) return null;
+  return (
+    <ul className={`m-0 p-0 list-none flex flex-wrap gap-1.5 ${className}`} data-amenities="">
+      {keys.map((k) => {
+        const Icon = AMENITY_ICON[k];
+        return (
+          <li
+            key={k}
+            data-amenity={k}
+            className="h-8 px-[11px] rounded-[10px] inline-flex items-center gap-1.5 text-[12px] leading-[18px] font-semibold text-charcoal bg-[#F7F7FA] dark:bg-cream-soft"
+          >
+            <Icon size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-th-7d67d9 dark:text-primary-accent" />
+            {AMENITY_LABELS[k]}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -288,6 +409,7 @@ export function DirectionsMenu({
   address,
   coords,
   onCopied,
+  onMapOpen,
 }: {
   open: boolean;
   onClose: () => void;
@@ -295,6 +417,8 @@ export function DirectionsMenu({
   address: string | null;
   coords: { lat: number; lng: number } | null;
   onCopied: (note: string) => void;
+  /** B13 MK-07: a maps app was opened for the venue (map_open). */
+  onMapOpen?: () => void;
 }) {
   const dest = coords ? `${coords.lat},${coords.lng}` : (address ?? "");
   type Dir = "apple" | "google" | "copy";
@@ -307,6 +431,7 @@ export function DirectionsMenu({
       );
       return;
     }
+    onMapOpen?.();
     const q = encodeURIComponent(dest);
     const url = d === "apple" ? `https://maps.apple.com/?daddr=${q}` : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
     window.open(url, "_blank", "noopener,noreferrer");

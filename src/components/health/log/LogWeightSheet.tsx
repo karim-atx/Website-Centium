@@ -9,6 +9,7 @@ import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../..
 import { dayLabel, FieldLabel, isoDay, MeasuredOnPopup, WhenField, partBSheetTone } from "./LogSheetParts";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useLogQueueFlush } from "./useLogQueue";
+import { formatShortDate } from "../../../utils/date";
 
 // HE1.7.1 "Log weight" (health-b-handover.md 3291-3450): "Last weigh-in",
 // a kg wheel with one decimal, When, pinned "Save {n} kg". Replaces the Add
@@ -132,7 +133,7 @@ export const LogWeightSheet: React.FC<{
             <strong className="text-charcoal" style={{ fontWeight: 700 }}>
               {last.toFixed(1)} kg
             </strong>{" "}
-            on {fromIso(lastDay).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}
+            on {formatShortDate(fromIso(lastDay), { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}
           </p>
         )}
 

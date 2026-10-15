@@ -9,7 +9,7 @@ import type { LucideIcon } from "lucide-react";
 
 // V8 (QA 8.0): "Replace the goals emoji with that of the 'what are you
 // working towards?' logos found in the Client UI onboarding" — same icon
-// set as GoalStep.tsx's own list, one-to-one by goal value.
+// set as the old onboarding goal list, one-to-one by goal value.
 const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
   { value: "lose_weight", label: "Lose weight", icon: Scale },
   { value: "build_muscle", label: "Build muscle", icon: Dumbbell },
@@ -24,7 +24,7 @@ const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
 // QA 13.0: "Changing goals and activity while the recovery sensitive
 // experience is turned on should use the goals in onboarding adapted to
 // recovery sensitive experience" — same `triggeringGoals` filter as
-// GoalStep.tsx's onboarding step, so editing goals later stays consistent
+// the old onboarding goal step, so editing goals later stays consistent
 // with what recovery-sensitive users saw at sign-up.
 const triggeringGoals: Goal[] = ["lose_weight"];
 

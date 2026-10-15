@@ -8,7 +8,7 @@ import { Armchair, Footprints, Bike, Flame, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // V7 (QA 7.0): "Have a button called activity level under goals similar to
-// the one found in the client sign up" — same options as ActivityStep.
+// the one found in the client sign up" — same options as the old onboarding activity step.
 const levels: { value: ActivityLevel; label: string; desc: string; icon: LucideIcon }[] = [
   { value: "sedentary", label: "Sedentary", desc: "Little to no exercise", icon: Armchair },
   { value: "light", label: "Lightly active", desc: "1–3 workouts a week", icon: Footprints },

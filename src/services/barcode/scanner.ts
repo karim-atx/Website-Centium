@@ -1,5 +1,6 @@
 // The camera half of barcode scanning: reads product barcodes (EAN-13, EAN-8,
-// UPC-A, UPC-E) from a live <video>.
+// UPC-A, UPC-E) from a live <video>, or QR codes (the gym member pass, v6
+// Front desk scan, OURS-OP1-front-desk-scan W2) when asked for kind "qr".
 //
 // NATIVE FIRST. BarcodeDetector (Chrome on Android, Safari 17+ behind its own
 // support list) decodes in the platform and costs nothing to load. Where it
@@ -7,7 +8,17 @@
 // over — imported only then, with its .wasm served from our own origin, so a
 // phone that has the native detector never downloads it.
 
-const NATIVE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e"] as const;
+/** What a reader looks for: retail barcodes (the food scanner) or QR codes (member passes). */
+export type CodeKind = "retail" | "qr";
+
+const NATIVE_FORMATS: Record<CodeKind, readonly string[]> = {
+  retail: ["ean_13", "ean_8", "upc_a", "upc_e"],
+  qr: ["qr_code"],
+};
+const ZXING_FORMATS = {
+  retail: ["EAN-13", "EAN-8", "UPC-A", "UPC-E"],
+  qr: ["QRCode"],
+} as const;
 
 /**
  * Whether this browser can show a camera at all: a secure context and
@@ -24,7 +35,7 @@ export function canUseBarcodeScanner(): boolean {
 
 export interface FrameReader {
   engine: "native" | "zxing";
-  /** The raw text of the first retail barcode in view, or null. */
+  /** The raw text of the first code of the asked-for kind in view, or null. */
   read: (video: HTMLVideoElement) => Promise<string | null>;
 }
 
@@ -36,13 +47,13 @@ interface NativeDetectorCtor {
   getSupportedFormats(): Promise<string[]>;
 }
 
-async function nativeReader(): Promise<FrameReader | null> {
+async function nativeReader(kind: CodeKind): Promise<FrameReader | null> {
   const Ctor = (globalThis as { BarcodeDetector?: NativeDetectorCtor }).BarcodeDetector;
   if (!Ctor) return null;
   try {
     const supported = await Ctor.getSupportedFormats();
-    const formats = NATIVE_FORMATS.filter((f) => supported.includes(f));
-    if (!formats.includes("ean_13")) return null;
+    const formats = NATIVE_FORMATS[kind].filter((f) => supported.includes(f));
+    if (!formats.includes(kind === "qr" ? "qr_code" : "ean_13")) return null;
     const detector = new Ctor({ formats: [...formats] });
     return {
       engine: "native",
@@ -56,7 +67,7 @@ async function nativeReader(): Promise<FrameReader | null> {
   }
 }
 
-async function zxingReader(): Promise<FrameReader> {
+async function zxingReader(kind: CodeKind): Promise<FrameReader> {
   const [{ prepareZXingModule, readBarcodes }, { default: wasmUrl }] = await Promise.all([
     import("zxing-wasm/reader"),
     import("zxing-wasm/reader/zxing_reader.wasm?url"),
@@ -76,7 +87,7 @@ async function zxingReader(): Promise<FrameReader> {
       ctx.drawImage(video, 0, 0);
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const results = await readBarcodes(image, {
-        formats: ["EAN-13", "EAN-8", "UPC-A", "UPC-E"],
+        formats: [...ZXING_FORMATS[kind]],
         tryHarder: true,
         maxNumberOfSymbols: 1,
       });
@@ -85,7 +96,7 @@ async function zxingReader(): Promise<FrameReader> {
   };
 }
 
-/** The best reader this browser has. */
-export async function createFrameReader(): Promise<FrameReader> {
-  return (await nativeReader()) ?? zxingReader();
+/** The best reader this browser has, for retail barcodes (default) or QR codes. */
+export async function createFrameReader(kind: CodeKind = "retail"): Promise<FrameReader> {
+  return (await nativeReader(kind)) ?? zxingReader(kind);
 }

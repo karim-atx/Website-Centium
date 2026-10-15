@@ -14,6 +14,15 @@
  * Returns "—" rather than "Invalid Date" for empty or unparseable input, so
  * a missing timestamp reads as absent instead of broken.
  */
+/**
+ * A short date with the handover's three-letter months: en-GB (and a browser
+ * left on its own locale) writes September as "Sept", every frame says "Sep".
+ * Use this for every `month: "short"` date that is not formatted en-US.
+ */
+export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-GB"): string {
+  return d.toLocaleDateString(locale, opts).replace(/\bSept\b/g, "Sep");
+}
+
 export function formatDisplayDate(value: string | null | undefined): string {
   if (!value) return "–";
   // A bare "2026-06-02" is already parsed as UTC midnight by JS, so both

@@ -9,14 +9,17 @@ import clsx from "clsx";
  *   class's "Show on Explore"), 42 × 26, knob 20.
  * - business-lg: Business UI listing visibility ("Show on Explore",
  *   "Visible on Explore"), 46 × 28, knob 22.
+ * - onboarding: BizOnboardingV10 rows (Payments, Essentials), 44 × 24,
+ *   padding 2, knob 20 with 0 1px 2px rgba(0,0,0,0.12); off the BU track.
  */
-export type ToggleSize = "default" | "lead" | "business" | "business-lg";
+export type ToggleSize = "default" | "lead" | "business" | "business-lg" | "onboarding";
 
 const SIZES: Record<ToggleSize, [number, number, number]> = {
   default: [44, 26, 20],
   lead: [56, 30, 24],
   business: [42, 26, 20],
   "business-lg": [46, 28, 22],
+  onboarding: [44, 24, 20],
 };
 
 export const Toggle: React.FC<{
@@ -53,7 +56,8 @@ export const Toggle: React.FC<{
 }> = ({ checked, onChange, label, disabled, lead, size = "default", onColor, knobShadow = true }) => {
   const kind: ToggleSize = lead ? "lead" : size;
   const [w, h, knob] = SIZES[kind];
-  const business = kind === "business" || kind === "business-lg";
+  const business = kind === "business" || kind === "business-lg" || kind === "onboarding";
+  const pad = kind === "onboarding" ? 2 : 3;
   // Part B and client (X-15, MO1.8 #10-#11): on is primary (#AEA1DC / #A991FE),
   // the lead switch on fill.pinned #9A8CD6 / #A991FE (#5B48B8 under High
   // contrast, V6-01); off #241F1B@12% / #F5F3FA@12%, and
@@ -74,7 +78,7 @@ export const Toggle: React.FC<{
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={clsx(
-        "tap px-[3px] rounded-full flex items-center transition-colors duration-150 ease-out shrink-0",
+        "tap rounded-full flex items-center transition-colors duration-150 ease-out shrink-0",
         checked
           ? clsx(
               !onColor && (kind === "lead" ? "bg-fill-pinned" : "bg-primary"),
@@ -87,7 +91,7 @@ export const Toggle: React.FC<{
             ),
         disabled && "opacity-40 cursor-not-allowed"
       )}
-      style={{ width: w, height: h, ...(checked && onColor ? { background: onColor } : null) }}
+      style={{ width: w, height: h, paddingLeft: pad, paddingRight: pad, ...(checked && onColor ? { background: onColor } : null) }}
     >
       <span
         aria-hidden
@@ -98,7 +102,9 @@ export const Toggle: React.FC<{
         style={{
           width: knob,
           height: knob,
-          ...(business && knobShadow ? { boxShadow: "0 1px 3px rgba(36,31,27,0.25)" } : null),
+          ...(business && knobShadow
+            ? { boxShadow: kind === "onboarding" ? "0 1px 2px rgba(0,0,0,0.12)" : "0 1px 3px rgba(36,31,27,0.25)" }
+            : null),
         }}
       />
     </button>

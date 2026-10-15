@@ -12,11 +12,60 @@ import { useApp } from "../../context/AppContext";
  * was true: deletion runs after a 30-day grace period during which it can be
  * cancelled, and saying so is the point.
  */
-export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; business?: boolean }> = ({ open, onClose, business }) => {
   const { deleteAccount } = useApp();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // MO1B-033 (v6 Batch 3): business accounts get the BizMoreV8 sheet and the
+  // business wording, on the same 30-day schedule and cancel (KEEP-SAFETY).
+  if (business) {
+    const schedule = async () => {
+      if (deleting) return;
+      setDeleteError(null);
+      setDeleting(true);
+      const result = await deleteAccount();
+      setDeleting(false);
+      if (!result.ok) {
+        setDeleteError("Couldn't schedule the deletion. Try again.");
+        return;
+      }
+      onClose();
+      navigate("/app/onboarding");
+    };
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Delete business account" chrome="market" tone="business" headerHeight={58}>
+        <p className="text-[12.5px] leading-[18px] text-charcoal-soft" style={{ marginBottom: 12 }}>
+          Your business will be scheduled for deletion in 30 days. After that its listing, classes, plans, team access and reports are
+          permanently removed. Members keep their personal accounts. You can change your mind at any point in those 30 days: sign back in
+          and choose Cancel deletion.
+        </p>
+        {deleteError && (
+          <p role="alert" className="text-[12px] font-bold text-status-high" style={{ marginBottom: 6 }}>
+            {deleteError}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => void schedule()}
+          disabled={deleting}
+          className="tap w-full flex items-center justify-center bg-status-high text-white dark:text-[#0D0B1A] text-[15px] font-extrabold disabled:opacity-60"
+          style={{ marginTop: 6, minHeight: 52, borderRadius: 16 }}
+        >
+          {deleting ? "Scheduling…" : "Schedule my business for deletion"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="tap w-full flex items-center justify-center bg-cream-soft text-charcoal text-[14px] font-bold"
+          style={{ marginTop: 8, minHeight: 48, borderRadius: 16 }}
+        >
+          Cancel
+        </button>
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Delete account">

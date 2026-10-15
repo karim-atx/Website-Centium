@@ -8,6 +8,8 @@ import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/prefe
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
 import { PRIVACY_INTRO, PRIVACY_SECTIONS } from "./legalCopy";
+import { SubHeader } from "../../components/business-more/kit";
+import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
 
 // MO1.8.7 Privacy, as a page (was a sheet); handover-complete pass: the
 // frame's text (the "Last updated" line, the intro and the ten headed
@@ -68,7 +70,8 @@ export default function PrivacyPage() {
 
   return (
     <div>
-      <PageHeader title="Privacy" showBack sub tightBack />
+      {/* v6 Batch 3 (OURS-MO1B-legal): business accounts take the More sub-page header. */}
+      {user.accountType === "business" ? <SubHeader title="Privacy" /> : <PageHeader title="Privacy" showBack sub tightBack />}
 
       {/* MO1.8.7: 24 pt side insets; 16 under the 36 pt title. */}
       <SettingsBody className="-mt-1">
@@ -97,7 +100,7 @@ export default function PrivacyPage() {
         <SettingsRow
           icon={Trash2}
           destructive
-          title="Delete my account"
+          title={user.accountType === "business" ? "Delete business account" : "Delete my account"}
           subtitle="Schedules deletion after a 30-day grace period"
           onClick={() => setDeleteOpen(true)}
         />
@@ -110,12 +113,13 @@ export default function PrivacyPage() {
         <LegalUpdated />
         <LegalIntro className="mt-2">{PRIVACY_INTRO}</LegalIntro>
         <LegalSections doc="privacy" sections={PRIVACY_SECTIONS} className="mt-6" />
+        {user.accountType === "business" && <BusinessLegalSections doc="privacy" />}
       </div>
 
       <LegalFullLink href="/legal#privacy">Read the full Privacy Policy</LegalFullLink>
       </SettingsBody>
 
-      <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
+      <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} business={user.accountType === "business"} />
     </div>
   );
 }

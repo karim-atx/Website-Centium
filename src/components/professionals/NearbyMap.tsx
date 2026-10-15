@@ -130,6 +130,8 @@ export interface NearbyMapProps {
   ariaLabel: string;
   /** MO1.2.2's round recentre button (the repo's "Use my location"), top right. */
   onRecentre?: () => void;
+  /** No zoom buttons and no recentre button (a caller that draws its own, e.g. onboarding's Place the pin, OB-255). */
+  hideControls?: boolean;
 }
 
 export default function NearbyMap({
@@ -144,8 +146,9 @@ export default function NearbyMap({
   className,
   ariaLabel,
   onRecentre,
+  hideControls,
 }: NearbyMapProps) {
-  const recentreSlot = !!onRecentre;
+  const recentreSlot = !!onRecentre || !!hideControls;
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -324,7 +327,7 @@ export default function NearbyMap({
   // are not a light patch.
   return (
     <div className={`relative ${className ?? ""}`}>
-    {onRecentre && (
+    {onRecentre && !hideControls && (
       <button
         type="button"
         onClick={onRecentre}

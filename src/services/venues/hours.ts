@@ -15,7 +15,7 @@
 // exactly as the frame draws it (its Thursday sits inside "Mon to Fri" and is
 // drawn again under it). "Today" is the venue's own day (gyms.timezone).
 
-import { range12 } from "../../utils/time12";
+import { range12, time12 } from "../../utils/time12";
 
 export interface HoursRow {
   /** 1 = Monday … 7 = Sunday (extract(isodow)). */
@@ -50,8 +50,10 @@ export function dayValue(row: HoursRow | undefined): string {
   // A range with a missing end can't be drawn honestly; say nothing about it.
   if (!row.opensAt || !row.closesAt) return NOT_PUBLISHED;
   // 12-hour (X-14): "6:00 AM to 11:00 PM".
-  const range = range12(row.opensAt, row.closesAt);
-  return row.wrapsMidnight ? `${range} (next day)` : range;
+  // An overnight range keeps both meridiems: "6:00 to 2:00 AM" would read as
+  // four hours in one morning, not 6:00 AM to 2:00 AM the next day.
+  if (row.wrapsMidnight) return `${time12(row.opensAt)} to ${time12(row.closesAt)} (next day)`;
+  return range12(row.opensAt, row.closesAt);
 }
 
 /**

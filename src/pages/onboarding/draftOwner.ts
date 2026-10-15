@@ -17,6 +17,9 @@ export interface StoredDraft<D> {
   legacy: boolean;
   draft: Partial<D>;
   step: string | null;
+  /** v6 (B5): when the device copy was written, and whether the server has it yet. */
+  savedAt?: string;
+  pending?: boolean;
 }
 
 /** Who is looking: the signed-in account, or nobody. */
@@ -88,6 +91,8 @@ export function parseStoredDraft<D>(raw: string | null): StoredDraft<D> | null {
       legacy: false,
       draft: v.draft,
       step: typeof v.step === "string" ? v.step : null,
+      ...(typeof v.savedAt === "string" ? { savedAt: v.savedAt } : {}),
+      ...(typeof v.pending === "boolean" ? { pending: v.pending } : {}),
     };
   } catch {
     return null;

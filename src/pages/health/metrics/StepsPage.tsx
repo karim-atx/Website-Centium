@@ -57,7 +57,7 @@ import { hourLabel12 } from "../../../utils/time12";
 // the total with "Hourly detail comes from your connected source.". The
 // source tag, freshness line and Delete on synced rows are native (sync and
 // HA-01 / HA-12, B1; V6-169), so none of them shows on the web. The goal
-// is localStorage until B1 (V6-59).
+// is B1's metric_goals (V6-59).
 
 const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const n = (v: number) => Math.round(v).toLocaleString("en-GB");

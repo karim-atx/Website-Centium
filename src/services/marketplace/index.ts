@@ -1,7 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
-import { stage4Message } from "../venues/venueLogic";
+import { featuredFirst } from "./listingLogic";
+import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBookingRules, type VenuePolicyKind } from "./classBooking";
 
 // Marketplace discovery: what a consumer can actually find and book.
 //
@@ -16,14 +17,25 @@ import { stage4Message } from "../venues/venueLogic";
 // WHAT THE VIEWS ALREADY DECIDE, so this file does not re-decide it:
 //   marketplace_classes filters `business_is_listed(business_id)` AND
 //   `event_date >= CURRENT_DATE`, so a delisted business's classes and every
-//   past class are gone before the client sees them. No date or listing
+//   past class are gone before the client sees them; since B9 so are
+//   cancelled classes and classes at a hidden venue. No date or listing
 //   filter is written here; adding one would be a second, drifting copy of a
 //   rule the database already enforces.
 //
-//   marketplace_venues filters businesses on `b.active` and applies NO filter
-//   to gyms beyond RLS (since stage 4a, gyms_select_public hides a venue an
-//   admin hid). The Gyms tab and gym page read public.gyms directly through
-//   services/venues, because this view carries none of the 4a columns.
+//   marketplace_venues filters businesses on `b.active`, and since B13 gyms
+//   on `hidden_at is null` and `business_is_listed(business_id)` (a hidden
+//   venue, or an unlisted business's venue, is off Explore even for its
+//   members and insiders, whom the gyms table's own RLS still shows it to).
+//   So every Explore LIST of venues starts from this view: the Gyms tab takes
+//   its ids from here (services/venues fetchVenues) and only reads the 4a
+//   columns from public.gyms; the gym page itself reads public.gyms, so a
+//   member can still open their own venue.
+//
+// B13 MK-04 / MK-06: marketplace_classes sorts featured first and carries
+// centium_spots_left (null = no separate limit) and is_featured;
+// marketplace_venues carries is_featured, amenities and first_visit (gyms
+// only; null on a business row). listed_on_explore = false keeps a class off
+// the view while members can still book it.
 //
 // SPOTS ARE COMPUTED SERVER-SIDE. spots_remaining is
 // `GREATEST(max_capacity - class_booked_count(id), 0)` and is_full is the same
@@ -53,6 +65,32 @@ export interface MarketplaceClass {
   bookedCount: number;
   spotsRemaining: number;
   isFull: boolean;
+  // B9 (EX-01, EX-02): appended to marketplace_classes. Optional so a class
+  // drawn from elsewhere (the business's own preview) can leave them out.
+  /** The class's venue (gyms row), when it has one. */
+  gymId?: string | null;
+  venueName?: string | null;
+  /** The venue's street address (MO1.4.4 #33). */
+  venueAddress?: string | null;
+  venueLat?: number | null;
+  venueLng?: number | null;
+  /** MO1.4.4 #26, the member-facing description (notes is the fallback). */
+  about?: string | null;
+  /** class_level enum: all_levels, beginner, intermediate, advanced. */
+  level?: string | null;
+  whatToBring?: string[];
+  /** A public URL in the class-covers bucket. */
+  coverUrl?: string | null;
+  /** Null unless the professional is listed publicly (the view decides). */
+  instructorId?: string | null;
+  instructorName?: string | null;
+  instructorAvatarUrl?: string | null;
+  /** class_starts_at(): the real moment, in the venue's time zone. */
+  startsAt?: string | null;
+  /** B13 MK-04: places left for non-members; null = no separate limit (members aren't limited). */
+  centiumSpotsLeft?: number | null;
+  /** B13 MK-06: a live featured week. */
+  isFeatured?: boolean;
 }
 
 export interface MarketplaceVenue {
@@ -68,6 +106,12 @@ export interface MarketplaceVenue {
   perk: string | null;
   canHostClasses: boolean;
   upcomingClassCount: number;
+  /** B13 MK-02: gyms.amenities (amenity_vocabulary() keys); empty for a business row. */
+  amenities: string[];
+  /** B13 MK-02: gyms.first_visit; null for a business row. */
+  firstVisit: string | null;
+  /** B13 MK-06: a live featured week (gyms / shops area). */
+  isFeatured: boolean;
 }
 
 type ClassRow = {
@@ -87,6 +131,21 @@ type ClassRow = {
   booked_count: number;
   spots_remaining: number;
   is_full: boolean;
+  gym_id: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  venue_lat: number | string | null;
+  venue_lng: number | string | null;
+  about: string | null;
+  level: string | null;
+  what_to_bring: string[] | null;
+  cover_url: string | null;
+  instructor_id: string | null;
+  instructor_name: string | null;
+  instructor_avatar_url: string | null;
+  starts_at: string | null;
+  centium_spots_left: number | null;
+  is_featured: boolean | null;
 };
 
 type VenueRow = {
@@ -101,6 +160,9 @@ type VenueRow = {
   perk: string | null;
   can_host_classes: boolean;
   upcoming_class_count: number;
+  amenities: string[] | null;
+  first_visit: string | null;
+  is_featured: boolean | null;
 };
 
 // Times arrive as HH:MM:SS from a `time` column; every input and comparison in
@@ -127,6 +189,21 @@ const toClass = (r: ClassRow): MarketplaceClass => ({
   bookedCount: r.booked_count,
   spotsRemaining: r.spots_remaining,
   isFull: r.is_full,
+  gymId: r.gym_id,
+  venueName: r.venue_name,
+  venueAddress: r.venue_address,
+  venueLat: toNumber(r.venue_lat),
+  venueLng: toNumber(r.venue_lng),
+  about: r.about,
+  level: r.level,
+  whatToBring: r.what_to_bring ?? [],
+  coverUrl: r.cover_url,
+  instructorId: r.instructor_id,
+  instructorName: r.instructor_name?.trim() || null,
+  instructorAvatarUrl: r.instructor_avatar_url,
+  startsAt: r.starts_at,
+  centiumSpotsLeft: r.centium_spots_left ?? null,
+  isFeatured: r.is_featured === true,
 });
 
 const toVenue = (r: VenueRow): MarketplaceVenue => ({
@@ -141,12 +218,16 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
   perk: r.perk,
   canHostClasses: r.can_host_classes,
   upcomingClassCount: r.upcoming_class_count,
+  amenities: r.amenities ?? [],
+  firstVisit: r.first_visit,
+  isFeatured: r.is_featured === true,
 });
 
 const CLASS_COLUMNS =
-  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full";
+  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, " +
+  "gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, starts_at, centium_spots_left, is_featured";
 const VENUE_COLUMNS =
-  "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count";
+  "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
 
 // Neither view is in database.types.ts — both are newer than the last
 // regeneration, as my_business_memberships and professional_reviews_readable
@@ -184,7 +265,9 @@ export async function fetchMarketplaceClasses(): Promise<
     console.error("[marketplace] Could not read classes:", error.message);
     return { ok: false, message: "Couldn't load classes right now." };
   }
-  return { ok: true, classes: (data ?? []).map(toClass) };
+  // The view sorts featured first; kept here too, as PostgREST does not
+  // promise a view's ORDER BY.
+  return { ok: true, classes: featuredFirst((data ?? []).map(toClass), (c) => c.isFeatured === true) };
 }
 
 /** Businesses and gyms in one list, discriminated by `kind`. */
@@ -196,7 +279,7 @@ export async function fetchMarketplaceVenues(): Promise<
     console.error("[marketplace] Could not read venues:", error.message);
     return { ok: false, message: "Couldn't load places right now." };
   }
-  return { ok: true, venues: (data ?? []).map(toVenue) };
+  return { ok: true, venues: featuredFirst((data ?? []).map(toVenue), (v) => v.isFeatured) };
 }
 
 /**
@@ -239,7 +322,7 @@ async function call<T>(fn: string, args: Record<string, unknown>, fallback: stri
   const { data, error } = await rpc<T>(fn, args);
   if (error) {
     console.error(`[marketplace] ${fn} failed:`, error.message);
-    return { ok: false, code: error.code, message: stage4Message(error.code, error.message, fallback) };
+    return { ok: false, code: error.code, message: classErrorMessage(error.code, error.message, fallback) };
   }
   return { ok: true, value: data as T };
 }
@@ -247,10 +330,89 @@ async function call<T>(fn: string, args: Record<string, unknown>, fallback: stri
 /**
  * MO1.4.4.1 (and the waitlist confirm path: an offer the caller holds does
  * not count against the seats). 'cash' = pay at the studio; Whish is stage 5.
- * ATX85 no such class, ATX86 started, ATX87 already booked, ATX88 full.
+ * ATX85 no such class, ATX86 started, ATX87 already booked, ATX88 full;
+ * B9: ATXE0 cancelled, ATXE2 not open yet, ATXE3 closed, ATXE4 the venue's
+ * terms are not accepted yet (pendingClassPolicies, acceptClassPolicies, then
+ * book again).
  */
 export function bookClass(classId: string): Promise<ClassResult<string>> {
   return call<string>("book_class", { p_class_id: classId, p_method: "cash" }, "Couldn't book that class. Try again.");
+}
+
+/** One venue document the member still has to accept before booking (B9). */
+export interface PendingClassPolicy {
+  versionId: string;
+  kind: VenuePolicyKind;
+  version: number;
+  /** The business's published text, shown verbatim. */
+  body: string;
+}
+
+/**
+ * The venue terms book_class() refuses on (ATXE4): pending_policies() for the
+ * business, kept to the waiver, class terms and house rules, with each current
+ * version's text from policy_versions (published versions are public to read).
+ * pending_policies() keys on auth.uid(), so it only ever describes the caller.
+ * `kinds` = the documents the booking waits on, in reading order (B12
+ * appointments pass APPOINTMENT_POLICY_KINDS); classes keep the default.
+ */
+export async function pendingClassPolicies(
+  businessId: string,
+  kinds: readonly VenuePolicyKind[] = CLASS_POLICY_KINDS
+): Promise<ClassResult<PendingClassPolicy[]>> {
+  type Row = { document_id: string; kind: string; version_id: string; version: number };
+  const pending = await rpc<Row[]>("pending_policies", { p_business_id: businessId });
+  if (pending.error) {
+    console.error("[marketplace] pending_policies failed:", pending.error.message);
+    return { ok: false, code: pending.error.code, message: "Couldn't load this venue's terms. Try again." };
+  }
+  const rows = (pending.data ?? []).filter((r) => (kinds as readonly string[]).includes(r.kind));
+  if (rows.length === 0) return { ok: true, value: [] };
+  const bodies = await supabase
+    .from("policy_versions")
+    .select("id, body")
+    .in(
+      "id",
+      rows.map((r) => r.version_id)
+    );
+  if (bodies.error) {
+    console.error("[marketplace] Could not read the terms:", bodies.error.message);
+    return { ok: false, code: bodies.error.code, message: "Couldn't load this venue's terms. Try again." };
+  }
+  const text = new Map((bodies.data ?? []).map((v) => [v.id, v.body]));
+  // A document whose text can't be read is not shown as blank: the member
+  // would be agreeing to nothing they could see.
+  if (rows.some((r) => !text.get(r.version_id)?.trim())) {
+    return { ok: false, message: "Couldn't load this venue's terms. Try again." };
+  }
+  return {
+    ok: true,
+    value: sortClassPolicies(
+      rows.map((r) => ({
+        versionId: r.version_id,
+        kind: r.kind as VenuePolicyKind,
+        version: r.version,
+        body: text.get(r.version_id) ?? "",
+      })),
+      kinds
+    ),
+  };
+}
+
+/**
+ * Records the member's acceptance of each version (policy_acceptances, own row
+ * only by policy). One insert per version, so one already recorded (23505,
+ * e.g. a second tap) doesn't undo the others.
+ */
+export async function acceptClassPolicies(personId: string, versionIds: string[]): Promise<ClassResult<null>> {
+  for (const versionId of versionIds) {
+    const { error } = await supabase.from("policy_acceptances").insert({ version_id: versionId, person_id: personId });
+    if (error && error.code !== "23505") {
+      console.error("[marketplace] Could not record the acceptance:", error.message);
+      return { ok: false, code: error.code, message: "Couldn't save your acceptance. Try again." };
+    }
+  }
+  return { ok: true, value: null };
 }
 
 export interface CancelOutcome {
@@ -288,7 +450,14 @@ export function leaveClassWaitlist(classId: string): Promise<ClassResult<null>> 
 export interface ClassLive {
   /** class_seats_left(): capacity − bookings − live waitlist offers. */
   seatsLeft: number | null;
-  /** class_cancellation_hours(): BR-14's window, the single resolution point. */
+  /**
+   * class_booking_rules() (B9, CL-05), the one reader of the class page's
+   * rules: BR-14's free-cancellation window (class → type → default → venue
+   * → 12 h, what cancel_class_booking() itself uses), the booking window, the
+   * close and the waitlist cap. Null when the read failed.
+   */
+  rules: ClassBookingRules | null;
+  /** The cancellation window alone, 12 when the rules couldn't be read. */
   windowHours: number;
   /** class_starts_at(): the real moment, in the venue's timezone. */
   startsAt: string | null;
@@ -296,32 +465,53 @@ export interface ClassLive {
   waitlistPosition: number | null;
   /** business_classes.gym_id (4c), so the venue line can open the gym page. */
   gymId: string | null;
+  /**
+   * business_classes.cancelled_at / cancel_reason (B9, CL-03). A cancelled
+   * class leaves marketplace_classes, so the class page reads these to say
+   * so instead of "isn't available".
+   */
+  cancelledAt: string | null;
+  cancelReason: string | null;
 }
 
-/** The four per-class reads the class page needs, in parallel. */
+/** The per-class reads the class page needs, in parallel. */
 export async function fetchClassLive(classId: string): Promise<ClassLive> {
   const args = { p_class_id: classId };
-  const [seats, hours, starts, pos, gym] = await Promise.all([
+  type RulesRow = { cancellation_hours: number; booking_window_days: number; closes_minutes_before: number; waitlist_cap: number };
+  type ClassBits = { gym_id: string | null; cancelled_at: string | null; cancel_reason: string | null };
+  const [seats, rules, starts, pos, cls] = await Promise.all([
     rpc<number>("class_seats_left", args),
-    rpc<number>("class_cancellation_hours", args),
+    rpc<RulesRow[]>("class_booking_rules", args),
     rpc<string>("class_starts_at", args),
     rpc<number>("my_class_waitlist_position", args),
-    (supabase as unknown as { from: (t: "business_classes") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: { gym_id: string | null }[] | null; error: PostgrestError | null }> } } })
+    (supabase as unknown as { from: (t: "business_classes") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: ClassBits[] | null; error: PostgrestError | null }> } } })
       .from("business_classes")
-      .select("gym_id")
+      .select("gym_id, cancelled_at, cancel_reason")
       .eq("id", classId),
   ]);
-  for (const e of [seats.error, hours.error, starts.error, pos.error, gym.error]) {
+  for (const e of [seats.error, rules.error, starts.error, pos.error, cls.error]) {
     if (e) console.warn("[marketplace] class detail read failed:", e.message);
   }
+  const r = rules.data?.[0] ?? null;
+  const row = cls.data?.[0] ?? null;
   return {
     seatsLeft: seats.error ? null : (seats.data ?? null),
-    windowHours: hours.data ?? 12,
+    rules: r
+      ? {
+          cancellationHours: r.cancellation_hours,
+          bookingWindowDays: r.booking_window_days,
+          closesMinutesBefore: r.closes_minutes_before,
+          waitlistCap: r.waitlist_cap,
+        }
+      : null,
+    windowHours: r?.cancellation_hours ?? 12,
     startsAt: starts.data ?? null,
     // The doc says NULL when not waiting; the local function returns 0 (a
     // count over no rows), so anything below 1 means "not waiting".
     waitlistPosition: pos.data && pos.data > 0 ? pos.data : null,
-    gymId: gym.data?.[0]?.gym_id ?? null,
+    gymId: row?.gym_id ?? null,
+    cancelledAt: row?.cancelled_at ?? null,
+    cancelReason: row?.cancel_reason?.trim() || null,
   };
 }
 
@@ -348,7 +538,9 @@ export async function fetchGymClassesThisWeek(gymId: string, todayIso: string, e
         eq: (k: string, v: string) => {
           gte: (k: string, v: string) => {
             lte: (k: string, v: string) => {
-              order: (k: string) => { order: (k: string) => PromiseLike<{ data: Row[] | null; error: PostgrestError | null }> };
+              is: (k: string, v: null) => {
+                order: (k: string) => { order: (k: string) => PromiseLike<{ data: Row[] | null; error: PostgrestError | null }> };
+              };
             };
           };
         };
@@ -360,6 +552,8 @@ export async function fetchGymClassesThisWeek(gymId: string, todayIso: string, e
     .eq("gym_id", gymId)
     .gte("event_date", todayIso)
     .lte("event_date", endIso)
+    // B9: a cancelled class stays as a record; it is not bookable (ATXE0).
+    .is("cancelled_at", null)
     .order("event_date")
     .order("start_time");
   if (error) {

@@ -45,6 +45,7 @@ import { coverBackground, onCover } from "./courseCover";
 import { useIsDark } from "../../hooks/useIsDark";
 import { PinnedCta } from "../ui/PinnedCta";
 import { useBack } from "../../hooks/useBack";
+import { formatShortDate } from "../../utils/date";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -461,7 +462,7 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
       {certificate ? (
         <>
           <span className="text-[13px] leading-[1.5]" style={{ color: fv("muted") }}>
-            Earned {new Date(certificate.issuedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+            Earned {formatShortDate(new Date(certificate.issuedAt), { day: "numeric", month: "short", year: "numeric" }, undefined)} ·{" "}
             {certificate.serial}
           </span>
 

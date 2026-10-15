@@ -1,0 +1,23 @@
+/* AN1 Live now motion, literal from BizAnalyticsV45 (helmet <style>, l.11).
+   Names are prefixed an1- so they cannot collide with other keyframes.
+   Reduced motion: the source zeroes every animation; the in-app switch puts
+   .reduce-motion on <html> and the components also pass reducedMotion. */
+
+@keyframes an1-arcDraw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes an1-arcGlow { 0%, 100% { opacity: 0.14; } 50% { opacity: 0.3; } }
+@keyframes an1-arcGlowIn { from { opacity: 0; } to { opacity: 0.22; } }
+@keyframes an1-ringBreath { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes an1-logoPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 currentColor); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 2px currentColor); }
+}
+@keyframes an1-dotGlow { 0%, 100% { box-shadow: 0 0 0 2px var(--dg); } 50% { box-shadow: 0 0 0 4px var(--dg); } }
+@keyframes an1-minSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes an1-handSweep { from { transform: rotate(var(--hd)); } to { transform: rotate(0deg); } }
+@keyframes an1-haloBreath { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.3; } }
+@keyframes an1-livePulse { 0% { transform: scale(0.6); opacity: 0.55; } 100% { transform: scale(1.9); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .an1-clock [data-glow] { animation: none !important; opacity: 0.22; }
+  .an1-clock [data-draw], .an1-clock [data-hand], .an1-clock [data-pulse] { animation: none !important; }
+}

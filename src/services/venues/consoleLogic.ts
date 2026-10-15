@@ -8,7 +8,8 @@
 // readers return, so a surname, email or birth date has nowhere to go.
 
 import { formatPrice } from "../../utils/price";
-import { memberTag, stage4Message, storagePath, type PassState } from "./venueLogic";
+import { formatShortDate } from "../../utils/date";
+import { dayMonthYear, memberTag, stage4Message, storagePath, type GymMembershipStatus, type PassState } from "./venueLogic";
 import type { HoursRow } from "./hours";
 
 // ---------------------------------------------------------------------------
@@ -100,10 +101,10 @@ export interface VenueDashboard {
   membersTotal: number;
   activeMembers: number;
   membershipsAwaitingPayment: number;
-  /** Agreed and unpaid. Not a payment record, and never "revenue". */
-  amountAwaitingPayment: number;
-  /** What staff marked as received this month. Not a payment record either. */
-  amountMarkedPaidThisMonth: number;
+  /** Agreed and unpaid. Not a payment record, and never "revenue". B15: null without the revenue permission. */
+  amountAwaitingPayment: number | null;
+  /** What staff marked as received this month. Not a payment record either. B15: null without revenue. */
+  amountMarkedPaidThisMonth: number | null;
   classesThisWeek: number;
   bookingsThisWeek: number;
   waitlistWaiting: number;
@@ -137,8 +138,10 @@ export function toVenueDashboard(r: VenueDashboardRow): VenueDashboard {
     membersTotal: int(r.members_total),
     activeMembers: int(r.active_members),
     membershipsAwaitingPayment: int(r.memberships_awaiting_payment),
-    amountAwaitingPayment: int(r.amount_awaiting_payment),
-    amountMarkedPaidThisMonth: int(r.amount_marked_paid_this_month),
+    // B15: venue_dashboard opens for any insider but nulls the money without
+    // "revenue"; a null stays null (hidden), never "$0".
+    amountAwaitingPayment: numOrNull(r.amount_awaiting_payment),
+    amountMarkedPaidThisMonth: numOrNull(r.amount_marked_paid_this_month),
     classesThisWeek: int(r.classes_this_week),
     bookingsThisWeek: int(r.bookings_this_week),
     waitlistWaiting: int(r.waitlist_waiting),
@@ -156,19 +159,39 @@ export function money(n: number): string {
 // ---------------------------------------------------------------------------
 // venue_members()
 
-export type MembershipStatus = "active" | "expired" | "cancelled";
+/** B7 MB-05 adds 'upcoming': a renewal not in force yet. */
+export type MembershipStatus = GymMembershipStatus;
 export type PaymentStatus = "pending" | "paid" | "refunded";
 
 export interface VenueMember {
   membershipId: string;
-  /** A first name. The venue is told nothing else about who this is. */
-  firstName: string;
+  /**
+   * The server's label (Q-05, Database 0587c8a): the first name only if the
+   * member shared it with this business, else "Member #0042". Render it;
+   * never treat it as a name. The desk's check-in reads names through
+   * desk_find_member instead.
+   */
+  label: string;
   isMinor: boolean;
+  /**
+   * B7 MB-01 (b95ef5c): the person and their number at this business. Never
+   * null on the local stack once the stage is there; null on a database
+   * without it. The desk searches by number ("42", "0042", "#42").
+   */
+  personId: string | null;
+  memberNumber: number | null;
   planName: string;
   status: MembershipStatus;
   paymentMethod: string;
   paymentStatus: PaymentStatus;
   priceAgreed: number;
+  /**
+   * When the payment was recorded (venue_members, 20261120080000). Shown as
+   * "Paid {d Mon}"; never summed into Revenue, which reads B8's payment ledger.
+   */
+  paidAt: string | null;
+  /** Who recorded it: a profile id, not a name. Carried, not shown. */
+  markedPaidBy: string | null;
   startedOn: string;
   expiresOn: string | null;
   /** The same derived state my_gym_memberships() shows the member. */
@@ -178,13 +201,17 @@ export interface VenueMember {
 
 export type VenueMemberRow = {
   membership_id: string;
-  member_first_name: string | null;
+  member_label: string | null;
   member_is_minor: boolean | null;
+  person_id?: string | null;
+  member_number?: number | null;
   plan_name: string;
   status: MembershipStatus;
   payment_method: string;
   payment_status: PaymentStatus;
   price_agreed: number | string | null;
+  paid_at: string | null;
+  marked_paid_by: string | null;
   started_on: string;
   expires_on: string | null;
   pass_state: PassState;
@@ -195,18 +222,33 @@ export type VenueMemberRow = {
 export function toVenueMember(r: VenueMemberRow): VenueMember {
   return {
     membershipId: r.membership_id,
-    firstName: r.member_first_name?.trim() || "Member",
+    label: r.member_label?.trim() || "Member",
     isMinor: r.member_is_minor === true,
+    personId: r.person_id ?? null,
+    memberNumber: r.member_number ?? null,
     planName: r.plan_name,
     status: r.status,
     paymentMethod: r.payment_method,
     paymentStatus: r.payment_status,
     priceAgreed: int(r.price_agreed),
+    paidAt: r.paid_at ?? null,
+    markedPaidBy: r.marked_paid_by ?? null,
     startedOn: r.started_on,
     expiresOn: r.expires_on,
     passState: r.pass_state,
     joinedAt: r.joined_at,
   };
+}
+
+/**
+ * "Paid 3 Oct", on the desk's own calendar day; null while unpaid, refunded,
+ * or paid before paid_at was recorded.
+ */
+export function paidLine(m: Pick<VenueMember, "paidAt" | "paymentStatus">): string | null {
+  if (!m.paidAt || m.paymentStatus !== "paid") return null;
+  const d = new Date(m.paidAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Paid ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
 }
 
 /** total_count rides on every row; an empty page has none, so it is 0 then. */
@@ -229,7 +271,16 @@ export const MEMBER_FILTERS: { value: MembershipStatus | null; label: string }[]
   { value: "active", label: "Active" },
   { value: "expired", label: "Expired" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "upcoming", label: "Upcoming" },
 ];
+
+/** A roster row's tag: an upcoming renewal says when it starts (MB-05), else the pass state. */
+export function venueMemberTag(m: { passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
+  // pass_state 'upcoming' outranks 'awaiting_payment' (20261121020000); the
+  // roster's own payment line says whether it is paid.
+  if (m.passState === "upcoming") return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+  return passStateTag(m.passState);
+}
 
 /** The pass state as the member sees it, worded for the desk. */
 export function passStateTag(state: PassState): { label: string; tone: "member" | "pending" | "muted" } {
@@ -246,37 +297,59 @@ export const methodLabel = (m: string | null): string => (m ? (PAYMENT_METHOD_LA
 
 export interface RosterEntry {
   kind: "booked" | "waitlist";
-  firstName: string;
+  /** B7 (Database 65e0311): who, for Message clients (start_member_thread). Null without the column. */
+  personId: string | null;
+  /** Q-05: a first name for the front desk, "Member #0042" for the class's instructor (unless shared). */
+  label: string;
   isMinor: boolean;
   paymentMethod: string | null;
   paymentStatus: PaymentStatus | null;
   priceAgreed: number | null;
   at: string;
   waitlistPosition: number | null;
+  /**
+   * CL-08 (Database 20261121210000): the booking to pass to
+   * mark_class_booking_paid. Null on waitlist rows, and without the column.
+   */
+  bookingId: string | null;
 }
 
 export type RosterRow = {
   entry_kind: "booked" | "waitlist";
-  client_first_name: string | null;
+  person_id?: string | null;
+  client_label: string | null;
   client_is_minor: boolean | null;
   payment_method: string | null;
   payment_status: PaymentStatus | null;
   price_agreed: number | string | null;
   at: string;
   waitlist_position: number | null;
+  /** CL-08: appended as the last column; read by name. */
+  booking_id?: string | null;
 };
 
 export function toRosterEntry(r: RosterRow): RosterEntry {
   return {
     kind: r.entry_kind,
-    firstName: r.client_first_name?.trim() || "Client",
+    personId: r.person_id ?? null,
+    label: r.client_label?.trim() || "Client",
     isMinor: r.client_is_minor === true,
     paymentMethod: r.payment_method,
     paymentStatus: r.payment_status,
     priceAgreed: numOrNull(r.price_agreed),
     at: r.at,
     waitlistPosition: r.waitlist_position,
+    // A waitlist row is never a booking, whatever the row carries.
+    bookingId: r.entry_kind === "booked" ? (r.booking_id ?? null) : null,
   };
+}
+
+/**
+ * CL-08: a booked row the desk may mark paid: payment pending, a booking id
+ * to pass (the column exists on this database), and never a waitlist row.
+ */
+export function canMarkBookingPaid(e: RosterEntry): boolean {
+  return e.kind === "booked" && e.paymentStatus === "pending" && !!e.bookingId;
 }
 
 /** The roster split as the sheet draws it; the server already orders each half. */
@@ -476,7 +549,7 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
     case "ATX03":
       return "You don't manage this venue.";
     case "42501":
-      return "Only the venue's owner can change this.";
+      return "You don't have access to change this. Ask the owner.";
     case "23514":
       return "That wasn't saved: each day must be closed, open 24 hours, or a from–to time.";
     case "23505":
@@ -484,4 +557,16 @@ export function consoleMessage(code: string | undefined, serverMessage: string, 
     default:
       return stage4Message(code, serverMessage, fallback);
   }
+}
+
+/**
+ * A label the server masked (Q-05). The server sends exactly a first name,
+ * "Member #0042", or "Guest" (money readers, a payment with no account); a
+ * bare "Member" from the server is a Database bug to report, not a state.
+ * "Member" / "Client" here are only our own fallbacks for a missing label.
+ * Avatars show the person glyph for these rather than an initial, which
+ * would be the "M" of "Member".
+ */
+export function isMaskedLabel(label: string): boolean {
+  return /^Member #\d+$/.test(label.trim()) || ["Guest", "Member", "Client"].includes(label.trim());
 }

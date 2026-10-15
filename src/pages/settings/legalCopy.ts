@@ -70,7 +70,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
   {
     heading: "Children's data",
-    body: "Centium isn't meant for, and doesn't knowingly collect data from, anyone under the minimum age.",
+    body: "Centium isn't meant for, and doesn't knowingly collect data from, anyone under 16.",
   },
   {
     heading: "Retention, security and your rights",
@@ -86,7 +86,7 @@ export const TERMS_SECTIONS: LegalSection[] = [
   {
     heading: "Your account",
     body:
-      "You must be 16 or over (or the age of digital consent where you live). Keep your login and two-factor device safe. Accounts can't be shared. What you log belongs to you.",
+      "You must be at least 16. Keep your login and two-factor device safe. Accounts can't be shared. What you log belongs to you.",
   },
   {
     heading: "Account status",

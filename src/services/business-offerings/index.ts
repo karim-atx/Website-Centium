@@ -1,12 +1,14 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { Database } from "../../../lib/supabase/database.types";
 import { resolveMyBusinessId } from "../business-profile";
 import { formatPrice, parsePrice } from "../../utils/price";
+import type { OfferingCategory, Offering } from "./types";
+export type { OfferingCategory, Offering } from "./types";
 
 // A business's marketplace listings: the real business_offerings rows.
 //
 // WHAT THIS REPLACES. `businessOfferings` was a plain localStorage array. The
-// business side (BusinessMarketplaceTab) created and deleted them, and the
+// business side (BusinessMarketplaceTab; since v6 Batch 5 the Store Products
+// tab and the Marketplace Listing "Offerings" card) created and deleted them, and the
 // CLIENT side (MarketplaceCategoryPage's "From Centium businesses" block) read
 // the very same array — which meant it could only ever show a business its own
 // listings back to itself. On a client's device that array is empty and always
@@ -19,16 +21,7 @@ import { formatPrice, parsePrice } from "../../utils/price";
 // Checked rather than assumed, because a mismatch would be a 22P02 at save
 // time on exactly one category.
 
-export type OfferingCategory = Database["public"]["Enums"]["offering_category"];
 
-export interface Offering {
-  id: string;
-  title: string;
-  category: OfferingCategory;
-  /** Formatted for display ("$25"), empty when the column is null. */
-  price: string;
-  description: string;
-}
 
 /** An offering plus who is selling it — the client-facing shape. */
 export interface PublicOffering extends Offering {

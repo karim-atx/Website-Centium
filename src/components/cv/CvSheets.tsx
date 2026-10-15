@@ -6,7 +6,9 @@ import { Toggle } from "../ui/Toggle";
 import { MonthYearField } from "../ui/MonthYearField";
 import { AttachDocument } from "../ui/AttachDocument";
 import { ChipInput } from "../ui/ChipInput";
-import { LicenceStatusBadge, RejectionNote } from "./CvBadges";
+import { LicenceStatusBadge, REPLACE_RESETS_REVIEW, RejectionNote } from "./CvBadges";
+import { LicencePublishRow } from "./LicencePublish";
+import { PUBLISH_STRINGS } from "./licencePublishState";
 import {
   deleteEntry,
   deleteLicence,
@@ -535,6 +537,7 @@ export const LicenceSheet: React.FC<{
             <LicenceStatusBadge status={status} />
           </div>
           {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
+          {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{REPLACE_RESETS_REVIEW}</p>}
         </div>
       )}
 
@@ -616,6 +619,19 @@ export const LicenceSheet: React.FC<{
           checked={showWhenExpired}
           onChange={setShowWhenExpired}
         />
+      )}
+
+      {/* Publishing is its own act on a saved licence (20261120150000): never part of Save. */}
+      {current ? (
+        <LicencePublishRow
+          licence={current}
+          onChanged={(l) => {
+            setCurrent(l);
+            onSaved(l);
+          }}
+        />
+      ) : (
+        <p className="text-xs text-charcoal-soft leading-[1.4]">{PUBLISH_STRINGS.newLicence}</p>
       )}
     </EntryFrame>
   );

@@ -101,8 +101,7 @@ export async function getAchievements(): Promise<Result<Achievement[]>> {
  */
 export async function markAchievementsNotified(keys: string[]): Promise<void> {
   for (let i = 0; i < keys.length; i += 200) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
-    const { error } = await (supabase as any).rpc("mark_achievements_notified", { p_keys: keys.slice(i, i + 200) });
+    const { error } = await supabase.rpc("mark_achievements_notified", { p_keys: keys.slice(i, i + 200) });
     if (error) console.error("[achievements] Could not mark unlocks shown:", error.message);
   }
 }

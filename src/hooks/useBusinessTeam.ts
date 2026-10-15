@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { fetchMyTeam, type TeamMember } from "../services/business-team";
 
-// The business's affiliated professionals, for the five screens that show them.
+// The business's affiliated professionals (ACCEPTED only, B0), for the screens that pick or count them.
 //
 // A HOOK RATHER THAN THE SAME EFFECT FIVE TIMES. Every one of these screens
 // wants the same thing — the team, hydrated on launch, not blanked by a failed
@@ -11,10 +11,9 @@ import { fetchMyTeam, type TeamMember } from "../services/business-team";
 // profileReady returns nothing and looks exactly like an empty team.
 //
 // WHAT EACH CALLER ACTUALLY NEEDS, checked rather than assumed:
-//   BusinessEmployeesTab  name, and the id to remove by
-//   BusinessAnalyticsTab  the count, nothing else
-//   BusinessClassesTab    id + name, for the "Run by" picker
-//   BusinessCalendarTab   id + name, for the same picker and a lookup
+//   BusinessCalendarTab   id + name, for the "Run by" picker and a lookup
+//   Subscription          the people, for the seat plan copy
+// (The v6 Team, Schedule and Analytics screens read services/business-team.)
 // None reads the subtype, which is just as well: a business cannot get it —
 // see the note in services/business-team.
 

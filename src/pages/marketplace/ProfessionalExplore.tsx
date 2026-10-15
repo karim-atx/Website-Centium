@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -34,6 +35,7 @@ import { Building2, LogOut } from "lucide-react";
 
 export default function ProfessionalExplore() {
   const { authUserId } = useApp();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   /**
    * THE REAL AFFILIATION, read from the server rather than local state.
@@ -76,7 +78,8 @@ export default function ProfessionalExplore() {
    */
   const leave = async () => {
     setLeaving(true);
-    const result = await leaveAffiliation();
+    if (!affiliation) return;
+    const result = await leaveAffiliation(affiliation.businessId);
     setLeaving(false);
     if (!result.ok) {
       setError(result.message);
@@ -127,24 +130,16 @@ export default function ProfessionalExplore() {
         </Card>
       )}
 
-      {/* NO "ENTER AN ID TO JOIN" FORM, and its absence is the schema's rule
-          rather than an omission. business_employees_insert_business_owner
-          requires auth.uid() to be the BUSINESS's profile_id, so a
-          professional cannot add themselves to a team however they are asked
-          for the id — the business adds them. This used to be an input that
-          matched against a localStorage directory and set a localStorage flag,
-          which is why it appeared to work. */}
-      {!affiliated && (
-        <Card className="mb-6 animate-fade-slide-up">
-          <p className="section-label text-charcoal-faint mb-2">
-            Not affiliated with a business
-          </p>
-          <p className="text-[11px] text-charcoal-faint">
-            A business adds you to their team from their own account. Reach out to one directly and
-            they can add you. There is nothing to enter here.
-          </p>
-        </Card>
-      )}
+      {/* v6 Batch 4 (B0 / B6): joining is now real on both sides. A business
+          invites the professional, or approves the request they send with the
+          business ID, and the professional accepts. All of it lives on Your
+          businesses (/app/businesses); this card points there. */}
+      <Card interactive onClick={() => navigate("/app/businesses")} className="mb-6 animate-fade-slide-up">
+        <p className="section-label text-charcoal-faint mb-2">{affiliated ? "Your businesses" : "Not affiliated with a business"}</p>
+        <p className="text-[11px] text-charcoal-faint">
+          See invitations, the teams you work with, or ask to join a business with its business ID.
+        </p>
+      </Card>
 
     </div>
   );

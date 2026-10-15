@@ -12,8 +12,8 @@ import { licenceStatus, type LicenceReviewRow, type LicenceStatus } from "./lice
 // in the professional_* tables, which RLS scopes to the owner and which carry
 // the private columns (credential_id, document_path). Everybody else reads the
 // public_professional_* views, which publish month/year text instead of dates,
-// never carry those two columns, drop unnamed licences and expired ones the
-// professional chose to hide, and are empty unless the professional is listed
+// never carry those two columns, drop licences their owner has not published
+// (published_at), unnamed ones and expired ones the professional chose to hide, and are empty unless the professional is listed
 // or the reader is their client. Nothing client-facing reads a table here.
 //
 // ORDER IS BY DATE WHERE A SECTION HAS DATES. Every row has a `position`
@@ -59,6 +59,12 @@ export interface Licence {
   position: number;
   /** The one licence kept in step with the legacy certification_url. */
   mirrorsCertification: boolean;
+  /**
+   * When its owner chose to show it on their profile; null = not public
+   * (20261120150000). Never written on insert: the grant refuses it, so a
+   * licence is never born public. setLicencePublished() is the only writer.
+   */
+  publishedAt: string | null;
 }
 
 export interface Experience {
@@ -312,9 +318,11 @@ const licenceFrom = (r: Tables<"professional_licences">): Licence => ({
   showWhenExpired: r.show_when_expired,
   position: r.position,
   mirrorsCertification: r.mirrors_certification_url,
+  // published_at (20261120150000) is newer than the production-generated types.
+  publishedAt: (r as typeof r & { published_at?: string | null }).published_at ?? null,
 });
 
-export type LicenceDraft = Omit<Licence, "id" | "position" | "documentPath" | "mirrorsCertification">;
+export type LicenceDraft = Omit<Licence, "id" | "position" | "documentPath" | "mirrorsCertification" | "publishedAt">;
 
 const licenceTo = (d: LicenceDraft) => ({
   name: blank(d.name),
@@ -542,6 +550,29 @@ export async function saveLicence(
   return { ok: true, licence: licenceFrom(result.data) };
 }
 
+/**
+ * Shows a licence on the owner's public profile, or takes it off
+ * (professional_licences.published_at, 20261120150000). A separate act from
+ * saving the licence, on purpose: authenticated may UPDATE published_at but
+ * not INSERT it, so publishing is always a second, deliberate write on a row
+ * that already exists. Whether a published licence is actually visible is
+ * still the view's call (a listed CV, a name, not expired unless opted in).
+ */
+export async function setLicencePublished(licence: Licence, on: boolean): Promise<{ ok: true; licence: Licence } | Fail> {
+  const result = await supabase
+    .from("professional_licences")
+    // published_at is newer than the production-generated Update type.
+    .update({ published_at: on ? new Date().toISOString() : null } as never)
+    .eq("id", licence.id)
+    .select("*")
+    .single();
+  if (result.error || !result.data) {
+    console.error("[professional-cv] Could not change whether the licence is public:", result.error?.message);
+    return { ok: false, message: result.error && isOffline(result.error) ? OFFLINE_MESSAGE : "Couldn't change that. Try again." };
+  }
+  return { ok: true, licence: licenceFrom(result.data) };
+}
+
 /** Detaches a licence's document: the row first, then the file. */
 export async function removeLicenceDocument(licence: Licence): Promise<{ ok: true; licence: Licence } | Fail> {
   const result = await supabase
@@ -760,14 +791,14 @@ export function cvIsEmpty(cv: PublicCv, skills: string[]) {
 
 /**
  * The professional's own CV as a client would see it, for "Preview as a
- * client". The SAME filters the public views apply: unnamed licences and
- * expired ones not opted in are dropped, verified follows the database's rule,
+ * client". The SAME filters the public views apply: licences their owner has
+ * not published, unnamed ones and expired ones not opted in are dropped, verified follows the database's rule,
  * and volunteering appears only when switched on.
  */
 export function previewAsClient(cv: MyCv, today: string): PublicCv {
   return {
     licences: cv.licences
-      .filter((l) => l.name && (!l.expires || l.noExpiry || `${l.expires}-01` >= today || l.showWhenExpired))
+      .filter((l) => l.publishedAt && l.name && (!l.expires || l.noExpiry || `${l.expires}-01` >= today || l.showWhenExpired))
       .map((l) => ({
         id: l.id,
         name: l.name!,
@@ -787,6 +818,25 @@ export function previewAsClient(cv: MyCv, today: string): PublicCv {
     volunteering: cv.profile.showVolunteering ? cv.volunteering : [],
     links: cv.links,
   };
+}
+
+/**
+ * Whether "Preview as a client" draws the Verified check beside the name: the
+ * rule professional_has_verified_licence() applies, which counts a verified
+ * licence whether or not it is published (the badge and the listing are
+ * separate by design, 20261120150000) but never one that expired and is hidden.
+ */
+export function previewShowsVerified(cv: MyCv, today: string): boolean {
+  return cv.licences.some(
+    (l) =>
+      licenceStatus(l, cv.reviews).kind === "verified" &&
+      (!l.expires || l.noExpiry || `${l.expires}-01` >= today || l.showWhenExpired)
+  );
+}
+
+/** Whether a licence the owner published is hidden only because it has expired. */
+export function licenceHiddenByExpiry(l: Licence, today: string): boolean {
+  return !l.noExpiry && !!l.expires && `${l.expires}-01` < today && !l.showWhenExpired;
 }
 
 export { licenceStatus };

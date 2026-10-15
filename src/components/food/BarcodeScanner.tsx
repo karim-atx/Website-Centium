@@ -1,15 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { canUseBarcodeScanner, createFrameReader } from "../../services/barcode/scanner";
 import { normalizeGtin } from "../../utils/gtin";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
-
-type CameraState = "starting" | "scanning" | "denied" | "unavailable";
-
-const READ_EVERY_MS = 250;
+import { useCameraCodeReader } from "./useCameraCodeReader";
 
 /**
  * The camera barcode scanner (FO3.2, reused by HO2.1's Barcode button): the
@@ -26,67 +22,22 @@ export const BarcodeScanner: React.FC<{
   title?: string;
 }> = ({ open, onClose, onCode, title = "Scan barcode" }) => {
   const dark = useIsDark();
-  const video = useRef<HTMLVideoElement | null>(null);
-  const [camera, setCamera] = useState<CameraState>(() => (canUseBarcodeScanner() ? "starting" : "unavailable"));
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState<string | null>(null);
-  const done = useRef(false);
   const onCodeRef = useRef(onCode);
   useEffect(() => {
     onCodeRef.current = onCode;
   }, [onCode]);
-
-  useEffect(() => {
-    if (!open || !canUseBarcodeScanner()) return;
-    done.current = false;
-    let stream: MediaStream | null = null;
-    let timer: number | null = null;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
-      } catch (err) {
-        if (!cancelled) setCamera((err as DOMException)?.name === "NotAllowedError" ? "denied" : "unavailable");
-        return;
-      }
-      if (cancelled || !video.current) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      video.current.srcObject = stream;
-      await video.current.play().catch(() => undefined);
-      const reader = await createFrameReader().catch(() => null);
-      if (cancelled) return;
-      if (!reader) {
-        setCamera("unavailable");
-        return;
-      }
-      setCamera("scanning");
-      const tick = async () => {
-        if (cancelled || done.current || !video.current) return;
-        const raw = await reader.read(video.current).catch(() => null);
-        const gtin = raw ? normalizeGtin(raw) : null;
-        if (gtin && !done.current) {
-          done.current = true;
-          navigator.vibrate?.(40);
-          onCodeRef.current(gtin);
-          return;
-        }
-        timer = window.setTimeout(() => void tick(), READ_EVERY_MS);
-      };
-      void tick();
-    })();
-
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-      stream?.getTracks().forEach((t) => t.stop());
-    };
-  }, [open]);
+  const { video, camera, stop } = useCameraCodeReader({
+    active: open,
+    kind: "retail",
+    accept: (raw) => {
+      const gtin = normalizeGtin(raw);
+      if (!gtin) return false;
+      onCodeRef.current(gtin);
+      return true;
+    },
+  });
 
   const submitTyped = () => {
     const gtin = normalizeGtin(typed);
@@ -94,7 +45,7 @@ export const BarcodeScanner: React.FC<{
       setTypedError("That isn't a valid barcode. Check the digits under the bars.");
       return;
     }
-    done.current = true;
+    stop();
     onCode(gtin);
   };
 

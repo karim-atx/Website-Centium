@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 
 // Database stage B1 "water_intakes — drinks, not a running total"
@@ -13,8 +12,6 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 // (user_id, amount_ml, logged_at); `source` keeps its default and
 // `backfilled` is never sent.
 
-// Newer than lib/supabase/database.types.ts (generated from production).
-const supabase = typed as unknown as SupabaseClient;
 
 export type DrinkResult = { ok: true; id: string } | { ok: false; message: string; overCap?: boolean };
 

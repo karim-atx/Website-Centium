@@ -10,6 +10,7 @@ import {
   logoObjectPath,
   money,
   pageLine,
+  paidLine,
   passStateTag,
   pickVenue,
   replacedObject,
@@ -18,8 +19,10 @@ import {
   toHoursWrite,
   toMyVenue,
   toRosterEntry,
+  canMarkBookingPaid,
   toVenueDashboard,
   toVenueMember,
+  isMaskedLabel,
   totalOf,
   validateDrafts,
   type DayDraft,
@@ -100,19 +103,42 @@ test("toVenueDashboard: money as numbers, missing counts as 0", () => {
   assert.equal(d.amountAwaitingPayment, 15);
   assert.equal(d.amountMarkedPaidThisMonth, 135);
   assert.equal(d.classesThisWeek, 0);
-  assert.equal(money(d.amountAwaitingPayment), "$15");
+  assert.equal(money(15), "$15");
   assert.equal(money(0), "$0");
+});
+
+test("toVenueDashboard: B15 money is null without revenue, never 0", () => {
+  const d = toVenueDashboard({
+    gym_id: GYM,
+    name: "Flex Gym",
+    is_open_now: null,
+    members_total: 2,
+    active_members: 2,
+    memberships_awaiting_payment: 1,
+    amount_awaiting_payment: null,
+    amount_marked_paid_this_month: null,
+    classes_this_week: 1,
+    bookings_this_week: 2,
+    waitlist_waiting: 0,
+    cancellations_this_week: 0,
+    reviews_count: 0,
+    reviews_average: null,
+  });
+  assert.equal(d.amountAwaitingPayment, null);
+  assert.equal(d.amountMarkedPaidThisMonth, null);
 });
 
 const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   membership_id: "m1",
-  member_first_name: "Rana",
+  member_label: "Rana",
   member_is_minor: false,
   plan_name: "Monthly",
   status: "active",
   payment_method: "cash",
   payment_status: "pending",
   price_agreed: "120",
+  paid_at: null,
+  marked_paid_by: null,
   started_on: "2026-10-01",
   expires_on: "2026-11-01",
   pass_state: "awaiting_payment",
@@ -121,17 +147,21 @@ const memberRow = (over: Partial<VenueMemberRow> = {}): VenueMemberRow => ({
   ...over,
 });
 
-test("toVenueMember: carries a first name and a minor flag, nothing more", () => {
+test("toVenueMember: carries the server's label (Q-05), a minor flag and the business member number (B7), nothing more", () => {
   const m = toVenueMember(memberRow({ member_is_minor: true }));
   assert.deepEqual(Object.keys(m).sort(), [
     "expiresOn",
-    "firstName",
     "isMinor",
     "joinedAt",
+    "label",
+    "markedPaidBy",
+    "memberNumber",
     "membershipId",
+    "paidAt",
     "passState",
     "paymentMethod",
     "paymentStatus",
+    "personId",
     "planName",
     "priceAgreed",
     "startedOn",
@@ -139,7 +169,14 @@ test("toVenueMember: carries a first name and a minor flag, nothing more", () =>
   ]);
   assert.equal(m.isMinor, true);
   assert.equal(m.priceAgreed, 120);
-  assert.equal(toVenueMember(memberRow({ member_first_name: null })).firstName, "Member");
+  assert.equal(toVenueMember(memberRow({ member_label: null })).label, "Member");
+  assert.equal(m.memberNumber, null);
+  assert.equal(toVenueMember(memberRow({ member_number: 42, person_id: "p" })).memberNumber, 42);
+});
+
+test("isMaskedLabel: the server's masked labels get the person glyph, a shared name its initial", () => {
+  for (const l of ["Member #0001", "Guest", "Member", " Member #12 "]) assert.equal(isMaskedLabel(l), true, l);
+  for (const l of ["Sarah", "Membership", "#0042", "Lina", "Client #0042"]) assert.equal(isMaskedLabel(l), false, l);
 });
 
 test("totalOf / pageLine: the unpaginated total rides on every row", () => {
@@ -158,17 +195,33 @@ test("passStateTag: the desk's wording for awaiting payment and valid", () => {
 
 test("roster: mapping and the booked / waitlist split", () => {
   const entries = [
-    toRosterEntry({ entry_kind: "booked", client_first_name: "Sam", client_is_minor: false, payment_method: "cash", payment_status: "pending", price_agreed: "20", at: "t1", waitlist_position: null }),
-    toRosterEntry({ entry_kind: "waitlist", client_first_name: "Lea", client_is_minor: true, payment_method: null, payment_status: null, price_agreed: null, at: "t2", waitlist_position: 1 }),
-    toRosterEntry({ entry_kind: "waitlist", client_first_name: null, client_is_minor: null, payment_method: null, payment_status: null, price_agreed: null, at: "t3", waitlist_position: 2 }),
+    toRosterEntry({ entry_kind: "booked", client_label: "Sam", client_is_minor: false, payment_method: "cash", payment_status: "pending", price_agreed: "20", at: "t1", waitlist_position: null }),
+    toRosterEntry({ entry_kind: "waitlist", client_label: "Lea", client_is_minor: true, payment_method: null, payment_status: null, price_agreed: null, at: "t2", waitlist_position: 1 }),
+    toRosterEntry({ entry_kind: "waitlist", client_label: null, client_is_minor: null, payment_method: null, payment_status: null, price_agreed: null, at: "t3", waitlist_position: 2 }),
   ];
   const { booked, waitlist } = splitRoster(entries);
   assert.equal(booked.length, 1);
   assert.equal(booked[0].priceAgreed, 20);
   assert.equal(waitlist.length, 2);
   assert.equal(waitlist[0].isMinor, true);
-  assert.equal(waitlist[1].firstName, "Client");
+  assert.equal(waitlist[1].label, "Client");
   assert.equal(waitlist[1].isMinor, false);
+  // Without the CL-08 column, no row carries a booking id.
+  assert.equal(booked[0].bookingId, null);
+});
+
+test("roster CL-08: booking_id on booked rows only, and which rows can be marked paid", () => {
+  const base = { client_label: "Sam", client_is_minor: false, payment_method: "cash", price_agreed: 20, at: "t1" } as const;
+  const pending = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "pending", waitlist_position: null, booking_id: "b1" });
+  const paid = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "paid", waitlist_position: null, booking_id: "b2" });
+  const noId = toRosterEntry({ ...base, entry_kind: "booked", payment_status: "pending", waitlist_position: null, booking_id: null });
+  const waiting = toRosterEntry({ ...base, entry_kind: "waitlist", payment_status: "pending", waitlist_position: 1, booking_id: "w1" });
+  assert.equal(pending.bookingId, "b1");
+  assert.equal(waiting.bookingId, null);
+  assert.equal(canMarkBookingPaid(pending), true);
+  assert.equal(canMarkBookingPaid(paid), false);
+  assert.equal(canMarkBookingPaid(noId), false);
+  assert.equal(canMarkBookingPaid(waiting), false);
 });
 
 // ---- hours editor
@@ -290,8 +343,20 @@ test("replacedObject: only a valid path in the caller's own prefix, never the ne
 test("consoleMessage: the console's codes, then stage 4's, then the fallback", () => {
   assert.equal(consoleMessage("ATX03", "that venue is not yours", "x"), "You don't manage this venue.");
   assert.equal(consoleMessage("ATX08", "no such venue", "x"), "That venue or class couldn't be found.");
-  assert.equal(consoleMessage("42501", "", "x"), "Only the venue's owner can change this.");
+  assert.equal(consoleMessage("42501", "", "x"), "You don't have access to change this. Ask the owner.");
   assert.match(consoleMessage("23514", "", "x"), /closed, open 24 hours/);
   assert.equal(consoleMessage("ATX01", "", "x"), "Your session expired. Sign in again.");
   assert.equal(consoleMessage(undefined, "boom", "fallback"), "fallback");
+});
+
+test("paidLine: 'Paid {d Mon}' on the local day, only for a recorded payment", () => {
+  const at = new Date(2026, 9, 3, 18, 30).toISOString();
+  assert.equal(paidLine({ paidAt: at, paymentStatus: "paid" }), "Paid 3 Oct");
+  assert.equal(paidLine({ paidAt: new Date(2026, 8, 27, 9).toISOString(), paymentStatus: "paid" }), "Paid 27 Sep");
+  assert.equal(paidLine({ paidAt: null, paymentStatus: "paid" }), null);
+  assert.equal(paidLine({ paidAt: at, paymentStatus: "refunded" }), null);
+  assert.equal(paidLine({ paidAt: null, paymentStatus: "pending" }), null);
+  const m = toVenueMember(memberRow({ payment_status: "paid", paid_at: at, marked_paid_by: "u1" }));
+  assert.equal(m.paidAt, at);
+  assert.equal(m.markedPaidBy, "u1");
 });

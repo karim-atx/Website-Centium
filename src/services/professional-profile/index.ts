@@ -252,9 +252,12 @@ export type LeaveAffiliationResult = { ok: true } | { ok: false; message: string
  * ZERO ROWS IS NOT AN ERROR. Leaving a business you are not in is the state
  * the caller wanted either way, and a stale button is the likeliest cause.
  */
-export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
+export async function leaveAffiliation(businessId: string): Promise<LeaveAffiliationResult> {
+  // ONE BUSINESS (B0, Release 2): a professional may work for several, so
+  // leaving is scoped to the business named; the policy still limits the
+  // delete to the caller's own rows.
   try {
-    const { error } = await supabase.from("business_employees").delete().not("id", "is", null);
+    const { error } = await supabase.from("business_employees").delete().eq("business_id", businessId);
     if (error) {
       console.error("[professional-profile] Could not leave business:", error.code, error.message);
       return { ok: false, message: describe(error) };
@@ -272,6 +275,8 @@ export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
 export const UNDER_18_LISTING = "Accounts under 18 can't be listed publicly.";
 /** ATX48: fixed by adding a date of birth. */
 export const NEEDS_DOB = "Add your date of birth to appear in the directory.";
+/** ATXC6: fixed once a licence or certificate is verified. */
+export const NEEDS_VERIFICATION = "You can be listed once your licence or certificate is verified.";
 
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
@@ -279,6 +284,8 @@ export type SetListingResult =
   | { status: "no_profile" }
   /** ATX48: no date of birth on file. One field, then it works. */
   | { status: "needs_dob" }
+  /** ATXC6: no current verified licence or certificate. */
+  | { status: "needs_verification" }
   | { status: "error"; message: string };
 
 /**
@@ -310,6 +317,9 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
     // ATX48 (Database 16f2f43): no date of birth on file. Different from ATX47
     // on purpose: this one is fixed by filling in one field.
     if (error.code === "ATX48") return { status: "needs_dob" };
+    // ATXC6 (Database, 14 Oct): a NEW listing needs a current verified
+    // licence or certificate. Anyone already listed keeps their listing.
+    if (error.code === "ATXC6") return { status: "needs_verification" };
     console.error("[professional-profile] Could not set listing:", error.code, error.message);
     return { status: "error", message: "Could not update your listing. Try again." };
   }

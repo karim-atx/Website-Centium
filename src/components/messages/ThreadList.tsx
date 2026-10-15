@@ -23,7 +23,9 @@ import type { BroadcastList } from "../../services/messaging/broadcasts";
 import { SwipeActions, type SwipeAction } from "../ui/SwipeActions";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
-import { listTime } from "./chatTime";
+import { bizListTime, listTime } from "./chatTime";
+import { BizAvatar } from "./BusinessList";
+import { useBizChatColours } from "./bizAvatar";
 import { useListColors, type ListColors } from "./listColors";
 import { typeColours } from "../professionals/typeColour";
 
@@ -108,7 +110,9 @@ export const ThreadList: React.FC<{
   onOpen: (thread: MessageThread) => void;
   /** Swipe and ⋮ actions; absent rows do not swipe. */
   actions?: RowActions;
-}> = ({ items, settings, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions }) => {
+  /** OP1-190: a business reads the ClientChatV2 rows (BusinessList.tsx); everyone else MO1.7's. */
+  business?: boolean;
+}> = ({ items, settings, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions, business }) => {
   const unread = useUnread();
   const live = useThreadLive();
   const c = useListColors();
@@ -202,6 +206,7 @@ export const ThreadList: React.FC<{
               onMenu={(anchor) => setMenu({ thread: t, anchor })}
               onMuteMenu={(anchor) => setMuteMenu({ thread: t, anchor })}
               c={c}
+              business={business}
             />
           );
         })}
@@ -288,7 +293,9 @@ const ThreadRow: React.FC<{
   onMenu: (anchor: HTMLElement) => void;
   onMuteMenu: (anchor: HTMLElement) => void;
   c: ListColors;
-}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c }) => {
+  business?: boolean;
+}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c, business }) => {
+  const bc = useBizChatColours();
   const rowRef = useRef<HTMLLIElement | null>(null);
   const group = t.kind === "group";
   const muted = isMuted(s);
@@ -338,6 +345,128 @@ const ThreadRow: React.FC<{
           : []),
       ]
     : [];
+
+  // OP1-190 rows 4-9 (template 25-34): the business row. 72 with its 1px
+  // divider (the li carries the divider, so the button is 71), padding
+  // 10 8 inside a -8 margin, r14, gap 12; a pale fill while pressed (no ring:
+  // the board's tap marker is not a state). Name 15/700 and time 11.5 (faint
+  // 400; unread pDark 800), gap 8; 2 under, gap 6: the tick 15/2 (readTick
+  // when read), the preview 13 (inkSoft 400; unread ink 700) and the badge
+  // (min 20, h 20, padding 0 6, fill / onFill 11/800). No "You: " on a direct
+  // chat: the tick says it (template 30, Jane S.).
+  const bizTime = t.lastMessageAt ? bizListTime(t.lastMessageAt) : "";
+  const bizBody = (
+    <div className="group relative bg-cream rounded-[14px]">
+      <button
+        type="button"
+        onClick={() => onOpen(t)}
+        onKeyDown={(e) => {
+          if (actions && ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu")) {
+            e.preventDefault();
+            if (rowRef.current) onMenu(rowRef.current);
+          }
+        }}
+        data-biz-row=""
+        className="relative w-full flex items-center gap-3 min-h-[71px] px-2 py-2.5 rounded-[14px] text-left transition-colors duration-100 active:bg-primary-pale"
+      >
+        <span className="relative shrink-0">
+          <BizAvatar thread={t} size={48} />
+          {online && (
+            <span
+              aria-label="Online"
+              data-row-online=""
+              className="absolute right-px bottom-px w-3 h-3 rounded-full"
+              style={{ background: bc.online, boxShadow: "0 0 0 2px rgb(var(--c-cream))" }}
+            />
+          )}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-2">
+            <span data-row-name="" className="flex-1 min-w-0 text-[15px] leading-[1.5] font-bold text-charcoal truncate">
+              {name}
+            </span>
+            {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0 text-charcoal-faint" />}
+            {muted && <BellOff size={12} aria-label="Muted" className="shrink-0 text-charcoal-faint" />}
+            <span
+              data-row-time=""
+              className={`shrink-0 whitespace-nowrap text-[11.5px] leading-[1.5] ${unread ? "font-extrabold text-primary-dark" : "font-normal text-charcoal-faint"}${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
+            >
+              {bizTime}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5 mt-0.5">
+            {typing ? (
+              <span data-row-preview="" className="flex-1 min-w-0 truncate text-[13px] leading-[1.5] italic text-primary-dark">
+                typing…
+              </span>
+            ) : (
+              <>
+                {mine &&
+                  !group &&
+                  (read ? (
+                    <CheckCheck size={15} strokeWidth={2} aria-label="Read" className="shrink-0" style={{ color: bc.readTick }} />
+                  ) : reached ? (
+                    <CheckCheck size={15} strokeWidth={2} aria-label="Delivered" className="shrink-0 text-charcoal-faint" />
+                  ) : (
+                    <Check size={15} strokeWidth={2} aria-label="Sent" className="shrink-0 text-charcoal-faint" />
+                  ))}
+                <span
+                  data-row-preview=""
+                  className={`flex-1 min-w-0 truncate text-[13px] leading-[1.5] ${unread ? "font-bold text-charcoal" : "font-normal text-charcoal-soft"}`}
+                >
+                  {group && (mine ? "You: " : groupSender ? `${groupSender}: ` : "")}
+                  {t.lastMessagePreview ?? "No messages yet"}
+                </span>
+              </>
+            )}
+            {unread && (
+              <span
+                data-row-badge=""
+                aria-label={`${count} unread`}
+                className={`shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-extrabold inline-flex items-center justify-center${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
+              >
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
+          </span>
+        </span>
+      </button>
+      {actions && (
+        <button
+          type="button"
+          data-row-more=""
+          aria-label={`More for chat with ${name}`}
+          onClick={(e) => onMenu(e.currentTarget)}
+          className="tap absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-cream text-charcoal-soft opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+        >
+          <MoreVertical size={18} aria-hidden />
+        </button>
+      )}
+    </div>
+  );
+
+  if (business)
+    return (
+      <li ref={rowRef} className="-mx-2 rounded-[14px] border-b border-charcoal/[0.06]">
+        {actions ? (
+          <SwipeActions
+            actions={tiles}
+            radius={14}
+            tileMax={58}
+            tileGap={6}
+            edgeInset={4}
+            tileRadius={14}
+            showLabels
+            tapCloses
+            onLongPress={(row) => onMenu(row)}
+          >
+            {bizBody}
+          </SwipeActions>
+        ) : (
+          bizBody
+        )}
+      </li>
+    );
 
   const body = (
     <div className="group relative" style={{ background: c.rowFill }}>

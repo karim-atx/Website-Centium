@@ -3,6 +3,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { uploadPrivateFile, validateFileFor } from "../storage";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { parseCard, type MessageCard } from "./cards";
+import { loadConsoleAccess } from "../business-console";
 
 // Two-party messaging, against the real tables.
 //
@@ -45,7 +46,7 @@ import { parseCard, type MessageCard } from "./cards";
  * (Database 20261003000000, phase 2B). The database kept the name "peer" for
  * direct chats rather than renaming it.
  */
-export type ThreadKind = "peer" | "official_support" | "group";
+export type ThreadKind = "peer" | "official_support" | "group" | "business";
 
 export interface MessageThread {
   id: string;
@@ -106,6 +107,14 @@ export interface MessageThread {
    */
   venue: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
   /**
+   * B7 MB-02: a thread between a business and one member (kind 'business').
+   * The member sees the business (its name and logo), never the employee
+   * who wrote; the business side sees the member as business_member_threads
+   * labels them ("Member #0001" unless they shared their name). Calls are
+   * off on these threads (thread_allows_calls). Null for every other thread.
+   */
+  business: { id: string; name: string; initials: string; logoUrl: string | null; memberSide: boolean } | null;
+  /**
    * Who the other party is, from my_conversations().other_role (Database B3,
    * 20261116040000; PB-O-41): "official", "gym", a professional_subtype, or
    * null for a group or a fellow customer (never an invented label).
@@ -118,8 +127,9 @@ export interface MessageThread {
 }
 
 /** The letters an avatar shows when there's no photo: the venue's initials on the member side. */
-export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue">): string {
+export function threadInitials(thread: Pick<MessageThread, "participantName" | "venue" | "business">): string {
   if (thread.venue?.memberSide) return thread.venue.initials;
+  if (thread.business?.memberSide) return thread.business.initials;
   return thread.participantName.trim().charAt(0).toUpperCase();
 }
 
@@ -495,6 +505,10 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     other_role?: string | null;
     last_sender_first_name?: string | null;
     cleared_at?: string | null;
+    business_id?: string | null;
+    business_name?: string | null;
+    business_initials?: string | null;
+    business_logo_url?: string | null;
   };
   const venueThreadIds = (data ?? []).filter((r) => !!(r as VenueCols).venue_id).map((r) => r.thread_id as string);
   const memberSideThreads = await venueThreadsIStarted(venueThreadIds);
@@ -535,7 +549,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
           : r.other_first_name?.trim() || "Someone",
     participantAvatarUrl: r.kind === "group" ? null : r.other_avatar_url,
     // Compared, not cast: only the exact string earns the official treatment.
-    kind: r.kind === "official_support" ? "official_support" : r.kind === "group" ? "group" : "peer",
+    kind: r.kind === "official_support" ? "official_support" : r.kind === "group" ? "group" : r.kind === "business" ? "business" : "peer",
     // Through the shared describer, so the list and a quoted preview always
     // say the same thing about the same message. The function returns no text
     // for a redacted message, and only whether there was an attachment.
@@ -557,10 +571,14 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
     venue,
+    business: businessOf(r.kind, v, r.other_first_name),
     otherRole: v.other_role ?? null,
     lastSenderFirstName: v.last_sender_first_name?.trim() || null,
     clearedAt: v.cleared_at ?? null,
     };
+    // B7 MB-02 (Database 65e0311): the member sees the business, its name and
+    // logo; the owner side's other_first_name is already the masked label.
+    if (base.business?.memberSide) return { ...base, participantName: base.business.name, participantAvatarUrl: base.business.logoUrl };
     if (!venue) return base;
     // A venue chat: the member sees the venue; the owner sees "Lina · Flex Gym".
     return venue.memberSide
@@ -572,7 +590,163 @@ export async function fetchThreads(): Promise<ThreadsResult> {
           participantName: `${base.participantId === null ? "Former member" : base.participantName} · ${venue.name}`,
         };
   });
-  return { ok: true, threads };
+  return { ok: true, threads: await withBusinessThreads(threads) };
+}
+
+// ---------------------------------------------------------------------------
+// B7 MB-02: business ↔ member threads
+// ---------------------------------------------------------------------------
+//
+// my_conversations() names both sides correctly since Database 65e0311: the
+// owner's other_first_name is business_person_label() ("Member #0001" unless
+// shared), and the member gets other_first_name / other_role null plus
+// business_id, business_name, business_initials, business_logo_url. The
+// member side is the side the name is withheld from. Staff holding
+// 'messages' are not participants: their business threads come from
+// business_member_threads and are added to the list here.
+
+/** What the member sees when a business has no name set. */
+const MEMBER_SIDE_FALLBACK = "Your gym or studio";
+
+function businessOf(
+  kind: string | null,
+  v: { business_id?: string | null; business_name?: string | null; business_initials?: string | null; business_logo_url?: string | null },
+  otherFirstName: string | null
+): MessageThread["business"] {
+  if (kind !== "business" || !v.business_id) return null;
+  return {
+    id: v.business_id,
+    name: v.business_name?.trim() || MEMBER_SIDE_FALLBACK,
+    initials: v.business_initials?.trim() || (v.business_name?.trim().charAt(0).toUpperCase() ?? "") || "G",
+    logoUrl: v.business_logo_url ?? null,
+    memberSide: otherFirstName === null,
+  };
+}
+
+type Loose = {
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PostgrestError | null }>;
+};
+const loose = () => supabase as unknown as Loose;
+
+type BizThreadRow = { thread_id: string; person_id: string; member_number: number | null; label: string; is_minor: boolean; last_message_at: string | null; message_count: number | string };
+
+async function businessThreadRows(businessId: string): Promise<BizThreadRow[]> {
+  const r = await loose().rpc("business_member_threads", { p_business_id: businessId, p_limit: 200, p_offset: 0 });
+  return r.error ? [] : ((r.data ?? []) as BizThreadRow[]);
+}
+
+async function withBusinessThreads(threads: MessageThread[]): Promise<MessageThread[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id ?? null;
+  const access = uid ? await loadConsoleAccess(uid) : null;
+  const staffSeats = (access?.ok ? access.value.seats : []).filter((s) => !s.isOwner && s.permissions.includes("messages"));
+  if (staffSeats.length === 0) return threads;
+  const rowsBySeat = new Map(await Promise.all(staffSeats.map(async (s) => [s.businessId, await businessThreadRows(s.businessId)] as const)));
+  // Staff: the business threads they read but are not a participant in.
+  const listed = new Set(threads.map((t) => t.id));
+  const extra: { seatId: string; seatName: string; row: BizThreadRow }[] = [];
+  for (const s of staffSeats) {
+    for (const row of rowsBySeat.get(s.businessId) ?? []) if (!listed.has(row.thread_id)) extra.push({ seatId: s.businessId, seatName: s.businessName, row });
+  }
+  if (extra.length === 0) return threads;
+  const latest = await latestMessages(extra.map((e) => e.row.thread_id));
+  const staffThreads = extra.map(({ seatId, seatName, row }): MessageThread => {
+    const m = latest.get(row.thread_id);
+    return {
+      id: row.thread_id,
+      participantId: row.person_id,
+      participantName: `${row.label} · ${seatName}`,
+      participantAvatarUrl: null,
+      kind: "business",
+      lastMessagePreview: m ? describeMessage(m) : null,
+      lastMessageAt: row.last_message_at,
+      lastMessageId: m?.id ?? null,
+      lastMessageSenderId: m?.senderId ?? null,
+      // Staff keep no read mark of their own on a business thread.
+      unreadCount: 0,
+      lastReadAt: null,
+      venue: null,
+      business: { id: seatId, name: seatName, initials: seatName.trim().charAt(0).toUpperCase() || "G", logoUrl: null, memberSide: false },
+      otherRole: null,
+      lastSenderFirstName: null,
+      clearedAt: null,
+    };
+  });
+  return [...threads, ...staffThreads].sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
+}
+
+
+type LatestRow = {
+  id: string;
+  thread_id: string;
+  sender_id: string | null;
+  text: string | null;
+  attachment_url: string | null;
+  attachment_purged_at: string | null;
+  redacted_at: string | null;
+  voice_note_seconds: number | null;
+  deleted_at: string | null;
+};
+type Latest = Parameters<typeof describeMessage>[0] & { id: string; senderId: string | null };
+
+/** The newest message of each thread (one read, newest first, first row per thread wins). */
+async function latestMessages(threadIds: string[]): Promise<Map<string, Latest>> {
+  const out = new Map<string, Latest>();
+  if (threadIds.length === 0) return out;
+  const r = await (supabase as unknown as {
+    from: (t: string) => { select: (c: string) => { in: (k: string, v: string[]) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => PromiseLike<{ data: unknown }> } } } };
+  })
+    .from("messages")
+    .select("id, thread_id, sender_id, text, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, deleted_at")
+    .in("thread_id", threadIds)
+    .order("created_at", { ascending: false })
+    .limit(500);
+  for (const m of (r.data ?? []) as LatestRow[]) {
+    if (out.has(m.thread_id)) continue;
+    out.set(m.thread_id, {
+      id: m.id,
+      senderId: m.sender_id,
+      text: m.text,
+      attachmentPath: m.attachment_url,
+      attachmentPurgedAt: m.attachment_purged_at,
+      redactedAt: m.redacted_at,
+      voiceNoteSeconds: m.voice_note_seconds,
+      deletedAt: m.deleted_at,
+    });
+  }
+  return out;
+}
+
+/**
+ * AN4-051 O5: whether the member in one of the business's threads is under 18
+ * (business_member_threads.is_minor; my_conversations does not carry it).
+ * Pages through the business's threads until the one asked for is found.
+ */
+export async function memberThreadIsMinor(businessId: string, threadId: string): Promise<boolean> {
+  const PAGE = 200;
+  for (let offset = 0; offset < 2000; offset += PAGE) {
+    const r = await loose().rpc("business_member_threads", { p_business_id: businessId, p_limit: PAGE, p_offset: offset });
+    if (r.error) return false;
+    const rows = (r.data ?? []) as BizThreadRow[];
+    const hit = rows.find((t) => t.thread_id === threadId);
+    if (hit) return !!hit.is_minor;
+    if (rows.length < PAGE) return false;
+  }
+  return false;
+}
+
+/**
+ * Opens (or finds) the business's thread with one member. Idempotent on
+ * (business, member): every employee gets the same thread. ATX96: not a
+ * current member, nor one who left in the last 90 days.
+ */
+export async function startMemberThread(businessId: string, personId: string): Promise<{ ok: true; threadId: string } | { ok: false; message: string }> {
+  const r = await loose().rpc("start_member_thread", { p_business_id: businessId, p_person_id: personId });
+  if (r.error) {
+    if (r.error.code === "ATX96") return { ok: false, message: "You can message current members, and anyone who left in the last 90 days." };
+    return { ok: false, message: describe(r.error) };
+  }
+  return { ok: true, threadId: String(r.data) };
 }
 
 const MESSAGE_COLUMNS =

@@ -1,0 +1,248 @@
+/* ScrubChart (handoff/source/ScrubChart.dc.html): the one week chart with
+   scrub, pin, legend toggles and markers (HANDOVER 2.3, motion
+   chart-scrub-pin). Shared by AN11 product detail, AN13 Reputation and
+   AN14 Revenue. Literal source L / D values; theme tokens where the source
+   value is the token (line = primary-dark, bar = primary-fill). Font sizes
+   are px here so Larger text applies (postcss larger-text). */
+
+.sc {
+  --sc-ink: rgb(var(--c-charcoal));
+  --sc-faint: rgb(var(--c-charcoal-faint));
+  --sc-axis: #a79e93;
+  --sc-card: rgb(var(--c-cream-card));
+  --sc-grid: rgba(36, 31, 27, 0.07);
+  --sc-line: rgb(var(--c-primary-dark));
+  --sc-area: rgba(125, 107, 181, 0.12);
+  --sc-ghost: #b5ada4;
+  --sc-scrub: #241f1b;
+  --sc-tip-bg: #241f1b;
+  --sc-tip-ink: #ffffff;
+  --sc-border: rgba(36, 31, 27, 0.14);
+  --sc-tab-track: #f3f3fd;
+  --sc-tab-on: #a79ad5;
+  --sc-tab-on-ink: #ffffff;
+  --sc-tab-ink: #6d50d3;
+  --sc-bar: rgb(var(--c-primary-fill));
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  color: var(--sc-ink);
+  line-height: 1.5;
+}
+html.dark .sc {
+  --sc-axis: #9f9cac;
+  --sc-grid: rgba(238, 239, 242, 0.07);
+  --sc-area: rgba(169, 145, 254, 0.14);
+  --sc-ghost: #8a86a0;
+  --sc-scrub: #f5f3fa;
+  --sc-tip-bg: #f5f3fa;
+  --sc-tip-ink: #121317;
+  --sc-border: rgba(245, 243, 250, 0.12);
+  --sc-tab-track: #242730;
+  --sc-tab-on: #a991fe;
+  --sc-tab-on-ink: #0d0b1a;
+  --sc-tab-ink: #b7abde;
+}
+html.high-contrast .sc {
+  --sc-axis: rgb(var(--c-charcoal-soft));
+  --sc-border: rgb(var(--c-charcoal-faint));
+}
+
+.sc-modes {
+  display: flex;
+  align-items: center;
+  background: var(--sc-tab-track);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.sc-mode {
+  flex: 1;
+  min-height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sc-tab-ink);
+  white-space: nowrap;
+}
+.sc-mode[aria-selected="true"] {
+  background: var(--sc-tab-on);
+  color: var(--sc-tab-on-ink);
+}
+.sc-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.sc-leg {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--sc-ink);
+  border-radius: 8px;
+  padding: 0 4px;
+  position: relative;
+}
+.sc-leg::after {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
+}
+.sc-leg[aria-pressed="false"] {
+  opacity: 0.45;
+}
+.sc-leg:focus-visible,
+.sc-mode:focus-visible,
+.sc-hit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(var(--c-primary-dark));
+}
+.sc-swatch {
+  width: 14px;
+  height: 0;
+}
+.sc-unit {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--sc-faint);
+  white-space: nowrap;
+}
+.sc-plot {
+  position: relative;
+}
+.sc-plot svg {
+  display: block;
+  overflow: visible;
+}
+.sc-ylab {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+  font-size: 9.5px;
+  color: var(--sc-axis);
+  font-variant-numeric: tabular-nums;
+}
+.sc-tag {
+  position: absolute;
+  top: -2px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sc-hit {
+  position: absolute;
+  left: 30px;
+  right: 4px;
+  top: 0;
+  bottom: 0;
+  touch-action: pan-y;
+  cursor: crosshair;
+  outline: none;
+}
+.sc-tip {
+  position: absolute;
+  top: 6px;
+  min-width: 150px;
+  background: var(--sc-tip-bg);
+  color: var(--sc-tip-ink);
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 20px rgba(36, 31, 27, 0.22);
+  pointer-events: none;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.reduce-motion) .sc-tip {
+    animation: sc-tip-in 150ms ease-out;
+  }
+}
+@keyframes sc-tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sc-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.sc-tip-pin {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+.sc-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11.5px;
+  line-height: 17px;
+  white-space: nowrap;
+}
+.sc-tip-row > span:first-child {
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sc-tip-row > span:last-child {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.sc-xl {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 30px;
+  margin-top: 4px;
+  font-size: 9.5px;
+  color: var(--sc-axis);
+}
+.sc-empty {
+  border-radius: 14px;
+  border: 1.5px dashed var(--sc-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+.sc-empty p {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--sc-faint);
+  text-wrap: pretty;
+}
+.sc-caption {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--sc-faint);
+  margin-top: 8px;
+  text-wrap: pretty;
+}

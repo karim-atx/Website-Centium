@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 
 /**
@@ -19,8 +18,6 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
  * upsert (an upsert would name user_id / check_key in its UPDATE half).
  */
 
-// B2 tables are newer than lib/supabase/database.types.ts (generated from production): untyped here.
-const supabase = typed as unknown as SupabaseClient;
 
 export const GENERAL_CHECK_KEYS = ["bp", "glucose", "cholesterol", "hepatitis_c", "hiv", "bowel", "mammogram", "cervical", "psa"] as const;
 export type GeneralCheckKey = (typeof GENERAL_CHECK_KEYS)[number];

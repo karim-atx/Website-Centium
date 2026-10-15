@@ -36,10 +36,12 @@ import { supabase } from "../../../lib/supabase/client";
 // real and a caller holding a uuid (a future admin tool, a deep link) can use
 // it; nothing in this UI can currently produce that uuid.
 //
-// MEMBER NAMES ARE NOT AVAILABLE TO THE BUSINESS, same structural reason. A
-// roster can show status, plan and dates, and cannot show who. Fixing that
-// needs a view or a widened grant — a schema decision, not something this file
-// can reach for.
+// MEMBER NAMES (B7): `profiles` is own-row only, so the business's roster is
+// read through list_business_members(business, state, limit, offset), the
+// business-level counterpart of venue_members(): a FIRST NAME and a minor
+// flag, never a date of birth, pending first, with total_count for paging.
+// It needs business_can(members) and returns nothing (not an error) without
+// it.
 
 /** Where a membership row sits. Derived, not stored — see toMembership. */
 export type MembershipStatus = "pending" | "active" | "declined" | "ended";
@@ -47,7 +49,12 @@ export type MembershipStatus = "pending" | "active" | "declined" | "ended";
 export interface Membership {
   id: string;
   businessId: string;
-  memberId: string;
+  /** The member's account. Null on the business's roster: list_business_members never hands it out. */
+  memberId: string | null;
+  /** The server's label (list_business_members, Q-05): a shared first name or "Member #0042"; null on the member's own side. */
+  label?: string | null;
+  /** Under 18 (a flag, never an age). */
+  isMinor?: boolean;
   membershipPlanId: string | null;
   status: MembershipStatus;
   invitedAt: string;
@@ -129,20 +136,6 @@ type PgError = { message: string; code?: string } | null;
 // from database.types.ts — newer than the last regeneration, as
 // professional_reviews_readable and my_class_schedule were. Cast to the exact
 // call shapes this file makes rather than hand-editing a generated file.
-type MembersTable = {
-  select: (columns: string) => {
-    eq: (
-      column: string,
-      value: string
-    ) => {
-      order: (
-        column: string,
-        options: { ascending: boolean }
-      ) => PromiseLike<{ data: Row[] | null; error: PgError }>;
-    };
-  };
-};
-
 type CodesTable = {
   select: (columns: string) => {
     eq: (
@@ -181,9 +174,6 @@ type MembershipsView = {
     }>;
   };
 };
-
-const membersTable = (): MembersTable =>
-  (supabase as unknown as { from: (t: "business_members") => MembersTable }).from("business_members");
 
 const membershipsView = (): MembershipsView =>
   (supabase as unknown as { from: (v: "my_business_memberships") => MembershipsView }).from(
@@ -229,50 +219,71 @@ function describe(error: { message?: string; code?: string }, fallback: string):
 }
 
 /**
- * Plan names for the plans actually on screen, batched.
- *
- * STILL HERE, AND ONLY FOR THE BUSINESS'S OWN ROSTER. The member side reads
- * my_business_memberships instead, which carries plan_name already — but
- * membership_plans_select_public is
- * `business_is_listed(business_id) OR is_business_insider(business_id)`, and
- * an owner satisfies the second half whatever their listing is set to. So
- * this read works for fetchMyMembers and would not have worked for a member
- * looking at a delisted business. businessNames() is gone entirely: nothing
- * calls it now.
- */
-async function planNames(ids: string[]): Promise<Map<string, string>> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return new Map();
-  const { data } = await supabase.from("membership_plans").select("id, name").in("id", unique);
-  return new Map((data ?? []).map((p) => [p.id as string, p.name as string]));
-}
-
-/**
- * The business's own roster, every state included.
+ * The business's own roster, every state included (B7 list_business_members).
  *
  * NOT FILTERED TO ACTIVE. An owner needs to see that an invitation is still
  * unanswered and that somebody declined — a roster showing only the people who
- * said yes cannot explain why the person they invited is missing.
+ * said yes cannot explain why the person they invited is missing. The reader
+ * sorts pending first, then newest; `total` is the full count for "See all".
+ *
+ * Staff holding `members` read the same roster; without it the reader
+ * returns no rows rather than an error, so an empty list is all they see.
  */
 export async function fetchMyMembers(
-  businessId: string
-): Promise<{ ok: true; members: Membership[] } | { ok: false; message: string }> {
-  const { data, error } = await membersTable()
-    .select(MEMBER_COLUMNS)
-    .eq("business_id", businessId)
-    .order("invited_at", { ascending: false });
+  businessId: string,
+  opts: { state?: MembershipStatus | null; limit?: number; offset?: number } = {}
+): Promise<{ ok: true; members: Membership[]; total: number } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("list_business_members", {
+    p_business_id: businessId,
+    p_state: opts.state ?? null,
+    p_limit: opts.limit ?? 200,
+    p_offset: opts.offset ?? 0,
+  });
 
   if (error) {
     console.error("[members] Could not read the member roster:", error.message);
     return { ok: false, message: "Couldn't load your members. Try again." };
   }
-  const rows = data ?? [];
-  const plans = await planNames(rows.map((r) => r.membership_plan_id).filter((x): x is string => !!x));
+  const rows = (data ?? []) as ListedMember[];
+  return { ok: true, members: rows.map((r) => listedToMembership(r, businessId)), total: Number(rows[0]?.total_count ?? 0) };
+}
+
+type ListedMember = {
+  membership_id: string;
+  /** Q-05 (Database 0587c8a): masked ("Member #0042") unless shared. */
+  member_label: string | null;
+  member_is_minor: boolean | null;
+  plan_name: string | null;
+  plan_price: number | string | null;
+  state: string;
+  invited_at: string;
+  responded_at: string | null;
+  ended_at: string | null;
+  total_count: number | string;
+};
+
+const STATES: MembershipStatus[] = ["pending", "active", "declined", "ended"];
+
+/** The reader's row in the shape the screens already use. */
+export function listedToMembership(r: ListedMember, businessId: string): Membership {
   return {
-    ok: true,
-    members: rows.map((r) => toMembership(r, r.membership_plan_id ? plans.get(r.membership_plan_id) ?? null : null)),
+    id: r.membership_id,
+    businessId,
+    memberId: null,
+    label: r.member_label?.trim() || null,
+    isMinor: !!r.member_is_minor,
+    membershipPlanId: null,
+    status: STATES.includes(r.state as MembershipStatus) ? (r.state as MembershipStatus) : "pending",
+    invitedAt: r.invited_at,
+    respondedAt: r.responded_at,
+    endedAt: r.ended_at,
+    planName: r.plan_name,
+    businessName: null,
   };
 }
+
+/** "Member #4F2A" where the reader gives no first name (the masking rule, HANDOVER §4). */
+export const maskedMemberLabel = (membershipId: string) => `Member #${membershipId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 
 /**
  * The signed-in person's own memberships and invitations.
@@ -350,7 +361,7 @@ export async function inviteMember(
 export async function createMemberCode(
   businessId: string,
   membershipPlanId: string | null
-): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string }> {
+): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string; code?: string }> {
   const { data, error } = await rpc().rpc("create_business_member_code", {
     p_business_id: businessId,
     p_membership_plan_id: membershipPlanId,
@@ -361,7 +372,7 @@ export async function createMemberCode(
 
   if (error || !data) {
     console.error("[members] Could not create a member code:", error?.message);
-    return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again.") };
+    return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again."), code: error?.code };
   }
   const row = data as {
     id: string;
@@ -467,4 +478,144 @@ export async function endMembership(
     return { ok: false, message: describe(error, "Couldn't end that membership. Try again.") };
   }
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// B7 MB-01: one people reader, member numbers, the member's own name switch
+// ---------------------------------------------------------------------------
+//
+// business_people() is the de-duplicated person list (business_members,
+// live gym memberships, class clients). `label` is the server's decision:
+// the first name when the person shared it with this business, otherwise
+// "Member #0042". RENDER THE LABEL; never build one from first_name.
+// Search matches a shared first name or the member number ("42", "0042",
+// "#42"); a masked name is never searchable, on purpose.
+
+export type PeopleSegment = "all" | "active" | "members" | "class_clients" | "customers" | "appointment_clients";
+
+export interface BusinessPerson {
+  personId: string;
+  label: string;
+  nameIsShared: boolean;
+  isMinor: boolean;
+  memberNumber: number | null;
+  isActive: boolean;
+  isMember: boolean;
+  isClassClient: boolean;
+  firstSeen: string | null;
+  lastSeen: string | null;
+}
+
+/** The function is missing (stage not on this database): the screens keep their pending state. */
+const isMissingFunction = (e: { code?: string }) => e.code === "PGRST202" || e.code === "42883";
+
+export async function fetchBusinessPeople(
+  businessId: string,
+  opts: { segment?: PeopleSegment; search?: string | null; limit?: number; offset?: number } = {}
+): Promise<{ ok: true; people: BusinessPerson[]; total: number } | { ok: false; pending: boolean; message: string }> {
+  const { data, error } = await rpc().rpc("business_people", {
+    p_business_id: businessId,
+    p_segment: opts.segment ?? "all",
+    p_search: opts.search?.trim() || null,
+    p_limit: opts.limit ?? 50,
+    p_offset: opts.offset ?? 0,
+  });
+  if (error) {
+    if (isMissingFunction(error)) return { ok: false, pending: true, message: "" };
+    console.error("[members] Could not read people:", error.message);
+    return { ok: false, pending: false, message: "Couldn't load your members. Try again." };
+  }
+  type Row = {
+    person_id: string; label: string; name_is_shared: boolean; is_minor: boolean; member_number: number | null;
+    is_active: boolean; is_member: boolean; is_class_client: boolean; first_seen: string | null; last_seen: string | null; total_count: number | string;
+  };
+  const rows = (data ?? []) as Row[];
+  return {
+    ok: true,
+    total: Number(rows[0]?.total_count ?? 0),
+    people: rows.map((r) => ({
+      personId: r.person_id,
+      label: r.label,
+      nameIsShared: !!r.name_is_shared,
+      isMinor: !!r.is_minor,
+      memberNumber: r.member_number,
+      isActive: !!r.is_active,
+      isMember: !!r.is_member,
+      isClassClient: !!r.is_class_client,
+      firstSeen: r.first_seen,
+      lastSeen: r.last_seen,
+    })),
+  };
+}
+
+/** How the member's own number reads, the same shape the server's label uses. */
+export const memberNumberLabel = (n: number) => `Member #${String(n).padStart(4, "0")}`;
+
+export interface MyNameSharing {
+  businessId: string;
+  memberNumber: number;
+  shared: boolean;
+}
+
+/**
+ * The member's side: every business that has numbered them, and whether they
+ * show it their first name. Own rows of business_person_numbers and
+ * profiles_shared_with_business (a revoked share keeps its row).
+ */
+export async function fetchMyNameSharing(userId: string): Promise<{ ok: true; rows: MyNameSharing[] } | { ok: false; pending: boolean }> {
+  const db = supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => Promise<{ data: unknown; error: { code?: string; message: string } | null }> } } };
+  const [nums, shares] = await Promise.all([
+    db.from("business_person_numbers").select("business_id, member_number").eq("person_id", userId),
+    db.from("profiles_shared_with_business").select("business_id, revoked_at").eq("profile_id", userId),
+  ]);
+  const err = nums.error ?? shares.error;
+  if (err) return { ok: false, pending: err.code === "42P01" || err.code === "PGRST205" };
+  const live = new Set(((shares.data ?? []) as { business_id: string; revoked_at: string | null }[]).filter((s) => !s.revoked_at).map((s) => s.business_id));
+  return {
+    ok: true,
+    rows: ((nums.data ?? []) as { business_id: string; member_number: number }[]).map((n) => ({ businessId: n.business_id, memberNumber: n.member_number, shared: live.has(n.business_id) })),
+  };
+}
+
+/** The member's own switch: show (or stop showing) their first name to one business. */
+export async function shareMyNameWithBusiness(businessId: string, share: boolean): Promise<{ ok: true; shared: boolean } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("share_my_profile_with_business", { p_business_id: businessId, p_share: share });
+  if (error) {
+    console.error("[members] Could not change name sharing:", error.message);
+    return { ok: false, message: describe(error, "Couldn't save that. Try again.") };
+  }
+  return { ok: true, shared: typeof data === "boolean" ? data : share };
+}
+
+// ---------------------------------------------------------------------------
+// B7 DI-07: the client's own switch for health figures in aggregate reports
+// ---------------------------------------------------------------------------
+//
+// SEPARATE FROM THE NAME SWITCH, by rule (the Database guard fails a
+// migration that makes one read the other): showing a gym your first name
+// never hands it your progress, and the reverse. The business only ever
+// learns a count (business_client_share_count), never who shared.
+
+/** Every business the member shares progress with (own rows; a revoked share keeps its row). */
+export async function fetchMyOutcomeShares(userId: string): Promise<{ ok: true; businessIds: Set<string> } | { ok: false }> {
+  const db = supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => Promise<{ data: unknown; error: { message: string } | null }> } } };
+  const r = await db.from("business_client_shares").select("business_id, revoked_at").eq("client_id", userId);
+  if (r.error) return { ok: false };
+  return { ok: true, businessIds: new Set(((r.data ?? []) as { business_id: string; revoked_at: string | null }[]).filter((x) => !x.revoked_at).map((x) => x.business_id)) };
+}
+
+export async function shareMyOutcomesWithBusiness(businessId: string, share: boolean): Promise<{ ok: true; shared: boolean } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("share_my_outcomes_with_business", { p_business_id: businessId, p_share: share });
+  if (error) {
+    console.error("[members] Could not change progress sharing:", error.message);
+    return { ok: false, message: describe(error, "Couldn't save that. Try again.") };
+  }
+  return { ok: true, shared: typeof data === "boolean" ? data : share };
+}
+
+/** How many clients share progress with the business; null while the stage is missing or unreadable. */
+export async function fetchOutcomeShareCount(businessId: string): Promise<number | null> {
+  const { data, error } = await rpc().rpc("business_client_share_count", { p_business_id: businessId });
+  if (error || data === null || data === undefined) return null;
+  return Number(data);
 }

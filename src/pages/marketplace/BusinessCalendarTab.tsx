@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
-import { PageHeader } from "../../components/ui/PageHeader";
-import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
+import { SubHeader } from "../../components/business-more/kit";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -68,9 +67,8 @@ const blankDraft = (date: string) => ({
 // the two-features-in-one-costume problem the assignment note had.
 //
 // CATALOG PHASE (2026-09): the classes half is real now too. It reads and
-// writes business_classes through the same hook BusinessClassesTab uses, so
-// the two screens are two views of one table rather than two views of one
-// localStorage array.
+// writes business_classes through useBusinessClasses (also Marketplace), so
+// every screen is a view of one table rather than of one localStorage array.
 //
 // THE CLIENT PICKER IS GONE, and the reason is structural rather than a
 // decision about this screen. "Add single or multiple clients at once" wrote
@@ -193,17 +191,15 @@ export default function BusinessCalendarTab() {
           {loadError ?? classesError}
         </p>
       )}
-      <PageHeader
-        title="Calendar"
-        showBack
-        right={
-          <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40" aria-label="New event">
-            <Plus size={18} />
-          </button>
-        }
-      />
-      <BusinessPrototypeNotice />
-
+      {/* v6 Batch 3 (OURS-MO1B-calendar): the More sub-page header. */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <SubHeader title="Calendar" />
+        </div>
+        <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40 shrink-0" aria-label="New event">
+          <Plus size={18} />
+        </button>
+      </div>
       <div className="flex items-center gap-2 mb-4">
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit">
         {(["year", "month", "week", "day"] as View[]).map((v) => (

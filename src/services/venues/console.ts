@@ -117,6 +117,23 @@ export async function fetchClassRoster(classId: string): Promise<Result<RosterEn
   return { ok: true, value: (data ?? []).map(toRosterEntry) };
 }
 
+/**
+ * The desk's "mark paid" (stage 4b, mark_gym_membership_paid): turns the
+ * member's amber "Awaiting payment" tag green. Insider-gated (owner and
+ * employed professionals), idempotent (a second press does nothing), and
+ * ATX84 for a membership that isn't this venue's. The pass state that
+ * follows is read back from venue_members, never guessed here.
+ */
+export async function markMembershipPaid(membershipId: string): Promise<Result<true>> {
+  const { error } = await rpc<null>("mark_gym_membership_paid", { p_membership_id: membershipId });
+  if (error) {
+    console.error("[venue console] Could not mark the membership paid:", error.message);
+    if (error.code === "ATX84") return { ok: false, code: error.code, message: "That membership couldn't be found." };
+    return fail(error, "Couldn't mark this as paid. Try again.");
+  }
+  return { ok: true, value: true };
+}
+
 export interface VenueClassLite {
   id: string;
   title: string;

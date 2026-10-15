@@ -5,6 +5,7 @@ import { CalendarPickerSheet } from "../../dashboard/CalendarPickerSheet";
 import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { clock12 } from "../../../utils/time12";
+import { formatShortDate } from "../../../utils/date";
 
 // The shared pieces of the Health B log sheets (HE1.1.1 water, HE1.6.1 blood
 // pressure, HE1.7.1 weight; health-b-handover.md "Shared Log sheet"): field
@@ -135,7 +136,7 @@ export function dayLabel(iso: string, today: string): string {
   if (iso === isoDay(y)) return "Yesterday";
   const d = dayFromIso(iso);
   const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  const mo = d.toLocaleDateString("en-GB", { month: "short" });
+  const mo = formatShortDate(d, { month: "short" });
   return `${wd} ${d.getDate()} ${mo}`;
 }
 

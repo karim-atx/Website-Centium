@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarCheck, CalendarDays, Check, ChevronDown, CircleCheck, Clock, Store, Wallet } from "lucide-react";
+import { Activity, CalendarCheck, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, Clock, Store, Wallet } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { useOnline } from "../../hooks/useOnline";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { CentiumMark } from "../../components/icons/CentiumMark";
+import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
+import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
+import { useClassBooking, type BookOutcome } from "../../hooks/useClassBooking";
+import { useKnownPosition } from "../../hooks/useKnownPosition";
+import { fetchListing } from "../../services/directory";
+import { distanceKm } from "../../services/geo/distance";
+import { bookingWindowLine, distanceText, instructorRole, levelLabel, whatToBringLine } from "../../services/marketplace/classBooking";
+import { ClassTermsSheet } from "./ClassTermsSheet";
 import { RetryLine } from "../../components/marketplace/ClassCard";
+import { VenueImage } from "../../components/marketplace/VenueImage";
 import {
-  bookClass,
   cancelClassBooking,
   fetchClassLive,
   fetchMarketplaceClasses,
@@ -20,8 +28,12 @@ import {
   type MarketplaceClass,
 } from "../../services/marketplace";
 import { cancellationLine, isLateCancellation } from "../../services/venues/venueLogic";
+import { fetchMyGymMemberships, fetchVenues } from "../../services/venues";
+import { recordListingEvent } from "../../services/marketplace/listingEvents";
+import { isLivePassState, parseListingSource, viewerSpotsLeft } from "../../services/marketplace/listingLogic";
 import { CLASS_HERO, CompactHeader, DetailHero, DetailLabel, DirectionsMenu, MapCard, useCompactHeader } from "./venueParts";
 import { range12, time12 } from "../../utils/time12";
+import { formatShortDate } from "../../utils/date";
 
 // MO1.4.4 Class page (v6 Part B), with its states MO1.4.4.1 (booking popup),
 // .2 (booking confirmed), .3 (booked), .4 (full) and .5 (waitlist), opened by
@@ -38,18 +50,21 @@ import { range12, time12 } from "../../utils/time12";
 // price, records "pay at the studio" as 'cash' and adds the class to the
 // member's Calendar with a 15-minute alert, the backend's choice, V6-73);
 // cancel_class_booking() cancels (a late one is accepted and reported back as
-// not free; BR-14's window comes from class_cancellation_hours(), warned
-// before the call); "Full" is class_seats_left() (it counts live waitlist
-// offers); join / leave / my position are the waitlist functions (BR-10).
-// marketplace_classes still supplies the class itself.
+// not free; BR-14's window is warned before the call); "Full" is
+// class_seats_left() (it counts live waitlist offers); join / leave / my
+// position are the waitlist functions (BR-10).
+//
+// AND TO B9 ("B9 · Classes and schedule"): book_class() asks for the venue's
+// terms first (ATXE4): useClassBooking reads pending_policies(), shows them
+// (ClassTermsSheet), records each acceptance, then books. class_booking_rules()
+// gives the free-cancellation window and the booking window lines.
+// marketplace_classes supplies the class with its venue (address and
+// coordinates: PB-O-50, distance worked out on the device), about, level and
+// what to bring (PB-O-53), cover (PB-O-54) and the instructor when listed
+// publicly (PB-O-52). A cancelled class leaves that view; its page then says
+// it was cancelled (business_classes.cancelled_at, cancel_reason).
 //
 // BACKEND, NOT BUILT (pending states; nothing here is faked):
-// - PB-O-54 (B9) class photo: the hero draws its placeholder picture.
-// - PB-O-50 (B9) distance and the venue's street address: the place alone,
-//   and Directions goes to that place text (no coordinates).
-// - PB-O-53 (B9) level and "What to bring": the Level tile and the section
-//   are hidden (two 175 tiles, OURS O-NOLEVEL).
-// - PB-O-52 (B9) instructor row: hidden (spots line 14 under the tiles).
 // - PB-O-55 (B4, B9) class notifications: no UI here.
 // - The check-in QR ("Show check-in code"): no booking token exists.
 // Whish is shown as coming (X-29). A waitlist offer (the 30-minute hold)
@@ -60,7 +75,7 @@ import { range12, time12 } from "../../utils/time12";
 function dayMonth(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  const mon = d.toLocaleDateString("en-GB", { month: "short" });
+  const mon = formatShortDate(d, { month: "short" });
   return `${wd} ${d.getDate()} ${mon}`;
 }
 
@@ -121,6 +136,32 @@ export function ClassPage({ classId }: { classId: string }) {
   }, [profileReady, authUserId, load]);
 
   const c = all?.find((x) => x.classId === classId) ?? null;
+
+  // B13 MK-04: a member of the business isn't limited by the class's Centium
+  // spots; anybody else sees the smaller of the two (as Discover's cards do).
+  // Read only when the class has a Centium limit; null = not known yet (no cap).
+  const capped = c?.centiumSpotsLeft != null ? c.businessId : null;
+  const [memberOf, setMemberOf] = useState<{ businessId: string; member: boolean } | null>(null);
+  useEffect(() => {
+    if (!capped || !profileReady) return;
+    let alive = true;
+    void (async () => {
+      if (!authUserId) {
+        if (alive) setMemberOf({ businessId: capped, member: false });
+        return;
+      }
+      const [mine, gyms] = await Promise.all([fetchMyGymMemberships(), fetchVenues()]);
+      if (!alive || !mine.ok || !gyms.ok) return;
+      const bizOf = new Map(gyms.value.map((g) => [g.id, g.businessId]));
+      setMemberOf({ businessId: capped, member: mine.value.some((m) => isLivePassState(m.passState) && bizOf.get(m.gymId) === capped) });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [capped, profileReady, authUserId]);
+  const isMember = memberOf && memberOf.businessId === capped ? memberOf.member : true;
+  // B13 MK-07: Book on this page, once per session per class (the session gate).
+  const listingSource = parseListingSource(params.get("src"));
   // MO1.4.4.4 "Other times" and OURS-class-other-times: the same class at the
   // same place, straight from the list (no new read), soonest first.
   const openOther = (id: string) => navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`, { replace: true });
@@ -135,12 +176,42 @@ export function ClassPage({ classId }: { classId: string }) {
   );
   const others = useMemo(() => sessions.filter((x) => x.classId !== classId).slice(0, 3), [sessions, classId]);
 
-  const book = async () => {
-    if (!c || !authUserId || busy) return;
-    setBusy(true);
-    const r = await bookClass(c.classId);
-    setBusy(false);
-    if (!r.ok) {
+  // PB-O-50: the distance, on the device, when the device has already shared
+  // its position (never prompted here).
+  const here = useKnownPosition();
+  const venueCoords = c && c.venueLat != null && c.venueLng != null ? { lat: c.venueLat, lng: c.venueLng } : null;
+  const distance = here && venueCoords ? distanceText(distanceKm(here, venueCoords)) : null;
+
+  // PB-O-52 #20: the instructor's role from the public directory (the view
+  // gives the name and photo only, and only when they are listed).
+  const instructorId = c?.instructorId ?? null;
+  const [role, setRole] = useState<{ id: string; text: string | null } | null>(null);
+  useEffect(() => {
+    if (!instructorId) return;
+    let on = true;
+    void fetchListing(instructorId).then((l) => {
+      if (!on) return;
+      // "Personal Trainer", as the directory card's type line.
+      const type = l?.subtype ? SUBTYPE_SINGULAR[l.subtype].replace(/\b\w/g, (ch) => ch.toUpperCase()) : null;
+      setRole({ id: instructorId, text: l ? instructorRole(l.specialty, type) : null });
+    });
+    return () => {
+      on = false;
+    };
+  }, [instructorId]);
+  const roleText = role && role.id === instructorId ? role.text : null;
+
+  // B9: Confirm booking asks for the venue's terms first when any wait
+  // (the sheet replaces the popup), then books; "Agree and book" records the
+  // acceptances and books.
+  const booking = useClassBooking({ classId: c?.classId ?? null, businessId: c?.businessId ?? null, userId: authUserId ?? null });
+  const settle = async (r: BookOutcome) => {
+    if (r.kind === "terms") {
+      setPopup(null);
+      return;
+    }
+    if (r.kind === "error") {
+      if (!r.message) return;
       setPopup(null);
       setError(r.message);
       await load();
@@ -150,6 +221,13 @@ export function ClassPage({ classId }: { classId: string }) {
     setNote(null);
     await load();
     setPopup("confirmed");
+  };
+  const book = async () => {
+    if (!c || !authUserId || booking.busy) return;
+    await settle(await booking.start());
+  };
+  const agree = async () => {
+    await settle(await booking.agree());
   };
 
   const cancel = async () => {
@@ -212,6 +290,15 @@ export function ClassPage({ classId }: { classId: string }) {
         {loadFailed ? (
           // K10 / O-ERR.
           <RetryLine className="mt-6 justify-center" message={online ? "Couldn't load this class." : "You're offline. Try again when you're connected."} onRetry={retry} />
+        ) : live?.cancelledAt ? (
+          // B9 (CL-03): a cancelled class leaves marketplace_classes; its page
+          // says so, with the venue's reason when it gave one (verbatim).
+          <div className="mt-6 text-center" data-class-cancelled="">
+            <p className="m-0 text-[13px] font-bold text-charcoal">This class was cancelled by the venue.</p>
+            {live.cancelReason && (
+              <p className="mt-1 mb-0 text-[13px] text-charcoal-faint whitespace-pre-wrap [overflow-wrap:anywhere]">{live.cancelReason}</p>
+            )}
+          </div>
         ) : (
           // K9.
           <p className="mt-6 text-center text-[13px] text-charcoal-faint">This class isn't available any more.</p>
@@ -225,11 +312,18 @@ export function ClassPage({ classId }: { classId: string }) {
   const priceText = free ? "Free" : c.price;
   // MO1.4.4.4 "Full" is class_seats_left() (it counts live waitlist offers);
   // the view's own count is the fallback when that read failed.
-  const seatsLeft = live?.seatsLeft ?? c.spotsRemaining;
+  const seatsLeft = viewerSpotsLeft(live?.seatsLeft ?? c.spotsRemaining, c.centiumSpotsLeft, isMember);
   const isFull = seatsLeft <= 0;
   const full = isFull && !mine;
   const position = mine ? null : (live?.waitlistPosition ?? null);
   const windowHours = live?.windowHours ?? 12;
+  // CL-05: "Bookings open 14 days ahead." (or the day they open), shown
+  // until the member holds the booking.
+  const windowLine = live?.rules && !mine ? bookingWindowLine(live.rules, live.startsAt ?? c.startsAt ?? null) : null;
+  const level = levelLabel(c.level);
+  const bring = whatToBringLine(c.whatToBring);
+  const about = c.about?.trim() || c.notes?.trim() || null;
+  const address = c.venueAddress?.trim() || c.location;
   const late = live?.startsAt ? isLateCancellation(live.startsAt, windowHours) : false;
   const taken = c.maxCapacity - seatsLeft;
   const when = `${dayMonth(c.date)} · ${range12(c.startTime, c.endTime)}`;
@@ -241,8 +335,9 @@ export function ClassPage({ classId }: { classId: string }) {
 
   // #12-15: info tiles, gap 8, r14, #F7F7FA (dark #242730, O3), pad 10 8; a
   // 16 icon #7D67D9 / #9A8CD6 4 above the value 12/18 700, the label
-  // 10.5/15.8 400 directly under. Level (PB-O-53, B9) is not stored: two
-  // tiles, 175 each (O-NOLEVEL). The Date tile is a button with a
+  // 10.5/15.8 400 directly under. Level (PB-O-53, B9): the third tile,
+  // Activity, three 114 wide; without a level two tiles, 175 each
+  // (O-NOLEVEL). The Date tile is a button with a
   // ChevronDown 12 when the class has other sessions (OURS-class-other-times).
   const tileInner = (Icon: typeof Clock, value: string, label: string, chevron = false) => (
     <>
@@ -260,26 +355,31 @@ export function ClassPage({ classId }: { classId: string }) {
     <div>
       <CompactHeader title={c.title} onBack={back} shown={compactShown} hairline headerRef={setHeaderEl} />
 
-      <DetailHero height={200} onBack={back} colors={CLASS_HERO} />
+      {/* #1-6 / PB-O-54: the class's cover (business_classes.cover_url, a
+          public class-covers URL) over the placeholder, which stays when there
+          is none or it fails to load. */}
+      <DetailHero height={200} onBack={back} colors={CLASS_HERO} coverUrl={c.coverUrl ?? null} />
 
       {/* #9-11: 16 under the hero, the name 22/33 800 (no tracking; two lines
           at most); the venue 13/19.5 700 #7D67D9 / #9A8CD6 (opens the gym
-          page, else the business page, K12), then the place 400 muted.
-          Distance: PB-O-50. The name drives the compact header. */}
+          page, else the business page, K12; the venue's name when the class
+          has one), then the place 400 muted and the distance (PB-O-50). The
+          name drives the compact header. */}
       <h1 ref={setNameEl} className="mt-4 mb-0 text-[22px] leading-[33px] font-extrabold text-charcoal line-clamp-2 [overflow-wrap:anywhere]">
         {c.title}
       </h1>
       <p className="mt-0.5 mb-0 text-[13px] leading-[19.5px] text-charcoal-faint">
         <Link
-          to={live?.gymId ? `/app/marketplace/gym?id=${encodeURIComponent(live.gymId)}` : `/app/marketplace/business?id=${encodeURIComponent(c.businessId)}`}
+          to={(c.gymId ?? live?.gymId) ? `/app/marketplace/gym?id=${encodeURIComponent((c.gymId ?? live?.gymId)!)}` : `/app/marketplace/business?id=${encodeURIComponent(c.businessId)}`}
           className="font-bold no-underline text-th-7d67d9 dark:text-primary-accent"
         >
-          {c.businessName}
+          {c.venueName?.trim() || c.businessName}
         </Link>
         {c.location ? ` · ${c.location}` : ""}
+        {distance ? ` · ${distance}` : ""}
       </p>
 
-      <div className="mt-[14px] grid grid-cols-2 gap-2" data-info-tiles="">
+      <div className={`mt-[14px] grid ${level ? "grid-cols-3" : "grid-cols-2"} gap-2`} data-info-tiles="">
         {manyTimes ? (
           <button
             type="button"
@@ -294,10 +394,35 @@ export function ClassPage({ classId }: { classId: string }) {
           <div className={tileClass}>{tileInner(CalendarDays, dayMonth(c.date), "Date")}</div>
         )}
         <div className={tileClass}>{tileInner(Clock, range12(c.startTime, c.endTime), "Time")}</div>
+        {level && <div className={tileClass}>{tileInner(Activity, level, "Level")}</div>}
       </div>
 
-      {/* #22-24: "4 of 12 spots left" 13/19.5 700, 14 under the tiles (no
-          instructor row, O-NOINST); a 5 tall track 6 under it, #E4F0EE
+      {/* #16-21 / PB-O-52 (S1b): the instructor, only when the professional
+          is listed publicly (the view's instructor columns are null
+          otherwise): 358 × 61.1, pad 10 12, 14 under the tiles, r16, 0.5px
+          #241F1B@8% / #F5F3FA@8%; a 40 disc #E7E2F6 (dark primary-pale
+          #303141, O3) with the photo, else the avatar glyph; 12 to the name
+          14/21 700 and the role 12/18 600 #7D67D9 / #9A8CD6; ChevronRight 16
+          #8C8378 / #B8B3C7. The row opens their profile. */}
+      {c.instructorId && c.instructorName && (
+        <Link
+          to={`/app/professionals/${encodeURIComponent(c.instructorId)}`}
+          data-instructor-card=""
+          className="tap mt-[14px] rounded-2xl border-[0.5px] border-hair-08 px-3 py-2.5 flex items-center gap-3 no-underline"
+        >
+          <span className="w-10 h-10 rounded-full bg-[#E7E2F6] dark:bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden" aria-hidden>
+            <VenueImage srcs={[c.instructorAvatarUrl]} className="w-full h-full" fallback={<AvatarPlaceholder size={40} />} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] leading-[21px] font-bold text-charcoal truncate">{c.instructorName}</span>
+            {roleText && <span className="block text-[12px] leading-[18px] font-semibold text-th-7d67d9 dark:text-primary-accent truncate">{roleText}</span>}
+          </span>
+          <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
+        </Link>
+      )}
+
+      {/* #22-24: "4 of 12 spots left" 13/19.5 700, 14 under the instructor
+          card (under the tiles without one, O-NOINST); a 5 tall track 6 under it, #E4F0EE
           (dark teal-pale, O3), the fill #6F9993 / #4F8F8A; full: a muted
           fill and the "Class full" tag (K5). */}
       <div className="mt-[14px]">
@@ -335,26 +460,44 @@ export function ClassPage({ classId }: { classId: string }) {
         </p>
       )}
 
-      {/* #25-26: About this class (hidden with no notes). What to bring
-          (#27): PB-O-53, hidden. */}
-      {c.notes && (
+      {/* #25-26: About this class, business_classes.about (B9, EX-01), the
+          class notes when there is none; hidden with neither. */}
+      {about && (
         <>
           <DetailLabel className="mt-[22px]">About this class</DetailLabel>
-          <p className="mt-2 mb-0 text-[14px] leading-[22.4px] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{c.notes}</p>
+          <p className="mt-2 mb-0 text-[14px] leading-[22.4px] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{about}</p>
         </>
       )}
 
-      {/* #28: BR-14's window, 12/18 400 muted, 14 under About (under What to
-          bring once that exists), from class_cancellation_hours(). */}
-      <p className="mt-3.5 mb-0 text-[12px] leading-[18px] text-charcoal-faint">{cancellationLine(windowHours)}</p>
+      {/* #25 / #27 PB-O-53: What to bring, 14/21 400, the items joined with
+          " · "; hidden when empty. */}
+      {bring && (
+        <>
+          <DetailLabel className="mt-[22px]">What to bring</DetailLabel>
+          <p className="mt-2 mb-0 text-[14px] leading-[21px] text-charcoal-soft [overflow-wrap:anywhere]" data-what-to-bring="">
+            {bring}
+          </p>
+        </>
+      )}
 
-      {/* #29-33 and S3: the Location card opens Directions for the place. */}
+      {/* #28: BR-14's window, 12/18 400 muted, 14 under What to bring (else
+          About), from class_booking_rules() (B9). Under it, the same style,
+          the booking window (CL-05, OURS: the frame draws one line). */}
+      <p className="mt-3.5 mb-0 text-[12px] leading-[18px] text-charcoal-faint">{cancellationLine(windowHours)}</p>
+      {windowLine && (
+        <p className="m-0 text-[12px] leading-[18px] text-charcoal-faint" data-booking-window="">
+          {windowLine}
+        </p>
+      )}
+
+      {/* #29-33 and S3: the Location card opens Directions; the venue's street
+          address and coordinates (PB-O-50), else the business's place. */}
       <DetailLabel className="mt-[22px]">Location</DetailLabel>
       <div className="mt-2">
         <MapCard
-          address={c.location}
+          address={address}
           onOpen={
-            c.location
+            address || venueCoords
               ? (e) => {
                   setDirAnchor(e.currentTarget);
                   setDirOpen(true);
@@ -444,15 +587,19 @@ export function ClassPage({ classId }: { classId: string }) {
         <PinnedCta
           primary={{
             label: `Book · ${priceText}`,
-            onClick: () => setPopup("book"),
+            onClick: () => {
+              recordListingEvent({ businessId: c.businessId, kind: "book_tap", source: listingSource, itemId: c.classId });
+              setPopup("book");
+            },
             disabled: !authUserId || !online,
             className: "!bg-fill-pinned !text-on-primary-fill",
           }}
         />
       )}
 
-      {/* S3: Directions for the class's place (no coordinates: PB-O-50). */}
-      <DirectionsMenu open={dirOpen} onClose={() => setDirOpen(false)} anchor={dirAnchor} address={c.location} coords={null} onCopied={flash} />
+      {/* S3: Directions to the venue's coordinates when it has them (PB-O-50),
+          else to the address text; Copy copies the address. */}
+      <DirectionsMenu open={dirOpen} onClose={() => setDirOpen(false)} anchor={dirAnchor} address={address} coords={venueCoords} onCopied={flash} />
 
       {/* MO1.4.4.1 (K1): the booking popup (no ×; outside dismisses), X-01 "ours". */}
       <CentredPopup
@@ -464,7 +611,7 @@ export function ClassPage({ classId }: { classId: string }) {
         geometry="ours"
         cta={{
           label: free ? "Confirm booking" : `Confirm booking · ${priceText}`,
-          loading: busy,
+          loading: booking.busy,
           disabled: !online,
           onClick: () => void book(),
           className: "!bg-fill-pinned !text-on-primary-fill",
@@ -476,7 +623,7 @@ export function ClassPage({ classId }: { classId: string }) {
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-bold text-charcoal tabular-nums">{when}</span>
             <span className="block text-[11.5px] text-charcoal-faint">
-              {c.businessName} · {c.spotsRemaining} {c.spotsRemaining === 1 ? "spot" : "spots"} left
+              {c.businessName} · {seatsLeft} {seatsLeft === 1 ? "spot" : "spots"} left
             </span>
           </span>
           <span className="text-[15px] font-extrabold text-charcoal tabular-nums shrink-0">{priceText}</span>
@@ -524,6 +671,18 @@ export function ClassPage({ classId }: { classId: string }) {
         )}
         {!online && <p className="mt-3 mb-0 text-[12px] font-semibold text-charcoal-soft">You're offline.</p>}
       </CentredPopup>
+
+      {/* OURS-class-terms (B9, ATXE4): the venue's waiver, class terms and
+          house rules, each agreed, then booked. */}
+      <ClassTermsSheet
+        docs={booking.terms}
+        businessName={c.businessName}
+        busy={booking.busy}
+        online={online}
+        error={booking.termsError}
+        onAgree={() => void agree()}
+        onClose={booking.closeTerms}
+      />
 
       {/* MO1.4.4.2 (K2): confirmed, X-01 "ours". The Centium mark (vector,
           at the old 56 × 60 contain box); the payment line says what was

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Bluetooth, DoorOpen, Nfc, QrCode, User } from "lucide-react";
 import { initials } from "../professionals/typeColour";
-import { memberTag, planLine, validRange } from "../../services/venues/venueLogic";
-import type { GymMembership } from "../../services/venues";
+import { membershipTag, planLine, validRange } from "../../services/venues/venueLogic";
+import { rotatePassToken, type GymMembership } from "../../services/venues";
+import { ConfirmCard } from "../ui/ConfirmCard";
 import { PassQr } from "./PassQr";
 import { MemberTag } from "./MemberTag";
+import { clock12 } from "../../utils/time12";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
 // MO1.4.2.2.5 Bluetooth), shown on the confirmed screen and in the member's
@@ -22,6 +24,12 @@ import { MemberTag } from "./MemberTag";
 //
 // The frame's pass number under the QR ("FLX 0417 2026") has no field in the
 // database (the pass_token is the code itself), so it isn't drawn.
+//
+// B10 (HANDOVER_API "A member can kill a leaked pass", BACKEND_REQUIREMENTS
+// 5.9): "Get a new pass code" under the QR calls rotate_gym_pass_token(); the
+// old code reads "not recognised" at the desk from then on. No frame: a 12/700
+// primary-dark text button (44 hit box) and the shared "decision" confirm
+// (OURS, strings flagged). Online only: an offline copy can't be rotated.
 
 type Method = "qr" | "tap" | "bluetooth";
 
@@ -48,7 +56,25 @@ export function MembershipPass({
     ...(membership.access.bluetooth ? [{ key: "bluetooth" as const, label: "Bluetooth", Icon: Bluetooth }] : []),
   ];
   const [method, setMethod] = useState<Method>(methods[0]?.key ?? "qr");
-  const tag = memberTag(membership.passState);
+  const tag = membershipTag(membership);
+  // The rotated token shows at once; the next read of my_gym_memberships carries it too.
+  const [rotated, setRotated] = useState<{ id: string; token: string } | null>(null);
+  const token = rotated?.id === membership.id ? rotated.token : membership.passToken;
+  const [asking, setAsking] = useState(false);
+  const [rotating, setRotating] = useState(false);
+  const [rotateNote, setRotateNote] = useState<{ text: string; error: boolean } | null>(null);
+  const rotate = async () => {
+    setRotating(true);
+    const r = await rotatePassToken(membership.id);
+    setRotating(false);
+    setAsking(false);
+    if (!r.ok) {
+      setRotateNote({ text: r.message, error: true });
+      return;
+    }
+    setRotated({ id: membership.id, token: r.value });
+    setRotateNote({ text: "Your pass has a new code. The old one no longer works.", error: false });
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -114,7 +140,7 @@ export function MembershipPass({
           {method === "qr" && (
             // The QR in a 200 box, 1.5 primary.soft edge, r16, padding 12.
             <div className="rounded-2xl border-[1.5px] border-th-a79ad5 dark:border-primary-dark/50 bg-white p-3">
-              <PassQr value={membership.passToken} size={176} />
+              <PassQr value={token} size={176} />
             </div>
           )}
           {method === "tap" && (
@@ -140,6 +166,33 @@ export function MembershipPass({
       </div>
 
       <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{UNDER[method]}</p>
+      {method === "qr" && !membership.cachedAt && (
+        <button type="button" onClick={() => setAsking(true)} className="tap mt-1 text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
+          Get a new pass code
+        </button>
+      )}
+      {rotateNote && (
+        <p role={rotateNote.error ? "alert" : "status"} className={`mt-1 mb-0 text-center text-[12px] font-semibold ${rotateNote.error ? "text-status-high" : "text-charcoal-faint"}`}>
+          {rotateNote.text}
+        </p>
+      )}
+      <ConfirmCard
+        open={asking}
+        layout="decision"
+        title="Get a new pass code?"
+        subtitle="Your current code stops working straight away. Do this if someone else may have a copy of your pass."
+        confirmLabel={rotating ? "Getting a code…" : "Get a new code"}
+        cancelLabel="Keep this one"
+        busy={rotating}
+        onCancel={() => setAsking(false)}
+        onConfirm={() => void rotate()}
+      />
+      {/* V6-30: the device's short-lived offline copy is showing. */}
+      {membership.cachedAt && (
+        <p role="status" className="mt-1 mb-0 text-center text-[12px] font-semibold text-charcoal-faint">
+          Offline. Last updated {clock12(membership.cachedAt)}.
+        </p>
+      )}
 
       {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. Wallet
           passes are native (signed pass files), so it is drawn disabled. */}

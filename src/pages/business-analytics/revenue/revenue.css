@@ -1,0 +1,82 @@
+/* Revenue and payments (AN14) colour tokens: AnInsightsV3 L / D (Revenue
+   page), PaySeeAllV2 L / D (Money owed, Failed, Renewals pages) and
+   ScrubChart's own palette, literal, through the app's theme tokens where the
+   value is the same, so the five colour themes, dark, Larger text (the build
+   boosts every px font size in classes) and High contrast apply.
+   `.rv-scope` goes on every Revenue page and on its portals. */
+
+.rv-scope {
+  --rv-card: rgb(var(--c-cream-card));
+  --rv-page: rgb(var(--c-cream));
+  --rv-soft: rgb(var(--c-cream-soft));
+  --rv-track: #f5f5f6;
+  --rv-ink: rgb(var(--c-charcoal));
+  --rv-ink-soft: rgb(var(--c-charcoal-soft));
+  --rv-faint: rgb(var(--c-charcoal-faint));
+  --rv-tert: #a79e93;
+  --rv-border: rgba(36, 31, 27, 0.11);
+  --rv-divider: rgba(36, 31, 27, 0.06);
+  --rv-primary: rgb(var(--c-primary));
+  --rv-fill: rgb(var(--c-primary-fill));
+  --rv-on-fill: rgb(var(--c-on-primary-fill));
+  --rv-pale: rgb(var(--c-primary-pale));
+  --rv-pdark: rgb(var(--c-primary-dark));
+  --rv-deep: rgb(var(--c-primary-deep-text));
+  --rv-good: rgb(var(--c-status-good));
+  --rv-good-bg: rgb(var(--c-status-good-bg));
+  --rv-high: rgb(var(--c-status-high));
+  --rv-high-bg: rgb(var(--c-status-high-bg));
+  /* AnInsightsV3 caution (stream colour) and its chip ink #8A5A00. */
+  --rv-caution: #d9a441;
+  --rv-caution-bg: #f6e9c9;
+  --rv-caution-ink: #8a5a00;
+  /* PaySeeAllV2 L.caution (OD-8: literal per component). */
+  --rv-pay-caution: #b07d16;
+  --rv-teal-dark: #6f9993;
+  --rv-teal-pale: #eaf4f2;
+  --rv-teal-ink: #3e6b67;
+  --rv-pay-teal: #6f9993;
+  --rv-amber: #c9922e;
+  --rv-mask-bg: #f5f5f6;
+  --rv-mask-ink: #5b5349;
+  --rv-option: #e5e6eb;
+  --rv-raised: #fafafb;
+  --rv-menu-border: rgba(174, 161, 220, 0.5);
+  --rv-week-bar: #d4cdee;
+  --rv-week-now: #faf9fe;
+}
+
+html.dark .rv-scope {
+  --rv-track: #262932;
+  --rv-tert: #9f9cac;
+  --rv-border: rgba(245, 243, 250, 0.08);
+  --rv-divider: rgba(245, 243, 250, 0.06);
+  --rv-caution: #e0b360;
+  --rv-caution-bg: #332b1a;
+  --rv-caution-ink: #e0b360;
+  --rv-pay-caution: #e0b360;
+  --rv-teal-dark: #4f8f8a;
+  --rv-teal-pale: #293339;
+  --rv-teal-ink: #b2d4cf;
+  --rv-pay-teal: #a2c8c2;
+  --rv-amber: #e0b360;
+  --rv-mask-bg: #262932;
+  --rv-mask-ink: #b8b3c7;
+  --rv-option: #31343c;
+  --rv-raised: #262932;
+  --rv-week-bar: rgba(169, 145, 254, 0.38);
+  --rv-week-now: rgba(169, 145, 254, 0.08);
+}
+
+/* High contrast: hairlines to faint ink, tertiary values to soft ink. */
+html.high-contrast .rv-scope {
+  --rv-border: rgb(var(--c-charcoal-faint));
+  --rv-divider: rgb(var(--c-charcoal-faint));
+  --rv-tert: rgb(var(--c-charcoal-soft));
+  --rv-menu-border: rgb(var(--c-charcoal-faint));
+}
+
+.rv-num {
+  font-variant-numeric: tabular-nums;
+}
+

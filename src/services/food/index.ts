@@ -1101,8 +1101,7 @@ export async function deleteCustomFood(id: string): Promise<{ ok: boolean; messa
  * answers null for every day and the current goal is used.
  */
 export async function getNutritionGoalOn(date: string): Promise<Omit<NutritionGoal, "pregnancyKcal"> | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- B3 function, not in the production-generated types
-  const { data, error } = await (supabase as any).rpc("nutrition_goal_on", { p_date: date });
+  const { data, error } = await supabase.rpc("nutrition_goal_on", { p_date: date });
   if (error) {
     if (!isOffline(error)) console.error("[food] Could not read the goal for that day:", error.message);
     return null;

@@ -1,7 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { statusFor } from "./index";
-import type { FileMeta } from "../storage/fileMeta";
+import { fileTypeOf, type FileMeta } from "../storage/fileMeta";
 
 // HE1.9 (Biomarkers & imaging): one row per RESULT, with the report it came
 // from, on the Database B2 model (HANDOVER_API.md "B2 · Health records and
@@ -17,10 +16,7 @@ import type { FileMeta } from "../storage/fileMeta";
 // blood_panels (panel_date, name, source_image_url, file_*). blood_panel_id
 // is not updatable, so a panel result moved to another date becomes a
 // standalone copy and the original row is deleted.
-//
-// The generated database types predate B2 (gen:types reads production), so
-// these calls go through an untyped view of the same client.
-const db = supabase as unknown as SupabaseClient;
+const db = supabase;
 
 export interface LabResult {
   id: string;
@@ -109,7 +105,7 @@ export async function getLabResults(userId: string): Promise<LabResultsRead> {
       name: p.name ?? null,
       filePath: p.source_image_url ?? null,
       fileName: p.file_name ?? null,
-      fileType: p.file_type ?? null,
+      fileType: fileTypeOf(p.file_type),
       filePages: p.file_pages ?? null,
       fileBytes: p.file_bytes === null || p.file_bytes === undefined ? null : Number(p.file_bytes),
     });

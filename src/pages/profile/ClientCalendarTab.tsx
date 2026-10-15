@@ -8,11 +8,12 @@ import { FixedHeader } from "../../components/ui/FixedHeader";
 import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
+import { RateClassSheet } from "../../components/marketplace/RateClassSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
 import type { EventAlert } from "../../components/calendar/eventAlert";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOnline } from "../../hooks/useOnline";
 import { YearScroll } from "../../components/calendar/YearScroll";
 import {
@@ -184,6 +185,8 @@ export default function ClientCalendarTab() {
   /** The invitee's own reminder being saved (PB-O-65), and a failure toast. */
   const [alertSaving, setAlertSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // B14 RP-04: Rate this class from a booked class that has ended.
+  const [rate, setRate] = useState<{ bookingId: string; title: string; businessName: string } | null>(null);
   const online = useOnline();
 
   // Populate on launch, and keep whatever is on screen if the read fails —
@@ -309,13 +312,17 @@ export default function ClientCalendarTab() {
    */
   const [bookedClasses, setBookedClasses] = useState<BookedClass[]>([]);
   const [linkedBookings, setLinkedBookings] = useState<LinkedBooking[]>([]);
+  /** The bookings read answered (or failed): the ?rate= deep link waits for it. */
+  const [bookingsRead, setBookingsRead] = useState(false);
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
     let cancelled = false;
     void (async () => {
       const result = await fetchMyBookedClasses();
-      if (cancelled || !result.ok) return;
+      if (cancelled) return;
+      setBookingsRead(true);
+      if (!result.ok) return;
       setBookedClasses(result.classes);
       setLinkedBookings(result.linked);
     })();
@@ -323,6 +330,28 @@ export default function ClientCalendarTab() {
       cancelled = true;
     };
   }, [authUserId, profileReady]);
+
+  // B14 follow-up: the review_prompt push opens /app/calendar?rate=<booking id>.
+  // Once the bookings are read, Rate this class opens for that booking if it's
+  // this account's and the class has ended; anything else is dropped quietly.
+  // The param is cleared either way, so a reload doesn't reopen the sheet.
+  const [params, setParams] = useSearchParams();
+  const rateParam = params.get("rate");
+  useEffect(() => {
+    if (!rateParam || !bookingsRead) return;
+    const legacy = bookedClasses.find((c) => c.bookingId === rateParam);
+    const linked = linkedBookings.find((b) => b.bookingId === rateParam);
+    const hit = legacy
+      ? { title: legacy.title, businessName: legacy.businessName, date: legacy.date, endTime: legacy.endTime }
+      : linked
+        ? { title: linked.title, businessName: linked.businessName, date: linked.date, endTime: linked.endTime }
+        : null;
+    const ended = hit ? new Date(`${hit.date}T${hit.endTime}:00`).getTime() <= Date.now() : false;
+    const next = new URLSearchParams(params);
+    next.delete("rate");
+    setParams(next, { replace: true });
+    if (hit && ended) setRate({ bookingId: rateParam, title: hit.title, businessName: hit.businessName });
+  }, [rateParam, bookingsRead, bookedClasses, linkedBookings, params, setParams]);
 
   const bookedClassEvents = useMemo<ClientCalendarEvent[]>(
     () =>
@@ -1243,6 +1272,8 @@ export default function ClientCalendarTab() {
         // An overlay row's notes start "Booked with …" for the cards; the
         // sheet says that in its status line, so it shows the class's own.
         const overlay = detail ? bookedById.get(detail.id) : undefined;
+        const booking = detail ? bookingOf(detail) : null;
+        const ended = !!detail && new Date(`${detail.date}T${detail.endTime ?? detail.startTime ?? "23:59"}`).getTime() < Date.now();
         return (
           <EventDetailSheet
             event={detail && overlay ? { ...detail, notes: overlay.notes || undefined } : detail}
@@ -1255,11 +1286,27 @@ export default function ClientCalendarTab() {
             onOpenAttachment={(path) => void openAttachment(path)}
             bookingMade={!!detail?.sourceKind}
             onViewBooking={classId ? () => navigate(`/app/marketplace/class?id=${encodeURIComponent(classId)}`) : undefined}
+            onRate={
+              booking && ended && detail
+                ? () => {
+                    setRate({ bookingId: booking.bookingId, title: detail.title, businessName: booking.businessName });
+                    setDetailId(null);
+                  }
+                : undefined
+            }
             onInviteAlert={(alert) => detail && void saveInviteAlert(detail, alert)}
             alertSaving={alertSaving}
           />
         );
       })()}
+
+      <RateClassSheet
+        open={!!rate}
+        bookingId={rate?.bookingId ?? null}
+        classTitle={rate?.title ?? ""}
+        businessName={rate?.businessName ?? ""}
+        onClose={() => setRate(null)}
+      />
 
       {/* MO1.6 K10: a failed invitation answer, the shared toast with the
           danger icon (#C0392B / #F09A8E). */}

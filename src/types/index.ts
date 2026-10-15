@@ -21,7 +21,22 @@ export type Goal =
   | "improve_fitness"
   | "improve_health"
   | "track_health"
-  | "live_healthier";
+  | "live_healthier"
+  // v6 client onboarding (OB-096…130): the sub-goals of the six goal areas.
+  // profiles.goals is text[] with no CHECK, so these store as they are.
+  | "move_every_day"
+  | "first_5k"
+  | "stretch_more"
+  | "eat_regularly"
+  | "notice_food_feelings"
+  | "sleep_better"
+  | "recover_well"
+  | "more_energy"
+  | "less_stress"
+  | "journaling_habit"
+  | "consistent_routines"
+  | "drink_more_water"
+  | "understand_cycle";
 
 export type TrackPreference =
   | "nutrition"
@@ -31,7 +46,15 @@ export type TrackPreference =
   | "sleep"
   | "bloodwork"
   | "habits"
-  | "body_composition";
+  | "body_composition"
+  // v6 client onboarding (OB-103…132, What to track). tracking_preferences is
+  // text[] with no CHECK. "hunger_fullness" is offered but never saved until
+  // the tracker exists (B5 open item).
+  | "water"
+  | "mood"
+  | "journal"
+  | "cycle"
+  | "hunger_fullness";
 
 // V2: who is signing up. The UI experience begins to branch on this without
 // requiring three separate applications yet — see the Home/Professionals
@@ -45,6 +68,8 @@ export type ProfessionalSubtype = "trainer" | "physiotherapist" | "dietitian" | 
 // drives which extra tabs (Employees/Classes) it gets in the Business UI.
 export type BusinessType =
   | "gym"
+  // v6 D8: the Classes business type is stored as "studio" (B5 business_type).
+  | "studio"
   | "store"
   | "supplement_store"
   | "equipment_seller"

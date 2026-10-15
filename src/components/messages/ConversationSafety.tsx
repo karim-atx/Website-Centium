@@ -126,13 +126,22 @@ export const BlockSheet: React.FC<{
   error: string | null;
   onBlock: () => void;
   onUnblock: () => void;
-}> = ({ open, onClose, personName, iBlocked, busy, error, onBlock, onUnblock }) => (
+  /**
+   * A gym or studio (B7 MB-02): blocking its owner blocks everyone there who
+   * can message, and, as in every chat, stops the member writing to it too.
+   */
+  business?: boolean;
+}> = ({ open, onClose, personName, iBlocked, busy, error, onBlock, onUnblock, business }) => (
   <BottomSheet open={open} onClose={onClose} title={iBlocked ? `Unblock ${personName}?` : `Block ${personName}?`}>
     <div className="space-y-3 animate-fade-slide-up">
       <p className="text-sm text-charcoal">
         {iBlocked
-          ? "You'll be able to message and call each other again."
-          : "Neither of you will be able to message or call the other. They won't be told."}
+          ? business
+            ? `You and ${personName} will be able to message each other again.`
+            : "You'll be able to message and call each other again."
+          : business
+            ? `No one at ${personName} will be able to message you, and you won't be able to message them either. They won't be told.`
+            : "Neither of you will be able to message or call the other. They won't be told."}
       </p>
       <div className="flex gap-2">
         <Button variant="outline" className="flex-1" onClick={onClose}>

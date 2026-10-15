@@ -8,6 +8,7 @@
 import { formatPrice } from "../../utils/price";
 import { OFFLINE_MESSAGE } from "../network-error";
 import type { HirePaymentMethod, PlanBilling } from "./proLogic";
+import { formatShortDate } from "../../utils/date";
 
 export type { HirePaymentMethod, PlanBilling } from "./proLogic";
 
@@ -151,7 +152,7 @@ export function hireUntilLabel(expiresOn: string | null): string | null {
   if (!expiresOn) return null;
   const d = new Date(`${expiresOn}T00:00:00`);
   if (Number.isNaN(d.getTime())) return null;
-  return `Until ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `Until ${formatShortDate(d, { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 /**

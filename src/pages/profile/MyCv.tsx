@@ -8,7 +8,7 @@ import { VerifiedCheck } from "../../components/cv/CvBadges";
 import { useMyCv } from "../../components/cv/useMyCv";
 import { useApp } from "../../context/AppContext";
 import { fetchMyProfile, type ProfessionalProfile } from "../../services/professional-profile";
-import { cvIsEmpty, previewAsClient } from "../../services/professional-cv";
+import { cvIsEmpty, previewAsClient, previewShowsVerified } from "../../services/professional-cv";
 import { professionalRole } from "../../services/connected-professional";
 import { todayLocal } from "../../utils/date";
 
@@ -67,7 +67,7 @@ export default function MyCv() {
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-[19px] font-extrabold text-charcoal break-words">{user.firstName}</p>
-                {preview.licences.some((l) => l.verified) && <VerifiedCheck size={18} />}
+                {previewShowsVerified(cv, todayLocal()) && <VerifiedCheck size={18} />}
               </div>
               {cv.profile.headline && <p className="text-[13px] font-semibold text-primary-deep-text mt-0.5">{cv.profile.headline}</p>}
               <p className="text-[12.5px] text-charcoal-soft mt-0.5">

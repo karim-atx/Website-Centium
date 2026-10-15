@@ -4,6 +4,7 @@ import { fetchConnectedProfessional, professionalRole } from "../../services/con
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { formatShortDate } from "../../utils/date";
 
 /** "Updated 2d ago" (WO25). Beyond a week, the date. */
 function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
@@ -16,7 +17,7 @@ function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
   if (hours < 24) return `Updated ${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days <= 7) return `Updated ${days}d ago`;
-  return `Updated ${new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  return `Updated ${formatShortDate(new Date(iso), { month: "short", day: "numeric" }, undefined)}`;
 }
 
 /**

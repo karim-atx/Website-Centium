@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase as db } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import { readSources } from "../../pages/settings/sourcesData";
 import { clock12 } from "../../utils/time12";
@@ -10,11 +9,7 @@ import { clock12 } from "../../utils/time12";
 // external_id, source), water_intakes, activity_daily / activity_hourly,
 // sleep_details times and sleep_segments, workout_sessions.kcal,
 // heart_rate_alert_settings, hidden_synced_readings. Owner-only rows (RLS).
-//
-// These tables and columns are newer than lib/supabase/database.types.ts
-// (generated from production), so the reads go through an untyped view of
-// the same client and each result is mapped to a typed shape here.
-const db = typed as unknown as SupabaseClient;
+// Each result is mapped to a typed shape here.
 
 /** The local day [start, end) as ISO instants (local midnights). */
 export function dayWindowIso(fromDay: string, toDay: string): [string, string] {

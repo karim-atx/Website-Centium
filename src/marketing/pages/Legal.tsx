@@ -45,11 +45,14 @@ interface LegalGroup {
 // Copied verbatim from the handoff's `termsData` (11 headed groups; the 12th
 // subsection, "Liability", is a hardcoded block after these in the handoff
 // rather than a data entry, so it is appended explicitly below).
+// Except the minimum age (user decision, 14 Oct 2026): stated as exactly 16,
+// the age the app and database enforce, without "or the age of digital
+// consent"; Children's data below says "under 16" for the same reason.
 const TERMS_GROUPS: LegalGroup[] = [
   {
     h: "Your account",
     items: [
-      "You must be at least 16 years old (or the age of digital consent in your country) to hold a Centium account, and you are responsible for keeping your credentials secure.",
+      "You must be at least 16 years old to hold a Centium account, and you are responsible for keeping your credentials secure.",
       "Information you log, including meals, sessions, weights, biomarkers and journal entries, belongs to you. You are responsible for its accuracy and for what you choose to share with professionals or businesses.",
       "Accounts may not be shared. Professionals and businesses are licensed per seat and per location.",
       "You can enable optional two-factor authentication for extra account security. You're responsible for keeping your login credentials and any second-factor device secure. Contact support if you lose access so we can verify your identity and help you regain entry.",
@@ -189,7 +192,7 @@ const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "Children's data",
     items: [
-      "Centium is not directed at, and does not knowingly collect data from, anyone under the applicable minimum age.",
+      "Centium is not directed at, and does not knowingly collect data from, anyone under 16.",
     ],
   },
   {

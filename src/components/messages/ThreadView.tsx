@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, SendHorizontal, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { ChatCard } from "./ChatCard";
 import { cardAllows } from "../../services/messaging/cards";
@@ -51,7 +51,9 @@ import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptDocumentsFor, acceptFor } from "../../services/storage";
+import { MemberTag } from "../marketplace/MemberTag";
 import {
+  memberThreadIsMinor,
   clearPin,
   describeMessage,
   describeRemoval,
@@ -80,6 +82,9 @@ import {
   type MessageThread,
   type Pin as ThreadPin,
 } from "../../services/messaging";
+import { formatShortDate } from "../../utils/date";
+import { BizAvatar } from "./BusinessList";
+import { bizAvatarKind } from "./bizAvatar";
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
@@ -242,6 +247,15 @@ export const ThreadView: React.FC<{
   // (a short thread), the root pulls 16 into the page's 112 bottom padding to
   // land on the same line.
   const clientBar = !(user.accountType === "professional" || user.accountType === "business");
+  // Business UI (OP1-179…192, AN4-051…054): a business account's chats take
+  // ClientChatV2's language (plain 44 back, 15/700 name, green "Online",
+  // italic "typing…", no calls, the new-chat block, 78% bubbles with a
+  // received border, 11/400 times, ticks 15, a white multi-line field and
+  // the mic / send swap). Client and professional chats are unchanged
+  // (MO1.2.1.3 keeps its own measured look).
+  const cv2 = user.accountType === "business";
+  // OP1-190 / AN14-058: in the business chat a member is masked and support is the life-buoy (BusinessList BizAvatar).
+  const cv2Icon = cv2 && (bizAvatarKind(thread) === "member" || bizAvatarKind(thread) === "support");
   // Plus --active-bar (the minimised-workout bar's height + gap, Layout; 0
   // without one), so the composer clears that bar as the page padding does.
   const footerBottom = clientBar
@@ -265,7 +279,25 @@ export const ThreadView: React.FC<{
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
   // ways; the composer and the call button give way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
-  const safetyApplies = !departed && thread.kind === "peer";
+  // B7 MB-02: the member may block a business (its owner is the target;
+  // the block covers everyone there). The business side has no Block.
+  const safetyApplies = !departed && (thread.kind === "peer" || (thread.kind === "business" && !!thread.business?.memberSide));
+  // AN4-051 O5: the business side tags an under-18 member "Under 18" (muted
+  // MemberTag, gap 6) beside the name; is_minor comes from business_member_threads.
+  const bizSide = thread.kind === "business" && !!thread.business && !thread.business.memberSide;
+  const [minor, setMinor] = useState<{ id: string; is: boolean } | null>(null);
+  const bizSideId = bizSide ? (thread.business?.id ?? null) : null;
+  useEffect(() => {
+    if (!bizSideId) return;
+    let cancelled = false;
+    void memberThreadIsMinor(bizSideId, thread.id).then((is) => {
+      if (!cancelled) setMinor({ id: thread.id, is });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bizSideId, thread.id]);
+  const isMinor = bizSide && minor?.id === thread.id && minor.is;
   // Reporting a message works in a direct chat and in a group alike.
   const canReport = !departed && thread.kind !== "official_support";
   const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
@@ -306,6 +338,11 @@ export const ThreadView: React.FC<{
   };
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  // The business field grows with its text; back to one line once the draft clears (sent).
+  const cv2FieldRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (!draft && cv2FieldRef.current) cv2FieldRef.current.style.height = "";
+  }, [draft]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -1347,10 +1384,10 @@ export const ThreadView: React.FC<{
         <button
           onClick={onBack}
           aria-label="Back to conversations"
-          className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"
+          className={cv2 ? "tap w-11 h-11 -ml-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal shrink-0" : "tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"}
         >
-          {/* MO1.2.1.3: ChevronLeft 17 on a 32 #F5F5F6 disc at x 16 (measured). */}
-          <ChevronLeft size={17} />
+          {/* MO1.2.1.3: ChevronLeft 17 on a 32 #F5F5F6 disc at x 16 (measured). OP1-180 row 3: plain 44, 20/2.2 ink. */}
+          {cv2 ? <ChevronLeft size={20} strokeWidth={2.2} /> : <ChevronLeft size={17} />}
         </button>
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
@@ -1365,8 +1402,11 @@ export const ThreadView: React.FC<{
             <span className="w-10 h-10 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center shrink-0">
               <Users size={19} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
             </span>
+          ) : cv2Icon ? (
+            // OP1-180 row 4 "or icon 18" / AN14-058 row 1: a member masked (user-round on maskBg), support the life-buoy.
+            <BizAvatar thread={thread} size={40} />
           ) : (
-          <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold text-primary-deep-text">
+          <span className={`w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold ${cv2 ? "text-[14px] text-primary-dark" : "text-primary-deep-text"}`}>
             {thread.participantAvatarUrl ? (
               <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -1376,7 +1416,14 @@ export const ThreadView: React.FC<{
           )}
           <span className="flex flex-col min-w-0">
             {/* MO1.2.1.3 #9: 14.5/700 in the deep primary ink (a no-decision item: the handover's look, theme token). */}
-            <span className="text-[14.5px] font-bold text-primary-deep-text truncate">{groupName}</span>
+            {isMinor ? (
+              <span data-minor-row className="flex items-center min-w-0" style={{ gap: 6 }}>
+                <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
+                <MemberTag label="Under 18" tone="muted" />
+              </span>
+            ) : (
+              <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
+            )}
             {isGroup ? (
               typingName ? (
                 <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
@@ -1391,11 +1438,17 @@ export const ThreadView: React.FC<{
                 )
               )
             ) : (
-              (theyAreTyping || theyAreOnline) && (
+              (theyAreTyping || theyAreOnline) &&
+              (cv2 ? (
+                // OP1-180 row 5 / OP1-187 row 1: 12/16, "Online" #3F9165 in both themes, "typing…" italic pDark.
+                <span className={`text-[12px] leading-[16px] ${theyAreTyping ? "italic text-primary-dark" : ""}`} style={theyAreTyping ? undefined : { color: "#3F9165" }}>
+                  {theyAreTyping ? "typing…" : "Online"}
+                </span>
+              ) : (
                 <span className="text-[11.5px] font-semibold" style={{ color: "#2E7D57" }}>
                   {theyAreTyping ? "typing…" : "Online"}
                 </span>
-              )
+              ))
             )}
           </span>
         </button>
@@ -1431,7 +1484,8 @@ export const ThreadView: React.FC<{
             enforcement: mint-call-token re-checks thread_allows_calls
             server-side. Not in a group, not with someone who left, and not
             across a block (a block stops calls both ways). */}
-        {canCall && !isGroup && thread.participantId && !block.blocked && (
+        {/* OP1-180 row 6: a business chat has no voice or video calls (HANDOVER §2.2). */}
+        {canCall && !cv2 && !isGroup && thread.participantId && !block.blocked && (
           <>
             <button
               type="button"
@@ -1537,7 +1591,29 @@ export const ThreadView: React.FC<{
             </button>
           )}
         </div>
-        {loaded && messages.length === 0 && (
+        {loaded && messages.length === 0 && cv2 && !departed && !isGroup && (
+          // OP1-180 row 8 / AN4-051 row 5: the new-chat block, its line by who the chat is with.
+          <div className="flex flex-col items-center text-center px-6 py-8">
+            {cv2Icon ? (
+              <BizAvatar thread={thread} size={64} />
+            ) : (
+            <span className="w-16 h-16 rounded-full bg-primary-pale text-primary-dark flex items-center justify-center overflow-hidden text-[20px] font-extrabold">
+              {thread.participantAvatarUrl ? <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" /> : threadInitials(thread)}
+            </span>
+            )}
+            <p className="text-[15px] font-extrabold text-charcoal mt-2.5">{groupName}</p>
+            <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-1">
+              {thread.kind === "official_support"
+                ? "You're chatting with the Centium team. We usually reply within an hour."
+                : thread.venue || bizSide
+                  ? "Only you and this member can read this chat."
+                  : thread.otherRole && thread.otherRole !== "official" && thread.otherRole !== "gym"
+                    ? `Messages with your team are private. ${thread.participantName.split(" ")[0]} sees your business name.`
+                    : `No messages yet. Say hello to ${thread.participantName}.`}
+            </p>
+          </div>
+        )}
+        {loaded && messages.length === 0 && !(cv2 && !departed && !isGroup) && (
           <p className="text-sm text-charcoal-faint text-center py-8">
             {departed
               ? "This conversation is empty."
@@ -1572,7 +1648,7 @@ export const ThreadView: React.FC<{
               {newDay && (
                 // MO1.2.1.3 #1/#5: 22 tall (21 measured), 13 under the bubble
                 // above and 14.5 over the next one; the first sits 17.5 under the header.
-                <p className={`self-center text-[10.5px] font-bold text-charcoal-faint bg-cream-soft rounded-full px-3 py-[3px] mb-2.5 ${index === 0 ? "" : "mt-[5px]"}`}>
+                <p className={cv2 ? "self-center text-[10.5px] font-bold text-charcoal-faint bg-cream-soft rounded-full px-3 py-[5px] my-1.5" : `self-center text-[10.5px] font-bold text-charcoal-faint bg-cream-soft rounded-full px-3 py-[3px] mb-2.5 ${index === 0 ? "" : "mt-[5px]"}`}>
                   {day}
                 </p>
               )}
@@ -1652,7 +1728,7 @@ export const ThreadView: React.FC<{
                   e.preventDefault();
                   setActionsFor(m);
                 }}
-                className={`max-w-[76%] px-3 py-[9px] text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words select-none transition-shadow flex flex-col gap-1 ${
+                className={`${cv2 ? "max-w-[78%] px-3 pt-[9px] pb-[7px]" : "max-w-[76%] px-3 py-[9px]"} text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words select-none transition-shadow flex flex-col gap-1 ${
                   mine
                     ? "self-end rounded-[20px_20px_4px_20px] bg-bubble-sent text-white dark:text-[#0D0B1A]"
                     : // Support messages keep the teal the Admin console gives
@@ -1661,7 +1737,9 @@ export const ThreadView: React.FC<{
                       `self-start rounded-[20px_20px_20px_4px] ${
                         fromSupport
                           ? "bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
-                          : "bg-cream-soft text-charcoal"
+                          : cv2
+                            ? "bg-cream-soft dark:bg-cream-card border border-charcoal/[0.08] text-charcoal"
+                            : "bg-cream-soft text-charcoal"
                       }`
                 } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >
@@ -1750,9 +1828,11 @@ export const ThreadView: React.FC<{
                 {/* 2 under the words (-mt-0.5 against the bubble's gap 4): a
                     one-line bubble is 52 tall as drawn. */}
                 <span
-                  className={`self-end -mt-0.5 flex items-center gap-1 text-[10px] font-semibold ${
-                    mine ? "opacity-80" : "text-charcoal-faint"
-                  }`}
+                  className={
+                    cv2
+                      ? `self-end -mt-0.5 flex items-center gap-1 text-[11px] font-normal ${mine ? "opacity-[0.85]" : "text-charcoal opacity-60"}`
+                      : `self-end -mt-0.5 flex items-center gap-1 text-[10px] font-semibold ${mine ? "opacity-80" : "text-charcoal-faint"}`
+                  }
                 >
                   {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
                   {clockTime(m.createdAt)}
@@ -1762,17 +1842,17 @@ export const ThreadView: React.FC<{
                   {isGroup && mine && !m.deletedAt && (readCounts[m.id] ?? 0) > 0 ? ` · read by ${readCounts[m.id]}` : ""}
                   {mine && !isGroup && !m.deletedAt &&
                     (tick === "read" ? (
-                      <CheckCheck size={14} aria-label="Read" className="text-tick-read-sent" />
+                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Read" className="text-tick-read-sent" />
                     ) : tick === "delivered" ? (
-                      <CheckCheck size={14} aria-label="Delivered" />
+                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Delivered" />
                     ) : (
-                      <Check size={14} aria-label="Sent" />
+                      <Check size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Sent" />
                     ))}
                 </span>
               </div>
               )}
               {grouped.length > 0 && !m.deletedAt && (
-                <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"}`}>
+                <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"} ${cv2 ? "-mt-1.5 relative" : ""}`}>
                   {grouped.map(([emoji, g]) => (
                     <button
                       key={emoji}
@@ -1781,7 +1861,7 @@ export const ThreadView: React.FC<{
                       onClick={() => void react(m, g.me ? null : emoji)}
                       aria-label={`${emoji} ${g.n}${g.me ? ", including you. Tap to remove yours" : ""}`}
                       aria-pressed={g.me}
-                      className={`tap text-xs rounded-full px-2 py-0.5 border ${
+                      className={`tap rounded-full border ${cv2 ? "text-[13px] px-1.5 py-[3px]" : "text-xs px-2 py-0.5"} ${
                         g.me ? "bg-primary-pale border-primary/40" : "bg-cream-card border-charcoal/10"
                       } text-charcoal`}
                     >
@@ -1844,15 +1924,20 @@ export const ThreadView: React.FC<{
           <div
             role="status"
             aria-label={`${typingName ?? thread.participantName} is typing`}
-            className="self-start rounded-[20px_20px_20px_4px] bg-cream-soft px-3.5 py-2.5 flex gap-1"
+            className={cv2 ? "self-start rounded-[16px] bg-cream-soft px-3.5 py-3 flex gap-1" : "self-start rounded-[20px_20px_20px_4px] bg-cream-soft px-3.5 py-2.5 flex gap-1"}
           >
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-[7px] h-[7px] rounded-full bg-primary/60 animate-pulse"
-                style={{ animationDelay: `${i * 180}ms` }}
-              />
-            ))}
+            {[0, 1, 2].map((i) =>
+              cv2 ? (
+                // OP1-187 row 2: dots 6 in faint at 1 / 0.7 / 0.45; the app's pulse kept (OURS), still under Reduce motion.
+                <span key={i} className="w-[6px] h-[6px] rounded-full bg-charcoal-faint motion-safe:animate-pulse" style={{ opacity: [1, 0.7, 0.45][i], animationDelay: `${i * 180}ms` }} />
+              ) : (
+                <span
+                  key={i}
+                  className="w-[7px] h-[7px] rounded-full bg-primary/60 animate-pulse"
+                  style={{ animationDelay: `${i * 180}ms` }}
+                />
+              )
+            )}
           </div>
         )}
         <div ref={endRef} />
@@ -1904,7 +1989,9 @@ export const ThreadView: React.FC<{
             </p>
             <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
               {block.iBlocked
-                ? "Neither of you can message or call the other. They haven't been told."
+                ? thread.kind === "business"
+                  ? "No one there can message you, and you can't message them until you unblock. They haven't been told."
+                  : "Neither of you can message or call the other. They haven't been told."
                 : "Messages and calls aren't available in this conversation."}
             </p>
             {block.iBlocked && (
@@ -2023,6 +2110,29 @@ export const ThreadView: React.FC<{
               {willCancel ? "Release to cancel" : `Slide away to cancel · max ${MAX_SECONDS / 60} min`}
             </span>
           </div>
+        ) : cv2 ? (
+          // OP1-180 row 11 / OP1-184 row 1: a white field (card), r22, 1px border (lavender with text), 14/19, grows to 5 lines; Enter sends, Shift+Enter is a new line.
+          <textarea
+            ref={cv2FieldRef}
+            value={draft}
+            rows={1}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const el = e.target;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight + 2, 19 * 5 + 24)}px`;
+              if (e.target.value && !editing) live.sendTyping(thread.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            placeholder={isGroup ? "Message the group" : "Message"}
+            aria-label="Message"
+            className={`flex-1 min-w-0 min-h-[44px] max-h-[117px] resize-none rounded-[22px] bg-cream-card border border-solid px-[14px] py-[11px] text-[14px] leading-[19px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${draft.trim() ? "border-primary-fill" : "border-charcoal/10"}`}
+          />
         ) : (
           <input
             value={draft}
@@ -2042,7 +2152,7 @@ export const ThreadView: React.FC<{
         {/* Same gate as the paperclip. MO1.2.1.3.5 draws the Mic beside Send
             whatever the field holds (handover-complete pass: it used to hide
             while typing). */}
-        {canAttach && recorder.supported && (
+        {canAttach && recorder.supported && !(cv2 && draft.trim() && !recorder.recording) && (
           <button
             onPointerDown={(e) => void onRecordDown(e)}
             onPointerMove={onRecordMove}
@@ -2054,20 +2164,23 @@ export const ThreadView: React.FC<{
             className={`tap rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
               recorder.recording
                 ? "w-12 h-12 bg-status-high text-white dark:text-[#0D0B1A]"
-                : "w-10 h-10 text-charcoal-soft hover:bg-cream-soft"
+                : cv2
+                  ? "w-11 h-11 text-charcoal-soft"
+                  : "w-10 h-10 text-charcoal-soft hover:bg-cream-soft"
             }`}
           >
-            {recorder.recording ? <Mic size={19} /> : <Mic size={18} strokeWidth={1.75} />}
+            {recorder.recording ? <Mic size={19} /> : cv2 ? <Mic size={17} strokeWidth={2.2} /> : <Mic size={18} strokeWidth={1.75} />}
           </button>
         )}
-        {!recorder.recording && (
+        {!recorder.recording && (!cv2 || !!draft.trim() || !(canAttach && recorder.supported)) && (
           <button
             onClick={() => void send()}
             disabled={sending || !draft.trim()}
-            aria-label="Send message"
+            aria-label={cv2 ? "Send" : "Send message"}
             className="tap w-11 h-11 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
           >
-            <Send size={16} />
+            {/* OP1-184 row 2: send-horizontal 17/2.2, shown only while there is text (the mic / send swap). */}
+            {cv2 ? <SendHorizontal size={17} strokeWidth={2.2} /> : <Send size={16} />}
           </button>
         )}
       </div>
@@ -2085,6 +2198,7 @@ export const ThreadView: React.FC<{
             open={blockOpen}
             onClose={() => setBlockOpen(false)}
             personName={thread.participantName}
+            business={thread.kind === "business"}
             iBlocked={block.iBlocked}
             busy={safetyBusy}
             error={safetyError}
@@ -2176,7 +2290,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm font-semibold text-charcoal">{label}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
-                    ? `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`
+                    ? `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`
                     : "–"}
                 </span>
               </div>
@@ -2322,7 +2436,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     };
   }, [messageId]);
   const when = (at: string) =>
-    `${new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${clockTime(at)}`;
+    `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`;
   const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
   return (
     <>

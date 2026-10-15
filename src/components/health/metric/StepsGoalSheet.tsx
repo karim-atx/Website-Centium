@@ -11,8 +11,8 @@ import { PINNED_FILL_STYLE, metricTextInk, useHealthMode } from "./MetricKit";
 // 6,842 (68%)" 12.5/18.8 600 in the Steps ink; chips 36 tall r9999, gap 8,
 // #F0EDF9 + 0.5px #CFC7EA, 12.5/18.8 700 #5F5093, selected #A79AD5 white;
 // Custom on its own row; hint 12/18 400 #8C8378; wheel 1,000 to 40,000 step
-// 500, band 120 x 40. Save → setStepsGoal (localStorage until B1,
-// PB-H-06 / V6-59), close, toast "Step goal saved" (the page).
+// 500, band 120 x 40. Save → setStepsGoal (B1 metric_goals, with the
+// device copy kept in step; PB-H-06 / V6-59), close, toast "Step goal saved" (the page).
 
 const CHIPS = [6000, 8000, 10000, 12000];
 const OPTIONS: WheelOption<number>[] = Array.from({ length: (40000 - 1000) / 500 + 1 }, (_, i) => {

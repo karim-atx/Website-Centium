@@ -558,9 +558,13 @@ export interface UploadProgressOptions {
  * (lib/supabase/tabIdentity.ts); XHR does not pass through that wrapper, so
  * the same shouldRefuse check runs here before anything is sent. Errors come
  * back in the shape isCapViolation / isPolicyRefusal read.
+ *
+ * Exported for business-verification (services/business-onboarding), whose
+ * <owner_uid>/<verification_id>/<file> path is the business's, not the
+ * uploader's, so it is not one of this file's bucket shapes.
  */
-async function uploadWithProgress(
-  bucket: PrivateBucket,
+export async function uploadWithProgress(
+  bucket: PrivateBucket | "business-verification",
   path: string,
   body: Blob,
   contentType: string,

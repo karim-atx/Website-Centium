@@ -1,6 +1,7 @@
 import { liftTo, tintOn } from "../../data/folderColors";
 import type { AchievementLevel } from "../../services/achievements";
 import { Gem, Crown, Medal, Shield, Star, type LucideIcon } from "lucide-react";
+import { formatShortDate } from "../../utils/date";
 
 // Mobile v5.1 MO1.1.3 / MO1.1.3.2: the hero card and the unlock pill take a
 // TIER (or an achievement LEVEL) colour, fixed in every theme:
@@ -196,7 +197,7 @@ export const keyInk = (key: string, dark: boolean): string => {
 /** MO1.1.3.1 S3: "Earned 2 Oct"; the year only when it is not this year. */
 export function formatEarnedAt(iso: string, now = new Date()): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", {
+  return formatShortDate(d, {
     day: "numeric",
     month: "short",
     ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : null),

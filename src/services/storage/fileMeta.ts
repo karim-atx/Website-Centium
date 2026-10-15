@@ -8,6 +8,9 @@ import { PDFDocument } from "pdf-lib";
  * has no page count. Limits per the table CHECKs: name 1-200, bytes up to
  * 50 MB, pages 1-500.
  */
+/** A stored file_type (CHECK: null, 'pdf' or 'image') narrowed to its union. */
+export const fileTypeOf = (v: string | null | undefined): FileMeta["file_type"] | null => (v === "pdf" || v === "image" ? v : null);
+
 export interface FileMeta {
   file_name: string | null;
   file_type: "pdf" | "image";

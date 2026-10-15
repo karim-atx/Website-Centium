@@ -30,7 +30,9 @@ export const DobPromptCard: React.FC<{
   className?: string;
   /** Profile: the Recovery-card style (DobInline `tile`). Home keeps its own. */
   tile?: boolean;
-}> = ({ className, tile }) => {
+  /** Business Dashboard (OURS-DA-kept-features #3): the setup card language; Not now inside the card. */
+  setup?: boolean;
+}> = ({ className, tile, setup }) => {
   const { authUserId, user } = useApp();
   const [needs, setNeeds] = useState<{ userId: string; value: boolean } | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -51,6 +53,32 @@ export const DobPromptCard: React.FC<{
   if (user.dateOfBirth) return null;
   if (dismissed === authUserId || dismissedThisSession(authUserId)) return null;
 
+  const dismiss = () => {
+    try {
+      sessionStorage.setItem(DISMISS_KEY(authUserId), "1");
+    } catch {
+      /* private mode: hidden for this page view only */
+    }
+    setDismissed(authUserId);
+  };
+
+  if (setup)
+    return (
+      <div className={className}>
+        <DobInline
+          setup
+          title="Add your date of birth"
+          body="It keeps your age, calorie targets and health suggestions right. Check it before saving: it can't be changed afterwards without contacting support."
+          onSaved={() => setNeeds({ userId: authUserId, value: false })}
+          after={
+            <button type="button" onClick={dismiss} className="tap self-start min-h-[44px] text-[11.5px] font-bold text-primary-deep-text">
+              Not now
+            </button>
+          }
+        />
+      </div>
+    );
+
   return (
     <div className={className}>
       <DobInline
@@ -61,14 +89,7 @@ export const DobPromptCard: React.FC<{
       />
       <button
         type="button"
-        onClick={() => {
-          try {
-            sessionStorage.setItem(DISMISS_KEY(authUserId), "1");
-          } catch {
-            /* private mode: hidden for this page view only */
-          }
-          setDismissed(authUserId);
-        }}
+        onClick={dismiss}
         className="tap mt-1.5 w-full text-center text-xs font-semibold text-charcoal-soft"
       >
         Not now

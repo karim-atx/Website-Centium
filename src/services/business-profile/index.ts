@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { invalidateConsoleAccess, loadConsoleAccess } from "../business-console";
 import type { Database, TablesInsert } from "../../../lib/supabase/database.types";
 
 // A business's own business_profiles row: the listing content clients see on
@@ -40,10 +41,6 @@ export interface BusinessProfile {
 export type BusinessProfilePatch = Partial<
   Pick<BusinessProfile, "branchType" | "bio" | "location" | "publicEmail" | "publicPhone" | "publicWebsite">
 >;
-
-export type BusinessProfileResult =
-  | { ok: true; profile: BusinessProfile | null }
-  | { ok: false; message: string };
 
 export type BusinessSaveResult =
   | { ok: true; profile: BusinessProfile }
@@ -113,29 +110,6 @@ function toRow(patch: BusinessProfilePatch): Partial<PatchRow> {
 }
 
 /**
- * This account's listing, or null when it has never been saved.
- *
- * ADDRESSED BY profile_id, NOT BY THE BIZ- CODE. business_profiles.id is a
- * uuid and `user.businessId` is a four-character display code minted at
- * onboarding — the mismatch that would have made BusinessEmployeesTab read an
- * empty team forever. This screen never needs either: the policy is
- * `auth.uid() = profile_id`, so the owner's own id addresses the row directly.
- */
-export async function fetchMyBusinessProfile(userId: string): Promise<BusinessProfileResult> {
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select(COLUMNS)
-    .eq("profile_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[business-profile] Could not read the listing:", error.message);
-    return { ok: false, message: "Couldn't load your listing. Check your connection and try again." };
-  }
-  return { ok: true, profile: data ? toProfile(data as Row) : null };
-}
-
-/**
  * Saves the listing, creating the row on first use.
  *
  * UPDATE THEN INSERT, matching saveMyProfile in services/professional-profile
@@ -154,7 +128,8 @@ export async function fetchMyBusinessProfile(userId: string): Promise<BusinessPr
 export async function saveMyBusinessProfile(
   userId: string,
   patch: BusinessProfilePatch,
-  identity?: { businessName?: string; businessType?: BusinessTypeEnum }
+  // "studio" (v6 D8, B5) is newer than the production-generated enum.
+  identity?: { businessName?: string; businessType?: BusinessTypeEnum | "studio" }
 ): Promise<BusinessSaveResult> {
   const row = toRow(patch);
 
@@ -184,28 +159,40 @@ export async function saveMyBusinessProfile(
   const insert: TablesInsert<"business_profiles"> = {
     profile_id: userId,
     business_name: businessName,
-    business_type: businessType,
+    business_type: businessType as BusinessTypeEnum,
     ...row,
   };
 
-  const inserted = await supabase.from("business_profiles").insert(insert).select(COLUMNS).single();
-
-  if (inserted.error || !inserted.data) {
-    console.error("[business-profile] Could not create the listing:", inserted.error?.message);
+  // NO RETURNING (B7, 20261120140000): business_profiles.active now defaults
+  // to false, and a hidden row is readable only to an insider
+  // (is_business_insider, a STABLE function whose snapshot cannot see the row
+  // its own INSERT is creating), so INSERT … RETURNING is refused with 42501.
+  // The row is read back once committed, as business-onboarding does.
+  const inserted = await supabase.from("business_profiles").insert(insert);
+  if (inserted.error) {
+    console.error("[business-profile] Could not create the listing:", inserted.error.message);
     return { ok: false, message: "Couldn't save your listing. Try again." };
   }
-  return { ok: true, profile: toProfile(inserted.data as Row) };
+  const made = await supabase.from("business_profiles").select(COLUMNS).eq("profile_id", userId).maybeSingle();
+  invalidateConsoleAccess();
+  if (made.error || !made.data) {
+    console.error("[business-profile] Could not read the new listing back:", made.error?.message);
+    return { ok: false, message: "Couldn't save your listing. Try again." };
+  }
+  return { ok: true, profile: toProfile(made.data as Row) };
 }
 
 /**
- * The business_profiles.id this account owns, or null when it has no row yet.
+ * The business the console is about: the business_profiles.id this account
+ * owns, or (B7) the business it works for with the permissions it was given
+ * (services/business-console). Null when it has neither.
  *
  * THE ONE PIECE EVERY BUSINESS-OWNED TABLE NEEDS. business_classes,
- * business_offerings, business_discounts and membership_plans each carry a
+ * business_offerings, promotions and membership_plans each carry a
  * `business_id` in the payload itself — unlike this table, which is addressed
  * by `profile_id` in the filter and so never needs the uuid at all. Their RLS
- * policies all read the same way: the business_id must belong to a
- * business_profiles row whose profile_id is auth.uid().
+ * policies read business_can(business_id, <permission>) since B7: the owner,
+ * or an accepted employee holding that permission.
  *
  * WHICH MAKES THIS THE EXACT SPOT THE BIZ- CODE TRAP LIVES. `user.businessId`
  * is a four-character display code minted at onboarding
@@ -224,15 +211,10 @@ export async function saveMyBusinessProfile(
 export async function resolveMyBusinessId(
   userId: string
 ): Promise<{ ok: true; id: string | null } | { ok: false }> {
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select("id")
-    .eq("profile_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[business-profile] Could not resolve the business id:", error.message);
+  const access = await loadConsoleAccess(userId);
+  if (!access.ok) {
+    console.error("[business-profile] Could not resolve the business id.");
     return { ok: false };
   }
-  return { ok: true, id: data?.id ?? null };
+  return { ok: true, id: access.value.current?.businessId ?? null };
 }

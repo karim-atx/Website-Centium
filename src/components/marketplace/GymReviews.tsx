@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Star, ThumbsUp, User } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { CtaButton, PinnedCta } from "../ui/PinnedCta";
+import { PinnedCta } from "../ui/PinnedCta";
 import { MemberTag } from "./MemberTag";
+import { ReviewForm } from "./ReviewForm";
 import {
   deleteGymReview,
   editGymReview,
+  fetchBusinessReviewsPage,
+  fetchMyReviews,
   fetchReviewsPage,
   toggleReviewHelpful,
+  writeBusinessReview,
   writeGymReview,
   type GymReview,
   type ReviewSort,
   type ReviewSummary,
 } from "../../services/venues";
-import { reviewAge } from "../../services/venues/venueLogic";
+import { reviewAge, summaryOf } from "../../services/venues/venueLogic";
+import { useApp } from "../../context/AppContext";
 
 // MO1.4.2.3 Gym page › Reviews (backend stage 4d): the rating summary with
 // its five bars, the sort chips, the review cards and "Write a review"
@@ -30,7 +35,15 @@ import { reviewAge } from "../../services/venues/venueLogic";
 //   removed."
 // - Sorts are recent / highest / lowest. "With photos" is not implemented
 //   (review photos need storage and moderation; the function refuses it with
-//   ATX93), so it isn't offered. Photos and the gym's reply aren't stored.
+//   ATX93), so it isn't offered. Photos aren't stored.
+// - B14 (RP-02): the business's public reply shows under its review
+//   ("{name} replied", AN13-024 row 6 style; AN13-001 K2), and a review
+//   written from a class booking names the class after its age.
+// - B14 follow-up: the same list for a business with no venue
+//   (businessId): business_reviews_public (signed out too; no helpful
+//   votes, member tag or class), the card summed from the loaded reviews,
+//   and the author's own review from my_reviews(), so "Write a review"
+//   becomes "Edit your review" instead of answering ATX92.
 
 const SORTS: { key: ReviewSort; label: string }[] = [
   { key: "recent", label: "Most recent" },
@@ -38,7 +51,6 @@ const SORTS: { key: ReviewSort; label: string }[] = [
   { key: "lowest", label: "Lowest" },
 ];
 const PAGE = 20;
-const BODY_MAX = 2000;
 
 function Stars({ value, size }: { value: number; size: number }) {
   return (
@@ -58,25 +70,53 @@ function Stars({ value, size }: { value: number; size: number }) {
 
 export function GymReviews({
   gymId,
+  businessId,
   gymName,
-  summary,
+  summary: gymSummary,
   onChanged,
+  pinned = true,
 }: {
-  gymId: string;
+  /** A venue's reviews (gym_reviews_page) … */
+  gymId?: string;
+  /** … or a venue-less business's (business_reviews_public). */
+  businessId?: string;
   gymName: string;
   summary: ReviewSummary | null;
   /** Re-read the summary (the header pill and the card) after a write. */
   onChanged: () => void;
+  /** The write button pinned at the bottom (the gym page's Reviews tab), or in the flow. */
+  pinned?: boolean;
 }) {
+  const { authUserId } = useApp();
   const [sort, setSort] = useState<ReviewSort>("recent");
   const [reviews, setReviews] = useState<GymReview[] | null>(null);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [writeOpen, setWriteOpen] = useState(false);
+  const [myBiz, setMyBiz] = useState<GymReview | null>(null);
+  const biz = !gymId && !!businessId;
+
+  // B14 follow-up: the author's own review of this business (my_reviews), signed in only.
+  const loadMine = useCallback(async () => {
+    if (!biz || !authUserId) return setMyBiz(null);
+    const r = await fetchMyReviews();
+    if (!r.ok) return;
+    const m = r.value.find((x) => x.businessId === businessId && !x.gymId) ?? null;
+    setMyBiz(
+      m
+        ? { id: m.reviewId, rating: m.rating, body: m.body, redacted: m.redacted, authorName: null, authorIsMember: false, createdAt: "", editedAt: null, helpfulCount: 0, viewerFoundHelpful: false, isMine: true, reply: null, classTitle: null }
+        : null
+    );
+  }, [biz, authUserId, businessId]);
+  useEffect(() => {
+    void (async () => {
+      await loadMine();
+    })();
+  }, [loadMine]);
 
   const load = useCallback(
     async (offset = 0) => {
-      const r = await fetchReviewsPage(gymId, sort, PAGE, offset);
+      const r = biz ? await fetchBusinessReviewsPage(businessId!, sort, PAGE, offset) : await fetchReviewsPage(gymId!, sort, PAGE, offset);
       if (!r.ok) {
         setError(r.message);
         setReviews((prev) => prev ?? []);
@@ -86,7 +126,7 @@ export function GymReviews({
       setMore(r.value.length === PAGE);
       setReviews((prev) => (offset === 0 ? r.value : [...(prev ?? []), ...r.value]));
     },
-    [gymId, sort]
+    [gymId, businessId, biz, sort]
   );
 
   useEffect(() => {
@@ -95,7 +135,9 @@ export function GymReviews({
     })();
   }, [load]);
 
-  const mine = reviews?.find((r) => r.isMine) ?? null;
+  const mine = biz ? myBiz : (reviews?.find((r) => r.isMine) ?? null);
+  // A business has no public summary reader: the card is the loaded reviews' once all are in.
+  const summary = biz ? (reviews && !more ? summaryOf(reviews) : null) : gymSummary;
 
   const helpful = async (r: GymReview) => {
     const res = await toggleReviewHelpful(r.id);
@@ -204,12 +246,20 @@ export function GymReviews({
                         <span className="text-[11px] text-charcoal-faint">
                           {reviewAge(r.createdAt)}
                           {r.editedAt ? " · edited" : ""}
+                          {r.classTitle ? ` · ${r.classTitle}` : ""}
                         </span>
                       </span>
                     </span>
                   </div>
                   {r.body && <p className="mt-2.5 mb-0 text-[13px] leading-[1.55] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{r.body}</p>}
-                  <div className="mt-2.5 flex items-center gap-3">
+                  {/* AN13-024 row 6: border-left 2 #AEA1DC · #A991FE, padding-left 10; head 11/800 #7D6BB5 · #C3B3FB; text 12/17 margin-top 2. */}
+                  {r.reply && (
+                    <div className="mt-2.5 border-l-2 border-[#AEA1DC] dark:border-[#A991FE] pl-2.5">
+                      <p className="m-0 text-[11px] font-extrabold text-[#7D6BB5] dark:text-[#C3B3FB]">{gymName} replied</p>
+                      <p className="mt-0.5 mb-0 text-[12px] leading-[17px] text-charcoal whitespace-pre-wrap [overflow-wrap:anywhere]">{r.reply.body}</p>
+                    </div>
+                  )}
+                  {!biz && <div className="mt-2.5 flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => void helpful(r)}
@@ -222,7 +272,7 @@ export function GymReviews({
                       <ThumbsUp size={13} strokeWidth={1.75} aria-hidden className={r.viewerFoundHelpful ? "fill-current" : ""} />
                       Helpful · {r.helpfulCount}
                     </button>
-                  </div>
+                  </div>}
                 </>
               )}
             </article>
@@ -235,114 +285,84 @@ export function GymReviews({
         )}
       </div>
 
-      <div aria-hidden style={{ height: 60 }} />
       {/* #13: "Write a review" with Pencil 15/1.75; your own review is
           edited from the same button. */}
-      <PinnedCta
-        primary={{
-          label: mine && !mine.redacted ? "Edit your review" : "Write a review",
-          icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
-          onClick: () => setWriteOpen(true),
-          disabled: reviews === null || (!!mine && mine.redacted),
-          className: "!bg-fill-pinned !text-on-primary-fill",
-        }}
-      />
+      {pinned ? (
+        <>
+          <div aria-hidden style={{ height: 60 }} />
+          <PinnedCta
+            primary={{
+              label: mine && !mine.redacted ? "Edit your review" : "Write a review",
+              icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
+              onClick: () => setWriteOpen(true),
+              disabled: reviews === null || (!!mine && mine.redacted),
+              className: "!bg-fill-pinned !text-on-primary-fill",
+            }}
+          />
+        </>
+      ) : (
+        authUserId && (
+          <button
+            type="button"
+            onClick={() => setWriteOpen(true)}
+            disabled={reviews === null || (!!mine && mine.redacted)}
+            className="tap mt-3 w-full flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 text-start disabled:opacity-60"
+          >
+            <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
+              <Pencil size={17} className="text-primary-dark" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 text-[14px] font-semibold text-charcoal truncate">{mine && !mine.redacted ? "Edit your review" : "Write a review"}</span>
+          </button>
+        )
+      )}
 
       <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={`Rate ${gymName}`}>
-        <ReviewForm
+        <GymReviewForm
           key={mine?.id ?? "new"}
           gymName={gymName}
           existing={mine}
           onDone={async () => {
             setWriteOpen(false);
             setSort("recent");
-            await load(0);
+            await Promise.all([load(0), loadMine()]);
             onChanged();
           }}
           gymId={gymId}
+          businessId={biz ? businessId : undefined}
         />
       </BottomSheet>
     </div>
   );
 }
 
-/** MO1.2.1.2's flow for a gym: 34 pt stars on a 44 pitch, the text, Submit. */
-function ReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
-  const [rating, setRating] = useState(existing?.rating ?? 5);
-  const [text, setText] = useState(existing?.body ?? "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const over = text.length > BODY_MAX;
-  const empty = !text.trim();
-
-  const submit = async () => {
-    if (busy || over || empty) return;
-    setBusy(true);
-    const r = existing ? await editGymReview(existing.id, rating, text) : await writeGymReview(gymId, rating, text);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.message);
-      return;
-    }
-    await onDone();
-  };
-
-  const remove = async () => {
-    if (!existing || busy) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
-    setBusy(true);
-    const r = await deleteGymReview(existing.id);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.message);
-      return;
-    }
-    await onDone();
-  };
-
+/** MO1.2.1.2's flow for a gym (or a venue-less business): write, or edit / delete your own. */
+function GymReviewForm({ gymId, businessId, gymName, existing, onDone }: { gymId?: string; businessId?: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
-        {Array.from({ length: 5 }, (_, i) => (
-          <button key={i} type="button" role="radio" aria-checked={rating === i + 1} onClick={() => setRating(i + 1)} aria-label={`${i + 1} star${i === 0 ? "" : "s"}`} className="tap">
-            <Star size={34} strokeWidth={1.5} className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-          </button>
-        ))}
-      </div>
-      <label className="block">
-        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">Your review</span>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={`How has ${gymName} been?`}
-          rows={5}
-          aria-invalid={over || undefined}
-          className="w-full h-[209px] rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-        />
-      </label>
-      {over && <p className="m-0 text-xs font-semibold text-status-high">A review can be up to {BODY_MAX.toLocaleString("en")} characters.</p>}
-      {error && (
-        <p role="alert" className="m-0 text-xs font-semibold text-status-high">
-          {error}
-        </p>
-      )}
-      <CtaButton
-        size="page"
-        label={existing ? "Save changes" : "Submit review"}
-        loading={busy}
-        disabled={over || empty}
-        onClick={() => void submit()}
-        className="!bg-fill-pinned !text-on-primary-fill"
-      />
-      {existing && (
-        <button type="button" onClick={() => void remove()} disabled={busy} className="tap min-h-[44px] w-full text-xs font-semibold text-status-high">
-          {confirmDelete ? "Tap again to delete your review" : "Delete review"}
-        </button>
-      )}
-    </div>
+    <ReviewForm
+      initialRating={existing?.rating ?? 5}
+      initialText={existing?.body ?? ""}
+      placeholder={`How has ${gymName} been?`}
+      submitLabel={existing ? "Save changes" : "Submit review"}
+      onSubmit={async (rating, text) => {
+        const r = existing
+          ? await editGymReview(existing.id, rating, text)
+          : businessId
+            ? await writeBusinessReview(businessId, rating, text)
+            : await writeGymReview(gymId!, rating, text);
+        if (!r.ok) return r.message;
+        await onDone();
+        return null;
+      }}
+      onDelete={
+        existing
+          ? async () => {
+              const r = await deleteGymReview(existing.id);
+              if (!r.ok) return r.message;
+              await onDone();
+              return null;
+            }
+          : undefined
+      }
+    />
   );
 }

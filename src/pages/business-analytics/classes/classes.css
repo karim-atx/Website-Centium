@@ -1,0 +1,847 @@
+/* AN3 Analytics › Classes (AnClassesV6.dc.html template l.21-268, palettes
+   L / D l.279-280). Literal handover values through the app's theme tokens
+   (AN3-001 O10): the purples follow the five colour themes, dark, Larger
+   text (the build boosts every px font size and line height here) and High
+   contrast (faint ink and hairlines). Scoped to `.an3`. */
+
+.an3 {
+  --k-card: rgb(var(--c-cream-card));
+  --k-border: rgba(36, 31, 27, 0.11);
+  --k-divider: rgba(36, 31, 27, 0.06);
+  --k-soft: #f7f6fb;
+  --k-track: #f1f0f4;
+  --k-ink: rgb(var(--c-charcoal));
+  --k-ink-soft: rgb(var(--c-charcoal-soft));
+  --k-faint: rgb(var(--c-charcoal-faint));
+  --k-tert: #a79e93;
+  --k-primary: rgb(var(--c-primary));
+  --k-fill: rgb(var(--c-primary-dark));
+  --k-on-fill: #ffffff;
+  --k-pale: rgb(var(--c-primary-pale));
+  --k-pdark: rgb(var(--c-primary-dark));
+  --k-deep: rgb(var(--c-primary-deep-text));
+  --k-full: rgb(var(--c-primary-deep-text));
+  --k-good: rgb(var(--c-status-good));
+  --k-good-bg: #eaf5ee;
+  --k-caution: #b07d1f;
+  --k-caution-bar: #d9a441;
+  --k-high: rgb(var(--c-status-high));
+  --k-teal-pale: #eaf4f2;
+  --k-teal-ink: #3e6b67;
+  --k-ghost: #8c8378;
+  --k-ghost-mk: #5b5349;
+  --k-tick: rgba(36, 31, 27, 0.38);
+  --k-hero-track: #eeedf4;
+  --k-hero-inset: rgba(36, 31, 27, 0.1);
+  --k-hero-rim: rgba(36, 31, 27, 0.05);
+  --k-hero-grad: linear-gradient(90deg, rgb(var(--c-primary-light)) 0%, rgb(var(--c-primary)) 45%, rgb(var(--c-primary-dark)) 100%);
+  --k-leaf: #14a08f;
+  --k-leaf-ink: #0e7a6d;
+  --k-pill-track: rgba(95, 80, 147, 0.07);
+  --k-pill-border: rgba(95, 80, 147, 0.16);
+  --k-pill-thumb: rgb(var(--c-primary-dark));
+  --k-pill-sh: 0 1px 3px rgba(95, 80, 147, 0.35);
+  --k-pill-on: #ffffff;
+  --k-shade: var(--c-primary-dark);
+  --k-heat-on: #ffffff;
+  --k-dash-cell: rgba(167, 158, 147, 0.45);
+  --k-dash-empty: rgba(167, 158, 147, 0.3);
+  --k-skel: #f1f0f4;
+}
+
+html.dark .an3 {
+  --k-border: rgba(245, 243, 250, 0.08);
+  --k-divider: rgba(245, 243, 250, 0.06);
+  --k-soft: #22252f;
+  --k-track: #2a2d37;
+  --k-ink-soft: #c9c4d6;
+  --k-tert: #9f9cac;
+  --k-fill: rgb(var(--c-primary));
+  --k-on-fill: #0d0b1a;
+  --k-full: #e9e2ff;
+  --k-good-bg: rgba(127, 199, 156, 0.1);
+  --k-caution: #e0b360;
+  --k-caution-bar: #e0b360;
+  --k-teal-pale: #293339;
+  --k-teal-ink: #b2d4cf;
+  --k-ghost: #9f9cac;
+  --k-ghost-mk: #f5f3fa;
+  --k-tick: rgba(245, 243, 250, 0.4);
+  --k-hero-track: #252833;
+  --k-hero-inset: rgba(0, 0, 0, 0.45);
+  --k-hero-rim: rgba(245, 243, 250, 0.05);
+  --k-hero-grad: linear-gradient(90deg, #6f5bcf 0%, rgb(var(--c-primary)) 60%, rgb(var(--c-primary-dark)) 100%);
+  --k-leaf: #4fd1c0;
+  --k-leaf-ink: #4fd1c0;
+  --k-pill-track: rgba(238, 239, 242, 0.06);
+  --k-pill-border: rgba(238, 239, 242, 0.12);
+  --k-pill-thumb: rgb(var(--c-primary));
+  --k-pill-sh: 0 1px 4px rgba(0, 0, 0, 0.5);
+  --k-pill-on: #121317;
+  --k-shade: var(--c-primary);
+  --k-heat-on: #0d0b1a;
+  --k-dash-cell: rgba(159, 156, 172, 0.35);
+  --k-dash-empty: rgba(159, 156, 172, 0.22);
+  --k-skel: #2a2d37;
+}
+
+/* High contrast (AN3-001 O7, BU5 §3): hairlines to faint ink, inkSoft to the
+   raised token, the caution text to #8A5A00 (light). */
+html.high-contrast .an3 {
+  --k-border: rgb(var(--c-charcoal-faint));
+  --k-ink-soft: rgb(var(--c-charcoal-soft));
+  --k-tert: rgb(var(--c-charcoal-soft));
+  --k-caution: #8a5a00;
+}
+html.high-contrast.dark .an3 {
+  --k-caution: #e0b360;
+}
+
+.an3 {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--k-ink);
+  line-height: 1.5;
+}
+.an3 p {
+  margin: 0;
+}
+.an3-anchor {
+  display: block;
+  height: 0;
+}
+.an3-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Section label row (AN3-001 row 11). */
+.an3-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.an3-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--k-faint);
+  white-space: nowrap;
+}
+.an3-caption {
+  font-size: 10.5px;
+  color: var(--k-faint);
+  margin-left: auto;
+  text-align: right;
+}
+
+.an3-card {
+  background: var(--k-card);
+  border-radius: 24px;
+  border: 1px solid var(--k-border);
+  overflow: hidden;
+}
+
+/* Empty / error card body (AN3-006 row 12). */
+.an3-empty {
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.an3-empty-title {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 21px;
+}
+.an3-empty-body {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--k-faint);
+  max-width: 270px;
+}
+.an3-placeholder-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--k-track);
+  position: relative;
+}
+.an3-placeholder-track > span {
+  position: absolute;
+  left: 70%;
+  top: -5px;
+  bottom: -5px;
+  border-left: 1.5px dashed var(--k-leaf);
+}
+.an3-create {
+  margin-top: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: var(--k-fill);
+  color: var(--k-on-fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+.an3-retry {
+  margin-top: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid var(--k-border);
+  border-style: solid;
+  background: transparent;
+  color: var(--k-ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.an3-retry:disabled,
+.an3-listing:disabled {
+  opacity: 0.4;
+}
+
+/* Fill-rate hero (AN3-001 rows 13-21). */
+.an3-fr {
+  padding: 18px 20px 14px;
+}
+.an3-sub {
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--k-faint);
+  min-width: 0;
+}
+.an3-hero {
+  position: relative;
+  margin: 50px 0 28px;
+}
+.an3-hero-num {
+  position: absolute;
+  bottom: calc(100% + 13px);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.an3-delta {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+.an3-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 4px);
+  height: 6px;
+}
+.an3-ticks > span {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: var(--k-tick);
+}
+.an3-track {
+  position: relative;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--k-hero-track);
+  box-shadow: inset 0 1px 2px var(--k-hero-inset), inset 0 0 0 1px var(--k-hero-rim);
+  overflow: hidden;
+}
+.an3-track > div {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--k-hero-grad);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(36, 31, 27, 0.08);
+}
+.an3-ghost {
+  position: absolute;
+  top: 9px;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1.5px solid var(--k-ghost-mk);
+  background: var(--k-card);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+.an3-target {
+  position: absolute;
+  left: 70%;
+  top: -5px;
+  width: 2px;
+  height: 28px;
+  transform: translateX(-1px);
+  border-radius: 1px;
+  background: var(--k-leaf);
+}
+.an3-target-label {
+  position: absolute;
+  left: 70%;
+  top: calc(100% + 7px);
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--k-leaf-ink);
+  white-space: nowrap;
+}
+.an3-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--k-faint);
+}
+.an3-legend-mk {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--k-ghost-mk);
+  border-radius: 2px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.an3-note {
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--k-ink-soft);
+  background: var(--k-soft);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+
+/* Breakdown rows (AN3-001 rows 22-24c). */
+.an3-tabs-wrap {
+  padding: 0 14px 14px;
+}
+.an3-rows-wrap {
+  padding: 2px 20px 14px;
+}
+.an3-small {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--k-faint);
+}
+.an3-rows {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 36px;
+  column-gap: 10px;
+  row-gap: 9px;
+  align-items: center;
+  margin-top: 8px;
+}
+.an3-row-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 15px;
+  overflow-wrap: anywhere;
+}
+.an3-row-sub {
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--k-faint);
+}
+.an3-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--k-track);
+}
+.an3-bar > div {
+  height: 100%;
+  border-radius: 999px;
+}
+.an3-bar > span {
+  position: absolute;
+  left: 70%;
+  top: -4px;
+  bottom: -4px;
+  border-left: 1.5px dashed var(--k-leaf);
+}
+.an3-val {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.an3-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--k-teal-pale);
+  color: var(--k-teal-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* By session list (AN3-001 S4). */
+.an3-sess {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 44px 14px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  min-height: 44px;
+}
+.an3-sess-day {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 14px;
+  color: var(--k-deep);
+}
+.an3-sess-time {
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--k-faint);
+}
+.an3-sess-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 16px;
+}
+.an3-sess-who {
+  font-size: 10.5px;
+  line-height: 14px;
+  color: var(--k-faint);
+}
+.an3-sess-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--k-track);
+  margin-top: 5px;
+  overflow: hidden;
+}
+.an3-sess-bar > div {
+  height: 100%;
+  border-radius: 999px;
+}
+.an3-detail {
+  margin: 0 0 12px;
+  border-radius: 14px;
+  background: var(--k-soft);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.an3-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+}
+.an3-detail-row > span:first-child {
+  color: var(--k-faint);
+}
+.an3-detail-row > span:last-child {
+  font-weight: 700;
+  text-align: right;
+}
+.an3-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--k-pdark);
+  border-radius: 8px;
+  padding: 2px 4px;
+}
+.an3-seeall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 11px 0 12px;
+  border-top: 1px solid var(--k-divider);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--k-pdark);
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Collapsibles (AN3-001 row 25, S6). */
+.an3-coll {
+  border-top: 1px solid var(--k-divider);
+  padding: 14px 20px;
+}
+.an3-coll-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  width: 100%;
+  text-align: left;
+}
+.an3-coll-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 17px;
+}
+.an3-coll-count {
+  font-size: 10.5px;
+  color: var(--k-faint);
+  white-space: nowrap;
+}
+.an3-chev {
+  display: flex;
+  color: var(--k-tert);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.an3-coll-line {
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--k-ink-soft);
+  margin-top: 3px;
+}
+.an3-coll-body {
+  display: grid;
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.an3-coll-body > div {
+  overflow: hidden;
+  min-height: 0;
+}
+.an3-tiles5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+}
+.an3-tile {
+  min-height: 44px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.an3-tile-n {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.an3-tile-t {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 12px;
+  color: var(--k-faint);
+  white-space: nowrap;
+}
+.an3-chip {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-sizing: border-box;
+  position: relative;
+}
+.an3-chip > span:last-child {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.an3-hi {
+  display: grid;
+  grid-template-columns: 16px 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--k-divider);
+}
+.an3-hi-bar {
+  height: 4px;
+  border-radius: 999px;
+  margin-top: 9px;
+}
+.an3-hi-n {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.an3-hi-t {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+/* Bookings (AN3-001 row 26). */
+.an3-bk-head {
+  padding: 18px 20px 6px;
+}
+.an3-bk-n {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.an3-pill {
+  position: relative;
+  width: 148px;
+  height: 44px;
+}
+.an3-pill-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--k-pill-track);
+  box-shadow: inset 0 0 0 1px var(--k-pill-border);
+}
+.an3-pill-thumb {
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  width: 72px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--k-pill-thumb);
+  box-shadow: var(--k-pill-sh);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.an3-pill-tab {
+  position: absolute;
+  top: 0;
+  width: 74px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: color 0.45s;
+}
+.an3-chart {
+  position: relative;
+  height: 118px;
+}
+.an3-chart-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.45s;
+  pointer-events: none;
+}
+.an3-chart-bars {
+  position: absolute;
+  inset: 0 0 18px 0;
+  display: grid;
+  align-items: end;
+}
+.an3-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.an3-chart-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+}
+.an3-lead {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.an3-lead > div {
+  border-radius: 14px;
+  background: var(--k-soft);
+  padding: 10px 6px;
+  text-align: center;
+}
+.an3-top {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 0;
+}
+
+/* Listing status row (AN3-006 row 16, AN3-008 row 22). */
+.an3-listing {
+  align-self: stretch;
+  min-height: 56px;
+  border-radius: 16px;
+  background: var(--k-soft);
+  border: 1px solid var(--k-border);
+  border-style: solid;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+.an3-listing-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 17px;
+  color: var(--k-ink);
+}
+.an3-listing-sub {
+  display: block;
+  font-size: 11.5px;
+  line-height: 15px;
+  color: var(--k-faint);
+  margin-top: 2px;
+}
+.an3-listing-act {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--k-pdark);
+  white-space: nowrap;
+}
+
+/* Peak times (AN3-001 row 28). */
+.an3-heat {
+  display: grid;
+  /* 30 in the source (24-hour labels); 12-hour labels ("7:30 PM") need their own width (AN3-001 O9). */
+  grid-template-columns: minmax(30px, max-content) repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  align-items: center;
+}
+.an3-heat-day {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 12px;
+  color: var(--k-faint);
+}
+.an3-heat-row {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--k-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.an3-cell {
+  height: 32px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 800;
+  box-sizing: border-box;
+  position: relative;
+}
+.an3-heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 2px 0;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--k-faint);
+  white-space: nowrap;
+}
+.an3-cell-d {
+  margin: 0 12px 12px;
+  border-radius: 14px;
+  background: var(--k-soft);
+  padding: 10px 12px;
+}
+.an3-peaks {
+  border-top: 1px solid var(--k-divider);
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 18px;
+}
+.an3-peaks-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.an3-rev {
+  border-top: 1px solid var(--k-divider);
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+.an3-soon {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--k-deep);
+  background: var(--k-pale);
+  border-radius: 999px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+/* Skeleton (AN3-001 O1). */
+.an3-skel {
+  background: var(--k-skel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .an3 *,
+  .an3 *::before {
+    transition-duration: 0s !important;
+  }
+}
+html.reduce-motion .an3 * {
+  transition-duration: 0s !important;
+}

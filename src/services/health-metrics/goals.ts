@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase as typed } from "../../../lib/supabase/client";
+import { supabase } from "../../../lib/supabase/client";
 
 // Database stage B1 `metric_goals` (HANDOVER_API.md "metric_goals — and it is
 // not measurement_goals"): a goal is a number with a date, keyed (user_id,
@@ -8,9 +7,6 @@ import { supabase as typed } from "../../../lib/supabase/client";
 // Ranges (enforced by the database): steps 1,000-40,000 step 500, water
 // 500-6,000 step 50. Only `value` is updatable, so a save is update-then-
 // insert (an upsert's update branch would name ungranted columns).
-//
-// Newer than lib/supabase/database.types.ts (generated from production).
-const supabase = typed as unknown as SupabaseClient;
 
 export type GoalMetric = "steps" | "water";
 
