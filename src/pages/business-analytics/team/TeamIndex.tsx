@@ -8,10 +8,15 @@ import type { TeamState } from "./useTeam";
 import type { RatingsState } from "./useRatings";
 import type { TeamPerson } from "./teamData";
 import { errText, seatList, sentAgo } from "./helpers";
+import { useScorecard } from "./useScorecard";
+import { payRowsOf } from "./payRows";
+import { money } from "./fmt";
 
 // AN5-001 (index, tinted bento tiles), AN5-003 (early data), AN5-005 (no
 // instructors yet), AN5-011 (free seat), AN5-060 hero message, OURS join
 // requests row, OURS loading / error / offline.
+
+type ScorecardRows = Parameters<typeof payRowsOf>[0];
 
 export type TileKey = "performance" | "repeat" | "load" | "coverage" | "ratings" | "pay";
 
@@ -65,6 +70,8 @@ export function TeamIndex({
 }) {
   const [sel, setSel] = useState(0);
   const seats = useMemo(() => seatList(state), [state]);
+  // AN5-001 row 24 Pay tile: the same figures as the Pay page (B15 instructor_scorecard).
+  const sc = useScorecard(state.businessId, range);
   const s = state.stats;
   const team = state.team;
 
@@ -262,7 +269,7 @@ export function TeamIndex({
       </div>
       <p className="an5-hint">Tap a seat for who's in it.</p>
 
-      <Tiles state={state} ratings={ratings} onTile={onTile} />
+      <Tiles state={state} ratings={ratings} scorecard={sc.rows} onTile={onTile} />
     </div>
   );
 }
@@ -283,7 +290,8 @@ const RequestsRow: React.FC<{ n: number; onClick: () => void; standalone?: boole
   </button>
 );
 
-function Tiles({ state, ratings, onTile }: { state: TeamState; ratings: RatingsState; onTile: (k: TileKey) => void }) {
+function Tiles({ state, ratings, scorecard, onTile }: { state: TeamState; ratings: RatingsState; scorecard: ScorecardRows; onTile: (k: TileKey) => void }) {
+  const pay = payRowsOf(scorecard, state.stats?.perPerson ?? []);
   const s = state.stats;
   const perf =
     s && s.studioFill !== null && !state.early && s.totalBookings >= 20
@@ -307,7 +315,8 @@ function Tiles({ state, ratings, onTile }: { state: TeamState; ratings: RatingsS
         : ratings.team.count > 0
           ? { v: "–", s: `${ratings.team.count} ${ratings.team.count === 1 ? "review" : "reviews"} so far` }
           : { v: "–", s: "No reviews yet" },
-    pay: { v: "–", s: "No pay data yet" },
+    // AnTeamV7 l.505: "$60" + "avg pay a class · $3,470 total"; "–" + "No pay data yet" with no rate agreed.
+    pay: pay.rows.length > 0 ? { v: money(pay.avg), s: `avg pay a class · ${money(pay.total)} total` } : { v: "–", s: "No pay data yet" },
   };
   return (
     <div className="an5-tiles">

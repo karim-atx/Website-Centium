@@ -152,6 +152,17 @@ export interface SalesSummary {
 }
 
 /** store_sales_summary for [from, to] (YYYY-MM-DD, the business's own days). */
+/**
+ * The business's timezone (business_profiles.timezone): store_sales_summary
+ * and store_top_products count p_from / p_to as days on this clock. Null when
+ * it couldn't be read (the caller keeps the device's dates).
+ */
+export async function fetchBusinessTimezone(businessId: string): Promise<string | null> {
+  const { data, error } = await db.from("business_profiles").select("timezone").eq("id", businessId).maybeSingle();
+  if (error) return null;
+  return ((data as { timezone?: string | null } | null)?.timezone ?? "").trim() || null;
+}
+
 export async function fetchSalesSummary(businessId: string, from: string, to: string): Promise<Load<SalesSummary>> {
   const { data, error } = await db.rpc("store_sales_summary", { p_business_id: businessId, p_from: from, p_to: to });
   if (error) return loadFail(error, "Could not read the sales summary");

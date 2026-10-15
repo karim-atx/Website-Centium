@@ -339,7 +339,9 @@ export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock 
         pill: b >= c.cap ? { text: "Full", tone: "good" as const } : w > 0 ? { text: `${w} on waitlist`, tone: "pale" as const } : { text: `${Math.round(fillOf(c) * 100)}%`, tone: "soft" as const },
       };
     }),
-    tip: g.early ? "Trends appear after your first two weeks of classes." : null,
+    // B15 follow-up: business_glance's early flag only (under 14 days old, or
+    // under 10 classes held in the 28 days before).
+    tip: g.early ? EARLY_TIP : null,
   };
 }
 
@@ -492,8 +494,12 @@ const ORDER_PILL: Record<string, { text: string; tone: "good" | "warn" | "pale" 
   out_for_delivery: { text: "Out", tone: "pale" },
   ready_for_pickup: { text: "Ready", tone: "good" },
 };
-/** DA1-013 #2: the early tip until the 10th order (COPY). */
-export const STORE_EARLY_ORDERS = 10;
+/**
+ * The early tip (DA1-005 #3 / DA1-013 #2 position), shown when business_glance
+ * says the figure rests on thin history (B15 follow-up: the business is under
+ * 14 days old, or the source has under 10 records in the 28 days before).
+ */
+export const EARLY_TIP = "Early days: not enough history yet";
 
 /**
  * DA1-011: Orders today, To pack or deliver, Low stock (under 5 left); the
@@ -510,14 +516,15 @@ export function storeToday(raw: DashRaw): TodayBlock {
   const open = s.orders.filter((o) => OPEN_ORDER.has(o.status));
   const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
   // B15: Orders today and Low stock are business_glance's (orders_today on the
-  // business's own day; low_stock under 5 left). "To pack or deliver" stays the
-  // open-order count of the list below it: glance's orders_to_pack is placed +
-  // packed only, and the drawn label also counts out for delivery / ready.
+  // business's own day; low_stock under 5 left). "To pack or deliver" is
+  // glance's orders_open (placed, packed, out for delivery, ready for pickup:
+  // what the drawn label counts; orders_to_pack is placed + packed only), else
+  // the open-order count of the list below it.
   const g = raw.glance;
   const fig = (f: GlanceFigure | undefined) => (f && f.value !== null ? Math.round(f.value) : null);
   const boxes: NumberBox[] = [];
   if (!g || g.orders_today) boxes.push({ value: fig(g?.orders_today) === null ? "–" : String(fig(g?.orders_today)), label: "Orders today" });
-  boxes.push({ value: String(open.length), label: "To pack or deliver" });
+  boxes.push({ value: String(fig(g?.orders_open) ?? open.length), label: "To pack or deliver" });
   if (!g || g.low_stock) {
     const low = fig(g?.low_stock);
     boxes.push(low === null ? { value: "–", label: "Low stock" } : low > 0 ? { value: String(low), label: "Low stock", delta: "Under 5 left", tone: "warn" } : { value: "0", label: "Low stock" });
@@ -535,6 +542,7 @@ export function storeToday(raw: DashRaw): TodayBlock {
     openCount: open.length,
     low: s.lowStock.slice(0, 3).map((p) => ({ id: p.id, title: p.name, detail: p.category ?? "Other", value: `${p.stock} left` })),
     lowCount: s.lowStock.length,
-    tip: s.totalOrders < STORE_EARLY_ORDERS ? "Sales trends appear after your first 10 orders." : null,
+    // The server's early flag only (orders in the 28 days before, B15 follow-up).
+    tip: g?.orders_open?.early || g?.orders_today?.early ? EARLY_TIP : null,
   };
 }

@@ -43,7 +43,8 @@ export function sortClassPolicies<T extends { kind: VenuePolicyKind }>(docs: T[]
 }
 
 /**
- * The B9 refusals a member can meet, in words, then the stage 4 codes
+ * The B9 refusals a member can meet (and B13's ATXF6, past the class's
+ * Centium spots), in words, then the stage 4 codes
  * (stage4Message) for everything older. ATXE2 carries the window in the
  * server's message ("bookings for this class open 14 days before it
  * starts"); the number is read from it when it is there.
@@ -62,6 +63,8 @@ export function classErrorMessage(code: string | undefined, serverMessage: strin
       return "Accept this venue's terms before booking.";
     case "ATXE5":
       return "The waitlist for this class is full.";
+    case "ATXF6":
+      return "No spots left on Centium for this class.";
     default:
       return stage4Message(code, serverMessage, fallback);
   }

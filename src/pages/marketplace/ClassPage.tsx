@@ -28,6 +28,9 @@ import {
   type MarketplaceClass,
 } from "../../services/marketplace";
 import { cancellationLine, isLateCancellation } from "../../services/venues/venueLogic";
+import { fetchMyGymMemberships, fetchVenues } from "../../services/venues";
+import { recordListingEvent } from "../../services/marketplace/listingEvents";
+import { isLivePassState, parseListingSource, viewerSpotsLeft } from "../../services/marketplace/listingLogic";
 import { CLASS_HERO, CompactHeader, DetailHero, DetailLabel, DirectionsMenu, MapCard, useCompactHeader } from "./venueParts";
 import { range12, time12 } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
@@ -133,6 +136,32 @@ export function ClassPage({ classId }: { classId: string }) {
   }, [profileReady, authUserId, load]);
 
   const c = all?.find((x) => x.classId === classId) ?? null;
+
+  // B13 MK-04: a member of the business isn't limited by the class's Centium
+  // spots; anybody else sees the smaller of the two (as Discover's cards do).
+  // Read only when the class has a Centium limit; null = not known yet (no cap).
+  const capped = c?.centiumSpotsLeft != null ? c.businessId : null;
+  const [memberOf, setMemberOf] = useState<{ businessId: string; member: boolean } | null>(null);
+  useEffect(() => {
+    if (!capped || !profileReady) return;
+    let alive = true;
+    void (async () => {
+      if (!authUserId) {
+        if (alive) setMemberOf({ businessId: capped, member: false });
+        return;
+      }
+      const [mine, gyms] = await Promise.all([fetchMyGymMemberships(), fetchVenues()]);
+      if (!alive || !mine.ok || !gyms.ok) return;
+      const bizOf = new Map(gyms.value.map((g) => [g.id, g.businessId]));
+      setMemberOf({ businessId: capped, member: mine.value.some((m) => isLivePassState(m.passState) && bizOf.get(m.gymId) === capped) });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [capped, profileReady, authUserId]);
+  const isMember = memberOf && memberOf.businessId === capped ? memberOf.member : true;
+  // B13 MK-07: Book on this page, once per session per class (the session gate).
+  const listingSource = parseListingSource(params.get("src"));
   // MO1.4.4.4 "Other times" and OURS-class-other-times: the same class at the
   // same place, straight from the list (no new read), soonest first.
   const openOther = (id: string) => navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`, { replace: true });
@@ -283,7 +312,7 @@ export function ClassPage({ classId }: { classId: string }) {
   const priceText = free ? "Free" : c.price;
   // MO1.4.4.4 "Full" is class_seats_left() (it counts live waitlist offers);
   // the view's own count is the fallback when that read failed.
-  const seatsLeft = live?.seatsLeft ?? c.spotsRemaining;
+  const seatsLeft = viewerSpotsLeft(live?.seatsLeft ?? c.spotsRemaining, c.centiumSpotsLeft, isMember);
   const isFull = seatsLeft <= 0;
   const full = isFull && !mine;
   const position = mine ? null : (live?.waitlistPosition ?? null);
@@ -558,7 +587,10 @@ export function ClassPage({ classId }: { classId: string }) {
         <PinnedCta
           primary={{
             label: `Book · ${priceText}`,
-            onClick: () => setPopup("book"),
+            onClick: () => {
+              recordListingEvent({ businessId: c.businessId, kind: "book_tap", source: listingSource, itemId: c.classId });
+              setPopup("book");
+            },
             disabled: !authUserId || !online,
             className: "!bg-fill-pinned !text-on-primary-fill",
           }}
@@ -591,7 +623,7 @@ export function ClassPage({ classId }: { classId: string }) {
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-bold text-charcoal tabular-nums">{when}</span>
             <span className="block text-[11.5px] text-charcoal-faint">
-              {c.businessName} · {c.spotsRemaining} {c.spotsRemaining === 1 ? "spot" : "spots"} left
+              {c.businessName} · {seatsLeft} {seatsLeft === 1 ? "spot" : "spots"} left
             </span>
           </span>
           <span className="text-[15px] font-extrabold text-charcoal tabular-nums shrink-0">{priceText}</span>

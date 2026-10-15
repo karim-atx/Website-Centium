@@ -623,6 +623,71 @@ export async function fetchReviewsPage(gymId: string, sort: ReviewSort, limit = 
   };
 }
 
+/**
+ * B14 follow-up: the reviews of a business with no venue, signed out too
+ * (business_reviews_public: the same rules as gym_reviews_page, a removed
+ * review keeps its row and loses its content, a minor's name is never shown,
+ * the reply included). It has no helpful votes, member tag or class.
+ */
+export async function fetchBusinessReviewsPage(businessId: string, sort: ReviewSort, limit = 20, offset = 0): Promise<Result<GymReview[]>> {
+  type Row = {
+    id: string;
+    rating: number | null;
+    body: string | null;
+    author_name: string | null;
+    created_at: string;
+    edited_at: string | null;
+    redacted: boolean;
+    is_mine: boolean;
+    reply_body: string | null;
+    reply_at: string | null;
+  };
+  const { data, error } = await rpc<Row[]>("business_reviews_public", { p_business_id: businessId, p_sort: sort, p_limit: limit, p_offset: offset });
+  if (error) {
+    console.error("[venues] Could not read the business's reviews:", error.message);
+    return fail(error, "Couldn't load reviews right now.");
+  }
+  return {
+    ok: true,
+    value: (data ?? []).map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      body: r.body,
+      authorName: r.author_name,
+      authorIsMember: false,
+      createdAt: r.created_at,
+      editedAt: r.edited_at,
+      redacted: r.redacted,
+      helpfulCount: 0,
+      viewerFoundHelpful: false,
+      isMine: !!r.is_mine,
+      reply: r.reply_body && r.reply_at ? { body: r.reply_body, at: r.reply_at } : null,
+      classTitle: null,
+    })),
+  };
+}
+
+/** One of the signed-in author's own reviews (my_reviews, B14 follow-up): venue or business. */
+export interface MyReview {
+  reviewId: string;
+  gymId: string | null;
+  businessId: string | null;
+  rating: number | null;
+  body: string | null;
+  redacted: boolean;
+}
+
+/** The signed-in author's reviews; edit or delete them with edit_gym_review / delete_gym_review. */
+export async function fetchMyReviews(): Promise<Result<MyReview[]>> {
+  type Row = { review_id: string; gym_id: string | null; business_id: string | null; rating: number | null; body: string | null; redacted: boolean };
+  const { data, error } = await rpc<Row[]>("my_reviews", {});
+  if (error) return fail(error, "Couldn't load your reviews.");
+  return {
+    ok: true,
+    value: (data ?? []).map((r) => ({ reviewId: r.review_id, gymId: r.gym_id, businessId: r.business_id, rating: r.rating, body: r.body, redacted: !!r.redacted })),
+  };
+}
+
 /** Any signed-in account may review a visible venue, once (ATX92); 1–5 (ATX91); 5 an hour (ATX02). */
 export async function writeGymReview(gymId: string, rating: number, body: string): Promise<Result<string>> {
   const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() });
@@ -642,8 +707,8 @@ export async function businessHasVenue(businessId: string): Promise<boolean | nu
 
 /**
  * B14 RP-01: a review of a business with no venue, once per person (ATX92);
- * staff of the business are refused (ATX03). There is no public reader of a
- * venue-less business's reviews yet, so the page only offers the write.
+ * staff of the business are refused (ATX03). Read back with
+ * business_reviews_public; the author's own is edited (my_reviews).
  */
 export async function writeBusinessReview(businessId: string, rating: number, body: string): Promise<Result<string>> {
   const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() });

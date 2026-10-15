@@ -7,14 +7,18 @@ import { ReviewForm } from "./ReviewForm";
 import {
   deleteGymReview,
   editGymReview,
+  fetchBusinessReviewsPage,
+  fetchMyReviews,
   fetchReviewsPage,
   toggleReviewHelpful,
+  writeBusinessReview,
   writeGymReview,
   type GymReview,
   type ReviewSort,
   type ReviewSummary,
 } from "../../services/venues";
-import { reviewAge } from "../../services/venues/venueLogic";
+import { reviewAge, summaryOf } from "../../services/venues/venueLogic";
+import { useApp } from "../../context/AppContext";
 
 // MO1.4.2.3 Gym page › Reviews (backend stage 4d): the rating summary with
 // its five bars, the sort chips, the review cards and "Write a review"
@@ -35,6 +39,11 @@ import { reviewAge } from "../../services/venues/venueLogic";
 // - B14 (RP-02): the business's public reply shows under its review
 //   ("{name} replied", AN13-024 row 6 style; AN13-001 K2), and a review
 //   written from a class booking names the class after its age.
+// - B14 follow-up: the same list for a business with no venue
+//   (businessId): business_reviews_public (signed out too; no helpful
+//   votes, member tag or class), the card summed from the loaded reviews,
+//   and the author's own review from my_reviews(), so "Write a review"
+//   becomes "Edit your review" instead of answering ATX92.
 
 const SORTS: { key: ReviewSort; label: string }[] = [
   { key: "recent", label: "Most recent" },
@@ -61,25 +70,53 @@ function Stars({ value, size }: { value: number; size: number }) {
 
 export function GymReviews({
   gymId,
+  businessId,
   gymName,
-  summary,
+  summary: gymSummary,
   onChanged,
+  pinned = true,
 }: {
-  gymId: string;
+  /** A venue's reviews (gym_reviews_page) … */
+  gymId?: string;
+  /** … or a venue-less business's (business_reviews_public). */
+  businessId?: string;
   gymName: string;
   summary: ReviewSummary | null;
   /** Re-read the summary (the header pill and the card) after a write. */
   onChanged: () => void;
+  /** The write button pinned at the bottom (the gym page's Reviews tab), or in the flow. */
+  pinned?: boolean;
 }) {
+  const { authUserId } = useApp();
   const [sort, setSort] = useState<ReviewSort>("recent");
   const [reviews, setReviews] = useState<GymReview[] | null>(null);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [writeOpen, setWriteOpen] = useState(false);
+  const [myBiz, setMyBiz] = useState<GymReview | null>(null);
+  const biz = !gymId && !!businessId;
+
+  // B14 follow-up: the author's own review of this business (my_reviews), signed in only.
+  const loadMine = useCallback(async () => {
+    if (!biz || !authUserId) return setMyBiz(null);
+    const r = await fetchMyReviews();
+    if (!r.ok) return;
+    const m = r.value.find((x) => x.businessId === businessId && !x.gymId) ?? null;
+    setMyBiz(
+      m
+        ? { id: m.reviewId, rating: m.rating, body: m.body, redacted: m.redacted, authorName: null, authorIsMember: false, createdAt: "", editedAt: null, helpfulCount: 0, viewerFoundHelpful: false, isMine: true, reply: null, classTitle: null }
+        : null
+    );
+  }, [biz, authUserId, businessId]);
+  useEffect(() => {
+    void (async () => {
+      await loadMine();
+    })();
+  }, [loadMine]);
 
   const load = useCallback(
     async (offset = 0) => {
-      const r = await fetchReviewsPage(gymId, sort, PAGE, offset);
+      const r = biz ? await fetchBusinessReviewsPage(businessId!, sort, PAGE, offset) : await fetchReviewsPage(gymId!, sort, PAGE, offset);
       if (!r.ok) {
         setError(r.message);
         setReviews((prev) => prev ?? []);
@@ -89,7 +126,7 @@ export function GymReviews({
       setMore(r.value.length === PAGE);
       setReviews((prev) => (offset === 0 ? r.value : [...(prev ?? []), ...r.value]));
     },
-    [gymId, sort]
+    [gymId, businessId, biz, sort]
   );
 
   useEffect(() => {
@@ -98,7 +135,9 @@ export function GymReviews({
     })();
   }, [load]);
 
-  const mine = reviews?.find((r) => r.isMine) ?? null;
+  const mine = biz ? myBiz : (reviews?.find((r) => r.isMine) ?? null);
+  // A business has no public summary reader: the card is the loaded reviews' once all are in.
+  const summary = biz ? (reviews && !more ? summaryOf(reviews) : null) : gymSummary;
 
   const helpful = async (r: GymReview) => {
     const res = await toggleReviewHelpful(r.id);
@@ -220,7 +259,7 @@ export function GymReviews({
                       <p className="mt-0.5 mb-0 text-[12px] leading-[17px] text-charcoal whitespace-pre-wrap [overflow-wrap:anywhere]">{r.reply.body}</p>
                     </div>
                   )}
-                  <div className="mt-2.5 flex items-center gap-3">
+                  {!biz && <div className="mt-2.5 flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => void helpful(r)}
@@ -233,7 +272,7 @@ export function GymReviews({
                       <ThumbsUp size={13} strokeWidth={1.75} aria-hidden className={r.viewerFoundHelpful ? "fill-current" : ""} />
                       Helpful · {r.helpfulCount}
                     </button>
-                  </div>
+                  </div>}
                 </>
               )}
             </article>
@@ -246,18 +285,36 @@ export function GymReviews({
         )}
       </div>
 
-      <div aria-hidden style={{ height: 60 }} />
       {/* #13: "Write a review" with Pencil 15/1.75; your own review is
           edited from the same button. */}
-      <PinnedCta
-        primary={{
-          label: mine && !mine.redacted ? "Edit your review" : "Write a review",
-          icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
-          onClick: () => setWriteOpen(true),
-          disabled: reviews === null || (!!mine && mine.redacted),
-          className: "!bg-fill-pinned !text-on-primary-fill",
-        }}
-      />
+      {pinned ? (
+        <>
+          <div aria-hidden style={{ height: 60 }} />
+          <PinnedCta
+            primary={{
+              label: mine && !mine.redacted ? "Edit your review" : "Write a review",
+              icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
+              onClick: () => setWriteOpen(true),
+              disabled: reviews === null || (!!mine && mine.redacted),
+              className: "!bg-fill-pinned !text-on-primary-fill",
+            }}
+          />
+        </>
+      ) : (
+        authUserId && (
+          <button
+            type="button"
+            onClick={() => setWriteOpen(true)}
+            disabled={reviews === null || (!!mine && mine.redacted)}
+            className="tap mt-3 w-full flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 text-start disabled:opacity-60"
+          >
+            <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
+              <Pencil size={17} className="text-primary-dark" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 text-[14px] font-semibold text-charcoal truncate">{mine && !mine.redacted ? "Edit your review" : "Write a review"}</span>
+          </button>
+        )
+      )}
 
       <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={`Rate ${gymName}`}>
         <GymReviewForm
@@ -267,18 +324,19 @@ export function GymReviews({
           onDone={async () => {
             setWriteOpen(false);
             setSort("recent");
-            await load(0);
+            await Promise.all([load(0), loadMine()]);
             onChanged();
           }}
           gymId={gymId}
+          businessId={biz ? businessId : undefined}
         />
       </BottomSheet>
     </div>
   );
 }
 
-/** MO1.2.1.2's flow for a gym: write, or edit / delete your own. */
-function GymReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
+/** MO1.2.1.2's flow for a gym (or a venue-less business): write, or edit / delete your own. */
+function GymReviewForm({ gymId, businessId, gymName, existing, onDone }: { gymId?: string; businessId?: string; gymName: string; existing: GymReview | null; onDone: () => Promise<void> }) {
   return (
     <ReviewForm
       initialRating={existing?.rating ?? 5}
@@ -286,7 +344,11 @@ function GymReviewForm({ gymId, gymName, existing, onDone }: { gymId: string; gy
       placeholder={`How has ${gymName} been?`}
       submitLabel={existing ? "Save changes" : "Submit review"}
       onSubmit={async (rating, text) => {
-        const r = existing ? await editGymReview(existing.id, rating, text) : await writeGymReview(gymId, rating, text);
+        const r = existing
+          ? await editGymReview(existing.id, rating, text)
+          : businessId
+            ? await writeBusinessReview(businessId, rating, text)
+            : await writeGymReview(gymId!, rating, text);
         if (!r.ok) return r.message;
         await onDone();
         return null;

@@ -33,7 +33,7 @@ function PreviewBody() {
   const today = isoOf(new Date());
   const live = m.classes.classes.filter((x) => x.date >= today && notEnded(x, now));
   const upcoming = live.slice(0, 6);
-  const chips = [...(m.perk ? [m.perk] : []), ...m.discounts.discounts.map((d) => d.label)];
+  const chips = [...(m.perk ? [m.perk] : []), ...m.listingPromos.map((p) => p.name)];
   const meta =
     kind === "store"
       ? `${m.offerings.offerings.length} products`

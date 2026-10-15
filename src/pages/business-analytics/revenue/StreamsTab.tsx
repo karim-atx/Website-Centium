@@ -14,7 +14,8 @@ import { useRecordedRevenue } from "./useRecordedRevenue";
 // refunds; a row's detail: payments, a membership's plans, refunds), plans
 // are recorded_revenue_by_plan (the null plan is "Classes and other", never
 // dropped, so the plans add up to the revenue). Before B8 (readers missing)
-// both are the records' sums. Discounts join when promotions (B13) exist.
+// both are the records' sums. Promotions (B13) are recorded against payments,
+// not applied to prices, so no discount stream exists to show here.
 
 const Collapsible: React.FC<{
   title: string;

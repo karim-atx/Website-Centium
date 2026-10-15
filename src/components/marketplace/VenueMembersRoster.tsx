@@ -33,7 +33,7 @@ function passPill(m: VenueMember): { tone: PillTone; label: string } {
 }
 
 // "Paid {d Mon}" from venue_members.paid_at (20261120080000); a fact about the
-// row, never a sum (Revenue waits for B8's ledger).
+// row, never a sum (Revenue sums B8's payment ledger, not these rows).
 const memberFact = (m: VenueMember) => [m.planName, money(m.priceAgreed), methodLabel(m.paymentMethod), paidLine(m)].filter(Boolean).join(" · ");
 const memberDates = (m: VenueMember) => (m.expiresOn ? `${dayMonthYear(m.startedOn)} to ${dayMonthYear(m.expiresOn)}` : `From ${dayMonthYear(m.startedOn)}`);
 

@@ -27,7 +27,7 @@ export interface RatingsState {
   prev3: InstructorRating[];
   /** Tagged reviews, newest first; null when business_reviews_page can't be read here. */
   reviews: BizReview[] | null;
-  /** Matched reviews per professional id (unique first names only). */
+  /** Matched reviews per professional id (by business_reviews_page's instructor_id). */
   byPerson: Map<string, BizReview[]>;
   updatedAt: number | null;
   reload: () => void;

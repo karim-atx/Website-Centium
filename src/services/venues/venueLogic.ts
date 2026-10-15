@@ -254,3 +254,12 @@ export function hostedImageUrl(value: string | null | undefined): string | null 
   const u = value?.trim();
   return u && /^https?:\/\//i.test(u) ? u : null;
 }
+
+/** A business's rating card from its loaded reviews (no public summary reader exists for a business). */
+export function summaryOf(reviews: readonly { rating: number | null; redacted: boolean }[]): { average: number; total: number; counts: [number, number, number, number, number] } {
+  const rated = reviews.filter((r) => !r.redacted && r.rating !== null) as { rating: number }[];
+  const counts: [number, number, number, number, number] = [0, 0, 0, 0, 0];
+  for (const r of rated) counts[5 - Math.min(5, Math.max(1, Math.round(r.rating)))] += 1;
+  const total = rated.length;
+  return { average: total ? rated.reduce((a, r) => a + r.rating, 0) / total : 0, total, counts };
+}

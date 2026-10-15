@@ -23,6 +23,7 @@ import {
   fetchSeries,
   moveClassSession,
   saveClassSeries,
+  setClassExplore,
   type CancelResult,
   type InstructorConflict,
   type SeriesRow,
@@ -140,6 +141,10 @@ const sortRows = (rows: BusinessClassRow[]) =>
 
 type Fail = { ok: false; message: string; code?: "capacity" | "permission" | "busy" };
 
+/** The sheet's MK-04 values, or null when the caller sent none. */
+const exploreOf = (d: ClassDraft) =>
+  d.centiumSpots === undefined && d.listedOnExplore === undefined ? null : { centiumSpots: d.centiumSpots ?? null, listedOnExplore: d.listedOnExplore !== false };
+
 export function useSchedule() {
   const { authUserId, profileReady } = useApp();
   const snap = useSyncExternalStore(
@@ -205,6 +210,15 @@ export function useSchedule() {
     if (!f.ok) return f;
     const r = await saveClassSeries(state.businessId, f.fields, rule);
     if (!r.ok) return { ok: false, message: r.message, code: r.refusal === "busy" ? "busy" : r.refusal === "denied" ? "permission" : undefined };
+    // B13 MK-04: not save_class_series keys, so written on the new classes after (defaults need no write).
+    const explore = exploreOf(draft);
+    if (explore && (explore.centiumSpots !== null || !explore.listedOnExplore)) {
+      const x = await setClassExplore({ seriesId: r.value, fromDate: rule.startsOn }, explore);
+      if (!x.ok) {
+        await reread();
+        return { ok: false, message: `The classes are saved, but their Centium spots aren't. ${x.message}` };
+      }
+    }
     await reread();
     const created = sortRows(state.classes.filter((c) => c.seriesId === r.value));
     return { ok: true, seriesId: r.value, created };
@@ -235,6 +249,19 @@ export function useSchedule() {
         delete fields.start_time;
         delete fields.end_time;
       }
+      // B13 MK-04: not edit_class keys, so a direct update to the same classes
+      // edit_class changes. The CHECK (centium_spots <= max_capacity) decides
+      // the order: before the edit when the new value fits the old capacity
+      // (so a lower capacity never trips on the old spots), else after it.
+      const explore = exploreOf(draft);
+      const exploreChanged = !!explore && (explore.centiumSpots !== (before.centiumSpots ?? null) || explore.listedOnExplore !== (before.listedOnExplore !== false));
+      const exploreFirst = exploreChanged && (explore!.centiumSpots === null || explore!.centiumSpots <= before.maxCapacity);
+      const writeExplore = (seriesId: string | null) =>
+        setClassExplore(scope === "future" && seriesId ? { seriesId, fromDate: before.date, alsoClassId: classId } : { classId }, explore!);
+      if (exploreFirst) {
+        const x = await writeExplore(before.seriesId ?? null);
+        if (!x.ok) return { ok: false, message: x.message };
+      }
       const r = await editClass(classId, scope, fields);
       if (!r.ok) {
         await reread();
@@ -245,6 +272,19 @@ export function useSchedule() {
         };
       }
       if (before.professionalId !== (draft.professionalId || null)) covers.delete(classId);
+      if (exploreChanged && !exploreFirst) {
+        // A "future" edit split the series: its classes are on the new series now.
+        let sid: string | null = null;
+        if (scope === "future") {
+          await reread();
+          sid = state.classes.find((c) => c.id === classId)?.seriesId ?? null;
+        }
+        const x = await writeExplore(sid);
+        if (!x.ok) {
+          await reread();
+          return { ok: false, message: `Your other changes are saved, but the Centium spots aren't. ${x.message}` };
+        }
+      }
       await reread();
       return { ok: true, changed: r.value, told };
     },

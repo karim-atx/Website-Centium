@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { fetchBusinessTimezone, fetchSalesSummary, type SalesSummary } from "../../../services/store/orders";
 import {
   ScrubChart,
   type ScrubCfg,
@@ -6,6 +7,7 @@ import {
   type ScrubTipRow,
 } from "../../../components/charts/ScrubChart";
 import {
+  businessRange,
   daysBetween,
   mondayOf,
   previousOf,
@@ -69,9 +71,26 @@ function beforeWords(key: string): string {
 
 export const OverviewTab: React.FC = () => {
   const { range, kind } = useAnalytics();
-  const { data } = useRevenue();
+  const { data, businessId } = useRevenue();
   const today = todayIso();
   const store = kind === "store";
+  // B11 store_sales_summary for the store's Average order / Returned boxes,
+  // in the business's own days. Null until it answers ("–").
+  const [sales, setSales] = useState<{ key: string; value: SalesSummary } | null>(null);
+  const salesKey = `${businessId}|${range.key}|${range.from}|${range.to}`;
+  useEffect(() => {
+    if (!store || !businessId) return;
+    let alive = true;
+    void (async () => {
+      const r = businessRange(range, await fetchBusinessTimezone(businessId));
+      const s = await fetchSalesSummary(businessId, r.from, r.to);
+      if (alive && s.status === "ok") setSales({ key: salesKey, value: s.value });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [store, businessId, range, salesKey]);
+  const storeSales = sales && sales.key === salesKey ? sales.value : null;
   const rec = useRecordedRevenue(range, data?.records ?? null, { plans: false });
   const f = rec.figures;
 
@@ -125,10 +144,10 @@ export const OverviewTab: React.FC = () => {
   type Box = { v: string; d: string | null; l: string; dGood?: boolean };
   let boxes: Box[];
   if (store) {
-    // Orders and returns are B11 (not on the server): no store sales exist to divide.
+    // B11 store_sales_summary: the average order and the share returned.
     boxes = [
-      { v: "$0", d: null, l: "Average order" },
-      { v: "–", d: null, l: "Returned" },
+      { v: storeSales ? money(storeSales.averageOrder) : "–", d: null, l: "Average order" },
+      { v: storeSales && storeSales.returnedPct !== null ? `${Math.round(storeSales.returnedPct)}%` : "–", d: null, l: "Returned" },
     ];
   } else {
     const recurring = recurringMonthly(m.records, today);

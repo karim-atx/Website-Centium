@@ -8,6 +8,9 @@ export interface BizReply {
   redacted: boolean;
 }
 
+/** business_reviews_page.flag_kind (B14 follow-up). */
+export type FlagKind = "keyword" | "injury" | "not_about_this_business" | "shares_private_information" | "harassment" | "spam" | "other";
+
 /** One row of business_reviews_page (B14). */
 export interface BizReview {
   id: string;
@@ -27,6 +30,10 @@ export interface BizReview {
   classTitle: string | null;
   /** That class's instructor's first name, if any. */
   instructor: string | null;
+  /** B14 follow-up: the tagged instructor's professional id (match ratings by this, never by name). */
+  instructorId?: string | null;
+  /** B14 follow-up: why it's flagged (the first report's reason, or keyword); null when not flagged. */
+  flagKind?: FlagKind | null;
   reply: BizReply | null;
   /** Reported, or caught by the blocked-terms list (RP-03). */
   flagged: boolean;

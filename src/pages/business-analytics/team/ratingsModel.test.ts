@@ -48,12 +48,22 @@ test("ratings: team average is weighted, shows from 3 reviews, delta hidden in e
   assert.equal(teamFigures([ir("a", "John", 2, 5)], [], [], false).avg, null);
 });
 
-test("ratings: reviews match an instructor by a unique first name only", () => {
+test("ratings: reviews match an instructor by instructor_id, even when first names repeat", () => {
   const ratings = [ir("a", "John", 2, 5), ir("b", "Sam", 1, 4), ir("c", "Sam", 1, 3)];
-  const m = reviewsByInstructor([rv("1", 5, "2026-10-01", "John"), rv("2", 4, "2026-10-01", "Sam"), rv("3", 3, "2026-10-01", null)], ratings);
+  const m = reviewsByInstructor(
+    [
+      rv("1", 5, "2026-10-01", "John", { instructorId: "a" }),
+      rv("2", 4, "2026-10-01", "Sam", { instructorId: "b" }),
+      rv("3", 3, "2026-10-01", "Sam", { instructorId: "c" }),
+      rv("4", 3, "2026-10-01", null),
+      rv("5", 2, "2026-10-01", "Kim", { instructorId: "gone" }),
+    ],
+    ratings,
+  );
   assert.equal(m.get("a")?.length, 1);
-  assert.equal(m.has("b"), false);
-  assert.equal(m.has("c"), false);
+  assert.equal(m.get("b")?.length, 1);
+  assert.equal(m.get("c")?.length, 1);
+  assert.equal(m.has("gone"), false);
 });
 
 test("ratings: distribution only when it agrees with the reader's count", () => {

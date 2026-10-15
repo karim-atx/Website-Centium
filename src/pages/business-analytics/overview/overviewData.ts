@@ -3,6 +3,7 @@ import { fetchMyTeam } from "../../../services/business-team";
 import { getCalendar } from "../../../services/calendar";
 import { occurrenceDates } from "../../../components/calendar/occurrences";
 import { mapMetrics } from "../../../services/reputation/mapping";
+import { LISTING_PROMO_COLS, liveOnListing, type PromotionRow } from "../../../services/business-market/promoLogic";
 import { activeAtWeekOf, fetchBusinessDay, fetchMemberGrowth, fetchPeriodStats, mondayOf, type Read } from "../../../services/business-analytics";
 import { addDays, type OvBooking, type OvClass, type OvRaw, type OvReviews, type Range } from "./overviewModel";
 
@@ -14,7 +15,8 @@ import { addDays, type OvBooking, type OvClass, type OvRaw, type OvReviews, type
 // for "Payment owed": Client outcomes' attendance and review list, and the
 // clock only while business_day is missing), business_offerings (the product
 // table since B11; store_listings is no longer read, B16),
-// business_discounts, business_review_metrics() (B14: every review of the
+// promotions (B13, live and on the listing; business_discounts is no longer
+// read, B16), business_review_metrics() (B14: every review of the
 // business, venues or none) for Reputation, the owner's calendar_events for today's events, and the team
 // names for "Class with …".
 //
@@ -95,7 +97,11 @@ export async function loadOverview(userId: string, range: Range, today: string):
     fetchMemberGrowth(bid, Math.min(52, Math.max(1, growthWeeks))),
     fetchBusinessDay(bid, today),
     db.from("business_offerings").select("id").eq("business_id", bid),
-    db.from("business_discounts").select("id").eq("business_id", bid),
+    // promotions is newer than the generated types.
+    (db as unknown as { from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: unknown[] | null; error: Err }> } } })
+      .from("promotions")
+      .select(LISTING_PROMO_COLS)
+      .eq("business_id", bid),
     // B14 business_review_metrics: all time up to the range end (the rating) and the range (new reviews).
     db.rpc("business_review_metrics" as never, { p_business_id: bid, p_from: "2000-01-01", p_to: range.to } as never),
     db.rpc("business_review_metrics" as never, { p_business_id: bid, p_from: range.from, p_to: range.to } as never),
@@ -161,7 +167,7 @@ export async function loadOverview(userId: string, range: Range, today: string):
       activeNow: growth.ok ? activeAtWeekOf(growth.value, end) : null,
       day: day.ok ? day.value : day.denied ? [] : null,
       productsCount: okCount(offerings, "products"),
-      discountsCount: okCount(discounts, "discounts"),
+      discountsCount: discounts.error ? (console.error("[analytics-overview] Could not read promotions:", discounts.error.message), 0) : liveOnListing((discounts.data ?? []) as unknown as Pick<PromotionRow, "starts_on" | "ends_on" | "paused_at" | "ended_at" | "show_on_listing">[], today),
       team: team.ok ? Object.fromEntries(team.members.map((m) => [m.professionalId, m.name])) : {},
       eventsToday,
       reviews,

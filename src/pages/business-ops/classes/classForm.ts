@@ -44,6 +44,10 @@ export interface ClassForm {
   level: ClassLevel | "";
   bring: string[];
   coverUrl: string;
+  /** B13 MK-04 centium_spots: null = "All free spots" (no separate limit), else 0 to capacity. */
+  centiumSpots: number | null;
+  /** B13 MK-04 listed_on_explore: false = "Members only". */
+  listedOnExplore: boolean;
 }
 
 export const noRepeat = (date: string): RepeatForm => ({ kind: "none", weekdays: date ? [isoWeekday(date)] : [], interval: 2, ends: "never", until: "", count: "10" });
@@ -65,6 +69,8 @@ export const blankForm = (date: string, carry?: Partial<ClassForm>): ClassForm =
   level: "",
   bring: [],
   coverUrl: "",
+  centiumSpots: null,
+  listedOnExplore: true,
   ...carry,
 });
 
@@ -85,6 +91,8 @@ export const formOf = (row: BusinessClassRow): ClassForm => ({
   level: row.level ?? "",
   bring: row.whatToBring ?? [],
   coverUrl: row.coverUrl ?? "",
+  centiumSpots: row.centiumSpots ?? null,
+  listedOnExplore: row.listedOnExplore !== false,
 });
 
 /** V6-164: "Create another" carries type, date, Run by and payment. */

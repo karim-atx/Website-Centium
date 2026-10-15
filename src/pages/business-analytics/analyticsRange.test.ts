@@ -1,6 +1,19 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { mondayOf, presetRange, previousOf, rangeLine } from "./analyticsRange.ts";
+import { businessRange, mondayOf, presetRange, previousOf, rangeLine, todayIn } from "./analyticsRange.ts";
+
+test("analyticsRange: business-local days for the store readers", () => {
+  // 22:30 UTC on 14 Oct is already 15 Oct in Beirut (UTC+3), still 14 Oct in New York.
+  const at = new Date("2026-10-14T22:30:00Z");
+  assert.equal(todayIn("Asia/Beirut", at), "2026-10-15");
+  assert.equal(todayIn("America/New_York", at), "2026-10-14");
+  const four = businessRange(presetRange("4w", "2026-10-14"), "Asia/Beirut", at);
+  assert.equal(four.to, "2026-10-15");
+  assert.equal(four.from, "2026-09-18");
+  const custom = { key: "custom" as const, from: "2026-09-14", to: "2026-09-27", compare: false };
+  assert.deepEqual(businessRange(custom, "Asia/Beirut", at), custom);
+  assert.equal(todayIn("Not/AZone", at).length, 10);
+});
 
 test("analyticsRange: weeks start on Monday", () => {
   assert.equal(mondayOf("2026-10-14"), "2026-10-12");

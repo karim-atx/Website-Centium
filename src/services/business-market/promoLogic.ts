@@ -80,6 +80,18 @@ export function promotionStatus(p: Pick<Promotion, "startsOn" | "endsOn" | "paus
   return "live";
 }
 
+/** The columns liveOnListing reads (promotions, any insider). */
+export const LISTING_PROMO_COLS = "starts_on, ends_on, paused_at, ended_at, show_on_listing";
+
+/**
+ * How many promotions are live and shown on the listing: the dashboard's and
+ * Analytics' "Live discounts · On listing" (B16 phase two: these figures
+ * came from business_discounts).
+ */
+export function liveOnListing(rows: readonly Pick<PromotionRow, "starts_on" | "ends_on" | "paused_at" | "ended_at" | "show_on_listing">[], today: string): number {
+  return rows.filter((r) => r.show_on_listing && promotionStatus({ startsOn: r.starts_on, endsOn: r.ends_on, pausedAt: r.paused_at, endedAt: r.ended_at }, today) === "live").length;
+}
+
 /**
  * ATX10: once a promotion has started (live, paused or ended) its offer
  * (target, type, value, audience) can't change. Dates, pause and end can.

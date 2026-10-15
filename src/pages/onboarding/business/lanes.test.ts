@@ -1,6 +1,9 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  AMENITIES,
+  AMENITIES_MORE,
+  amenityKeysOf,
   businessTypeFor,
   copyMondayToWeekdays,
   dbCategories,
@@ -79,6 +82,12 @@ test("policy templates follow the answers; delivery terms only when delivering",
   assert.deepEqual(docsFor(d).map((x) => x.kind), ["returns"]);
   const withDelivery = { ...d, essentials: { ...d.essentials, delivery: true, deliveryFee: "3", freeOver: "50" } };
   assert.ok(docsFor(withDelivery)[1].lines.includes("• Delivery is $3, free over $50."));
+});
+
+test("amenities: the chip labels become amenity_vocabulary() keys; unknown labels are left out", () => {
+  assert.deepEqual(amenityKeysOf(["Pool", "Wi-Fi", "Café", "Accessible entrance", "Drinking water", "Changing rooms"]), ["pool", "wifi", "cafe", "accessible", "water", "changing_rooms"]);
+  assert.deepEqual(amenityKeysOf(["Steam room", "Juice bar", "Pool", "Pool"]), ["pool"]);
+  for (const l of [...AMENITIES, ...AMENITIES_MORE]) assert.equal(amenityKeysOf([l]).length, 1, l);
 });
 
 test("switching type keeps the basics and clears the type answers", () => {

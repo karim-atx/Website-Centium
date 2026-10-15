@@ -174,6 +174,19 @@ export async function deleteReply(reviewId: string): Promise<Write<null>> {
   return { ok: true, value: null };
 }
 
+/**
+ * B14 follow-up: "Message privately". start_reviewer_thread(p_review_id)
+ * resolves the author on the server and applies start_member_thread()'s rule
+ * (the business's own people within 90 days); anyone else answers ATX96, and
+ * the page offers Report to Centium instead. Gate messages. The business
+ * never learns who wrote it: the thread shows the masked member label.
+ */
+export async function startReviewerThread(reviewId: string): Promise<Write<string>> {
+  const { data, error } = await db.rpc("start_reviewer_thread", { p_review_id: reviewId });
+  if (error) return writeFail(error, "Could not open the thread");
+  return { ok: true, value: String(data ?? "") };
+}
+
 export async function reportReview(
   reviewId: string,
   reason: string,

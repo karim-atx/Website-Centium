@@ -5,8 +5,8 @@
 // your next membership at partner gyms" is example data and must never be
 // shown: it names a discount, a partner and an entitlement that do not exist.
 //
-// FUTURE DATA SOURCE: partner offers, i.e. business_discounts rows
-// (services/business-discounts) joined to an eligibility rule the user has met
+// FUTURE DATA SOURCE: partner offers, i.e. B13 promotions rows
+// (services/business-market/promotions) joined to an eligibility rule the user has met
 // (for example a streak length, from services/streaks), resolved server-side
 // so the client never decides who qualifies. When that exists, return the
 // earned offer here: `title` names what unlocked it ("Your 21-day streak

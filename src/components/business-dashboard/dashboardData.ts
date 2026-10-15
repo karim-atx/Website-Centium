@@ -12,6 +12,7 @@ import type { ActivityRow, DashBusiness, DashClass, DashLoad, DashOrder, DashRaw
 import { kindOf, toGlance } from "./dashboardModel";
 import { toAttentionRows } from "./attention";
 import { ACTIVITY_PAGE, toActivityRow } from "./activityFeed";
+import { LISTING_PROMO_COLS, liveOnListing, type PromotionRow } from "../../services/business-market/promoLogic";
 
 // THE DASHBOARD'S READS, all real rows on the local stack (no mock figures).
 //
@@ -19,7 +20,8 @@ import { ACTIVITY_PAGE, toActivityRow } from "./activityFeed";
 // business_profiles (own row), business_classes, business_class_bookings
 // (select_business_owner), business_members,
 // membership_plans, business_offerings (the product table since B11;
-// store_listings is no longer read, B16), business_discounts,
+// store_listings is no longer read, B16), promotions (B13: live and on the
+// listing; business_discounts is no longer read, B16),
 // my_business_seat_capacity(), gyms.access_qr, business_store_settings (B5),
 // onboarding_progress (B5, the setup card's dismissal), venue_class_roster()
 // for today's waitlists, venue_members() for renewals due.
@@ -160,7 +162,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       db.rpc<AttentionRaw[]>("business_attention", { p_business_id: bid }),
       db.from<{ id: string; name: string }>("membership_plans").select("id, name").eq("business_id", bid),
       db.from<{ id: string }>("business_offerings").select("id").eq("business_id", bid),
-      db.from<{ id: string }>("business_discounts").select("id").eq("business_id", bid),
+      db.from<Pick<PromotionRow, "starts_on" | "ends_on" | "paused_at" | "ended_at" | "show_on_listing">>("promotions").select(LISTING_PROMO_COLS).eq("business_id", bid),
       db.rpc<{ business_id: string; seat_blocks: number; seats_per_unit: number; seats_total: number; seats_used: number; seats_invited: number }[]>("my_business_seat_capacity"),
       db.from<{ access_qr: boolean | null }>("gyms").select("access_qr").eq("business_id", bid),
       db.from<{ delivery_enabled: boolean | null; pickup_enabled: boolean | null }>("business_store_settings").select("delivery_enabled, pickup_enabled").eq("business_id", bid),
@@ -227,7 +229,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
       members,
       plansCount: plans.length,
       productsCount: ok(offeringsRes, "products", partial, []).length,
-      discountsCount: ok(discountsRes, "discounts", partial, []).length,
+      discountsCount: liveOnListing(ok(discountsRes, "promotions", partial, []), today),
       seats: seatRow ? { blocks: seatRow.seat_blocks, perUnit: seatRow.seats_per_unit, capacity: seatRow.seats_total, used: Number(seatRow.seats_used) } : null,
       team: teamRes.ok ? Object.fromEntries(teamRes.members.map((m) => [m.professionalId, m.name])) : {},
       events: calRes.ok ? calRes.events : [],

@@ -10,6 +10,7 @@ import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } fr
 import { OB_STRINGS } from "../../pages/onboarding/shell/flow";
 import { looksBlurry } from "./blurCheck";
 import {
+  amenityKeysOf,
   businessTypeFor,
   dbCategories,
   docBody,
@@ -330,6 +331,8 @@ export async function saveEntrySettings(gymId: string, e: Essentials): Promise<R
     min_entry_age: Math.min(21, Math.max(16, Math.round(e.minAge))),
     guest_passes_per_month: Math.min(10, Math.max(0, Math.round(e.guestPasses))),
     front_desk_checkin: e.frontDeskCheckIn,
+    // B13 MK-02 (OB-257 row 23): the picked facilities as amenity_vocabulary() keys.
+    amenities: amenityKeysOf(e.amenities),
   };
   const { error } = await db.from("gyms").update(row).eq("id", gymId);
   if (error && !["42703", "PGRST204"].includes(error.code)) return fail(error);

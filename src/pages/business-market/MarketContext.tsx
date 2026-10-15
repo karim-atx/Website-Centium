@@ -6,7 +6,8 @@ import { useMyVenues } from "../../hooks/useMyVenues";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import type { ConsolePermission } from "../../services/business-console";
 import { useBusinessNavKind } from "../../components/navigation/useBusinessNavKind";
-import { useBusinessClasses, useBusinessDiscounts, useBusinessOfferings, useMembershipPlans } from "../../hooks/useBusinessCatalog";
+import { useBusinessClasses, useBusinessOfferings, useMembershipPlans } from "../../hooks/useBusinessCatalog";
+import { fetchPromotions, promotionStatus, type Promotion } from "../../services/business-market/promotions";
 import type { BusinessFull } from "../../services/business-more";
 import { fetchPolicy, fetchStoreSettings, type StoreSettings } from "../../services/business-more";
 import { fetchClassBookings, fetchInstructors } from "../../services/business-classes";
@@ -54,7 +55,14 @@ export interface MarketData {
   can: (p: ConsolePermission) => boolean;
   hours: GymHoursTableRow[] | null;
   setHours: (rows: GymHoursTableRow[]) => void;
-  discounts: ReturnType<typeof useBusinessDiscounts>;
+  /**
+   * B13 promotions that are live and shown on the listing: the listing's
+   * offer chips after the perk (business_discounts is no longer read, B16).
+   * Empty until read, or while the table is absent.
+   */
+  listingPromos: Promotion[];
+  /** Re-read listingPromos after a promotion changes. */
+  reloadListingPromos: () => void;
   offerings: ReturnType<typeof useBusinessOfferings>;
   plans: ReturnType<typeof useMembershipPlans>;
   classes: ReturnType<typeof useBusinessClasses>;
@@ -99,7 +107,6 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   const kind: BizKind = forceKind ?? (biz.business ? biz.kind : navKind ?? biz.kind);
   const { venues, selected } = useMyVenues();
   const access = useConsoleAccess();
-  const discounts = useBusinessDiscounts();
   const offerings = useBusinessOfferings();
   const plans = useMembershipPlans();
   const classes = useBusinessClasses();
@@ -196,6 +203,27 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   }, [businessId, tick, strengthTick]);
   const refreshStrength = useCallback(() => setStrengthTick((t) => t + 1), []);
 
+  const [promos, setPromos] = useState<{ businessId: string; rows: Promotion[] } | null>(null);
+  const [promoTick, setPromoTick] = useState(0);
+  const promosLive = backend.promotions === "live";
+  useEffect(() => {
+    if (!businessId || !promosLive) return;
+    let alive = true;
+    void fetchPromotions(businessId).then((r) => {
+      if (alive && r.ok) setPromos({ businessId, rows: r.value });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId, promosLive, tick, promoTick]);
+  const reloadListingPromos = useCallback(() => setPromoTick((t) => t + 1), []);
+  const listingPromos = useMemo(() => {
+    if (!promos || promos.businessId !== businessId) return [];
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return promos.rows.filter((p) => p.showOnListing && promotionStatus(p, iso) === "live");
+  }, [promos, businessId]);
+
   const classIds = useMemo(() => classes.classes.map((x) => x.id).join(","), [classes.classes]);
   useEffect(() => {
     if (!classIds) return;
@@ -253,7 +281,8 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
     can: (p: ConsolePermission) => owner || access.can(p),
     hours,
     setHours,
-    discounts,
+    listingPromos,
+    reloadListingPromos,
     offerings,
     plans,
     classes,

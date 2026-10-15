@@ -1308,7 +1308,8 @@ interface AppState {
   // membershipPlans and discounts nested in businessListing, businessOfferings
   // and businessClasses as their own arrays. All four are real tables now —
   // membership_plans, business_discounts, business_offerings, business_classes
-  // — read and written through hooks/useBusinessCatalog. membershipPlans was
+  // — read and written through hooks/useBusinessCatalog (discounts have since
+  // moved to B13 promotions, services/business-market/promotions; B16). membershipPlans was
   // the worst of them: it shipped seeded with two invented plans, so every
   // business account has been showing "Monthly Membership $45" and "Day Pass
   // $8" to itself since onboarding.
@@ -3660,7 +3661,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
   // `membershipPlans` and `discounts` are gone from here — real
-  // membership_plans and business_discounts rows now. The plans in particular
+  // membership_plans and (since B16) promotions rows now. The plans in particular
   // were not merely unpersisted but INVENTED: two seeded entries every business
   // account has been shown as its own since onboarding.
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {

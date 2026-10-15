@@ -19,8 +19,8 @@ import { useListingSwitch } from "./useListingSwitch";
 // Performance and Promotions live under Products (MA1-067, V6-54).
 //
 // REPLACES BusinessMarketplaceTab (deleted). Its two live features are kept:
-// discounts (business_discounts) as "Offers on your listing" with an
-// "Add an offer" row (MA1-007 OF1-OF3), and the offerings form and list
+// "Offers on your listing" with an "Add an offer" row (MA1-007 OF1-OF3; the
+// perk, then B13 promotions since B16 retired business_discounts), and the offerings form and list
 // (business_offerings) as the Listing tab's "Offerings" card (MA1-001 K1).
 
 export type MarketTab = "listing" | "spots" | "perf" | "promo";

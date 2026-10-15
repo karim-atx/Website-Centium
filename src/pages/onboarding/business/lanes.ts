@@ -306,8 +306,35 @@ export const CLASS_TYPES = ["Yoga", "Pilates", "Barre", "Spin", "Meditation", "D
 // OURS: the extra class types behind More (the frame shows the More chip only).
 export const CLASS_TYPES_MORE = ["Strength", "HIIT", "Boxing", "Stretching", "Prenatal"];
 export const AMENITIES = ["Showers", "Lockers", "Towels", "Parking", "Sauna", "Pool", "Wi-Fi", "Café"];
-// OURS: the extra amenities behind More.
-export const AMENITIES_MORE = ["Steam room", "Childcare", "Accessible entrance", "Juice bar"];
+// OURS: the extra amenities behind More, each one amenity_vocabulary() can hold
+// (B13 MK-02: gyms.amenities is a fixed list; "Steam room" and "Juice bar"
+// had no key, so they were replaced).
+export const AMENITIES_MORE = ["Changing rooms", "Drinking water", "Childcare", "Accessible entrance"];
+
+/** The onboarding chip labels as amenity_vocabulary() keys (gyms_amenities_known). */
+const AMENITY_KEY_OF: Record<string, string> = {
+  Showers: "showers",
+  Lockers: "lockers",
+  "Changing rooms": "changing_rooms",
+  Towels: "towels",
+  Parking: "parking",
+  "Wi-Fi": "wifi",
+  "Drinking water": "water",
+  Café: "cafe",
+  Sauna: "sauna",
+  Pool: "pool",
+  Childcare: "childcare",
+  "Accessible entrance": "accessible",
+};
+
+/**
+ * The draft's amenity labels as gyms.amenities keys, once each. A label with
+ * no key (an older draft's "Steam room" or "Juice bar") is left out: the
+ * column refuses anything outside the vocabulary.
+ */
+export function amenityKeysOf(labels: readonly string[]): string[] {
+  return [...new Set(labels.map((l) => AMENITY_KEY_OF[l.trim()]).filter((k): k is string => !!k))];
+}
 
 export const CANCEL_OPTIONS = [12, 24, 2] as const;
 export type CancelHours = (typeof CANCEL_OPTIONS)[number];

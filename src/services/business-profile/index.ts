@@ -188,7 +188,7 @@ export async function saveMyBusinessProfile(
  * (services/business-console). Null when it has neither.
  *
  * THE ONE PIECE EVERY BUSINESS-OWNED TABLE NEEDS. business_classes,
- * business_offerings, business_discounts and membership_plans each carry a
+ * business_offerings, promotions and membership_plans each carry a
  * `business_id` in the payload itself — unlike this table, which is addressed
  * by `profile_id` in the filter and so never needs the uuid at all. Their RLS
  * policies read business_can(business_id, <permission>) since B7: the owner,

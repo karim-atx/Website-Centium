@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
+  MessageCircle,
   Reply,
   Star,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   type ScrubChartConfig,
 } from "../../../components/charts/ScrubChart";
 import { useBusiness } from "../../../components/business-more/useBusiness";
+import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useAnalytics as useShellAnalytics } from "../analyticsContext";
 import type { BizKind } from "../../../components/business-more/kind";
 import { useOnline } from "../../../hooks/useOnline";
@@ -63,7 +65,19 @@ import {
   type FilterKey,
   type ServerMetrics,
 } from "./reputationModel";
-import { FlagLine, ReviewRow, Stars } from "./parts";
+import { FlagLine, INJURY_LINE, ReviewRow, Stars } from "./parts";
+
+/**
+ * The flag card's reason line (OURS-AN13-flag-queue row 4) from flag_kind
+ * (B14 follow-up): injury is AN13-011 row 4a's wording verbatim
+ * (KEEP-SAFETY); harassment the OURS line; otherwise our own report, or
+ * "Centium is reviewing".
+ */
+function flagText(r: BizReview, reportedAt: string | null): string {
+  if (r.flagKind === "injury") return INJURY_LINE;
+  if (r.flagKind === "harassment" && !reportedAt) return "Mentions harassment or threats. Read it yourself before replying.";
+  return flagLine(reportedAt);
+}
 import { ReportSheet, ReviewComposer, type ComposerMode } from "./ReviewSheets";
 import "../shell/analytics.css";
 import "./an13.css";
@@ -204,6 +218,9 @@ export default function ReputationPage() {
   const [sub, setSub] = useState<"metrics" | "reviews">("metrics");
   const data = useReputation(business?.id ?? null, range);
   const [toast, showToast] = useOpsToast();
+  // B14 follow-up: Message privately needs the messages permission (start_reviewer_thread).
+  const access = useConsoleAccess();
+  const canMessage = access.isOwner || (!access.isStaff && !!business) || access.can("messages");
 
   const loaded = data.reviews.status === "ok" ? data.reviews.value : null;
   const list = useMemo(() => loaded?.reviews ?? [], [loaded]);
@@ -299,6 +316,8 @@ export default function ReputationPage() {
           vocab={vocab}
           tagOf={tagOf}
           businessName={business?.name || "Your business"}
+          canMessage={canMessage}
+          onThread={(threadId) => navigate("/app/messages", { state: { threadId } })}
           onChanged={(msg) => {
             if (msg) showToast(msg, false);
             data.refresh();
@@ -695,8 +714,14 @@ const Reviews: React.FC<{
   vocab: ReturnType<typeof vocabOf>;
   tagOf: (r: BizReview) => string | null;
   businessName: string;
+  /** The messages permission: Message privately on a flagged review (start_reviewer_thread). */
+  canMessage: boolean;
+  /** A private message was sent: open its thread. */
+  onThread: (threadId: string) => void;
   onChanged: (toast: string | null) => void;
-}> = ({ list, range, reports, byInstructor, vocab, tagOf, businessName, onChanged }) => {
+}> = ({ list, range, reports, byInstructor, vocab, tagOf, businessName, canMessage, onThread, onChanged }) => {
+  // Reviews whose author start_reviewer_thread refused (ATX96): Report to Centium instead (X-28).
+  const [noThread, setNoThread] = useState<Set<string>>(new Set());
   const online = useOnline();
   const [fk, setFk] = useState<FilterKey>("all");
   const [fOpen, setFOpen] = useState(false);
@@ -865,7 +890,7 @@ const Reviews: React.FC<{
             {flagged.length === 1 && (
               <FlagLine
                 place="top"
-                text={flagLine(openReport(flagged[0])?.reportedAt ?? null)}
+                text={flagText(flagged[0], openReport(flagged[0])?.reportedAt ?? null)}
               />
             )}
             {flagged.map((r) => {
@@ -880,22 +905,36 @@ const Reviews: React.FC<{
                     flagged.length > 1 ? (
                       <FlagLine
                         place="row"
-                        text={flagLine(mine?.reportedAt ?? null)}
+                        text={flagText(r, mine?.reportedAt ?? null)}
                       />
                     ) : undefined
                   }
                 >
                   <div className="rp-acts">
-                    {/* X-28: B14 never names the reviewer, so there is no private message; Report to Centium instead. */}
-                    <button
-                      type="button"
-                      className="rp-act is-high tap"
-                      disabled={!online || !!reports.get(r.id)}
-                      onClick={() => setReport(r)}
-                    >
-                      <Flag size={14} strokeWidth={2.4} aria-hidden />
-                      Report to Centium
-                    </button>
+                    {/* AN13-011 row 4c / AN13-018: Message privately (start_reviewer_thread,
+                        messages permission); X-28: Report to Centium when the reviewer
+                        isn't one of the business's people (ATX96) or without the permission. */}
+                    {canMessage && !noThread.has(r.id) ? (
+                      <button
+                        type="button"
+                        className="rp-act is-high tap"
+                        disabled={!online}
+                        onClick={() => setComposer({ mode: "message", review: r })}
+                      >
+                        <MessageCircle size={14} strokeWidth={2.4} aria-hidden />
+                        Message privately
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rp-act is-high tap"
+                        disabled={!online || !!reports.get(r.id)}
+                        onClick={() => setReport(r)}
+                      >
+                        <Flag size={14} strokeWidth={2.4} aria-hidden />
+                        Report to Centium
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="rp-act is-line tap"
@@ -1053,11 +1092,22 @@ const Reviews: React.FC<{
         mode={composer?.mode ?? "reply"}
         review={composer?.review ?? null}
         tag={composer ? tagOf(composer.review) : null}
+        injury={composer?.review.flagKind === "injury"}
         businessName={businessName}
         onClose={() => setComposer(null)}
         onDone={(msg) => {
           setComposer(null);
           onChanged(msg);
+        }}
+        onMessaged={(threadId) => {
+          setComposer(null);
+          onThread(threadId);
+        }}
+        onNotMember={() => {
+          const id = composer?.review.id;
+          setComposer(null);
+          if (id) setNoThread((s) => new Set(s).add(id));
+          onChanged("You can only message your own members. Report it to Centium instead.");
         }}
       />
       <ReportSheet

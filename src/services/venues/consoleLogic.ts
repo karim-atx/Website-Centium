@@ -187,7 +187,7 @@ export interface VenueMember {
   priceAgreed: number;
   /**
    * When the payment was recorded (venue_members, 20261120080000). Shown as
-   * "Paid {d Mon}"; never summed into Revenue, which waits for B8's ledger.
+   * "Paid {d Mon}"; never summed into Revenue, which reads B8's payment ledger.
    */
   paidAt: string | null;
   /** Who recorded it: a profile id, not a name. Carried, not shown. */

@@ -477,12 +477,25 @@ export interface BizLocation {
   cancellationHours: number;
   timezone: string;
   hours: HoursRow[];
+  /** B10 entry rules (gyms; writable with the Venues permission). */
+  entry: EntryRules;
 }
+
+/** B10 "Venue settings": gyms.min_entry_age (16 to 21), guest_passes_per_month (0 to 10), front_desk_checkin. */
+export interface EntryRules {
+  minEntryAge: number;
+  guestPassesPerMonth: number;
+  frontDeskCheckIn: boolean;
+}
+
+export const ENTRY_AGE_MIN = 16;
+export const ENTRY_AGE_MAX = 21;
+export const GUEST_PASSES_MAX = 10;
 
 export async function fetchLocations(businessId: string): Promise<Result<BizLocation[]>> {
   const { data, error } = await db
     .from("gyms")
-    .select("id, name, location, lat, lng, public_phones, venue_kind, default_cancellation_hours, timezone, created_at")
+    .select("id, name, location, lat, lng, public_phones, venue_kind, default_cancellation_hours, timezone, min_entry_age, guest_passes_per_month, front_desk_checkin, created_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
   if (error) return fail(error, "Couldn't load your locations.");
@@ -501,6 +514,11 @@ export async function fetchLocations(businessId: string): Promise<Result<BizLoca
       cancellationHours: Number(r.default_cancellation_hours ?? 12),
       timezone: (r.timezone as string) ?? "Asia/Beirut",
       hours: hours[i].ok ? hours[i].value : [],
+      entry: {
+        minEntryAge: Number(r.min_entry_age ?? ENTRY_AGE_MIN),
+        guestPassesPerMonth: Number(r.guest_passes_per_month ?? 2),
+        frontDeskCheckIn: r.front_desk_checkin !== false,
+      },
     })),
   };
 }
@@ -553,6 +571,23 @@ export async function updateLocation(gymId: string, d: LocationDraft, originalPh
   }
   if (!data || data.length === 0) return { ok: false, code: "42501", message: "Couldn't save the location. Try again." };
   return { ok: true, value: null };
+}
+
+/**
+ * B10 entry rules on one venue (gyms_update_insider: the Venues permission).
+ * Clamped to the CHECK ranges (gyms_min_entry_age_range 16 to 21,
+ * gyms_guest_passes_range 0 to 10), the same clamp onboarding uses.
+ */
+export async function updateEntryRules(gymId: string, v: EntryRules): Promise<Result<EntryRules>> {
+  const row = {
+    min_entry_age: Math.min(ENTRY_AGE_MAX, Math.max(ENTRY_AGE_MIN, Math.round(v.minEntryAge))),
+    guest_passes_per_month: Math.min(GUEST_PASSES_MAX, Math.max(0, Math.round(v.guestPassesPerMonth))),
+    front_desk_checkin: v.frontDeskCheckIn,
+  };
+  const { data, error } = await db.from("gyms").update(row).eq("id", gymId).select("id");
+  if (error) return fail(error, "Couldn't save the entry rules. Try again.");
+  if (!data || data.length === 0) return { ok: false, code: "42501", message: "You need the Venues permission to change this. Ask the owner." };
+  return { ok: true, value: { minEntryAge: row.min_entry_age, guestPassesPerMonth: row.guest_passes_per_month, frontDeskCheckIn: row.front_desk_checkin } };
 }
 
 /** Upcoming classes at a venue in the next 30 days (the remove guard). */

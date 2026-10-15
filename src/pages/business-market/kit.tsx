@@ -293,7 +293,7 @@ export function MFieldLabel({ c, children, id }: { c: MarketPalette; children: R
   );
 }
 
-/** A "Coming soon" note under a pending control (B13 / B7 not on the stack). */
+/** A "Coming soon" note under a pending control (its B13 / B7 probe found the table or function absent). */
 export function MSoonNote({ c, id, children }: { c: MarketPalette; id?: string; children: React.ReactNode }) {
   return (
     <p id={id} style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(16), marginTop: 8, textAlign: "center" }}>

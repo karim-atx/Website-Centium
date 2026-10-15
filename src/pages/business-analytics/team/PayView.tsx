@@ -6,6 +6,7 @@ import type { TeamState } from "./useTeam";
 import type { Vocab } from "./vocab";
 import { useAnalytics } from "../shell/AnalyticsContext";
 import { useScorecard } from "./useScorecard";
+import { payRowsOf } from "./payRows";
 
 // AN5-065 Team › Pay (AnTeamV6 k === "pay", l.469-486; markup l.216-247).
 // B15 instructor_scorecard (TM-04, gate revenue) gives, per instructor for
@@ -26,19 +27,8 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
   const { range } = useAnalytics();
   const sc = useScorecard(state.businessId, range);
   const people = state.stats?.perPerson ?? [];
-  type PayRow = { p: (typeof people)[number]; rate: number; pay: number; classes: number; revenue: number | null };
-  const rows: PayRow[] = (
-    sc.rows
-      ? sc.rows.flatMap((r): PayRow[] => {
-          const p = people.find((x) => x.person.id === r.professionalId);
-          if (!p || r.pay === null) return [];
-          return [{ p, rate: p.person.payRate ?? (r.classes ? r.pay / r.classes : 0), pay: r.pay, classes: r.classes, revenue: r.recordedRevenue }];
-        })
-      : people.filter((p) => p.person.payRate !== null).map((p) => ({ p, rate: p.person.payRate as number, pay: (p.person.payRate as number) * p.sessions, classes: p.sessions, revenue: null }))
-  ).sort((a, b) => b.pay - a.pay);
+  const { rows, total, avg } = payRowsOf(sc.rows, people);
   const noPay = rows.length === 0;
-  const total = rows.reduce((a, r) => a + r.pay, 0);
-  const classes = rows.reduce((a, r) => a + r.classes, 0);
   // Row 7: revenue a class (recorded revenue ÷ classes) against the rate.
   const withRev = rows.some((r) => r.revenue !== null);
   const pairs = rows.map((r) => {
@@ -47,7 +37,6 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
   });
   const mxR = Math.max(1, ...pairs.map((x) => Math.max(x.rev, x.r.rate)));
   const best = [...pairs].sort((a, b) => b.prof - a.prof)[0];
-  const avg = classes ? Math.round(total / classes) : 0;
   const maxPay = Math.max(1, ...rows.map((r) => r.pay));
   const listed = all ? rows : rows.slice(0, 3);
 

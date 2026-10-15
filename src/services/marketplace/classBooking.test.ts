@@ -22,6 +22,7 @@ test("classErrorMessage words the B9 refusals", () => {
   assert.equal(classErrorMessage("ATXE3", "x", "f"), "Bookings for this class have closed.");
   assert.equal(classErrorMessage("ATXE4", "x", "f"), "Accept this venue's terms before booking.");
   assert.equal(classErrorMessage("ATXE5", "x", "f"), "The waitlist for this class is full.");
+  assert.equal(classErrorMessage("ATXF6", "x", "f"), "No spots left on Centium for this class.");
 });
 
 test("classErrorMessage falls through to the stage 4 words and the fallback", () => {

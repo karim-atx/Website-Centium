@@ -22,6 +22,13 @@ export interface BusinessClassRow {
   level?: "all_levels" | "beginner" | "intermediate" | "advanced" | null;
   whatToBring?: string[];
   coverUrl?: string | null;
+  /**
+   * B13 MK-04 (writable, Schedule): the total places for people from Centium
+   * (Explore), including ones already booked; null = no separate limit.
+   */
+  centiumSpots?: number | null;
+  /** B13 MK-04: false = members only (off Explore; members can still book). */
+  listedOnExplore?: boolean;
   /** B9 read-only: the repeating series this class belongs to, edited on its own, cancelled. */
   seriesId?: string | null;
   seriesException?: boolean;

@@ -68,9 +68,11 @@ import { usePromotions } from "./usePromotions";
 // Gym / Store variants (OURS-MA1-gym-promotions, MA1-072).
 //
 // LIVE: "Offers on your listing" = the listing perk (business_profiles.perk,
-// V6-88) and business_discounts (until B16), with "Add an offer" (OF3) and
-// each offer's Edit / Remove; their switches stay drawn on and disabled (no
-// show-on-listing column for them).
+// V6-88), with "Add an offer" (OF3) and its Edit / Remove (its switch stays
+// drawn on and disabled: no show-on-listing column for it), then each running
+// promotion below. B16: business_discounts is no longer read or written; once
+// the perk is set, "Add an offer" opens Create promotion, the offer's home
+// since B13.
 // B13 MK-05 (live when the probe finds promotions): "Your promotions" lists
 // every promotions row (insiders see all), with its status from the dates and
 // the paused / ended stamps, promotion_stats (uses, people, the revenue the
@@ -126,8 +128,8 @@ export function PromotionsTab() {
   const canMarket = m.can("marketing");
   const data = usePromotions(business?.id ?? null, m.backend, { promos: canMarket || m.can("revenue"), placements: canMarket || m.can("revenue") });
   const offers: OfferRow[] = useMemo(
-    () => [...(m.perk ? [{ id: "perk", label: m.perk, perk: true }] : []), ...m.discounts.discounts.map((d) => ({ id: d.id, label: d.label, perk: false }))],
-    [m.perk, m.discounts.discounts]
+    () => (m.perk ? [{ id: "perk", label: m.perk, perk: true }] : []),
+    [m.perk]
   );
   const items = useMemo(
     () =>
@@ -198,6 +200,7 @@ export function PromotionsTab() {
   const applied = (p: Promotion, msg: string) => {
     data.setPromotions((list) => (list.some((x) => x.id === p.id) ? list.map((x) => (x.id === p.id ? p : x)) : [p, ...list]));
     data.reload();
+    m.reloadListingPromos();
     flash(p.id);
     showToast(msg, { overCta: true });
   };
@@ -205,15 +208,10 @@ export function PromotionsTab() {
   const doRemove = async (row: OfferRow) => {
     if (!business) return;
     setBusy(true);
-    if (row.perk) {
-      const r = await saveListingPerk(business.id, null);
-      setBusy(false);
-      if (!r.ok) return showToast(r.message);
-      m.setPerk(null);
-    } else {
-      await m.discounts.remove(row.id);
-      setBusy(false);
-    }
+    const r = await saveListingPerk(business.id, null);
+    setBusy(false);
+    if (!r.ok) return showToast(r.message);
+    m.setPerk(null);
     setRemoveRow(null);
     showToast(`${row.label} is off your listing.`, { overCta: true });
   };
@@ -237,6 +235,7 @@ export function PromotionsTab() {
       if (!r.ok) return showToast(r.message, { overCta: true });
       data.setPromotions((list) => list.filter((x) => x.id !== p.id));
       data.reload();
+      m.reloadListingPromos();
       return showToast(`${p.name} is cancelled.`, { overCta: true });
     }
     const r = await endPromotion(p.id);
@@ -252,6 +251,7 @@ export function PromotionsTab() {
     setRowBusy(null);
     if (!r.ok) return showToast(r.message, { overCta: true });
     data.setPromotions((list) => list.map((x) => (x.id === p.id ? r.value : x)));
+    m.reloadListingPromos();
     if (on) flash(`offer:${p.id}`);
     showToast(on ? `${p.name} is now on your listing.` : `${p.name} is off your listing.`, { overCta: true });
   };
@@ -390,7 +390,8 @@ export function PromotionsTab() {
       )}
       <button
         type="button"
-        onClick={() => setOfferSheet({ mode: "add" })}
+        // The perk is the listing's one free-text offer; any further offer is a promotion (B13).
+        onClick={() => (m.perk ? setCreate({ what: null }) : setOfferSheet({ mode: "add" }))}
         disabled={!online || !canMarket || !business}
         className="tap"
         style={{
@@ -413,7 +414,6 @@ export function PromotionsTab() {
         <Plus size={15} strokeWidth={2.4} aria-hidden />
         Add an offer
       </button>
-      {m.discounts.error && <MSaveError c={c}>{m.discounts.error}</MSaveError>}
 
       {sugg.length > 0 && (
         <>
@@ -861,19 +861,14 @@ function OfferSheet({ mode, row, offers, onClose, onSaved }: { mode: "add" | "ed
     if (!business || !t) return;
     setBusy(true);
     setError(null);
-    // The perk is the listing's first offer: the first one added fills it, the rest are discounts.
-    if (mode === "edit" ? row?.perk : !m.perk) {
-      const r = await saveListingPerk(business.id, t);
-      setBusy(false);
-      if (!r.ok) return setError(r.message);
-      m.setPerk(r.value);
-      onSaved(t, "perk");
-      return;
-    }
-    const ok = await m.discounts.add(t);
+    // The perk is the listing's free-text offer (business_profiles.perk); this
+    // sheet only sets it. Further offers are promotions (B13; B16 retired
+    // business_discounts).
+    const r = await saveListingPerk(business.id, t);
     setBusy(false);
-    if (!ok) return setError(m.discounts.error ?? "Couldn't save. Try again.");
-    onSaved(t, null);
+    if (!r.ok) return setError(r.message);
+    m.setPerk(r.value);
+    onSaved(t, "perk");
   };
   return (
     <MSheet

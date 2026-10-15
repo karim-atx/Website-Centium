@@ -126,11 +126,21 @@ describe("store Today block (DA1-011, B11)", () => {
     assert.equal(b.tip, null);
   });
 
-  it("shows the early tip under 10 orders, and the setup step closes on the first order", () => {
-    const r = raw({ store: store([{ id: "o1", number: 1, fulfilment: "pickup", itemCount: 1, label: "Guest", status: "placed", placedAt: at(9) }]) });
+  it("shows the early tip only when the glance says early, and the setup step closes on the first order", () => {
+    const one = [{ id: "o1", number: 1, fulfilment: "pickup" as const, itemCount: 1, label: "Guest", status: "placed" as const, placedAt: at(9) }];
+    const r = raw({ store: store(one), glance: toGlance([{ metric: "orders_open", value: 1, early: true }]) });
     const b = todayBlock("store", r, now);
-    assert.equal(b.kind === "store" ? b.tip : null, "Sales trends appear after your first 10 orders.");
+    assert.equal(b.kind === "store" ? b.tip : null, "Early days: not enough history yet");
     assert.equal(setupSteps("store", r).find((s) => s.key === "order")?.done, true);
+    // Few orders in total but history the server counts as enough: no tip.
+    const settled = todayBlock("store", raw({ store: store(one), glance: toGlance([{ metric: "orders_open", value: 1, early: false }]) }), now);
+    assert.equal(settled.kind === "store" ? settled.tip : "x", null);
+  });
+
+  it("To pack or deliver is the glance's orders_open (placed to ready), else the list's open count", () => {
+    const one = [{ id: "o1", number: 1, fulfilment: "pickup" as const, itemCount: 1, label: "Guest", status: "placed" as const, placedAt: at(9) }];
+    const b = todayBlock("store", raw({ store: store(one), glance: toGlance([{ metric: "orders_open", value: 7, early: false }, { metric: "orders_to_pack", value: 5, early: false }]) }), now);
+    assert.equal(b.kind === "store" ? b.boxes.find((x) => x.label === "To pack or deliver")?.value : null, "7");
   });
 });
 

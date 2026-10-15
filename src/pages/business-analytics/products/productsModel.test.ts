@@ -48,7 +48,7 @@ const order = (
     })),
   }) as StoreOrder;
 
-test("products: sales unknown until B11 answers (null orders), never 0", () => {
+test("products: sales unknown until the orders read answers (null orders), never 0", () => {
   const h = headlineOf([prod("a", "Whey", 58)], null, range, TODAY);
   assert.equal(h.live, 1);
   assert.equal(h.sold, null);

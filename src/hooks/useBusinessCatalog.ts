@@ -15,12 +15,6 @@ import {
   type OfferingCategory,
 } from "../services/business-offerings";
 import {
-  createDiscount,
-  deleteDiscount,
-  fetchMyDiscounts,
-  type Discount,
-} from "../services/business-discounts";
-import {
   createPlan,
   deletePlan,
   fetchMyPlans,
@@ -30,14 +24,15 @@ import {
   type PlanDraft,
 } from "../services/membership-plans";
 
-// The four business-owned catalog collections: classes, offerings, discounts
-// and membership plans.
+// The three business-owned catalog collections: classes, offerings and
+// membership plans. (Discounts left in B16: offers are B13 promotions,
+// services/business-market/promotions.)
 //
 // ONE FILE BECAUSE THEY SHARE A GATE, NOT BECAUSE THEY ARE THE SAME. Every one
 // of these tables carries `business_id` in the payload rather than deriving it
 // from auth.uid(), so every one of them needs the real business_profiles.id
 // first, and every one of them is unwritable until the owner has saved their
-// listing at least once. Four copies of that gate would drift, and the first
+// listing at least once. Three copies of that gate would drift, and the first
 // thing to drift would be the difference between "no business profile yet" and
 // "the read failed" — which look identical on screen and are not the same.
 //
@@ -47,12 +42,11 @@ import {
 //                being assigned (see services/business-classes).
 //   offerings    create + delete. A category enum, and a separate public
 //                cross-business read used by the client's Explore.
-//   discounts    create + delete. One content column. Nothing else.
-//   plans        create + UPDATE + delete — the only one of the four with a
+//   plans        create + UPDATE + delete — the only one of the three with a
 //                real edit path in the UI (Front desk › Memberships edits
 //                through services/membership-plans, see plans/usePlans.ts).
 // Checked against each screen rather than inferred from the shared schema
-// shape: three of the four offer no edit at all, so no updateX is built for
+// shape: two of the three offer no edit at all, so no updateX is built for
 // them even though the grant would allow one.
 
 /** What every catalog hook returns, whatever it holds. */
@@ -206,50 +200,6 @@ export function useBusinessOfferings(): UseBusinessOfferings {
   return { offerings: items, businessId, loading, error, add, remove };
 }
 
-export interface UseBusinessDiscounts extends CatalogBase {
-  discounts: Discount[];
-  add: (label: string) => Promise<boolean>;
-  remove: (discountId: string) => Promise<void>;
-}
-
-export function useBusinessDiscounts(): UseBusinessDiscounts {
-  const load = useCallback(
-    (userId: string) =>
-      fetchMyDiscounts(userId).then((r) =>
-        r.ok ? ({ ok: true, businessId: r.businessId, items: r.discounts } as const) : r
-      ),
-    []
-  );
-  const { items, setItems, businessId, loading, error, setError } = useHydrated<Discount>(load);
-
-  const add = async (label: string) => {
-    if (!businessId) {
-      setError("Set up your business profile before adding discounts.");
-      return false;
-    }
-    const result = await createDiscount(businessId, label);
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-    setError(null);
-    setItems((prev) => [...prev, result.discount]);
-    return true;
-  };
-
-  const remove = async (discountId: string) => {
-    const result = await deleteDiscount(discountId);
-    if (!result.ok) {
-      setError(result.message ?? "Couldn't remove the discount.");
-      return;
-    }
-    setError(null);
-    setItems((prev) => prev.filter((d) => d.id !== discountId));
-  };
-
-  return { discounts: items, businessId, loading, error, add, remove };
-}
-
 export interface UseMembershipPlans extends CatalogBase {
   plans: MembershipPlanRow[];
   add: (draft: PlanDraft) => Promise<boolean>;
@@ -284,7 +234,7 @@ export function useMembershipPlans(): UseMembershipPlans {
     return true;
   };
 
-  // The one edit path across the four. The row that replaces the old one comes
+  // The one edit path across the three. The row that replaces the old one comes
   // from the response, not from the draft: the price is stored as numeric and
   // comes back formatted, so what the list shows is what the column holds.
   const edit = async (planId: string, draft: PlanDraft) => {

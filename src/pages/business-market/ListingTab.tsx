@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchReviewMetrics } from "../../services/reputation";
 import { useNavigate } from "react-router-dom";
 import { useOnline } from "../../hooks/useOnline";
 import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
@@ -17,8 +18,11 @@ import { OfferingsCard } from "./OfferingsCard";
 // MA1-001 / 024 / 031 / 037 / 046 / 062 / 078 (Classes), OURS-MA1-gym-listing
 // (Gym) and MA1-067 (Store, under Products). Live data only: the B5 business
 // row (logo, cover, bio, location, contacts, categories, active), the perk
-// and discounts (chips), the venue's hours (gym_hours, one shared hours
-// sheet, V6-163) and its reviews (my_venues). B13: the gallery
+// and the live promotions shown on the listing (chips, B13), the venue's hours (gym_hours, one shared hours
+// sheet, V6-163) and its rating: B14 business_review_metrics over all time
+// (every review of the business, so a business with no venue has one too;
+// the venue's my_venues figures only while that read hasn't answered or the
+// viewer lacks Marketing). B13: the gallery
 // (business_photos, MK-03), the venue's amenities and first-visit text
 // (MK-02) and listing_strength(), whose done flags win for photos, amenities
 // and first visit (the server counts 3 approved photos and any venue). While
@@ -41,7 +45,23 @@ export function ListingTab() {
   const [catSignal, setCatSignal] = useState(0);
   const [now] = useState(() => Date.now());
 
-  const reviews = { average: m.venue?.reviewsAverage ?? null, count: m.venue?.reviewsCount ?? 0 };
+  const businessId = business?.id ?? null;
+  const [metrics, setMetrics] = useState<{ businessId: string; average: number | null; count: number } | null>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    // All time: from a date before any review could exist, to the business's today.
+    void fetchReviewMetrics(businessId, "2000-01-01", null).then((r) => {
+      if (alive && r.status === "ok") setMetrics({ businessId, average: r.value.average, count: r.value.reviews });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId]);
+  const reviews =
+    metrics && metrics.businessId === businessId
+      ? { average: metrics.average, count: metrics.count }
+      : { average: m.venue?.reviewsAverage ?? null, count: m.venue?.reviewsCount ?? 0 };
   const gallery = sortPhotos(m.photos ?? []);
   const counts = photoCounts(gallery);
   // The cover first (MA1-033 K1), then the approved photos; in-review photos
@@ -121,7 +141,7 @@ export function ListingTab() {
     logoUrl: business.logoUrl,
     coverUrl: business.coverUrl,
     meta,
-    chips: [...(m.perk ? [m.perk] : []), ...m.discounts.discounts.map((d) => d.label)],
+    chips: [...(m.perk ? [m.perk] : []), ...m.listingPromos.map((p) => p.name)],
     rating: reviews.count >= 3 && reviews.average !== null ? { average: reviews.average, count: reviews.count } : null,
   };
 

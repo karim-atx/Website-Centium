@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, ImagePlus, Minus, Plus, Repeat, RotateCw, WifiOff, X } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
+import { Toggle } from "../../../components/ui/Toggle";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
@@ -210,6 +211,9 @@ function SheetBody({
     level: f.level || null,
     whatToBring: bringList(f.bring),
     coverUrl: f.coverUrl || null,
+    // B13 MK-04: never above the capacity (business_classes_centium_spots_ok).
+    centiumSpots: f.centiumSpots === null ? null : Math.max(0, Math.min(f.centiumSpots, /^d+$/.test(f.capacity.trim()) ? Number(f.capacity.trim()) : f.centiumSpots)),
+    listedOnExplore: f.listedOnExplore,
   });
 
   const validate = (f: ClassForm) => {
@@ -405,6 +409,9 @@ function SheetBody({
     if (capNum === CAPACITY_MAX) return { text: "Maximum is 200 spots per class.", ink: c.faint };
     return { text: capFocus === "typing" ? "1 to 200 spots." : "Type a number or use − and +.", ink: c.faint };
   })();
+  // B13 MK-04: the Centium spots stepper runs 0 to the capacity, then "All free spots" (null).
+  const exploreCap = capNum ?? (Number(lastValidCap) || 0);
+  const exploreSpots = form.centiumSpots === null ? null : Math.min(form.centiumSpots, exploreCap);
   const stepCap = (d: number) => {
     const base = capNum ?? (Number(lastValidCap) || 10);
     const next = Math.min(CAPACITY_MAX, Math.max(capFloor, base + d));
@@ -1001,6 +1008,53 @@ function SheetBody({
                 caretColor: c.pDark,
               }}
             />
+          </div>
+
+          {/* B13 MK-04: Show on Explore and the Centium spots. No class-sheet frame
+              draws them: the words are MA1-003 row 7i / MA1-040's (OURS layout). */}
+          <div className="flex flex-col" style={{ gap: 14, borderTop: `1px solid ${c.divider}`, paddingTop: 16 }} data-class-explore="">
+            <div className="flex items-start" style={{ gap: 12 }}>
+              <div className="flex-1 min-w-0">
+                <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink }}>Show on Explore</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>
+                  {form.listedOnExplore ? "New clients can find and book this class on Centium." : "Members only. It's off Explore, and members can still book it."}
+                </p>
+              </div>
+              <Toggle size="business" checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={`Show ${form.title.trim() || "this class"} on Explore`} />
+            </div>
+            {form.listedOnExplore && (
+              <div>
+                {label("Spots open on Centium")}
+                <div className="grid items-center" style={{ gridTemplateColumns: "40px minmax(0,1fr) 40px", height: 40, borderRadius: 12, background: c.soft, border: `1px solid ${c.inputBd}` }}>
+                  <button
+                    type="button"
+                    aria-label="Fewer"
+                    disabled={exploreSpots === 0}
+                    onClick={() => update({ centiumSpots: exploreSpots === null ? exploreCap : Math.max(0, exploreSpots - 1) })}
+                    className="tap h-full flex items-center justify-center disabled:opacity-30"
+                    style={{ color: c.pDark }}
+                  >
+                    <Minus size={15} strokeWidth={2.4} />
+                  </button>
+                  <span role="status" aria-label={exploreSpots === null ? "All free spots open on Centium" : `${exploreSpots} spots open on Centium`} className="text-center tabular-nums" style={{ fontSize: textPx(14), fontWeight: 700, color: c.ink }}>
+                    {exploreSpots === null ? "All free spots" : exploreSpots}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="More"
+                    disabled={exploreSpots === null}
+                    onClick={() => update({ centiumSpots: exploreSpots !== null && exploreSpots < exploreCap ? exploreSpots + 1 : null })}
+                    className="tap h-full flex items-center justify-center disabled:opacity-30"
+                    style={{ color: c.pDark }}
+                  >
+                    <Plus size={15} strokeWidth={2.4} />
+                  </button>
+                </div>
+                <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
+                  All the places people from Centium can take, including ones already booked. Members can always book any free spot.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* B9 EX-01: what the class page shows (OURS layout and strings; no business frame). */}

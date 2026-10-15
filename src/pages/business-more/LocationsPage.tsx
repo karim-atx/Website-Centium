@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Clock, LocateFixed, MapPin, MapPinOff, Pencil, Phone, Plus, Search, Store, Trash2 } from "lucide-react";
+import { Clock, LocateFixed, MapPin, MapPinOff, Minus, Pencil, Phone, Plus, ScanLine, Search, Store, Trash2 } from "lucide-react";
 import { BizButton, BizButtonSoft, BizConfirm, BizField, BizFieldButton, BizPage, BizRow, BizSection, BizSheet, LoadError, RowsSkeleton, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { useBusiness } from "../../components/business-more/useBusiness";
@@ -13,7 +13,12 @@ import {
   countUpcomingClasses,
   fetchLocations,
   removeLocation,
+  updateEntryRules,
   updateLocation,
+  ENTRY_AGE_MAX,
+  ENTRY_AGE_MIN,
+  GUEST_PASSES_MAX,
+  type EntryRules,
   type BizLocation,
   type LocationDraft,
 } from "../../services/business-more";
@@ -111,6 +116,7 @@ export default function LocationsPage() {
     setStoreHours({ loc, rows: r.value });
   };
   const title = store ? "Pickup and opening hours" : "Locations and hours";
+  const [entryFor, setEntryFor] = useState<BizLocation | null>(null);
 
   return (
     <BizPage title={title} sub="Clients see these on your listing.">
@@ -135,6 +141,16 @@ export default function LocationsPage() {
               lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={canHours || !store ? () => void openHours(loc) : undefined} />)
             ) : (
               <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value={canHours ? "Add" : undefined} onClick={canHours || !store ? () => void openHours(loc) : undefined} />
+            )}
+            {/* B10 entry rules (OB-259's "Entry and check-in", after onboarding): gyms only, Venues permission. */}
+            {loc.kind === "gym" && (
+              <BizRow
+                icon={ScanLine}
+                title="Entry and check-in"
+                desc={entryLine(loc.entry)}
+                value={canEdit ? "Edit" : undefined}
+                onClick={canEdit ? () => setEntryFor(loc) : undefined}
+              />
             )}
             {/* V6-54: the venue console, for owners, from here; never for stores. */}
             {!store && <BizRow icon={Store} title="Venue console" desc="Members, classes, hours & photos" onClick={() => openConsole(loc.id)} />}
@@ -196,6 +212,18 @@ export default function LocationsPage() {
           onToast={showToast}
         />
       )}
+      {entryFor && canEdit && (
+        <EntrySheet
+          key={entryFor.id}
+          location={entryFor}
+          onClose={() => setEntryFor(null)}
+          onSaved={() => {
+            setEntryFor(null);
+            reload();
+            showToast("Entry and check-in updated.");
+          }}
+        />
+      )}
       {storeHours && (
         <VenueHoursSheet
           open
@@ -213,6 +241,57 @@ export default function LocationsPage() {
       )}
       {toast}
     </BizPage>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// B10 venue settings: entry and check-in (OURS sheet; the controls and their
+// words are OB-259's onboarding rows: "Front desk can check people in",
+// "Minimum age" 16 to 21, "Guest passes a month" 0 to 10).
+
+const entryLine = (e: EntryRules) =>
+  `${e.minEntryAge} and over · ${e.guestPassesPerMonth} guest ${e.guestPassesPerMonth === 1 ? "pass" : "passes"} a month · ${e.frontDeskCheckIn ? "Front desk check-in on" : "Front desk check-in off"}`;
+
+function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onClose: () => void; onSaved: () => void }) {
+  const online = useOnline();
+  const [v, setV] = useState<EntryRules>(location.entry);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = v.minEntryAge !== location.entry.minEntryAge || v.guestPassesPerMonth !== location.entry.guestPassesPerMonth || v.frontDeskCheckIn !== location.entry.frontDeskCheckIn;
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    const r = await updateEntryRules(location.id, v);
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    onSaved();
+  };
+  const stepper = (label: string, value: number, min: number, max: number, set: (n: number) => void) => (
+    <div className="flex items-center justify-between gap-3" style={{ minHeight: 54, padding: "7px 14px" }}>
+      <span className="text-[12.5px] leading-[17px] font-bold text-charcoal">{label}</span>
+      <span className="inline-flex items-center gap-1">
+        <button type="button" aria-label={`Less: ${label}`} disabled={value <= min} onClick={() => set(value - 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
+          <Minus size={15} strokeWidth={2.4} aria-hidden />
+        </button>
+        <span role="status" aria-label={`${label}, ${value}`} className="min-w-[28px] text-center text-[14px] font-extrabold text-charcoal tabular-nums">
+          {value}
+        </span>
+        <button type="button" aria-label={`More: ${label}`} disabled={value >= max} onClick={() => set(value + 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
+          <Plus size={15} strokeWidth={2.4} aria-hidden />
+        </button>
+      </span>
+    </div>
+  );
+  return (
+    <BizSheet open onClose={onClose} title="Entry and check-in" lead={`How people come in at ${location.name}.`}>
+      <div className={`rounded-[18px] ${LIST_BG}`} style={{ padding: "4px 0" }}>
+        <BizRow title="Front desk can check people in" toggle={{ checked: v.frontDeskCheckIn, onChange: (on) => setV({ ...v, frontDeskCheckIn: on }), label: "Front desk can check people in" }} />
+        {stepper("Minimum age", v.minEntryAge, ENTRY_AGE_MIN, ENTRY_AGE_MAX, (n) => setV({ ...v, minEntryAge: n }))}
+        {stepper("Guest passes a month", v.guestPassesPerMonth, 0, GUEST_PASSES_MAX, (n) => setV({ ...v, guestPassesPerMonth: n }))}
+      </div>
+      {error && <p className="mt-3 text-[12px] leading-[17px] font-bold text-status-high">{error}</p>}
+      <BizButton label="Save" className="mt-4" onClick={() => void save()} disabled={!dirty || !online || busy} busy={busy} />
+    </BizSheet>
   );
 }
 

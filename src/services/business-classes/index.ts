@@ -54,6 +54,14 @@ export interface ClassDraft {
   level?: BusinessClassRow["level"];
   whatToBring?: string[];
   coverUrl?: string | null;
+  /**
+   * B13 MK-04 (optional; left out of the write when undefined). Not
+   * save_class_series / edit_class keys (class_fields_check refuses them):
+   * a series or an edit writes them with a direct update afterwards
+   * (schedule.ts setClassExplore).
+   */
+  centiumSpots?: number | null;
+  listedOnExplore?: boolean;
 }
 
 /** v6 V6-164: the six fixed class types (ClassFlowsV6 `typeOpts`). */
@@ -101,7 +109,7 @@ export type ClassesResult =
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours, about, level, what_to_bring, cover_url, series_id, series_exception, cancelled_at, cancel_reason";
+  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours, about, level, what_to_bring, cover_url, series_id, series_exception, cancelled_at, cancel_reason, centium_spots, listed_on_explore";
 
 type Row = {
   id: string;
@@ -125,6 +133,9 @@ type Row = {
   series_exception?: boolean | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
+  // B13 MK-04 (absent from my_class_schedule, so optional).
+  centium_spots?: number | null;
+  listed_on_explore?: boolean | null;
 };
 
 /**
@@ -148,6 +159,8 @@ type WriteRow = {
   level?: BusinessClassRow["level"];
   what_to_bring?: string[];
   cover_url?: string | null;
+  centium_spots?: number | null;
+  listed_on_explore?: boolean;
 };
 
 // Times arrive as HH:MM:SS from a `time` column; every input and comparison in
@@ -176,6 +189,8 @@ const toClass = (r: Row): BusinessClassRow => ({
   seriesException: !!r.series_exception,
   cancelledAt: r.cancelled_at ?? null,
   cancelReason: r.cancel_reason ?? null,
+  centiumSpots: r.centium_spots ?? null,
+  listedOnExplore: r.listed_on_explore !== false,
 });
 
 /**
@@ -218,6 +233,9 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
       ...(draft.level !== undefined ? { level: draft.level ?? null } : null),
       ...(draft.whatToBring !== undefined ? { what_to_bring: draft.whatToBring } : null),
       ...(draft.coverUrl !== undefined ? { cover_url: draft.coverUrl ?? null } : null),
+      // B13 MK-04: only an insert (createClass) sends these; classFieldsOf leaves them out.
+      ...(draft.centiumSpots !== undefined ? { centium_spots: draft.centiumSpots } : null),
+      ...(draft.listedOnExplore !== undefined ? { listed_on_explore: draft.listedOnExplore } : null),
     },
   };
 }
@@ -580,6 +598,11 @@ export interface LinkedBooking {
   classId: string;
   businessName: string;
   businessActive: boolean;
+  /** The class, for the review_prompt deep link (/app/calendar?rate=<booking id>). */
+  title: string;
+  date: string;
+  /** HH:MM. */
+  endTime: string;
 }
 
 export async function fetchMyBookedClasses(): Promise<
@@ -637,6 +660,9 @@ export async function fetchMyBookedClasses(): Promise<
         classId: r.class_id,
         businessName: r.business_name,
         businessActive: r.business_active,
+        title: r.title,
+        date: r.event_date,
+        endTime: toHHMM(r.end_time),
       })),
     classes: (data ?? []).filter((r) => !onCalendar.has(r.booking_id)).map((r) => ({
       // toClass wants the class's own id; the view exposes it as class_id

@@ -36,10 +36,10 @@ export const Stars: React.FC<{
 );
 
 /**
- * The handover's injury wording, verbatim (KEEP-SAFETY, SW-36). B14 flags a
- * review without saying why (no injury / harassment reason), so nothing on
- * the page can pick these yet; the composer shows them the moment a reason
- * exists (ReviewComposer `injury`). Never reworded.
+ * The handover's injury wording, verbatim (KEEP-SAFETY, SW-36), shown when
+ * business_reviews_page's flag_kind is 'injury' (B14 follow-up): the flag
+ * card's reason line, and the notes in Message privately and Post a reply
+ * (ReviewComposer `injury`). Never reworded.
  */
 export const INJURY_LINE =
   "Mentions an injury. Read it yourself; Centium never answers these automatically.";

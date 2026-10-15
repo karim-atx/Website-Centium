@@ -25,6 +25,7 @@ import { Toggle } from "../../../components/ui/Toggle";
 import { useOnline } from "../../../hooks/useOnline";
 import { clock12 } from "../../../utils/time12";
 import {
+  fetchBusinessTimezone,
   fetchSalesSummary,
   fetchStoreOrders,
   fetchTopProducts,
@@ -38,10 +39,17 @@ import {
   type Product,
   type ProductsLoad,
 } from "../../../services/store/products";
-import { db } from "../../../services/store/backend";
-import { deleteDiscount } from "../../../services/business-discounts";
+import {
+  endPromotion,
+  fetchPromotionStats,
+  fetchPromotions,
+  promotionStatus,
+  type PromoStats,
+  type PromoStatus,
+  type Promotion,
+} from "../../../services/business-market/promotions";
 import { useAnalytics } from "../analyticsContext";
-import { dayMonth, isoOf, previousOf, type AnalyticsRange } from "../analyticsRange";
+import { businessRange, dayMonth, isoOf, previousOf, type AnalyticsRange } from "../analyticsRange";
 import { AnHeaderRow, AnNumberBoxes } from "../members/anKit";
 import {
   CtaSpacer,
@@ -78,8 +86,10 @@ import "./an11.css";
 // (AN11-009 / -011 / -014) and discounts/<id> (AN11-015 to -020). The ONE
 // product editor is Batch 4's ProductEditorSheet (V6-157). Sales are B11
 // (store orders): until the server answers for them every sales number is
-// "–" and the empty texts show, never a sample. Discount uses, codes, dates
-// and limits are B13 (promotions): business_discounts has a label only.
+// "–" and the empty texts show, never a sample. Discounts are the B13
+// promotions rows (B16: business_discounts is no longer read): status from
+// the dates and stamps, uses from promotion_stats. Promotions are recorded,
+// not taken off prices, so "Discount given" stays "–".
 
 const BASE = "/app/business/analytics/products";
 
@@ -93,8 +103,11 @@ const ORDER_VALUE_NOTE =
 /** B11 store_sales_summary (range + the period before) and store_top_products for the index. */
 async function loadServerSales(
   businessId: string,
-  range: AnalyticsRange,
+  shown: AnalyticsRange,
 ): Promise<Load<ServerSales>> {
+  // The readers count days in the business's timezone: a preset ends on the
+  // business's today, not this device's.
+  const range = businessRange(shown, await fetchBusinessTimezone(businessId));
   const p = previousOf(range);
   const [now, prev, top] = await Promise.all([
     fetchSalesSummary(businessId, range.from, range.to),
@@ -119,29 +132,38 @@ async function loadServerSales(
 interface DiscountRow {
   id: string;
   label: string;
-  createdAt: string;
+  status: PromoStatus;
+  promo: Promotion;
+  /** promotion_stats (gate marketing or revenue); null when not readable. */
+  stats: PromoStats | null;
 }
 
+const STATUS_WORD: Record<PromoStatus, string> = { live: "Active", scheduled: "Scheduled", paused: "Paused", ended: "Ended" };
+const STATUS_ORDER: Record<PromoStatus, number> = { live: 0, scheduled: 1, paused: 2, ended: 3 };
+
+/** B13 promotions (any insider reads them) with promotion_stats: the AN11 discounts. */
 async function fetchDiscounts(
   businessId: string,
 ): Promise<
   { status: "ok"; value: DiscountRow[] } | { status: "error"; offline: boolean }
 > {
-  const { data, error } = await db
-    .from("business_discounts")
-    .select("id, label, created_at")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: true });
-  if (error) return { status: "error", offline: false };
+  const [rows, stats] = await Promise.all([fetchPromotions(businessId), fetchPromotionStats(businessId)]);
+  if (!rows.ok) return { status: "error", offline: typeof navigator !== "undefined" && navigator.onLine === false };
+  const today = isoOf(new Date());
   return {
     status: "ok",
-    value: ((data ?? []) as Record<string, unknown>[]).map((r) => ({
-      id: String(r.id),
-      label: String(r.label ?? ""),
-      createdAt: String(r.created_at),
-    })),
+    value: rows.value
+      .map((p) => ({ id: p.id, label: p.name, status: promotionStatus(p, today), promo: p, stats: stats.ok ? stats.value.get(p.id) ?? { uses: 0, useLimit: p.useLimit, people: 0, recorded: 0 } : null }))
+      .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
   };
 }
+
+const StatusPill: React.FC<{ s: PromoStatus }> = ({ s }) => (
+  <span className="pa-status" style={s === "live" ? undefined : { background: "var(--an-soft)", color: "var(--an-faint)" }}>
+    <i aria-hidden />
+    {STATUS_WORD[s]}
+  </span>
+);
 
 export default function ProductsSection() {
   const params = useParams();
@@ -528,7 +550,8 @@ const IndexView: React.FC<{
     1,
     ...h.top.map((r) => Math.max(r.units, r.prevUnits ?? 0)),
   );
-  const liveN = discounts?.length ?? 0;
+  const liveN = discounts?.filter((d) => d.status === "live").length ?? 0;
+  const usesN = discounts?.reduce((a, d) => a + (d.stats?.uses ?? 0), 0) ?? 0;
   return (
     <>
       {h.early && (
@@ -759,7 +782,9 @@ const IndexView: React.FC<{
           <span className="pa-ix-t">Discounts</span>
           <span className="pa-ix-l">
             {liveN
-              ? "Uses show here once discounts are applied to orders."
+              ? usesN
+                ? `Used ${usesN} ${usesN === 1 ? "time" : "times"} so far.`
+                : "No uses recorded yet."
               : "Deals shown on your listing."}
           </span>
         </span>
@@ -1236,9 +1261,10 @@ const ProductDetail: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Discounts (AN11-009 to -020). business_discounts holds a label only (B13
-// adds kind, value, code, dates, limit, status and redemptions): live count
-// is real, every use / amount is "–" and the chart shows its empty state.
+// Discounts (AN11-009 to -020): the B13 promotions rows. Live count, status
+// and uses are real (promotion_stats); promotions are recorded against
+// payments, not taken off prices, so "Discount given" is "–" and the weekly
+// chart keeps its empty state (no weekly reader exists).
 
 const DiscountsView: React.FC<{
   list: DiscountRow[];
@@ -1247,19 +1273,23 @@ const DiscountsView: React.FC<{
   const navigate = useNavigate();
   const [all, setAll] = useState(false);
   const n = list.length;
+  const live = list.filter((d) => d.status === "live").length;
+  const uses = list.reduce((a, d) => a + (d.stats?.uses ?? 0), 0);
   const rows = all ? list : list.slice(0, 3);
   return (
     <>
       <section className="pa-card" aria-label="Discounts this period">
         <AnNumberBoxes
           boxes={[
-            { label: "Live discounts", value: String(n) },
+            { label: "Live discounts", value: String(live) },
             { label: "Discount given", value: null },
           ]}
         />
         <p className="pa-lead">
           {n
-            ? "Uses and amounts show here once discounts are applied to orders."
+            ? uses
+              ? `Used ${uses} ${uses === 1 ? "time" : "times"} so far. Discounts are recorded on payments, so the amount given isn't counted.`
+              : "No uses recorded yet. Discounts are recorded on payments, so the amount given isn't counted."
             : "Add a discount and it shows on your listing."}
         </p>
         {!n && (
@@ -1282,11 +1312,13 @@ const DiscountsView: React.FC<{
           <span className="pa-dempty-tile">
             <BadgePercent size={22} aria-hidden />
           </span>
-          <b>{n ? "No uses yet" : "No discounts yet"}</b>
+          <b>{uses ? "No weekly figures yet" : n ? "No uses yet" : "No discounts yet"}</b>
           <p>
-            {n
-              ? "Uses show here once customers order with a discount."
-              : "Add one in Products, Promotions and its uses show here."}
+            {uses
+              ? "Each discount shows its total uses."
+              : n
+                ? "Uses show here once customers order with a discount."
+                : "Add one in Products, Promotions and its uses show here."}
           </p>
         </div>
       </section>
@@ -1301,16 +1333,13 @@ const DiscountsView: React.FC<{
                 key={d.id}
                 type="button"
                 className="pa-drowcard tap"
-                aria-label={`${d.label}, Active, Discount given not known yet`}
+                aria-label={`${d.label}, ${STATUS_WORD[d.status]}, Discount given not known`}
                 onClick={() => onOpen(d.id)}
               >
                 <div className="pa-drow-in">
                   <div className="pa-drow-top">
                     <span className="pa-drow-name">{d.label}</span>
-                    <span className="pa-status">
-                      <i aria-hidden />
-                      Active
-                    </span>
+                    <StatusPill s={d.status} />
                   </div>
                 </div>
                 <div className="pa-dfoot">
@@ -1350,15 +1379,13 @@ const DiscountDetail: React.FC<{
   const [err, setErr] = useState<string | null>(null);
   if (!d) return <Navigate to={`${BASE}/discounts`} replace />;
   const promos = () => navigate("/app/business/products?tab=promotions");
+  const uses = d.stats?.uses ?? null;
   return (
     <>
       <section className="pa-card pa-dsum" aria-label={d.label}>
         <div className="pa-drow-top">
           <p className="pa-dsum-n flex-1 min-w-0">{d.label}</p>
-          <span className="pa-status">
-            <i aria-hidden />
-            Active
-          </span>
+          <StatusPill s={d.status} />
         </div>
         <div className="pa-dacts">
           <button type="button" className="pa-dact tap" onClick={promos}>
@@ -1369,34 +1396,38 @@ const DiscountDetail: React.FC<{
             <Copy size={14} aria-hidden />
             Duplicate
           </button>
-          <button
-            type="button"
-            className="pa-dact is-high tap"
-            disabled={!online}
-            onClick={() => setConfirm(true)}
-          >
-            <CircleStop size={14} aria-hidden />
-            End now
-          </button>
+          {d.status !== "ended" && (
+            <button
+              type="button"
+              className="pa-dact is-high tap"
+              disabled={!online}
+              onClick={() => setConfirm(true)}
+            >
+              <CircleStop size={14} aria-hidden />
+              End now
+            </button>
+          )}
         </div>
       </section>
       <section className="pa-card" style={{ marginTop: 12 }} aria-label="Uses">
         <AnNumberBoxes
           boxes={[
-            { label: "Uses", value: null },
+            { label: "Uses", value: uses === null ? null : String(uses) },
             { label: "Discount given", value: null },
           ]}
         />
         <p className="pa-lead">
-          Uses and amounts show here once customers order with this discount.
+          {uses
+            ? `Recorded on ${uses} ${uses === 1 ? "payment" : "payments"}. The amount given isn't counted.`
+            : "Uses show here once payments are recorded with this discount."}
         </p>
       </section>
       <section className="pa-card pa-valid" aria-label="Validity">
         <p className="pa-valid-t">Validity</p>
         <div className="pa-vbar" aria-hidden />
         <p className="pa-vdates">
-          <span>From {dayMonth(isoOf(new Date(d.createdAt)))}</span>
-          <span>No end date</span>
+          <span>From {dayMonth(d.promo.startsOn)}</span>
+          <span>{d.promo.endsOn ? `To ${dayMonth(d.promo.endsOn)}` : "No end date"}</span>
         </p>
       </section>
       <KitPop
@@ -1415,8 +1446,8 @@ const DiscountDetail: React.FC<{
         onAction={async () => {
           setBusy(true);
           setErr(null);
-          // business_discounts has no end date yet (B13): ending removes the row, as today's delete does.
-          const r = await deleteDiscount(d.id);
+          // B13: ending stamps ended_at (the row and its uses stay).
+          const r = await endPromotion(d.id);
           setBusy(false);
           if (!r.ok) {
             setErr("Couldn't end the discount. Try again.");

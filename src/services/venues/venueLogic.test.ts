@@ -6,6 +6,7 @@ import {
   currentMembership,
   dayMonthYear,
   hostedImageUrl,
+  summaryOf,
   isLateCancellation,
   memberTag,
   membershipFromLine,
@@ -118,4 +119,17 @@ test("hostedImageUrl: gyms.logo_url is drawn only when it is http(s)", () => {
   assert.equal(hostedImageUrl("javascript:alert(1)"), null);
   assert.equal(hostedImageUrl("0b1c/logo.png"), null);
   assert.equal(hostedImageUrl(null), null);
+});
+
+test("summaryOf: a venue-less business's rating card from its reviews (removed ones count for nothing)", () => {
+  const s = summaryOf([
+    { rating: 5, redacted: false },
+    { rating: 4, redacted: false },
+    { rating: null, redacted: true },
+    { rating: 1, redacted: false },
+  ]);
+  assert.equal(s.total, 3);
+  assert.deepEqual(s.counts, [1, 1, 0, 0, 1]);
+  assert.equal(s.average.toFixed(2), "3.33");
+  assert.deepEqual(summaryOf([]), { average: 0, total: 0, counts: [0, 0, 0, 0, 0] });
 });

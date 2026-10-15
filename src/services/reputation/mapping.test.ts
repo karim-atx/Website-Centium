@@ -26,6 +26,8 @@ const row = {
   reply_redacted: false,
   flagged: true,
   total_count: 1,
+  instructor_id: "p1",
+  flag_kind: "injury",
 };
 
 test("B14 mapping: business_reviews_page row, with the reply, tags and flag", () => {
@@ -42,6 +44,10 @@ test("B14 mapping: business_reviews_page row, with the reply, tags and flag", ()
     redacted: false,
   });
   assert.equal(r.flagged, true);
+  assert.equal(r.instructorId, "p1");
+  assert.equal(r.flagKind, "injury");
+  assert.equal(mapBizReview({ ...row, flag_kind: "weird" }, venues).flagKind, null);
+  assert.equal(mapBizReview({ ...row, flagged: false }, venues).flagKind, null);
 });
 
 test("B14 mapping: no venue, no reply, a removed reply, a redacted review", () => {
@@ -116,6 +122,7 @@ test("B14 mapping: instructor ratings, own reports, reasons and refusals", () =>
     REPORT_REASONS.map((r) => r.key).sort(),
     [
       "harassment",
+      "injury",
       "not_about_this_business",
       "other",
       "shares_private_information",

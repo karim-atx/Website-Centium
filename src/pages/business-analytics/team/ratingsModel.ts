@@ -43,27 +43,20 @@ export function teamFigures(
 }
 
 /**
- * business_reviews_page names an instructor by first name only, so a review
- * is matched to an instructor_ratings row by that name, and only when the
- * name is unique among the business's rated instructors. Two instructors
- * with one first name keep their averages; their reviews stay in the team
- * list but are not split between them.
+ * Reviews per instructor, by business_reviews_page's instructor_id (B14
+ * follow-up), so two instructors with one first name each get their own.
+ * Only instructors with an instructor_ratings row are keyed.
  */
 export function reviewsByInstructor(
   reviews: BizReview[],
   ratings: InstructorRating[],
 ): Map<string, BizReview[]> {
-  const byName = new Map<string, string[]>();
-  for (const r of ratings) {
-    const k = r.firstName.toLowerCase();
-    byName.set(k, [...(byName.get(k) ?? []), r.professionalId]);
-  }
+  const rated = new Set(ratings.map((r) => r.professionalId));
   const out = new Map<string, BizReview[]>();
   for (const rv of reviews) {
-    if (!rv.instructor) continue;
-    const ids = byName.get(rv.instructor.toLowerCase());
-    if (!ids || ids.length !== 1) continue;
-    out.set(ids[0], [...(out.get(ids[0]) ?? []), rv]);
+    const id = rv.instructorId;
+    if (!id || !rated.has(id)) continue;
+    out.set(id, [...(out.get(id) ?? []), rv]);
   }
   return out;
 }
@@ -71,7 +64,7 @@ export function reviewsByInstructor(
 /** Tagged reviews only (an instructor on the review), newest first. */
 export const teamReviews = (reviews: BizReview[]) =>
   reviews
-    .filter((r) => !!r.instructor)
+    .filter((r) => !!r.instructor || !!r.instructorId)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
 /** Counts for 5..1 stars; null when the rows don't add up to the reader's count (one reader rule, AN5-048 row 5). */

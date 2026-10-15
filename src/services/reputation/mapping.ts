@@ -1,5 +1,6 @@
 import type {
   BizReview,
+  FlagKind,
   InstructorRating,
   MyReport,
   ReviewMetrics,
@@ -49,8 +50,14 @@ export function mapBizReview(r: Row, venues: Map<string, string>): BizReview {
         }
       : null,
     flagged: r.flagged === true,
+    instructorId: s(r.instructor_id),
+    flagKind: r.flagged === true ? flagKindOf(r.flag_kind) : null,
   };
 }
+
+const FLAG_KINDS: FlagKind[] = ["keyword", "injury", "not_about_this_business", "shares_private_information", "harassment", "spam", "other"];
+/** flag_kind, or null when absent or unknown. */
+export const flagKindOf = (v: unknown): FlagKind | null => (FLAG_KINDS.includes(v as FlagKind) ? (v as FlagKind) : null);
 
 /** business_review_metrics → ReviewMetrics (distribution jsonb keyed "1".."5"). */
 export function mapMetrics(r: Row | null | undefined): ReviewMetrics {
@@ -92,6 +99,9 @@ export function mapMyReport(r: Row): MyReport {
 
 /** The reasons report_review takes (review_report_reason), in the sheet's order. */
 export const REPORT_REASONS: { key: string; label: string }[] = [
+  // B14 follow-up: injury is a report_review reason; flagged with it, the
+  // business sees AN13's injury wording (reputation/parts.tsx INJURY_LINE).
+  { key: "injury", label: "Mentions an injury" },
   { key: "harassment", label: "Harassment" },
   { key: "spam", label: "Spam" },
   { key: "not_about_this_business", label: "Not about this business" },

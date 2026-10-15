@@ -14,14 +14,14 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, Pencil, ShoppingBag, type LucideIcon } from "lucide-react";
+import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, ShoppingBag, type LucideIcon } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
 import { initials } from "../../components/professionals/typeColour";
 import { TYPE_CATEGORY, typeLabel } from "./venueTypes";
 import { ClassPage } from "./ClassPage";
-import { ReviewForm } from "../../components/marketplace/ReviewForm";
-import { businessHasVenue, writeBusinessReview } from "../../services/venues";
+import { GymReviews } from "../../components/marketplace/GymReviews";
+import { businessHasVenue } from "../../services/venues";
 import { GymPage } from "./GymPage";
 
 type FilterMode = "rating" | "proximity" | "discount";
@@ -221,8 +221,10 @@ function OfferingCard({
  * category page each of its listings — or its business type — belongs to, so
  * every category page stays reachable now the "More categories" grid is gone.
  *
- * NOT HERE, because nothing stores it: a logo, ratings or reviews, opening
- * hours, contact details, distance (B25, B26).
+ * NOT HERE, because nothing stores it: a logo, opening hours, contact
+ * details, distance (B25, B26). Reviews: a business with no venue lists its
+ * own here (B14 follow-up business_reviews_public, the gym reviews' card
+ * and language); a business with a venue is reviewed on its venue's page.
  */
 function BusinessPage({ businessId, source }: { businessId: string; source: string | null }) {
   const [venue, setVenue] = useState<MarketplaceVenue | null | undefined>(undefined);
@@ -230,8 +232,6 @@ function BusinessPage({ businessId, source }: { businessId: string; source: stri
   const [error, setError] = useState<string | null>(null);
   // B14 RP-01: a business with no venue is reviewed here (write_business_review).
   const [venueLess, setVenueLess] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewed, setReviewed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -356,40 +356,15 @@ function BusinessPage({ businessId, source }: { businessId: string; source: stri
         )}
       </div>
 
-      {/* B14 RP-01: no public reader of a venue-less business's reviews exists yet, so this is the write only. */}
+      {/* B14 RP-01 + follow-up: a venue-less business's reviews (business_reviews_public,
+          signed out too) in the gym reviews' card and language; the author's own
+          is edited (my_reviews, edit_gym_review / delete_gym_review). */}
       {venueLess && (
         <>
-          <p className="section-label text-charcoal-faint pt-2 mb-2.5">Reviews</p>
-          {reviewed ? (
-            <p role="status" className="mb-4 text-[12px] font-semibold text-charcoal-faint">
-              Thanks. Your review is posted.
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setReviewOpen(true)}
-              className="tap mb-4 w-full flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 text-start"
-            >
-              <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
-                <Pencil size={17} className="text-primary-dark" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1 text-[14px] font-semibold text-charcoal truncate">Write a review</span>
-              <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
-            </button>
-          )}
-          <BottomSheet open={reviewOpen} onClose={() => setReviewOpen(false)} title={`Rate ${venue.name}`}>
-            <ReviewForm
-              placeholder={`How has ${venue.name} been?`}
-              submitLabel="Submit review"
-              onSubmit={async (rating, text) => {
-                const r = await writeBusinessReview(venue.venueId, rating, text);
-                if (!r.ok) return r.message;
-                setReviewOpen(false);
-                setReviewed(true);
-                return null;
-              }}
-            />
-          </BottomSheet>
+          <p className="section-label text-charcoal-faint pt-2 mb-0">Reviews</p>
+          <div className="mb-4">
+            <GymReviews businessId={venue.venueId} gymName={venue.name} summary={null} onChanged={() => undefined} pinned={false} />
+          </div>
         </>
       )}
 

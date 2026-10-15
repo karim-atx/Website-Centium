@@ -47,6 +47,29 @@ export function presetRange(key: Exclude<RangeKey, "custom">, today: string = is
   return { key, from: addDays(today, -(days - 1)), to: today, compare: true };
 }
 
+/** Today (YYYY-MM-DD) on a timezone's calendar; the device's day when the zone is unknown. */
+export function todayIn(timeZone: string | null, now: Date = new Date()): string {
+  if (!timeZone) return isoOf(now);
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  } catch {
+    return isoOf(now);
+  }
+}
+
+/**
+ * The range as days on the business's calendar, for readers that count days
+ * in the business's timezone (store_sales_summary, store_top_products). A
+ * preset ends on the business's today rather than the device's; Custom dates
+ * are the days the user picked, so they stay as they are.
+ */
+export function businessRange(r: AnalyticsRange, timeZone: string | null, now: Date = new Date()): AnalyticsRange {
+  if (r.key === "custom") return r;
+  return { ...presetRange(r.key, todayIn(timeZone, now)), compare: r.compare };
+}
+
 /** "8 Sep", or "8 Sep 2025" when the year differs from `today`'s. */
 export function dayMonth(iso: string, today: string = isoOf(new Date())): string {
   const d = dateOf(iso);
