@@ -12,7 +12,6 @@ import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -47,12 +46,8 @@ export default function Home() {
 
   const isBusiness = user.accountType === "business";
 
-  // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
-  // dashboard of their own — "My Clients" is their main page instead,
-  // same pattern already used by the Professionals/Explore routes.
-  if (user.accountType === "professional") {
-    return <ProfessionalDashboard />;
-  }
+  // Release 3: a professional never renders this page. /app sends them to
+  // /app/pro (ProHomeRedirect, J1), whose Home replaced their dashboard.
   // V6 (QA 6.0): "remove everything that does not pertain to the business
   // owner related UI" — same treatment as professionals, a business account
   // lands on its own management dashboard instead of the personal

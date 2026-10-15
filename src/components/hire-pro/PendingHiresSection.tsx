@@ -32,7 +32,15 @@ export const PendingHiresSection: React.FC<{
   /** Called after a confirmation, which adds a client to the roster. */
   onConfirmed?: () => void | Promise<void>;
   className?: string;
-}> = ({ planLabel, onConfirmed, className }) => {
+  /**
+   * Release 3 (FINAL_PLAN W2): when given, "Decline" opens the caller's
+   * decline-with-reason (decline_hire) in place of the cancel confirmation.
+   * Unset keeps the Release 2 Cancel flow exactly as it was.
+   */
+  onDecline?: (hire: PendingHire) => void;
+  /** Changing it re-reads the list (after the caller declined one). */
+  reloadKey?: number;
+}> = ({ planLabel, onConfirmed, className, onDecline, reloadKey }) => {
   const { authUserId } = useApp();
   const [hires, setHires] = useState<PendingHire[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -61,7 +69,7 @@ export const PendingHiresSection: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [authUserId]);
+  }, [authUserId, reloadKey]);
 
   const confirm = async (hire: PendingHire) => {
     if (busy) return;
@@ -149,8 +157,8 @@ export const PendingHiresSection: React.FC<{
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" disabled={!!busy} onClick={() => setAskingCancel(h.id)}>
-                    Cancel
+                  <Button size="sm" variant="outline" className="flex-1" disabled={!!busy} onClick={() => (onDecline ? onDecline(h) : setAskingCancel(h.id))}>
+                    {onDecline ? "Decline" : "Cancel"}
                   </Button>
                   <Button size="sm" className="flex-1" disabled={!!busy} onClick={() => void confirm(h)}>
                     {busy === h.id ? "Confirming…" : "Confirm payment"}

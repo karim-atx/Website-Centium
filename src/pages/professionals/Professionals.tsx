@@ -10,7 +10,6 @@ import { useApp } from "../../context/AppContext";
 import { fetchLinkedProfessionals } from "../../services/consent";
 import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
-import ProfessionalDashboard from "./ProfessionalDashboard";
 import { DirectoryCard } from "../../components/professionals/DirectoryCard";
 import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
@@ -182,12 +181,6 @@ export default function Professionals() {
     if (linkedListed) navigate(`/app/professionals/${linkedProfessionalId}`);
     else setLinkedProfileOpen(true);
   };
-
-  // Professionals get an entirely different dashboard here (client roster,
-  // not a directory to browse) — separate UI per QA, not just a banner.
-  if (user.accountType === "professional") {
-    return <ProfessionalDashboard />;
-  }
 
   return (
     <div>

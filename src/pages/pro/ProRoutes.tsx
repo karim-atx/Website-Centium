@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { legacyProRedirect, slotRouteFor, PRO_ROUTES } from "../../components/pro/subtypeLanes";
 import Home from "./Home";
+import InviteClients from "./InviteClients";
 import Clients from "./Clients";
 import ClientPage from "./ClientPage";
 import Calendar from "./Calendar";
@@ -36,6 +37,7 @@ export default function ProRoutes() {
   return (
     <Routes>
       <Route index element={<Home />} />
+      <Route path="invite" element={<InviteClients />} />
       <Route path="clients" element={<Clients />} />
       <Route path="clients/:id/:tab?" element={<ClientPage />} />
       <Route path="calendar" element={<Calendar />} />
