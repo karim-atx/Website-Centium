@@ -22,7 +22,7 @@ export const SUPPORT_EMAIL = "support@atraxia.org";
 // from, hence the narrow cast (the same one startVenueThread uses).
 const rpc = (fn: string) =>
   (
-    supabase.rpc.bind(supabase) as unknown as (
+    (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (
       fn: string
     ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>
   )(fn);

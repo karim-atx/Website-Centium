@@ -7,6 +7,7 @@ import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { time12 } from "../../../utils/time12";
 import { STATUS_PENDING_VIS, STATUS_REJECTED_VIS, statusFanVis } from "./proVisuals";
+import { isRegulated, type ProKind } from "./proModel";
 import { ProfilePreview, SummaryCard, Timeline } from "./parts";
 import { formatShortDate } from "../../../utils/date";
 
@@ -23,7 +24,7 @@ const K_AT = [0, 300, 650, 1100];
 
 export interface ProStatusProps {
   status: ProStatus | "loading" | "error";
-  kind: "trainer" | "physio" | "diet" | "other";
+  kind: ProKind;
   firstName: string;
   /** When the submission was made (the Submitted row of the timeline). */
   submittedAt?: Date | null;
@@ -76,7 +77,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   }, [celebrate, reduced]);
 
   const nm = firstName.trim().split(/\s+/)[0] || "there";
-  const reg = kind === "physio" || kind === "diet";
+  const reg = isRegulated(kind);
   // Every lane is listed once checked (14 Oct 2026): a licence for the
   // regulated lanes, a certificate for Fitness / Other.
   const doc = reg ? "licence" : "certificate";

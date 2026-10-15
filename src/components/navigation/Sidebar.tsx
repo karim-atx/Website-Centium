@@ -2,14 +2,18 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import {
-  sidebarNavItems,
-  professionalSidebarNavItems,
   businessTabs,
   businessSidebarShortcuts,
   isBusinessTabActive,
+  proTabs,
+  isProTabActive,
+  proSidebarShortcuts,
   type BusinessGlyphKey,
-  type NavItem,
+  type ProGlyphKey,
 } from "./navItems";
+import { useProSubtype } from "../../hooks/useProSubtype";
+import { CalendarNavGlyph, ClientsNavGlyph } from "../pro/ProNavGlyphs";
+import { FoodNavGlyph, WorkoutNavGlyph } from "../icons/ClientNavGlyphs";
 import { useBusinessNavKind } from "./useBusinessNavKind";
 import { SectionLabel } from "../ui/SectionLabel";
 import {
@@ -24,7 +28,7 @@ import {
   type BusinessNavGlyphProps,
 } from "../icons/BusinessNavGlyphs";
 import { useApp } from "../../context/AppContext";
-import { Flame } from "lucide-react";
+import { Flame, HeartPulse } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
@@ -63,6 +67,30 @@ const BusinessSidebarGlyph: React.FC<{ glyph: BusinessGlyphKey; active: boolean 
   }
   const Glyph = SIDEBAR_GLYPHS[glyph];
   return <Glyph active={active} size={22} color={active ? NAV_ACCENT : NAV_IDLE} />;
+};
+
+/**
+ * Release 3 · the professional rows' glyphs, the bar's own (NV1) at 22 in the
+ * same inks; Home is the mark at 19 in the 22 box, as Dashboard is.
+ */
+const ProSidebarGlyph: React.FC<{ glyph: ProGlyphKey; active: boolean }> = ({ glyph, active }) => {
+  const color = active ? NAV_ACCENT : NAV_IDLE;
+  switch (glyph) {
+    case "mark":
+      return <BusinessSidebarGlyph glyph="mark" active={active} />;
+    case "clients":
+      return <ClientsNavGlyph active={active} size={22} color={color} />;
+    case "calendar":
+      return <CalendarNavGlyph active={active} size={22} color={color} />;
+    case "workout":
+      return <WorkoutNavGlyph active={active} size={22} color={color} />;
+    case "food":
+      return <FoodNavGlyph active={active} size={22} color={color} />;
+    case "heart":
+      return <HeartPulse size={22} strokeWidth={active ? 2.2 : 1.6} style={{ color }} aria-hidden />;
+    case "more":
+      return <MoreNavGlyph active={active} size={22} color={color} />;
+  }
 };
 
 /**
@@ -106,22 +134,37 @@ export const Sidebar: React.FC = () => {
   );
   const { pathname } = useLocation();
   const businessKind = useBusinessNavKind();
+  const { lane } = useProSubtype();
   // The forum is for adults (Database ATX55): no entry for anyone the app
   // cannot confirm is 18 or over.
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
-  const items = (user.accountType === "professional" ? professionalSidebarNavItems : sidebarNavItems).filter(
-    (item) => forumAllowed || item.to !== "/app/forum"
-  );
-  // One lit row: the item whose route is the longest prefix of the page
-  // (so Clients is not lit on Calendar, which sits under /app/professionals).
-  const activeTo = items
-    .filter((i) => under(pathname, i.to))
-    .sort((a, b) => b.to.length - a.to.length)[0]?.to;
 
   // OURS-NAV-desktop-sidebar row 5: the More shortcuts. Employees and
   // Classes fold into the Operations slot and Team (both stay reachable).
-  const shortcuts = isBusiness ? businessSidebarShortcuts(businessKind) : [];
+  // Release 3: professionals get the same shape, their five tabs and the
+  // More rows (proSidebarShortcuts).
+  const shortcuts = isBusiness
+    ? businessSidebarShortcuts(businessKind)
+    : proSidebarShortcuts().filter((s) => forumAllowed || s.to !== "/app/forum");
   const shortcutActive = shortcuts.find((s) => under(pathname, s.to))?.to;
+  // The lit tab or shortcut row: one at a time, a shortcut's own page first.
+  const tabs = isBusiness
+    ? [...businessTabs(businessKind)].sort((a, b) => Number(b.glyph === "mark") - Number(a.glyph === "mark")).map((tab) => ({
+        key: tab.label,
+        to: tab.to,
+        label: tab.label,
+        active: !shortcutActive && isBusinessTabActive(tab, pathname),
+        icon: (on: boolean) => <BusinessSidebarGlyph glyph={tab.glyph} active={on} />,
+      }))
+    : lane
+      ? [...proTabs(lane)].sort((a, b) => Number(b.glyph === "mark") - Number(a.glyph === "mark")).map((tab) => ({
+          key: tab.label,
+          to: tab.to,
+          label: tab.label,
+          active: !shortcutActive && isProTabActive(tab, pathname),
+          icon: (on: boolean) => <ProSidebarGlyph glyph={tab.glyph} active={on} />,
+        }))
+      : [];
 
   return (
     // OURS-NAV-desktop-sidebar row 1: w256, #FFFFFF (dark #121317), right
@@ -139,55 +182,31 @@ export const Sidebar: React.FC = () => {
         </span>
       </div>
 
-      <nav aria-label={isBusiness ? t("Business tabs") : undefined} className="flex flex-col gap-1 flex-1">
-        {isBusiness ? (
-          <>
-            {/* Row 3: the bar's five destinations for this type, Dashboard first. */}
-            {[...businessTabs(businessKind)].sort((a, b) => Number(b.glyph === "mark") - Number(a.glyph === "mark")).map((tab) => {
-              const active = !shortcutActive && isBusinessTabActive(tab, pathname);
-              return (
-                <SidebarRow key={tab.label} to={tab.to} active={active} label={t(tab.label)} icon={<BusinessSidebarGlyph glyph={tab.glyph} active={active} />} />
-              );
-            })}
-            {/* Row 4: section label More, 11/600 0.14em uppercase #8C8378
-                with the 1.5px primary rule, mt 20 mb 8. */}
-            <SectionLabel as="p" className="mt-5 mb-2 mx-3.5">
-              <span style={{ color: "rgb(var(--c-charcoal-faint))" }}>{t("More")}</span>
-            </SectionLabel>
-            {shortcuts.map((s) => {
-              const Icon = s.icon;
-              const active = shortcutActive === s.to;
-              return (
-                <SidebarRow
-                  key={s.to}
-                  to={s.to}
-                  active={active}
-                  label={t(s.label)}
-                  compact
-                  icon={<Icon size={18} strokeWidth={1.75} style={{ color: "rgb(var(--c-primary-accent))" }} />}
-                  badge={s.unread ? <UnreadBadge count={unread.total} /> : null}
-                />
-              );
-            })}
-          </>
-        ) : (
-          items.map((item: NavItem) => {
-            const Icon = item.icon;
-            const active = item.to === activeTo;
-            // The badge is keyed on the route, not the label: the label is
-            // translated and would stop matching in another language.
-            return (
-              <SidebarRow
-                key={item.to}
-                to={item.to}
-                active={active}
-                label={t(item.label)}
-                icon={<Icon size={22} strokeWidth={active ? 2.2 : 1.6} style={{ color: active ? NAV_ACCENT : NAV_IDLE }} />}
-                badge={item.to === "/app/messages" ? <UnreadBadge count={unread.total} /> : null}
-              />
-            );
-          })
-        )}
+      <nav aria-label={t(isBusiness ? "Business tabs" : "Professional tabs")} className="flex flex-col gap-1 flex-1">
+        {/* Row 3: the bar's five destinations, Dashboard (Home) first. */}
+        {tabs.map((tab) => (
+          <SidebarRow key={tab.key} to={tab.to} active={tab.active} label={t(tab.label)} icon={tab.icon(tab.active)} />
+        ))}
+        {/* Row 4: section label More, 11/600 0.14em uppercase #8C8378
+            with the 1.5px primary rule, mt 20 mb 8. */}
+        <SectionLabel as="p" className="mt-5 mb-2 mx-3.5">
+          <span style={{ color: "rgb(var(--c-charcoal-faint))" }}>{t("More")}</span>
+        </SectionLabel>
+        {shortcuts.map((s) => {
+          const Icon = s.icon;
+          const active = shortcutActive === s.to;
+          return (
+            <SidebarRow
+              key={s.to}
+              to={s.to}
+              active={active}
+              label={t(s.label)}
+              compact
+              icon={<Icon size={18} strokeWidth={1.75} style={{ color: "rgb(var(--c-primary-accent))" }} />}
+              badge={s.unread ? <UnreadBadge count={unread.total} /> : null}
+            />
+          );
+        })}
       </nav>
 
       {/* CUSTOMERS ONLY, not "everyone who isn't a business". The four

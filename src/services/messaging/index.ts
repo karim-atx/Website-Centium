@@ -436,7 +436,7 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
  * where this function isn't yet, hence the narrow cast.
  */
 export async function startVenueThread(gymId: string): Promise<StartThreadResult> {
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
+  const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;

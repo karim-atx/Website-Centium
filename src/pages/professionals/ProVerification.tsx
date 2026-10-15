@@ -103,7 +103,7 @@ export default function ProVerification() {
       noDocument={state.noDocument}
       notListed={state.notListed}
       preview={{ initials: initials(name), avatarUrl: user.avatarUrl ?? null, name, label: PRO_LABEL[kind], tags: state.tags, line: state.line }}
-      onPrimary={() => navigate("/app/professionals")}
+      onPrimary={() => navigate("/app/pro")}
       onFix={() => navigate("/app/profile/cv")}
       onRetry={() => void load()}
       extra={

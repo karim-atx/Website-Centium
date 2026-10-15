@@ -137,16 +137,11 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
       profile.tracking = data.tracking_preferences as UserProfile["tracking"];
     if (data.activity_level) profile.activityLevel = data.activity_level;
     if (data.customer_subtype) profile.customerSubtype = data.customer_subtype;
-    // The database enum carries a "doctor" value the app's own
-    // ProfessionalSubtype union does not. Rather than cast it away, fold it
-    // into "other" — the app has no doctor-specific behaviour, and silently
-    // widening the union here would push an unhandled value into every
-    // subtype switch in the UI.
+    // Release 3: ProfessionalSubtype is the whole database enum now. Doctor
+    // used to be folded into "other" here; it has its own lane (Clinical
+    // overview), so it is kept as stored.
     if (data.professional_subtype) {
-      profile.professionalSubtype =
-        data.professional_subtype === "doctor"
-          ? "other"
-          : (data.professional_subtype as ProfessionalSubtype);
+      profile.professionalSubtype = data.professional_subtype as ProfessionalSubtype;
     }
     if (data.avatar_url) profile.avatarUrl = data.avatar_url;
     // The date is the stored truth; age is recomputed from it on every

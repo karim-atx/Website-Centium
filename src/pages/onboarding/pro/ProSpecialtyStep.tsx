@@ -10,6 +10,12 @@ const ART: Record<ProKind, React.FC<{ size?: number }>> = {
   trainer: ProTrainerArt,
   physio: ProPhysioArt,
   diet: ({ size }) => <ProDietitianArt size={size} ground="var(--ob-pale)" />,
+  // Release 3: no new drawings were supplied; each new card reuses its
+  // nearest lane's (Nutritionist the Dietitian plate, Coach the Trainer,
+  // Doctor the Physiotherapist).
+  nutritionist: ({ size }) => <ProDietitianArt size={size} ground="var(--ob-pale)" />,
+  coach: ProTrainerArt,
+  doctor: ProPhysioArt,
   other: ProOtherArt,
 };
 

@@ -61,7 +61,7 @@ export const ProReviewStep: React.FC<
     formats.length ? formats.join(", ") : "No session formats yet",
   ];
   const credLine = reg
-    ? `${kind === "physio" ? "Licence" : "Registration"} ${pro.licenceNumber.trim()}${pro.registrationLicenceId ? " · proof uploaded" : ""}`
+    ? `${kind === "physio" || kind === "doctor" ? "Licence" : "Registration"} ${pro.licenceNumber.trim()}${pro.registrationLicenceId ? " · proof uploaded" : ""}`
     : shared.certificationFile
     ? "Certificate uploaded, checked before you go live"
     : "No certificate yet, needed to go live";

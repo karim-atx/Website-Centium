@@ -17,6 +17,7 @@ import {
   type ProfessionalProfile,
 } from "../../services/professional-profile";
 import { fetchGoLiveStatus } from "../../services/professional-onboarding";
+import { isRegulated, proKindOf } from "../../pages/onboarding/pro/proModel";
 import type { LicenceStatus } from "../../services/professional-cv";
 
 type Draft = {
@@ -95,7 +96,7 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
   onClose,
 }) => {
   const { authUserId, theme, user } = useApp();
-  const regulated = user.professionalSubtype === "physiotherapist" || user.professionalSubtype === "dietitian";
+  const regulated = isRegulated(proKindOf(user.professionalSubtype));
   const docWord = regulated ? "licence" : "certificate";
   const [check, setCheck] = useState<LicenceStatus | null>(null);
   /**

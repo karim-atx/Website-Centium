@@ -62,7 +62,17 @@ export type TrackPreference =
 export type AccountType = "customer" | "professional" | "business";
 export type CustomerSubtype = "client" | "regular" | "athlete" | "general";
 // V4: Physiotherapist split out as its own specialty (was folded into "other").
-export type ProfessionalSubtype = "trainer" | "physiotherapist" | "dietitian" | "other";
+// Release 3: the whole database enum (profiles.professional_subtype), with
+// doctor, nutritionist and coach_instructor. The lane each one maps to lives
+// in components/pro/subtypeLanes.ts (laneForType).
+export type ProfessionalSubtype =
+  | "trainer"
+  | "physiotherapist"
+  | "dietitian"
+  | "doctor"
+  | "nutritionist"
+  | "coach_instructor"
+  | "other";
 
 // V7 (QA 7.0): a business account picks one of these during onboarding —
 // drives which extra tabs (Employees/Classes) it gets in the Business UI.

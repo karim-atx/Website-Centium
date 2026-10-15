@@ -9,6 +9,124 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          answered_at: string | null
+          category: Database["public"]["Enums"]["access_category"]
+          client_id: string
+          created_at: string
+          id: string
+          message: string | null
+          professional_id: string
+          status: Database["public"]["Enums"]["access_request_status"]
+        }
+        Insert: {
+          answered_at?: string | null
+          category: Database["public"]["Enums"]["access_category"]
+          client_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          professional_id: string
+          status?: Database["public"]["Enums"]["access_request_status"]
+        }
+        Update: {
+          answered_at?: string | null
+          category?: Database["public"]["Enums"]["access_category"]
+          client_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          professional_id?: string
+          status?: Database["public"]["Enums"]["access_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "access_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "access_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       account_emails: {
         Row: {
           attempts: number
@@ -421,6 +539,79 @@ export type Database = {
           },
         ]
       }
+      allergies: {
+        Row: {
+          allergen: Database["public"]["Enums"]["allergen"]
+          created_at: string
+          id: string
+          note: string | null
+          severity: Database["public"]["Enums"]["allergy_severity"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergen: Database["public"]["Enums"]["allergen"]
+          created_at?: string
+          id?: string
+          note?: string | null
+          severity: Database["public"]["Enums"]["allergy_severity"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergen?: Database["public"]["Enums"]["allergen"]
+          created_at?: string
+          id?: string
+          note?: string | null
+          severity?: Database["public"]["Enums"]["allergy_severity"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "allergies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       ambassador_grants: {
         Row: {
           granted_at: string
@@ -521,6 +712,13 @@ export type Database = {
           notification_memberships: boolean
           notification_mentions: boolean
           notification_orders: boolean
+          notification_pro_booking_changes: boolean
+          notification_pro_care_network: boolean
+          notification_pro_gone_quiet: boolean
+          notification_pro_payments: boolean
+          notification_pro_requests: boolean
+          notification_pro_submissions: boolean
+          notification_pro_unpaid_sessions: boolean
           notification_professional_messages: boolean
           notification_referral_rewards: boolean
           notification_reviews: boolean
@@ -560,6 +758,13 @@ export type Database = {
           notification_memberships?: boolean
           notification_mentions?: boolean
           notification_orders?: boolean
+          notification_pro_booking_changes?: boolean
+          notification_pro_care_network?: boolean
+          notification_pro_gone_quiet?: boolean
+          notification_pro_payments?: boolean
+          notification_pro_requests?: boolean
+          notification_pro_submissions?: boolean
+          notification_pro_unpaid_sessions?: boolean
           notification_professional_messages?: boolean
           notification_referral_rewards?: boolean
           notification_reviews?: boolean
@@ -599,6 +804,13 @@ export type Database = {
           notification_memberships?: boolean
           notification_mentions?: boolean
           notification_orders?: boolean
+          notification_pro_booking_changes?: boolean
+          notification_pro_care_network?: boolean
+          notification_pro_gone_quiet?: boolean
+          notification_pro_payments?: boolean
+          notification_pro_requests?: boolean
+          notification_pro_submissions?: boolean
+          notification_pro_unpaid_sessions?: boolean
           notification_professional_messages?: boolean
           notification_referral_rewards?: boolean
           notification_reviews?: boolean
@@ -727,6 +939,316 @@ export type Database = {
           {
             foreignKeyName: "app_reviews_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      appointment_services: {
+        Row: {
+          active: boolean
+          buffer_min: number
+          business_id: string | null
+          colour: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          duration_min: number
+          gym_id: string | null
+          id: string
+          location_kind: string | null
+          name: string
+          price: number
+          professional_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          buffer_min?: number
+          business_id?: string | null
+          colour?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_min: number
+          gym_id?: string | null
+          id?: string
+          location_kind?: string | null
+          name: string
+          price?: number
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          buffer_min?: number
+          business_id?: string | null
+          colour?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_min?: number
+          gym_id?: string | null
+          id?: string
+          location_kind?: string | null
+          name?: string
+          price?: number
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "appointment_services_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointment_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          business_id: string | null
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_business: boolean | null
+          client_id: string | null
+          created_at: string
+          ends_at: string
+          gym_id: string | null
+          id: string
+          marked_paid_by: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id: string | null
+          service_name: string
+          staff_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          business_id?: string | null
+          calendar_event_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_business?: boolean | null
+          client_id?: string | null
+          created_at?: string
+          ends_at: string
+          gym_id?: string | null
+          id?: string
+          marked_paid_by?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id?: string | null
+          service_name: string
+          staff_id?: string | null
+          starts_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string | null
+          calendar_event_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_business?: boolean | null
+          client_id?: string | null
+          created_at?: string
+          ends_at?: string
+          gym_id?: string | null
+          id?: string
+          marked_paid_by?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed?: number
+          service_id?: string | null
+          service_name?: string
+          staff_id?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "appointments_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "appointments_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -1405,6 +1927,111 @@ export type Database = {
           },
         ]
       }
+      business_activity: {
+        Row: {
+          at: string
+          business_id: string
+          id: number
+          is_minor: boolean | null
+          kind: Database["public"]["Enums"]["business_activity_kind"]
+          label: string
+          ref_id: string | null
+          ref_kind: string | null
+          summary: string | null
+        }
+        Insert: {
+          at?: string
+          business_id: string
+          id?: never
+          is_minor?: boolean | null
+          kind: Database["public"]["Enums"]["business_activity_kind"]
+          label: string
+          ref_id?: string | null
+          ref_kind?: string | null
+          summary?: string | null
+        }
+        Update: {
+          at?: string
+          business_id?: string
+          id?: never
+          is_minor?: boolean | null
+          kind?: Database["public"]["Enums"]["business_activity_kind"]
+          label?: string
+          ref_id?: string | null
+          ref_kind?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_activity_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_activity_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      business_booking_policies: {
+        Row: {
+          booking_window_days: number | null
+          business_id: string
+          cancellation_hours: number | null
+          class_type: string | null
+          closes_minutes_before: number | null
+          created_at: string
+          default_capacity: number | null
+          id: string
+          updated_at: string
+          waitlist_cap: number | null
+        }
+        Insert: {
+          booking_window_days?: number | null
+          business_id: string
+          cancellation_hours?: number | null
+          class_type?: string | null
+          closes_minutes_before?: number | null
+          created_at?: string
+          default_capacity?: number | null
+          id?: string
+          updated_at?: string
+          waitlist_cap?: number | null
+        }
+        Update: {
+          booking_window_days?: number | null
+          business_id?: string
+          cancellation_hours?: number | null
+          class_type?: string | null
+          closes_minutes_before?: number | null
+          created_at?: string
+          default_capacity?: number | null
+          id?: string
+          updated_at?: string
+          waitlist_cap?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_booking_policies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_booking_policies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
       business_class_bookings: {
         Row: {
           business_class_id: string
@@ -1418,6 +2045,7 @@ export type Database = {
           payment_reference: string | null
           payment_status: Database["public"]["Enums"]["venue_payment_status"]
           price_agreed: number | null
+          source: Database["public"]["Enums"]["booking_source"] | null
           updated_at: string
         }
         Insert: {
@@ -1432,6 +2060,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: Database["public"]["Enums"]["venue_payment_status"]
           price_agreed?: number | null
+          source?: Database["public"]["Enums"]["booking_source"] | null
           updated_at?: string
         }
         Update: {
@@ -1446,6 +2075,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: Database["public"]["Enums"]["venue_payment_status"]
           price_agreed?: number | null
+          source?: Database["public"]["Enums"]["booking_source"] | null
           updated_at?: string
         }
         Relationships: [
@@ -1566,6 +2196,7 @@ export type Database = {
       business_class_cancellations: {
         Row: {
           business_class_id: string
+          by_venue: boolean
           cancelled_at: string
           client_id: string
           hours_before: number
@@ -1574,6 +2205,7 @@ export type Database = {
         }
         Insert: {
           business_class_id: string
+          by_venue?: boolean
           cancelled_at?: string
           client_id: string
           hours_before: number
@@ -1582,6 +2214,7 @@ export type Database = {
         }
         Update: {
           business_class_id?: string
+          by_venue?: boolean
           cancelled_at?: string
           client_id?: string
           hours_before?: number
@@ -1753,58 +2386,88 @@ export type Database = {
       }
       business_classes: {
         Row: {
+          about: string | null
           business_id: string
+          cancel_reason: string | null
           cancellation_hours: number | null
+          cancelled_at: string | null
+          centium_spots: number | null
           class_type: string | null
+          cover_url: string | null
           created_at: string
           end_time: string
           event_date: string
           gym_id: string | null
           id: string
+          level: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore: boolean
           max_capacity: number
           notes: string | null
           payment_type: string | null
-          price: number | null
+          price: number
           professional_id: string | null
+          series_exception: boolean
+          series_id: string | null
           start_time: string
           title: string
           updated_at: string
+          what_to_bring: string[]
         }
         Insert: {
+          about?: string | null
           business_id: string
+          cancel_reason?: string | null
           cancellation_hours?: number | null
+          cancelled_at?: string | null
+          centium_spots?: number | null
           class_type?: string | null
+          cover_url?: string | null
           created_at?: string
           end_time: string
           event_date: string
           gym_id?: string | null
           id?: string
+          level?: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore?: boolean
           max_capacity: number
           notes?: string | null
           payment_type?: string | null
-          price?: number | null
+          price?: number
           professional_id?: string | null
+          series_exception?: boolean
+          series_id?: string | null
           start_time: string
           title: string
           updated_at?: string
+          what_to_bring?: string[]
         }
         Update: {
+          about?: string | null
           business_id?: string
+          cancel_reason?: string | null
           cancellation_hours?: number | null
+          cancelled_at?: string | null
+          centium_spots?: number | null
           class_type?: string | null
+          cover_url?: string | null
           created_at?: string
           end_time?: string
           event_date?: string
           gym_id?: string | null
           id?: string
+          level?: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore?: boolean
           max_capacity?: number
           notes?: string | null
           payment_type?: string | null
-          price?: number | null
+          price?: number
           professional_id?: string | null
+          series_exception?: boolean
+          series_id?: string | null
           start_time?: string
           title?: string
           updated_at?: string
+          what_to_bring?: string[]
         }
         Relationships: [
           {
@@ -1870,6 +2533,91 @@ export type Database = {
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
           },
+          {
+            foreignKeyName: "business_classes_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "class_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_client_shares: {
+        Row: {
+          business_id: string
+          client_id: string
+          granted_at: string
+          revoked_at: string | null
+        }
+        Insert: {
+          business_id: string
+          client_id: string
+          granted_at?: string
+          revoked_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          client_id?: string
+          granted_at?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_client_shares_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_client_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       business_directory_entries: {
@@ -1892,42 +2640,6 @@ export type Database = {
           tier?: string | null
         }
         Relationships: []
-      }
-      business_discounts: {
-        Row: {
-          business_id: string
-          created_at: string
-          id: string
-          label: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          id?: string
-          label: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          id?: string
-          label?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_discounts_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_discounts_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "my_class_schedule"
-            referencedColumns: ["business_id"]
-          },
-        ]
       }
       business_employees: {
         Row: {
@@ -2538,32 +3250,44 @@ export type Database = {
         Row: {
           business_id: string
           category: Database["public"]["Enums"]["offering_category"]
+          category_id: string | null
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           price: number | null
+          stock: number | null
           title: string
           updated_at: string
+          visible: boolean
         }
         Insert: {
           business_id: string
           category: Database["public"]["Enums"]["offering_category"]
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           price?: number | null
+          stock?: number | null
           title: string
           updated_at?: string
+          visible?: boolean
         }
         Update: {
           business_id?: string
           category?: Database["public"]["Enums"]["offering_category"]
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           price?: number | null
+          stock?: number | null
           title?: string
           updated_at?: string
+          visible?: boolean
         }
         Relationships: [
           {
@@ -2579,6 +3303,397 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "my_class_schedule"
             referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_offerings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_payment_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          business_id: string
+          id: string
+          new_status:
+            Database["public"]["Enums"]["business_payment_status"] | null
+          note: string | null
+          payment_id: string
+          previous_status:
+            Database["public"]["Enums"]["business_payment_status"] | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          business_id: string
+          id?: string
+          new_status?:
+            Database["public"]["Enums"]["business_payment_status"] | null
+          note?: string | null
+          payment_id: string
+          previous_status?:
+            Database["public"]["Enums"]["business_payment_status"] | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          business_id?: string
+          id?: string
+          new_status?:
+            Database["public"]["Enums"]["business_payment_status"] | null
+          note?: string | null
+          payment_id?: string
+          previous_status?:
+            Database["public"]["Enums"]["business_payment_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_payment_audit_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payment_audit_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_payment_audit_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "business_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_payment_settings: {
+        Row: {
+          business_id: string
+          cash_enabled: boolean
+          updated_at: string
+          whish_enabled: boolean
+          whish_merchant_ref: string | null
+        }
+        Insert: {
+          business_id: string
+          cash_enabled?: boolean
+          updated_at?: string
+          whish_enabled?: boolean
+          whish_merchant_ref?: string | null
+        }
+        Update: {
+          business_id?: string
+          cash_enabled?: boolean
+          updated_at?: string
+          whish_enabled?: boolean
+          whish_merchant_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_payment_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payment_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      business_payments: {
+        Row: {
+          amount: number
+          attempt_count: number
+          business_id: string
+          currency: string
+          due_on: string | null
+          gym_id: string | null
+          id: string
+          last_attempt_at: string | null
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          next_retry_at: string | null
+          paid_at: string | null
+          payer_id: string | null
+          price_type: Database["public"]["Enums"]["price_type"]
+          provider: string | null
+          provider_reference: string | null
+          recorded_at: string
+          recorded_by: string | null
+          retries_stopped_at: string | null
+          source_id: string
+          source_kind: Database["public"]["Enums"]["payment_source_kind"]
+          status: Database["public"]["Enums"]["business_payment_status"]
+        }
+        Insert: {
+          amount: number
+          attempt_count?: number
+          business_id: string
+          currency?: string
+          due_on?: string | null
+          gym_id?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          next_retry_at?: string | null
+          paid_at?: string | null
+          payer_id?: string | null
+          price_type?: Database["public"]["Enums"]["price_type"]
+          provider?: string | null
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          retries_stopped_at?: string | null
+          source_id: string
+          source_kind: Database["public"]["Enums"]["payment_source_kind"]
+          status?: Database["public"]["Enums"]["business_payment_status"]
+        }
+        Update: {
+          amount?: number
+          attempt_count?: number
+          business_id?: string
+          currency?: string
+          due_on?: string | null
+          gym_id?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          method?: Database["public"]["Enums"]["venue_payment_method"]
+          next_retry_at?: string | null
+          paid_at?: string | null
+          payer_id?: string | null
+          price_type?: Database["public"]["Enums"]["price_type"]
+          provider?: string | null
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          retries_stopped_at?: string | null
+          source_id?: string
+          source_kind?: Database["public"]["Enums"]["payment_source_kind"]
+          status?: Database["public"]["Enums"]["business_payment_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_payments_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      business_person_numbers: {
+        Row: {
+          business_id: string
+          created_at: string
+          member_number: number
+          person_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          member_number: number
+          person_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          member_number?: number
+          person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_person_numbers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_person_numbers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      business_photos: {
+        Row: {
+          business_id: string
+          caption: string | null
+          created_at: string
+          gym_id: string | null
+          id: string
+          path: string
+          position: number
+          reject_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["photo_status"]
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          caption?: string | null
+          created_at?: string
+          gym_id?: string | null
+          id?: string
+          path: string
+          position?: number
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["photo_status"]
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          caption?: string | null
+          created_at?: string
+          gym_id?: string | null
+          id?: string
+          path?: string
+          position?: number
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["photo_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_photos_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_photos_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_photos_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2706,6 +3821,58 @@ export type Database = {
           },
         ]
       }
+      business_refunds: {
+        Row: {
+          amount: number
+          at: string
+          business_id: string
+          id: string
+          payment_id: string
+          reason: string | null
+          recorded_by: string | null
+        }
+        Insert: {
+          amount: number
+          at?: string
+          business_id: string
+          id?: string
+          payment_id: string
+          reason?: string | null
+          recorded_by?: string | null
+        }
+        Update: {
+          amount?: number
+          at?: string
+          business_id?: string
+          id?: string
+          payment_id?: string
+          reason?: string | null
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_refunds_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_refunds_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "business_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_store_settings: {
         Row: {
           allow_exchanges: boolean
@@ -2773,6 +3940,8 @@ export type Database = {
           file_paths: string[]
           id: string
           items: Json
+          previous_name: string | null
+          reason: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["verification_status"]
@@ -2785,6 +3954,8 @@ export type Database = {
           file_paths?: string[]
           id?: string
           items?: Json
+          previous_name?: string | null
+          reason?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["verification_status"]
@@ -2797,6 +3968,8 @@ export type Database = {
           file_paths?: string[]
           id?: string
           items?: Json
+          previous_name?: string | null
+          reason?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["verification_status"]
@@ -2859,6 +4032,7 @@ export type Database = {
         Row: {
           accepted: boolean | null
           alert: Database["public"]["Enums"]["calendar_alert"]
+          alert_2: Database["public"]["Enums"]["calendar_alert"]
           calendar_event_id: string
           id: string
           invited_at: string
@@ -2869,6 +4043,7 @@ export type Database = {
         Insert: {
           accepted?: boolean | null
           alert?: Database["public"]["Enums"]["calendar_alert"]
+          alert_2?: Database["public"]["Enums"]["calendar_alert"]
           calendar_event_id: string
           id?: string
           invited_at?: string
@@ -2879,6 +4054,7 @@ export type Database = {
         Update: {
           accepted?: boolean | null
           alert?: Database["public"]["Enums"]["calendar_alert"]
+          alert_2?: Database["public"]["Enums"]["calendar_alert"]
           calendar_event_id?: string
           id?: string
           invited_at?: string
@@ -2984,6 +4160,7 @@ export type Database = {
         Row: {
           alert: Database["public"]["Enums"]["calendar_alert"]
           all_day: boolean
+          appointment_service_id: string | null
           attachment_path: string | null
           color: string | null
           created_at: string
@@ -2993,7 +4170,11 @@ export type Database = {
           id: string
           location: string | null
           notes: string | null
+          outcome: Database["public"]["Enums"]["session_outcome"] | null
+          outcome_counted_at: string | null
           owner_id: string
+          paid_at: string | null
+          price: number | null
           repeat: Database["public"]["Enums"]["calendar_repeat"]
           repeat_until: string | null
           source_id: string | null
@@ -3008,6 +4189,7 @@ export type Database = {
         Insert: {
           alert?: Database["public"]["Enums"]["calendar_alert"]
           all_day?: boolean
+          appointment_service_id?: string | null
           attachment_path?: string | null
           color?: string | null
           created_at?: string
@@ -3017,7 +4199,11 @@ export type Database = {
           id?: string
           location?: string | null
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["session_outcome"] | null
+          outcome_counted_at?: string | null
           owner_id: string
+          paid_at?: string | null
+          price?: number | null
           repeat?: Database["public"]["Enums"]["calendar_repeat"]
           repeat_until?: string | null
           source_id?: string | null
@@ -3032,6 +4218,7 @@ export type Database = {
         Update: {
           alert?: Database["public"]["Enums"]["calendar_alert"]
           all_day?: boolean
+          appointment_service_id?: string | null
           attachment_path?: string | null
           color?: string | null
           created_at?: string
@@ -3041,7 +4228,11 @@ export type Database = {
           id?: string
           location?: string | null
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["session_outcome"] | null
+          outcome_counted_at?: string | null
           owner_id?: string
+          paid_at?: string | null
+          price?: number | null
           repeat?: Database["public"]["Enums"]["calendar_repeat"]
           repeat_until?: string | null
           source_id?: string | null
@@ -3054,6 +4245,13 @@ export type Database = {
           url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "calendar_events_appointment_service_id_fkey"
+            columns: ["appointment_service_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_services"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "calendar_events_owner_id_fkey"
             columns: ["owner_id"]
@@ -3256,85 +4454,634 @@ export type Database = {
           },
         ]
       }
-      cart_items: {
+      care_network_links: {
         Row: {
           created_at: string
           id: string
-          item_name: string
-          owner_id: string
-          price: number
-          quantity: number
-          store_item_id: string | null
-          store_name: string
+          requested_by: string
+          requested_of: string
+          responded_at: string | null
+          status: string
         }
         Insert: {
           created_at?: string
           id?: string
-          item_name: string
-          owner_id: string
-          price: number
-          quantity?: number
-          store_item_id?: string | null
-          store_name: string
+          requested_by: string
+          requested_of: string
+          responded_at?: string | null
+          status?: string
         }
         Update: {
           created_at?: string
           id?: string
-          item_name?: string
-          owner_id?: string
-          price?: number
-          quantity?: number
-          store_item_id?: string | null
-          store_name?: string
+          requested_by?: string
+          requested_of?: string
+          responded_at?: string | null
+          status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "connected_professional_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "care_network_links_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
           },
           {
-            foreignKeyName: "cart_items_store_item_id_fkey"
-            columns: ["store_item_id"]
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
             isOneToOne: false
-            referencedRelation: "store_items"
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_network_links_requested_of_fkey"
+            columns: ["requested_of"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      care_plan_items: {
+        Row: {
+          body: string
+          care_plan_id: string
+          created_at: string
+          id: string
+          kind: string
+          metric: string | null
+          position: number
+          threshold_high: number | null
+          threshold_low: number | null
+          updated_at: string
+          visible_to_client: boolean
+        }
+        Insert: {
+          body: string
+          care_plan_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          metric?: string | null
+          position?: number
+          threshold_high?: number | null
+          threshold_low?: number | null
+          updated_at?: string
+          visible_to_client?: boolean
+        }
+        Update: {
+          body?: string
+          care_plan_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          metric?: string | null
+          position?: number
+          threshold_high?: number | null
+          threshold_low?: number | null
+          updated_at?: string
+          visible_to_client?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_plan_items_care_plan_id_fkey"
+            columns: ["care_plan_id"]
+            isOneToOne: false
+            referencedRelation: "care_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      care_plan_versions: {
+        Row: {
+          care_plan_id: string
+          created_at: string
+          id: string
+          note: string | null
+          snapshot: Json
+          version: number
+        }
+        Insert: {
+          care_plan_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          snapshot: Json
+          version: number
+        }
+        Update: {
+          care_plan_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          snapshot?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_plan_versions_care_plan_id_fkey"
+            columns: ["care_plan_id"]
+            isOneToOne: false
+            referencedRelation: "care_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      care_plans: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          professional_id: string
+          published_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          professional_id: string
+          published_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          professional_id?: string
+          published_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      care_referrals: {
+        Row: {
+          client_answered_at: string | null
+          client_id: string
+          created_at: string
+          dispute_reason: string | null
+          disputed_at: string | null
+          disputed_by: string | null
+          from_professional: string
+          id: string
+          reason: string
+          resolved_at: string | null
+          resolved_by: string | null
+          responded_at: string | null
+          status: Database["public"]["Enums"]["care_referral_status"]
+          status_before_dispute:
+            Database["public"]["Enums"]["care_referral_status"] | null
+          to_professional: string
+        }
+        Insert: {
+          client_answered_at?: string | null
+          client_id: string
+          created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
+          disputed_by?: string | null
+          from_professional: string
+          id?: string
+          reason: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["care_referral_status"]
+          status_before_dispute?:
+            Database["public"]["Enums"]["care_referral_status"] | null
+          to_professional: string
+        }
+        Update: {
+          client_answered_at?: string | null
+          client_id?: string
+          created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
+          disputed_by?: string | null
+          from_professional?: string
+          id?: string
+          reason?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["care_referral_status"]
+          status_before_dispute?:
+            Database["public"]["Enums"]["care_referral_status"] | null
+          to_professional?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_from_professional_fkey"
+            columns: ["from_professional"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "care_referrals_to_professional_fkey"
+            columns: ["to_professional"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      centium_charges: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          is_renewal: boolean
+          method: Database["public"]["Enums"]["centium_charge_method"] | null
+          paid_at: string | null
+          payer_business_id: string | null
+          payer_business_name: string
+          period_end: string | null
+          period_start: string | null
+          product: Database["public"]["Enums"]["centium_product"]
+          provider_reference: string | null
+          quantity: number
+          recorded_by: string | null
+          status: Database["public"]["Enums"]["centium_charge_status"]
+          status_reason: string | null
+          tier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          is_renewal?: boolean
+          method?: Database["public"]["Enums"]["centium_charge_method"] | null
+          paid_at?: string | null
+          payer_business_id?: string | null
+          payer_business_name: string
+          period_end?: string | null
+          period_start?: string | null
+          product: Database["public"]["Enums"]["centium_product"]
+          provider_reference?: string | null
+          quantity?: number
+          recorded_by?: string | null
+          status?: Database["public"]["Enums"]["centium_charge_status"]
+          status_reason?: string | null
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          is_renewal?: boolean
+          method?: Database["public"]["Enums"]["centium_charge_method"] | null
+          paid_at?: string | null
+          payer_business_id?: string | null
+          payer_business_name?: string
+          period_end?: string | null
+          period_start?: string | null
+          product?: Database["public"]["Enums"]["centium_product"]
+          provider_reference?: string | null
+          quantity?: number
+          recorded_by?: string | null
+          status?: Database["public"]["Enums"]["centium_charge_status"]
+          status_reason?: string | null
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centium_charges_payer_business_id_fkey"
+            columns: ["payer_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centium_charges_payer_business_id_fkey"
+            columns: ["payer_business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "centium_charges_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_tiers"
             referencedColumns: ["id"]
           },
         ]
@@ -3408,6 +5155,163 @@ export type Database = {
           },
           {
             foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      class_series: {
+        Row: {
+          about: string | null
+          business_id: string
+          cancellation_hours: number | null
+          centium_spots: number | null
+          class_type: string | null
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          end_time: string
+          gym_id: string | null
+          id: string
+          interval_weeks: number
+          level: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore: boolean
+          max_capacity: number
+          notes: string | null
+          occurrence_count: number | null
+          payment_type: string | null
+          price: number
+          professional_id: string | null
+          skip_dates: string[]
+          start_time: string
+          starts_on: string
+          title: string
+          until_on: string | null
+          updated_at: string
+          weekdays: number[]
+          what_to_bring: string[]
+        }
+        Insert: {
+          about?: string | null
+          business_id: string
+          cancellation_hours?: number | null
+          centium_spots?: number | null
+          class_type?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_time: string
+          gym_id?: string | null
+          id?: string
+          interval_weeks?: number
+          level?: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore?: boolean
+          max_capacity: number
+          notes?: string | null
+          occurrence_count?: number | null
+          payment_type?: string | null
+          price?: number
+          professional_id?: string | null
+          skip_dates?: string[]
+          start_time: string
+          starts_on: string
+          title: string
+          until_on?: string | null
+          updated_at?: string
+          weekdays: number[]
+          what_to_bring?: string[]
+        }
+        Update: {
+          about?: string | null
+          business_id?: string
+          cancellation_hours?: number | null
+          centium_spots?: number | null
+          class_type?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_time?: string
+          gym_id?: string | null
+          id?: string
+          interval_weeks?: number
+          level?: Database["public"]["Enums"]["class_level"] | null
+          listed_on_explore?: boolean
+          max_capacity?: number
+          notes?: string | null
+          occurrence_count?: number | null
+          payment_type?: string | null
+          price?: number
+          professional_id?: string | null
+          skip_dates?: string[]
+          start_time?: string
+          starts_on?: string
+          title?: string
+          until_on?: string | null
+          updated_at?: string
+          weekdays?: number[]
+          what_to_bring?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_series_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "class_series_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "class_series_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
@@ -3539,30 +5443,42 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          kind: string
+          max_uses: number
           professional_id: string
           redeemed: boolean
           redeemed_at: string | null
           redeemed_by: string | null
+          revoked_at: string | null
+          uses: number
         }
         Insert: {
           code: string
           created_at?: string
           expires_at?: string
           id?: string
+          kind?: string
+          max_uses?: number
           professional_id: string
           redeemed?: boolean
           redeemed_at?: string | null
           redeemed_by?: string | null
+          revoked_at?: string | null
+          uses?: number
         }
         Update: {
           code?: string
           created_at?: string
           expires_at?: string
           id?: string
+          kind?: string
+          max_uses?: number
           professional_id?: string
           redeemed?: boolean
           redeemed_at?: string | null
           redeemed_by?: string | null
+          revoked_at?: string | null
+          uses?: number
         }
         Relationships: [
           {
@@ -3645,6 +5561,169 @@ export type Database = {
           {
             foreignKeyName: "client_codes_redeemed_by_fkey"
             columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      client_files: {
+        Row: {
+          client_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          kind: string
+          path: string
+          professional_id: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          kind: string
+          path: string
+          professional_id: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          kind?: string
+          path?: string
+          professional_id?: string
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_files_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -3775,6 +5854,104 @@ export type Database = {
           },
         ]
       }
+      client_invites: {
+        Row: {
+          address_hash: string
+          address_hint: string
+          attempts: number
+          channel: string
+          code_id: string
+          created_at: string
+          email: string | null
+          id: string
+          last_error: string | null
+          lease_until: string | null
+          professional_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          address_hash: string
+          address_hint: string
+          attempts?: number
+          channel: string
+          code_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          professional_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          address_hash?: string
+          address_hint?: string
+          attempts?: number
+          channel?: string
+          code_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_error?: string | null
+          lease_until?: string | null
+          professional_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_invites_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "client_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_invites_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       clinical_sources: {
         Row: {
           citation: string | null
@@ -3816,6 +5993,118 @@ export type Database = {
           url_verified_on?: string
         }
         Relationships: []
+      }
+      coaching_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          client_id: string
+          id: string
+          professional_id: string
+          terms_hash: string
+          terms_version: number
+        }
+        Insert: {
+          accepted_at?: string
+          client_id: string
+          id?: string
+          professional_id: string
+          terms_hash: string
+          terms_version: number
+        }
+        Update: {
+          accepted_at?: string
+          client_id?: string
+          id?: string
+          professional_id?: string
+          terms_hash?: string
+          terms_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coaching_terms_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
       }
       comorbidities: {
         Row: {
@@ -4451,6 +6740,7 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          opens_after_days: number
           position: number
           revision_id: string | null
           title: string
@@ -4459,6 +6749,7 @@ export type Database = {
           course_id: string
           created_at?: string
           id?: string
+          opens_after_days?: number
           position: number
           revision_id?: string | null
           title: string
@@ -4467,6 +6758,7 @@ export type Database = {
           course_id?: string
           created_at?: string
           id?: string
+          opens_after_days?: number
           position?: number
           revision_id?: string | null
           title?: string
@@ -5016,6 +7308,8 @@ export type Database = {
           cover_colour: string
           created_at: string
           currency: string
+          drip_mode: string
+          drip_weekday: number | null
           id: string
           learn_points: string[]
           level: string
@@ -5037,6 +7331,8 @@ export type Database = {
           cover_colour?: string
           created_at?: string
           currency?: string
+          drip_mode?: string
+          drip_weekday?: number | null
           id?: string
           learn_points?: string[]
           level?: string
@@ -5058,6 +7354,8 @@ export type Database = {
           cover_colour?: string
           created_at?: string
           currency?: string
+          drip_mode?: string
+          drip_weekday?: number | null
           id?: string
           learn_points?: string[]
           level?: string
@@ -5256,8 +7554,7 @@ export type Database = {
           external_fetched_at: string | null
           external_ref: string | null
           external_source:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g: number
           id: string
           logo_tone: number | null
@@ -5279,8 +7576,7 @@ export type Database = {
           external_fetched_at?: string | null
           external_ref?: string | null
           external_source?:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g: number
           id?: string
           logo_tone?: number | null
@@ -5302,8 +7598,7 @@ export type Database = {
           external_fetched_at?: string | null
           external_ref?: string | null
           external_source?:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g?: number
           id?: string
           logo_tone?: number | null
@@ -5668,8 +7963,7 @@ export type Database = {
           mood: string[]
           notes: string | null
           pregnancy_test:
-            | Database["public"]["Enums"]["pregnancy_test_result"]
-            | null
+            Database["public"]["Enums"]["pregnancy_test_result"] | null
           sex_activity: Database["public"]["Enums"]["sex_activity"] | null
           symptoms: string[]
           updated_at: string
@@ -5688,8 +7982,7 @@ export type Database = {
           mood?: string[]
           notes?: string | null
           pregnancy_test?:
-            | Database["public"]["Enums"]["pregnancy_test_result"]
-            | null
+            Database["public"]["Enums"]["pregnancy_test_result"] | null
           sex_activity?: Database["public"]["Enums"]["sex_activity"] | null
           symptoms?: string[]
           updated_at?: string
@@ -5708,8 +8001,7 @@ export type Database = {
           mood?: string[]
           notes?: string | null
           pregnancy_test?:
-            | Database["public"]["Enums"]["pregnancy_test_result"]
-            | null
+            Database["public"]["Enums"]["pregnancy_test_result"] | null
           sex_activity?: Database["public"]["Enums"]["sex_activity"] | null
           symptoms?: string[]
           updated_at?: string
@@ -5887,6 +8179,128 @@ export type Database = {
         }
         Relationships: []
       }
+      desk_sales: {
+        Row: {
+          amount: number
+          business_id: string
+          guest_label: string | null
+          gym_id: string | null
+          id: string
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          paid_at: string | null
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          person_id: string | null
+          plan_id: string | null
+          plan_name: string
+          sold_at: string
+          sold_by: string | null
+          sold_on: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          guest_label?: string | null
+          gym_id?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["venue_payment_method"]
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          person_id?: string | null
+          plan_id?: string | null
+          plan_name: string
+          sold_at?: string
+          sold_by?: string | null
+          sold_on: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          guest_label?: string | null
+          gym_id?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["venue_payment_method"]
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          person_id?: string | null
+          plan_id?: string | null
+          plan_name?: string
+          sold_at?: string
+          sold_by?: string | null
+          sold_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "desk_sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "desk_sales_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "desk_sales_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "desk_sales_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_presentation_settings: {
         Row: {
           bigger_tap_targets: boolean
@@ -5976,18 +8390,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           restriction: Database["public"]["Enums"]["dietary_restriction"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           restriction: Database["public"]["Enums"]["dietary_restriction"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           restriction?: Database["public"]["Enums"]["dietary_restriction"]
           user_id?: string
         }
@@ -6199,6 +8616,184 @@ export type Database = {
           },
         ]
       }
+      feature_prices: {
+        Row: {
+          active_from: string
+          area: Database["public"]["Enums"]["feature_area"]
+          created_at: string
+          currency: string
+          id: string
+          price: number
+        }
+        Insert: {
+          active_from?: string
+          area: Database["public"]["Enums"]["feature_area"]
+          created_at?: string
+          currency?: string
+          id?: string
+          price: number
+        }
+        Update: {
+          active_from?: string
+          area?: Database["public"]["Enums"]["feature_area"]
+          created_at?: string
+          currency?: string
+          id?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      featured_placements: {
+        Row: {
+          area: Database["public"]["Enums"]["feature_area"]
+          business_id: string
+          centium_charge_id: string | null
+          created_at: string
+          ends_on: string
+          id: string
+          starts_on: string
+          status: Database["public"]["Enums"]["placement_status"]
+          target_id: string
+          target_kind: Database["public"]["Enums"]["placement_target"]
+          updated_at: string
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["feature_area"]
+          business_id: string
+          centium_charge_id?: string | null
+          created_at?: string
+          ends_on: string
+          id?: string
+          starts_on: string
+          status?: Database["public"]["Enums"]["placement_status"]
+          target_id: string
+          target_kind: Database["public"]["Enums"]["placement_target"]
+          updated_at?: string
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["feature_area"]
+          business_id?: string
+          centium_charge_id?: string | null
+          created_at?: string
+          ends_on?: string
+          id?: string
+          starts_on?: string
+          status?: Database["public"]["Enums"]["placement_status"]
+          target_id?: string
+          target_kind?: Database["public"]["Enums"]["placement_target"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_placements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_placements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "featured_placements_centium_charge_id_fkey"
+            columns: ["centium_charge_id"]
+            isOneToOne: false
+            referencedRelation: "centium_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_ups: {
+        Row: {
+          calendar_event_id: string | null
+          care_plan_id: string
+          created_at: string
+          due_on: string
+          id: string
+          note: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_event_id?: string | null
+          care_plan_id: string
+          created_at?: string
+          due_on: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_event_id?: string | null
+          care_plan_id?: string
+          created_at?: string
+          due_on?: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_care_plan_id_fkey"
+            columns: ["care_plan_id"]
+            isOneToOne: false
+            referencedRelation: "care_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      food_allergen_tags: {
+        Row: {
+          allergen: Database["public"]["Enums"]["allergen"]
+          created_at: string
+          custom_food_id: string | null
+          food_id: string | null
+          id: string
+        }
+        Insert: {
+          allergen: Database["public"]["Enums"]["allergen"]
+          created_at?: string
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+        }
+        Update: {
+          allergen?: Database["public"]["Enums"]["allergen"]
+          created_at?: string
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_allergen_tags_custom_food_id_fkey"
+            columns: ["custom_food_id"]
+            isOneToOne: false
+            referencedRelation: "custom_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_allergen_tags_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_log_entries: {
         Row: {
           calories: number
@@ -6206,11 +8801,11 @@ export type Database = {
           category: Database["public"]["Enums"]["food_category"] | null
           created_at: string
           custom_food_id: string | null
+          eaten_at: string | null
           external_fetched_at: string | null
           external_ref: string | null
           external_source:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g: number
           food_id: string | null
           id: string
@@ -6232,11 +8827,11 @@ export type Database = {
           category?: Database["public"]["Enums"]["food_category"] | null
           created_at?: string
           custom_food_id?: string | null
+          eaten_at?: string | null
           external_fetched_at?: string | null
           external_ref?: string | null
           external_source?:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g: number
           food_id?: string | null
           id?: string
@@ -6258,11 +8853,11 @@ export type Database = {
           category?: Database["public"]["Enums"]["food_category"] | null
           created_at?: string
           custom_food_id?: string | null
+          eaten_at?: string | null
           external_fetched_at?: string | null
           external_ref?: string | null
           external_source?:
-            | Database["public"]["Enums"]["external_food_source"]
-            | null
+            Database["public"]["Enums"]["external_food_source"] | null
           fat_g?: number
           food_id?: string | null
           id?: string
@@ -6331,6 +8926,134 @@ export type Database = {
           {
             foreignKeyName: "food_log_entries_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      food_log_feedback: {
+        Row: {
+          body: string | null
+          client_id: string
+          client_reply: string | null
+          created_at: string
+          entry_id: string
+          id: string
+          professional_id: string
+          reaction: string | null
+          replied_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          client_id: string
+          client_reply?: string | null
+          created_at?: string
+          entry_id: string
+          id?: string
+          professional_id: string
+          reaction?: string | null
+          replied_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          client_id?: string
+          client_reply?: string | null
+          created_at?: string
+          entry_id?: string
+          id?: string
+          professional_id?: string
+          reaction?: string | null
+          replied_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "food_log_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "food_log_feedback_professional_id_fkey"
+            columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -6425,6 +9148,413 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      form_assignments: {
+        Row: {
+          client_id: string
+          created_at: string
+          due_at: string | null
+          form_id: string
+          id: string
+          professional_id: string
+          reminded_at: string | null
+          schedule: string | null
+          series_id: string | null
+          status: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          due_at?: string | null
+          form_id: string
+          id?: string
+          professional_id: string
+          reminded_at?: string | null
+          schedule?: string | null
+          series_id?: string | null
+          status?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          due_at?: string | null
+          form_id?: string
+          id?: string
+          professional_id?: string
+          reminded_at?: string | null
+          schedule?: string | null
+          series_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "form_assignments_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "form_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "form_assignments_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "form_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_questions: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          options: Json | null
+          position: number
+          prompt: string
+          required: boolean
+          safety_topic: string | null
+          safety_trigger: Json | null
+          scale_max: number | null
+          scale_min: number | null
+          type: Database["public"]["Enums"]["form_question_type"]
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          options?: Json | null
+          position?: number
+          prompt: string
+          required?: boolean
+          safety_topic?: string | null
+          safety_trigger?: Json | null
+          scale_max?: number | null
+          scale_min?: number | null
+          type: Database["public"]["Enums"]["form_question_type"]
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          prompt?: string
+          required?: boolean
+          safety_topic?: string | null
+          safety_trigger?: Json | null
+          scale_max?: number | null
+          scale_min?: number | null
+          type?: Database["public"]["Enums"]["form_question_type"]
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          answers: Json
+          assignment_id: string
+          client_id: string
+          created_at: string
+          id: string
+          professional_id: string
+          reply: string | null
+          reviewed_at: string | null
+          safety_flag: boolean
+          safety_topics: string[]
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          assignment_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          professional_id: string
+          reply?: string | null
+          reviewed_at?: string | null
+          safety_flag?: boolean
+          safety_topics?: string[]
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          assignment_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          professional_id?: string
+          reply?: string | null
+          reviewed_at?: string | null
+          safety_flag?: boolean
+          safety_topics?: string[]
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "form_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "form_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "form_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["form_kind"]
+          professional_id: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["form_kind"]
+          professional_id: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["form_kind"]
+          professional_id?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "forms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
       }
       forum_block_labels: {
         Row: {
@@ -7462,6 +10592,209 @@ export type Database = {
           },
         ]
       }
+      gym_check_in_days: {
+        Row: {
+          day: string
+          denied: number
+          entries: number
+          gym_id: string
+          people: number
+        }
+        Insert: {
+          day: string
+          denied?: number
+          entries?: number
+          gym_id: string
+          people?: number
+        }
+        Update: {
+          day?: string
+          denied?: number
+          entries?: number
+          gym_id?: string
+          people?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_check_in_days_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gym_check_ins: {
+        Row: {
+          at: string
+          business_id: string
+          deny_reason:
+            Database["public"]["Enums"]["check_in_deny_reason"] | null
+          desk_sale_id: string | null
+          guest_label: string | null
+          guest_of: string | null
+          gym_id: string
+          id: string
+          member_id: string | null
+          membership_id: string | null
+          method: Database["public"]["Enums"]["check_in_method"]
+          recorded_by: string | null
+          result: Database["public"]["Enums"]["check_in_result"]
+        }
+        Insert: {
+          at?: string
+          business_id: string
+          deny_reason?:
+            Database["public"]["Enums"]["check_in_deny_reason"] | null
+          desk_sale_id?: string | null
+          guest_label?: string | null
+          guest_of?: string | null
+          gym_id: string
+          id?: string
+          member_id?: string | null
+          membership_id?: string | null
+          method: Database["public"]["Enums"]["check_in_method"]
+          recorded_by?: string | null
+          result: Database["public"]["Enums"]["check_in_result"]
+        }
+        Update: {
+          at?: string
+          business_id?: string
+          deny_reason?:
+            Database["public"]["Enums"]["check_in_deny_reason"] | null
+          desk_sale_id?: string | null
+          guest_label?: string | null
+          guest_of?: string | null
+          gym_id?: string
+          id?: string
+          member_id?: string | null
+          membership_id?: string | null
+          method?: Database["public"]["Enums"]["check_in_method"]
+          recorded_by?: string | null
+          result?: Database["public"]["Enums"]["check_in_result"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_check_ins_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_desk_sale_fk"
+            columns: ["desk_sale_id"]
+            isOneToOne: false
+            referencedRelation: "desk_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_guest_of_fkey"
+            columns: ["guest_of"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "gym_check_ins_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "gym_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gym_hours: {
         Row: {
           closed: boolean
@@ -7870,15 +11203,172 @@ export type Database = {
           },
         ]
       }
+      gym_review_replies: {
+        Row: {
+          author_id: string | null
+          body: string
+          business_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          redacted_at: string | null
+          redacted_by: string | null
+          redaction_reason: string | null
+          review_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          business_id: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          redacted_at?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          review_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          business_id?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          redacted_at?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_review_replies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_review_replies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "gym_review_replies_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "gym_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gym_review_reports: {
+        Row: {
+          by_business: boolean
+          created_at: string
+          id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["review_report_reason"]
+          reporter_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          status: Database["public"]["Enums"]["review_report_status"]
+        }
+        Insert: {
+          by_business?: boolean
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason: Database["public"]["Enums"]["review_report_reason"]
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          status?: Database["public"]["Enums"]["review_report_status"]
+        }
+        Update: {
+          by_business?: boolean
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["review_report_reason"]
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          status?: Database["public"]["Enums"]["review_report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "gym_review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "gym_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gym_reviews: {
         Row: {
           author_id: string
           author_name_visible: boolean
           body: string
+          business_handled_at: string | null
+          business_id: string | null
+          class_id: string | null
           created_at: string
           edited_at: string | null
-          gym_id: string
+          flag_kind: string | null
+          flag_source: string | null
+          flagged_at: string | null
+          gym_id: string | null
           id: string
+          instructor_id: string | null
           rating: number
           redacted_at: string | null
           redacted_by: string | null
@@ -7889,10 +11379,17 @@ export type Database = {
           author_id: string
           author_name_visible?: boolean
           body: string
+          business_handled_at?: string | null
+          business_id?: string | null
+          class_id?: string | null
           created_at?: string
           edited_at?: string | null
-          gym_id: string
+          flag_kind?: string | null
+          flag_source?: string | null
+          flagged_at?: string | null
+          gym_id?: string | null
           id?: string
+          instructor_id?: string | null
           rating: number
           redacted_at?: string | null
           redacted_by?: string | null
@@ -7903,10 +11400,17 @@ export type Database = {
           author_id?: string
           author_name_visible?: boolean
           body?: string
+          business_handled_at?: string | null
+          business_id?: string | null
+          class_id?: string | null
           created_at?: string
           edited_at?: string | null
-          gym_id?: string
+          flag_kind?: string | null
+          flag_source?: string | null
+          flagged_at?: string | null
+          gym_id?: string | null
           id?: string
+          instructor_id?: string | null
           rating?: number
           redacted_at?: string | null
           redacted_by?: string | null
@@ -7957,11 +11461,88 @@ export type Database = {
             referencedColumns: ["participant_id"]
           },
           {
+            foreignKeyName: "gym_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "business_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_classes"
+            referencedColumns: ["class_id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["class_id"]
+          },
+          {
             foreignKeyName: "gym_reviews_gym_id_fkey"
             columns: ["gym_id"]
             isOneToOne: false
             referencedRelation: "gyms"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gym_reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -7970,11 +11551,15 @@ export type Database = {
           access_bluetooth: boolean
           access_nfc: boolean
           access_qr: boolean
+          amenities: string[]
           bio: string | null
           business_id: string | null
           cover_url: string | null
           created_at: string
           default_cancellation_hours: number
+          first_visit: string | null
+          front_desk_checkin: boolean
+          guest_passes_per_month: number
           hidden_at: string | null
           hidden_reason: string | null
           id: string
@@ -7982,6 +11567,7 @@ export type Database = {
           lng: number
           location: string
           logo_url: string | null
+          min_entry_age: number
           name: string
           perk: string | null
           public_email: string | null
@@ -7995,11 +11581,15 @@ export type Database = {
           access_bluetooth?: boolean
           access_nfc?: boolean
           access_qr?: boolean
+          amenities?: string[]
           bio?: string | null
           business_id?: string | null
           cover_url?: string | null
           created_at?: string
           default_cancellation_hours?: number
+          first_visit?: string | null
+          front_desk_checkin?: boolean
+          guest_passes_per_month?: number
           hidden_at?: string | null
           hidden_reason?: string | null
           id?: string
@@ -8007,6 +11597,7 @@ export type Database = {
           lng: number
           location: string
           logo_url?: string | null
+          min_entry_age?: number
           name: string
           perk?: string | null
           public_email?: string | null
@@ -8020,11 +11611,15 @@ export type Database = {
           access_bluetooth?: boolean
           access_nfc?: boolean
           access_qr?: boolean
+          amenities?: string[]
           bio?: string | null
           business_id?: string | null
           cover_url?: string | null
           created_at?: string
           default_cancellation_hours?: number
+          first_visit?: string | null
+          front_desk_checkin?: boolean
+          guest_passes_per_month?: number
           hidden_at?: string | null
           hidden_reason?: string | null
           id?: string
@@ -8032,6 +11627,7 @@ export type Database = {
           lng?: number
           location?: string
           logo_url?: string | null
+          min_entry_age?: number
           name?: string
           perk?: string | null
           public_email?: string | null
@@ -8090,6 +11686,7 @@ export type Database = {
       habit_items: {
         Row: {
           archived_at: string | null
+          assigned_by_professional_id: string | null
           colour: Database["public"]["Enums"]["habit_colour"]
           created_at: string
           icon: Database["public"]["Enums"]["habit_icon"]
@@ -8101,6 +11698,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          assigned_by_professional_id?: string | null
           colour?: Database["public"]["Enums"]["habit_colour"]
           created_at?: string
           icon: Database["public"]["Enums"]["habit_icon"]
@@ -8112,6 +11710,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          assigned_by_professional_id?: string | null
           colour?: Database["public"]["Enums"]["habit_colour"]
           created_at?: string
           icon?: Database["public"]["Enums"]["habit_icon"]
@@ -8122,6 +11721,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "habit_items_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
           {
             foreignKeyName: "habit_items_owner_id_fkey"
             columns: ["owner_id"]
@@ -8416,8 +12057,7 @@ export type Database = {
       health_integrations: {
         Row: {
           access_state:
-            | Database["public"]["Enums"]["health_access_state"]
-            | null
+            Database["public"]["Enums"]["health_access_state"] | null
           connected: boolean
           created_at: string
           id: string
@@ -8431,8 +12071,7 @@ export type Database = {
         }
         Insert: {
           access_state?:
-            | Database["public"]["Enums"]["health_access_state"]
-            | null
+            Database["public"]["Enums"]["health_access_state"] | null
           connected?: boolean
           created_at?: string
           id?: string
@@ -8446,8 +12085,7 @@ export type Database = {
         }
         Update: {
           access_state?:
-            | Database["public"]["Enums"]["health_access_state"]
-            | null
+            Database["public"]["Enums"]["health_access_state"] | null
           connected?: boolean
           created_at?: string
           id?: string
@@ -8966,28 +12604,31 @@ export type Database = {
       }
       instructor_availability: {
         Row: {
-          business_id: string
+          business_id: string | null
           created_at: string
           ends_at: string
           id: string
+          location: string | null
           professional_id: string
           starts_at: string
           weekday: number
         }
         Insert: {
-          business_id: string
+          business_id?: string | null
           created_at?: string
           ends_at: string
           id?: string
+          location?: string | null
           professional_id: string
           starts_at: string
           weekday: number
         }
         Update: {
-          business_id?: string
+          business_id?: string | null
           created_at?: string
           ends_at?: string
           id?: string
+          location?: string | null
           professional_id?: string
           starts_at?: string
           weekday?: number
@@ -9053,28 +12694,34 @@ export type Database = {
       }
       instructor_unavailable_dates: {
         Row: {
-          business_id: string
+          business_id: string | null
           created_at: string
+          ends_time: string | null
           id: string
           on_date: string
           professional_id: string
           reason: string | null
+          starts_time: string | null
         }
         Insert: {
-          business_id: string
+          business_id?: string | null
           created_at?: string
+          ends_time?: string | null
           id?: string
           on_date: string
           professional_id: string
           reason?: string | null
+          starts_time?: string | null
         }
         Update: {
-          business_id?: string
+          business_id?: string | null
           created_at?: string
+          ends_time?: string | null
           id?: string
           on_date?: string
           professional_id?: string
           reason?: string | null
+          starts_time?: string | null
         }
         Relationships: [
           {
@@ -9578,6 +13225,78 @@ export type Database = {
           },
         ]
       }
+      listing_event_counts: {
+        Row: {
+          business_id: string
+          day: string
+          item_id: string
+          kind: Database["public"]["Enums"]["listing_event_kind"]
+          n: number
+          source: Database["public"]["Enums"]["listing_event_source"]
+        }
+        Insert: {
+          business_id: string
+          day: string
+          item_id?: string
+          kind: Database["public"]["Enums"]["listing_event_kind"]
+          n?: number
+          source: Database["public"]["Enums"]["listing_event_source"]
+        }
+        Update: {
+          business_id?: string
+          day?: string
+          item_id?: string
+          kind?: Database["public"]["Enums"]["listing_event_kind"]
+          n?: number
+          source?: Database["public"]["Enums"]["listing_event_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_event_counts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_event_counts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      listing_event_salts: {
+        Row: {
+          day: string
+          salt: string
+        }
+        Insert: {
+          day: string
+          salt: string
+        }
+        Update: {
+          day?: string
+          salt?: string
+        }
+        Relationships: []
+      }
+      listing_event_seen: {
+        Row: {
+          day: string
+          digest: string
+        }
+        Insert: {
+          day: string
+          digest: string
+        }
+        Update: {
+          day?: string
+          digest?: string
+        }
+        Relationships: []
+      }
       logged_exercises: {
         Row: {
           block_result_id: string | null
@@ -9698,6 +13417,394 @@ export type Database = {
             columns: ["logged_exercise_id"]
             isOneToOne: false
             referencedRelation: "logged_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_assignments: {
+        Row: {
+          assigned_at: string
+          client_id: string
+          ended_at: string | null
+          ends_on: string | null
+          id: string
+          meal_plan_id: string
+          professional_id: string
+          starts_on: string
+          swaps: Json | null
+          template_id: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          client_id: string
+          ended_at?: string | null
+          ends_on?: string | null
+          id?: string
+          meal_plan_id: string
+          professional_id: string
+          starts_on: string
+          swaps?: Json | null
+          template_id?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          client_id?: string
+          ended_at?: string | null
+          ends_on?: string | null
+          id?: string
+          meal_plan_id?: string
+          professional_id?: string
+          starts_on?: string
+          swaps?: Json | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_meal_plan_id_fkey"
+            columns: ["meal_plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "meal_plan_assignments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_days: {
+        Row: {
+          day_index: number
+          id: string
+          label: string | null
+          meal_plan_id: string
+        }
+        Insert: {
+          day_index: number
+          id?: string
+          label?: string | null
+          meal_plan_id: string
+        }
+        Update: {
+          day_index?: number
+          id?: string
+          label?: string | null
+          meal_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_days_meal_plan_id_fkey"
+            columns: ["meal_plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_items: {
+        Row: {
+          custom_food_id: string | null
+          custom_meal_id: string | null
+          food_id: string | null
+          grams: number | null
+          id: string
+          meal_plan_day_id: string
+          meal_slot: Database["public"]["Enums"]["meal_slot"]
+          note: string | null
+          position: number
+          recipe_id: string | null
+          servings: number | null
+        }
+        Insert: {
+          custom_food_id?: string | null
+          custom_meal_id?: string | null
+          food_id?: string | null
+          grams?: number | null
+          id?: string
+          meal_plan_day_id: string
+          meal_slot: Database["public"]["Enums"]["meal_slot"]
+          note?: string | null
+          position?: number
+          recipe_id?: string | null
+          servings?: number | null
+        }
+        Update: {
+          custom_food_id?: string | null
+          custom_meal_id?: string | null
+          food_id?: string | null
+          grams?: number | null
+          id?: string
+          meal_plan_day_id?: string
+          meal_slot?: Database["public"]["Enums"]["meal_slot"]
+          note?: string | null
+          position?: number
+          recipe_id?: string | null
+          servings?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_items_custom_food_id_fkey"
+            columns: ["custom_food_id"]
+            isOneToOne: false
+            referencedRelation: "custom_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_custom_meal_id_fkey"
+            columns: ["custom_meal_id"]
+            isOneToOne: false
+            referencedRelation: "custom_meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_meal_plan_day_id_fkey"
+            columns: ["meal_plan_day_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plans: {
+        Row: {
+          carbs_pct: number | null
+          client_id: string | null
+          created_at: string
+          days_count: number
+          fat_pct: number | null
+          id: string
+          is_template: boolean
+          kcal_target: number | null
+          name: string
+          notes: string | null
+          professional_id: string
+          protein_pct: number | null
+          source_plan_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          carbs_pct?: number | null
+          client_id?: string | null
+          created_at?: string
+          days_count?: number
+          fat_pct?: number | null
+          id?: string
+          is_template?: boolean
+          kcal_target?: number | null
+          name: string
+          notes?: string | null
+          professional_id: string
+          protein_pct?: number | null
+          source_plan_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carbs_pct?: number | null
+          client_id?: string | null
+          created_at?: string
+          days_count?: number
+          fat_pct?: number | null
+          id?: string
+          is_template?: boolean
+          kcal_target?: number | null
+          name?: string
+          notes?: string | null
+          professional_id?: string
+          protein_pct?: number | null
+          source_plan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "meal_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "meal_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "meal_plans_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -9950,8 +14057,7 @@ export type Database = {
           name: string
           notice_days: number | null
           payment_methods:
-            | Database["public"]["Enums"]["venue_payment_method"][]
-            | null
+            Database["public"]["Enums"]["venue_payment_method"][] | null
           payment_type: string | null
           plan_type: Database["public"]["Enums"]["plan_type"]
           price: number
@@ -9975,8 +14081,7 @@ export type Database = {
           name: string
           notice_days?: number | null
           payment_methods?:
-            | Database["public"]["Enums"]["venue_payment_method"][]
-            | null
+            Database["public"]["Enums"]["venue_payment_method"][] | null
           payment_type?: string | null
           plan_type?: Database["public"]["Enums"]["plan_type"]
           price: number
@@ -10000,8 +14105,7 @@ export type Database = {
           name?: string
           notice_days?: number | null
           payment_methods?:
-            | Database["public"]["Enums"]["venue_payment_method"][]
-            | null
+            Database["public"]["Enums"]["venue_payment_method"][] | null
           payment_type?: string | null
           plan_type?: Database["public"]["Enums"]["plan_type"]
           price?: number
@@ -10127,8 +14231,7 @@ export type Database = {
         }
         Insert: {
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_url?: string | null
           author_id?: string | null
           change: Database["public"]["Enums"]["message_content_change"]
@@ -10141,8 +14244,7 @@ export type Database = {
         }
         Update: {
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_url?: string | null
           author_id?: string | null
           change?: Database["public"]["Enums"]["message_content_change"]
@@ -10746,6 +14848,7 @@ export type Database = {
       }
       message_threads: {
         Row: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -10757,6 +14860,7 @@ export type Database = {
           participant_two_id: string | null
         }
         Insert: {
+          business_id?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -10768,6 +14872,7 @@ export type Database = {
           participant_two_id?: string | null
         }
         Update: {
+          business_id?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -10779,6 +14884,20 @@ export type Database = {
           participant_two_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "message_threads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
           {
             foreignKeyName: "message_threads_gym_id_fkey"
             columns: ["gym_id"]
@@ -10902,8 +15021,7 @@ export type Database = {
         Insert: {
           attachment_bytes?: number | null
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_mime?: string | null
           attachment_name?: string | null
           attachment_purged_at?: string | null
@@ -10930,8 +15048,7 @@ export type Database = {
         Update: {
           attachment_bytes?: number | null
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_mime?: string | null
           attachment_name?: string | null
           attachment_purged_at?: string | null
@@ -11147,6 +15264,79 @@ export type Database = {
         }
         Relationships: []
       }
+      note_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["session_note_kind"]
+          professional_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["session_note_kind"]
+          professional_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["session_note_kind"]
+          professional_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "note_templates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       nutrition_goals: {
         Row: {
           carbs_pct: number
@@ -11156,8 +15346,10 @@ export type Database = {
           fat_pct: number
           id: string
           is_current: boolean
+          locked: boolean
           plan_type: Database["public"]["Enums"]["nutrition_plan_type"]
           protein_pct: number
+          set_by_professional_id: string | null
           target_calories: number
           user_id: string
           weekly_rate_kg: number
@@ -11171,8 +15363,10 @@ export type Database = {
           fat_pct: number
           id?: string
           is_current?: boolean
+          locked?: boolean
           plan_type: Database["public"]["Enums"]["nutrition_plan_type"]
           protein_pct: number
+          set_by_professional_id?: string | null
           target_calories: number
           user_id: string
           weekly_rate_kg: number
@@ -11186,14 +15380,58 @@ export type Database = {
           fat_pct?: number
           id?: string
           is_current?: boolean
+          locked?: boolean
           plan_type?: Database["public"]["Enums"]["nutrition_plan_type"]
           protein_pct?: number
+          set_by_professional_id?: string | null
           target_calories?: number
           user_id?: string
           weekly_rate_kg?: number
           weight_goal?: Database["public"]["Enums"]["weight_goal"]
         }
         Relationships: [
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_set_by_professional_id_fkey"
+            columns: ["set_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
           {
             foreignKeyName: "nutrition_goals_user_id_fkey"
             columns: ["user_id"]
@@ -11232,6 +15470,127 @@ export type Database = {
           {
             foreignKeyName: "nutrition_goals_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      offline_clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          linked_client_id: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          linked_client_id?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          linked_client_id?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "offline_clients_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "offline_clients_professional_id_fkey"
+            columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -11534,9 +15893,143 @@ export type Database = {
           },
         ]
       }
+      payment_attempts: {
+        Row: {
+          at: string
+          attempt_no: number
+          id: string
+          outcome: Database["public"]["Enums"]["payment_attempt_outcome"]
+          payment_id: string
+          provider_code: string | null
+          reason: string | null
+          settled_at: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          at?: string
+          attempt_no: number
+          id?: string
+          outcome?: Database["public"]["Enums"]["payment_attempt_outcome"]
+          payment_id: string
+          provider_code?: string | null
+          reason?: string | null
+          settled_at?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          at?: string
+          attempt_no?: number
+          id?: string
+          outcome?: Database["public"]["Enums"]["payment_attempt_outcome"]
+          payment_id?: string
+          provider_code?: string | null
+          reason?: string | null
+          settled_at?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "business_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          business_id: string
+          id: string
+          message_id: string | null
+          payment_id: string
+          sent_at: string
+          sent_by: string | null
+          thread_id: string | null
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          message_id?: string | null
+          payment_id: string
+          sent_at?: string
+          sent_by?: string | null
+          thread_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          message_id?: string | null
+          payment_id?: string
+          sent_at?: string
+          sent_by?: string | null
+          thread_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "business_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+        ]
+      }
       pending_client_requests: {
         Row: {
           customer_id: string
+          decline_message: string | null
+          decline_reason:
+            Database["public"]["Enums"]["client_request_decline_reason"] | null
           id: string
           professional_id: string
           requested_at: string
@@ -11545,6 +16038,9 @@ export type Database = {
         }
         Insert: {
           customer_id: string
+          decline_message?: string | null
+          decline_reason?:
+            Database["public"]["Enums"]["client_request_decline_reason"] | null
           id?: string
           professional_id: string
           requested_at?: string
@@ -11553,6 +16049,9 @@ export type Database = {
         }
         Update: {
           customer_id?: string
+          decline_message?: string | null
+          decline_reason?:
+            Database["public"]["Enums"]["client_request_decline_reason"] | null
           id?: string
           professional_id?: string
           requested_at?: string
@@ -12175,6 +16674,101 @@ export type Database = {
           },
         ]
       }
+      practice_settings: {
+        Row: {
+          calls_with_hired_clients: boolean
+          coaching_terms: string | null
+          coaching_terms_version: number
+          default_alert: Database["public"]["Enums"]["calendar_alert"]
+          default_alert_2: Database["public"]["Enums"]["calendar_alert"]
+          default_data_requests: Database["public"]["Enums"]["access_category"][]
+          default_location: string | null
+          default_service_id: string | null
+          gone_quiet_days: number
+          invoice_details: Json
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          calls_with_hired_clients?: boolean
+          coaching_terms?: string | null
+          coaching_terms_version?: number
+          default_alert?: Database["public"]["Enums"]["calendar_alert"]
+          default_alert_2?: Database["public"]["Enums"]["calendar_alert"]
+          default_data_requests?: Database["public"]["Enums"]["access_category"][]
+          default_location?: string | null
+          default_service_id?: string | null
+          gone_quiet_days?: number
+          invoice_details?: Json
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          calls_with_hired_clients?: boolean
+          coaching_terms?: string | null
+          coaching_terms_version?: number
+          default_alert?: Database["public"]["Enums"]["calendar_alert"]
+          default_alert_2?: Database["public"]["Enums"]["calendar_alert"]
+          default_data_requests?: Database["public"]["Enums"]["access_category"][]
+          default_location?: string | null
+          default_service_id?: string | null
+          gone_quiet_days?: number
+          invoice_details?: Json
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_settings_default_service_id_fkey"
+            columns: ["default_service_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "practice_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       pregnancies: {
         Row: {
           created_at: string
@@ -12414,6 +17008,163 @@ export type Database = {
           },
         ]
       }
+      pro_change_log: {
+        Row: {
+          at: string
+          client_id: string
+          id: string
+          professional_id: string
+          subject_id: string | null
+          subject_type: string
+          summary: Json
+        }
+        Insert: {
+          at?: string
+          client_id: string
+          id?: string
+          professional_id: string
+          subject_id?: string | null
+          subject_type: string
+          summary?: Json
+        }
+        Update: {
+          at?: string
+          client_id?: string
+          id?: string
+          professional_id?: string
+          subject_id?: string | null
+          subject_type?: string
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pro_change_log_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      product_categories: {
+        Row: {
+          business_id: string
+          created_at: string
+          glyph: string | null
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          glyph?: string | null
+          id?: string
+          name: string
+          position?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          glyph?: string | null
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
       professional_awards: {
         Row: {
           awarded_on: string | null
@@ -12493,6 +17244,306 @@ export type Database = {
           },
         ]
       }
+      professional_booking_policies: {
+        Row: {
+          booking_link_enabled: boolean
+          free_cancel_hours: number
+          late_cancel_pct: number
+          min_notice_hours: number
+          new_client_approval: boolean
+          no_show_pct: number
+          professional_id: string
+          updated_at: string
+          who_can_book: Database["public"]["Enums"]["booking_audience"]
+          window_days: number
+        }
+        Insert: {
+          booking_link_enabled?: boolean
+          free_cancel_hours?: number
+          late_cancel_pct?: number
+          min_notice_hours?: number
+          new_client_approval?: boolean
+          no_show_pct?: number
+          professional_id: string
+          updated_at?: string
+          who_can_book?: Database["public"]["Enums"]["booking_audience"]
+          window_days?: number
+        }
+        Update: {
+          booking_link_enabled?: boolean
+          free_cancel_hours?: number
+          late_cancel_pct?: number
+          min_notice_hours?: number
+          new_client_approval?: boolean
+          no_show_pct?: number
+          professional_id?: string
+          updated_at?: string
+          who_can_book?: Database["public"]["Enums"]["booking_audience"]
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_booking_policies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_client_stage_history: {
+        Row: {
+          changed_at: string
+          client_id: string
+          from_stage: Database["public"]["Enums"]["client_stage"] | null
+          id: string
+          professional_id: string
+          to_stage: Database["public"]["Enums"]["client_stage"]
+        }
+        Insert: {
+          changed_at?: string
+          client_id: string
+          from_stage?: Database["public"]["Enums"]["client_stage"] | null
+          id?: string
+          professional_id: string
+          to_stage: Database["public"]["Enums"]["client_stage"]
+        }
+        Update: {
+          changed_at?: string
+          client_id?: string
+          from_stage?: Database["public"]["Enums"]["client_stage"] | null
+          id?: string
+          professional_id?: string
+          to_stage?: Database["public"]["Enums"]["client_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_client_stage_history_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_client_tags: {
+        Row: {
+          client_id: string
+          created_at: string
+          professional_id: string
+          tag: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          professional_id: string
+          tag: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          professional_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_client_tags_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       professional_clients: {
         Row: {
           assigned_food_template_id: string | null
@@ -12504,10 +17555,14 @@ export type Database = {
           disconnected_at: string | null
           id: string
           joined_at: string
+          joined_via_code_id: string | null
+          nutrition_coaching: boolean
           prefix: string | null
           professional_id: string
           pronouns: string | null
           reminder_preference: string | null
+          stage: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at: string
         }
         Insert: {
           assigned_food_template_id?: string | null
@@ -12519,10 +17574,14 @@ export type Database = {
           disconnected_at?: string | null
           id?: string
           joined_at?: string
+          joined_via_code_id?: string | null
+          nutrition_coaching?: boolean
           prefix?: string | null
           professional_id: string
           pronouns?: string | null
           reminder_preference?: string | null
+          stage?: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at?: string
         }
         Update: {
           assigned_food_template_id?: string | null
@@ -12534,10 +17593,14 @@ export type Database = {
           disconnected_at?: string | null
           id?: string
           joined_at?: string
+          joined_via_code_id?: string | null
+          nutrition_coaching?: boolean
           prefix?: string | null
           professional_id?: string
           pronouns?: string | null
           reminder_preference?: string | null
+          stage?: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at?: string
         }
         Relationships: [
           {
@@ -12581,6 +17644,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_clients_joined_via_code_id_fkey"
+            columns: ["joined_via_code_id"]
+            isOneToOne: false
+            referencedRelation: "client_codes"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "professional_clients_professional_id_fkey"
@@ -12798,6 +17868,7 @@ export type Database = {
       }
       professional_hires: {
         Row: {
+          cancellation_message: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           client_id: string
@@ -12811,11 +17882,13 @@ export type Database = {
           plan_id: string
           price_agreed: number
           professional_id: string
+          sessions_used: number
           started_on: string
           status: Database["public"]["Enums"]["hire_status"]
           updated_at: string
         }
         Insert: {
+          cancellation_message?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           client_id: string
@@ -12829,11 +17902,13 @@ export type Database = {
           plan_id: string
           price_agreed: number
           professional_id: string
+          sessions_used?: number
           started_on?: string
           status?: Database["public"]["Enums"]["hire_status"]
           updated_at?: string
         }
         Update: {
+          cancellation_message?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           client_id?: string
@@ -12847,6 +17922,7 @@ export type Database = {
           plan_id?: string
           price_agreed?: number
           professional_id?: string
+          sessions_used?: number
           started_on?: string
           status?: Database["public"]["Enums"]["hire_status"]
           updated_at?: string
@@ -13326,6 +18402,133 @@ export type Database = {
           },
         ]
       }
+      professional_notifications: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          dedupe_key: string | null
+          id: string
+          kind: Database["public"]["Enums"]["pro_notification_kind"]
+          payload: Json
+          professional_id: string
+          read_at: string | null
+          subject_id: string | null
+          subject_type: string
+          title_key: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["pro_notification_kind"]
+          payload?: Json
+          professional_id: string
+          read_at?: string | null
+          subject_id?: string | null
+          subject_type: string
+          title_key: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["pro_notification_kind"]
+          payload?: Json
+          professional_id?: string
+          read_at?: string | null
+          subject_id?: string | null
+          subject_type?: string
+          title_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_notifications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       professional_other_entries: {
         Row: {
           created_at: string
@@ -13404,6 +18607,7 @@ export type Database = {
           position: number
           price: number
           professional_id: string
+          session_count: number | null
           updated_at: string
         }
         Insert: {
@@ -13416,6 +18620,7 @@ export type Database = {
           position?: number
           price: number
           professional_id: string
+          session_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -13428,6 +18633,7 @@ export type Database = {
           position?: number
           price?: number
           professional_id?: string
+          session_count?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -13485,12 +18691,13 @@ export type Database = {
           certification_url: string | null
           certification_verified: boolean
           closest_group:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate: number | null
           created_at: string
           facebook: string | null
           free_period_ends_at: string
+          handle: string | null
+          handle_changed_at: string | null
           headline: string | null
           home_visit_km: number | null
           id: string
@@ -13512,8 +18719,7 @@ export type Database = {
           updated_at: string
           website: string | null
           work_mode:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x: string | null
         }
         Insert: {
@@ -13525,12 +18731,13 @@ export type Database = {
           certification_url?: string | null
           certification_verified?: boolean
           closest_group?:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
           free_period_ends_at?: string
+          handle?: string | null
+          handle_changed_at?: string | null
           headline?: string | null
           home_visit_km?: number | null
           id?: string
@@ -13552,8 +18759,7 @@ export type Database = {
           updated_at?: string
           website?: string | null
           work_mode?:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x?: string | null
         }
         Update: {
@@ -13565,12 +18771,13 @@ export type Database = {
           certification_url?: string | null
           certification_verified?: boolean
           closest_group?:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
           free_period_ends_at?: string
+          handle?: string | null
+          handle_changed_at?: string | null
           headline?: string | null
           home_visit_km?: number | null
           id?: string
@@ -13592,8 +18799,7 @@ export type Database = {
           updated_at?: string
           website?: string | null
           work_mode?:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x?: string | null
         }
         Relationships: [
@@ -13843,6 +19049,7 @@ export type Database = {
           detail: string | null
           id: string
           reason: Database["public"]["Enums"]["report_reason"]
+          reply_id: string | null
           reported_id: string | null
           reporter_id: string
           resolved_at: string | null
@@ -13856,6 +19063,7 @@ export type Database = {
           detail?: string | null
           id?: string
           reason: Database["public"]["Enums"]["report_reason"]
+          reply_id?: string | null
           reported_id?: string | null
           reporter_id: string
           resolved_at?: string | null
@@ -13869,6 +19077,7 @@ export type Database = {
           detail?: string | null
           id?: string
           reason?: Database["public"]["Enums"]["report_reason"]
+          reply_id?: string | null
           reported_id?: string | null
           reporter_id?: string
           resolved_at?: string | null
@@ -13877,6 +19086,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["report_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "professional_review_reports_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "professional_review_replies"
+            referencedColumns: ["review_id"]
+          },
           {
             foreignKeyName: "professional_review_reports_reported_id_fkey"
             columns: ["reported_id"]
@@ -14113,6 +19329,82 @@ export type Database = {
           },
         ]
       }
+      professional_type_change_requests: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          professional_id: string
+          requested_type: Database["public"]["Enums"]["professional_subtype"]
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          professional_id: string
+          requested_type: Database["public"]["Enums"]["professional_subtype"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          professional_id?: string
+          requested_type?: Database["public"]["Enums"]["professional_subtype"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_type_change_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       professional_volunteering: {
         Row: {
           created_at: string
@@ -14202,8 +19494,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           customer_subtype:
-            | Database["public"]["Enums"]["customer_subtype"]
-            | null
+            Database["public"]["Enums"]["customer_subtype"] | null
           date_of_birth: string | null
           deletion_due_at: string | null
           deletion_notice_days: number | null
@@ -14220,8 +19511,7 @@ export type Database = {
           plant_species: string | null
           preferred_activities: string[]
           professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           sex: Database["public"]["Enums"]["sex"] | null
           shares_presence: boolean
           storage_bytes_used: number
@@ -14231,6 +19521,7 @@ export type Database = {
           tracking_preferences: string[]
           updated_at: string
           weight_kg: number | null
+          win_sharing: Database["public"]["Enums"]["win_sharing_setting"]
           x: string | null
         }
         Insert: {
@@ -14239,8 +19530,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           customer_subtype?:
-            | Database["public"]["Enums"]["customer_subtype"]
-            | null
+            Database["public"]["Enums"]["customer_subtype"] | null
           date_of_birth?: string | null
           deletion_due_at?: string | null
           deletion_notice_days?: number | null
@@ -14257,8 +19547,7 @@ export type Database = {
           plant_species?: string | null
           preferred_activities?: string[]
           professional_subtype?:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           sex?: Database["public"]["Enums"]["sex"] | null
           shares_presence?: boolean
           storage_bytes_used?: number
@@ -14268,6 +19557,7 @@ export type Database = {
           tracking_preferences?: string[]
           updated_at?: string
           weight_kg?: number | null
+          win_sharing?: Database["public"]["Enums"]["win_sharing_setting"]
           x?: string | null
         }
         Update: {
@@ -14276,8 +19566,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           customer_subtype?:
-            | Database["public"]["Enums"]["customer_subtype"]
-            | null
+            Database["public"]["Enums"]["customer_subtype"] | null
           date_of_birth?: string | null
           deletion_due_at?: string | null
           deletion_notice_days?: number | null
@@ -14294,8 +19583,7 @@ export type Database = {
           plant_species?: string | null
           preferred_activities?: string[]
           professional_subtype?:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           sex?: Database["public"]["Enums"]["sex"] | null
           shares_presence?: boolean
           storage_bytes_used?: number
@@ -14305,7 +19593,283 @@ export type Database = {
           tracking_preferences?: string[]
           updated_at?: string
           weight_kg?: number | null
+          win_sharing?: Database["public"]["Enums"]["win_sharing_setting"]
           x?: string | null
+        }
+        Relationships: []
+      }
+      profiles_shared_with_business: {
+        Row: {
+          business_id: string
+          profile_id: string
+          revoked_at: string | null
+          shared_at: string
+        }
+        Insert: {
+          business_id: string
+          profile_id: string
+          revoked_at?: string | null
+          shared_at?: string
+        }
+        Update: {
+          business_id?: string
+          profile_id?: string
+          revoked_at?: string | null
+          shared_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_shared_with_business_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profiles_shared_with_business_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      promotion_redemptions: {
+        Row: {
+          business_id: string
+          id: string
+          payment_id: string
+          person_id: string | null
+          promotion_id: string
+          recorded_by: string | null
+          redeemed_at: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          payment_id: string
+          person_id?: string | null
+          promotion_id: string
+          recorded_by?: string | null
+          redeemed_at?: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          payment_id?: string
+          person_id?: string | null
+          promotion_id?: string
+          recorded_by?: string | null
+          redeemed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_redemptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "business_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          audience: Database["public"]["Enums"]["promo_audience"]
+          business_id: string
+          code: string | null
+          created_at: string
+          ended_at: string | null
+          ends_on: string | null
+          id: string
+          name: string
+          paused_at: string | null
+          show_on_listing: boolean
+          starts_on: string
+          target_id: string | null
+          target_kind: Database["public"]["Enums"]["promo_target"]
+          type: Database["public"]["Enums"]["promo_type"]
+          updated_at: string
+          use_limit: number | null
+          value: number | null
+        }
+        Insert: {
+          audience?: Database["public"]["Enums"]["promo_audience"]
+          business_id: string
+          code?: string | null
+          created_at?: string
+          ended_at?: string | null
+          ends_on?: string | null
+          id?: string
+          name: string
+          paused_at?: string | null
+          show_on_listing?: boolean
+          starts_on: string
+          target_id?: string | null
+          target_kind?: Database["public"]["Enums"]["promo_target"]
+          type: Database["public"]["Enums"]["promo_type"]
+          updated_at?: string
+          use_limit?: number | null
+          value?: number | null
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["promo_audience"]
+          business_id?: string
+          code?: string | null
+          created_at?: string
+          ended_at?: string | null
+          ends_on?: string | null
+          id?: string
+          name?: string
+          paused_at?: string | null
+          show_on_listing?: boolean
+          starts_on?: string
+          target_id?: string | null
+          target_kind?: Database["public"]["Enums"]["promo_target"]
+          type?: Database["public"]["Enums"]["promo_type"]
+          updated_at?: string
+          use_limit?: number | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      public_handles: {
+        Row: {
+          claimed_at: string
+          handle: string
+          owner_id: string
+          owner_kind: string
+        }
+        Insert: {
+          claimed_at?: string
+          handle: string
+          owner_id: string
+          owner_kind: string
+        }
+        Update: {
+          claimed_at?: string
+          handle?: string
+          owner_id?: string
+          owner_kind?: string
         }
         Relationships: []
       }
@@ -14628,6 +20192,81 @@ export type Database = {
           },
         ]
       }
+      recommendation_adds: {
+        Row: {
+          added_at: string
+          client_id: string
+          message_id: string
+        }
+        Insert: {
+          added_at?: string
+          client_id: string
+          message_id: string
+        }
+        Update: {
+          added_at?: string
+          client_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_adds_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recovery_mode_settings: {
         Row: {
           created_at: string
@@ -14888,6 +20527,7 @@ export type Database = {
       }
       reminder_sends: {
         Row: {
+          alert_slot: number
           attempts: number
           body: string
           calendar_event_id: string | null
@@ -14906,6 +20546,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alert_slot?: number
           attempts?: number
           body: string
           calendar_event_id?: string | null
@@ -14924,6 +20565,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alert_slot?: number
           attempts?: number
           body?: string
           calendar_event_id?: string | null
@@ -15000,6 +20642,135 @@ export type Database = {
           },
         ]
       }
+      result_shares: {
+        Row: {
+          blood_marker_id: string | null
+          blood_panel_id: string | null
+          client_id: string
+          id: string
+          note: string | null
+          professional_id: string
+          shared_at: string
+        }
+        Insert: {
+          blood_marker_id?: string | null
+          blood_panel_id?: string | null
+          client_id: string
+          id?: string
+          note?: string | null
+          professional_id: string
+          shared_at?: string
+        }
+        Update: {
+          blood_marker_id?: string | null
+          blood_panel_id?: string | null
+          client_id?: string
+          id?: string
+          note?: string | null
+          professional_id?: string
+          shared_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_shares_blood_marker_id_fkey"
+            columns: ["blood_marker_id"]
+            isOneToOne: false
+            referencedRelation: "blood_markers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_blood_panel_id_fkey"
+            columns: ["blood_panel_id"]
+            isOneToOne: false
+            referencedRelation: "blood_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "result_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "result_shares_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       routine_exercise_blocks: {
         Row: {
           created_at: string
@@ -15052,6 +20823,7 @@ export type Database = {
           cardio_duration_min: number | null
           cardio_incline_pct: number | null
           cardio_pace_min_per_km: number | null
+          coach_note: string | null
           created_at: string
           custom_exercise_id: string | null
           duration_seconds: number | null
@@ -15068,12 +20840,12 @@ export type Database = {
           position: number
           rep_max_kg: number | null
           rep_max_update_mode:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps: number | null
           rest_seconds: number | null
           routine_id: string
           rpe: number | null
+          set_types: Json | null
           sets: number | null
           tempo: string | null
           weight_kg: number | null
@@ -15085,6 +20857,7 @@ export type Database = {
           cardio_duration_min?: number | null
           cardio_incline_pct?: number | null
           cardio_pace_min_per_km?: number | null
+          coach_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
@@ -15101,12 +20874,12 @@ export type Database = {
           position: number
           rep_max_kg?: number | null
           rep_max_update_mode?:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps?: number | null
           rest_seconds?: number | null
           routine_id: string
           rpe?: number | null
+          set_types?: Json | null
           sets?: number | null
           tempo?: string | null
           weight_kg?: number | null
@@ -15118,6 +20891,7 @@ export type Database = {
           cardio_duration_min?: number | null
           cardio_incline_pct?: number | null
           cardio_pace_min_per_km?: number | null
+          coach_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
@@ -15134,12 +20908,12 @@ export type Database = {
           position?: number
           rep_max_kg?: number | null
           rep_max_update_mode?:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps?: number | null
           rest_seconds?: number | null
           routine_id?: string
           rpe?: number | null
+          set_types?: Json | null
           sets?: number | null
           tempo?: string | null
           weight_kg?: number | null
@@ -15405,6 +21179,487 @@ export type Database = {
           },
         ]
       }
+      session_notes: {
+        Row: {
+          body: string
+          client_id: string
+          created_at: string
+          event_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["session_note_kind"]
+          professional_id: string
+          shared_with_client: boolean
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["session_note_kind"]
+          professional_id: string
+          shared_with_client?: boolean
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["session_note_kind"]
+          professional_id?: string
+          shared_with_client?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "session_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "session_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      share_item_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          shared_item_id: string
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shared_item_id: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shared_item_id?: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "share_item_reports_shared_item_id_fkey"
+            columns: ["shared_item_id"]
+            isOneToOne: false
+            referencedRelation: "shared_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_requests: {
+        Row: {
+          card: Json
+          client_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          photos_allowed: boolean
+          professional_id: string
+          status: string
+          visibility: string
+          win_id: string
+          win_kind: string
+        }
+        Insert: {
+          card?: Json
+          client_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          photos_allowed?: boolean
+          professional_id: string
+          status?: string
+          visibility?: string
+          win_id: string
+          win_kind: string
+        }
+        Update: {
+          card?: Json
+          client_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          photos_allowed?: boolean
+          professional_id?: string
+          status?: string
+          visibility?: string
+          win_id?: string
+          win_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "share_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "share_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      shared_items: {
+        Row: {
+          card: Json
+          client_id: string | null
+          created_at: string
+          format: string
+          id: string
+          image_path: string | null
+          kind: string
+          professional_id: string
+          removal_requested_at: string | null
+          removed_at: string | null
+          removed_by: string | null
+          share_request_id: string | null
+        }
+        Insert: {
+          card?: Json
+          client_id?: string | null
+          created_at?: string
+          format: string
+          id?: string
+          image_path?: string | null
+          kind: string
+          professional_id: string
+          removal_requested_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          share_request_id?: string | null
+        }
+        Update: {
+          card?: Json
+          client_id?: string | null
+          created_at?: string
+          format?: string
+          id?: string
+          image_path?: string | null
+          kind?: string
+          professional_id?: string
+          removal_requested_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          share_request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "shared_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "shared_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "shared_items_share_request_id_fkey"
+            columns: ["share_request_id"]
+            isOneToOne: false
+            referencedRelation: "share_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sleep_details: {
         Row: {
           asleep_min: number | null
@@ -15561,134 +21816,322 @@ export type Database = {
         }
         Relationships: []
       }
-      store_items: {
+      store_order_counters: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          price: number
-          store_listing_id: string
-          updated_at: string
+          business_id: string
+          last_number: number
         }
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          price: number
-          store_listing_id: string
-          updated_at?: string
+          business_id: string
+          last_number?: number
         }
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          price?: number
-          store_listing_id?: string
-          updated_at?: string
+          business_id?: string
+          last_number?: number
         }
         Relationships: [
           {
-            foreignKeyName: "store_items_store_listing_id_fkey"
-            columns: ["store_listing_id"]
+            foreignKeyName: "store_order_counters_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_order_counters_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      store_order_items: {
+        Row: {
+          id: string
+          line_total: number
+          name: string
+          offering_id: string | null
+          order_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          line_total: number
+          name: string
+          offering_id?: string | null
+          order_id: string
+          quantity: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          line_total?: number
+          name?: string
+          offering_id?: string | null
+          order_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_order_items_offering_id_fkey"
+            columns: ["offering_id"]
             isOneToOne: false
-            referencedRelation: "store_listings"
+            referencedRelation: "business_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
             referencedColumns: ["id"]
           },
         ]
       }
-      store_listings: {
+      store_orders: {
         Row: {
-          business_id: string | null
-          created_at: string
+          business_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          currency: string
+          customer_id: string | null
+          delivery_address: string | null
+          delivery_address_cleared_at: string | null
+          delivery_fee: number
+          fulfilment: Database["public"]["Enums"]["order_fulfilment"]
           id: string
-          location: string | null
-          name: string
-          offer: string | null
-          owner_type: Database["public"]["Enums"]["store_owner_type"]
-          professional_id: string | null
+          marked_paid_by: string | null
+          note: string | null
+          order_number: number
+          packed_at: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          placed_at: string
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total: number
           updated_at: string
         }
         Insert: {
-          business_id?: string | null
-          created_at?: string
+          business_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          currency?: string
+          customer_id?: string | null
+          delivery_address?: string | null
+          delivery_address_cleared_at?: string | null
+          delivery_fee?: number
+          fulfilment: Database["public"]["Enums"]["order_fulfilment"]
           id?: string
-          location?: string | null
-          name: string
-          offer?: string | null
-          owner_type: Database["public"]["Enums"]["store_owner_type"]
-          professional_id?: string | null
+          marked_paid_by?: string | null
+          note?: string | null
+          order_number: number
+          packed_at?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          placed_at?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total: number
           updated_at?: string
         }
         Update: {
-          business_id?: string | null
-          created_at?: string
+          business_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          currency?: string
+          customer_id?: string | null
+          delivery_address?: string | null
+          delivery_address_cleared_at?: string | null
+          delivery_fee?: number
+          fulfilment?: Database["public"]["Enums"]["order_fulfilment"]
           id?: string
-          location?: string | null
-          name?: string
-          offer?: string | null
-          owner_type?: Database["public"]["Enums"]["store_owner_type"]
-          professional_id?: string | null
+          marked_paid_by?: string | null
+          note?: string | null
+          order_number?: number
+          packed_at?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status?: Database["public"]["Enums"]["venue_payment_status"]
+          placed_at?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal?: number
+          total?: number
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "store_listings_business_id_fkey"
+            foreignKeyName: "store_orders_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "store_listings_business_id_fkey"
+            foreignKeyName: "store_orders_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "my_class_schedule"
             referencedColumns: ["business_id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "connected_professional_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "store_listings_professional_id_fkey"
-            columns: ["professional_id"]
+            foreignKeyName: "store_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      store_returns: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          items: Json
+          kind: Database["public"]["Enums"]["return_kind"]
+          order_id: string
+          reason: string
+          refund_amount: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["return_status"]
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          items: Json
+          kind: Database["public"]["Enums"]["return_kind"]
+          order_id: string
+          reason: string
+          refund_amount?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["return_status"]
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          items?: Json
+          kind?: Database["public"]["Enums"]["return_kind"]
+          order_id?: string
+          reason?: string
+          refund_amount?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["return_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_returns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_returns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "store_returns_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "store_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -17019,9 +23462,11 @@ export type Database = {
           id: string
           kcal: number | null
           notes: string | null
+          results_sent_at: string | null
           routine_id: string | null
           routine_name: string
           started_at: string
+          swaps: Json | null
           total_volume_kg: number | null
           user_id: string
         }
@@ -17033,9 +23478,11 @@ export type Database = {
           id?: string
           kcal?: number | null
           notes?: string | null
+          results_sent_at?: string | null
           routine_id?: string | null
           routine_name: string
           started_at?: string
+          swaps?: Json | null
           total_volume_kg?: number | null
           user_id: string
         }
@@ -17047,9 +23494,11 @@ export type Database = {
           id?: string
           kcal?: number | null
           notes?: string | null
+          results_sent_at?: string | null
           routine_id?: string | null
           routine_name?: string
           started_at?: string
+          swaps?: Json | null
           total_volume_kg?: number | null
           user_id?: string
         }
@@ -17111,8 +23560,12 @@ export type Database = {
           assigned_day: string | null
           client_id: string
           created_at: string
+          ended_at: string | null
+          ends_on: string | null
           id: string
+          join_week: number
           routine_id: string | null
+          starts_on: string | null
           workout_template_id: string
         }
         Insert: {
@@ -17120,8 +23573,12 @@ export type Database = {
           assigned_day?: string | null
           client_id: string
           created_at?: string
+          ended_at?: string | null
+          ends_on?: string | null
           id?: string
+          join_week?: number
           routine_id?: string | null
+          starts_on?: string | null
           workout_template_id: string
         }
         Update: {
@@ -17129,8 +23586,12 @@ export type Database = {
           assigned_day?: string | null
           client_id?: string
           created_at?: string
+          ended_at?: string | null
+          ends_on?: string | null
           id?: string
+          join_week?: number
           routine_id?: string | null
+          starts_on?: string | null
           workout_template_id?: string
         }
         Relationships: [
@@ -17244,6 +23705,7 @@ export type Database = {
           cardio_duration_min: number | null
           cardio_incline_pct: number | null
           cardio_pace_min_per_km: number | null
+          coach_note: string | null
           created_at: string
           custom_exercise_id: string | null
           duration_seconds: number | null
@@ -17259,11 +23721,11 @@ export type Database = {
           position: number
           rep_max_kg: number | null
           rep_max_update_mode:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps: number | null
           rest_seconds: number | null
           rpe: number | null
+          set_types: Json | null
           sets: number | null
           tempo: string | null
           weight_kg: number | null
@@ -17276,6 +23738,7 @@ export type Database = {
           cardio_duration_min?: number | null
           cardio_incline_pct?: number | null
           cardio_pace_min_per_km?: number | null
+          coach_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
@@ -17291,11 +23754,11 @@ export type Database = {
           position: number
           rep_max_kg?: number | null
           rep_max_update_mode?:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps?: number | null
           rest_seconds?: number | null
           rpe?: number | null
+          set_types?: Json | null
           sets?: number | null
           tempo?: string | null
           weight_kg?: number | null
@@ -17308,6 +23771,7 @@ export type Database = {
           cardio_duration_min?: number | null
           cardio_incline_pct?: number | null
           cardio_pace_min_per_km?: number | null
+          coach_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
@@ -17323,11 +23787,11 @@ export type Database = {
           position?: number
           rep_max_kg?: number | null
           rep_max_update_mode?:
-            | Database["public"]["Enums"]["rep_max_update_mode"]
-            | null
+            Database["public"]["Enums"]["rep_max_update_mode"] | null
           reps?: number | null
           rest_seconds?: number | null
           rpe?: number | null
+          set_types?: Json | null
           sets?: number | null
           tempo?: string | null
           weight_kg?: number | null
@@ -17451,6 +23915,7 @@ export type Database = {
           created_at: string
           description: string | null
           duration_min: number | null
+          duration_weeks: number | null
           folder_id: string | null
           id: string
           is_public: boolean
@@ -17466,6 +23931,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_min?: number | null
+          duration_weeks?: number | null
           folder_id?: string | null
           id?: string
           is_public?: boolean
@@ -17481,6 +23947,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_min?: number | null
+          duration_weeks?: number | null
           folder_id?: string | null
           id?: string
           is_public?: boolean
@@ -17787,10 +24254,10 @@ export type Database = {
           has_verified_licence: boolean | null
           headline: string | null
           id: string | null
+          licence_verified: boolean | null
           location: string | null
           professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           skills: string[] | null
           specialty: string | null
         }
@@ -18040,22 +24507,38 @@ export type Database = {
       }
       marketplace_classes: {
         Row: {
+          about: string | null
           booked_count: number | null
           business_id: string | null
           business_name: string | null
+          centium_spots_left: number | null
           class_id: string | null
           class_type: string | null
+          cover_url: string | null
           end_time: string | null
           event_date: string | null
+          gym_id: string | null
+          instructor_avatar_url: string | null
+          instructor_id: string | null
+          instructor_name: string | null
+          is_featured: boolean | null
           is_full: boolean | null
+          level: Database["public"]["Enums"]["class_level"] | null
           location: string | null
           max_capacity: number | null
           notes: string | null
           payment_type: string | null
           price: number | null
+          series_id: string | null
           spots_remaining: number | null
           start_time: string | null
+          starts_at: string | null
           title: string | null
+          venue_address: string | null
+          venue_lat: number | null
+          venue_lng: number | null
+          venue_name: string | null
+          what_to_bring: string[] | null
         }
         Relationships: [
           {
@@ -18072,13 +24555,30 @@ export type Database = {
             referencedRelation: "my_class_schedule"
             referencedColumns: ["business_id"]
           },
+          {
+            foreignKeyName: "business_classes_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "class_series"
+            referencedColumns: ["id"]
+          },
         ]
       }
       marketplace_venues: {
         Row: {
+          amenities: string[] | null
           bio: string | null
           can_host_classes: boolean | null
           created_at: string | null
+          first_visit: string | null
+          is_featured: boolean | null
           kind: string | null
           lat: number | null
           lng: number | null
@@ -18120,8 +24620,7 @@ export type Database = {
         Insert: {
           attachment_bytes?: number | null
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_mime?: string | null
           attachment_name?: string | null
           attachment_purged_at?: string | null
@@ -18147,8 +24646,7 @@ export type Database = {
         Update: {
           attachment_bytes?: number | null
           attachment_kind?:
-            | Database["public"]["Enums"]["attachment_kind"]
-            | null
+            Database["public"]["Enums"]["attachment_kind"] | null
           attachment_mime?: string | null
           attachment_name?: string | null
           attachment_purged_at?: string | null
@@ -18672,11 +25170,9 @@ export type Database = {
           location: string | null
           monthly_rate: number | null
           payment_modalities:
-            | Database["public"]["Enums"]["payment_modality"][]
-            | null
+            Database["public"]["Enums"]["payment_modality"][] | null
           professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           profile_id: string | null
           review_count: number | null
           skills: string[] | null
@@ -18895,8 +25391,7 @@ export type Database = {
           position: number | null
           professional_id: string | null
           proficiency:
-            | Database["public"]["Enums"]["language_proficiency"]
-            | null
+            Database["public"]["Enums"]["language_proficiency"] | null
         }
         Insert: {
           id?: string | null
@@ -18904,8 +25399,7 @@ export type Database = {
           position?: number | null
           professional_id?: string | null
           proficiency?:
-            | Database["public"]["Enums"]["language_proficiency"]
-            | null
+            Database["public"]["Enums"]["language_proficiency"] | null
         }
         Update: {
           id?: string | null
@@ -18913,8 +25407,7 @@ export type Database = {
           position?: number | null
           professional_id?: string | null
           proficiency?:
-            | Database["public"]["Enums"]["language_proficiency"]
-            | null
+            Database["public"]["Enums"]["language_proficiency"] | null
         }
         Relationships: [
           {
@@ -19330,6 +25823,38 @@ export type Database = {
       }
     }
     Functions: {
+      accept_booking_request: {
+        Args: { p_appointment_id: string }
+        Returns: {
+          business_id: string | null
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_business: boolean | null
+          client_id: string | null
+          created_at: string
+          ends_at: string
+          gym_id: string | null
+          id: string
+          marked_paid_by: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id: string | null
+          service_name: string
+          staff_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_business_employment: {
         Args: { p_business_id: string }
         Returns: string
@@ -19346,10 +25871,14 @@ export type Database = {
           disconnected_at: string | null
           id: string
           joined_at: string
+          joined_via_code_id: string | null
+          nutrition_coaching: boolean
           prefix: string | null
           professional_id: string
           pronouns: string | null
           reminder_preference: string | null
+          stage: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at: string
         }
         SetofOptions: {
           from: "*"
@@ -19358,9 +25887,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      accept_coaching_terms: {
+        Args: { p_professional: string }
+        Returns: {
+          accepted_at: string
+          client_id: string
+          id: string
+          professional_id: string
+          terms_hash: string
+          terms_version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coaching_terms_acceptances"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_group_invitation: {
         Args: { p_thread_id: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -19428,6 +25975,7 @@ export type Database = {
         }
         Returns: string
       }
+      add_recommendation: { Args: { p_message_id: string }; Returns: string }
       add_to_broadcast_list: {
         Args: { p_list_id: string; p_user_ids: string[] }
         Returns: number
@@ -19457,10 +26005,6 @@ export type Database = {
         Args: { p_reason: string; p_revision_id: string }
         Returns: undefined
       }
-      admin_approve_certification: {
-        Args: { p_note?: string; p_professional_id: string }
-        Returns: Json
-      }
       admin_approve_licence: {
         Args: { p_licence_id: string; p_note?: string }
         Returns: Json
@@ -19480,6 +26024,29 @@ export type Database = {
           user_agent: string
         }[]
       }
+      admin_business_verifications: {
+        Args: {
+          p_business_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+        }
+        Returns: {
+          business_id: string
+          business_name: string
+          file_paths: string[]
+          items: Json
+          previous_name: string
+          reason: string
+          reviewed_at: string
+          reviewed_by: string
+          reviewer_name: string
+          status: Database["public"]["Enums"]["verification_status"]
+          submitted_at: string
+          total_count: number
+          verification_id: string
+        }[]
+      }
       admin_cancel_deletion: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
@@ -19488,6 +26055,53 @@ export type Database = {
         Args: { reason?: string; request_id: string }
         Returns: string
       }
+      admin_care_network_disputes: {
+        Args: never
+        Returns: {
+          client_answered_at: string
+          created_at: string
+          dispute_reason: string
+          disputed_at: string
+          disputed_by: string
+          from_name: string
+          from_professional: string
+          referral_id: string
+          resolved_at: string
+          responded_at: string
+          status: Database["public"]["Enums"]["care_referral_status"]
+          status_before_dispute: Database["public"]["Enums"]["care_referral_status"]
+          to_name: string
+          to_professional: string
+        }[]
+      }
+      admin_centium_charges: {
+        Args: {
+          p_business_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+        }
+        Returns: {
+          amount: number
+          business_id: string
+          business_name: string
+          charge_id: string
+          created_at: string
+          currency: string
+          is_renewal: boolean
+          method: Database["public"]["Enums"]["centium_charge_method"]
+          owner_email: string
+          paid_at: string
+          period_end: string
+          period_start: string
+          product: Database["public"]["Enums"]["centium_product"]
+          provider_reference: string
+          quantity: number
+          status: Database["public"]["Enums"]["centium_charge_status"]
+          status_reason: string
+          total_count: number
+        }[]
+      }
       admin_clear_subscription_tier: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
@@ -19495,6 +26109,7 @@ export type Database = {
       admin_close_group: {
         Args: { p_reason: string; p_thread_id: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -19666,12 +26281,13 @@ export type Database = {
           certification_url: string | null
           certification_verified: boolean
           closest_group:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate: number | null
           created_at: string
           facebook: string | null
           free_period_ends_at: string
+          handle: string | null
+          handle_changed_at: string | null
           headline: string | null
           home_visit_km: number | null
           id: string
@@ -19693,8 +26309,7 @@ export type Database = {
           updated_at: string
           website: string | null
           work_mode:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x: string | null
         }
         SetofOptions: {
@@ -19805,16 +26420,37 @@ export type Database = {
         Args: { p_locked: boolean; p_reason: string; p_thread_id: string }
         Returns: undefined
       }
-      admin_log_certification_view: {
-        Args: { p_path: string; p_professional_id: string; p_reason: string }
-        Returns: undefined
-      }
       admin_log_licence_view: {
         Args: { p_licence_id: string; p_reason: string }
         Returns: {
           document_path: string
           professional_id: string
         }[]
+      }
+      admin_log_share_image_view: {
+        Args: { p_item_id: string; p_reason: string }
+        Returns: string
+      }
+      admin_map_other_professional: {
+        Args: {
+          p_reason: string
+          p_type: Database["public"]["Enums"]["professional_subtype"]
+          p_user: string
+        }
+        Returns: {
+          new_type: Database["public"]["Enums"]["professional_subtype"]
+          old_type: Database["public"]["Enums"]["professional_subtype"]
+          subtype: string
+        }[]
+      }
+      admin_mark_centium_charge_paid: {
+        Args: {
+          p_charge_id: string
+          p_method: Database["public"]["Enums"]["centium_charge_method"]
+          p_note?: string
+          p_reference?: string
+        }
+        Returns: undefined
       }
       admin_message_history: {
         Args: { p_message_id: string; p_reason: string }
@@ -19857,6 +26493,14 @@ export type Database = {
           thread_name: string
         }[]
       }
+      admin_moderate_profile_handle: {
+        Args: { p_new_handle: string; p_reason: string; p_user: string }
+        Returns: string
+      }
+      admin_moderate_share_item: {
+        Args: { p_action: string; p_item_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_my_display_name: {
         Args: never
         Returns: {
@@ -19880,6 +26524,17 @@ export type Database = {
           severity: string
           source: string
           total_count: number
+        }[]
+      }
+      admin_other_professionals: {
+        Args: never
+        Returns: {
+          closest_group: Database["public"]["Enums"]["professional_group"]
+          credential_verified: boolean
+          first_name: string
+          other_discipline: string
+          profile_id: string
+          signed_up_at: string
         }[]
       }
       admin_overview_breakdowns: {
@@ -19970,6 +26625,8 @@ export type Database = {
           items: Json
           owner_email: string
           owner_first_name: string
+          previous_name: string
+          reason: string
           status: Database["public"]["Enums"]["verification_status"]
           submitted_at: string
           total_count: number
@@ -19995,8 +26652,23 @@ export type Database = {
           professional_email: string
           professional_id: string
           professional_name: string
+          professional_subtype: Database["public"]["Enums"]["professional_subtype"]
           review_id: string
           submitted_at: string
+        }[]
+      }
+      admin_photo_queue: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          business_id: string
+          business_name: string
+          caption: string
+          gym_id: string
+          path: string
+          photo_id: string
+          submitted_at: string
+          total_count: number
+          waiting_days: number
         }[]
       }
       admin_pin_forum_thread: {
@@ -20057,6 +26729,7 @@ export type Database = {
           created_at: string
           detail: string
           reason: Database["public"]["Enums"]["report_reason"]
+          reply_id: string
           report_id: string
           reporter_id: string
           resolved_at: string
@@ -20121,11 +26794,16 @@ export type Database = {
           voice_note_seconds: number
         }[]
       }
+      admin_reason: { Args: { p_reason: string }; Returns: string }
       admin_record_backup: {
         Args: { p_note?: string; p_occurred_at?: string; p_succeeded?: boolean }
         Returns: string
       }
       admin_redact_gym_review: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: undefined
+      }
+      admin_redact_gym_review_reply: {
         Args: { p_reason: string; p_review_id: string }
         Returns: undefined
       }
@@ -20145,10 +26823,6 @@ export type Database = {
       admin_redact_review_reply: {
         Args: { p_reason: string; p_review_id: string }
         Returns: undefined
-      }
-      admin_reject_certification: {
-        Args: { p_professional_id: string; p_reason: string }
-        Returns: Json
       }
       admin_reject_licence: {
         Args: { p_licence_id: string; p_reason: string }
@@ -20236,6 +26910,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_resolve_review_report: {
+        Args: { p_reason: string; p_report_id: string; p_uphold: boolean }
+        Returns: undefined
+      }
+      admin_resolve_type_change_request: {
+        Args: { p_approve: boolean; p_reason: string; p_request_id: string }
+        Returns: undefined
+      }
       admin_restore_professional_review: {
         Args: { p_reason: string; p_review_id: string }
         Returns: Json
@@ -20247,6 +26929,32 @@ export type Database = {
       admin_review_business_verification: {
         Args: { p_approve: boolean; p_items?: Json; p_verification_id: string }
         Returns: Database["public"]["Enums"]["verification_status"]
+      }
+      admin_review_care_network_dispute: {
+        Args: { p_decision: string; p_reason: string; p_referral_id: string }
+        Returns: undefined
+      }
+      admin_review_photo: {
+        Args: { p_approve: boolean; p_photo_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      admin_review_reports: {
+        Args: { p_limit?: number; p_offset?: number; p_status?: string }
+        Returns: {
+          body: string
+          business_id: string
+          business_name: string
+          by_business: boolean
+          created_at: string
+          note: string
+          rating: number
+          reason: Database["public"]["Enums"]["review_report_reason"]
+          report_id: string
+          reports_on_review: number
+          review_id: string
+          status: Database["public"]["Enums"]["review_report_status"]
+          total_count: number
+        }[]
       }
       admin_revoke_ambassador_status: {
         Args: { p_profile_id: string; p_reason: string }
@@ -20270,6 +26978,10 @@ export type Database = {
       }
       admin_set_bug_report_status: {
         Args: { p_note?: string; p_report_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_set_centium_charge_status: {
+        Args: { p_charge_id: string; p_reason: string; p_status: string }
         Returns: undefined
       }
       admin_set_contact_status: {
@@ -20302,6 +27014,17 @@ export type Database = {
         Args: { p_open: boolean; p_reason: string }
         Returns: undefined
       }
+      admin_set_professional_type: {
+        Args: {
+          p_reason: string
+          p_type: Database["public"]["Enums"]["professional_subtype"]
+          p_user: string
+        }
+        Returns: {
+          new_type: Database["public"]["Enums"]["professional_subtype"]
+          old_type: Database["public"]["Enums"]["professional_subtype"]
+        }[]
+      }
       admin_set_subscription_tier: {
         Args: {
           force?: boolean
@@ -20311,6 +27034,22 @@ export type Database = {
           tier_id: string
         }
         Returns: string
+      }
+      admin_share_reports: {
+        Args: never
+        Returns: {
+          client_visibility: string
+          created_at: string
+          format: string
+          has_image: boolean
+          kind: string
+          open_reports: number
+          professional_id: string
+          professional_name: string
+          removal_requested_at: string
+          removed_at: string
+          shared_item_id: string
+        }[]
       }
       admin_start_support_thread: {
         Args: { reason: string; target_user_id: string }
@@ -20341,6 +27080,19 @@ export type Database = {
         Args: { p_days: number; p_reason: string; p_user_id: string }
         Returns: string
       }
+      admin_type_change_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          current_type: Database["public"]["Enums"]["professional_subtype"]
+          first_name: string
+          note: string
+          professional_id: string
+          request_id: string
+          requested_type: Database["public"]["Enums"]["professional_subtype"]
+          status: string
+        }[]
+      }
       admin_unpublish_course: {
         Args: { p_course_id: string; p_reason: string }
         Returns: undefined
@@ -20360,6 +27112,7 @@ export type Database = {
           call_count: number
           certification_path: string
           certification_status: string
+          client_stage_counts: Json
           customer_subtype: Database["public"]["Enums"]["customer_subtype"]
           date_of_birth: string
           deletion_due_at: string
@@ -20370,12 +27123,14 @@ export type Database = {
           first_name: string
           free_period_ended: boolean
           free_period_ends_at: string
+          handle: string
           id: string
           last_active_at: string
           licence_status: string
           message_count: number
           onboarded: boolean
           premium_plan: Database["public"]["Enums"]["premium_plan"]
+          professional_lane: string
           professional_subtype: Database["public"]["Enums"]["professional_subtype"]
           seat_blocks: number
           seats_used: number
@@ -20417,14 +27172,116 @@ export type Database = {
         }
       }
       advance_auto_streaks: { Args: never; Returns: number }
+      advance_featured_placements: { Args: never; Returns: number }
+      advance_order_status: {
+        Args: {
+          p_order_id: string
+          p_status: Database["public"]["Enums"]["order_status"]
+        }
+        Returns: undefined
+      }
+      allergen_keyword_match: {
+        Args: {
+          p_allergen: Database["public"]["Enums"]["allergen"]
+          p_text: string
+        }
+        Returns: boolean
+      }
       am_i_blocked_with: { Args: { p_other: string }; Returns: boolean }
+      amenity_vocabulary: { Args: never; Returns: string[] }
+      answer_access_request: {
+        Args: { p_grant: boolean; p_request_id: string }
+        Returns: {
+          answered_at: string | null
+          category: Database["public"]["Enums"]["access_category"]
+          client_id: string
+          created_at: string
+          id: string
+          message: string | null
+          professional_id: string
+          status: Database["public"]["Enums"]["access_request_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "access_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      answer_care_referral: {
+        Args: { p_agree: boolean; p_referral_id: string }
+        Returns: undefined
+      }
       answer_course_question: {
         Args: { p_answer: string; p_question_id: string }
         Returns: undefined
       }
+      answer_share_request: {
+        Args: { p_answer: string; p_request_id: string }
+        Returns: {
+          card: Json
+          client_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          photos_allowed: boolean
+          professional_id: string
+          status: string
+          visibility: string
+          win_id: string
+          win_kind: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "share_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      appointment_slots: {
+        Args: { p_day: string; p_service_id: string; p_staff_id?: string }
+        Returns: {
+          ends_at: string
+          staff_id: string
+          staff_name: string
+          starts_at: string
+        }[]
+      }
       ask_course_question: {
         Args: { p_body: string; p_course_id: string; p_lesson_id?: string }
         Returns: string
+      }
+      ask_to_share_win: {
+        Args: {
+          p_card?: Json
+          p_client_id: string
+          p_photos_allowed?: boolean
+          p_visibility?: string
+          p_win_id: string
+        }
+        Returns: {
+          card: Json
+          client_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          photos_allowed: boolean
+          professional_id: string
+          status: string
+          visibility: string
+          win_id: string
+          win_kind: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "share_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      assert_admin_readers_hold_no_health_data: {
+        Args: never
+        Returns: undefined
       }
       assert_barcode_lookup_allowed: { Args: never; Returns: undefined }
       assert_broadcast_list_owner: {
@@ -20435,6 +27292,17 @@ export type Database = {
         Args: never
         Returns: string
       }
+      assert_business_outcome_gate_ignores_professional_grants: {
+        Args: never
+        Returns: undefined
+      }
+      assert_business_readers_mask_names: { Args: never; Returns: undefined }
+      assert_business_threads_are_masked: { Args: never; Returns: undefined }
+      assert_class_price_is_total: { Args: never; Returns: undefined }
+      assert_console_readers_consult_permissions: {
+        Args: never
+        Returns: undefined
+      }
       assert_default_privileges_are_narrow: { Args: never; Returns: undefined }
       assert_employment_readers_check_acceptance: {
         Args: never
@@ -20444,20 +27312,87 @@ export type Database = {
         Args: { p_thread_id: string; p_user: string }
         Returns: undefined
       }
+      assert_has_client_access_unchanged: { Args: never; Returns: undefined }
       assert_health_reset_coverage: { Args: never; Returns: undefined }
       assert_may_start_conversation: {
         Args: { p_other: string; p_starter: string }
         Returns: undefined
       }
       assert_message_columns_readable: { Args: never; Returns: undefined }
+      assert_name_and_health_consent_are_separate: {
+        Args: never
+        Returns: undefined
+      }
+      assert_no_card_data_anywhere: { Args: never; Returns: undefined }
+      assert_no_definer_gates_on_current_user: {
+        Args: never
+        Returns: undefined
+      }
       assert_no_unqualified_updates: { Args: never; Returns: undefined }
+      assert_notification_kinds_storable: { Args: never; Returns: undefined }
+      assert_one_pass_state_vocabulary: { Args: never; Returns: undefined }
+      assert_pair_lookups_exclude_business_threads: {
+        Args: never
+        Returns: undefined
+      }
+      assert_pass_states_classified: { Args: never; Returns: undefined }
+      assert_payment_sources_covered: { Args: never; Returns: undefined }
+      assert_people_sources_wired_when_they_exist: {
+        Args: never
+        Returns: undefined
+      }
+      assert_person_number_sources_covered: { Args: never; Returns: undefined }
+      assert_share_card_guards_present: { Args: never; Returns: undefined }
+      assert_sharing_policies_follow_shares: { Args: never; Returns: undefined }
       assert_subscription_price_list: { Args: never; Returns: undefined }
+      assert_thread_openers_are_gated: { Args: never; Returns: undefined }
+      assert_whish_stays_off_until_it_exists: {
+        Args: never
+        Returns: undefined
+      }
       assert_workout_copy_complete: { Args: never; Returns: undefined }
+      assign_class_instructor: {
+        Args: {
+          p_class_id: string
+          p_professional_id: string
+          p_tell_members?: boolean
+        }
+        Returns: number
+      }
+      assign_form: {
+        Args: {
+          p_client_id: string
+          p_due_at?: string
+          p_form_id: string
+          p_schedule?: string
+        }
+        Returns: string
+      }
+      assign_habit: {
+        Args: {
+          p_client_id: string
+          p_colour?: Database["public"]["Enums"]["habit_colour"]
+          p_icon: Database["public"]["Enums"]["habit_icon"]
+          p_label: string
+        }
+        Returns: string
+      }
+      assign_meal_plan: {
+        Args: {
+          p_client_id: string
+          p_ends_on?: string
+          p_starts_on?: string
+          p_template_id: string
+        }
+        Returns: string
+      }
       assign_template_to_client: {
         Args: {
           p_assigned_day?: string
           p_client_id: string
           p_confirm_overwrite?: boolean
+          p_join_week?: number
+          p_starts_on?: string
           p_template_id: string
         }
         Returns: {
@@ -20498,11 +27433,38 @@ export type Database = {
         Args: { p_reply_id?: string; p_thread_id?: string }
         Returns: undefined
       }
+      book_appointment: {
+        Args: {
+          p_method?: Database["public"]["Enums"]["venue_payment_method"]
+          p_service_id: string
+          p_staff_id: string
+          p_starts_at: string
+        }
+        Returns: string
+      }
+      book_appointment_for: {
+        Args: {
+          p_business_id: string
+          p_method?: Database["public"]["Enums"]["venue_payment_method"]
+          p_person_id: string
+          p_service_id: string
+          p_staff_id: string
+          p_starts_at: string
+        }
+        Returns: {
+          appointment_id: string
+          waiver_pending: boolean
+        }[]
+      }
       book_class: {
         Args: {
           p_class_id: string
           p_method?: Database["public"]["Enums"]["venue_payment_method"]
         }
+        Returns: string
+      }
+      booking_make_event: {
+        Args: { p_appointment_id: string }
         Returns: string
       }
       broadcast_attachment_paths: {
@@ -20527,13 +27489,92 @@ export type Database = {
         Args: { p_name: string }
         Returns: boolean
       }
+      business_appointments: {
+        Args: {
+          p_business_id: string
+          p_from?: string
+          p_staff_id?: string
+          p_to?: string
+        }
+        Returns: {
+          appointment_id: string
+          client_id: string
+          client_is_minor: boolean
+          client_label: string
+          ends_at: string
+          gym_id: string
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_name: string
+          staff_first_name: string
+          staff_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+        }[]
+      }
+      business_attention: {
+        Args: { p_business_id: string }
+        Returns: {
+          count: number
+          item: string
+          severity: string
+        }[]
+      }
       business_can: {
         Args: { p_business_id: string; p_permission: string }
         Returns: boolean
       }
+      business_client_outcomes: {
+        Args: { p_business_id: string }
+        Returns: {
+          attendance_bookings_per_week: number
+          average_daily_steps: number
+          average_resting_bpm: number
+          average_workouts_per_week: number
+          enough_to_show: boolean
+          sharing: number
+        }[]
+      }
+      business_client_share_count: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
+      business_day: {
+        Args: { p_business_id: string; p_date?: string }
+        Returns: {
+          booked: number
+          cancelled: boolean
+          capacity: number
+          client_is_minor: boolean
+          client_label: string
+          ends_at: string
+          kind: string
+          ref_id: string
+          staff_first_name: string
+          starts_at: string
+          title: string
+        }[]
+      }
       business_employs_professional: {
         Args: { p_business_id: string; p_professional_id: string }
         Returns: boolean
+      }
+      business_first_90_days: {
+        Args: { p_business_id: string }
+        Returns: {
+          average_visits: number
+          booked_a_class: number
+          joined: number
+          still_active: number
+        }[]
+      }
+      business_glance: {
+        Args: { p_business_id: string; p_date?: string }
+        Returns: {
+          early: boolean
+          metric: string
+          value: number
+        }[]
       }
       business_invite_member: {
         Args: {
@@ -20561,13 +27602,237 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      business_invites_funnel: {
+        Args: { p_business_id: string; p_days?: number }
+        Returns: {
+          became_members: number
+          codes_expired_unused: number
+          codes_issued: number
+          codes_redeemed: number
+        }[]
+      }
       business_is_listed: { Args: { p_business_id: string }; Returns: boolean }
+      business_may_see_client_outcomes: {
+        Args: { p_business_id: string; p_client_id: string }
+        Returns: boolean
+      }
+      business_member_growth: {
+        Args: { p_business_id: string; p_weeks?: number }
+        Returns: {
+          ended: number
+          joined: number
+          members_at_end: number
+          net: number
+          week_start: string
+        }[]
+      }
+      business_member_spans: {
+        Args: { p_business_id: string }
+        Returns: {
+          ended: string
+          person: string
+          started: string
+        }[]
+      }
+      business_member_threads: {
+        Args: { p_business_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          is_minor: boolean
+          label: string
+          last_message_at: string
+          member_number: number
+          message_count: number
+          person_id: string
+          thread_id: string
+          total_count: number
+        }[]
+      }
+      business_payment_for: {
+        Args: {
+          p_source_id: string
+          p_source_kind: Database["public"]["Enums"]["payment_source_kind"]
+        }
+        Returns: string
+      }
+      business_payment_status_for: {
+        Args: { p_source: Database["public"]["Enums"]["venue_payment_status"] }
+        Returns: Database["public"]["Enums"]["business_payment_status"]
+      }
+      business_people: {
+        Args: {
+          p_business_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_segment?: string
+        }
+        Returns: {
+          first_name: string
+          first_seen: string
+          is_active: boolean
+          is_class_client: boolean
+          is_member: boolean
+          is_minor: boolean
+          label: string
+          last_seen: string
+          member_number: number
+          name_is_shared: boolean
+          person_id: string
+          total_count: number
+        }[]
+      }
+      business_people_segments: { Args: never; Returns: string[] }
+      business_people_summary: {
+        Args: { p_business_id: string }
+        Returns: {
+          metric: string
+          value: number
+        }[]
+      }
+      business_period_stats: {
+        Args: {
+          p_business_id: string
+          p_compare?: boolean
+          p_from?: string
+          p_to?: string
+        }
+        Returns: {
+          early: boolean
+          metric: string
+          previous: number
+          value: number
+        }[]
+      }
       business_permission_vocabulary: { Args: never; Returns: string[] }
+      business_person_label: {
+        Args: { p_business_id: string; p_person_id: string }
+        Returns: string
+      }
+      business_person_number_allocate: {
+        Args: { p_business_id: string; p_person_id: string }
+        Returns: number
+      }
+      business_plan_figures: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          active_now: number
+          plan_id: string
+          plan_name: string
+          sold: number
+          sold_previous: number
+          status: Database["public"]["Enums"]["plan_status"]
+        }[]
+      }
+      business_plan_is_active: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
+      business_plan_summary: {
+        Args: { p_business_id: string }
+        Returns: {
+          included_seats: number
+          pending_amount: number
+          pending_charges: number
+          plan_name: string
+          plan_price: number
+          plan_status: Database["public"]["Enums"]["subscription_status"]
+          renews_at: string
+          seat_block_price: number
+          seat_blocks: number
+          seat_capacity: number
+          seats_per_block: number
+        }[]
+      }
+      business_recent_activity: {
+        Args: { p_business_id: string; p_limit?: number }
+        Returns: {
+          at: string
+          id: number
+          is_minor: boolean
+          kind: Database["public"]["Enums"]["business_activity_kind"]
+          label: string
+          ref_id: string
+          ref_kind: string
+          summary: string
+        }[]
+      }
+      business_relationship_is_recent: {
+        Args: { p_business_id: string; p_days?: number; p_person_id: string }
+        Returns: boolean
+      }
+      business_review_metrics: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          average: number
+          average_hours_to_reply: number
+          distribution: Json
+          flagged: number
+          previous_average: number
+          previous_reviews: number
+          reply_rate: number
+          reviews: number
+          weekly: Json
+        }[]
+      }
+      business_reviews_page: {
+        Args: {
+          p_business_id: string
+          p_flagged_only?: boolean
+          p_limit?: number
+          p_max_rating?: number
+          p_offset?: number
+          p_unanswered_only?: boolean
+        }
+        Returns: {
+          body: string
+          class_title: string
+          created_at: string
+          edited_at: string
+          flag_kind: string
+          flagged: boolean
+          gym_id: string
+          handled_at: string
+          instructor_first_name: string
+          instructor_id: string
+          rating: number
+          redacted: boolean
+          reply_at: string
+          reply_body: string
+          reply_redacted: boolean
+          review_id: string
+          reviewer_label: string
+          total_count: number
+        }[]
+      }
+      business_reviews_public: {
+        Args: {
+          p_business_id: string
+          p_limit?: number
+          p_offset?: number
+          p_sort?: string
+        }
+        Returns: {
+          author_name: string
+          body: string
+          created_at: string
+          edited_at: string
+          id: string
+          is_mine: boolean
+          rating: number
+          redacted: boolean
+          reply_at: string
+          reply_body: string
+        }[]
+      }
       business_seat_capacity: {
         Args: { p_business_id: string }
         Returns: number
       }
       business_seats_used: { Args: { p_business_id: string }; Returns: number }
+      business_sees_name: {
+        Args: { p_business_id: string; p_person_id: string }
+        Returns: boolean
+      }
       business_setup_checklist: {
         Args: { p_business_id: string }
         Returns: {
@@ -20576,9 +27841,26 @@ export type Database = {
           item: string
         }[]
       }
+      business_thread_member: { Args: { p_thread_id: string }; Returns: string }
+      business_today: { Args: { p_business_id: string }; Returns: string }
+      business_user_can: {
+        Args: { p_business_id: string; p_permission: string; p_user: string }
+        Returns: boolean
+      }
+      buy_seat_blocks: {
+        Args: { p_blocks: number; p_business_id: string }
+        Returns: string
+      }
       calendar_alert_offset: {
         Args: { p_alert: Database["public"]["Enums"]["calendar_alert"] }
         Returns: string
+      }
+      calendar_event_windows: {
+        Args: { p_from: string; p_to: string; p_user: string }
+        Returns: {
+          busy: unknown
+          event_id: string
+        }[]
       }
       calendar_override_keys_ok: {
         Args: { p_override: Json }
@@ -20592,14 +27874,16 @@ export type Database = {
         Args: { p_invitee: string; p_inviter: string }
         Returns: boolean
       }
+      can_post_card_in: { Args: { p_thread_id: string }; Returns: boolean }
       can_review_professional: {
         Args: { p_professional: string; p_reviewer: string }
         Returns: boolean
       }
-      can_see_store_listing: {
-        Args: { p_listing_id: string }
+      can_write_form: {
+        Args: { p_kind: Database["public"]["Enums"]["form_kind"] }
         Returns: boolean
       }
+      can_write_meal_plans: { Args: never; Returns: boolean }
       cancel_account_deletion: {
         Args: never
         Returns: {
@@ -20608,8 +27892,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           customer_subtype:
-            | Database["public"]["Enums"]["customer_subtype"]
-            | null
+            Database["public"]["Enums"]["customer_subtype"] | null
           date_of_birth: string | null
           deletion_due_at: string | null
           deletion_notice_days: number | null
@@ -20626,8 +27909,7 @@ export type Database = {
           plant_species: string | null
           preferred_activities: string[]
           professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           sex: Database["public"]["Enums"]["sex"] | null
           shares_presence: boolean
           storage_bytes_used: number
@@ -20637,6 +27919,7 @@ export type Database = {
           tracking_preferences: string[]
           updated_at: string
           weight_kg: number | null
+          win_sharing: Database["public"]["Enums"]["win_sharing_setting"]
           x: string | null
         }
         SetofOptions: {
@@ -20646,6 +27929,12 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_appointment: {
+        Args: { p_appointment_id: string; p_reason?: string }
+        Returns: {
+          paid_to_refund: boolean
+        }[]
+      }
       cancel_class_booking: {
         Args: { p_class_id: string }
         Returns: {
@@ -20654,13 +27943,199 @@ export type Database = {
           window_hours: number
         }[]
       }
+      cancel_class_session: {
+        Args: { p_class_id: string; p_reason?: string }
+        Returns: {
+          bookings_cancelled: number
+          members_told: number
+          paid_to_refund: number
+          waitlist_released: number
+        }[]
+      }
+      cancel_form_assignment: {
+        Args: { p_assignment_id: string }
+        Returns: undefined
+      }
       cancel_hire: {
         Args: { p_hire_id: string; p_reason?: string }
         Returns: {
           was_free: boolean
         }[]
       }
+      cancel_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: {
+          paid_to_refund: boolean
+        }[]
+      }
+      cancel_professional_booking: {
+        Args: { p_appointment_id: string; p_reason?: string }
+        Returns: {
+          business_id: string | null
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_business: boolean | null
+          client_id: string | null
+          created_at: string
+          ends_at: string
+          gym_id: string | null
+          id: string
+          marked_paid_by: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id: string | null
+          service_name: string
+          staff_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_seat_block_purchase: {
+        Args: { p_charge_id: string }
+        Returns: undefined
+      }
       capture_daily_active_snapshot: { Args: never; Returns: string }
+      care_plan_alerts: {
+        Args: { p_client_id?: string }
+        Returns: {
+          care_plan_id: string
+          client_id: string
+          item_id: string
+          latest_value: number
+          metric: string
+          recorded_at: string
+          threshold_high: number
+          threshold_low: number
+        }[]
+      }
+      centium_base_tier: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          included_seats: number | null
+          is_addon: boolean
+          is_business_seat_plan: boolean
+          is_default: boolean
+          max_clients: number | null
+          max_employees: number | null
+          monthly_price: number
+          name: string
+          seats_per_unit: number | null
+          tier_type: Database["public"]["Enums"]["subscription_tier_type"]
+          yearly_price: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_tiers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      centium_billing_history: {
+        Args: { p_business_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          amount: number
+          charge_id: string
+          created_at: string
+          currency: string
+          is_renewal: boolean
+          method: Database["public"]["Enums"]["centium_charge_method"]
+          paid_at: string
+          period_end: string
+          period_start: string
+          product: Database["public"]["Enums"]["centium_product"]
+          quantity: number
+          status: Database["public"]["Enums"]["centium_charge_status"]
+          total_count: number
+        }[]
+      }
+      centium_seat_block_tier: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          included_seats: number | null
+          is_addon: boolean
+          is_business_seat_plan: boolean
+          is_default: boolean
+          max_clients: number | null
+          max_employees: number | null
+          monthly_price: number
+          name: string
+          seats_per_unit: number | null
+          tier_type: Database["public"]["Enums"]["subscription_tier_type"]
+          yearly_price: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_tiers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      check_in_guest: {
+        Args: {
+          p_guest_label: string
+          p_gym_id: string
+          p_host_membership_id: string
+        }
+        Returns: {
+          check_in_id: string
+          deny_reason: Database["public"]["Enums"]["check_in_deny_reason"]
+          guests_allowed: number
+          guests_used_this_month: number
+          result: Database["public"]["Enums"]["check_in_result"]
+        }[]
+      }
+      check_in_member: {
+        Args: {
+          p_gym_id: string
+          p_membership_id: string
+          p_method?: Database["public"]["Enums"]["check_in_method"]
+        }
+        Returns: {
+          already_in: boolean
+          check_in_id: string
+          deny_reason: Database["public"]["Enums"]["check_in_deny_reason"]
+          expires_on: string
+          member_first_name: string
+          member_is_minor: boolean
+          membership_id: string
+          pass_state: string
+          plan_name: string
+          result: Database["public"]["Enums"]["check_in_result"]
+        }[]
+      }
+      check_in_with_pass: {
+        Args: {
+          p_gym_id: string
+          p_method?: Database["public"]["Enums"]["check_in_method"]
+          p_token: string
+        }
+        Returns: {
+          already_in: boolean
+          check_in_id: string
+          deny_reason: Database["public"]["Enums"]["check_in_deny_reason"]
+          expires_on: string
+          member_first_name: string
+          member_is_minor: boolean
+          membership_id: string
+          pass_state: string
+          plan_name: string
+          result: Database["public"]["Enums"]["check_in_result"]
+        }[]
+      }
       check_rate_limit: {
         Args: {
           p_action: Database["public"]["Enums"]["rate_limited_action"]
@@ -20669,7 +28144,31 @@ export type Database = {
         }
         Returns: undefined
       }
+      class_analytics: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          average_fill_pct: number
+          bookings: number
+          cancellations: number
+          class_type: string
+          new_clients: number
+          return_rate_pct: number
+          returning_clients: number
+          sessions: number
+          title: string
+        }[]
+      }
       class_booked_count: { Args: { p_class_id: string }; Returns: number }
+      class_booking_rules: {
+        Args: { p_class_id: string }
+        Returns: {
+          booking_window_days: number
+          cancellation_hours: number
+          closes_minutes_before: number
+          default_capacity: number
+          waitlist_cap: number
+        }[]
+      }
       class_calendar_event_for: {
         Args: { p_class_id: string; p_client: string }
         Returns: string
@@ -20683,13 +28182,78 @@ export type Database = {
         Returns: {
           cancelled_at: string
           client_id: string
-          first_name: string
+          client_label: string
           hours_before: number
           was_free: boolean
         }[]
       }
+      class_fields_check: { Args: { p_fields: Json }; Returns: undefined }
+      class_fill_heatmap: {
+        Args: { p_business_id: string; p_weeks?: number }
+        Returns: {
+          average_fill_pct: number
+          hour: number
+          sessions: number
+          weekday: number
+        }[]
+      }
+      class_has_bookings: { Args: { p_class_id: string }; Returns: boolean }
+      class_instructor_conflicts: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          class_id: string
+          end_time: string
+          event_date: string
+          other_class_id: string
+          other_end_time: string
+          other_start_time: string
+          professional_id: string
+          start_time: string
+        }[]
+      }
+      class_instructor_conflicts_internal: {
+        Args: { p_business_id: string }
+        Returns: {
+          class_id: string
+        }[]
+      }
+      class_notice_id: { Args: { p_parts: string }; Returns: string }
       class_seats_left: { Args: { p_class_id: string }; Returns: number }
+      class_series_dates: {
+        Args: { p_series_id: string; p_until: string }
+        Returns: {
+          n: number
+          on_date: string
+        }[]
+      }
+      class_session_move: {
+        Args: {
+          p_class_id: string
+          p_end_time: string
+          p_event_date: string
+          p_start_time: string
+        }
+        Returns: number
+      }
       class_starts_at: { Args: { p_class_id: string }; Returns: string }
+      class_when_text: {
+        Args: { p_date: string; p_start: string }
+        Returns: string
+      }
+      class_window_for: {
+        Args: {
+          p_business_id: string
+          p_date: string
+          p_end: string
+          p_gym_id: string
+          p_start: string
+        }
+        Returns: unknown
+      }
+      class_zone: {
+        Args: { p_business_id: string; p_gym_id: string }
+        Returns: string
+      }
       clear_approximate_location: {
         Args: never
         Returns: {
@@ -20701,12 +28265,13 @@ export type Database = {
           certification_url: string | null
           certification_verified: boolean
           closest_group:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate: number | null
           created_at: string
           facebook: string | null
           free_period_ends_at: string
+          handle: string | null
+          handle_changed_at: string | null
           headline: string | null
           home_visit_km: number | null
           id: string
@@ -20728,8 +28293,7 @@ export type Database = {
           updated_at: string
           website: string | null
           work_mode:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x: string | null
         }
         SetofOptions: {
@@ -20739,15 +28303,70 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      clear_old_delivery_addresses: { Args: never; Returns: number }
+      client_adherence: {
+        Args: { p_client_id?: string; p_days?: number; p_until?: string }
+        Returns: {
+          client_id: string
+          completed: number
+          pct: number
+          planned: number
+        }[]
+      }
+      client_biomarker_flags: {
+        Args: { p_client_id: string }
+        Returns: {
+          change_flag: boolean
+          change_pct: number
+          latest_value: number
+          marker_key: string
+          name: string
+          previous_date: string
+          previous_value: number
+          range_high: number
+          range_low: number
+          range_source: string
+          result_date: string
+          status: string
+          unit: string
+          yearly_rate: number
+        }[]
+      }
+      client_code_unusable_reason: {
+        Args: { p_code: Database["public"]["Tables"]["client_codes"]["Row"] }
+        Returns: string
+      }
       client_cycle_phase: {
         Args: { p_client: string }
         Returns: Database["public"]["Enums"]["cycle_phase_kind"]
+      }
+      client_file_visible: {
+        Args: { p_file: Database["public"]["Tables"]["client_files"]["Row"] }
+        Returns: boolean
+      }
+      client_flags: {
+        Args: { p_client_id?: string }
+        Returns: {
+          at_risk: boolean
+          client_id: string
+          gone_quiet: boolean
+          last_activity_at: string
+          meal_plan_ending: boolean
+          programme_ending: boolean
+        }[]
       }
       client_pregnancy_status: {
         Args: { p_client: string }
         Returns: {
           status: string
           trimester: number
+        }[]
+      }
+      client_pregnancy_summary: {
+        Args: { p_client_id: string }
+        Returns: {
+          pregnant: boolean
+          week: number
         }[]
       }
       client_social_handles: {
@@ -20757,9 +28376,20 @@ export type Database = {
           x: string
         }[]
       }
+      client_wins: {
+        Args: { p_client_id?: string }
+        Returns: {
+          client_id: string
+          kind: string
+          occurred_at: string
+          value: Json
+          win_id: string
+        }[]
+      }
       close_group: {
         Args: { p_thread_id: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -20776,6 +28406,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      comment_on_food_entry: {
+        Args: { p_body?: string; p_entry_id: string; p_reaction?: string }
+        Returns: string
       }
       complete_course_lesson: {
         Args: { p_lesson_id: string }
@@ -20804,16 +28438,28 @@ export type Database = {
         Args: { p_course_id: string; p_revision_id?: string }
         Returns: boolean
       }
+      course_drip_schedule: {
+        Args: { p_course_id: string }
+        Returns: {
+          is_open: boolean
+          module_id: string
+          module_position: number
+          opens_at: string
+          title: string
+        }[]
+      }
       course_is_mine: { Args: { p_course_id: string }; Returns: boolean }
       course_is_readable: { Args: { p_course_id: string }; Returns: boolean }
       course_lesson_is_editable: {
         Args: { p_lesson_id: string }
         Returns: boolean
       }
+      course_lesson_is_open: { Args: { p_lesson_id: string }; Returns: boolean }
       course_module_is_editable: {
         Args: { p_module_id: string }
         Returns: boolean
       }
+      course_module_opens_at: { Args: { p_module_id: string }; Returns: string }
       course_net_earnings: {
         Args: { p_course_id: string }
         Returns: {
@@ -20932,10 +28578,14 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          kind: string
+          max_uses: number
           professional_id: string
           redeemed: boolean
           redeemed_at: string | null
           redeemed_by: string | null
+          revoked_at: string | null
+          uses: number
         }
         SetofOptions: {
           from: "*"
@@ -20944,6 +28594,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_client_file: {
+        Args: {
+          p_filename: string
+          p_kind: string
+          p_other_party: string
+          p_title: string
+        }
+        Returns: {
+          file_id: string
+          path: string
+        }[]
+      }
       create_course: {
         Args: { p_category_key: string; p_level?: string; p_title: string }
         Returns: string
@@ -20951,6 +28613,7 @@ export type Database = {
       create_group: {
         Args: { p_name: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -20964,6 +28627,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "message_threads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_invite_link: {
+        Args: { p_max_uses?: number; p_valid_for?: string }
+        Returns: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          kind: string
+          max_uses: number
+          professional_id: string
+          redeemed: boolean
+          redeemed_at: string | null
+          redeemed_by: string | null
+          revoked_at: string | null
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_codes"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -20990,6 +28676,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_weekly_check_in_template: { Args: never; Returns: string }
+      current_invite_link_for: {
+        Args: { p_professional: string }
+        Returns: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          kind: string
+          max_uses: number
+          professional_id: string
+          redeemed: boolean
+          redeemed_at: string | null
+          redeemed_by: string | null
+          revoked_at: string | null
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_codes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       custom_exercise_usage: { Args: { p_id: string }; Returns: number }
       cycle_prediction: {
         Args: { p_on: string; p_user: string }
@@ -21010,15 +28720,62 @@ export type Database = {
           trimester: number
         }[]
       }
+      decline_booking_request: {
+        Args: { p_appointment_id: string; p_reason?: string }
+        Returns: {
+          business_id: string | null
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_business: boolean | null
+          client_id: string | null
+          created_at: string
+          ends_at: string
+          gym_id: string | null
+          id: string
+          marked_paid_by: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id: string | null
+          service_name: string
+          staff_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decline_group_invitation: {
         Args: { p_thread_id: string }
         Returns: undefined
+      }
+      decline_hire: {
+        Args: {
+          p_hire_id: string
+          p_message?: string
+          p_reason: Database["public"]["Enums"]["client_request_decline_reason"]
+        }
+        Returns: undefined
+      }
+      decline_reason_label: {
+        Args: {
+          p_reason: Database["public"]["Enums"]["client_request_decline_reason"]
+        }
+        Returns: string
       }
       default_permissions_for_role: {
         Args: { p_role: Database["public"]["Enums"]["business_role"] }
         Returns: string[]
       }
       delete_broadcast_list: { Args: { p_list_id: string }; Returns: undefined }
+      delete_client_file: { Args: { p_file_id: string }; Returns: undefined }
       delete_conversation_for_me: {
         Args: { p_thread_id: string }
         Returns: string
@@ -21064,6 +28821,78 @@ export type Database = {
         }
       }
       delete_my_cycle_data: { Args: never; Returns: undefined }
+      delete_review_reply: { Args: { p_review_id: string }; Returns: undefined }
+      desk_check_in: {
+        Args: {
+          p_gym_id: string
+          p_membership_id: string
+          p_method: Database["public"]["Enums"]["check_in_method"]
+        }
+        Returns: {
+          already_in: boolean
+          check_in_id: string
+          deny_reason: Database["public"]["Enums"]["check_in_deny_reason"]
+          expires_on: string
+          member_first_name: string
+          member_is_minor: boolean
+          membership_id: string
+          pass_state: string
+          plan_name: string
+          result: Database["public"]["Enums"]["check_in_result"]
+        }[]
+      }
+      desk_entries: {
+        Args: {
+          p_day?: string
+          p_gym_id: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          at: string
+          check_in_id: string
+          deny_reason: Database["public"]["Enums"]["check_in_deny_reason"]
+          guest_label: string
+          host_first_name: string
+          is_day_pass: boolean
+          member_first_name: string
+          member_is_minor: boolean
+          method: Database["public"]["Enums"]["check_in_method"]
+          person_id: string
+          plan_name: string
+          result: Database["public"]["Enums"]["check_in_result"]
+          total_count: number
+        }[]
+      }
+      desk_find_member: {
+        Args: { p_gym_id: string; p_limit?: number; p_search?: string }
+        Returns: {
+          expires_on: string
+          member_first_name: string
+          member_is_minor: boolean
+          member_number: number
+          membership_id: string
+          pass_state: string
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          person_id: string
+          plan_name: string
+          status: Database["public"]["Enums"]["gym_membership_status"]
+        }[]
+      }
+      desk_gate: { Args: { p_gym_id: string }; Returns: string }
+      desk_summary: {
+        Args: { p_gym_id: string }
+        Returns: {
+          day_passes_this_week: number
+          denied_today: number
+          entries_today: number
+          guest_passes_this_month: number
+          in_now: number
+          last_hour: number
+          right_now: string
+          typical_hour: number
+        }[]
+      }
       disable_journal_folder_lock: {
         Args: { p_folder_id: string; p_password: string }
         Returns: Database["public"]["CompositeTypes"]["journal_unlock_result"]
@@ -21086,10 +28915,14 @@ export type Database = {
           disconnected_at: string | null
           id: string
           joined_at: string
+          joined_via_code_id: string | null
+          nutrition_coaching: boolean
           prefix: string | null
           professional_id: string
           pronouns: string | null
           reminder_preference: string | null
+          stage: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at: string
         }
         SetofOptions: {
           from: "*"
@@ -21100,7 +28933,19 @@ export type Database = {
       }
       display_name_is_reserved: { Args: { p_name: string }; Returns: boolean }
       disposable_email_check: { Args: { p_email: string }; Returns: boolean }
+      dispute_care_referral: {
+        Args: { p_reason: string; p_referral_id: string }
+        Returns: undefined
+      }
       distinct_set: { Args: { p_max: number; v: unknown }; Returns: boolean }
+      edit_class: {
+        Args: { p_class_id: string; p_fields: Json; p_scope: string }
+        Returns: number
+      }
+      edit_class_apply: {
+        Args: { p_class_id: string; p_fields: Json }
+        Returns: undefined
+      }
       edit_forum_post: {
         Args: {
           p_body?: string
@@ -21159,6 +29004,10 @@ export type Database = {
         Returns: undefined
       }
       edit_my_review_reply: {
+        Args: { p_body: string; p_review_id: string }
+        Returns: undefined
+      }
+      edit_review_reply: {
         Args: { p_body: string; p_review_id: string }
         Returns: undefined
       }
@@ -21223,6 +29072,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      end_class_series: {
+        Args: { p_last_date: string; p_series_id: string }
+        Returns: {
+          kept_with_bookings: number
+          removed: number
+        }[]
+      }
       end_gym_membership: {
         Args: {
           p_at_period_end?: boolean
@@ -21231,12 +29087,24 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["gym_membership_status"]
       }
+      end_meal_plan_assignment: {
+        Args: { p_assignment_id: string }
+        Returns: undefined
+      }
+      end_template_assignment: {
+        Args: { p_assignment_id: string }
+        Returns: undefined
+      }
       enrol_in_course: {
         Args: { p_course_id: string; p_tier?: string }
         Returns: string
       }
       ensure_direct_thread: {
         Args: { p_a: string; p_b: string }
+        Returns: string
+      }
+      ensure_member_thread: {
+        Args: { p_business_id: string; p_person_id: string }
         Returns: string
       }
       evaluate_achievements: {
@@ -21249,6 +29117,14 @@ export type Database = {
       expire_due_memberships: { Args: never; Returns: number }
       expire_stale_ringing_calls: { Args: never; Returns: number }
       expire_waitlist_offers: { Args: never; Returns: number }
+      extend_class_series: { Args: never; Returns: number }
+      feature_price_for: {
+        Args: {
+          p_area: Database["public"]["Enums"]["feature_area"]
+          p_on?: string
+        }
+        Returns: number
+      }
       finalize_forum_photo_purge: { Args: { p_path: string }; Returns: boolean }
       finalize_health_data_storage_purge: {
         Args: { p_request_id: string }
@@ -21295,6 +29171,30 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      food_conflicts: {
+        Args: {
+          p_client_id: string
+          p_custom_food_id?: string
+          p_custom_meal_id?: string
+          p_food_id?: string
+          p_name?: string
+          p_recipe_id?: string
+        }
+        Returns: {
+          allergen: Database["public"]["Enums"]["allergen"]
+          detail: string
+          kind: string
+          restriction: Database["public"]["Enums"]["dietary_restriction"]
+          severity: Database["public"]["Enums"]["allergy_severity"]
+        }[]
+      }
+      form_answer_triggers_safety: {
+        Args: {
+          p_answer: Json
+          p_q: Database["public"]["Tables"]["form_questions"]["Row"]
+        }
+        Returns: boolean
       }
       forum_author_is_verified_professional: {
         Args: { p_user: string }
@@ -21409,6 +29309,10 @@ export type Database = {
         Returns: string
       }
       generate_client_code: { Args: { p_prefix: string }; Returns: string }
+      generate_invite_link_code: {
+        Args: { p_first_name: string }
+        Returns: string
+      }
       generate_referral_code: { Args: { p_prefix: string }; Returns: string }
       generate_two_factor_recovery_codes: { Args: never; Returns: string[] }
       group_members: {
@@ -21455,6 +29359,7 @@ export type Database = {
         }
         Returns: string
       }
+      gym_pass_state_is_live: { Args: { p_state: string }; Returns: boolean }
       gym_review_summary: {
         Args: { p_gym_id: string }
         Returns: {
@@ -21478,6 +29383,7 @@ export type Database = {
           author_is_member: boolean
           author_name: string
           body: string
+          class_title: string
           created_at: string
           edited_at: string
           helpful_count: number
@@ -21485,6 +29391,8 @@ export type Database = {
           is_mine: boolean
           rating: number
           redacted: boolean
+          reply_at: string
+          reply_body: string
           viewer_found_helpful: boolean
         }[]
       }
@@ -21519,6 +29427,58 @@ export type Database = {
         }
         Returns: string
       }
+      hub_trend: {
+        Args: { p_client_id?: string; p_range: string }
+        Returns: {
+          bucket_start: string
+          pct: number
+          planned: number
+          previous_pct: number
+        }[]
+      }
+      in_care_network: { Args: { p_a: string; p_b: string }; Returns: boolean }
+      instructor_ratings: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          average: number
+          first_name: string
+          professional_id: string
+          reviews: number
+        }[]
+      }
+      instructor_scorecard: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          average_fill_pct: number
+          classes: number
+          first_name: string
+          pay: number
+          professional_id: string
+          rating: number
+          recorded_revenue: number
+          reviews: number
+        }[]
+      }
+      instructors_free_for: {
+        Args: { p_class_id: string }
+        Returns: {
+          first_name: string
+          is_busy: boolean
+          is_current: boolean
+          marked_unavailable: boolean
+          professional_id: string
+          role: string
+          within_availability: boolean
+        }[]
+      }
+      invite_client: {
+        Args: { p_address: string; p_channel: string }
+        Returns: {
+          code: string
+          invite_id: string
+          status: string
+        }[]
+      }
       invite_employee: {
         Args: {
           p_business_id: string
@@ -21537,7 +29497,19 @@ export type Database = {
       is_ambassador: { Args: { p_profile_id: string }; Returns: boolean }
       is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
       is_calendar_invitee: { Args: { p_event_id: string }; Returns: boolean }
+      is_care_plan_author: {
+        Args: { p_care_plan_id: string }
+        Returns: boolean
+      }
       is_disposable_email: { Args: { email: string }; Returns: boolean }
+      is_featured: {
+        Args: {
+          p_area: Database["public"]["Enums"]["feature_area"]
+          p_business_id: string
+          p_target_id?: string
+        }
+        Returns: boolean
+      }
       is_thread_participant: {
         Args: { p_thread_id: string; p_user: string }
         Returns: boolean
@@ -21550,6 +29522,26 @@ export type Database = {
       leave_class_waitlist: { Args: { p_class_id: string }; Returns: undefined }
       leave_group: { Args: { p_thread_id: string }; Returns: undefined }
       licence_is_verified: { Args: { p_licence_id: string }; Returns: boolean }
+      link_offline_client: {
+        Args: { p_client_id: string; p_offline_id: string }
+        Returns: {
+          created_at: string
+          email: string | null
+          id: string
+          linked_client_id: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          professional_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offline_clients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       list_abandoned_health_files: {
         Args: { p_older_than?: string }
         Returns: {
@@ -21569,8 +29561,8 @@ export type Database = {
         Returns: {
           ended_at: string
           invited_at: string
-          member_first_name: string
           member_is_minor: boolean
+          member_label: string
           membership_id: string
           plan_name: string
           plan_price: number
@@ -21611,21 +29603,114 @@ export type Database = {
           user_id: string
         }[]
       }
+      listing_event_bump: {
+        Args: {
+          p_business_id: string
+          p_item_id: string
+          p_kind: Database["public"]["Enums"]["listing_event_kind"]
+          p_source: Database["public"]["Enums"]["listing_event_source"]
+        }
+        Returns: undefined
+      }
+      listing_funnel: {
+        Args: { p_business_id: string }
+        Returns: {
+          booked: number
+          by_source: Json
+          opened: number
+          seen: number
+          tapped_book: number
+        }[]
+      }
       listing_needs_date_of_birth: { Args: never; Returns: boolean }
+      listing_new_clients: {
+        Args: { p_business_id: string }
+        Returns: {
+          new_clients: number
+          week_start: string
+        }[]
+      }
+      listing_performance: {
+        Args: { p_business_id: string }
+        Returns: {
+          book_taps: number
+          bookings: number
+          impressions: number
+          map_opens: number
+          orders: number
+          passes: number
+          profile_opens: number
+          week_start: string
+        }[]
+      }
+      listing_strength: {
+        Args: { p_business_id: string }
+        Returns: {
+          done: boolean
+          done_count: number
+          item: string
+          total: number
+        }[]
+      }
+      listing_top_items: {
+        Args: { p_business_id: string; p_limit?: number }
+        Returns: {
+          book_taps: number
+          bookings: number
+          impressions: number
+          item_id: string
+          item_kind: string
+          title: string
+        }[]
+      }
       lock_journal_folder: { Args: { p_folder_id: string }; Returns: undefined }
+      log_pro_change: {
+        Args: {
+          p_client: string
+          p_professional: string
+          p_subject_id: string
+          p_subject_type: string
+          p_summary: Json
+        }
+        Returns: undefined
+      }
       mark_achievements_notified: {
         Args: { p_keys: string[] }
         Returns: number
+      }
+      mark_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_status: Database["public"]["Enums"]["appointment_status"]
+        }
+        Returns: undefined
+      }
+      mark_appointment_paid: {
+        Args: { p_appointment_id: string }
+        Returns: undefined
       }
       mark_class_booking_paid: {
         Args: { p_booking_id: string; p_reference?: string }
         Returns: undefined
       }
+      mark_desk_sale_paid: { Args: { p_sale_id: string }; Returns: undefined }
       mark_gym_membership_paid: {
         Args: { p_membership_id: string }
         Returns: undefined
       }
+      mark_order_paid: {
+        Args: { p_order_id: string; p_reference?: string }
+        Returns: undefined
+      }
+      mark_review_handled: {
+        Args: { p_handled?: boolean; p_review_id: string }
+        Returns: undefined
+      }
       mark_thread_read: { Args: { p_thread_id: string }; Returns: string }
+      materialise_class_series: {
+        Args: { p_series_id: string }
+        Returns: number
+      }
       may_open_message_attachment: {
         Args: { p_name: string }
         Returns: boolean
@@ -21640,10 +29725,40 @@ export type Database = {
         Args: { p_enrolment_id: string }
         Returns: boolean
       }
+      meal_plan_detail: {
+        Args: { p_meal_plan_id: string }
+        Returns: {
+          calories: number
+          carbs_g: number
+          day_index: number
+          day_label: string
+          fat_g: number
+          grams: number
+          item_id: string
+          item_kind: string
+          item_position: number
+          meal_slot: Database["public"]["Enums"]["meal_slot"]
+          name: string
+          note: string
+          protein_g: number
+          servings: number
+        }[]
+      }
+      meets_entry_age: {
+        Args: { p_gym_id: string; p_person: string }
+        Returns: boolean
+      }
       membership_is_awaiting_payment: {
         Args: {
           p_payment_status: Database["public"]["Enums"]["venue_payment_status"]
           p_status: Database["public"]["Enums"]["gym_membership_status"]
+        }
+        Returns: boolean
+      }
+      message_card_payload_allowed: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["message_card_kind"]
+          p_payload: Json
         }
         Returns: boolean
       }
@@ -21669,6 +29784,44 @@ export type Database = {
         }
         Returns: number
       }
+      money_owed: {
+        Args: {
+          p_business_id: string
+          p_filter?: string
+          p_limit?: number
+          p_method?: string
+          p_offset?: number
+          p_sort?: string
+        }
+        Returns: {
+          amount: number
+          days_overdue: number
+          due_on: string
+          gym_id: string
+          is_minor: boolean
+          label: string
+          last_reminder_at: string
+          member_number: number
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_id: string
+          person_id: string
+          price_type: Database["public"]["Enums"]["price_type"]
+          reminders_sent: number
+          source_id: string
+          source_kind: Database["public"]["Enums"]["payment_source_kind"]
+          total_count: number
+          venue_name: string
+        }[]
+      }
+      move_class_session: {
+        Args: {
+          p_class_id: string
+          p_end_time: string
+          p_event_date: string
+          p_start_time: string
+        }
+        Returns: number
+      }
       my_achievements: {
         Args: never
         Returns: {
@@ -21686,6 +29839,21 @@ export type Database = {
           sort_order: number
           threshold: number
           title: string
+        }[]
+      }
+      my_appointments: {
+        Args: { p_include_past?: boolean }
+        Returns: {
+          appointment_id: string
+          business_id: string
+          business_name: string
+          can_cancel: boolean
+          ends_at: string
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_name: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
         }[]
       }
       my_broadcast_lists: {
@@ -21733,6 +29901,17 @@ export type Database = {
         Args: { p_class_id: string }
         Returns: number
       }
+      my_client_stages: {
+        Args: never
+        Returns: {
+          client_id: string
+          joined_at: string
+          nutrition_coaching: boolean
+          stage: Database["public"]["Enums"]["client_stage"]
+          stage_changed_at: string
+          tags: string[]
+        }[]
+      }
       my_contraception_status: {
         Args: never
         Returns: {
@@ -21748,6 +29927,10 @@ export type Database = {
       my_conversations: {
         Args: never
         Returns: {
+          business_id: string
+          business_initials: string
+          business_logo_url: string
+          business_name: string
           cleared_at: string
           kind: Database["public"]["Enums"]["thread_kind"]
           last_message_at: string
@@ -21830,6 +30013,20 @@ export type Database = {
           tier_name: string
         }[]
       }
+      my_featured_placements: {
+        Args: { p_business_id: string }
+        Returns: {
+          amount: number
+          area: Database["public"]["Enums"]["feature_area"]
+          charge_status: Database["public"]["Enums"]["centium_charge_status"]
+          ends_on: string
+          placement_id: string
+          starts_on: string
+          status: Database["public"]["Enums"]["placement_status"]
+          target_id: string
+          target_kind: Database["public"]["Enums"]["placement_target"]
+        }[]
+      }
       my_forum_blocks: {
         Args: never
         Returns: {
@@ -21898,6 +30095,16 @@ export type Database = {
           status: Database["public"]["Enums"]["hire_status"]
         }[]
       }
+      my_invite_joins: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          client_id: string
+          code: string
+          first_name: string
+          joined_at: string
+        }[]
+      }
       my_journal_week: {
         Args: never
         Returns: {
@@ -21916,6 +30123,24 @@ export type Database = {
           seconds_this_week: number
           seconds_today: number
           sessions_this_week: number
+        }[]
+      }
+      my_orders: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          business_id: string
+          business_name: string
+          can_cancel: boolean
+          can_return: boolean
+          fulfilment: Database["public"]["Enums"]["order_fulfilment"]
+          item_count: number
+          order_id: string
+          order_number: number
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          placed_at: string
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+          total_count: number
         }[]
       }
       my_points_summary: {
@@ -21945,6 +30170,7 @@ export type Database = {
           tier_name: string
         }[]
       }
+      my_professional_subtype: { Args: never; Returns: string }
       my_referral_code: { Args: never; Returns: string }
       my_reviewable_professionals: {
         Args: never
@@ -21956,6 +30182,23 @@ export type Database = {
           my_review_id: string
           my_review_status: string
           professional_id: string
+        }[]
+      }
+      my_reviews: {
+        Args: never
+        Returns: {
+          body: string
+          business_id: string
+          class_title: string
+          created_at: string
+          edited_at: string
+          gym_id: string
+          place_name: string
+          rating: number
+          redacted: boolean
+          reply_at: string
+          reply_body: string
+          review_id: string
         }[]
       }
       my_support_thread: {
@@ -22007,6 +30250,29 @@ export type Database = {
       }
       notification_family: { Args: { p_kind: string }; Returns: string }
       notification_quiet_policy: { Args: { p_kind: string }; Returns: string }
+      notify_order: {
+        Args: { p_order_id: string; p_step: string; p_title: string }
+        Returns: undefined
+      }
+      notify_professional: {
+        Args: {
+          p_client: string
+          p_dedupe_key?: string
+          p_kind: Database["public"]["Enums"]["pro_notification_kind"]
+          p_payload?: Json
+          p_professional: string
+          p_push_body?: string
+          p_push_kind?: string
+          p_push_title?: string
+          p_source_id?: string
+          p_source_kind?: string
+          p_subject_id: string
+          p_subject_type: string
+          p_title_key: string
+        }
+        Returns: string
+      }
+      notify_unpaid_sessions: { Args: never; Returns: number }
       nutrition_goal_on: {
         Args: { p_date: string }
         Returns: {
@@ -22017,8 +30283,10 @@ export type Database = {
           fat_pct: number
           id: string
           is_current: boolean
+          locked: boolean
           plan_type: Database["public"]["Enums"]["nutrition_plan_type"]
           protein_pct: number
+          set_by_professional_id: string | null
           target_calories: number
           user_id: string
           weekly_rate_kg: number
@@ -22031,8 +30299,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      nutrition_targets_locked: { Args: { p_user: string }; Returns: boolean }
       offer_next_waitlist_spot: {
         Args: { p_class_id: string }
+        Returns: string
+      }
+      open_business_plan_charge: {
+        Args: { p_business_id: string }
         Returns: string
       }
       open_course_revision: { Args: { p_course_id: string }; Returns: string }
@@ -22050,6 +30323,14 @@ export type Database = {
       owns_calendar_event: { Args: { p_event_id: string }; Returns: boolean }
       owns_imaging_record: { Args: { p_record_id: string }; Returns: boolean }
       paid_enrolment_is_open: { Args: never; Returns: boolean }
+      payment_retry_policy: {
+        Args: never
+        Returns: {
+          first_delay: string
+          max_attempts: number
+          second_delay: string
+        }[]
+      }
       pending_policies: {
         Args: { p_business_id: string }
         Returns: {
@@ -22061,6 +30342,17 @@ export type Database = {
         }[]
       }
       phone_list_is_valid: { Args: { p_phones: string[] }; Returns: boolean }
+      place_order: {
+        Args: {
+          p_business_id: string
+          p_delivery_address?: string
+          p_fulfilment: Database["public"]["Enums"]["order_fulfilment"]
+          p_items: Json
+          p_note?: string
+          p_payment_method?: Database["public"]["Enums"]["venue_payment_method"]
+        }
+        Returns: string
+      }
       plan_expiry_from: {
         Args: {
           p_billing: Database["public"]["Enums"]["billing_period"]
@@ -22078,16 +30370,46 @@ export type Database = {
         Args: { p_plan_ids?: string[]; p_thread_id: string }
         Returns: string
       }
+      practice_insights: {
+        Args: never
+        Returns: {
+          active_clients: number
+          average_rating: number
+          clients_coached: number
+          retention_90d_pct: number
+          retention_note: string
+          review_count: number
+          sessions_delivered: number
+          years_on_centium: number
+        }[]
+      }
       preview_client_code: {
         Args: { p_code: string }
         Returns: {
           code: string
           expires_at: string
+          kind: string
+          licence_verified: boolean
           professional_avatar_url: string
           professional_first_name: string
           professional_id: string
           professional_subtype: Database["public"]["Enums"]["professional_subtype"]
           redeemed: boolean
+          usable_message: string
+        }[]
+      }
+      preview_invite_link: {
+        Args: { p_code: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          handle: string
+          licence_verified: boolean
+          professional_id: string
+          professional_subtype: Database["public"]["Enums"]["professional_subtype"]
+          subtype: string
+          usable: boolean
+          usable_message: string
         }[]
       }
       preview_referral: {
@@ -22112,12 +30434,52 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pro_client_day_items: {
+        Args: { p_client_id: string; p_day: string }
+        Returns: {
+          completed: number
+          planned: number
+        }[]
+      }
+      pro_client_last_activity: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
       probe_rows_remaining: { Args: { p_id: string }; Returns: string }
       process_health_data_resets: { Args: never; Returns: number }
       process_scheduled_account_deletions: { Args: never; Returns: number }
+      professional_booking_allowed: {
+        Args: { p_professional: string }
+        Returns: boolean
+      }
+      professional_by_handle: {
+        Args: { p_handle: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          handle: string
+          headline: string
+          invite_links_allowed: boolean
+          licence_verified: boolean
+          listed_publicly: boolean
+          professional_subtype: Database["public"]["Enums"]["professional_subtype"]
+          profile_id: string
+          specialty: string
+          subtype: string
+        }[]
+      }
       professional_can_take_client: {
         Args: { p_professional: string }
         Returns: string
+      }
+      professional_client_access: {
+        Args: { p_client_id?: string }
+        Returns: {
+          categories: Database["public"]["Enums"]["access_category"][]
+          client_id: string
+          imaging_shared_count: number
+          result_shared_count: number
+        }[]
       }
       professional_cv_is_visible: {
         Args: { p_professional_id: string }
@@ -22131,6 +30493,10 @@ export type Database = {
         Args: { p_professional_id: string }
         Returns: boolean
       }
+      professional_invites_allowed: {
+        Args: { p_professional: string }
+        Returns: boolean
+      }
       professional_is_affiliated: {
         Args: { p_professional_id: string }
         Returns: boolean
@@ -22138,6 +30504,18 @@ export type Database = {
       professional_is_listed: {
         Args: { p_professional_id: string }
         Returns: boolean
+      }
+      professional_open_slots: {
+        Args: {
+          p_from: string
+          p_professional: string
+          p_service_id: string
+          p_to: string
+        }
+        Returns: {
+          ends_at: string
+          starts_at: string
+        }[]
       }
       professional_pending_hires: {
         Args: never
@@ -22204,6 +30582,26 @@ export type Database = {
           x: string
         }[]
       }
+      promotion_stats: {
+        Args: { p_business_id: string }
+        Returns: {
+          name: string
+          people: number
+          promotion_id: string
+          recorded_revenue: number
+          status: string
+          use_limit: number
+          uses: number
+        }[]
+      }
+      promotion_status: {
+        Args: { p: Database["public"]["Tables"]["promotions"]["Row"] }
+        Returns: string
+      }
+      publish_care_plan: {
+        Args: { p_care_plan_id: string; p_note?: string }
+        Returns: number
+      }
       purchase_gym_membership: {
         Args: {
           p_gym_id: string
@@ -22213,13 +30611,30 @@ export type Database = {
         Returns: string
       }
       purge_barcode_lookup_misses: { Args: never; Returns: number }
+      purge_business_activity: { Args: never; Returns: undefined }
       purge_contact_submissions: { Args: never; Returns: Json }
       purge_daily_active_snapshots: { Args: never; Returns: number }
+      purge_listing_event_salts: { Args: never; Returns: undefined }
       purge_message_content_history: { Args: never; Returns: number }
+      purge_old_check_ins: { Args: never; Returns: number }
       purge_ops_events: { Args: never; Returns: number }
+      purge_professional_notifications: { Args: never; Returns: number }
       queue_account_email: { Args: { p_id: string }; Returns: boolean }
       queue_activity_reminders: { Args: never; Returns: number }
+      queue_business_plan_renewal_charges: { Args: never; Returns: number }
       queue_calendar_event_alerts: { Args: never; Returns: number }
+      queue_class_notice: {
+        Args: {
+          p_body: string
+          p_due: string
+          p_kind: string
+          p_source_id: string
+          p_source_kind: string
+          p_title: string
+          p_user: string
+        }
+        Returns: string
+      }
       queue_contraception_reminders: { Args: never; Returns: number }
       queue_deletion_reminders: { Args: never; Returns: number }
       queue_event_notification: {
@@ -22240,6 +30655,7 @@ export type Database = {
       queue_period_reminders: { Args: never; Returns: number }
       queue_personal_reminders: { Args: never; Returns: number }
       queue_renewal_payment_reminders: { Args: never; Returns: number }
+      queue_review_prompts: { Args: never; Returns: number }
       queue_streak_alerts: { Args: never; Returns: number }
       queue_weekly_summary: { Args: never; Returns: number }
       quiet_hours_end_at: { Args: { p_user: string }; Returns: string }
@@ -22256,6 +30672,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      record_listing_event: {
+        Args: {
+          p_business_id: string
+          p_item_id?: string
+          p_kind: Database["public"]["Enums"]["listing_event_kind"]
+          p_source?: Database["public"]["Enums"]["listing_event_source"]
+        }
+        Returns: undefined
+      }
       record_ops_event: {
         Args: {
           p_details?: Json
@@ -22267,13 +30692,73 @@ export type Database = {
         }
         Returns: string
       }
+      record_promotion_redemption: {
+        Args: { p_payment_id: string; p_promotion_id: string }
+        Returns: string
+      }
       record_push_failure: {
         Args: { p_subscription_id: string }
         Returns: undefined
       }
+      record_refund: {
+        Args: { p_amount: number; p_payment_id: string; p_reason?: string }
+        Returns: string
+      }
       record_reminder_failure: {
         Args: { p_reason: string; p_reminder_id: string }
         Returns: undefined
+      }
+      record_session_outcome: {
+        Args: {
+          p_event_id: string
+          p_outcome: Database["public"]["Enums"]["session_outcome"]
+        }
+        Returns: undefined
+      }
+      record_shared_item: {
+        Args: {
+          p_card?: Json
+          p_format: string
+          p_image_path?: string
+          p_kind: string
+          p_share_request_id?: string
+        }
+        Returns: string
+      }
+      recorded_revenue_by_plan: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          gross: number
+          net: number
+          payments: number
+          plan_id: string
+          plan_name: string
+          refunded: number
+        }[]
+      }
+      recorded_revenue_by_stream: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          gross: number
+          net: number
+          payments: number
+          price_type: Database["public"]["Enums"]["price_type"]
+          refunded: number
+        }[]
+      }
+      recorded_revenue_components: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: {
+          gross: number
+          gym_id: string
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          net: number
+          paid_on: string
+          payment_id: string
+          plan_id: string
+          price_type: Database["public"]["Enums"]["price_type"]
+          refunded: number
+        }[]
       }
       redact_admin_actions_for_erasure: {
         Args: { p_user_id: string }
@@ -22333,6 +30818,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      refer_client: {
+        Args: {
+          p_client_id: string
+          p_reason: string
+          p_to_professional: string
+        }
+        Returns: string
+      }
       referral_summary: {
         Args: never
         Returns: {
@@ -22349,6 +30842,33 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: {
           customer_id: string
+          decline_message: string | null
+          decline_reason:
+            Database["public"]["Enums"]["client_request_decline_reason"] | null
+          id: string
+          professional_id: string
+          requested_at: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["request_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pending_client_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reject_client_request_with_reason: {
+        Args: {
+          p_message?: string
+          p_reason: Database["public"]["Enums"]["client_request_decline_reason"]
+          p_request_id: string
+        }
+        Returns: {
+          customer_id: string
+          decline_message: string | null
+          decline_reason:
+            Database["public"]["Enums"]["client_request_decline_reason"] | null
           id: string
           professional_id: string
           requested_at: string
@@ -22363,6 +30883,7 @@ export type Database = {
         }
       }
       release_held_notifications: { Args: never; Returns: number }
+      remove_care_link: { Args: { p_link_id: string }; Returns: undefined }
       remove_course_lesson: {
         Args: { p_lesson_id: string }
         Returns: undefined
@@ -22383,6 +30904,7 @@ export type Database = {
         Args: { p_thread_id: string; p_user_id: string }
         Returns: undefined
       }
+      remove_shared_item: { Args: { p_item_id: string }; Returns: undefined }
       rename_broadcast_list: {
         Args: { p_list_id: string; p_name: string }
         Returns: {
@@ -22406,6 +30928,7 @@ export type Database = {
       rename_group: {
         Args: { p_name: string; p_thread_id: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -22427,6 +30950,10 @@ export type Database = {
         Args: { p_membership_id: string }
         Returns: string
       }
+      reorder_business_photos: {
+        Args: { p_business_id: string; p_ids: string[] }
+        Returns: undefined
+      }
       reorder_course_lessons: {
         Args: { p_lesson_ids: string[]; p_module_id: string }
         Returns: undefined
@@ -22439,9 +30966,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      reply_to_food_feedback: {
+        Args: { p_feedback_id: string; p_reply: string }
+        Returns: undefined
+      }
       reply_to_professional_review: {
         Args: { p_body: string; p_review_id: string }
         Returns: undefined
+      }
+      reply_to_review: {
+        Args: { p_body: string; p_review_id: string }
+        Returns: string
       }
       report_course: {
         Args: {
@@ -22464,7 +30999,24 @@ export type Database = {
         Args: {
           p_detail?: string
           p_reason: Database["public"]["Enums"]["report_reason"]
+          p_reply_id?: string
           p_review_id: string
+        }
+        Returns: undefined
+      }
+      report_review: {
+        Args: {
+          p_note?: string
+          p_reason: Database["public"]["Enums"]["review_report_reason"]
+          p_review_id: string
+        }
+        Returns: string
+      }
+      report_shared_item: {
+        Args: {
+          p_detail?: string
+          p_item_id: string
+          p_reason: Database["public"]["Enums"]["report_reason"]
         }
         Returns: undefined
       }
@@ -22476,8 +31028,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           customer_subtype:
-            | Database["public"]["Enums"]["customer_subtype"]
-            | null
+            Database["public"]["Enums"]["customer_subtype"] | null
           date_of_birth: string | null
           deletion_due_at: string | null
           deletion_notice_days: number | null
@@ -22494,8 +31045,7 @@ export type Database = {
           plant_species: string | null
           preferred_activities: string[]
           professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
+            Database["public"]["Enums"]["professional_subtype"] | null
           sex: Database["public"]["Enums"]["sex"] | null
           shares_presence: boolean
           storage_bytes_used: number
@@ -22505,6 +31055,7 @@ export type Database = {
           tracking_preferences: string[]
           updated_at: string
           weight_kg: number | null
+          win_sharing: Database["public"]["Enums"]["win_sharing_setting"]
           x: string | null
         }
         SetofOptions: {
@@ -22514,11 +31065,106 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_care_link: { Args: { p_professional: string }; Returns: string }
+      request_client_access: {
+        Args: {
+          p_category: Database["public"]["Enums"]["access_category"]
+          p_client_id: string
+          p_message?: string
+        }
+        Returns: string
+      }
+      request_featured_week: {
+        Args: {
+          p_area: Database["public"]["Enums"]["feature_area"]
+          p_business_id: string
+          p_starts_on: string
+          p_target_id: string
+          p_target_kind: Database["public"]["Enums"]["placement_target"]
+        }
+        Returns: string
+      }
+      request_professional_booking: {
+        Args: { p_service_id: string; p_starts_at: string }
+        Returns: {
+          business_id: string | null
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_business: boolean | null
+          client_id: string | null
+          created_at: string
+          ends_at: string
+          gym_id: string | null
+          id: string
+          marked_paid_by: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          price_agreed: number
+          service_id: string | null
+          service_name: string
+          staff_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_professional_type_change: {
+        Args: {
+          p_note?: string
+          p_type: Database["public"]["Enums"]["professional_subtype"]
+        }
+        Returns: string
+      }
+      request_return: {
+        Args: {
+          p_items: Json
+          p_kind: Database["public"]["Enums"]["return_kind"]
+          p_order_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      request_shared_item_removal: {
+        Args: { p_item_id: string }
+        Returns: undefined
+      }
       request_to_join_business: { Args: { p_code: string }; Returns: string }
+      request_to_join_business_by_id: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
       require_admin: { Args: never; Returns: undefined }
+      resolve_weight: {
+        Args: { p_intensity_pct: number; p_one_rm: number; p_unit?: string }
+        Returns: number
+      }
+      respond_care_link: {
+        Args: { p_accept: boolean; p_link_id: string }
+        Returns: undefined
+      }
+      respond_care_referral: {
+        Args: { p_accept: boolean; p_referral_id: string }
+        Returns: undefined
+      }
       respond_join_request: {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: Database["public"]["Enums"]["join_request_status"]
+      }
+      respond_return: {
+        Args: {
+          p_refund_amount?: number
+          p_return_id: string
+          p_status: Database["public"]["Enums"]["return_status"]
+        }
+        Returns: undefined
       }
       respond_to_business_membership: {
         Args: { p_accept: boolean; p_membership_id: string }
@@ -22542,7 +31188,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      restriction_keyword_match: {
+        Args: {
+          p_restriction: Database["public"]["Enums"]["dietary_restriction"]
+          p_text: string
+        }
+        Returns: boolean
+      }
+      result_shared_with_me: {
+        Args: { p_marker_id: string; p_panel_id: string }
+        Returns: boolean
+      }
       retry_account_emails: { Args: never; Returns: number }
+      retry_due_payments: {
+        Args: never
+        Returns: {
+          attempt_id: string
+          attempt_no: number
+          payment_id: string
+        }[]
+      }
+      retry_featured_week: {
+        Args: { p_placement_id: string; p_starts_on: string }
+        Returns: undefined
+      }
+      retry_payment: { Args: { p_payment_id: string }; Returns: string }
       retry_undelivered_reminders: { Args: never; Returns: number }
       retry_welcome_emails: { Args: never; Returns: number }
       review_author_names: {
@@ -22552,10 +31222,56 @@ export type Database = {
           review_id: string
         }[]
       }
+      review_form_response: {
+        Args: { p_reply?: string; p_response_id: string }
+        Returns: undefined
+      }
       review_reviewer_id: { Args: { p_review_id: string }; Returns: string }
+      reviewer_label: { Args: { p_review_id: string }; Returns: string }
+      revoke_invite_link: { Args: { p_code_id: string }; Returns: undefined }
       role_uses_seat: {
         Args: { p_role: Database["public"]["Enums"]["business_role"] }
         Returns: boolean
+      }
+      rotate_gym_pass_token: {
+        Args: { p_membership_id: string }
+        Returns: string
+      }
+      run_form_schedules: { Args: never; Returns: number }
+      save_class_series: {
+        Args: {
+          p_business_id: string
+          p_fields: Json
+          p_interval_weeks?: number
+          p_occurrence_count?: number
+          p_starts_on: string
+          p_until_on?: string
+          p_weekdays: number[]
+        }
+        Returns: string
+      }
+      save_form_response: {
+        Args: { p_answers: Json; p_assignment_id: string; p_submit?: boolean }
+        Returns: {
+          answers: Json
+          assignment_id: string
+          client_id: string
+          created_at: string
+          id: string
+          professional_id: string
+          reply: string | null
+          reviewed_at: string | null
+          safety_flag: boolean
+          safety_topics: string[]
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "form_responses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       save_lab_report: {
         Args: { p_markers: Json; p_panel: Json }
@@ -22585,6 +31301,17 @@ export type Database = {
       seat_capacity_for: {
         Args: { p_blocks: number; p_included: number; p_per: number }
         Returns: number
+      }
+      sell_day_pass: {
+        Args: {
+          p_guest_label?: string
+          p_gym_id: string
+          p_method?: Database["public"]["Enums"]["venue_payment_method"]
+          p_paid?: boolean
+          p_person_id?: string
+          p_plan_id: string
+        }
+        Returns: string
       }
       send_broadcast: {
         Args: { p_list_id: string; p_text: string }
@@ -22629,7 +31356,40 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      send_group_card: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["message_card_kind"]
+          p_note?: string
+          p_ref_id: string
+          p_thread_id: string
+        }
+        Returns: string
+      }
+      send_payment_reminder: { Args: { p_payment_id: string }; Returns: string }
+      send_recommendation: {
+        Args: {
+          p_body?: string
+          p_category?: string
+          p_ref_id?: string
+          p_ref_kind?: string
+          p_thread_id: string
+          p_title: string
+        }
+        Returns: string
+      }
       session_is_aal2: { Args: never; Returns: boolean }
+      session_packs: {
+        Args: { p_client_id?: string }
+        Returns: {
+          client_id: string
+          hire_id: string
+          plan_name: string
+          professional_id: string
+          session_count: number
+          sessions_left: number
+          sessions_used: number
+        }[]
+      }
       set_approximate_location: {
         Args: { p_label?: string; p_lat: number; p_lng: number }
         Returns: {
@@ -22641,12 +31401,13 @@ export type Database = {
           certification_url: string | null
           certification_verified: boolean
           closest_group:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate: number | null
           created_at: string
           facebook: string | null
           free_period_ends_at: string
+          handle: string | null
+          handle_changed_at: string | null
           headline: string | null
           home_visit_km: number | null
           id: string
@@ -22668,8 +31429,7 @@ export type Database = {
           updated_at: string
           website: string | null
           work_mode:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x: string | null
         }
         SetofOptions: {
@@ -22705,8 +31465,42 @@ export type Database = {
         Args: { p_business_id: string; p_paused: boolean }
         Returns: string
       }
+      set_business_payment_settings: {
+        Args: {
+          p_business_id: string
+          p_cash_enabled?: boolean
+          p_whish_enabled?: boolean
+          p_whish_merchant_ref?: string
+        }
+        Returns: string
+      }
       set_certificate_sharing: {
         Args: { p_certificate_id: string; p_shared: boolean }
+        Returns: undefined
+      }
+      set_client_nutrition_targets: {
+        Args: {
+          p_carbs_pct: number
+          p_client_id: string
+          p_fat_pct: number
+          p_lock?: boolean
+          p_protein_pct: number
+          p_target_calories: number
+          p_weekly_rate_kg?: number
+          p_weight_goal?: Database["public"]["Enums"]["weight_goal"]
+        }
+        Returns: string
+      }
+      set_client_stage: {
+        Args: {
+          p_client_id: string
+          p_stage: Database["public"]["Enums"]["client_stage"]
+        }
+        Returns: Database["public"]["Enums"]["client_stage"]
+      }
+      set_coaching_terms: { Args: { p_text: string }; Returns: number }
+      set_course_drip: {
+        Args: { p_course_id: string; p_mode: string; p_weekday?: number }
         Returns: undefined
       }
       set_course_quiz_options: {
@@ -22724,6 +31518,11 @@ export type Database = {
         Returns: string
       }
       set_forum_nickname: { Args: { p_nickname: string }; Returns: undefined }
+      set_module_opens_after: {
+        Args: { p_days: number; p_module_id: string }
+        Returns: undefined
+      }
+      set_my_handle: { Args: { p_handle: string }; Returns: string }
       set_public_listing: {
         Args: { p_listed: boolean }
         Returns: {
@@ -22735,12 +31534,13 @@ export type Database = {
           certification_url: string | null
           certification_verified: boolean
           closest_group:
-            | Database["public"]["Enums"]["professional_group"]
-            | null
+            Database["public"]["Enums"]["professional_group"] | null
           consultation_rate: number | null
           created_at: string
           facebook: string | null
           free_period_ends_at: string
+          handle: string | null
+          handle_changed_at: string | null
           headline: string | null
           home_visit_km: number | null
           id: string
@@ -22762,8 +31562,7 @@ export type Database = {
           updated_at: string
           website: string | null
           work_mode:
-            | Database["public"]["Enums"]["professional_work_mode"]
-            | null
+            Database["public"]["Enums"]["professional_work_mode"] | null
           x: string | null
         }
         SetofOptions: {
@@ -22777,14 +31576,68 @@ export type Database = {
         Args: { p_items: Json; p_routine_id: string }
         Returns: number
       }
+      set_session_outcome: {
+        Args: {
+          p_event_id: string
+          p_outcome: Database["public"]["Enums"]["session_outcome"]
+        }
+        Returns: undefined
+      }
+      set_session_paid: {
+        Args: { p_event_id: string; p_paid: boolean }
+        Returns: undefined
+      }
+      set_types_valid: { Args: { p: Json }; Returns: boolean }
+      share_card_allowed: { Args: { p_card: Json }; Returns: boolean }
+      share_my_outcomes_with_business: {
+        Args: { p_business_id: string; p_share?: boolean }
+        Returns: boolean
+      }
+      share_my_profile_with_business: {
+        Args: { p_business_id: string; p_share?: boolean }
+        Returns: boolean
+      }
+      shared_item_public: {
+        Args: { p_item_id: string }
+        Returns: {
+          card: Json
+          created_at: string
+          format: string
+          id: string
+          kind: string
+          professional_handle: string
+        }[]
+      }
       should_notify: {
         Args: { p_kind: string; p_user: string }
         Returns: boolean
       }
+      staff_is_free: {
+        Args: {
+          p_except_appointment?: string
+          p_staff_id: string
+          p_window: unknown
+        }
+        Returns: boolean
+      }
+      staff_works_then: {
+        Args: {
+          p_business_id: string
+          p_gym_id: string
+          p_staff_id: string
+          p_window: unknown
+        }
+        Returns: boolean
+      }
       star_messages: { Args: { p_message_ids: string[] }; Returns: number }
+      start_member_thread: {
+        Args: { p_business_id: string; p_person_id: string }
+        Returns: string
+      }
       start_message_thread: {
         Args: { p_other_user_id: string }
         Returns: {
+          business_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -22802,6 +31655,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      start_reviewer_thread: { Args: { p_review_id: string }; Returns: string }
       start_support_thread: { Args: never; Returns: string }
       start_venue_thread: { Args: { p_gym_id: string }; Returns: string }
       storage_cap_bytes: { Args: { p_user_id: string }; Returns: number }
@@ -22832,6 +31686,68 @@ export type Database = {
           used_bytes: number
         }[]
       }
+      store_low_stock: {
+        Args: { p_below?: number; p_business_id: string }
+        Returns: {
+          offering_id: string
+          stock: number
+          title: string
+          visible: boolean
+        }[]
+      }
+      store_orders_page: {
+        Args: {
+          p_business_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: {
+          customer_id: string
+          customer_is_minor: boolean
+          customer_label: string
+          delivery_address: string
+          delivery_fee: number
+          fulfilment: Database["public"]["Enums"]["order_fulfilment"]
+          item_count: number
+          open_return: Database["public"]["Enums"]["return_status"]
+          order_id: string
+          order_number: number
+          payment_method: Database["public"]["Enums"]["venue_payment_method"]
+          payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          placed_at: string
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total: number
+          total_count: number
+        }[]
+      }
+      store_sales_summary: {
+        Args: { p_business_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          average_order: number
+          cancelled: number
+          orders: number
+          returned_pct: number
+          sales: number
+          units: number
+        }[]
+      }
+      store_top_products: {
+        Args: {
+          p_business_id: string
+          p_from?: string
+          p_limit?: number
+          p_to?: string
+        }
+        Returns: {
+          name: string
+          offering_id: string
+          sales: number
+          units: number
+        }[]
+      }
       submit_course_for_review: {
         Args: { p_course_id: string }
         Returns: undefined
@@ -22846,6 +31762,10 @@ export type Database = {
       submit_course_revision: {
         Args: { p_revision_id: string }
         Returns: undefined
+      }
+      subtype_for_type: {
+        Args: { p_type: Database["public"]["Enums"]["professional_subtype"] }
+        Returns: string
       }
       sweep_achievements: { Args: never; Returns: number }
       system_support_identity: { Args: never; Returns: string }
@@ -22874,6 +31794,7 @@ export type Database = {
         Args: { p_thread_id: string; p_user: string }
         Returns: boolean
       }
+      thread_is_personal: { Args: { p_thread_id: string }; Returns: boolean }
       thread_participants: {
         Args: { p_thread_id: string }
         Returns: {
@@ -22894,6 +31815,38 @@ export type Database = {
         Returns: boolean
       }
       touch_last_active: { Args: never; Returns: string }
+      transactions_page: {
+        Args: {
+          p_business_id: string
+          p_from?: string
+          p_limit?: number
+          p_method?: string
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+          p_to?: string
+        }
+        Returns: {
+          amount: number
+          gym_id: string
+          label: string
+          member_number: number
+          method: Database["public"]["Enums"]["venue_payment_method"]
+          net: number
+          paid_at: string
+          paid_on: string
+          payment_id: string
+          person_id: string
+          price_type: Database["public"]["Enums"]["price_type"]
+          provider_reference: string
+          recorded_at: string
+          refunded: number
+          source_kind: Database["public"]["Enums"]["payment_source_kind"]
+          status: Database["public"]["Enums"]["business_payment_status"]
+          total_count: number
+          venue_name: string
+        }[]
+      }
       trigger_call_cap_sweep: { Args: never; Returns: number }
       trigger_forum_photo_purge: { Args: never; Returns: number }
       trigger_health_data_storage_purge: { Args: never; Returns: number }
@@ -22923,6 +31876,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      unmark_payment_paid: {
+        Args: { p_note?: string; p_payment_id: string }
+        Returns: string
+      }
+      update_assigned_habit: {
+        Args: { p_archive?: boolean; p_habit_id: string; p_label?: string }
+        Returns: undefined
       }
       update_course_details: {
         Args: {
@@ -22976,15 +31937,25 @@ export type Database = {
         Args: { allowed: string[]; v: string[] }
         Returns: boolean
       }
+      venue_busy_times: {
+        Args: { p_gym_id: string; p_weeks?: number }
+        Returns: {
+          average_entries: number
+          hour: number
+          weekday: number
+        }[]
+      }
       venue_class_roster: {
         Args: { p_class_id: string }
         Returns: {
           at: string
-          client_first_name: string
+          booking_id: string
           client_is_minor: boolean
+          client_label: string
           entry_kind: string
           payment_method: Database["public"]["Enums"]["venue_payment_method"]
           payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          person_id: string
           price_agreed: number
           waitlist_position: number
         }[]
@@ -23024,13 +31995,15 @@ export type Database = {
           expires_on: string
           joined_at: string
           marked_paid_by: string
-          member_first_name: string
           member_is_minor: boolean
+          member_label: string
+          member_number: number
           membership_id: string
           paid_at: string
           pass_state: string
           payment_method: Database["public"]["Enums"]["venue_payment_method"]
           payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          person_id: string
           plan_name: string
           price_agreed: number
           started_on: string
@@ -23045,9 +32018,11 @@ export type Database = {
           description: string
           id: string
           kind: string
+          member_number: number
           payment_method: Database["public"]["Enums"]["venue_payment_method"]
-          person_first_name: string
+          person_id: string
           person_is_minor: boolean
+          person_label: string
           since: string
         }[]
       }
@@ -23070,14 +32045,17 @@ export type Database = {
           cancel_at_period_end: boolean
           days_left: number
           expires_on: string
-          member_first_name: string
           member_is_minor: boolean
+          member_label: string
+          member_number: number
           membership_id: string
           payment_status: Database["public"]["Enums"]["venue_payment_status"]
+          person_id: string
           plan_name: string
           total_count: number
         }[]
       }
+      venue_today: { Args: { p_gym_id: string }; Returns: string }
       verify_gym_pass: {
         Args: { p_token: string }
         Returns: {
@@ -23091,8 +32069,20 @@ export type Database = {
         }[]
       }
       viewer_uses_gym: { Args: { p_gym_id: string }; Returns: boolean }
+      withdraw_access_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
+      withdraw_care_referral: {
+        Args: { p_referral_id: string }
+        Returns: undefined
+      }
       withdraw_course_revision: {
         Args: { p_revision_id: string }
+        Returns: undefined
+      }
+      withdraw_join_request: {
+        Args: { p_request_id: string }
         Returns: undefined
       }
       withdraw_my_professional_review: {
@@ -23102,6 +32092,14 @@ export type Database = {
       withdraw_my_review_reply: {
         Args: { p_review_id: string }
         Returns: undefined
+      }
+      write_business_review: {
+        Args: { p_body: string; p_business_id: string; p_rating: number }
+        Returns: string
+      }
+      write_class_review: {
+        Args: { p_body: string; p_booking_id: string; p_rating: number }
+        Returns: string
       }
       write_gym_review: {
         Args: { p_body: string; p_gym_id: string; p_rating: number }
@@ -23122,6 +32120,9 @@ export type Database = {
         | "blood_pressure"
         | "cycle_phase"
         | "pregnancy"
+        | "allergies_dietary"
+        | "habits"
+      access_request_status: "pending" | "granted" | "declined" | "withdrawn"
       account_type: "customer" | "professional" | "business"
       achievement_category:
         | "getting_started"
@@ -23134,22 +32135,51 @@ export type Database = {
         | "explorer"
       achievement_level: "bronze" | "silver" | "gold"
       activity_level:
-        | "sedentary"
-        | "light"
-        | "moderate"
-        | "very_active"
-        | "athlete"
+        "sedentary" | "light" | "moderate" | "very_active" | "athlete"
+      allergen:
+        | "celery"
+        | "cereals_gluten"
+        | "crustaceans"
+        | "eggs"
+        | "fish"
+        | "lupin"
+        | "milk"
+        | "molluscs"
+        | "mustard"
+        | "tree_nuts"
+        | "peanuts"
+        | "sesame"
+        | "soya"
+        | "sulphites"
+      allergy_severity: "mild" | "moderate" | "severe"
       app_language: "en" | "ar"
       app_platform: "web" | "mobile"
+      appointment_status:
+        | "booked"
+        | "cancelled"
+        | "completed"
+        | "no_show"
+        | "requested"
+        | "late_cancel"
       attachment_kind: "image" | "voice" | "file"
       billing_period:
-        | "daily"
-        | "monthly"
-        | "annually"
-        | "quarterly"
-        | "semiannually"
+        "daily" | "monthly" | "annually" | "quarterly" | "semiannually"
       block_kind: "superset" | "amrap" | "emom" | "for_time"
       blood_marker_status: "low" | "normal" | "high"
+      booking_audience: "everyone" | "clients_only" | "approved_only"
+      booking_source: "centium" | "member" | "direct"
+      business_activity_kind:
+        | "booking"
+        | "cancel"
+        | "join"
+        | "end"
+        | "check_in"
+        | "order"
+        | "payment"
+        | "appointment"
+        | "review"
+      business_payment_status:
+        "pending" | "paid" | "failed" | "refunded" | "void"
       business_role:
         | "instructor"
         | "trainer"
@@ -23188,13 +32218,41 @@ export type Database = {
         | "completed"
         | "cap_ended"
         | "failed"
+      care_referral_status:
+        | "awaiting_client"
+        | "declined_by_client"
+        | "sent"
+        | "accepted"
+        | "declined"
+        | "withdrawn"
+        | "disputed"
+        | "closed"
+      centium_charge_method: "whish" | "cash" | "transfer" | "manual"
+      centium_charge_status:
+        | "pending"
+        | "paid"
+        | "failed"
+        | "waived"
+        | "cancelled"
+        | "payment_not_received"
+      centium_product: "business_plan" | "seat_block" | "featured_week"
       cervical_mucus: "dry" | "sticky" | "creamy" | "watery" | "egg_white"
-      class_waitlist_state:
-        | "waiting"
-        | "offered"
-        | "converted"
-        | "left"
+      check_in_deny_reason:
+        | "no_pass"
         | "expired"
+        | "unpaid"
+        | "not_started"
+        | "under_min_age"
+        | "guest_limit"
+        | "other_venue"
+      check_in_method: "qr" | "manual" | "nfc" | "bluetooth"
+      check_in_result: "in" | "denied"
+      class_level: "all_levels" | "beginner" | "intermediate" | "advanced"
+      class_waitlist_state:
+        "waiting" | "offered" | "converted" | "left" | "expired"
+      client_request_decline_reason:
+        "fully_booked" | "outside_specialty" | "location" | "other"
+      client_stage: "onboarding" | "active" | "paused" | "completed"
       color_theme:
         | "centium"
         | "ocean"
@@ -23258,6 +32316,7 @@ export type Database = {
         | "duration"
       exercise_difficulty: "beginner" | "intermediate" | "advanced"
       external_food_source: "open_food_facts"
+      feature_area: "classes" | "gyms" | "shops"
       food_category:
         | "traditional"
         | "breakfast"
@@ -23272,6 +32331,9 @@ export type Database = {
       food_log_source: "search" | "ai" | "scan" | "barcode" | "recent" | "quick"
       food_source: "fdc" | "curated" | "user_submitted"
       food_unit: "serving" | "g" | "ml" | "cup" | "tbsp" | "tsp"
+      form_kind: "intake" | "check_in"
+      form_question_type:
+        "number" | "scale" | "choice" | "multi" | "text" | "photo" | "date"
       gym_membership_status: "active" | "expired" | "cancelled" | "upcoming"
       habit_colour: "lavender" | "teal" | "gold" | "rose" | "sky"
       habit_icon:
@@ -23308,10 +32370,7 @@ export type Database = {
         | "psa"
       health_metric_context: "rest" | "workout"
       health_metric_source:
-        | "manual"
-        | "apple_health"
-        | "android_health"
-        | "whoop"
+        "manual" | "apple_health" | "android_health" | "whoop"
       health_metric_type:
         | "weight"
         | "heart_rate"
@@ -23345,17 +32404,31 @@ export type Database = {
         | "hormones"
         | "metabolic"
         | "other"
+        | "vitamins_minerals"
+        | "thyroid"
       language_proficiency:
-        | "native"
-        | "fluent"
-        | "professional"
-        | "conversational"
-        | "basic"
+        "native" | "fluent" | "professional" | "conversational" | "basic"
       lh_test_result: "negative" | "positive" | "peak"
+      listing_event_kind:
+        | "impression"
+        | "profile_open"
+        | "map_open"
+        | "book_tap"
+        | "booking"
+        | "order"
+        | "pass"
+      listing_event_source:
+        "search" | "category" | "map" | "direct" | "featured"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
       measurement_goal: "decrease" | "increase" | "maintain"
       medication_route: "oral" | "injectable" | "topical" | "inhaled" | "other"
-      message_card_kind: "plans_offer" | "hire_confirmed"
+      message_card_kind:
+        | "plans_offer"
+        | "hire_confirmed"
+        | "payment_reminder"
+        | "recommendation"
+        | "programme_share"
+        | "session_share"
       message_content_change: "edit" | "delete"
       message_flag: "starred" | "hidden"
       mind_content_type: "breathing" | "stretch" | "yoga"
@@ -23387,24 +32460,54 @@ export type Database = {
         | "supplements"
         | "wellness"
         | "meal_prep"
+      order_fulfilment: "pickup" | "delivery"
+      order_status:
+        | "placed"
+        | "packed"
+        | "out_for_delivery"
+        | "ready_for_pickup"
+        | "completed"
+        | "cancelled"
+        | "returned"
+      payment_attempt_outcome: "pending" | "succeeded" | "failed"
       payment_modality: "cash" | "card" | "whish"
-      plan_status: "active" | "paused" | "archived"
-      plan_type:
+      payment_source_kind:
         | "membership"
+        | "class_booking"
         | "day_pass"
         | "class_pack"
-        | "intro_offer"
-        | "drop_in"
+        | "order"
+        | "appointment"
+      photo_status: "in_review" | "approved" | "rejected"
+      placement_status:
+        | "requested"
+        | "scheduled"
+        | "live"
+        | "ended"
+        | "cancelled"
+        | "payment_not_received"
+      placement_target: "business" | "class" | "product"
+      plan_status: "active" | "paused" | "archived"
+      plan_type:
+        "membership" | "day_pass" | "class_pack" | "intro_offer" | "drop_in"
       points_source:
-        | "streak"
-        | "referral"
-        | "manual_adjustment"
-        | "other"
-        | "achievement"
+        "streak" | "referral" | "manual_adjustment" | "other" | "achievement"
       pregnancy_outcome: "birth" | "loss" | "other"
       pregnancy_status: "active" | "ended"
       pregnancy_test_result: "negative" | "positive"
       premium_plan: "monthly" | "yearly"
+      price_type:
+        | "class_pack"
+        | "membership"
+        | "intro_offer"
+        | "drop_in"
+        | "day_pass"
+        | "intro_week"
+        | "product"
+        | "delivery"
+        | "other"
+        | "appointment"
+      pro_notification_kind: "request" | "to_review" | "update"
       professional_group: "fitness" | "clinical" | "nutrition" | "other"
       professional_plan_source: "own_subscription" | "business_seat" | "default"
       professional_subtype:
@@ -23413,7 +32516,18 @@ export type Database = {
         | "dietitian"
         | "doctor"
         | "other"
+        | "nutritionist"
+        | "coach_instructor"
       professional_work_mode: "in_person" | "online" | "both"
+      promo_audience: "new" | "everyone"
+      promo_target:
+        "any" | "class" | "plan" | "product" | "day_pass" | "intro_offer"
+      promo_type:
+        | "percent_off"
+        | "first_free"
+        | "first_n_free"
+        | "bring_friend"
+        | "free_delivery"
       rate_limited_action:
         | "create_client_code"
         | "redeem_client_code"
@@ -23451,6 +32565,14 @@ export type Database = {
         | "review_gym"
         | "invite_employee"
         | "request_to_join_business"
+        | "send_payment_reminder"
+        | "create_invite_link"
+        | "send_client_invite"
+        | "request_client_access"
+        | "request_professional_booking"
+        | "refer_client"
+        | "ask_to_share_win"
+        | "report_shared_item"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       report_reason:
         | "harassment"
@@ -23461,12 +32583,24 @@ export type Database = {
         | "harmful_health_advice"
       report_status: "open" | "actioned" | "dismissed"
       request_status: "pending" | "accepted" | "rejected"
+      return_kind: "refund" | "exchange"
+      return_status:
+        "requested" | "approved" | "received" | "refunded" | "rejected"
+      review_report_reason:
+        | "not_about_this_business"
+        | "shares_private_information"
+        | "harassment"
+        | "spam"
+        | "other"
+        | "injury"
+      review_report_status: "open" | "upheld" | "dismissed"
+      session_note_kind: "training" | "nutrition" | "clinical" | "body"
+      session_outcome: "completed" | "no_show" | "late_cancel"
       set_outcome: "completed" | "skipped" | "failed"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
       sex: "female" | "male" | "other"
       sex_activity: "none" | "protected" | "unprotected"
       sleep_stage: "awake" | "light" | "deep" | "rem"
-      store_owner_type: "business" | "professional"
       subscription_status: "active" | "cancelled" | "expired"
       subscription_tier_type: "professional" | "business" | "client"
       template_level: "beginner" | "intermediate" | "advanced"
@@ -23474,11 +32608,7 @@ export type Database = {
       thread_kind: "peer" | "official_support" | "group" | "venue" | "business"
       thread_member_role: "owner" | "member"
       thread_member_status:
-        | "invited"
-        | "joined"
-        | "declined"
-        | "left"
-        | "removed"
+        "invited" | "joined" | "declined" | "left" | "removed"
       unit_system: "metric" | "imperial"
       venue_kind: "gym" | "studio" | "store" | "wellness"
       venue_payment_method: "cash" | "whish"
@@ -23501,6 +32631,7 @@ export type Database = {
         | "meditation"
         | "gym_passes"
         | "cycle"
+      win_sharing_setting: "always_ask" | "always_allow" | "never"
     }
     CompositeTypes: {
       journal_unlock_result: {
@@ -23512,15 +32643,13 @@ export type Database = {
         success: boolean | null
         message: string | null
         membership:
-          | Database["public"]["Tables"]["business_members"]["Row"]
-          | null
+          Database["public"]["Tables"]["business_members"]["Row"] | null
       }
       redeem_client_code_result: {
         success: boolean | null
         message: string | null
         relationship:
-          | Database["public"]["Tables"]["professional_clients"]["Row"]
-          | null
+          Database["public"]["Tables"]["professional_clients"]["Row"] | null
       }
       redeem_referral_result: {
         success: boolean | null
@@ -23587,8 +32716,7 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -23612,8 +32740,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -23637,8 +32764,7 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -23684,7 +32810,10 @@ export const Constants = {
         "blood_pressure",
         "cycle_phase",
         "pregnancy",
+        "allergies_dietary",
+        "habits",
       ],
+      access_request_status: ["pending", "granted", "declined", "withdrawn"],
       account_type: ["customer", "professional", "business"],
       achievement_category: [
         "getting_started",
@@ -23704,8 +32833,33 @@ export const Constants = {
         "very_active",
         "athlete",
       ],
+      allergen: [
+        "celery",
+        "cereals_gluten",
+        "crustaceans",
+        "eggs",
+        "fish",
+        "lupin",
+        "milk",
+        "molluscs",
+        "mustard",
+        "tree_nuts",
+        "peanuts",
+        "sesame",
+        "soya",
+        "sulphites",
+      ],
+      allergy_severity: ["mild", "moderate", "severe"],
       app_language: ["en", "ar"],
       app_platform: ["web", "mobile"],
+      appointment_status: [
+        "booked",
+        "cancelled",
+        "completed",
+        "no_show",
+        "requested",
+        "late_cancel",
+      ],
       attachment_kind: ["image", "voice", "file"],
       billing_period: [
         "daily",
@@ -23716,6 +32870,26 @@ export const Constants = {
       ],
       block_kind: ["superset", "amrap", "emom", "for_time"],
       blood_marker_status: ["low", "normal", "high"],
+      booking_audience: ["everyone", "clients_only", "approved_only"],
+      booking_source: ["centium", "member", "direct"],
+      business_activity_kind: [
+        "booking",
+        "cancel",
+        "join",
+        "end",
+        "check_in",
+        "order",
+        "payment",
+        "appointment",
+        "review",
+      ],
+      business_payment_status: [
+        "pending",
+        "paid",
+        "failed",
+        "refunded",
+        "void",
+      ],
       business_role: [
         "instructor",
         "trainer",
@@ -23758,7 +32932,39 @@ export const Constants = {
         "cap_ended",
         "failed",
       ],
+      care_referral_status: [
+        "awaiting_client",
+        "declined_by_client",
+        "sent",
+        "accepted",
+        "declined",
+        "withdrawn",
+        "disputed",
+        "closed",
+      ],
+      centium_charge_method: ["whish", "cash", "transfer", "manual"],
+      centium_charge_status: [
+        "pending",
+        "paid",
+        "failed",
+        "waived",
+        "cancelled",
+        "payment_not_received",
+      ],
+      centium_product: ["business_plan", "seat_block", "featured_week"],
       cervical_mucus: ["dry", "sticky", "creamy", "watery", "egg_white"],
+      check_in_deny_reason: [
+        "no_pass",
+        "expired",
+        "unpaid",
+        "not_started",
+        "under_min_age",
+        "guest_limit",
+        "other_venue",
+      ],
+      check_in_method: ["qr", "manual", "nfc", "bluetooth"],
+      check_in_result: ["in", "denied"],
+      class_level: ["all_levels", "beginner", "intermediate", "advanced"],
       class_waitlist_state: [
         "waiting",
         "offered",
@@ -23766,6 +32972,13 @@ export const Constants = {
         "left",
         "expired",
       ],
+      client_request_decline_reason: [
+        "fully_booked",
+        "outside_specialty",
+        "location",
+        "other",
+      ],
+      client_stage: ["onboarding", "active", "paused", "completed"],
       color_theme: [
         "centium",
         "ocean",
@@ -23835,6 +33048,7 @@ export const Constants = {
       ],
       exercise_difficulty: ["beginner", "intermediate", "advanced"],
       external_food_source: ["open_food_facts"],
+      feature_area: ["classes", "gyms", "shops"],
       food_category: [
         "traditional",
         "breakfast",
@@ -23850,6 +33064,16 @@ export const Constants = {
       food_log_source: ["search", "ai", "scan", "barcode", "recent", "quick"],
       food_source: ["fdc", "curated", "user_submitted"],
       food_unit: ["serving", "g", "ml", "cup", "tbsp", "tsp"],
+      form_kind: ["intake", "check_in"],
+      form_question_type: [
+        "number",
+        "scale",
+        "choice",
+        "multi",
+        "text",
+        "photo",
+        "date",
+      ],
       gym_membership_status: ["active", "expired", "cancelled", "upcoming"],
       habit_colour: ["lavender", "teal", "gold", "rose", "sky"],
       habit_icon: [
@@ -23927,6 +33151,8 @@ export const Constants = {
         "hormones",
         "metabolic",
         "other",
+        "vitamins_minerals",
+        "thyroid",
       ],
       language_proficiency: [
         "native",
@@ -23936,10 +33162,27 @@ export const Constants = {
         "basic",
       ],
       lh_test_result: ["negative", "positive", "peak"],
+      listing_event_kind: [
+        "impression",
+        "profile_open",
+        "map_open",
+        "book_tap",
+        "booking",
+        "order",
+        "pass",
+      ],
+      listing_event_source: ["search", "category", "map", "direct", "featured"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
       measurement_goal: ["decrease", "increase", "maintain"],
       medication_route: ["oral", "injectable", "topical", "inhaled", "other"],
-      message_card_kind: ["plans_offer", "hire_confirmed"],
+      message_card_kind: [
+        "plans_offer",
+        "hire_confirmed",
+        "payment_reminder",
+        "recommendation",
+        "programme_share",
+        "session_share",
+      ],
       message_content_change: ["edit", "delete"],
       message_flag: ["starred", "hidden"],
       mind_content_type: ["breathing", "stretch", "yoga"],
@@ -23973,7 +33216,36 @@ export const Constants = {
         "wellness",
         "meal_prep",
       ],
+      order_fulfilment: ["pickup", "delivery"],
+      order_status: [
+        "placed",
+        "packed",
+        "out_for_delivery",
+        "ready_for_pickup",
+        "completed",
+        "cancelled",
+        "returned",
+      ],
+      payment_attempt_outcome: ["pending", "succeeded", "failed"],
       payment_modality: ["cash", "card", "whish"],
+      payment_source_kind: [
+        "membership",
+        "class_booking",
+        "day_pass",
+        "class_pack",
+        "order",
+        "appointment",
+      ],
+      photo_status: ["in_review", "approved", "rejected"],
+      placement_status: [
+        "requested",
+        "scheduled",
+        "live",
+        "ended",
+        "cancelled",
+        "payment_not_received",
+      ],
+      placement_target: ["business", "class", "product"],
       plan_status: ["active", "paused", "archived"],
       plan_type: [
         "membership",
@@ -23993,6 +33265,19 @@ export const Constants = {
       pregnancy_status: ["active", "ended"],
       pregnancy_test_result: ["negative", "positive"],
       premium_plan: ["monthly", "yearly"],
+      price_type: [
+        "class_pack",
+        "membership",
+        "intro_offer",
+        "drop_in",
+        "day_pass",
+        "intro_week",
+        "product",
+        "delivery",
+        "other",
+        "appointment",
+      ],
+      pro_notification_kind: ["request", "to_review", "update"],
       professional_group: ["fitness", "clinical", "nutrition", "other"],
       professional_plan_source: [
         "own_subscription",
@@ -24005,8 +33290,26 @@ export const Constants = {
         "dietitian",
         "doctor",
         "other",
+        "nutritionist",
+        "coach_instructor",
       ],
       professional_work_mode: ["in_person", "online", "both"],
+      promo_audience: ["new", "everyone"],
+      promo_target: [
+        "any",
+        "class",
+        "plan",
+        "product",
+        "day_pass",
+        "intro_offer",
+      ],
+      promo_type: [
+        "percent_off",
+        "first_free",
+        "first_n_free",
+        "bring_friend",
+        "free_delivery",
+      ],
       rate_limited_action: [
         "create_client_code",
         "redeem_client_code",
@@ -24044,6 +33347,14 @@ export const Constants = {
         "review_gym",
         "invite_employee",
         "request_to_join_business",
+        "send_payment_reminder",
+        "create_invite_link",
+        "send_client_invite",
+        "request_client_access",
+        "request_professional_booking",
+        "refer_client",
+        "ask_to_share_win",
+        "report_shared_item",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       report_reason: [
@@ -24056,12 +33367,30 @@ export const Constants = {
       ],
       report_status: ["open", "actioned", "dismissed"],
       request_status: ["pending", "accepted", "rejected"],
+      return_kind: ["refund", "exchange"],
+      return_status: [
+        "requested",
+        "approved",
+        "received",
+        "refunded",
+        "rejected",
+      ],
+      review_report_reason: [
+        "not_about_this_business",
+        "shares_private_information",
+        "harassment",
+        "spam",
+        "other",
+        "injury",
+      ],
+      review_report_status: ["open", "upheld", "dismissed"],
+      session_note_kind: ["training", "nutrition", "clinical", "body"],
+      session_outcome: ["completed", "no_show", "late_cancel"],
       set_outcome: ["completed", "skipped", "failed"],
       set_type: ["normal", "warmup", "failure", "dropset", "superset", "pr"],
       sex: ["female", "male", "other"],
       sex_activity: ["none", "protected", "unprotected"],
       sleep_stage: ["awake", "light", "deep", "rem"],
-      store_owner_type: ["business", "professional"],
       subscription_status: ["active", "cancelled", "expired"],
       subscription_tier_type: ["professional", "business", "client"],
       template_level: ["beginner", "intermediate", "advanced"],
@@ -24098,7 +33427,7 @@ export const Constants = {
         "gym_passes",
         "cycle",
       ],
+      win_sharing_setting: ["always_ask", "always_allow", "never"],
     },
   },
 } as const
-

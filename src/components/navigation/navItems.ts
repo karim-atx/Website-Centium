@@ -1,5 +1,6 @@
-import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, MessageSquare, Building2, UserPlus, Settings } from "lucide-react";
+import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Users, Store, User as UserIcon, CalendarDays, MessageCircle, MessageSquare, Building2, UserPlus, Settings, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { PRO_ROUTES, SLOT4, type ProLane, type Slot4Glyph } from "../pro/subtypeLanes";
 
 export interface NavItem {
   to: string;
@@ -18,60 +19,77 @@ export const primaryNavItems: NavItem[] = [
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
-// V5 (QA 5.0): professionals have no personal Home/Food/Workout/Health
-// tracking — "My Clients" (the "/professionals" route, which renders
-// ProfessionalDashboard for this account type) is their main page instead.
-// V6 (QA 6.0): Calendar, Templates (Workout Template Builder) and Messages
-// replace the Home/Food/Workout/Health tabs the professional doesn't use —
-// Meal Plans and Health Metrics live in More alongside the rest.
-// V7 (QA 7.0): Meal Plans now takes the bottom-nav slot Messages used to
-// hold — Messages moved into More instead.
-export const professionalPrimaryNavItems: NavItem[] = [
-  { to: "/app/professionals", label: "Clients", icon: Users },
-  { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
-  { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
-  { to: "/app/more", label: "More", icon: MoreHorizontal },
+// (The client desktop sidebar list went with the client sidebar: the client app
+// is one phone column at every width, Handover 2026-09-29. The Sidebar renders
+// for business and professional accounts only.)
+
+
+// ---------------------------------------------------------------------------
+// Release 3 · Professional UI (HANDOVER d "Navbar per subtype", NV1): one
+// bar for every lane. Clients, Calendar, Home as the Centium mark in the
+// centre, slot 4 by lane (Library, Meal plans or Insights), More.
+// ---------------------------------------------------------------------------
+
+export type ProGlyphKey = "clients" | "calendar" | "mark" | Slot4Glyph | "more";
+
+export interface ProTab {
+  to: string;
+  label: string;
+  glyph: ProGlyphKey;
+}
+
+/** The bar's five tabs, left to right (Home is the centre slot). */
+export function proTabs(lane: ProLane): ProTab[] {
+  const slot4 = SLOT4[lane];
+  return [
+    { to: PRO_ROUTES.clients, label: "Clients", glyph: "clients" },
+    { to: PRO_ROUTES.calendar, label: "Calendar", glyph: "calendar" },
+    { to: PRO_ROUTES.home, label: "Home", glyph: "mark" },
+    { to: slot4.to, label: slot4.label, glyph: slot4.glyph },
+    { to: PRO_ROUTES.more, label: "More", glyph: "more" },
+  ];
+}
+
+/**
+ * More is lit on More, its sub-pages and every page reached from it: the
+ * shared account pages, Messages, Explore, Community, the teams this
+ * professional is on (and the business console pages a staff seat opens,
+ * which keep this bar), and the client directory a professional can still
+ * open from Explore.
+ */
+export const PRO_MORE_PAGES = [
+  "/app/more",
+  "/app/profile",
+  "/app/subscription",
+  "/app/settings",
+  "/app/messages",
+  "/app/marketplace",
+  "/app/forum",
+  "/app/businesses",
+  "/app/business",
+  "/app/store",
+  "/app/appointments",
+  "/app/professionals",
 ];
 
-// Full set shown in the desktop sidebar.
-export const sidebarNavItems: NavItem[] = [
-  { to: "/app", label: "Home", icon: Home },
-  { to: "/app/food", label: "Food", icon: UtensilsCrossed },
-  { to: "/app/workout", label: "Workout", icon: Dumbbell },
-  { to: "/app/health", label: "Health", icon: HeartPulse },
-  { to: "/app/mind", label: "Mind", icon: Sparkles },
-  { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/professionals", label: "Professionals", icon: Users },
-  { to: "/app/forum", label: "Forum", icon: MessageSquare },
-  // The sidebar is the only navigation at lg and above — the bottom nav is
-  // `lg:hidden`, and More is reachable only from it. So a missing entry here
-  // is not a longer route to a screen, it is no route at all: until this was
-  // added, a signed-in client on a desktop viewport could not reach their own
-  // conversations from anywhere in the UI.
-  { to: "/app/messages", label: "Messages", icon: MessageCircle },
-  { to: "/app/marketplace", label: "Explore", icon: Store },
-  { to: "/app/profile", label: "Profile", icon: UserIcon },
-];
+export function isProTabActive(tab: ProTab, pathname: string): boolean {
+  if (tab.to === PRO_ROUTES.home) return pathname === PRO_ROUTES.home;
+  if (tab.to === PRO_ROUTES.more) return PRO_MORE_PAGES.some((p) => under(pathname, p));
+  return under(pathname, tab.to);
+}
 
-export const professionalSidebarNavItems: NavItem[] = [
-  { to: "/app/professionals", label: "My Clients", icon: Users },
-  { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
-  { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
-  // The "Business messages" entry is gone with the device-only mock behind it;
-  // real conversations, including any with an affiliated business, are here.
-  { to: "/app/messages", label: "Messages", icon: MessageCircle },
-  { to: "/app/professionals/health-metrics", label: "Health Metrics", icon: HeartPulse },
-  // The shared forum, where a verified professional posts under their name
-  // with the Professional badge. Removed for an under-18 in Sidebar.
-  { to: "/app/forum", label: "Forum", icon: MessageSquare },
-  { to: "/app/marketplace", label: "Explore", icon: Store },
-  // B7: the teams this professional is on, their invites and the console
-  // areas each team opens (MyBusinessesPage); the bar reaches it from More.
-  { to: "/app/businesses", label: "Your businesses", icon: Building2 },
-  { to: "/app/profile", label: "Profile", icon: UserIcon },
-];
+/** The desktop sidebar's More rows under the five tabs (MO1 v7 destinations that have a page). */
+export function proSidebarShortcuts(): BusinessShortcut[] {
+  return [
+    { to: "/app/messages", label: "Messages", icon: MessageCircle, unread: true },
+    { to: "/app/marketplace", label: "Explore", icon: Store },
+    { to: "/app/forum", label: "Community", icon: MessageSquare },
+    { to: `${PRO_ROUTES.more}/practice-insights`, label: "Practice insights", icon: TrendingUp },
+    { to: `${PRO_ROUTES.more}/businesses`, label: "Businesses", icon: Building2 },
+    { to: "/app/profile", label: "Profile", icon: UserIcon },
+    { to: "/app/settings", label: "Settings", icon: Settings },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // v6 Business UI (X-31, V6-54, NAV-001 rows 7-8, S2): one bar per business

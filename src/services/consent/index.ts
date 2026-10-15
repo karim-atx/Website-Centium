@@ -46,7 +46,12 @@ export type AccessCategory = Enums<"access_category">;
  * the only writer — so every existing relationship starts with this switch
  * off and stays off until its owner turns it on.
  */
-export type SurfacedAccessCategory = AccessCategory;
+/**
+ * Release 3 (DB-3) added `habits` and `allergies_dietary`. They are held out
+ * here until the client sharing screen gains their switches (CU8, batch W7),
+ * the same way body_measurements was held out until it had a screen.
+ */
+export type SurfacedAccessCategory = Exclude<AccessCategory, "habits" | "allergies_dietary">;
 
 export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: string; description: string }[] = [
   { category: "food_diary", label: "Food diary", description: "Meals and nutrition you log" },

@@ -15,6 +15,11 @@ import {
   workComplete,
   workSummary,
   initials,
+  isRegulated,
+  credentialWord,
+  PRO_KINDS,
+  PRO_LABEL,
+  SPECIALTY_CARDS,
 } from "./proModel";
 
 test("the specialty maps to the handoff's lane", () => {
@@ -22,6 +27,26 @@ test("the specialty maps to the handoff's lane", () => {
   assert.equal(proKindOf("physiotherapist"), "physio");
   assert.equal(proKindOf("dietitian"), "diet");
   assert.equal(proKindOf(null), "other");
+  assert.equal(proKindOf("nutritionist"), "nutritionist");
+  assert.equal(proKindOf("coach_instructor"), "coach");
+  assert.equal(proKindOf("doctor"), "doctor");
+});
+
+test("Release 3 J2: a doctor is regulated (licence); nutritionist and coach use the certificate path", () => {
+  assert.equal(isRegulated("doctor"), true);
+  assert.equal(isRegulated("physio"), true);
+  assert.equal(isRegulated("diet"), true);
+  assert.equal(isRegulated("nutritionist"), false);
+  assert.equal(isRegulated("coach"), false);
+  assert.equal(credentialWord("doctor"), "licence");
+  assert.equal(credentialWord("coach"), "certificate");
+});
+
+test("Release 3: the new types have labels and cards", () => {
+  assert.equal(PRO_LABEL.coach, "Coach or instructor");
+  assert.equal(PRO_LABEL.nutritionist, "Nutritionist");
+  assert.equal(PRO_LABEL.doctor, "Doctor or GP");
+  for (const k of PRO_KINDS) assert.ok(SPECIALTY_CARDS.some((c) => c.kind === k), k);
 });
 
 test("session lengths step through the lengths the database accepts", () => {

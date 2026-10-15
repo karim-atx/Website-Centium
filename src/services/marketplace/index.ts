@@ -316,7 +316,7 @@ export async function fetchMyBookedClassIds(): Promise<Set<string>> {
 export type ClassResult<T = true> = { ok: true; value: T } | { ok: false; message: string; code?: string };
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 async function call<T>(fn: string, args: Record<string, unknown>, fallback: string): Promise<ClassResult<T>> {
   const { data, error } = await rpc<T>(fn, args);

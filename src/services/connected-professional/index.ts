@@ -153,6 +153,8 @@ const SUBTYPE_LABEL: Record<Enums<"professional_subtype">, string> = {
   physiotherapist: "Physiotherapist",
   dietitian: "Dietitian",
   doctor: "Doctor",
+  nutritionist: "Nutritionist",
+  coach_instructor: "Coach or instructor",
   other: "Health professional",
 };
 

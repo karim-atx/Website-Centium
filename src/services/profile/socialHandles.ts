@@ -95,7 +95,8 @@ export async function migrateLocalSocialHandles(
  * nothing to show.
  */
 export async function fetchClientSocialHandles(clientId: string): Promise<SocialHandles | null> {
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
+  // Through unknown first (TS2589 on the fully typed rpc since the Release 3 types).
+  const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => PromiseLike<{ data: unknown; error: DbError | null }>;

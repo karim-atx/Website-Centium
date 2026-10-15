@@ -41,7 +41,7 @@ import type { Result } from "./index";
 // a narrow cast at this boundary.
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 type Res<T> = PromiseLike<{ data: T | null; error: PostgrestError | null }>;
 type Loose = {

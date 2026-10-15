@@ -41,11 +41,9 @@ import Professionals from "./pages/professionals/Professionals";
 import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
 import ProfessionalReviews from "./pages/professionals/ProfessionalReviews";
 import ProVerification from "./pages/professionals/ProVerification";
-import CalendarTab from "./pages/professionals/CalendarTab";
-import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
-import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
 import Messages from "./pages/messages/Messages";
-import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
+import ProRoutes, { ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRoutes";
+import ProMoreRoutes from "./pages/pro/more/MoreRoutes";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
@@ -53,7 +51,6 @@ import MarketRoutes from "./pages/business-market/MarketRoutes";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import TeamRoutes from "./pages/business-team/TeamRoutes";
-import MyBusinessesPage from "./pages/professionals/MyBusinessesPage";
 import SchedulePage from "./pages/business-ops/classes/SchedulePage";
 import SessionPage from "./pages/business-ops/classes/SessionPage";
 import ClassRulesPage from "./pages/business-ops/classes/ClassRulesPage";
@@ -435,7 +432,10 @@ function AppRoutes() {
           </RequireOnboarded>
         }
       >
-        <Route path="/app" element={<Home />} />
+        {/* Release 3 J1: a professional's Home is /app/pro. */}
+        <Route path="/app" element={<ProHomeRedirect otherwise={<Home />} />} />
+        {/* Release 3 · Professional UI: every professional screen (pages/pro). */}
+        <Route path="/app/pro/*" element={<ProRoutes />} />
         <Route path="/app/food" element={<Food />} />
         <Route path="/app/food/nutrient-summary" element={<NutrientSummaryPage />} />
         <Route path="/app/workout" element={<Workout />} />
@@ -456,15 +456,16 @@ function AppRoutes() {
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
         <Route path="/app/mind/:section" element={<Mind />} />
-        <Route path="/app/professionals" element={<Professionals />} />
-        <Route path="/app/professionals/calendar" element={<CalendarTab />} />
-        <Route path="/app/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
-        <Route path="/app/professionals/meal-plans" element={<MealPlanBuilderTab />} />
-        {/* The device-only business-messaging mocks are hidden until business
-            messaging is real; their old addresses open the real inbox. */}
-        <Route path="/app/professionals/messages" element={<Navigate to="/app/messages" replace />} />
+        {/* The client directory. Release 3: the old professional addresses
+            redirect professional accounts to /app/pro for one release (static
+            routes, so "calendar" is never read as an :id); a client keeps the
+            directory, and /:id, /:id/reviews and /verification stay. */}
+        <Route path="/app/professionals" element={<ProOnlyRedirect otherwise={<Professionals />} />} />
+        <Route path="/app/professionals/calendar" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
+        <Route path="/app/professionals/templates" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
+        <Route path="/app/professionals/meal-plans" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
+        <Route path="/app/professionals/health-metrics" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
         <Route path="/app/messages" element={<Messages />} />
-        <Route path="/app/professionals/health-metrics" element={<HealthMetricsTab />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
@@ -488,7 +489,8 @@ function AppRoutes() {
         <Route path="/app/business/more/*" element={<BusinessMoreRoutes />} />
         <Route path="/app/business/messages" element={<Navigate to="/app/messages" replace />} />
         <Route path="/app/business/employees/*" element={<ConsoleGate need="members"><TeamRoutes /></ConsoleGate>} />
-        <Route path="/app/businesses" element={<MyBusinessesPage />} />
+        {/* Release 3: Businesses lives under More (MO9). */}
+        <Route path="/app/businesses" element={<Navigate to="/app/more/businesses" replace />} />
         <Route path="/app/business/members" element={<Navigate to="/app/business/analytics/members/codes" replace />} />
         {/* v6 Batch 4 · Classes: Schedule, Class rules and the session page (OP1-074 … 155). */}
         <Route path="/app/business/classes" element={<ConsoleGate need="schedule"><SchedulePage /></ConsoleGate>} />
@@ -503,6 +505,8 @@ function AppRoutes() {
         <Route path="/app/profile/cv" element={<MyCv />} />
         <Route path="/app/subscription" element={<Subscription />} />
         <Route path="/app/more" element={<More />} />
+        {/* Release 3: the professional More pages (pages/pro/more). */}
+        <Route path="/app/more/*" element={<ProMoreRoutes />} />
         <Route path="/app/calendar" element={<ClientCalendarTab />} />
         <Route path="/app/forum" element={<Community />} />
         <Route path="/app/forum/new" element={<ForumNewPage />} />

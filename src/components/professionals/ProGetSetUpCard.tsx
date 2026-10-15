@@ -14,7 +14,7 @@ import {
 import { PaymentsSheet } from "../profile/PaymentsSheet";
 import { PublicListingSheet } from "../profile/PublicListingSheet";
 import type { LicenceStatus } from "../../services/professional-cv";
-import { GO_LIVE_ON_VERIFICATION } from "../../pages/onboarding/pro/proModel";
+import { GO_LIVE_ON_VERIFICATION, isRegulated, proKindOf } from "../../pages/onboarding/pro/proModel";
 import "../../pages/onboarding/shell/onboarding.css";
 import "../../pages/onboarding/pro/pro.css";
 
@@ -59,7 +59,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
   const [payments, setPayments] = useState(false);
   const [listing, setListing] = useState(false);
   const kind = user.professionalSubtype;
-  const regulated = kind === "physiotherapist" || kind === "dietitian";
+  const regulated = isRegulated(proKindOf(kind));
 
   const load = useCallback(async () => {
     if (!authUserId) return;
@@ -107,7 +107,14 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
 
   if (!data) return null;
 
-  const descByKind = kind === "dietitian" ? "First consultation and follow-ups" : kind === "physiotherapist" ? "Assessment and treatment blocks" : "Single sessions and blocks";
+  const descByKind =
+    kind === "dietitian" || kind === "nutritionist"
+      ? "First consultation and follow-ups"
+      : kind === "physiotherapist"
+        ? "Assessment and treatment blocks"
+        : kind === "doctor"
+          ? "First appointment and follow-ups"
+          : "Single sessions and blocks";
   const licenceDone = data.licence?.kind === "verified";
   const checkDesc = (word: "licence" | "certificate") =>
     data.licence?.kind === "rejected" ? "Needs changes" : data.licence?.kind === "pending" ? "Usually within 2 working days" : `Add your ${word} to go live`;
@@ -123,7 +130,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
       done: data.availability,
       onClick: () => {
         if (authUserId) void markOwnerItemDone(authUserId, AVAILABILITY_ITEM);
-        navigate("/app/professionals/calendar");
+        navigate("/app/pro/calendar");
       },
     },
     {
