@@ -41,6 +41,12 @@ import {
 export interface SharingState {
   /** Names of the professionals holding lab_results; null while reading. */
   names: string[] | null;
+  /**
+   * Release 3 · W7: how many single results the client shares (result_shares).
+   * With Lab results shared with nobody, the line must not say "Not shared"
+   * while the CU17 "Shared with…" banner above lists single results.
+   */
+  singleShares?: number;
 }
 
 export const BiomarkersTab: React.FC<{
@@ -104,7 +110,11 @@ export const BiomarkersTab: React.FC<{
 
   const sharedLine = (() => {
     if (sharing.names === null) return null;
-    if (sharing.names.length === 0) return "Not shared with professionals.";
+    if (sharing.names.length === 0) {
+      return (sharing.singleShares ?? 0) > 0
+        ? "Lab results aren't shared as a whole. Single results you share are listed in the banner above."
+        : "Not shared with professionals.";
+    }
     if (sharing.names.length === 1) return `Shared with ${sharing.names[0]}.`;
     return `Shared with ${sharing.names.length} professionals.`;
   })();

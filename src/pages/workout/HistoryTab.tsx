@@ -19,7 +19,10 @@ import {
   topSet,
   type HistoryPeriod,
 } from "../../services/workout/history";
-import { Calendar, CalendarDays, ChevronDown, ChevronUp, Dumbbell, Pencil, Plus, Trash2 } from "lucide-react";
+import { Calendar, CalendarDays, ChevronDown, ChevronUp, Dumbbell, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { fetchSentSessions } from "../../services/workout/coach";
+import { sentLine } from "../../services/workout/coachLogic";
+import { fetchConnectedProfessional } from "../../services/connected-professional";
 import type { WorkoutSession } from "../../types";
 import { linePx, textPx } from "../../theme/textSize";
 
@@ -47,7 +50,48 @@ const CHIP = {
 } as const;
 
 export default function HistoryTab() {
-  const { workoutSessions, routines, routineFolders, today, moveWorkoutSession, removeWorkoutSession } = useApp();
+  const { workoutSessions, routines, routineFolders, today, moveWorkoutSession, removeWorkoutSession, authUserId } = useApp();
+  // Release 3 · W7 (CU1 v4 "session sent to Alex"): the sessions the database
+  // marked sent to a coach (results_sent_at), their swaps, and who.
+  const [sent, setSent] = useState<Record<string, { swaps: number }>>({});
+  const [coachNames, setCoachNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void fetchSentSessions(authUserId).then((m) => !cancelled && setSent(m));
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, workoutSessions.length]);
+  const sentCoachIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of workoutSessions) {
+      if (!sent[s.id] || !s.routineId) continue;
+      const pro = routines.find((r) => r.id === s.routineId)?.assignedByProfessionalId;
+      if (pro) ids.add(pro);
+    }
+    return [...ids].sort().join(",");
+  }, [sent, workoutSessions, routines]);
+  useEffect(() => {
+    const ids = sentCoachIds ? sentCoachIds.split(",") : [];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void Promise.all(ids.map(async (id) => [id, await fetchConnectedProfessional(id)] as const)).then((rows) => {
+      if (cancelled) return;
+      const names: Record<string, string> = {};
+      for (const [id, r] of rows) if (r.ok && r.professional?.firstName?.trim()) names[id] = r.professional.firstName.trim();
+      setCoachNames(names);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sentCoachIds]);
+  const sentLineOf = (s: WorkoutSession): string | null => {
+    const info = sent[s.id];
+    if (!info) return null;
+    const pro = s.routineId ? routines.find((r) => r.id === s.routineId)?.assignedByProfessionalId : undefined;
+    return sentLine((pro && coachNames[pro]) || "your coach", info.swaps);
+  };
   const [period, setPeriod] = useState<HistoryPeriod>("month");
   const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -205,6 +249,7 @@ export default function HistoryTab() {
               key={s.id}
               session={s}
               family={familyOf(s)}
+              sentLine={sentLineOf(s)}
               expanded={expandedId === s.id}
               onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
               onChangeDate={() => setMoving(s)}
@@ -322,7 +367,9 @@ const SessionCard: React.FC<{
   onToggle: () => void;
   onChangeDate: () => void;
   onDelete: () => void;
-}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete }) => {
+  /** CU1 v4: "Sent to Alex · 1 swap" when the session went to a coach. */
+  sentLine?: string | null;
+}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, sentLine: sentText }) => {
   const [showAll, setShowAll] = useState(false);
   // Mobile v5.1 R3: the folder's row tint and header shade for the current
   // mode (dark: hue tints on the dark card; headInk then picks white).
@@ -365,6 +412,17 @@ const SessionCard: React.FC<{
               <span className="block truncate" style={{ marginTop: 3, fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgb(var(--c-charcoal-muted))" }}>
                 {session.totalVolumeKg.toLocaleString()} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
               </span>
+              {sentText && (
+                // CU1 v4: 6 under the meta, send 12 and 11.5/700 in the
+                // folder's tile colour (4.5:1 on the dark row).
+                <span
+                  className="flex items-center"
+                  style={{ marginTop: 6, gap: 5, fontSize: textPx(11.5), lineHeight: linePx(15), fontWeight: 700, color: dark ? liftTo(family.tile, family.row) : family.tile }}
+                >
+                  <Send size={12} className="flex-none" aria-hidden />
+                  {sentText}
+                </span>
+              )}
             </span>
             {expanded ? (
               <ChevronUp size={16} className="flex-none" style={{ color: "rgb(var(--c-charcoal-muted))" }} />

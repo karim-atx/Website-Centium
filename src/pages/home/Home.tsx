@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
+import { ProReminders } from "../../components/client-forms/ProReminders";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -125,6 +126,11 @@ export default function Home() {
       {/* Widget order per QA: Calendar (fixed, non-adjustable) > Streaks > Quick Actions > Your Health Today */}
       {/* OURS-home-shell H5: the HO1.1 pill's hairline border (X-09, both modes) and 44 hit areas. */}
       <DateSelector partB />
+
+      {/* Release 3 · W7 (CU5, CU6, CU23, CU26), an addition: what the client's
+          professionals are waiting on, between the date pill and the streak
+          board, and the pop-up queue. Renders nothing when nothing is waiting. */}
+      <ProReminders />
 
       {/* QA 12.0 recovery-sensitive experience: "Disable fasting, streaks,
           badges, and weight-loss prompts." */}

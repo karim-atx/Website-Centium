@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Banknote, Check, Handshake, Lock, MessageCircle, Wallet } from "lucide-react";
+import { Banknote, Check, Handshake, Lock, MessageCircle, Send, Wallet } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { CtaButton } from "../ui/PinnedCta";
 import { goldPill, initials, type TypeColours } from "../professionals/typeColour";
@@ -22,6 +22,8 @@ import {
   type MyHire,
   type Plan,
 } from "../../services/hires";
+import type { HireRequestExtras } from "../../services/hire-request";
+import { REQUEST_MESSAGE_MAX } from "../../services/public-pro/logic";
 
 // A3-client: MO1.2.1.5 (hire sheet) → MO1.2.1.5.1 (checkout) → MO1.2.1.5.2
 // (confirmed), one Lavender-header sheet whose content changes step, as the
@@ -61,7 +63,7 @@ export interface HirePro {
   avatarUrl: string | null;
 }
 
-type Step = "plans" | "checkout" | "confirmed";
+type Step = "plans" | "checkout" | "confirmed" | "request";
 
 /** MO1.2.1.5 › Empty state (Foundations): 56 tile, 26 icon, 15/700, 12.5/500 muted, max 260. */
 function StateBlock({ t, icon, title, line, children }: { t: TypeColours; icon: React.ReactNode; title: string; line: string; children?: React.ReactNode }) {
@@ -122,7 +124,8 @@ export function HireSheet({
     state: "none" | "pending" | "cooling_down";
     busy: boolean;
     error: string | null;
-    onSend: () => void;
+    /** Release 3 (W7): an optional plan and message go with the request. */
+    onSend: (extras?: HireRequestExtras) => void;
   };
 }) {
   const { user } = useApp();
@@ -146,6 +149,10 @@ export function HireSheet({
   const [hired, setHired] = useState<MyHire | null>(null);
   const [settled, setSettled] = useState(false);
   const [deepLinkUsed, setDeepLinkUsed] = useState<string | null>(null);
+  // Release 3 (W7, CU12 audit "the free request inside HireSheet"): the
+  // request's optional plan and message.
+  const [requestPlan, setRequestPlan] = useState<string | null>(null);
+  const [requestMessage, setRequestMessage] = useState("");
 
   const load = async () => {
     setLoadError(null);
@@ -171,6 +178,8 @@ export function HireSheet({
       setNote(null);
       setHired(null);
       setSettled(false);
+      setRequestPlan(null);
+      setRequestMessage("");
       const loaded = await load();
       if (cancelled || !loaded) return;
       // The deep link, once per plan id: straight to that plan's checkout
@@ -308,7 +317,7 @@ export function HireSheet({
           {request && (
             <button
               type="button"
-              onClick={request.onSend}
+              onClick={() => setStep("request")}
               disabled={request.busy || request.state !== "none"}
               className="tap mt-2 h-10 px-4 rounded-xl inline-flex items-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
               style={{ background: t.cta, color: t.onMain }}
@@ -384,6 +393,112 @@ export function HireSheet({
             </article>
           ))}
         </div>
+        {request && request.state === "none" && (
+          // Release 3 (W7): the free request, for a client who wants to talk
+          // first; it can name one of these plans and carry a note.
+          <button
+            type="button"
+            onClick={() => setStep("request")}
+            className="tap mt-3 self-center min-h-11 px-3 inline-flex items-center gap-1.5 font-bold"
+            style={{ color: t.deep, fontSize: textPx(13) }}
+          >
+            <Send size={14} aria-hidden /> Send {pro.first} a request instead
+          </button>
+        )}
+        {request && request.state === "pending" && (
+          <p role="status" className="m-0 mt-3 text-center text-charcoal-faint" style={{ fontSize: textPx(12.5) }}>
+            Your request to {pro.first} is waiting for an answer.
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  // Release 3 (W7): the request composer. pending_client_requests takes an
+  // optional plan_id (one of this professional's active plans) and message
+  // (at most 500); plan_price is the database's to set.
+  const requestBody = () => {
+    if (!request) return null;
+    if (request.state === "pending") {
+      return (
+        <StateBlock
+          t={t}
+          icon={<Send size={26} strokeWidth={1.5} />}
+          title="Request sent"
+          line={`${pro.first} can accept your request or message you about it.`}
+        />
+      );
+    }
+    const label = (text: string, className = "") => (
+      <p className={`m-0 px-0.5 text-[10.5px] font-bold uppercase tracking-[0.12em] ${className}`} style={{ color: t.main }}>
+        {text}
+      </p>
+    );
+    const options = [
+      { id: null as string | null, name: "No particular plan", price: null as string | null },
+      ...(plans ?? []).map((p) => ({ id: p.id as string | null, name: p.name, price: planPriceLabel(p.price, p.billing) as string | null })),
+    ];
+    return (
+      <div className="flex flex-col">
+        <p className="m-0 mb-3.5 text-charcoal-soft" style={{ fontSize: textPx(13) }}>
+          Ask {pro.first} to work with you. Nothing is shared until you choose to share it.
+        </p>
+        {(plans?.length ?? 0) > 0 && (
+          <>
+            {label("Plan (optional)")}
+            <div className="mt-2.5 mb-[22px] flex flex-col gap-2" role="radiogroup" aria-label="Plan">
+              {options.map((o) => {
+                const on = o.id === requestPlan;
+                return (
+                  <button
+                    key={o.id ?? "none"}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setRequestPlan(o.id)}
+                    className="tap w-full min-h-[48px] rounded-[14px] px-3 py-2 flex items-center gap-3 text-start bg-cream-card"
+                    style={on ? { border: `1px solid ${t.main}`, boxShadow: `0 0 0 3px ${t.pill}` } : { border: "1px solid rgb(var(--c-charcoal) / 0.10)" }}
+                  >
+                    <span className="min-w-0 flex-1 font-medium text-charcoal break-words" style={{ fontSize: textPx(14) }}>
+                      {o.name}
+                    </span>
+                    {o.price && (
+                      <span className="shrink-0 font-bold tabular-nums" style={{ color: t.deep, fontSize: textPx(13) }}>
+                        {o.price}
+                      </span>
+                    )}
+                    <span
+                      aria-hidden
+                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${on ? "" : "border border-charcoal/[0.18]"}`}
+                      style={on ? { background: t.cta, color: t.onMain } : undefined}
+                    >
+                      {on && <Check size={12} strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {label("Message (optional)")}
+        <textarea
+          value={requestMessage}
+          onChange={(e) => setRequestMessage(e.target.value.slice(0, REQUEST_MESSAGE_MAX))}
+          maxLength={REQUEST_MESSAGE_MAX}
+          rows={4}
+          aria-label={`Message to ${pro.first}`}
+          placeholder={`What would you like to work on with ${pro.first}?`}
+          className="mt-2.5 w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          style={{ fontSize: textPx(14) }}
+        />
+        <p className="m-0 mt-1 text-right text-charcoal-faint tabular-nums" style={{ fontSize: textPx(11.5) }} aria-live="polite">
+          {requestMessage.length}/{REQUEST_MESSAGE_MAX}
+        </p>
+        {request.error && (
+          <p role="alert" className="m-0 mt-2 text-[12.5px] font-medium text-status-high">
+            {request.error}
+          </p>
+        )}
       </div>
     );
   };
@@ -571,7 +686,16 @@ export function HireSheet({
   };
 
   const footer =
-    step === "checkout" && plan ? (
+    step === "request" && request && request.state === "none" ? (
+      <CtaButton
+        size="sheet"
+        label="Send request"
+        icon={<Send size={15} aria-hidden />}
+        loading={request.busy}
+        onClick={() => request.onSend({ planId: requestPlan, message: requestMessage })}
+        style={{ background: t.cta, color: t.onMain }}
+      />
+    ) : step === "checkout" && plan ? (
       <CtaButton
         size="sheet"
         label={`Pay ${priceShort(plan.price)}`}
@@ -602,17 +726,17 @@ export function HireSheet({
       open={open}
       onClose={close}
       // v6 MO1.2.1.5.2 #27: "Hired" on the confirmed step (supersedes C-08 / D26).
-      title={step === "plans" ? `Hire ${pro.first}` : step === "checkout" ? "Checkout" : "Hired"}
+      title={step === "plans" ? `Hire ${pro.first}` : step === "checkout" ? "Checkout" : step === "request" ? "Send a request" : "Hired"}
       // #25 / #26 / #28 (X-03, X-07): the Part B sheet chrome (0.5px outline,
       // close ring 1.1), the warm scrim in both modes with no blur; S2 swipe
       // down on the band closes.
       chrome="partB"
       scrimBlur={false}
       swipeToClose
-      onBack={step === "checkout" && !busy ? () => setStep("plans") : undefined}
+      onBack={(step === "checkout" && !busy) || (step === "request" && !request?.busy) ? () => setStep("plans") : undefined}
       footer={footer}
     >
-      {step === "plans" ? plansBody() : step === "checkout" ? checkoutBody() : confirmedBody()}
+      {step === "plans" ? plansBody() : step === "checkout" ? checkoutBody() : step === "request" ? requestBody() : confirmedBody()}
     </BottomSheet>
   );
 }

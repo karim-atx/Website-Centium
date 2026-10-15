@@ -16,6 +16,7 @@ import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
+import { LicencePendingTag } from "../../components/professionals/LicencePendingTag";
 import { updateBodyMetric, updateDateOfBirth, updateSex } from "../../services/profile";
 import type { Sex } from "../../types";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
@@ -509,6 +510,8 @@ function ClientProfile() {
                   <span className="flex-1 min-w-0">
                     <span className="block text-[14px] font-semibold leading-tight text-charcoal truncate">{p.name}</span>
                     <span className="block text-[11.5px] leading-tight text-charcoal-faint">Manage data sharing</span>
+                    {/* Release 3 W7 (Karim answer 1): addition under the row's own line. */}
+                    {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
                   <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>

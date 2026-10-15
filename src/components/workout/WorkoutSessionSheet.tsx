@@ -15,8 +15,12 @@ import {
   Timer,
   Link2,
   Unlink,
+  Repeat2,
+  Undo2,
+  Send,
 } from "lucide-react";
-import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, SessionTimers, WorkoutBlock } from "../../types";
+import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, SessionTimers, WorkoutBlock, WorkoutSession } from "../../types";
+import type { SessionSwap } from "../../services/workout/coachLogic";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseChip } from "../cycle/CyclePhaseStrip";
@@ -37,7 +41,7 @@ import { formatClock, isRoundBased, prescriptionLine } from "../../services/work
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { exerciseKey, kindFields, lastSessionPrefill, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
-import { loggerShades, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
+import { DARK_SURFACE, liftTo, loggerShades, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { PR_BAR, typeStyles } from "./setTypeStyle";
 import { BlockRunner } from "./BlockRunner";
@@ -46,6 +50,21 @@ import clsx from "clsx";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { clock12 } from "../../utils/time12";
+import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
+import { CoachAvatar } from "./CoachAvatar";
+import { fetchConnectedProfessional } from "../../services/connected-professional";
+import { sharedWith } from "../../services/routines/programmes";
+import { readResultsSent, resolveWeights } from "../../services/workout/coach";
+import {
+  derivedSwaps,
+  loggedOffText,
+  optionsTargetText,
+  resultsSentMessage,
+  seedPrescribedTypes,
+  swapsPayload,
+  SWAP_REASON_MAX,
+  targetLine,
+} from "../../services/workout/coachLogic";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -106,11 +125,28 @@ function blockFrom(block: WorkoutBlock): BlockResult {
  * template's) until the athlete types or checks the set (WO8 prefill).
  */
 function freshLogged(exercises: Exercise[]): LoggedExercise[] {
-  return initLoggedExercises(exercises).map((ex) => ({
+  return initLoggedExercises(exercises).map((ex, i) => ({
     ...ex,
-    sets: ex.sets.map((s) => ({ ...s, weightKg: null, reps: 0 })),
+    // Release 3 (CU1 v5): a coach's Warm up / Drop set rows start as that type.
+    sets: seedPrescribedTypes(exercises[i] ?? {}, ex.sets.map((s) => ({ ...s, weightKg: null, reps: 0 }))),
   }));
 }
+
+/**
+ * CU1 v5, as [light, dark]: the target line (chF #8C8378 / #B8B3C7) and its
+ * "logged …" part (the handover's gold #D9A441 / #E0B360, 700; High contrast
+ * takes goldInk #8A6A3E / #DCBB7F, which reads at 4.5:1), the swap banner
+ * (goldPale #F6E9C9 / #3A342C, icon goldInk) and the results toast's shadow.
+ */
+const COACH_LOGGER = {
+  target: ["#8C8378", "#B8B3C7"],
+  off: ["#D9A441", "#E0B360"],
+  offHc: ["#8A6A3E", "#DCBB7F"],
+  swapBg: ["#F6E9C9", "#3A342C"],
+  swapIcon: ["#8A6A3E", "#DCBB7F"],
+  toastShadow: ["0 10px 40px rgba(36,31,27,0.18)", "0 10px 40px rgba(0,0,0,0.5)"],
+} as const;
+const coachLoggerColor = (key: keyof typeof COACH_LOGGER, dark: boolean): string => COACH_LOGGER[key][dark ? 1 : 0];
 
 /** Working-set numbers: only Normal, PR and Drop set count (02 Set types). */
 function workingNumbers(sets: LoggedSet[]): (number | null)[] {
@@ -153,11 +189,14 @@ export const WorkoutSessionSheet: React.FC<{
     markCoachNoteRead,
     activeSession,
     setActiveSession,
+    authUserId,
+    accessibility,
   } = useApp();
 
   const routineRow = routineId ? routines.find((r) => r.id === routineId) ?? null : null;
   // 02 Folder colour tokens: parent folder → routine's own colour → lavender.
   const dark = useIsDark();
+  const hc = !!accessibility.highContrast;
   const family: FolderFamily = routineFamily(routineRow, routineFolders);
   const shades: LoggerShades = loggerShades(family, dark);
 
@@ -213,6 +252,20 @@ export const WorkoutSessionSheet: React.FC<{
   const setRest = (next: Rest | null | ((r: Rest | null) => Rest | null)) =>
     setTimers((t) => ({ ...t, rest: typeof next === "function" ? next(t.rest ?? null) : next }));
   const [needReps, setNeedReps] = useState<string | null>(null);
+  // --- Release 3 · W7 (CU1 v5): a routine a professional assigned --------
+  const coachId = routineRow?.assignedByProfessionalId ?? null;
+  const [coachName, setCoachName] = useState<string | null>(null);
+  const [coachAvatar, setCoachAvatar] = useState<string | null>(null);
+  // Whether the coach receives this session (they are told only when the
+  // client shares Workout activity with them; workout_sessions_tell_coach).
+  const [coachSees, setCoachSees] = useState(false);
+  // resolve_weight per template exercise id (weights from 1RM, display only).
+  const [resolvedKg, setResolvedKg] = useState<Record<string, number>>({});
+  // J7: the swap in progress (the library, then the reason) and each position's reason.
+  const [swapPick, setSwapPick] = useState<number | null>(null);
+  const [swapReason, setSwapReason] = useState<{ exIdx: number; pick: ExercisePick; text: string } | null>(null);
+  const [swapReasons, setSwapReasons] = useState<Record<number, string>>({});
+  const [resultsToast, setResultsToast] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const scrollRef = useRef<HTMLDivElement>(null);
   // The restored list, until the logger has scrolled to its current exercise.
@@ -277,8 +330,44 @@ export const WorkoutSessionSheet: React.FC<{
     }
     setFinished(false);
     setQuitConfirmOpen(false);
+    setSwapReasons({});
+    setResultsToast(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, routineId]);
+
+  // CU1 v5: the coach's first name (connected_professional_summary, as
+  // CoachNotePopup reads it) and whether they receive this session.
+  useEffect(() => {
+    if (!open || !coachId) return;
+    let cancelled = false;
+    void fetchConnectedProfessional(coachId).then((r) => {
+      if (cancelled || !r.ok || !r.professional) return;
+      setCoachName(r.professional.firstName?.trim() || null);
+      setCoachAvatar(r.professional.avatarUrl);
+    });
+    if (authUserId) void sharedWith(authUserId, "workout_activity").then((ids) => !cancelled && setCoachSees(ids.has(coachId)));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, coachId, authUserId]);
+
+  // Weights from 1RM: resolve_weight(1RM, intensity %, kg) for each exercise
+  // with an intensity, from the client's own 1RM (else the routine's
+  // estimate). Rendered only; nothing is stored (follow-up 20261124160000).
+  useEffect(() => {
+    if (!open || !coachId) return;
+    const items = exercises
+      .map((ex) => ({ key: ex.id, oneRm: personalRecords[ex.name] ?? ex.estimatedOneRepMaxKg ?? 0, intensityPct: ex.intensityPct ?? 0 }))
+      .filter((x) => x.oneRm > 0 && x.intensityPct > 0);
+    if (items.length === 0) return;
+    let cancelled = false;
+    void resolveWeights(items).then((kg) => !cancelled && setResolvedKg(kg));
+    return () => {
+      cancelled = true;
+    };
+    // Once per opening; a PR logged now must not move this session's targets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, coachId]);
 
   const totalVolume = useMemo(
     () => logged.reduce((sum, ex) => sum + ex.sets.filter(countsTowardVolume).reduce((v, s) => v + s.reps * loadKg(s), 0), 0),
@@ -556,6 +645,56 @@ export const WorkoutSessionSheet: React.FC<{
 
   const blockKindOf = (ex: Exercise): BlockKind => template.blocks.find((b) => b.id === ex.blockId)?.kind ?? "superset";
 
+  // --- CU1 v5 / J7: swapping an exercise for this session only -------------
+  //
+  // THE ROUTINE IS NOT CHANGED: only this session's logged exercise takes the
+  // picked name and library row. The swap is read back from logged vs the
+  // routine, position by position (derivedSwaps), so it survives minimising
+  // and resuming with no state of its own; only the typed reason is held here.
+  const coachWho = coachName ?? "Your coach";
+  const swappedFrom = (exIdx: number): string | null => {
+    const t = template.exercises[exIdx];
+    const l = logged[exIdx];
+    if (!coachId || !t || !l) return null;
+    return derivedSwaps([t], [l]).length > 0 ? t.name : null;
+  };
+  const setLoggedRef = (exIdx: number, ref: { name: string; exerciseId?: string; customExerciseId?: string }) =>
+    setLogged((prev) =>
+      prev.map((l, i) => {
+        if (i !== exIdx) return l;
+        const { catalogExerciseId: _c, customExerciseId: _u, ...rest } = l;
+        void _c;
+        void _u;
+        return {
+          ...rest,
+          name: ref.name,
+          ...(ref.exerciseId ? { catalogExerciseId: ref.exerciseId } : {}),
+          ...(ref.customExerciseId ? { customExerciseId: ref.customExerciseId } : {}),
+        };
+      })
+    );
+  const applySwap = (exIdx: number, pick: ExercisePick, reason: string) => {
+    setLoggedRef(exIdx, pick);
+    setSwapReasons((r) => ({ ...r, [exIdx]: reason.trim().slice(0, SWAP_REASON_MAX) }));
+  };
+  const undoSwap = (exIdx: number) => {
+    const t = template.exercises[exIdx];
+    if (!t) return;
+    setLoggedRef(exIdx, t);
+    setSwapReasons((r) => {
+      const next = { ...r };
+      delete next[exIdx];
+      return next;
+    });
+  };
+  /** Completed sets logged off their target, for the results toast. */
+  const changedSetCount = () =>
+    logged.reduce((n, l, i) => {
+      const meta = template.exercises[i];
+      if (!meta) return n;
+      return n + l.sets.filter((s) => loggedOffText(meta, s, resolvedKg[meta.id]) != null).length;
+    }, 0);
+
   // --- rendering -----------------------------------------------------------
 
   const renderExercise = (exIdx: number, inRoundBlock: boolean, superset: boolean) => {
@@ -566,6 +705,8 @@ export const WorkoutSessionSheet: React.FC<{
     const { asked } = setRowCount(meta);
     const numbers = workingNumbers(ex.sets);
     const restSec = meta.restSeconds ?? 0;
+    const swapFrom = swappedFrom(exIdx);
+    const offered = setRowCount(meta).offered;
 
     return (
       <div
@@ -603,6 +744,29 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
         {/* The divider in the folder's dark shade (WO8). */}
         <div style={{ height: 2, margin: "0 14px", background: playInk(family, dark), borderRadius: 1 }} />
+        {swapFrom && (
+          // CU1 v5 "exercise swapped": goldPale, repeat-2 13 in goldInk, 12/16.
+          <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: coachLoggerColor("swapBg", dark) }}>
+            <Repeat2 size={13} className="flex-none" style={{ marginTop: 2, color: coachLoggerColor("swapIcon", dark) }} aria-hidden />
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(16), color: "rgb(var(--c-charcoal))" }}>
+              <b>Swapped for {swapFrom}</b>
+              {(() => {
+                const tail = [swapReasons[exIdx], coachSees ? `${coachWho} sees the swap.` : null].filter(Boolean).join(" ");
+                return tail ? ` · ${tail}` : null;
+              })()}
+            </span>
+          </div>
+        )}
+        {meta.coachNote && (
+          // CU1 v5: the coach's note on this exercise, on the pinned-note banner
+          // (the full note, never collapsed), with the message icon.
+          <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: shades.banner, color: shades.ink }}>
+            <MessageSquareText size={13} className="flex-none" style={{ marginTop: 2 }} aria-hidden />
+            <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 500, lineHeight: linePx(17) }}>
+              <b>{coachWho}:</b> {meta.coachNote}
+            </p>
+          </div>
+        )}
         {meta.pinnedNote && (
           <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: shades.banner, color: shades.ink }}>
             <Pin size={13} className="flex-none" style={{ marginTop: 2 }} />
@@ -659,6 +823,16 @@ export const WorkoutSessionSheet: React.FC<{
                     onType={(anchor) => setTypeMenu({ exIdx, setIdx, anchor })}
                     onCheck={() => toggleCheck(exIdx, setIdx)}
                     onOptions={() => setSetOptionsTarget({ exIdx, setIdx })}
+                    target={
+                      coachId && setIdx < offered
+                        ? (() => {
+                            const text = targetLine(meta, setIdx, resolvedKg[meta.id]);
+                            return text ? { text, off: loggedOffText(meta, s, resolvedKg[meta.id]) } : undefined;
+                          })()
+                        : undefined
+                    }
+                    offColor={coachLoggerColor(hc ? "offHc" : "off", dark)}
+                    targetColor={coachLoggerColor("target", dark)}
                   />
                   {showRest && (
                     <div className="flex items-center" style={{ gap: 10, padding: "0 15px", height: 19 }}>
@@ -706,7 +880,10 @@ export const WorkoutSessionSheet: React.FC<{
     const endedAt = new Date();
     setSaving(true);
     setSaveError(null);
-    const result = await saveWorkoutSession({
+    // CU1 / J7: a coach routine's swaps go in with the session row (insert-only).
+    const swaps = coachId ? swapsPayload(derivedSwaps(template.exercises, logged, swapReasons)) : null;
+    const changed = coachId ? changedSetCount() : 0;
+    const payload: Omit<WorkoutSession, "id"> & { swaps?: SessionSwap[] } = {
       routineId,
       routineName,
       // The day the session STARTED, which is what started_at says too.
@@ -718,7 +895,9 @@ export const WorkoutSessionSheet: React.FC<{
       // Untouched optional rows dropped; every surviving row gets an outcome.
       exercises: finalizeExercises(logged),
       blockResults: Object.values(blockResults),
-    });
+      ...(swaps ? { swaps } : {}),
+    };
+    const result = await saveWorkoutSession(payload);
     setSaving(false);
     if (!result.ok) {
       setSaveError(result.message ?? "Couldn't save this workout.");
@@ -735,7 +914,17 @@ export const WorkoutSessionSheet: React.FC<{
     clearActive();
     setFinished(true);
     setRunSince(null);
-    setTimeout(onClose, 900);
+    // CU1 v5 "finished, results sent": only when the database marked the
+    // session sent (it tells the coach when Workout activity is shared).
+    let closeAfter = 900;
+    if (coachId && authUserId && routineId) {
+      const sent = await readResultsSent(authUserId, routineId, payload.startedAt);
+      if (sent) {
+        setResultsToast(resultsSentMessage(coachName ?? "your coach", swaps?.length ?? 0, changed));
+        closeAfter = 2600;
+      }
+    }
+    setTimeout(onClose, closeAfter);
   };
 
   const circle = "tap relative flex-none flex items-center justify-center rounded-full";
@@ -779,6 +968,19 @@ export const WorkoutSessionSheet: React.FC<{
                 ? `Paused · ${formatDuration(elapsed)} elapsed`
                 : "Not started"}
             </p>
+            {coachId && (
+              // CU1 v5: "From Alex" under the status, 10.5/700 in the folder's
+              // tile colour (lifted to 4.5:1 on the dark page), 14 avatar.
+              <p className="flex justify-center" style={{ margin: "3px 0 0" }}>
+                <span
+                  className="inline-flex items-center"
+                  style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 700, lineHeight: linePx(14), color: dark ? liftTo(family.tile, DARK_SURFACE.page) : family.tile }}
+                >
+                  <CoachAvatar name={coachWho} avatarUrl={coachAvatar} size={14} tone="teal" />
+                  From {coachName ?? "your coach"}
+                </span>
+              </p>
+            )}
             {/* The cycle phase sits under the status line, not in the button row,
                 where it squeezed the routine name to "Regres…" at 393px.
                 Restore round 2 (user, 2026-10-07): main's gating again; the chip
@@ -991,6 +1193,8 @@ export const WorkoutSessionSheet: React.FC<{
           if (v === "note") setPinEditor({ exIdx: exMenu.exIdx, text: exMenuEx?.pinnedNote ?? "" });
           if (v === "rest" || v === "superset") exMenuNext.current = v;
           if (v === "unpair") removeSuperset(exMenu.exIdx);
+          if (v === "swap") setSwapPick(exMenu.exIdx);
+          if (v === "unswap") undoSwap(exMenu.exIdx);
         }}
         options={[
           { value: "note", label: "Pinned note", icon: <Pin size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
@@ -1012,6 +1216,14 @@ export const WorkoutSessionSheet: React.FC<{
                 icon: <Link2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
                 disabled: !exMenu || !!exMenuBlock || partnersFor(exMenu.exIdx).length === 0,
               },
+          // J7 (CU1 v5): a coach's routine can swap an exercise for this session.
+          ...(coachId && exMenu && exMenuEx && !exMenuEx.endurancePlan
+            ? [
+                swappedFrom(exMenu.exIdx)
+                  ? { value: "unswap", label: "Undo swap", icon: <Undo2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
+                  : { value: "swap", label: "Swap exercise", icon: <Repeat2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
+              ]
+            : []),
         ]}
       />
       <PopupMenu
@@ -1069,6 +1281,14 @@ export const WorkoutSessionSheet: React.FC<{
         title={setOptionsTarget ? setOptionsTitle(setOptionsTarget.exIdx, setOptionsTarget.setIdx) : ""}
         routineName={routineName}
         pinnedNote={setOptionsTarget ? template.exercises[setOptionsTarget.exIdx]?.pinnedNote : undefined}
+        target={(() => {
+          const meta = setOptionsTarget ? template.exercises[setOptionsTarget.exIdx] : undefined;
+          if (!coachId || !meta || !setOptionsTarget) return undefined;
+          const text = optionsTargetText(coachName, meta, setOptionsTarget.setIdx, resolvedKg[meta.id]);
+          if (!text) return undefined;
+          const normal = (meta.setTypes?.[setOptionsTarget.setIdx] ?? "normal") === "normal";
+          return { text, rpe: normal ? meta.rpe : undefined, coachName: coachWho };
+        })()}
         onSave={(result) => {
           if (!setOptionsTarget) return;
           const { exIdx, setIdx } = setOptionsTarget;
@@ -1103,6 +1323,75 @@ export const WorkoutSessionSheet: React.FC<{
             >
               Exit routine
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* J7: pick what to do instead, then (optionally) why. */}
+      <ExerciseLibrarySheet
+        open={swapPick !== null}
+        onClose={() => setSwapPick(null)}
+        onPick={(pick) => {
+          if (swapPick !== null) setSwapReason({ exIdx: swapPick, pick, text: "" });
+          setSwapPick(null);
+        }}
+        alreadyAdded={[]}
+        mode="replace"
+      />
+      <BottomSheet
+        open={!!swapReason}
+        onClose={() => setSwapReason(null)}
+        title="Swap exercise"
+        footer={
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              if (swapReason) applySwap(swapReason.exIdx, swapReason.pick, swapReason.text);
+              setSwapReason(null);
+            }}
+          >
+            Swap
+          </Button>
+        }
+      >
+        {swapReason && (
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            <p style={{ margin: 0, fontSize: textPx(13.5), color: "rgb(var(--c-charcoal))" }}>
+              {template.exercises[swapReason.exIdx]?.name} for {swapReason.pick.name}, this session only.
+            </p>
+            <label htmlFor="swap-reason" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
+              Reason (optional)
+            </label>
+            <input
+              id="swap-reason"
+              value={swapReason.text}
+              maxLength={SWAP_REASON_MAX}
+              onChange={(e) => setSwapReason((r) => (r ? { ...r, text: e.target.value.slice(0, SWAP_REASON_MAX) } : r))}
+              placeholder="e.g. The rack was taken."
+              className="w-full bg-transparent focus:outline-none"
+              style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
+            />
+            {coachSees && (
+              <p style={{ margin: 0, fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>{coachWho} sees the swap and your reason.</p>
+            )}
+          </div>
+        )}
+      </BottomSheet>
+
+      {resultsToast && (
+        // CU1 v5 "finished, results sent": a card at the top, r16, the sheet
+        // shadow, send 16 in the folder's tile colour, 13/600.
+        <div className="absolute inset-x-4 mx-auto" style={{ top: 16, zIndex: 30, maxWidth: 398 }}>
+          <div
+            role="status"
+            className="flex items-center bg-cream-card"
+            style={{ gap: 10, borderRadius: 16, padding: "12px 14px", boxShadow: coachLoggerColor("toastShadow", dark) }}
+          >
+            <Send size={16} className="flex-none" style={{ color: dark ? liftTo(family.tile, DARK_SURFACE.card) : family.tile }} aria-hidden />
+            <span className="flex-1" style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+              {resultsToast}
+            </span>
           </div>
         </div>
       )}
@@ -1182,7 +1471,11 @@ const SetRow: React.FC<{
   onType: (anchor: HTMLElement) => void;
   onCheck: () => void;
   onOptions: () => void;
-}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions }) => {
+  /** CU1 v5: the coach's target under the set, and what was logged off it. */
+  target?: { text: string; off: string | null };
+  targetColor?: string;
+  offColor?: string;
+}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, targetColor, offColor }) => {
   const dark = useIsDark();
   const kind = setKind(s);
   const t = kind === "normal" ? null : typeStyles(dark)[kind];
@@ -1298,6 +1591,17 @@ const SetRow: React.FC<{
       </div>
       {kind === "skipped" && (
         <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: sessionColor("strike", dark) }} />
+      )}
+      {target && (
+        // CU1 v5: 10.5/14 under the fields (58 in), faint; the logged
+        // difference in gold, 700.
+        <p
+          className="basis-full"
+          style={{ margin: "2px 0 1px 58px", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: target.off ? 700 : 500, color: target.off ? offColor : targetColor }}
+        >
+          {target.text}
+          {target.off ? ` · logged ${target.off}` : ""}
+        </p>
       )}
       {needsReps && (
         <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>

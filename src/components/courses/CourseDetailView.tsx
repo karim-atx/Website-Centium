@@ -37,7 +37,9 @@ import {
 } from "../../services/courses/rules";
 import { DangerLine, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
-import { Check, ChevronRight, Star } from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Star } from "lucide-react";
+import { fetchDripSchedule } from "../../services/courses/drip";
+import { courseDripLine, hasDrip, nextLocked, type DripRow } from "./drip";
 import { CentredPopup } from "../ui/CentredPopup";
 import { StarRating } from "../ui/StarRating";
 import { CoverPill, Instructor, StarIcon } from "./courseParts";
@@ -72,6 +74,8 @@ type Loaded = {
   myRating: { stars: number; body: string | null } | null;
   questions: CourseQuestion[];
   certificate: Certificate | null;
+  /** CU25: the modules' opening days for this learner (empty = all at once). */
+  drip: DripRow[];
 };
 
 async function loadCourse(courseId: string, userId: string): Promise<Loaded | null | { error: string }> {
@@ -88,11 +92,12 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
     fetchMyEnrolments(userId),
   ]);
   const enrolment = enrolments.find((e) => e.courseId === course.id) ?? null;
-  const [completed, myRating, questions, certificate] = await Promise.all([
+  const [completed, myRating, questions, certificate, drip] = await Promise.all([
     enrolment ? fetchCompleted([enrolment.id]).then((m) => m.get(enrolment.id) ?? new Set<string>()) : Promise.resolve(new Set<string>()),
     enrolment ? fetchMyRating(course.id, userId) : Promise.resolve(null),
     access === "paid" ? fetchQuestions(course.id) : Promise.resolve([]),
     enrolment ? fetchMyCertificate(enrolment.id) : Promise.resolve(null),
+    enrolment ? fetchDripSchedule(course.id) : Promise.resolve([]),
   ]);
   return {
     course,
@@ -107,6 +112,7 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
     myRating,
     questions,
     certificate,
+    drip,
   };
 }
 
@@ -245,6 +251,22 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             </>
           )}
         </span>
+
+        {/* CU25 (Release 3): an enrolled learner on a course that opens a
+            week at a time sees their progress and when the next week opens
+            (r29: r18, padding 14, rules-bg, gap 8; 13 rules-ink with the
+            count; an 8 bar in the card colour filled in the accent; the line
+            12 rules-ink with CalendarClock 13 / 2, gap 6). Every other course
+            looks as before. */}
+        {enrolment && !isAuthor && hasDrip(state.drip) && (
+          <DripProgress
+            author={authorName}
+            modules={modules}
+            drip={state.drip}
+            lessons={lessons}
+            completed={state.completed}
+          />
+        )}
 
         {/* MO1.3.5 #5: radius 18, padding 14, gap 10; each point's Check
             12/2.4 sits in a 20 pt tile in the primary tint (measured from the
@@ -400,6 +422,59 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             : { label: "Get the full course", loading: busy === "paid", onClick: () => void start("paid"), className: CTA_COLOURS }
         }
       />
+    </div>
+  );
+}
+
+/**
+ * CU25: "Your progress" and the drip line. While a week is still to open,
+ * its lessons are hidden from the learner (course_lessons RLS through
+ * course_lesson_is_open), so the course's lesson total isn't readable: the
+ * count and the bar show only once every week is open (backend gap, reported).
+ */
+function DripProgress({
+  author,
+  modules,
+  drip,
+  lessons,
+  completed,
+}: {
+  author: string;
+  modules: CourseModule[];
+  drip: DripRow[];
+  lessons: Lesson[];
+  completed: Set<string>;
+}) {
+  const next = nextLocked(drip);
+  const week = next ? modules.findIndex((m) => m.id === next.moduleId) + 1 : 0;
+  const done = lessons.filter((l) => completed.has(l.id)).length;
+  const total = lessons.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="rounded-[18px] p-[14px] flex flex-col gap-2" style={{ background: fv("rules-bg") }}>
+      <div className="flex justify-between gap-3 text-[13px]" style={{ color: fv("rules-ink") }}>
+        <strong>Your progress</strong>
+        {!next && <span>{`${done} of ${total} ${total === 1 ? "lesson" : "lessons"}`}</span>}
+      </div>
+      {!next && (
+        <span
+          role="progressbar"
+          aria-label="Your progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          className="h-2 rounded-full overflow-hidden"
+          style={{ background: fv("card") }}
+        >
+          <span className="block h-full" style={{ width: `${pct}%`, background: fv("accent") }} />
+        </span>
+      )}
+      {next?.opensAt && week > 0 && (
+        <span className="flex items-center gap-1.5 text-xs" style={{ color: fv("rules-ink") }}>
+          <CalendarClock size={13} strokeWidth={2} className="shrink-0" aria-hidden />
+          {courseDripLine(author, week, next.opensAt)}
+        </span>
+      )}
     </div>
   );
 }

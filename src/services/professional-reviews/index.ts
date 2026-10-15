@@ -302,6 +302,28 @@ export async function reportReview(reviewId: string, reason: ReviewReportReason,
   return { ok: true };
 }
 
+/**
+ * Release 3 (DB-6, DECISIONS "Review replies can be reported"): reports the
+ * professional's reply under a review. report_professional_review's
+ * p_reply_id names the reply, which is keyed by its review (the reply's id is
+ * the review id); one reply report per reporter per review, a repeat changes
+ * nothing.
+ */
+export async function reportReply(reviewId: string, reason: ReviewReportReason, detail?: string): Promise<Done> {
+  const d = detail?.trim();
+  const { error } = await supabase.rpc("report_professional_review", {
+    p_review_id: reviewId,
+    p_reason: reason,
+    p_reply_id: reviewId,
+    ...(d ? { p_detail: d.slice(0, 2000) } : {}),
+  } as never);
+  if (error) {
+    console.error("[reviews] Could not report the reply:", error.code, error.message);
+    return { ok: false, message: describeReviewError(error, "report") };
+  }
+  return { ok: true };
+}
+
 /** The professional's one public reply. Also replaces one they withdrew. */
 export async function replyToReview(reviewId: string, body: string): Promise<Done> {
   const { error } = await supabase.rpc("reply_to_professional_review", { p_review_id: reviewId, p_body: body.trim() });

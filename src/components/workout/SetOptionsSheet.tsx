@@ -55,6 +55,10 @@ const SET_OPTIONS_COLORS = {
   notesLabel: ["#575863", "#B8B3C7"],
   pinIdle: ["#A39D95", "#918DA0"],
   pinned: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  // Release 3 (CU1 v5): the coach's target line (chF #8C8378 / #B8B3C7) and
+  // the target RPE ring (tealDark #6F9993 / #4F8F8A, as the handover's tokens).
+  targetInk: ["#8C8378", "#B8B3C7"],
+  targetRing: ["#6F9993", "#4F8F8A"],
 } as const;
 const optionsColor = (key: keyof typeof SET_OPTIONS_COLORS, dark: boolean): string => SET_OPTIONS_COLORS[key][dark ? 1 : 0];
 
@@ -107,7 +111,14 @@ export const SetOptionsSheet: React.FC<{
    * template).
    */
   coach?: { coachRpe?: number };
-}> = ({ open, onClose, set, title, routineName, pinnedNote, onSave, coach }) => {
+  /**
+   * Release 3 · W7 (CU1 v5 "set 2 options"): the client logging a coach's
+   * routine. Adds the coach's target above Type ("Alex's target: 6 × 82.5 kg
+   * at RPE 8") and outlines the target RPE chip in teal, with its caption.
+   * Unset = the sheet exactly as before. Additions only.
+   */
+  target?: { text: string; rpe?: number; coachName: string };
+}> = ({ open, onClose, set, title, routineName, pinnedNote, onSave, coach, target }) => {
   const [kind, setKindState] = useState<HandoverSetType>("normal");
   const [notes, setNotes] = useState("");
   const [pinned, setPinned] = useState(false);
@@ -166,6 +177,10 @@ export const SetOptionsSheet: React.FC<{
         </Button>
       }
     >
+      {target && (
+        // CU1 v5: 12px in text.faint, pulled 6 up under the title, 12 above Type.
+        <p style={{ margin: "-6px 0 12px", fontSize: textPx(12), color: optionsColor("targetInk", dark) }}>{target.text}</p>
+      )}
       <div className="flex flex-col" style={{ gap: 12 }}>
         <div>
           <p style={sectionLabel}>Type</p>
@@ -238,12 +253,26 @@ export const SetOptionsSheet: React.FC<{
                 onClick={() => setRpe(rpe === r ? undefined : r)}
                 aria-pressed={rpe === r}
                 className="tap flex-none"
-                style={{ ...sessionChipStyle(rpe === r, dark), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
+                aria-describedby={target?.rpe === r ? "rpe-target-note" : undefined}
+                style={{
+                  ...sessionChipStyle(rpe === r, dark),
+                  minWidth: 30,
+                  height: 30,
+                  padding: "0 8px",
+                  borderRadius: 6,
+                  // CU1 v5: the coach's target RPE, an inset 1.5 teal (tealDark) outline.
+                  ...(target?.rpe === r ? { boxShadow: `inset 0 0 0 1.5px ${optionsColor("targetRing", dark)}` } : {}),
+                }}
               >
                 {r}
               </button>
             ))}
           </div>
+          {target?.rpe != null && (
+            <p id="rpe-target-note" style={{ margin: "6px 0 0", fontSize: textPx(11), color: optionsColor("targetInk", dark) }}>
+              Teal outline: {target.coachName}'s target.
+            </p>
+          )}
         </div>
 
         <div>

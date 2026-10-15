@@ -14,6 +14,8 @@ import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
 import { useIsDark } from "../../hooks/useIsDark";
 import {
+  COACH_HABIT_LOCKED,
+  getCoachHabits,
   DUPLICATE_HABIT,
   HABIT_LIMITS,
   HABIT_SAVE_FAILED as SAVE_FAILED,
@@ -86,8 +88,22 @@ export default function HabitsTab() {
     removeHabit,
     reloadHabits,
     accessibility,
+    authUserId,
   } = useApp();
   const dark = useIsDark();
+  // Release 3 (CU28): a coach's habit is ticked and archived here, never
+  // edited (no rename, colour or icon) or deleted; the database refuses a
+  // rename with ATXG4 and this says the same before anything is tried.
+  const [coachOf, setCoachOf] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void getCoachHabits(authUserId).then((m) => !cancelled && setCoachOf(m));
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, habits.length]);
+  const fromCoach = (h: HabitItem) => !!coachOf[h.id];
   // The tile and icon of a habit colour; null = lavender, the theme classes.
   const shadeOf = (c: HabitColour | undefined) => habitShade(c, dark, !!accessibility.highContrast);
   // The panel (MO1.1.1.1): closed, adding, or editing one habit (S5).
@@ -132,7 +148,10 @@ export default function HabitsTab() {
   };
 
   // S3: the next colour, saved at once; a refused write puts it back (O4).
-  const cycleColour = (h: HabitItem) => void setHabitColour(h.id, nextHabitColour(h.colour)).then(failed);
+  const cycleColour = (h: HabitItem) =>
+    fromCoach(h)
+      ? setToast({ id: Date.now(), message: COACH_HABIT_LOCKED })
+      : void setHabitColour(h.id, nextHabitColour(h.colour)).then(failed);
 
   // B3 archive (OURS): off the list, history kept; Undo brings it back.
   const archive = (h: HabitItem) =>
@@ -255,11 +274,15 @@ export default function HabitsTab() {
         tileMax={45}
         edgeInset={10}
         tileRadius={12}
-        actions={[
-          { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => openEdit(h) },
-          { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
-        ]}
-        keyboardLabel={`${h.label}. Arrow left for Edit and Delete`}
+        actions={
+          fromCoach(h)
+            ? [{ key: "archive", label: "Archive", icon: <Archive size={16} />, onClick: () => archive(h) }]
+            : [
+                { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => openEdit(h) },
+                { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
+              ]
+        }
+        keyboardLabel={fromCoach(h) ? `${h.label}. Arrow left for Archive` : `${h.label}. Arrow left for Edit and Delete`}
         onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         {/* #12: rows 59 + the 1 px divider (pitch 60); min-height so Larger
@@ -446,9 +469,12 @@ export default function HabitsTab() {
         anchor={menu?.anchor ?? null}
         rowLineHeight={16}
         options={[
-          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
+          // CU28: a coach's habit can't be edited or deleted here; the note says why.
+          menu && fromCoach(menu.habit)
+            ? { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} />, disabled: true, note: COACH_HABIT_LOCKED }
+            : { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
           { value: "archive", label: "Archive", icon: <Archive size={15} strokeWidth={1.75} /> },
-          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true, disabled: !!menu && fromCoach(menu.habit) },
         ]}
         onSelect={(v) => {
           if (!menu) return;

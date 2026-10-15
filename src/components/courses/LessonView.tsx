@@ -25,6 +25,9 @@ import { ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CheckIcon, LockIcon } from "./courseParts";
 import { useBack } from "../../hooks/useBack";
+import { CalendarClock } from "lucide-react";
+import { fetchDripSchedule, fetchLessonIsOpen } from "../../services/courses/drip";
+import { lessonDripLine, nextLocked, type DripRow } from "./drip";
 
 // Design screen 8: a lesson. The video is YouTube's official embedded player
 // on the privacy-enhanced domain (youtube-nocookie.com), with no autoplay and
@@ -41,6 +44,8 @@ type Loaded = {
   enrolment: Enrolment | null;
   completed: Set<string>;
   attempts: Map<string, { score: number; passed: boolean }>;
+  /** CU25: the modules' opening days for this learner (empty = all at once). */
+  drip: DripRow[];
 };
 
 async function loadLesson(courseId: string, userId: string): Promise<Loaded | null> {
@@ -54,9 +59,10 @@ async function loadLesson(courseId: string, userId: string): Promise<Loaded | nu
     fetchAuthorNames(course.authorId ? [course.authorId] : []),
   ]);
   const enrolment = enrolments.find((e) => e.courseId === course.id) ?? null;
-  const [completed, attempts] = await Promise.all([
+  const [completed, attempts, drip] = await Promise.all([
     enrolment ? fetchCompleted([enrolment.id]).then((m) => m.get(enrolment.id) ?? new Set<string>()) : Promise.resolve(new Set<string>()),
     enrolment && access === "paid" ? fetchBestAttempts(enrolment.id) : Promise.resolve(new Map()),
+    enrolment ? fetchDripSchedule(course.id) : Promise.resolve([]),
   ]);
   return {
     course,
@@ -67,6 +73,7 @@ async function loadLesson(courseId: string, userId: string): Promise<Loaded | nu
     enrolment,
     completed,
     attempts,
+    drip,
   };
 }
 
@@ -83,6 +90,20 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
       live = false;
     };
   }, [courseId, userId]);
+
+  // CU25: a lesson in a week that hasn't opened is hidden from the learner
+  // (course_lessons RLS), so its page asks course_lesson_is_open to say "not
+  // open yet" rather than "not available". Only when the lesson isn't loaded.
+  const missing = !!state && !orderedLessons(state.modules, state.lessons, state.course.id).some((l) => l.id === lessonId);
+  const [lockedLesson, setLockedLesson] = useState<string | null>(null);
+  useEffect(() => {
+    if (!missing) return;
+    let live = true;
+    void fetchLessonIsOpen(lessonId).then((isOpen) => live && setLockedLesson(isOpen ? null : lessonId));
+    return () => {
+      live = false;
+    };
+  }, [missing, lessonId]);
 
   const toCourse = `/app/forum/courses/${courseId}`;
   // Batch E (E5): pops back to the course (no loop through a pushed copy of
@@ -113,8 +134,9 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
       <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
         <div className="-mx-1">{backButton}</div>
         <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-          This lesson isn't available.
+          {lockedLesson === lessonId ? "This lesson isn't open yet." : "This lesson isn't available."}
         </p>
+        {state && lockedLesson === lessonId && <DripLine author={state.authorName} modules={state.modules} drip={state.drip} />}
       </div>
     );
   }
@@ -251,6 +273,10 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
           })}
         </div>
 
+        {/* CU25 (Release 3): when the next week opens, under This week
+            (r29: 12.5 muted, CalendarClock 13 / 2, gap 6, padding 2 0). */}
+        <DripLine author={state.authorName} modules={state.modules} drip={state.drip} />
+
         {showUpgrade && (
           <div className="rounded-2xl p-[14px] flex flex-col gap-2" style={{ background: fv("rules-bg") }}>
             <span className="text-sm font-extrabold" style={{ color: fv("rules-ink") }}>
@@ -270,6 +296,19 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
         )}
       </div>
     </div>
+  );
+}
+
+/** CU25: "Week 2 opens Thursday 15 Oct. Alex opens a week at a time." Nothing when every week is open. */
+function DripLine({ author, modules, drip }: { author: string; modules: CourseModule[]; drip: DripRow[] }) {
+  const next = nextLocked(drip);
+  const week = next ? modules.findIndex((m) => m.id === next.moduleId) + 1 : 0;
+  if (!next?.opensAt || week < 1) return null;
+  return (
+    <p className="m-0 flex items-center gap-1.5 text-[12.5px] py-0.5" style={{ color: fv("muted") }}>
+      <CalendarClock size={13} strokeWidth={2} className="shrink-0" aria-hidden />
+      {lessonDripLine(author, week, next.opensAt)}
+    </p>
   );
 }
 

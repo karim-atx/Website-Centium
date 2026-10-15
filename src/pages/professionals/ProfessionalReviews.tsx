@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { EllipsisVertical, Flag, LogIn, Pencil, Star } from "lucide-react";
+import { EllipsisVertical, Flag, LogIn, MessageSquareWarning, Pencil, Star } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Button } from "../../components/ui/Button";
@@ -11,7 +11,7 @@ import { ReviewFormSheet, ReviewReportForm } from "../../components/professional
 import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
 import { typeColours } from "../../components/professionals/typeColour";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
-import { reportReview } from "../../services/professional-reviews";
+import { reportReply, reportReview } from "../../services/professional-reviews";
 import { ratingDistribution, ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -41,6 +41,8 @@ export default function ProfessionalReviews() {
   const [reportingId, setReportingId] = useState<string | null>(null);
   /** The open ⋮ menu: which review, and the button it anchors to. */
   const [menuFor, setMenuFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+  /** Release 3: the review whose reply is being reported. */
+  const [reportingReplyId, setReportingReplyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -96,6 +98,7 @@ export default function ProfessionalReviews() {
   // labelled "You" since its name may not be shown to others.
   const rows = [...others, ...(ownCounts && mine ? [mine] : [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  const menuReview = menuFor ? rows.find((r) => r.id === menuFor.id) ?? null : null;
   const canWrite = !signedOut && canReview === true && !mine;
   const canEdit = !!mine && myStatus === "editable";
 
@@ -243,11 +246,31 @@ export default function ProfessionalReviews() {
         open={!!menuFor}
         anchor={menuFor?.anchor ?? null}
         onClose={() => setMenuFor(null)}
-        options={[{ value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> }]}
-        onSelect={() => {
-          if (menuFor) setReportingId(menuFor.id);
+        options={[
+          { value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> },
+          // Release 3 (DECISIONS "Review replies can be reported"): only
+          // under a review that has a live reply.
+          ...(menuReview?.reply && !menuReview.reply.redactedAt
+            ? [{ value: "report-reply", label: "Report reply", icon: <MessageSquareWarning size={15} strokeWidth={1.75} /> }]
+            : []),
+        ]}
+        onSelect={(value) => {
+          if (!menuFor) return;
+          if (value === "report-reply") setReportingReplyId(menuFor.id);
+          else setReportingId(menuFor.id);
         }}
       />
+
+      <BottomSheet open={!!reportingReplyId} onClose={() => setReportingReplyId(null)} title="Report this reply">
+        {reportingReplyId && (
+          <ReviewReportForm
+            onSend={async (reason, detail) => {
+              const r = await reportReply(reportingReplyId, reason, detail);
+              return r.ok ? null : r.message;
+            }}
+          />
+        )}
+      </BottomSheet>
 
       <BottomSheet open={!!reportingId} onClose={() => setReportingId(null)} title="Report this review">
         {reportingId && (

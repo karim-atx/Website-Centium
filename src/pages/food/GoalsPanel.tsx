@@ -14,7 +14,11 @@ import {
 } from "../../services/nutrition";
 import { canDrawSparkline, trendLabel, withinDays, type MetricReadings } from "../../services/health-metrics/series";
 import type { WeightGoalType, PlanType, NutritionGoal, MacroSplit } from "../../types";
-import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal } from "lucide-react";
+import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal, TriangleAlert } from "lucide-react";
+import { AllergiesSheet } from "../../components/food/AllergiesSheet";
+import { MealPlanCard } from "../../components/food/MealPlanCard";
+import { allergyLine, TARGETS_LOCKED_MESSAGE, withProfessionalTargets, type ProfessionalTargets } from "../../services/nutrition/clientNutritionModel";
+import { useMyAllergies } from "./useFoodProfessional";
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // Item 8 shares Food's own tab bar (labels + literal flex-weights) instead
 // of a second, drifting copy of them.
@@ -111,9 +115,27 @@ export interface GoalsPanelPro {
 
 // v6 FO1 S1: the Food tab bar is the page's one fixed header on every tab,
 // so this panel no longer draws a second copy of it.
-export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
+/**
+ * Release 3 · W7 client additions (CU3, CU13 to CU15), client mode only:
+ * - clientTargets: the targets a professional set (Food reads them,
+ *   AppContext professionalTargets). Locked, every editing control locks (the
+ *   existing lock line stays as written), Existing plan applies them instead
+ *   of the stand-in preset, and Custom plan says ATXG8's words.
+ * - the Allergies chip beside Dietary restriction (unchanged, CU14), the
+ *   allergy line under it, and AllergiesSheet (CU15);
+ * - the "Meal plan from {pro}" card under Plan (MealPlanCard).
+ * An account with no professional and no allergies sees the panel as before.
+ */
+export default function GoalsPanel({
+  pro,
+  clientTargets,
+  onAllergiesSaved,
+}: { pro?: GoalsPanelPro; clientTargets?: ProfessionalTargets | null; onAllergiesSaved?: () => void } = {}) {
   const app = useApp();
-  const { user, healthSeries, metricValues, dietaryRestriction, setDietaryRestriction, pregnancy, cycleOffered } = app;
+  const { user, healthSeries, metricValues, dietaryRestriction, setDietaryRestriction, pregnancy, cycleOffered, authUserId, recoverySensitive, recoveryModePending } = app;
+  const proTargets = pro ? null : clientTargets ?? null;
+  const myAllergies = useMyAllergies(!pro);
+  const [allergiesOpen, setAllergiesOpen] = useState(false);
   const today = pro ? pro.today : app.today;
   const nutritionGoal: NutritionGoal = pro ? { ...pro.goal, planType: "custom", desiredWeightConfirmed: pro.goal.desiredWeightKg != null } : app.nutritionGoal;
   const setNutritionGoal = (g: NutritionGoal) =>
@@ -149,7 +171,7 @@ export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
   // V6 (QA 6.0): "Existing plan" is a dietitian-provided plan — the client
   // can view it but only the dietitian edits it (from the professional UI),
   // so every editable control here locks while it's selected.
-  const locked = pro ? pro.readOnly : nutritionGoal.planType === "existing";
+  const locked = pro ? pro.readOnly : nutritionGoal.planType === "existing" || !!proTargets?.locked;
 
   const tdee = pro ? pro.tdee : calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
@@ -238,6 +260,12 @@ export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
   };
 
   const applyExistingPlan = () => {
+    // Release 3 · CU3: with targets a professional set, Existing plan is those targets.
+    if (proTargets) {
+      setNutritionGoal(withProfessionalTargets({ ...nutritionGoal, planType: "existing" }, proTargets));
+      setCalorieDraft(null);
+      return;
+    }
     const suggested = pro ? pro.tdee : calculateTDEE(user);
     if (suggested === null) return;
     setNutritionGoal({
@@ -629,8 +657,13 @@ export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
                 // make it so that when pressed it reverts back to custom
                 // plan with an error message saying that they should hire a
                 // professional."
+                // Release 3 · CU3: locked targets can't be replaced (ATXG8).
+                if (proTargets?.locked) {
+                  setPlanError(p === "existing" ? null : TARGETS_LOCKED_MESSAGE);
+                  return;
+                }
                 if (p === "existing") {
-                  if (!user.linkedProfessionalName) {
+                  if (!user.linkedProfessionalName && !proTargets) {
                     setPlanError("You need to hire a professional before switching to an existing plan.");
                     setNutritionGoal({ ...nutritionGoal, planType: "custom" });
                     return;
@@ -659,11 +692,23 @@ export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
               <ChevronDown size={11} className={restrictionOpen ? "rotate-180" : undefined} />
             </span>
           </Chip>
+          {/* Release 3 · CU13: the Allergies chip beside Dietary restriction (same chip). */}
+          <Chip
+            active={myAllergies.allergies.length > 0 || allergiesOpen}
+            className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
+            onClick={() => setAllergiesOpen(true)}
+            aria-haspopup="dialog"
+          >
+            <span className="flex items-center gap-1">
+              Allergies
+              <ChevronDown size={11} />
+            </span>
+          </Chip>
         </div>
         {planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{planError}</p>}
         {!planError && nutritionGoal.planType === "existing" && (
           <p className="text-[10.5px] text-charcoal-faint mt-1.5">
-            {user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
+            {proTargets?.professionalName || user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
         <PopupMenu
@@ -690,7 +735,42 @@ export default function GoalsPanel({ pro }: { pro?: GoalsPanelPro } = {}) {
             items are highlighted. Tap to clear.
           </button>
         )}
+        {/* Release 3 · CU13 (gen/r23.js goals23 o.allergy): 12 / 700 status.high,
+            TriangleAlert 12 / 2.4, 8 above, 2 × 0. Severity from the client's own rows. */}
+        {(() => {
+          const line = allergyLine(myAllergies.allergies, myAllergies.sharedWith);
+          return line ? (
+            <p className="flex items-center text-status-high" style={{ gap: 6, margin: "8px 0 0", padding: "2px 0", fontSize: textPx(12), fontWeight: 700 }}>
+              <TriangleAlert size={12} strokeWidth={2.4} className="shrink-0" aria-hidden />
+              {line}
+            </p>
+          ) : null;
+        })()}
+        {myAllergies.status === "error" && (
+          <p className="flex items-center" style={{ gap: 10, margin: "8px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>
+            Couldn't load your allergies.
+            <button type="button" onClick={myAllergies.reload} className="tap relative text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']" style={{ fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        )}
       </section>
+      )}
+
+      {/* Release 3 · CU3: the meal plan a professional assigned (nothing without one). */}
+      {!pro && authUserId && <MealPlanCard userId={authUserId} today={today} card={CARD} title={TITLE} hideNumbers={recoverySensitive || recoveryModePending} />}
+
+      {!pro && allergiesOpen && (
+        <AllergiesSheet
+          open
+          onClose={() => setAllergiesOpen(false)}
+          userId={authUserId}
+          initial={myAllergies.allergies}
+          onSaved={() => {
+            myAllergies.reload();
+            onAllergiesSaved?.();
+          }}
+        />
       )}
     </div>
   );

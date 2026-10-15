@@ -295,6 +295,8 @@ import { todayLocal } from "../utils/date";
 import { normalizeColorTheme } from "../theme/colorThemes";
 import { useSystemDark } from "../theme/useSystemDark";
 import { usePresentationSync } from "../theme/usePresentationSync";
+import { useProfessionalTargetsSync } from "./useProfessionalTargetsSync";
+import type { ProfessionalTargets } from "../services/nutrition/clientNutritionModel";
 import type { Presentation, ThemeMode } from "../services/presentation/mapping";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
@@ -808,6 +810,12 @@ interface AppState {
 
   nutritionGoal: NutritionGoal;
   setNutritionGoal: (goal: NutritionGoal) => void;
+  /**
+   * Release 3 · W7 (CU3): the targets a professional set for this client
+   * (null when none, or not a customer). Synced into nutritionGoal here, so
+   * every screen follows them; Food's Goals panel shows them locked.
+   */
+  professionalTargets: ProfessionalTargets | null;
   setWeightGoal: (weightGoal: WeightGoalType, weeklyRateKg: number) => void;
   setMacroSplit: (split: MacroSplit) => void;
   // QA 11.0: shared between Goals & Macros (where it's picked) and the
@@ -5616,6 +5624,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // too, so a write from this profile never changes the stored value.
   const setNutritionGoal = (goal: NutritionGoal) =>
     setNutritionGoalState((prev) => (cycleOffered ? goal : { ...goal, pregnancyKcal: prev.pregnancyKcal }));
+  // Release 3 · W7 (CU3): customers only; professionals and businesses read nothing.
+  const professionalTargets = useProfessionalTargetsSync(
+    authUserId && user.accountType === "customer" ? authUserId : null,
+    visibleNutritionGoal,
+    setNutritionGoal
+  );
   const setWeightGoal = (weightGoal: WeightGoalType, weeklyRateKg: number) =>
     setNutritionGoalState((prev) => {
       const suggested = suggestNutritionGoal(user, weightGoal, weeklyRateKg);
@@ -6538,6 +6552,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       replaceWidgets,
       nutritionGoal: visibleNutritionGoal,
       setNutritionGoal,
+      professionalTargets,
       setWeightGoal,
       setMacroSplit,
       dietaryRestriction,
@@ -6754,6 +6769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricGoalRows,
       widgets,
       visibleNutritionGoal,
+      professionalTargets,
       customMeals,
       customMealsError,
       // FO3.2: these were missing, so a recipe added or deleted only reached

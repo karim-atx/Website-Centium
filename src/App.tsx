@@ -80,6 +80,11 @@ import TwoFactorPage from "./pages/settings/TwoFactorPage";
 import TwoFactorSetupPage from "./pages/settings/TwoFactorSetupPage";
 import ResetPassword from "./pages/auth/ResetPassword";
 import PublicCertificate from "./pages/courses/PublicCertificate";
+import InviteLanding from "./pages/public/InviteLanding";
+import PublicProfile from "./pages/public/PublicProfile";
+import PublicBooking from "./pages/public/PublicBooking";
+import { PublicReturnResume } from "./pages/public/PublicReturnResume";
+import CarePlan from "./pages/health/CarePlan";
 import { ConsoleGate } from "./components/business-console/ConsoleGate";
 
 const RouteLoading: React.FC = () => (
@@ -358,6 +363,7 @@ function AppRoutes() {
   return (
     <>
     <ReturnedAuthErrorRoute />
+    <PublicReturnResume />
     <Routes>
       {/* Public marketing site */}
       <Route element={<MarketingLayout />}>
@@ -389,6 +395,15 @@ function AppRoutes() {
           the learner has not chosen to publish. Not inside MarketingLayout
           either: it should carry no nav, no footer and nothing to sell. */}
       <Route path="/certificate/:serial" element={<PublicCertificate />} />
+
+      {/* Release 3 W7: a professional's invite link (centium.app/i/{code}),
+          public profile and booking page. Public like the certificate: the
+          readers (preview_invite_link, professional_by_handle,
+          professional_open_slots) are granted to anon and reveal only what
+          the professional publishes; booking itself asks the visitor to sign in. */}
+      <Route path="/i/:code" element={<InviteLanding />} />
+      <Route path="/p/:handle" element={<PublicProfile />} />
+      <Route path="/p/:handle/book" element={<PublicBooking />} />
 
       {/* The one route a recovery session may reach. Deliberately outside
           RequireOnboarded: those guards redirect INTO here, so putting it
@@ -443,6 +458,7 @@ function AppRoutes() {
         <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/health/sources" element={<HealthSources />} />
         <Route path="/app/health/records" element={<HealthRecords />} />
+        <Route path="/app/health/care-plan" element={<CarePlan />} />
         {/* Batch 2 · Health A: the seven metric pages (HE1.1-HE1.7) and heart-rate alert settings. */}
         <Route path="/app/health/water" element={<WaterPage />} />
         <Route path="/app/health/steps" element={<StepsPage />} />

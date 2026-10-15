@@ -1,5 +1,6 @@
-import React from "react";
-import { ChevronRight } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { ChevronRight, MoreVertical, UserRoundCheck } from "lucide-react";
+import { PopupMenu } from "../ui/PopupMenu";
 import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
 import { FlagNote } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
@@ -105,7 +106,16 @@ export const BiomarkerDetailSheet: React.FC<{
   results?: LabResult[];
   /** HE1.9.3 S1: "View full history" → HE1.9.1. */
   onViewHistory?: () => void;
-}> = ({ open, onClose, marker, results, onViewHistory }) => {
+  /**
+   * Release 3 CU18 v2: a ⋮ beside the status word with "Share with a
+   * professional" (the v6 decision puts shares in ⋮ menus). Omitted: no ⋮.
+   */
+  onShareWithProfessional?: () => void;
+  /** Release 3 CU18 v2: "Shared with {pro_name}, GP since {date}" under the history link. */
+  sharedLine?: string | null;
+}> = ({ open, onClose, marker, results, onViewHistory, onShareWithProfessional, sharedLine }) => {
+  const menuBtn = useRef<HTMLButtonElement | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const checkFlags = useCheckFlags();
   const pregnancyFlags = usePregnancyFlags();
   const labCatalogue = useLabCatalogue();
@@ -130,8 +140,27 @@ export const BiomarkerDetailSheet: React.FC<{
       geometry="partB"
       align="start"
       swipeToClose
-      titleClass="text-[17px] leading-[25.5px] tracking-[-0.3px] pr-[72px]"
-      titleAside={status ? <StatusWord status={status} size={12} line={18} icon={14} /> : undefined}
+      titleClass={`text-[17px] leading-[25.5px] tracking-[-0.3px] ${onShareWithProfessional ? "pr-[108px]" : "pr-[72px]"}`}
+      titleAside={
+        onShareWithProfessional ? (
+          <span className="flex items-center" style={{ gap: 2, marginTop: -9, marginRight: -10 }}>
+            {status && <StatusWord status={status} size={12} line={18} icon={14} />}
+            <button
+              ref={menuBtn}
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="More options"
+              aria-haspopup="menu"
+              className="tap shrink-0 grid place-items-center rounded-full"
+              style={{ width: 36, height: 36 }}
+            >
+              <MoreVertical size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+            </button>
+          </span>
+        ) : status ? (
+          <StatusWord status={status} size={12} line={18} icon={14} />
+        ) : undefined
+      }
     >
       <div style={{ marginTop: -10 }}>
         <p className="flex items-baseline" style={{ gap: 5 }}>
@@ -197,9 +226,28 @@ export const BiomarkerDetailSheet: React.FC<{
             View full history <ChevronRight size={15} aria-hidden />
           </button>
         )}
+        {/* Release 3 CU18 v2 (r28.js bio28: 11.5 #8C8378, centred). */}
+        {sharedLine && (
+          <p data-shared-line className="text-center" style={{ marginTop: 6, fontSize: textPx(11.5), lineHeight: linePx(17), color: INK_FAINT }}>
+            {sharedLine}
+          </p>
+        )}
         {/* KEEP-SAFETY (release review): the app-wide disclaimer stays on the marker popup, as on main. */}
         <HealthDisclaimer className="mt-3" />
       </div>
+      {onShareWithProfessional && (
+        <PopupMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchor={menuBtn.current}
+          options={[{ value: "share-pro", label: "Share with a professional", icon: <UserRoundCheck size={15} /> }]}
+          onSelect={() => onShareWithProfessional()}
+          width={220}
+          align="right"
+          hairline
+          rowLineHeight={18}
+        />
+      )}
     </CentredPopup>
   );
 };

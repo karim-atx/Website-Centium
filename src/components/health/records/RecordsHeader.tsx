@@ -1,9 +1,9 @@
 import React, { useRef, useState } from "react";
-import { ChevronLeft, MoreVertical } from "lucide-react";
+import { ChevronLeft, MoreVertical, ShieldCheck } from "lucide-react";
 import { FixedHeader } from "../../ui/FixedHeader";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { textPx, linePx } from "../../../theme/textSize";
-import { INK } from "./kit";
+import { INK, useHealthMode } from "./kit";
 
 export interface HeaderMenuItem {
   key: string;
@@ -26,7 +26,17 @@ export const RecordsHeader: React.FC<{
   onBack: () => void;
   menu?: HeaderMenuItem[];
   children?: React.ReactNode;
-}> = ({ title, onBack, menu, children }) => {
+  /**
+   * Release 3 CU17 v2 "Shared with …" banner under the tabs (r28.js recBody28:
+   * r14 #EAF4F2 (dark #293339), pad 10 12, gap 10, shield-check 16/2
+   * #3C6B65 (dark #B2D4CF), label 12.5/600 lh1.4, "Manage" 12/700
+   * #5F5093 (dark #C3B3FB)). Omitted: nothing is drawn, as before.
+   */
+  shared?: { label: string; onManage: () => void } | null;
+  /** The ⋮ menu width (default 155, as before). */
+  menuWidth?: number;
+}> = ({ title, onBack, menu, children, shared, menuWidth = 155 }) => {
+  const { dark } = useHealthMode();
   const menuBtn = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   return (
@@ -59,6 +69,26 @@ export const RecordsHeader: React.FC<{
         )}
       </div>
       {children}
+      {shared && (
+        <div
+          data-records-shared
+          className="flex items-center"
+          style={{ marginTop: 12, gap: 10, borderRadius: 14, padding: "0 0 0 12px", minHeight: 44, background: dark ? "#293339" : "#EAF4F2" }}
+        >
+          <ShieldCheck size={16} strokeWidth={2} className="shrink-0" style={{ color: dark ? "#B2D4CF" : "#3C6B65" }} aria-hidden />
+          <span className="flex-1 min-w-0" style={{ padding: "10px 0", fontSize: textPx(12.5), lineHeight: 1.4, fontWeight: 600, color: INK }}>
+            {shared.label}
+          </span>
+          <button
+            type="button"
+            onClick={shared.onManage}
+            className="tap shrink-0 min-h-[44px]"
+            style={{ padding: "0 12px", fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#C3B3FB" : "#5F5093" }}
+          >
+            Manage
+          </button>
+        </div>
+      )}
       {menu && menu.length > 0 && (
         <PopupMenu
           open={open}
@@ -66,7 +96,7 @@ export const RecordsHeader: React.FC<{
           anchor={menuBtn.current}
           options={menu.map((m) => ({ value: m.key, label: m.label, icon: m.icon, destructive: m.destructive }))}
           onSelect={(v) => menu.find((m) => m.key === v)?.onSelect()}
-          width={155}
+          width={menuWidth}
           align="right"
           hairline
           rowLineHeight={18}

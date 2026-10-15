@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Microscope, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+import { Microscope, Pencil, Plus, Share2, Trash2, UserRoundCheck } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useBackCloses } from "../../../hooks/useBackCloses";
 import { usePregnancyFlags } from "../../pregnancy/usePregnancyFlags";
@@ -61,7 +61,9 @@ export const MarkerPage: React.FC<{
   onBack: () => void;
   onShare: () => void;
   onToast: (message: string) => void;
-}> = ({ marker, results, allResults, catalogue, isThreshold, remark, onBack, onShare, onToast }) => {
+  /** Release 3 CU18: "Share with a professional" in the ⋮ menu (result_shares). Omitted: the menu is as before. */
+  onShareWithProfessional?: () => void;
+}> = ({ marker, results, allResults, catalogue, isThreshold, remark, onBack, onShare, onToast, onShareWithProfessional }) => {
   const { dark, hc } = useHealthMode();
   const { today, reloadHealthRecords } = useApp();
   const pregnancyFlags = usePregnancyFlags();
@@ -153,8 +155,12 @@ export const MarkerPage: React.FC<{
       <RecordsHeader
         title={marker.name}
         onBack={onBack}
+        menuWidth={onShareWithProfessional ? 220 : undefined}
         menu={[
           { key: "share", label: "Share", icon: <Share2 size={15} />, onSelect: onShare },
+          ...(onShareWithProfessional
+            ? [{ key: "share-pro", label: "Share with a professional", icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }]
+            : []),
           { key: "delete", label: "Delete marker", icon: <Trash2 size={15} />, destructive: true, onSelect: () => setDeleting("marker") },
         ]}
       />

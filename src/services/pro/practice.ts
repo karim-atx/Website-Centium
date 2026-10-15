@@ -5,8 +5,9 @@
 //
 // - default_data_requests access_category[]: asked of every new client when
 //   they hire you (W2's accept reads it).
-// - invoice_details jsonb (an object, at most 4 KB): the keys are not set by
-//   the backend contract; this screen writes { name, tax_number, prefix }.
+// - invoice_details jsonb (an object, at most 4 KB), keys documented in
+//   HANDOVER_API (5e9700a): name (<= 120), tax_number (<= 40), prefix (<= 10;
+//   invoice numbers read {prefix}{n}). Other stored keys are kept on write.
 // - calls_with_hired_clients boolean (default true): thread_allows_calls
 //   follows it for professional and client chats (DB-7).
 

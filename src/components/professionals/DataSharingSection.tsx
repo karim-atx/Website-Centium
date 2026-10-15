@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
 import { useSharingGrants } from "./useSharingGrants";
@@ -7,6 +7,7 @@ import {
   Activity,
   Baby,
   Check,
+  CircleCheck,
   CircleAlert,
   ClipboardList,
   Droplet,
@@ -17,7 +18,9 @@ import {
   Ruler,
   Scale,
   ShieldCheck,
+  Syringe,
   TrendingUp,
+  TriangleAlert,
   Utensils,
   type LucideIcon,
 } from "lucide-react";
@@ -25,11 +28,13 @@ import { PERSON_ICON } from "../../utils/icons";
 import { initials } from "./typeColour";
 import { formatDisplayDate } from "../../utils/date";
 import { ACCESS_CATEGORIES, type AccessCategory, type LinkedProfessional } from "../../services/consent";
+import { answerAccessRequest, firstNameOf, getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
+import { AccessRequestNotice } from "./AccessRequestNotice";
 
 /** MO1.5.1.1: the board's three groups. */
 const GROUPS: { label: string; categories: AccessCategory[] }[] = [
-  { label: "Everyday tracking", categories: ["food_diary", "workout_activity", "weight", "progress", "health_metrics"] },
-  { label: "Health records", categories: ["lab_results", "medical_history", "body_measurements", "blood_pressure"] },
+  { label: "Everyday tracking", categories: ["food_diary", "workout_activity", "weight", "progress", "health_metrics", "habits"] },
+  { label: "Health records", categories: ["lab_results", "medical_history", "allergies_dietary", "body_measurements", "blood_pressure"] },
   { label: "Personal", categories: ["cycle_phase", "pregnancy"] },
 ];
 
@@ -55,6 +60,9 @@ const CATEGORY_ICON: Partial<Record<AccessCategory, LucideIcon>> = {
   weight: Scale,
   progress: TrendingUp,
   health_metrics: Activity,
+  // Release 3 CU8 v4 (r25.js SHARE25): circle-check, triangle-alert.
+  habits: CircleCheck,
+  allergies_dietary: TriangleAlert,
   lab_results: FlaskConical,
   medical_history: ClipboardList,
   body_measurements: Ruler,
@@ -96,6 +104,34 @@ export const DataSharingSection: React.FC<{
     toggle,
     declineAll,
   } = useSharingGrants();
+
+  // Release 3 CU8 v4: professionals' pending requests to see a data type
+  // (DB-2 access_requests). The switches are the "yes", AccessRequestNotice's
+  // "Don't share this" the "no".
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
+  const loadRequests = useCallback(async () => {
+    const r = await getMyAccessRequests();
+    // A failed read draws no notice: the switches still work, and the request
+    // is shown again on the next open.
+    if (r.ok) setRequests(r.requests);
+  }, []);
+  useEffect(() => {
+    if (authUserId) void loadRequests();
+  }, [authUserId, loadRequests]);
+
+  /**
+   * A switch turned on for a category a professional asked for also answers
+   * that request "yes" (answer_access_request), so it stops being pending and
+   * the professional is told. Only after the switch's own write landed.
+   */
+  const onSwitch = async (professionalId: string, category: AccessCategory, next: boolean) => {
+    const ok = await toggle(professionalId, category, next);
+    if (!ok || !next) return;
+    const asked = requests.find((r) => r.professionalId === professionalId && r.category === category);
+    if (!asked) return;
+    const answered = await answerAccessRequest(asked.id, true);
+    if (answered.ok) setRequests((rs) => rs.filter((r) => r.id !== asked.id));
+  };
 
   /** Who a pending-change warning is about, for the message that names them. */
   const nameFor = (id: string) =>
@@ -153,6 +189,15 @@ export const DataSharingSection: React.FC<{
     <>
       {header(pro)}
 
+      {/* Release 3 CU8 v4 "Alex asks to see lab results": the request, in this
+          section's existing notice style (r25.js l.30). */}
+      <AccessRequestNotice
+        requests={requests.filter((r) => r.professionalId === pro.professionalId)}
+        firstName={firstNameOf(pro.name)}
+        labelFor={labelFor}
+        onAnswered={(ids) => setRequests((rs) => rs.filter((r) => !ids.includes(r.id)))}
+      />
+
       {/* Decision 23 (item 80): an r16 #F0EDF9 notice with a 12.5/400 body
           and a Foundations text action (13/700 primary.accent). */}
       {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
@@ -205,34 +250,51 @@ export const DataSharingSection: React.FC<{
               const granted = grants[pro.professionalId]?.[category] === true;
               const Icon = CATEGORY_ICON[category] ?? ShieldCheck;
               return (
-                // MO1.5.1.1 (2x frame): a 32 r10 #F0EDF9 tile with a #7D6BB5
-                // glyph (new tile, decision 22; x 72–135), and the rule from
-                // the label's x (160) at #F4F4F3 (5%).
-                <div
-                  key={category}
-                  className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[44px] before:end-0 before:h-px before:bg-charcoal/[0.05] last:before:hidden"
-                >
-                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale text-primary-dark flex items-center justify-center shrink-0" aria-hidden>
-                    {/* MO1.5.1.1: category icons 16/1.75. */}
-                    <Icon size={16} strokeWidth={1.75} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-charcoal flex items-center gap-1.5">
-                      {label}
-                      {savedKey === `${pro.professionalId}:${category}` && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-status-good">
-                          <Check size={11} /> Saved
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-[11px] text-charcoal-faint">{description}</p>
+                <React.Fragment key={category}>
+                  {/* MO1.5.1.1 (2x frame): a 32 r10 #F0EDF9 tile with a #7D6BB5
+                      glyph (new tile, decision 22; x 72–135), and the rule from
+                      the label's x (160) at #F4F4F3 (5%). */}
+                  <div className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[44px] before:end-0 before:h-px before:bg-charcoal/[0.05] last:before:hidden">
+                    <span className="w-8 h-8 rounded-[10px] bg-primary-pale text-primary-dark flex items-center justify-center shrink-0" aria-hidden>
+                      {/* MO1.5.1.1: category icons 16/1.75. */}
+                      <Icon size={16} strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-charcoal flex items-center gap-1.5">
+                        {label}
+                        {savedKey === `${pro.professionalId}:${category}` && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-status-good">
+                            <Check size={11} /> Saved
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-charcoal-faint">{description}</p>
+                    </div>
+                    <Toggle
+                      checked={granted}
+                      onChange={(v) => void onSwitch(pro.professionalId, category, v)}
+                      label={`Share ${label.toLowerCase()} with ${pro.name}`}
+                    />
                   </div>
-                  <Toggle
-                    checked={granted}
-                    onChange={(v) => void toggle(pro.professionalId, category, v)}
-                    label={`Share ${label.toLowerCase()} with ${pro.name}`}
-                  />
-                </div>
+                  {/* Release 3 CU8 v4 (r25.js SHARE25: syringe, "Vaccinations",
+                      "Not recorded in Centium yet"), right after Allergies and
+                      dietary needs. Informational only (FINAL_PLAN W7): there is
+                      no vaccination data and no category, so no switch. */}
+                  {category === "allergies_dietary" && (
+                    <div
+                      data-row="vaccinations"
+                      className="relative flex items-center gap-3 py-3 before:content-[''] before:absolute before:bottom-0 before:start-[44px] before:end-0 before:h-px before:bg-charcoal/[0.05] last:before:hidden"
+                    >
+                      <span className="w-8 h-8 rounded-[10px] bg-primary-pale text-primary-dark flex items-center justify-center shrink-0" aria-hidden>
+                        <Syringe size={16} strokeWidth={1.75} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-charcoal">Vaccinations</p>
+                        <p className="text-[11px] text-charcoal-faint">Not recorded in Centium yet</p>
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>

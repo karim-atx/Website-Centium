@@ -27,6 +27,17 @@ export interface HireRequest {
   status: "pending" | "accepted" | "rejected";
   requestedAt: string;
   resolvedAt: string | null;
+  /** Release 3 (DB-2): why the professional said no, when they did. */
+  declineReason?: string | null;
+  /** Release 3 (DB-2): the professional's own words with the decline. */
+  declineMessage?: string | null;
+}
+
+/** Release 3 · optional extras the client may send with a request (≤ 500 characters). */
+export interface HireRequestExtras {
+  /** One of this professional's active plans; another's or an inactive one is 22023. */
+  planId?: string | null;
+  message?: string | null;
 }
 
 /**
@@ -99,7 +110,7 @@ export async function fetchMyHireRequest(
   try {
     const { data, error } = await supabase
       .from("pending_client_requests")
-      .select("id, status, requested_at, resolved_at")
+      .select("id, status, requested_at, resolved_at, decline_reason, decline_message")
       .eq("professional_id", professionalId)
       .order("requested_at", { ascending: false });
 
@@ -110,6 +121,8 @@ export async function fetchMyHireRequest(
       status: r.status,
       requestedAt: r.requested_at,
       resolvedAt: r.resolved_at,
+      declineReason: r.decline_reason ?? null,
+      declineMessage: r.decline_message ?? null,
     }));
 
     const pending = rows.find((r) => r.status === "pending");
@@ -158,18 +171,36 @@ export async function fetchMyHireRequest(
  */
 export async function sendHireRequest(
   professionalId: string,
-  clientId: string
+  clientId: string,
+  extras?: HireRequestExtras
 ): Promise<SendHireRequestResult> {
   try {
+    // Release 3 ("Five small additions"): plan_id and message are in the
+    // client's INSERT grant; plan_price is set by the database from the plan
+    // and is never sent (42501). Untyped columns, hence the narrow cast.
+    const message = extras?.message?.trim() || null;
+    const row = {
+      customer_id: clientId,
+      professional_id: professionalId,
+      ...(extras?.planId ? { plan_id: extras.planId } : {}),
+      ...(message ? { message } : {}),
+    } as { customer_id: string; professional_id: string };
     const { data, error } = await supabase
       .from("pending_client_requests")
-      .insert({ customer_id: clientId, professional_id: professionalId })
+      .insert(row)
       .select("id, status, requested_at, resolved_at")
       .single();
 
     if (error) {
       if (error.code === "23505") return { status: "already_pending" };
       if (error.code === "ATX07") return { status: "cooling_down" };
+      // 22023: the plan isn't one of this professional's active plans
+      // (pending_client_requests_stamp_plan).
+      // 23514: pending_client_requests_message_check (over 500 characters).
+      if (error.code === "23514") return { status: "error", message: "Your message can be at most 500 characters." };
+      if (error.code === "22023") {
+        return { status: "error", message: "That plan isn't on offer any more. Choose another or send the request without one." };
+      }
       console.error("[hire-request] Could not send request:", error.message);
       return { status: "error", message: describe(error) };
     }
@@ -188,5 +219,22 @@ export async function sendHireRequest(
       status: "error",
       message: e instanceof Error ? e.message : "Could not send your request.",
     };
+  }
+}
+
+/**
+ * decline_reason_label(reason) (anon): the database's own words for a decline
+ * reason ("Fully booked", ...), so the client reads exactly what the
+ * professional chose. Null when it can't be read.
+ */
+export async function fetchDeclineReasonLabel(reason: string): Promise<string | null> {
+  try {
+    const { data, error } = await (supabase as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
+    }).rpc("decline_reason_label", { p_reason: reason });
+    if (error || typeof data !== "string") return null;
+    return data;
+  } catch {
+    return null;
   }
 }

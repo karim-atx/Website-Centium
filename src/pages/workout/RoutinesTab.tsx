@@ -77,6 +77,11 @@ import {
   Group,
   AlertCircle,
 } from "lucide-react";
+import { useCoachProgrammes } from "./useCoachProgrammes";
+import { CoachSection } from "./CoachSection";
+import { coachColor } from "./coachColors";
+import { fullGroupIndex, shortDay } from "../../services/routines/programmeLogic";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 
 
 let addedExId = 0;
@@ -118,6 +123,28 @@ const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode
   { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
   { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
+// Release 3 · W7 (CU1 v4): a coach's folder and rows offer one thing, a copy
+// of their own (cleanRoutineCopy: no coach notes, no assignment).
+const COACH_MENU: { value: "copy"; label: string; icon: React.ReactNode }[] = [
+  { value: "copy", label: "Save a copy", icon: <Copy size={MENU_ICON} /> },
+];
+
+/** Updated banners the client has closed, by assignment id → the assigned_at they closed. */
+const SEEN_KEY = "centium.coachUpdateSeen";
+function readSeen(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+function writeSeen(seen: Record<string, string>) {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  } catch {
+    // Private mode: the banner simply shows again next time.
+  }
+}
 
 export default function RoutinesTab() {
   const {
@@ -142,10 +169,17 @@ export default function RoutinesTab() {
     clearPausedSession,
     activeSession,
     setActiveSession,
+    authUserId,
+    today,
   } = useApp();
   const dark = useIsDark();
   const hc = !!accessibility.highContrast;
   const online = useOnline();
+  // Release 3 · W7 (CU1): the coach's programmes, shown in their own section
+  // above Folders and left out of the client's folders and Unfiled.
+  const coach = useCoachProgrammes(routines, authUserId, today);
+  const coachIds = coach.coachRoutineIds;
+  const ownRoutines = coachIds.size ? routines.filter((r) => !coachIds.has(r.id)) : routines;
   // v6 WO1 O3 / O4: a write that failed, or one tried offline, says
   // "Couldn't save. Try again." in the shared toast.
   const [saveToast, setSaveToast] = useState(false);
@@ -240,6 +274,10 @@ export default function RoutinesTab() {
   // deleting" — same full-screen confirm pattern as pendingRoutine above.
   const [pendingDeleteRoutine, setPendingDeleteRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
+  // CU1: the coach folder / row ⋮ (Save a copy), Past programmes, closed Updated banners.
+  const [coachMenu, setCoachMenu] = useState<{ routineId: string; anchor: HTMLElement } | null>(null);
+  const [pastOpen, setPastOpen] = useState(false);
+  const [seenUpdates, setSeenUpdates] = useState<Record<string, string>>(readSeen);
   // Master handover ("Color-coded folders": "Folders now open"): every
   // folder, the seeded Strength and Hypertrophy included, starts expanded.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
@@ -255,14 +293,25 @@ export default function RoutinesTab() {
   // keeps it on screen with the inline line (K9) instead of the Retry (O2).
   const hasCache = routines.length > 0 || routineFolders.length > 0;
   const siblingsOf = (parentId: string | null) => routineFolders.filter((f) => (f.parentId ?? null) === parentId);
-  const unfiled = routinesIn(routines, null);
+  const unfiled = routinesIn(ownRoutines, null);
 
   // --- WO1.1 drag and drop ----------------------------------------------------
   const listRef = useRef<HTMLDivElement>(null);
   const onDrop = (item: DragItem, target: DropTarget) => {
     if (item.kind === "routine") {
       if (target.kind === "header") run(placeRoutine(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
-      else if (target.kind === "group") run(placeRoutine(item.id, target.folderId, target.index));
+      else if (target.kind === "group")
+        // The drop slot counts the rows on screen; placeRoutine counts the
+        // whole group, coach routines included (CU1: they are listed above).
+        run(
+          placeRoutine(
+            item.id,
+            target.folderId,
+            coachIds.size
+              ? fullGroupIndex(routinesIn(routines, target.folderId).map((r) => r.id), coachIds, item.id, target.index)
+              : target.index
+          )
+        );
     } else if (target.kind === "into") {
       run(moveRoutineFolder(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
     } else if (target.kind === "folders") {
@@ -359,11 +408,21 @@ export default function RoutinesTab() {
     writeChain.current.set(r.id, { list: out.exercises, done });
   };
 
-  const renderRoutine = (r: Routine, index: number, family: FolderFamily, hidden: boolean) => (
+  const renderRoutine = (
+    r: Routine,
+    index: number,
+    family: FolderFamily,
+    hidden: boolean,
+    // CU1: a coach's routine row (no drag, its own meta line and ⋮ menu).
+    coachRow?: { meta: string; today: boolean; onMenu: (anchor: HTMLElement) => void }
+  ) => (
     <RoutineRow
       key={r.id}
       routine={r}
       hidden={hidden}
+      metaText={coachRow?.meta}
+      today={coachRow?.today}
+      noGrip={!!coachRow}
       onStart={() =>
         // A minimised session that is paused resumes its clock here; anything
         // else (a quit session, or a new start) opens the logger as before.
@@ -372,13 +431,13 @@ export default function RoutinesTab() {
       isOngoing={!!pausedSessions[r.id]}
       running={activeSession?.routineId === r.id && activeSession.status === "running"}
       onPause={pauseActive}
-      onMenu={(anchor) => setMenu({ kind: "routine", id: r.id, anchor })}
-      renaming={renamingId === r.id}
+      onMenu={coachRow ? coachRow.onMenu : (anchor) => setMenu({ kind: "routine", id: r.id, anchor })}
+      renaming={!coachRow && renamingId === r.id}
       renameDraft={renameDraft}
       onRenameDraft={setRenameDraft}
       onRenameCommit={() => commitRename("routine", r.id)}
-      press={pressProps({ kind: "routine", id: r.id, folderId: r.folderId, index }, renamingId !== r.id)}
-      grip={gripProps({ kind: "routine", id: r.id, folderId: r.folderId, index })}
+      press={coachRow ? undefined : pressProps({ kind: "routine", id: r.id, folderId: r.folderId, index }, renamingId !== r.id)}
+      grip={coachRow ? undefined : gripProps({ kind: "routine", id: r.id, folderId: r.folderId, index })}
       onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
       onDeleteExercise={(exId) => queueExercises(r, (cur) => ({ exercises: cur.filter((e) => e.id !== exId) }))}
       onReplaceExercise={(exId, pick) =>
@@ -398,7 +457,7 @@ export default function RoutinesTab() {
 
   /** A folder's routines (or Unfiled's), with the drop placeholder while dragging. */
   const renderGroup = (folderId: string | null, familyOf: (r: Routine) => FolderFamily) => {
-    const group = routinesIn(routines, folderId);
+    const group = routinesIn(ownRoutines, folderId);
     const at =
       drag?.item.kind === "routine" && drag.target.kind === "group" && drag.target.folderId === folderId
         ? drag.target.index
@@ -434,7 +493,7 @@ export default function RoutinesTab() {
   // during render remounts its whole subtree on every render, which would drop
   // a drag (and every routine's expanded state) on each pointer move.
   const renderFolder = (folder: RoutineFolder, depth: number, index: number, hidden: boolean): React.ReactNode => {
-    const folderRoutines = routinesIn(routines, folder.id);
+    const folderRoutines = routinesIn(ownRoutines, folder.id);
     const collapsed = collapsedFolders.has(folder.id);
     // Folder order: the folder's position in the account's folder list.
     const family = shade(folderFamily(folder, routineFolders.indexOf(folder)));
@@ -544,6 +603,26 @@ export default function RoutinesTab() {
           again; the strip itself shows the cycle phase (cycle offered,
           tracker on) or the pregnancy guidance (cycle offered, a pregnancy). */}
       <CyclePhaseStrip />
+
+      <CoachSection
+        coach={coach}
+        dark={dark}
+        capsInk={capsInk}
+        shade={shade}
+        collapsed={collapsedFolders}
+        onToggle={toggleFolderCollapsed}
+        seen={seenUpdates}
+        onSeen={(a) => {
+          const next = { ...seenUpdates, [a.id]: a.assignedAt };
+          setSeenUpdates(next);
+          writeSeen(next);
+        }}
+        onMenu={(routineId, anchor) => setCoachMenu({ routineId, anchor })}
+        onPast={() => setPastOpen(true)}
+        renderRow={(r, family, meta, isToday) =>
+          renderRoutine(r, 0, family, false, { meta, today: isToday, onMenu: (anchor) => setCoachMenu({ routineId: r.id, anchor }) })
+        }
+      />
 
       <div className="flex items-center justify-between mb-2.5">
         <p className="text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Folders</p>
@@ -683,7 +762,8 @@ export default function RoutinesTab() {
           thin-stroke glyph in primary.accent, title 15/700, one line 12.5/500
           text.muted, max width 260, centred. The glyph is unspecified; Dumbbell
           (the workout glyph) at the 1.25 thin stroke. */}
-      {routines.length === 0 && (
+      {/* CU1: counted without the coach's programmes, which sit above. */}
+      {ownRoutines.length === 0 && (
         <div className="flex flex-col items-center text-center mx-auto mb-4" style={{ maxWidth: 260 }}>
           <span className="flex items-center justify-center bg-th-f0edf9 dark:bg-th-aea1dc/[0.14]" style={{ width: 56, height: 56, borderRadius: 14 }}>
             <Dumbbell size={26} strokeWidth={1.25} absoluteStrokeWidth className="text-th-7d67d9 dark:text-th-9a8cd6" />
@@ -746,6 +826,27 @@ export default function RoutinesTab() {
         options={ROUTINE_MENU}
         onSelect={(action) => menuRoutine && onRoutineAction(menuRoutine, action)}
       />
+      <PopupMenu<"copy">
+        open={!!coachMenu}
+        anchor={coachMenu?.anchor ?? null}
+        onClose={() => setCoachMenu(null)}
+        options={COACH_MENU}
+        onSelect={() => coachMenu && guard(() => run(duplicateRoutine(coachMenu.routineId)))()}
+      />
+
+      {/* CU1 v4: the programmes that ended (ended_at, or past their last day). */}
+      <BottomSheet open={pastOpen} onClose={() => setPastOpen(false)} title="Past programmes">
+        <div className="flex flex-col" style={{ gap: 6 }}>
+          {coach.past.map((p) => (
+            <div key={p.id} style={{ padding: "12px 14px", borderRadius: 14, background: coachColor("soft", dark) }}>
+              <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{p.name}</p>
+              {p.endedOn && (
+                <p style={{ margin: 0, fontSize: textPx(11.5), color: coachColor("faint", dark) }}>Ended {shortDay(p.endedOn)}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </BottomSheet>
 
       {drag && <InsertionLine listRef={listRef} />}
       {/* The lifted card follows the pointer (WO1.1 "While dragging"). */}
@@ -784,7 +885,7 @@ export default function RoutinesTab() {
                 family={shade(folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!)))}
                 drawnInk
                 themed
-                count={routinesIn(routines, dragFolder!.id).length}
+                count={routinesIn(ownRoutines, dragFolder!.id).length}
                 collapsed={collapsedFolders.has(dragFolder!.id)}
               />
             )}
@@ -916,7 +1017,13 @@ const RoutineCardFace: React.FC<{
   onRenameCommit?: () => void;
   press?: PressProps;
   grip?: GripProps;
-}> = ({ routine, family, isOngoing, running, onPause, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
+  /** CU1: a coach routine's meta ("Week 3, day 2 • 5 exercises • ~50 min"); unset = the routine's own. */
+  metaText?: string;
+  /** CU1: the TODAY badge (the programme has a session today). */
+  today?: boolean;
+  /** CU1: no drag grip (a coach's routine). */
+  noGrip?: boolean;
+}> = ({ routine, family, isOngoing, running, onPause, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, metaText, today, noGrip }) => {
   const dark = useIsDark();
   // The play glyph: white, or the dark ink on a light dark-mode fill (V6-02).
   const playInk = isOngoing ? "#FFFFFF" : partBInk(family.play, dark);
@@ -939,6 +1046,16 @@ const RoutineCardFace: React.FC<{
           <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "rgb(var(--c-charcoal))" }}>
             {/* The name ellipsizes on its own so the state badge is never cut (D18). */}
             <span className="truncate min-w-0">{routine.name}</span>
+            {today && !isOngoing && (
+              // CU1 v4: 10/800 .06em caps, r6, 1 × 6, white on the play colour
+              // (the dark ink on a light dark-mode fill, as the play glyph).
+              <span
+                className="shrink-0 uppercase"
+                style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.06em", borderRadius: 6, padding: "1px 6px", lineHeight: linePx(15), background: family.play, color: partBInk(family.play, dark) }}
+              >
+                Today
+              </span>
+            )}
             {isOngoing && (
               // WO17: the same running / paused state the bar shows.
               <span className="text-[10px] font-bold uppercase flex items-center gap-1 shrink-0" style={{ color: rc("ongoing", dark) }}>
@@ -955,7 +1072,7 @@ const RoutineCardFace: React.FC<{
             )}
           </p>
           <p className="text-[11.5px] mt-0.5" style={{ color: rc("meta", dark) }}>
-            {routine.exercises.length} exercises • ~{routine.estimatedDurationMin} min
+            {metaText ?? `${routine.exercises.length} exercises • ~${routine.estimatedDurationMin} min`}
           </p>
         </button>
       )}
@@ -981,15 +1098,17 @@ const RoutineCardFace: React.FC<{
       >
         <MoreVertical size={17} />
       </button>
-      <span
-        {...gripProps}
-        role="button"
-        aria-label={`Drag ${routine.name}`}
-        className="hit flex shrink-0"
-        style={{ color: "rgb(var(--c-charcoal-faint))", ...(gripProps?.style as React.CSSProperties | undefined) }}
-      >
-        <GripVertical size={17} />
-      </span>
+      {!noGrip && (
+        <span
+          {...gripProps}
+          role="button"
+          aria-label={`Drag ${routine.name}`}
+          className="hit flex shrink-0"
+          style={{ color: "rgb(var(--c-charcoal-faint))", ...(gripProps?.style as React.CSSProperties | undefined) }}
+        >
+          <GripVertical size={17} />
+        </span>
+      )}
     </div>
   );
 };
@@ -1039,8 +1158,8 @@ const RoutineRow: React.FC<{
   renameDraft: string;
   onRenameDraft: (v: string) => void;
   onRenameCommit: () => void;
-  press: PressProps;
-  grip: GripProps;
+  press?: PressProps;
+  grip?: GripProps;
   onSettings: (ex: Exercise) => void;
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
@@ -1053,7 +1172,11 @@ const RoutineRow: React.FC<{
   /** The ongoing session's clock is running (minimised to the WO17 bar). */
   running?: boolean;
   onPause?: () => void;
-}> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing, running, onPause }) => {
+  /** CU1: a coach routine's row (see RoutineCardFace). */
+  metaText?: string;
+  today?: boolean;
+  noGrip?: boolean;
+}> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing, running, onPause, metaText, today, noGrip }) => {
   const dark = useIsDark();
   const [expanded, setExpanded] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
@@ -1212,6 +1335,9 @@ const RoutineRow: React.FC<{
         onRenameCommit={onRenameCommit}
         press={press}
         grip={grip}
+        metaText={metaText}
+        today={today}
+        noGrip={noGrip}
       />
       {expanded && (
         <div className="border-t border-charcoal/[0.06]">

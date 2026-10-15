@@ -28,7 +28,7 @@ import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryMo
  * has no backend for workout sessions yet: Coming soon.
  */
 export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemplate | null; onBack: () => void }> = ({ sessionId, template: given, onBack }) => {
-  const { professionalClients, templateAssignments, workoutTemplates } = useApp();
+  const { professionalClients, templateAssignments, workoutTemplates, exerciseCatalog, customExercises } = useApp();
   const [session, setSession] = useState<ProgrammeSession | null>(null);
   const [targets, setTargets] = useState<Exercise[] | null>(null);
   const [review, setReview] = useState<ReviewState | null>(null);
@@ -75,8 +75,11 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
 
   const assignment = session ? templateAssignments.find((a) => a.routineId === session.routineId && a.clientId === session.userId) : undefined;
   const template = given ?? (assignment ? workoutTemplates.find((t) => t.id === assignment.templateId) ?? null : null);
-  const swaps = session ? parseSwaps(session.swaps) : [];
-  const rows = session ? compareLog(targets ?? template?.exercises ?? [], session, swaps) : [];
+  const prescribed = targets ?? template?.exercises ?? [];
+  const swaps = session
+    ? parseSwaps(session.swaps, { prescribed, catalog: exerciseCatalog, custom: customExercises, logged: session.exercises })
+    : [];
+  const rows = session ? compareLog(prescribed, session, swaps) : [];
   const week = assignment && session ? currentWeek(assignment.startsOn, assignment.joinWeek, template?.durationWeeks, session.date) : null;
   const rpes = session ? session.exercises.flatMap((e) => e.sets.map((s) => s.rpe).filter((x): x is number => typeof x === "number")) : [];
   const rpe = rpes.length ? Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 2) / 2 : null;

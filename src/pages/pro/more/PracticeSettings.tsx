@@ -307,8 +307,8 @@ function InvoicePage() {
       ) : (
         <div className="space-y-4">
           {field("name", "Name on invoices", "Your name or business name", 120)}
-          {field("taxNumber", "Tax number", "Optional", 60)}
-          {field("prefix", "Invoice numbering", "Prefix, for example INV-", 20)}
+          {field("taxNumber", "Tax number", "Optional", 40)}
+          {field("prefix", "Invoice numbering", "Prefix, for example INV-", 10)}
           <Note>Shown on invoices and receipts once payments in the app launch.</Note>
           {msg && (
             <p role="status" style={{ fontSize: textPx(12), fontWeight: 600, color: msg === "Saved" ? INK.good : INK.hi }}>

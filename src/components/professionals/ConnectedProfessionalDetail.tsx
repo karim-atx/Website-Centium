@@ -5,6 +5,7 @@ import {
   professionalRole,
   type ConnectedProfessional,
 } from "../../services/connected-professional";
+import { LicencePendingTag } from "./LicencePendingTag";
 
 /**
  * Bio and specialty for the professional whose sharing sheet is open.
@@ -54,10 +55,16 @@ export const ConnectedProfessionalDetail: React.FC<{ professionalId: string }> =
   // sheet tells them nothing they did not know.
   const role = professionalRole({ specialty, subtype });
   const hasBio = !!bio?.trim();
-  if (!hasBio && !specialty?.trim() && !location?.trim()) return null;
+  // Release 3 (Karim's answer 1): a client deciding what to share is told
+  // when the professional's licence isn't verified yet.
+  const unverified = professional.licenceVerified === false;
+  if (!hasBio && !specialty?.trim() && !location?.trim()) {
+    return unverified ? <LicencePendingTag className="mb-4" /> : null;
+  }
 
   return (
     <div className="mb-5 pb-5 border-b border-charcoal/[0.06]">
+      {unverified && <LicencePendingTag className="mb-2" />}
       {(role || location?.trim()) && (
         <div className="flex items-center gap-2 mb-2">
           {role && (

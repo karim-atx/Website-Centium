@@ -5,6 +5,7 @@ import { ShareChatCard } from "../pro/messages/ShareChatCard";
 import { useApp } from "../../context/AppContext";
 import { ChatCard } from "./ChatCard";
 import { cardAllows } from "../../services/messaging/cards";
+import { addRecommendation, fetchAddedRecommendations } from "../../services/messaging/recommendationApi";
 import { fetchPlansFor, type Plan as HirePlan } from "../../services/hires";
 import { offerPlansInChat } from "../../services/hires/chat";
 import { useCall } from "../../context/CallContext";
@@ -686,6 +687,40 @@ export const ThreadView: React.FC<{
     await load();
   };
 
+  /**
+   * CU9 (Release 3, DB-7): a professional's recommendation card. The client
+   * reads which they have added (their own recommendation_adds rows) and adds
+   * one with add_recommendation. Not for the sender, who sees it as sent.
+   */
+  const recKey = messages
+    .filter((m) => m.recommendation && m.senderId !== authUserId)
+    .map((m) => m.id)
+    .join(",");
+  const [addedRecs, setAddedRecs] = useState<Set<string>>(() => new Set());
+  const [addingRec, setAddingRec] = useState<string | null>(null);
+  useEffect(() => {
+    if (!recKey || !authUserId) return;
+    let cancelled = false;
+    void fetchAddedRecommendations(authUserId, recKey.split(",")).then((s) => {
+      if (!cancelled) setAddedRecs(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recKey, authUserId]);
+  const addRec = async (messageId: string) => {
+    if (addingRec) return;
+    setAddingRec(messageId);
+    setError(null);
+    const r = await addRecommendation(messageId);
+    setAddingRec(null);
+    if (!r.ok) {
+      setError(r.message);
+      return;
+    }
+    setAddedRecs((prev) => new Set(prev).add(messageId));
+  };
+
   const idsKey = messages.map((m) => m.id).join(",");
   const refreshReactions = async () => {
     const ids = idsKey ? idsKey.split(",") : [];
@@ -1169,7 +1204,8 @@ export const ThreadView: React.FC<{
     }
     // A3 CARD MESSAGES (see cardAllows): no Copy, Forward or Edit; Delete for
     // everyone only for a plans offer, never for "Plan confirmed".
-    const allows = m.card ? cardAllows(m.card) : { copy: true, forward: true, edit: true, unsend: true };
+    // CU9: a recommendation card is not copied, forwarded or edited either; its sender may unsend it.
+    const allows = m.card ? cardAllows(m.card) : m.recommendation ? { copy: false, forward: false, edit: false, unsend: true } : { copy: true, forward: true, edit: true, unsend: true };
     const list: MessageAction[] = [
       { label: "Reply", onSelect: () => {
         setReplyTo(m);
@@ -1715,7 +1751,22 @@ export const ThreadView: React.FC<{
                 >
                   <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
                 </div>
-              ) : m.card && !m.deletedAt && !removal ? (
+              ) : !proView && m.shareCard && !m.deletedAt && !removal ? (
+                // CU24 (Release 3): a member sees the programme or session the
+                // host shared as the same read-only card, on the sender's side.
+                <div
+                  ref={(el) => {
+                    bubbleRefs.current[m.id] = el;
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setActionsFor(m);
+                  }}
+                  className={`${mine ? "self-end" : "self-start"} w-[86%] rounded-[18px] ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
+                >
+                  <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
+                </div>
+              ) : (m.card || m.recommendation) && !m.deletedAt && !removal ? (
                 <div
                   ref={(el) => {
                     bubbleRefs.current[m.id] = el;
@@ -1734,7 +1785,10 @@ export const ThreadView: React.FC<{
                       message itself (post_plans_card, confirm_hire_payment),
                       never as a reply, and a card is not forwardable. */}
                   <ChatCard
-                    card={m.card}
+                    card={(m.card ?? m.recommendation)!}
+                    added={addedRecs.has(m.id)}
+                    adding={addingRec === m.id}
+                    onAdd={m.recommendation && !mine ? () => void addRec(m.id) : undefined}
                     mine={mine}
                     senderName={isGroup ? nameOf(m.senderId) : thread.participantName}
                     createdAt={m.createdAt}

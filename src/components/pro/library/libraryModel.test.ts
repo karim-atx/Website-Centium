@@ -68,11 +68,31 @@ test("targets per client: resolve_weight and the summary", () => {
   assert.equal(targetsSummary([{ name: "Omar", kg: null }]), null);
 });
 
-test("parseSwaps reads the likely keys and ignores the rest", () => {
-  assert.deepEqual(parseSwaps([{ from: "Back squat", to: "Goblet squat", reason: "The rack was taken." }, { x: 1 }, "no"]), [
-    { from: "Back squat", to: "Goblet squat", reason: "The rack was taken." },
-  ]);
-  assert.deepEqual(parseSwaps(null), []);
+test("parseSwaps reads the documented shape (ids only) and names from the library", () => {
+  const names = {
+    prescribed: [{ name: "Bench press", exerciseId: "x0" }, { name: "Back squat", exerciseId: "x1" }, { name: "Row", customExerciseId: "c1" }],
+    catalog: [{ id: "x1", name: "Back squat" }, { id: "x9", name: "Goblet squat" }],
+    custom: [{ id: "c1", name: "Row" }],
+    logged: [{ name: "Bench press" }, { name: "Goblet squat" }, { name: "My band row" }],
+  };
+  assert.deepEqual(
+    parseSwaps(
+      [
+        { position: 1, from_exercise_id: "x1", from_custom_exercise_id: null, to_exercise_id: "x9", to_custom_exercise_id: null, reason: "The rack was taken." },
+        // The client's own movement: unreadable by id, named from the logged exercise at that position.
+        { position: 2, from_exercise_id: null, from_custom_exercise_id: "c1", to_exercise_id: null, to_custom_exercise_id: "theirs" },
+        { position: 0, to_exercise_id: "unknown" },
+        { x: 1 },
+        "no",
+      ],
+      names
+    ),
+    [
+      { from: "Back squat", to: "Goblet squat", reason: "The rack was taken." },
+      { from: "Row", to: "My band row", reason: null },
+    ]
+  );
+  assert.deepEqual(parseSwaps(null, names), []);
 });
 
 test("compareLog: changed, as planned, above, skipped", () => {

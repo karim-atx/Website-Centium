@@ -126,22 +126,50 @@ export interface Swap {
   reason: string | null;
 }
 
+/** Where parseSwaps finds names: the shape the client writes stores ids only. */
+export interface SwapNames {
+  /** The prescription the session ran against (its position order is the routine's). */
+  prescribed: Pick<Exercise, "name" | "exerciseId" | "customExerciseId">[];
+  /** The exercise library (catalog) and the professional's own custom movements. */
+  catalog: { id: string; name: string }[];
+  custom: { id?: string; name: string }[];
+  /** The session's logged exercises (names are snapshots), position by position. */
+  logged: { name: string }[];
+}
+
 /**
- * workout_sessions.swaps is a jsonb array whose element shape the backend
- * does not specify (only the array check). Read defensively: an element
- * names what was planned and what was done, under the most likely keys.
+ * workout_sessions.swaps in the documented shape (HANDOVER_API, Release 3
+ * follow-up 20261124160000), which the client logger writes:
+ * [{ position, from_exercise_id, from_custom_exercise_id, to_exercise_id,
+ *    to_custom_exercise_id, reason }]. Ids only, so names come from the
+ * exercise library: the catalog, then the professional's own movements, then
+ * the prescription (from) or the session's logged exercise at that position
+ * (to, e.g. the client's own custom movement, which the professional can't
+ * read). An element with no resolvable name on either side is skipped.
  */
-export function parseSwaps(raw: unknown): Swap[] {
+export function parseSwaps(raw: unknown, names: SwapNames): Swap[] {
   if (!Array.isArray(raw)) return [];
-  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const id = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const byCatalog = new Map(names.catalog.map((c) => [c.id, c.name]));
+  const byCustom = new Map(names.custom.filter((c) => !!c.id).map((c) => [c.id!, c.name]));
   const out: Swap[] = [];
   for (const e of raw) {
     if (!e || typeof e !== "object") continue;
     const o = e as Record<string, unknown>;
-    const from = str(o.from) ?? str(o.from_name) ?? str(o.original) ?? str(o.planned);
-    const to = str(o.to) ?? str(o.to_name) ?? str(o.replacement) ?? str(o.done);
+    const pos = typeof o.position === "number" && Number.isInteger(o.position) && o.position >= 0 ? o.position : null;
+    const fromEx = id(o.from_exercise_id);
+    const fromCx = id(o.from_custom_exercise_id);
+    const toEx = id(o.to_exercise_id);
+    const toCx = id(o.to_custom_exercise_id);
+    const planned =
+      names.prescribed.find((p) => (fromEx && p.exerciseId === fromEx) || (fromCx && p.customExerciseId === fromCx)) ??
+      (pos !== null ? names.prescribed[pos] : undefined);
+    const from = (fromEx && byCatalog.get(fromEx)) || (fromCx && byCustom.get(fromCx)) || planned?.name || null;
+    const loggedAt = pos !== null ? names.logged[pos]?.name : undefined;
+    const to = (toEx && byCatalog.get(toEx)) || (toCx && byCustom.get(toCx)) || (loggedAt && loggedAt !== from ? loggedAt : null);
     if (!from || !to) continue;
-    out.push({ from, to, reason: str(o.reason) ?? str(o.note) });
+    const reason = typeof o.reason === "string" && o.reason.trim() ? o.reason.trim() : null;
+    out.push({ from, to, reason });
   }
   return out;
 }
