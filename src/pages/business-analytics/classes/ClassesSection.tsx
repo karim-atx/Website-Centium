@@ -37,13 +37,14 @@ import "./classes.css";
 // v6 Analytics › Classes (AN3-001, -003, -006, -008, -062, -074, -082;
 // source AnClassesV6.dc.html imported by BizAnalyticsV43 with anim "live").
 // Registered in the Analytics shell (AnalyticsPage.tsx) for the Classes and
-// Gym types. Numbers are computed on the device from the owner's own rows
-// (classesData.ts) until the B15 class readers exist; nothing is sampled.
+// Gym types. New vs returning, Top classes and cancellations come from B15
+// class_analytics; the session-level blocks from the owner's own rows
+// (classesData.ts). Nothing is sampled.
 
 type Raw = { status: "loading" } | { status: "error" } | { status: "ready"; raw: RawData };
 type CsKey = "dist" | "nvr" | "lead" | "top" | "ds";
 
-const EMPTY_RAW: RawData = { sessions: [], bookings: [], bookingDates: {}, firstEver: null, names: {} };
+const EMPTY_RAW: RawData = { sessions: [], bookings: [], firstEver: null, names: {}, analytics: [] };
 const ease = (x: number) => 1 - Math.pow(1 - x, 3);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const fmtAvg = (n: number) => (n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
@@ -766,8 +767,10 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
   const fB = bkView === "dow" ? 1 : 0;
   const gap = nW <= 6 ? 14 : 6;
 
-  const total = m.newCount + m.returningCount;
-  const retPct = total ? Math.round((m.returningCount / total) * 100) : 0;
+  const nNew = m.newCount ?? 0;
+  const nRet = m.returningCount ?? 0;
+  const total = nNew + nRet;
+  const retPct = total ? Math.round((nRet / total) * 100) : 0;
   const leadTop = m.lead.reduce((a, b, i) => (b.pct > m.lead[a].pct ? i : a), 0);
   const LEAD_LINE = ["Most people book the same day.", "Most people book 1 to 2 days ahead.", "Most people book 3 to 7 days ahead.", "Most people book over a week ahead."];
 
@@ -866,14 +869,14 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
           {`Bookings ${inPeriod(r)}, by whether the person had booked with you before.`}
         </p>
         <div className="flex" style={{ height: 8, gap: 2, marginTop: 8 }} aria-hidden>
-          {m.newCount > 0 && <span style={{ flex: m.newCount, background: "var(--k-primary)", borderRadius: m.returningCount ? "999px 0 0 999px" : 999 }} />}
-          {m.returningCount > 0 && <span style={{ flex: m.returningCount, background: "var(--k-deep)", borderRadius: m.newCount ? "0 999px 999px 0" : 999 }} />}
+          {nNew > 0 && <span style={{ flex: nNew, background: "var(--k-primary)", borderRadius: nRet ? "999px 0 0 999px" : 999 }} />}
+          {nRet > 0 && <span style={{ flex: nRet, background: "var(--k-deep)", borderRadius: nNew ? "0 999px 999px 0" : 999 }} />}
         </div>
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
           {(
             [
-              ["New", m.newCount, "var(--k-primary)"],
-              ["Returning", m.returningCount, "var(--k-deep)"],
+              ["New", m.newCount ?? "–", "var(--k-primary)"],
+              ["Returning", m.returningCount ?? "–", "var(--k-deep)"],
             ] as const
           ).map(([t, n, c]) => (
             <div key={t} className="an3-tile" style={{ background: "var(--k-soft)" }}>
@@ -933,7 +936,13 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
       </Coll>
       <div className="flex items-start" style={{ margin: "4px 20px 16px", gap: 8, fontSize: 10.5, lineHeight: "14px", color: "var(--k-faint)" }}>
         <Info size={13} aria-hidden className="shrink-0" />
-        <span>Cancelled bookings aren't counted here yet.</span>
+        <span>
+          {m.cancellations === null
+            ? "Cancelled bookings aren't counted here."
+            : m.cancellations === 0
+              ? `No bookings cancelled by ${people} ${inPeriod(r)}.`
+              : `${plural(m.cancellations, "booking", "bookings")} cancelled by ${people} ${inPeriod(r)}, not counted here.`}
+        </span>
       </div>
     </>
   );

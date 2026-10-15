@@ -1,10 +1,12 @@
 import { minutesOfDay, range12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex, startOfWeekISO } from "../../../utils/week";
 import { localDayOf, shiftDate } from "../../../utils/date";
+import type { ClassAnalyticsRow } from "../../../services/business-analytics/model";
 
-// AN3 Analytics › Classes: every number on the section, computed on the
-// device from the owner's own business_classes and business_class_bookings
-// rows (the server reader is B15 / BU5-01, not on the local stack yet).
+// AN3 Analytics › Classes: New vs returning, Top classes and member
+// cancellations come from B15 class_analytics (CL-07); the session-level
+// blocks are computed on the device from the owner's own business_classes and
+// business_class_bookings rows (no reader gives sessions one by one).
 // Pure: no React, no network, so node --test covers it. The handover's
 // sample numbers (AnClassesV6 l.292-393) are never used; each block either
 // shows what the rows say or its honest empty / early state.
@@ -39,14 +41,14 @@ export interface BookingIn {
 export interface RawData {
   /** Sessions from the look-back start up to range.to (inclusive). */
   sessions: SessionIn[];
-  /** Every booking on this business's sessions up to range.to. */
+  /** The bookings on those sessions. */
   bookings: BookingIn[];
-  /** Class date of each booking's session (for bookings on sessions outside `sessions`). */
-  bookingDates: Record<string, string>;
   /** The business's first class date ever (null: none). */
   firstEver: string | null;
   /** First names of the business's accepted team, by profile id. */
   names: Record<string, string>;
+  /** B15 class_analytics for the range (null: the reader is missing or not the caller's). */
+  analytics: ClassAnalyticsRow[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,8 +206,11 @@ export interface ClassesModel {
   bookingsDeltaPct: number | null;
   weeks: { label: string; n: number; ghost: number | null }[];
   dow: { label: string; n: number; avg: number }[];
-  newCount: number;
-  returningCount: number;
+  /** class_analytics: first-ever bookings and the rest (null: no reader). */
+  newCount: number | null;
+  returningCount: number | null;
+  /** class_analytics: bookings the member cancelled (not the venue). */
+  cancellations: number | null;
   lead: { label: string; pct: number }[];
   top: { title: string; sub: string; n: number }[];
   // Peak times
@@ -334,18 +339,12 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
     return { label, n: dowSum[i], avg: a };
   });
 
-  // New vs returning: a booking is returning when the client booked an
-  // earlier session of this business.
-  const dateOf = (classId: string) => raw.bookingDates[classId] ?? all.find((s) => s.id === classId)?.date ?? "";
-  const firstByClient = new Map<string, string>();
-  for (const b of raw.bookings) {
-    const d = dateOf(b.classId);
-    const f = firstByClient.get(b.clientId);
-    if (!f || d < f) firstByClient.set(b.clientId, d);
-  }
-  let returningCount = 0;
-  for (const b of inRange) if ((firstByClient.get(b.clientId) ?? "") < dateOf(b.classId)) returningCount += 1;
-  const newCount = bookingsN - returningCount;
+  // New vs returning and cancellations (B15 class_analytics): a booking is
+  // new when it was the person's first ever with the business.
+  const an = raw.analytics;
+  const newCount = an ? an.reduce((n, x) => n + x.newClients, 0) : null;
+  const returningCount = an ? an.reduce((n, x) => n + x.returningClients, 0) : null;
+  const cancellations = an ? an.reduce((n, x) => n + x.cancellations, 0) : null;
 
   // How far ahead: calendar days from the booking to the class day (a
   // booking made on or after the class day counts as same day).
@@ -362,13 +361,17 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
     pct: bookingsN ? Math.round((buckets[i] / bookingsN) * 100) : 0,
   }));
 
-  // Top classes by bookings.
-  const byTitle = new Map<string, Session[]>();
-  for (const s of sessions) byTitle.set(s.title, [...(byTitle.get(s.title) ?? []), s]);
+  // Top classes by bookings (class_analytics, one row per type + title,
+  // summed per title); the instructors' first names from the sessions.
+  const byTitle = new Map<string, { sessions: number; n: number }>();
+  for (const x of an ?? []) {
+    const t = byTitle.get(x.title) ?? { sessions: 0, n: 0 };
+    byTitle.set(x.title, { sessions: t.sessions + x.sessions, n: t.n + x.bookings });
+  }
   const top = [...byTitle.entries()]
-    .map(([title, xs]) => {
-      const who = [...new Set(xs.map((x) => x.who).filter(Boolean))] as string[];
-      return { title, sub: [plural(xs.length, "session", "sessions"), who.join(", ")].filter(Boolean).join(" · "), n: xs.reduce((n, x) => n + x.booked, 0) };
+    .map(([title, t]) => {
+      const who = [...new Set(sessions.filter((x) => x.title === title).map((x) => x.who).filter(Boolean))] as string[];
+      return { title, sub: [plural(t.sessions, "session", "sessions"), who.join(", ")].filter(Boolean).join(" · "), n: t.n };
     })
     .sort((a, b) => b.n - a.n || a.title.localeCompare(b.title))
     .slice(0, 3);
@@ -415,6 +418,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
     dow,
     newCount,
     returningCount,
+    cancellations,
     lead,
     top,
     slots,

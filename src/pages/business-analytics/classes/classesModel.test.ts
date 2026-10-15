@@ -17,9 +17,9 @@ const B = (classId: string, clientId: string, createdAt = "2026-09-01T10:00:00Z"
 const raw = (sessions: RawData["sessions"], bookings: RawData["bookings"], firstEver: string | null): RawData => ({
   sessions,
   bookings,
-  bookingDates: Object.fromEntries(sessions.map((s) => [s.id, s.date])),
   firstEver,
   names: { p1: "John" },
+  analytics: null,
 });
 
 test("no sessions in the range is the empty state; only future classes name the first date", () => {
@@ -48,8 +48,17 @@ test("data state: fill, previous period and delta in points", () => {
   assert.equal(m.deltaPts, 30);
   assert.equal(m.bands[4].sessions.length, 6);
   assert.equal(m.bands[0].sessions.length, 6);
-  // c0 and c1 booked "old" before (12 returning); c2-c9 are new on the first session, returning on the next five (40).
-  assert.equal(m.returningCount, 52);
+  // Without class_analytics there is no new / returning split (never a guess).
+  assert.equal(m.returningCount, null);
+  assert.deepEqual(m.top, []);
+  // With it: summed per title, cancellations by members, instructors from the sessions.
+  const an = [
+    { classType: "Spin", title: "Spin", sessions: 10, averageFillPct: 50, bookings: 50, cancellations: 2, newClients: 8, returningClients: 42, returnRatePct: 50 },
+    { classType: "", title: "Spin", sessions: 2, averageFillPct: 50, bookings: 10, cancellations: 1, newClients: 0, returningClients: 10, returnRatePct: null },
+  ];
+  const m2 = computeModel({ ...raw([prev, ...sessions], bookings, "2026-08-01"), analytics: an }, R);
+  assert.deepEqual([m2.newCount, m2.returningCount, m2.cancellations], [8, 52, 3]);
+  assert.deepEqual(m2.top, [{ title: "Spin", sub: "12 sessions · John", n: 60 }]);
   const rows = exportRows(m, R);
   assert.deepEqual(rows[2], ["By type", "Sessions", "Booked", "Spots", "Fill %"]);
   assert.deepEqual(rows[3], ["Spin", 12, 60, 120, 50]);

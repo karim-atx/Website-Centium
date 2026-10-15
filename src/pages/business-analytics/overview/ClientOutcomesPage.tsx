@@ -7,10 +7,11 @@ import { linePx, textPx } from "../../../theme/textSize";
 import { ErrorRow, KitEmpty, KitLabel, KitList, KitTip, NumberBoxes } from "../../../components/business-dashboard/parts";
 import { useAnalytics } from "../analyticsContext";
 import { loadOverview } from "./overviewData";
-import { isoDay, outcomes, shareBody, type OvRaw } from "./overviewModel";
+import { isoDay, outcomes, sharedProgress, shareBody, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
 import { useBusiness } from "../../../components/business-more/useBusiness";
 import { fetchOutcomeShareCount } from "../../../services/business-members";
+import { fetchClientOutcomes, type ClientOutcomes } from "../../../services/business-analytics";
 
 // Analytics › Client outcomes (OURS-AN1-client-outcomes, V6-28): the kept
 // Client Outcomes feature in the AN1 / BizTypeKit language, opened from the
@@ -20,8 +21,9 @@ import { fetchOutcomeShareCount } from "../../../services/business-members";
 //
 // PRIVACY FIRST. A business sees health data only from clients who chose to
 // share it with that business, in groups of 5 or more (B7 consent,
-// business_client_shares + business_client_outcomes): until that exists the
-// Shared progress block is the honest empty state. The attendance block is
+// business_client_shares + B15 business_client_outcomes, DI-07: no range, plan
+// or class, all null below 5 sharers): below 5 the Shared progress block is
+// the honest empty state with the share count. The attendance block is
 // the business's own booking data and ships now: Bookings a week and Need a
 // check-in (no booking in 21 days) from business_class_bookings; "Attending
 // 80%+" and the spread need attendance (check-ins B10 / the cancellations
@@ -49,17 +51,33 @@ export function ClientOutcomesPage() {
   const [error, setError] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const today = isoDay(new Date());
-  // B7 DI-07: how many clients share progress (a count only; never who).
+  // DI-07 (B15 business_client_outcomes): the cohort's aggregates, and how
+  // many share (a count only; never who). The B7 count stays the fallback
+  // while the outcomes reader is not on the database.
   const { business } = useBusiness();
+  const [shared, setShared] = useState<ClientOutcomes | null>(null);
   const [shareCount, setShareCount] = useState<number | null>(null);
   useEffect(() => {
     if (!business?.id) return;
+    const bid = business.id;
     let alive = true;
-    void fetchOutcomeShareCount(business.id).then((n) => alive && setShareCount(n));
+    void fetchClientOutcomes(bid).then(async (r) => {
+      if (!alive) return;
+      if (r.ok && r.value) {
+        setShared(r.value);
+        setShareCount(r.value.sharing);
+        return;
+      }
+      if (!r.ok && r.pending) {
+        const n = await fetchOutcomeShareCount(bid);
+        if (alive) setShareCount(n);
+      }
+    });
     return () => {
       alive = false;
     };
   }, [business?.id]);
+  const progress = shared ? sharedProgress(shared, kind) : null;
 
   useEffect(() => setExport("", null), [setExport]);
 
@@ -111,7 +129,14 @@ export function ClientOutcomesPage() {
       )}
 
       <KitLabel c={c} label="Shared progress" />
-      <KitEmpty c={c} icon="heart-pulse" title="Not enough shared data yet" body={shareBody(shareCount)} />
+      {progress ? (
+        <div data-shared-progress>
+          <NumberBoxes c={c} boxes={progress.boxes} />
+          <p style={{ fontSize: textPx(11), lineHeight: linePx(15), color: c.faint, margin: "-4px 2px 14px", textWrap: "pretty" }}>{progress.note}</p>
+        </div>
+      ) : (
+        <KitEmpty c={c} icon="heart-pulse" title="Not enough shared data yet" body={shareBody(shareCount)} />
+      )}
 
       {!loading && rows.length > 0 && (
         <>

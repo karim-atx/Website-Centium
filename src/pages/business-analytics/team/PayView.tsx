@@ -4,25 +4,49 @@ import { Accordion, Avatar, HeadCard, PageHeader, QuestionCard, Strip } from "./
 import { money } from "./fmt";
 import type { TeamState } from "./useTeam";
 import type { Vocab } from "./vocab";
+import { useAnalytics } from "../shell/AnalyticsContext";
+import { useScorecard } from "./useScorecard";
 
-// AN5-065 Team › Pay. Pay = business_employees.pay_rate_per_class (B6; NULL
-// means not agreed) × classes taught in range. The rate is set on the Team
-// person page (Role card › Pay per class, set_employee_terms, B6 follow-up)
-// and read here through the Team service; with none set this shows the drawn
-// "No pay data yet" state (row 11). Revenue per class needs recorded booking payments (B8), so
-// the revenue-vs-pay block is not shown until then.
+// AN5-065 Team › Pay (AnTeamV6 k === "pay", l.469-486; markup l.216-247).
+// B15 instructor_scorecard (TM-04, gate revenue) gives, per instructor for
+// the range, the classes taught, pay (business_employees.pay_rate_per_class
+// × classes; NULL rate = not agreed) and the recorded revenue from their
+// classes, so the "Revenue vs pay per class" block (row 7) is drawn from it.
+// Without the reader (missing, or no revenue permission) the page keeps the
+// rate × classes estimate from the Team service and no revenue. The rate is
+// set on the Team person page (set_employee_terms). With no rate this shows
+// the drawn "No pay data yet" state (row 11).
 
 const PAY_ESTIMATE_NOTE = "An estimate from each instructor's agreed rate, not payouts you recorded.";
+/** "$141" / "−$12" (U+2212 minus). */
+const signedMoney = (n: number) => (n < 0 ? `−${money(Math.abs(n))}` : money(n));
 
 export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vocab: Vocab; onBack: () => void; onCard: (id: string) => void }) {
   const [all, setAll] = useState(false);
-  const rows = (state.stats?.perPerson ?? [])
-    .filter((p) => p.person.payRate !== null)
-    .map((p) => ({ p, rate: p.person.payRate as number, pay: (p.person.payRate as number) * p.sessions }))
-    .sort((a, b) => b.pay - a.pay);
+  const { range } = useAnalytics();
+  const sc = useScorecard(state.businessId, range);
+  const people = state.stats?.perPerson ?? [];
+  type PayRow = { p: (typeof people)[number]; rate: number; pay: number; classes: number; revenue: number | null };
+  const rows: PayRow[] = (
+    sc.rows
+      ? sc.rows.flatMap((r): PayRow[] => {
+          const p = people.find((x) => x.person.id === r.professionalId);
+          if (!p || r.pay === null) return [];
+          return [{ p, rate: p.person.payRate ?? (r.classes ? r.pay / r.classes : 0), pay: r.pay, classes: r.classes, revenue: r.recordedRevenue }];
+        })
+      : people.filter((p) => p.person.payRate !== null).map((p) => ({ p, rate: p.person.payRate as number, pay: (p.person.payRate as number) * p.sessions, classes: p.sessions, revenue: null }))
+  ).sort((a, b) => b.pay - a.pay);
   const noPay = rows.length === 0;
   const total = rows.reduce((a, r) => a + r.pay, 0);
-  const classes = rows.reduce((a, r) => a + r.p.sessions, 0);
+  const classes = rows.reduce((a, r) => a + r.classes, 0);
+  // Row 7: revenue a class (recorded revenue ÷ classes) against the rate.
+  const withRev = rows.some((r) => r.revenue !== null);
+  const pairs = rows.map((r) => {
+    const rev = r.classes ? Math.round((r.revenue ?? 0) / r.classes) : 0;
+    return { r, rev, prof: rev - r.rate };
+  });
+  const mxR = Math.max(1, ...pairs.map((x) => Math.max(x.rev, x.r.rate)));
+  const best = [...pairs].sort((a, b) => b.prof - a.prof)[0];
   const avg = classes ? Math.round(total / classes) : 0;
   const maxPay = Math.max(1, ...rows.map((r) => r.pay));
   const listed = all ? rows : rows.slice(0, 3);
@@ -45,7 +69,15 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
                 { v: money(avg), l: "Average pay per class" },
               ]
         }
-        lead={noPay ? "No pay data yet." : `${rows[0].p.person.name} earns ${money(rows[0].rate)} a class.`}
+        lead={
+          noPay
+            ? "No pay data yet."
+            : withRev && rows.length === 1
+              ? `${rows[0].p.person.name} earns ${money(rows[0].rate)} a class and each class makes ${signedMoney(pairs[0].prof)} after pay.`
+              : withRev && best
+                ? `${best.r.p.person.name}'s classes make the most after pay, ${signedMoney(best.prof)} a class.`
+                : `${rows[0].p.person.name} earns ${money(rows[0].rate)} a class.`
+        }
       />
       <QuestionCard
         q="What does each instructor cost and earn per class?"
@@ -85,11 +117,48 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
                     <span className="an5-bar-fill" style={{ width: `${(r.pay / maxPay) * 100}%` }} />
                   </span>
                   <span className="an5-meta block">
-                    {r.p.sessions} classes · {money(r.rate)} a class
+                    {r.classes} classes · {money(r.rate)} a class
                   </span>
                 </span>
               </div>
             ))}
+            {withRev && (
+              <>
+                <div data-rev-vs-pay style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 16 }}>
+                  <p className="an5-q">Revenue vs pay per class</p>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 10.5, color: "var(--an-faint)", whiteSpace: "nowrap" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 10, height: 6, borderRadius: 999, background: "var(--an-fill)" }} />
+                      Revenue
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 10, height: 6, borderRadius: 999, background: "var(--an-tert)" }} />
+                      Pay
+                    </span>
+                  </span>
+                </div>
+                {pairs.map((x, i) => (
+                  <div key={x.r.p.person.id} style={{ padding: "10px 0", borderTop: i ? "1px solid var(--an-divider)" : "none" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", columnGap: 8, alignItems: "baseline" }}>
+                      <p style={{ fontSize: 12.5, fontWeight: 700 }}>{x.r.p.person.name}</p>
+                      <p style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap", color: x.prof > 0 ? "var(--an-good)" : "var(--an-ink-soft)" }}>{signedMoney(x.prof)} profit a class</p>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 40px", columnGap: 8, alignItems: "center", marginTop: 6 }}>
+                      <div style={{ height: 7, borderRadius: 999, background: "var(--an-track)" }}>
+                        <div style={{ height: "100%", width: `${Math.round((Math.max(0, x.rev) / mxR) * 100)}%`, borderRadius: 999, background: "var(--an-fill)" }} />
+                      </div>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{money(x.rev)}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 40px", columnGap: 8, alignItems: "center", marginTop: 4 }}>
+                      <div style={{ height: 7, borderRadius: 999, background: "var(--an-track)" }}>
+                        <div style={{ height: "100%", width: `${Math.round((x.r.rate / mxR) * 100)}%`, borderRadius: 999, background: "var(--an-tert)" }} />
+                      </div>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--an-ink-soft)" }}>{money(x.r.rate)}</span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
             <p className="an5-q" style={{ marginTop: 14 }}>
               By instructor
             </p>
@@ -99,7 +168,7 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
                 <span className="min-w-0 block">
                   <span className="an5-name block">{r.p.person.name}</span>
                   <span className="an5-meta block" style={{ marginTop: 0, fontSize: 11.5 }}>
-                    {r.p.sessions} classes
+                    {r.revenue === null ? `${r.classes} classes` : `${r.classes} classes · profit ${signedMoney(r.revenue - r.pay)}`}
                   </span>
                 </span>
                 <span className="an5-amt" style={{ fontSize: 13 }}>

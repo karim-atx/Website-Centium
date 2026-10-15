@@ -276,13 +276,6 @@ export const AnEmptyCard: React.FC<{
   </div>
 );
 
-/** AN4-024 row 1 · the soft hint box above a card. */
-export const AnHintBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="rounded-[12px] bg-cream-soft text-[11.5px] leading-[16px] text-charcoal-soft mb-[12px]" style={{ padding: "9px 12px" }}>
-    {children}
-  </p>
-);
-
 /** AN4-001 O1 · skeleton index rows. */
 export const AnIndexSkeleton: React.FC<{ rows: number }> = ({ rows }) => (
   <div role="status" aria-label="Loading">
