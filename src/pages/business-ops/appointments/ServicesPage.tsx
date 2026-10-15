@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, Clock, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
-import {
-  addAvailability,
-  fetchAvailability,
-  fetchServices,
-  removeAvailability,
-  saveService,
-  type Availability,
-  type Service,
-} from "../../../services/appointments";
+import { addStaffHours, DURATIONS, fetchServices, fetchStaffHours, removeStaffHours, saveService, type Service, type StaffHours } from "../../../services/appointments";
+import { fetchTeam } from "../../../services/business-team/team";
 import type { Load } from "../../../services/store/backend";
 import { money } from "../../../services/store/format";
 import { parsePrice } from "../../../utils/price";
@@ -20,9 +13,13 @@ import { EmptyCard, ErrorCard, KitField, KitFieldButton, KitLabel, KitRow, ListC
 import { useLive, useStoreBusiness } from "../store/storeShared";
 
 // V6-158: services and free slots are set up under More (Wellness Service
-// with appointments). Not drawn: built from the OP1 kit (OURS). B12.
+// with appointments). Not drawn: built from the OP1 kit (OURS).
+// B12: appointment_services (name ≤ 60, description ≤ 500, 5-480 minutes,
+// price) and the staff's hours, which are the B6 instructor_availability
+// rows (weekday 1 = Monday) classes use too: a person is bookable for any
+// service inside their hours. Only accepted team members can be booked.
+// Both need the schedule permission.
 
-const DURATIONS = [15, 30, 45, 60, 75, 90, 120];
 const HALF_HOURS = Array.from({ length: 48 }, (_, i) => i * 30);
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const toMin = (t: string) => {
@@ -30,13 +27,31 @@ const toMin = (t: string) => {
   return h * 60 + (m || 0);
 };
 
-async function loadSetup(businessId: string): Promise<Load<{ services: Service[]; hours: Availability[]; pending: boolean }>> {
-  const [s, h] = await Promise.all([fetchServices(businessId), fetchAvailability(businessId)]);
+interface Person {
+  id: string;
+  name: string;
+}
+
+interface Setup {
+  services: Service[];
+  hours: StaffHours[];
+  people: Person[];
+  pending: boolean;
+}
+
+async function loadSetup(businessId: string): Promise<Load<Setup>> {
+  const [s, h, t] = await Promise.all([fetchServices(businessId), fetchStaffHours(businessId), fetchTeam(businessId)]);
   if (s.status === "error") return s;
   if (h.status === "error") return h;
   return {
     status: "ok",
-    value: { services: s.status === "ok" ? s.value : [], hours: h.status === "ok" ? h.value : [], pending: s.status === "pending" || h.status === "pending" },
+    value: {
+      services: s.status === "ok" ? s.value : [],
+      hours: h.status === "ok" ? h.value : [],
+      // A team that can't be read leaves the names unknown, not the page broken.
+      people: t.ok ? t.value.filter((p) => p.acceptedAt).map((p) => ({ id: p.professionalId, name: p.name })) : [],
+      pending: s.status === "pending" || h.status === "pending",
+    },
   };
 }
 
@@ -49,9 +64,10 @@ export default function ServicesPage() {
   const [hoursOpen, setHoursOpen] = useState(false);
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
+  const nameOf = (id: string) => d?.people.find((p) => p.id === id)?.name ?? "Team member";
 
-  const removeHours = async (h: Availability) => {
-    const r = await removeAvailability(h.id);
+  const removeHours = async (h: StaffHours) => {
+    const r = await removeStaffHours(h.id);
     if (!r.ok) showToast("Couldn't remove the hours. Try again.", false);
     else {
       showToast("Hours removed.", false);
@@ -80,7 +96,7 @@ export default function ServicesPage() {
                   key={x.id}
                   icon={Sparkles}
                   title={x.name}
-                  sub={`${x.durationMin} min${x.price !== null ? ` · ${money(x.price)}` : ""}`}
+                  sub={`${x.durationMin} min · ${money(x.price)}`}
                   chip={x.active ? null : { label: "Hidden", tone: "soft" }}
                   onClick={() => setSvc({ open: true, s: x })}
                 />
@@ -89,19 +105,19 @@ export default function ServicesPage() {
           )}
           <KitLabel label="Free slots" action="Add" onAction={() => setHoursOpen(true)} />
           {d.hours.length === 0 ? (
-            <EmptyCard icon={Clock} title="No free slots yet" body="Add the hours you take bookings. Weeks start on Monday." />
+            <EmptyCard icon={Clock} title="No free slots yet" body="Add the hours each person takes bookings. Weeks start on Monday." />
           ) : (
             <ListCard label="Free slots">
               {d.hours.map((h) => (
                 <KitRow
                   key={h.id}
                   icon={Clock}
-                  title={DAY_LONG[h.weekday] ?? ""}
-                  sub={`${formatMinutes12(toMin(h.starts))} to ${formatMinutes12(toMin(h.ends))}`}
+                  title={DAY_LONG[h.weekday - 1] ?? ""}
+                  sub={`${nameOf(h.staffId)} · ${formatMinutes12(toMin(h.starts))} to ${formatMinutes12(toMin(h.ends))}`}
                   trailing={
                     <button
                       type="button"
-                      aria-label={`Remove ${DAY_LONG[h.weekday]} hours`}
+                      aria-label={`Remove ${nameOf(h.staffId)}'s ${DAY_LONG[h.weekday - 1]} hours`}
                       onClick={() => void removeHours(h)}
                       disabled={!online}
                       className={`tap shrink-0 flex items-center justify-center ${P_DARK} disabled:opacity-40`}
@@ -133,6 +149,7 @@ export default function ServicesPage() {
         <HoursSheet
           open={hoursOpen}
           businessId={businessId}
+          people={d?.people ?? []}
           onClose={() => setHoursOpen(false)}
           onSaved={() => {
             setHoursOpen(false);
@@ -148,6 +165,7 @@ export default function ServicesPage() {
 
 function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: boolean; service: Service | null; businessId: string; onClose: () => void; onSaved: (m: string) => void }) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState("");
   const [active, setActive] = useState(true);
@@ -157,25 +175,30 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
   useEffect(() => {
     if (!open) return;
     setName(service?.name ?? "");
+    setDescription(service?.description ?? "");
     setDuration(service?.durationMin ?? 60);
-    setPrice(service?.price != null ? String(service.price) : "");
+    setPrice(service ? String(service.price) : "");
     setActive(service?.active ?? true);
     setError(null);
   }, [open, service]);
   const p = parsePrice(price);
-  const valid = name.trim().length > 0 && p.ok;
+  const valid = name.trim().length > 0 && p.ok && p.value !== null;
+  // A saved duration outside the list (the table takes any 5-minute step) stays choosable.
+  const durations = DURATIONS.includes(duration as (typeof DURATIONS)[number]) ? [...DURATIONS] : [...DURATIONS, duration].sort((a, b) => a - b);
   const save = async (nextActive = active) => {
-    if (!valid || !p.ok) return;
+    if (!valid || !p.ok || p.value === null) return;
     setBusy(true);
-    const r = await saveService(businessId, { id: service?.id, name, durationMin: duration, price: p.value, active: nextActive });
+    setError(null);
+    const r = await saveService(businessId, { id: service?.id, name, description, durationMin: duration, price: p.value, active: nextActive });
     setBusy(false);
-    if (!r.ok) setError("Couldn't save the service. Try again.");
+    if (!r.ok) setError(r.pending ? "Setting up services is coming soon." : "Couldn't save the service. Try again.");
     else onSaved(service ? "Changes saved." : `${name.trim()} added.`);
   };
   return (
     <>
       <OpsSheet open={open} onClose={onClose} title={service ? "Edit service" : "New service"} button="Save" onButton={() => void save()} disabled={!valid} busy={busy} error={error}>
         <KitField id="svc-name" label="Name" value={name} onChange={setName} placeholder="e.g. Sports massage" icon={Pencil} maxLength={60} />
+        <KitField id="svc-desc" label="Description" value={description} onChange={setDescription} placeholder="Optional" icon={Pencil} maxLength={500} multiline />
         <KitFieldButton id="svc-duration" label="Duration" value={`${duration} min`} placeholder="" icon={ChevronDown} onClick={(el) => setMenu(el)} expanded={!!menu} />
         <KitField
           id="svc-price"
@@ -186,9 +209,10 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
           icon={Pencil}
           inputMode="decimal"
           error={price.trim() && !p.ok ? "Enter the price as a number, for example 25 or $25." : null}
+          note="Paid in cash at the visit."
         />
         {service && (
-          <button type="button" onClick={() => void save(!active)} className="tap w-full text-[14px] font-bold text-charcoal-soft" style={{ minHeight: 44 }}>
+          <button type="button" onClick={() => void save(!active)} disabled={!valid || busy} className="tap w-full text-[14px] font-bold text-charcoal-soft disabled:opacity-40" style={{ minHeight: 44 }}>
             {active ? "Hide from booking" : "Show for booking"}
           </button>
         )}
@@ -199,7 +223,7 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
         anchor={menu}
         matchWidth={menu}
         variant="field"
-        options={DURATIONS.map((m) => ({ value: String(m), label: `${m} min` }))}
+        options={durations.map((m) => ({ value: String(m), label: `${m} min` }))}
         selected={String(duration)}
         onSelect={(v) => setDuration(Number(v))}
       />
@@ -207,29 +231,51 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
   );
 }
 
-function HoursSheet({ open, businessId, onClose, onSaved }: { open: boolean; businessId: string; onClose: () => void; onSaved: () => void }) {
-  const [weekday, setWeekday] = useState(0);
+function HoursSheet({ open, businessId, people, onClose, onSaved }: { open: boolean; businessId: string; people: Person[]; onClose: () => void; onSaved: () => void }) {
+  const [staffId, setStaffId] = useState<string | null>(null);
+  /** 1 = Monday … 7 = Sunday (instructor_availability). */
+  const [weekday, setWeekday] = useState(1);
   const [start, setStart] = useState(9 * 60);
   const [end, setEnd] = useState(17 * 60);
-  const [menu, setMenu] = useState<null | { k: "day" | "start" | "end"; el: HTMLElement }>(null);
+  const [menu, setMenu] = useState<null | { k: "person" | "day" | "start" | "end"; el: HTMLElement }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    if (open) setError(null);
-  }, [open]);
-  const valid = end > start;
+    if (!open) return;
+    setError(null);
+    setStaffId((cur) => (cur && people.some((p) => p.id === cur) ? cur : people.length === 1 ? people[0].id : null));
+  }, [open, people]);
+  const valid = end > start && !!staffId;
   const save = async () => {
+    if (!staffId) return;
     setBusy(true);
-    const r = await addAvailability(businessId, weekday, hhmm(start), hhmm(end));
+    setError(null);
+    const r = await addStaffHours(businessId, staffId, weekday, hhmm(start), hhmm(end));
     setBusy(false);
-    if (!r.ok) setError("Couldn't save the hours. Try again.");
+    if (!r.ok) setError(r.pending ? "Setting up hours is coming soon." : "Couldn't save the hours. Try again.");
     else onSaved();
   };
   const timeOpts = HALF_HOURS.map((m) => ({ value: String(m), label: formatMinutes12(m) }));
+  const options =
+    menu?.k === "person"
+      ? people.map((p) => ({ value: p.id, label: p.name }))
+      : menu?.k === "day"
+        ? DAY_LONG.map((d, i) => ({ value: String(i + 1), label: d }))
+        : timeOpts;
+  const selected = menu?.k === "person" ? staffId : menu?.k === "day" ? String(weekday) : menu?.k === "start" ? String(start) : String(end);
   return (
     <>
       <OpsSheet open={open} onClose={onClose} title="Add free slots" button="Save" onButton={() => void save()} disabled={!valid} busy={busy} error={error}>
-        <KitFieldButton id="hours-day" label="Day" value={DAY_LONG[weekday]} placeholder="" icon={ChevronDown} onClick={(el) => setMenu({ k: "day", el })} />
+        <KitFieldButton
+          id="hours-person"
+          label="Person"
+          value={people.find((p) => p.id === staffId)?.name ?? null}
+          placeholder="Choose a person"
+          icon={ChevronDown}
+          onClick={people.length > 0 ? (el) => setMenu({ k: "person", el }) : undefined}
+          note={people.length === 0 ? "Add people to your team first. Clients book them by their hours." : undefined}
+        />
+        <KitFieldButton id="hours-day" label="Day" value={DAY_LONG[weekday - 1]} placeholder="" icon={ChevronDown} onClick={(el) => setMenu({ k: "day", el })} />
         <KitFieldButton id="hours-start" label="From" value={formatMinutes12(start)} placeholder="" icon={Clock} onClick={(el) => setMenu({ k: "start", el })} />
         <KitFieldButton
           id="hours-end"
@@ -238,7 +284,7 @@ function HoursSheet({ open, businessId, onClose, onSaved }: { open: boolean; bus
           placeholder=""
           icon={Clock}
           onClick={(el) => setMenu({ k: "end", el })}
-          error={valid ? null : "End after the start time."}
+          error={end > start ? null : "End after the start time."}
         />
       </OpsSheet>
       <PopupMenu
@@ -247,10 +293,11 @@ function HoursSheet({ open, businessId, onClose, onSaved }: { open: boolean; bus
         anchor={menu?.el ?? null}
         matchWidth={menu?.el ?? null}
         variant="field"
-        options={menu?.k === "day" ? DAY_LONG.map((d, i) => ({ value: String(i), label: d })) : timeOpts}
-        selected={menu?.k === "day" ? String(weekday) : menu?.k === "start" ? String(start) : String(end)}
+        options={options}
+        selected={selected}
         onSelect={(v) => {
-          if (menu?.k === "day") setWeekday(Number(v));
+          if (menu?.k === "person") setStaffId(v);
+          else if (menu?.k === "day") setWeekday(Number(v));
           else if (menu?.k === "start") setStart(Number(v));
           else setEnd(Number(v));
         }}

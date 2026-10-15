@@ -1,15 +1,11 @@
 import { clock12 } from "../../../utils/time12";
 import { shortDate } from "../../../services/store/format";
-import type { Appointment } from "../../../services/appointments";
+import type { DiaryAppt } from "../../../services/appointments";
 
-/** The client as the business sees them: the name for its own clients, else "Client #2C8E" (§4). */
-export function clientLabel(a: { clientName: string | null; clientId: string | null }): string {
-  if (a.clientName) return a.clientName;
-  const id = (a.clientId ?? "").replace(/-/g, "");
-  return id ? `Client #${id.slice(0, 4).toUpperCase()}` : "Client";
-}
+// The client is the server's label (business_appointments.client_label:
+// "Member #0042" unless the client shared their name). Render it as is.
 
-export const serviceTitle = (a: Pick<Appointment, "serviceName" | "durationMin">) => `${a.serviceName}, ${a.durationMin} min`;
+export const serviceTitle = (a: Pick<DiaryAppt, "serviceName" | "durationMin">) => `${a.serviceName}, ${a.durationMin} min`;
 
 /** "Today, Tue 14 Oct" (OP1-020 #4, OURS sub). */
 export function todaySub(now = new Date()): string {

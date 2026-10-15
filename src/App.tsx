@@ -478,8 +478,8 @@ function AppRoutes() {
         <Route path="/app/business/products/*" element={<ConsoleGate need={["store", "marketing"]}><StoreProductsRoute /></ConsoleGate>} />
         {/* v6 Batch 4: Store orders (detail, returns, See all) and appointments. */}
         <Route path="/app/business/orders/*" element={<ConsoleGate need="store"><BusinessOrdersRoutes /></ConsoleGate>} />
-        <Route path="/app/business/appointments/*" element={<ConsoleGate need="owner"><BusinessAppointmentsRoutes /></ConsoleGate>} />
-        <Route path="/app/business/services" element={<ConsoleGate need="owner"><AppointmentServicesPage /></ConsoleGate>} />
+        <Route path="/app/business/appointments/*" element={<ConsoleGate need="schedule"><BusinessAppointmentsRoutes /></ConsoleGate>} />
+        <Route path="/app/business/services" element={<ConsoleGate need="schedule"><AppointmentServicesPage /></ConsoleGate>} />
         {/* v6 Batch 4 (V6-49, designed by us): the customer side. */}
         <Route path="/app/store/*" element={<StoreRoutes />} />
         <Route path="/app/appointments/*" element={<AppointmentRoutes />} />

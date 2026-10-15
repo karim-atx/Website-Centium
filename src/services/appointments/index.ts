@@ -1,182 +1,64 @@
-import { db, loadFail, num, str, writeFail, type Load, type Write } from "../store/backend";
+import { db, loadFail, writeFail, type Load, type Write } from "../store/backend";
+import type { Row } from "../store/mapping";
+import { isoDate } from "../store/format";
+import { fetchBusinessPeople } from "../business-members";
+import {
+  APPOINTMENT_TERMS_KINDS,
+  freeStretches,
+  waiverPending,
+  toDiaryAppt,
+  toMyAppt,
+  toService,
+  toSlot,
+  toStaffHours,
+  type DiaryAppt,
+  type MyAppt,
+  type Service,
+  type Slot,
+  type StaffHours,
+} from "./model";
 
-// Appointments (B12 · AP-01), both sides. Wellness Service stores that offer
-// appointments (business_store_settings.offers_appointments, B5).
-//
-// CONTRACT ASSUMED (BACKEND_REQUIREMENTS-v6 AP-01; re-check against
-// HANDOVER_API.md "B12" when it lands, and change the names here only):
-//   appointment_services(id, business_id, name, duration_min, price, active)
-//   appointment_availability(id, business_id, staff_id, weekday 0 = Monday,
-//     starts time, ends time)
-//   appointments(id, business_id, client_id, client_name, service_id,
-//     starts_at, ends_at, status booked|completed|cancelled|no_show,
-//     booked_at, price, payment_method, appointment_services(name, duration_min))
-//   appointment_free_slots(p_business_id, p_service_id, p_from, p_to)
-//     → (starts_at, ends_at)  open slots left, after bookings
-//   book_appointment(p_service_id, p_starts_at, p_client_id default caller) → uuid
-//     (calendar row, waiver acceptance, pending payment; ATX code when the
-//     slot is taken)
-//   cancel_appointment(p_appointment_id) → { notified }
-//   set_appointment_status(p_appointment_id, p_status) → { notified }
-// Walk-in clients without an account are not supported (V6-158).
+// B12 · Appointments (Database docs/HANDOVER_API.md "B12 · Appointments"),
+// both sides. Wellness Service stores that offer appointments
+// (business_store_settings.offers_appointments, B5).
+//   appointment_services(business_id, gym_id?, name, description,
+//     duration_min, price, active): public reads active services of a listed
+//     business; writing needs `schedule`.
+//   Staff hours are the B6 tables instructor_availability (weekday 1 = Monday)
+//     and instructor_unavailable_dates; written with `schedule`.
+//   appointment_slots(p_service_id, p_day, p_staff_id?) → staff_id,
+//     staff_name (null unless listed publicly), starts_at, ends_at.
+//   book_appointment(p_service_id, p_staff_id, p_starts_at, p_method) → id.
+//     ATXE4 = the venue's terms first (as book_class); ATXF2 outside hours,
+//     ATXF3 taken, ATXF4 service unavailable.
+//   my_appointments(p_include_past) · cancel_appointment(id, reason) →
+//     paid_to_refund.
+//   business_appointments(business, from, to, staff?) (schedule; masked
+//     labels) · mark_appointment(id, completed|no_show) (schedule) ·
+//     mark_appointment_paid(id) (front_desk or schedule).
+//   book_appointment_for(business, person, service, staff|null, start, method)
+//     → (appointment_id, waiver_pending) (B12 follow-up, schedule or
+//     front_desk): the business books for its own people (ATX96 otherwise).
+// Walk-ins without an account are not built (B12 "Not built").
 
-export type ApptStatus = "booked" | "completed" | "cancelled" | "no_show";
-
-export interface Service {
-  id: string;
-  name: string;
-  durationMin: number;
-  price: number | null;
-  active: boolean;
-}
-
-export interface Appointment {
-  id: string;
-  businessId: string;
-  businessName: string | null;
-  clientId: string | null;
-  clientName: string | null;
-  serviceId: string | null;
-  serviceName: string;
-  durationMin: number;
-  startsAt: string;
-  endsAt: string;
-  status: ApptStatus;
-  bookedAt: string | null;
-  price: number | null;
-  paymentMethod: "cash" | "whish";
-}
-
-export interface Slot {
-  startsAt: string;
-  endsAt: string;
-}
-
-export interface Availability {
-  id: string;
-  weekday: number;
-  starts: string;
-  ends: string;
-}
-
-type Row = Record<string, unknown>;
-
-const toService = (r: Row): Service => ({
-  id: String(r.id),
-  name: String(r.name ?? ""),
-  durationMin: num(r.duration_min) || 60,
-  price: r.price === null || r.price === undefined ? null : num(r.price),
-  active: r.active !== false,
-});
-
-export function toAppointment(r: Row): Appointment {
-  const s = (r.appointment_services as Row | null) ?? {};
-  const b = (r.business_profiles as Row | null) ?? null;
-  const startsAt = String(r.starts_at);
-  const dur = num(s.duration_min) || Math.round((new Date(String(r.ends_at ?? startsAt)).getTime() - new Date(startsAt).getTime()) / 60000) || 60;
-  return {
-    id: String(r.id),
-    businessId: String(r.business_id ?? ""),
-    businessName: b ? str(b.business_name) : null,
-    clientId: str(r.client_id),
-    clientName: str(r.client_name),
-    serviceId: str(r.service_id),
-    serviceName: String(s.name ?? r.service_name ?? ""),
-    durationMin: dur,
-    startsAt,
-    endsAt: String(r.ends_at ?? new Date(new Date(startsAt).getTime() + dur * 60000).toISOString()),
-    status: (str(r.status) as ApptStatus) ?? "booked",
-    bookedAt: str(r.booked_at) ?? str(r.created_at),
-    price: r.price === null || r.price === undefined ? (s.price !== undefined && s.price !== null ? num(s.price) : null) : num(r.price),
-    paymentMethod: r.payment_method === "whish" ? "whish" : "cash",
-  };
-}
-
-const APPT_SELECT = "*, appointment_services(name, duration_min, price)";
-
-const dayBounds = (date: string) => {
-  const [y, m, d] = date.split("-").map(Number);
-  const from = new Date(y, m - 1, d);
-  const to = new Date(y, m - 1, d + 1);
-  return { from: from.toISOString(), to: to.toISOString() };
-};
+export * from "./model";
 
 // ---------------------------------------------------------------------------
-// Business side
+// Services (business and public)
 
 export async function fetchServices(businessId: string, activeOnly = false): Promise<Load<Service[]>> {
-  let q = db.from("appointment_services").select("*").eq("business_id", businessId);
+  let q = db.from("appointment_services").select("id, name, description, duration_min, price, active").eq("business_id", businessId);
   if (activeOnly) q = q.eq("active", true);
   const { data, error } = await q.order("name");
   if (error) return loadFail(error, "Could not read the services");
   return { status: "ok", value: ((data ?? []) as Row[]).map(toService) };
 }
 
-export async function fetchDayAppointments(businessId: string, date: string): Promise<Load<Appointment[]>> {
-  const { from, to } = dayBounds(date);
-  const { data, error } = await db
-    .from("appointments")
-    .select(APPT_SELECT)
-    .eq("business_id", businessId)
-    .gte("starts_at", from)
-    .lt("starts_at", to)
-    .order("starts_at");
-  if (error) return loadFail(error, "Could not read the appointments");
-  return { status: "ok", value: ((data ?? []) as Row[]).map(toAppointment) };
-}
-
-/** Any appointment ever (decides "No appointments yet" vs "No appointments today"). */
-export async function countAppointments(businessId: string): Promise<Load<number>> {
-  const { count, error } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("business_id", businessId);
-  if (error) return loadFail(error, "Could not count the appointments");
-  return { status: "ok", value: count ?? 0 };
-}
-
-export async function fetchAppointment(id: string): Promise<Load<Appointment | null>> {
-  const { data, error } = await db.from("appointments").select(APPT_SELECT + ", business_profiles(business_name)").eq("id", id).maybeSingle();
-  if (error) return loadFail(error, "Could not read the appointment");
-  return { status: "ok", value: data ? toAppointment(data as Row) : null };
-}
-
-export async function fetchFreeSlots(businessId: string, serviceId: string | null, fromDate: string, toDate: string): Promise<Load<Slot[]>> {
-  const { data, error } = await db.rpc("appointment_free_slots", { p_business_id: businessId, p_service_id: serviceId, p_from: fromDate, p_to: toDate });
-  if (error) return loadFail(error, "Could not read the free slots");
-  return {
-    status: "ok",
-    value: ((data ?? []) as Row[]).map((r) => ({ startsAt: String(r.starts_at), endsAt: String(r.ends_at) })).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
-  };
-}
-
-const notified = (data: unknown): boolean =>
-  data && typeof data === "object" && "notified" in (data as Row) ? (data as Row).notified !== false : true;
-
-export async function setAppointmentStatus(id: string, status: "completed" | "no_show"): Promise<Write<{ notified: boolean }>> {
-  const { data, error } = await db.rpc("set_appointment_status", { p_appointment_id: id, p_status: status });
-  if (error) return writeFail(error, "Could not update the appointment");
-  return { ok: true, value: { notified: notified(data) } };
-}
-
-export async function cancelAppointment(id: string): Promise<Write<{ notified: boolean }>> {
-  const { data, error } = await db.rpc("cancel_appointment", { p_appointment_id: id });
-  if (error) return writeFail(error, "Could not cancel the appointment");
-  return { ok: true, value: { notified: notified(data) } };
-}
-
-/** Book (client) or add (business, with the client's id). A taken slot comes back as `taken`. */
-export async function bookAppointment(serviceId: string, startsAt: string, clientId?: string): Promise<Write<string> & { taken?: boolean }> {
-  const args: Row = { p_service_id: serviceId, p_starts_at: startsAt };
-  if (clientId) args.p_client_id = clientId;
-  const { data, error } = await db.rpc("book_appointment", args);
-  if (error) {
-    const w = writeFail<string>(error, "Could not book the appointment");
-    // 23P01 exclusion / 23505 unique: someone took the slot first.
-    return { ...w, taken: error.code === "23P01" || error.code === "23505" || /no longer free|taken/i.test(error.message ?? "") };
-  }
-  return { ok: true, value: String(data ?? "") };
-}
-
-export async function saveService(businessId: string, s: { id?: string; name: string; durationMin: number; price: number | null; active: boolean }): Promise<Write<null>> {
-  const payload = { name: s.name.trim(), duration_min: s.durationMin, price: s.price, active: s.active };
+export async function saveService(
+  businessId: string,
+  s: { id?: string; name: string; description: string | null; durationMin: number; price: number; active: boolean }
+): Promise<Write<null>> {
+  const payload = { name: s.name.trim(), description: s.description?.trim() || null, duration_min: s.durationMin, price: s.price, active: s.active };
   const { error } = s.id
     ? await db.from("appointment_services").update(payload).eq("id", s.id)
     : await db.from("appointment_services").insert({ ...payload, business_id: businessId });
@@ -184,62 +66,203 @@ export async function saveService(businessId: string, s: { id?: string; name: st
   return { ok: true, value: null };
 }
 
-export async function fetchAvailability(businessId: string): Promise<Load<Availability[]>> {
-  const { data, error } = await db.from("appointment_availability").select("*").eq("business_id", businessId).order("weekday").order("starts");
-  if (error) return loadFail(error, "Could not read the free slots");
-  return {
-    status: "ok",
-    value: ((data ?? []) as Row[]).map((r) => ({ id: String(r.id), weekday: num(r.weekday), starts: String(r.starts ?? "").slice(0, 5), ends: String(r.ends ?? "").slice(0, 5) })),
-  };
+// ---------------------------------------------------------------------------
+// Staff hours (instructor_availability)
+
+export async function fetchStaffHours(businessId: string): Promise<Load<StaffHours[]>> {
+  const { data, error } = await db
+    .from("instructor_availability")
+    .select("id, professional_id, weekday, starts_at, ends_at")
+    .eq("business_id", businessId)
+    .order("weekday")
+    .order("starts_at");
+  if (error) return loadFail(error, "Could not read the staff hours");
+  return { status: "ok", value: ((data ?? []) as Row[]).map(toStaffHours) };
 }
 
-export async function addAvailability(businessId: string, weekday: number, starts: string, ends: string): Promise<Write<null>> {
-  const { error } = await db.from("appointment_availability").insert({ business_id: businessId, weekday, starts, ends });
+/** weekday 1 = Monday … 7 = Sunday; times "HH:MM". */
+export async function addStaffHours(businessId: string, staffId: string, weekday: number, starts: string, ends: string): Promise<Write<null>> {
+  const { error } = await db.from("instructor_availability").insert({ business_id: businessId, professional_id: staffId, weekday, starts_at: starts, ends_at: ends });
   if (error) return writeFail(error, "Could not save the hours");
   return { ok: true, value: null };
 }
 
-export async function removeAvailability(id: string): Promise<Write<null>> {
-  const { error } = await db.from("appointment_availability").delete().eq("id", id);
+export async function removeStaffHours(id: string): Promise<Write<null>> {
+  const { error } = await db.from("instructor_availability").delete().eq("id", id);
   if (error) return writeFail(error, "Could not remove the hours");
   return { ok: true, value: null };
 }
 
-/** The business's own clients (people who booked before), for the Add appointment search. */
-export async function fetchKnownClients(businessId: string): Promise<Load<{ id: string; name: string }[]>> {
-  const { data, error } = await db.from("appointments").select("client_id, client_name").eq("business_id", businessId).not("client_id", "is", null);
-  if (error) return loadFail(error, "Could not read the clients");
-  const seen = new Map<string, string>();
-  for (const r of (data ?? []) as Row[]) {
-    const id = str(r.client_id);
-    if (id && !seen.has(id)) seen.set(id, str(r.client_name) ?? "");
+// ---------------------------------------------------------------------------
+// Slots
+
+/** appointment_slots for one service and day (ATXF4 = not bookable: no slots). */
+export async function fetchSlots(serviceId: string, day: string, staffId: string | null = null): Promise<Load<Slot[]>> {
+  const { data, error } = await db.rpc("appointment_slots", { p_service_id: serviceId, p_day: day, p_staff_id: staffId });
+  if (error) {
+    if (error.code === "ATXF4") return { status: "ok", value: [] };
+    return loadFail(error, "Could not read the free times");
   }
-  return { status: "ok", value: [...seen.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)) };
+  return { status: "ok", value: ((data ?? []) as Row[]).map(toSlot) };
+}
+
+/** The business's free stretches on a day, across its active services (the diary's "Free slot" rows). */
+export async function fetchFreeStretches(services: Service[], day: string): Promise<Load<{ startsAt: string; endsAt: string }[]>> {
+  const active = services.filter((s) => s.active);
+  if (active.length === 0) return { status: "ok", value: [] };
+  const all = await Promise.all(active.map((s) => fetchSlots(s.id, day)));
+  const slots: Slot[] = [];
+  for (const r of all) {
+    if (r.status !== "ok") return r;
+    slots.push(...r.value);
+  }
+  return { status: "ok", value: freeStretches(slots, Date.now()) };
 }
 
 // ---------------------------------------------------------------------------
-// Customer side
+// Business diary
 
-export async function fetchMyAppointments(clientId: string): Promise<Load<Appointment[]>> {
-  const { data, error } = await db
-    .from("appointments")
-    .select(APPT_SELECT + ", business_profiles(business_name)")
-    .eq("client_id", clientId)
-    .order("starts_at", { ascending: false });
-  if (error) return loadFail(error, "Could not read your appointments");
-  return { status: "ok", value: ((data ?? []) as Row[]).map(toAppointment) };
+/** business_appointments for [from, to] (local dates; at most two months). */
+export async function fetchDiary(businessId: string, from: string, to: string): Promise<Load<DiaryAppt[]>> {
+  const { data, error } = await db.rpc("business_appointments", { p_business_id: businessId, p_from: from, p_to: to });
+  if (error) return loadFail(error, "Could not read the appointments");
+  return { status: "ok", value: ((data ?? []) as Row[]).map(toDiaryAppt) };
 }
 
-/** Appointment chip (OURS-OP1-appointments-detail row 9; Open = a free slot). */
-export function apptChip(s: ApptStatus): { label: string; tone: "good" | "soft" | "bad" | "warn" } {
-  switch (s) {
-    case "booked":
-      return { label: "Booked", tone: "good" };
-    case "completed":
-      return { label: "Done", tone: "soft" };
-    case "cancelled":
-      return { label: "Cancelled", tone: "bad" };
-    case "no_show":
-      return { label: "No-show", tone: "warn" };
-  }
+/** Whether the business has ever had an appointment ("No appointments yet" vs "No appointments today"). */
+export async function hasAppointments(businessId: string): Promise<Load<boolean>> {
+  const { count, error } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("business_id", businessId);
+  if (error) return loadFail(error, "Could not count the appointments");
+  return { status: "ok", value: (count ?? 0) > 0 };
+}
+
+export interface DiaryDetail extends DiaryAppt {
+  bookedAt: string | null;
+  paymentMethod: "cash" | "whish";
+  /** The client still has the appointment terms to accept (null: unknown, or not a booked appointment). */
+  waiverPending: boolean | null;
+}
+
+/**
+ * One appointment for the business: the row (RLS: schedule) for its day,
+ * booking time and method, then that day's business_appointments row for the
+ * masked label and the rest. Null when neither can be read.
+ */
+export async function fetchDiaryDetail(appointmentId: string): Promise<Load<DiaryDetail | null>> {
+  const { data, error } = await db.from("appointments").select("id, business_id, starts_at, created_at, payment_method").eq("id", appointmentId).maybeSingle();
+  if (error) return loadFail(error, "Could not read the appointment");
+  if (!data) return { status: "ok", value: null };
+  const r = data as Row;
+  const day = new Date(String(r.starts_at));
+  const from = isoDate(new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1));
+  const to = isoDate(new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1));
+  const diary = await fetchDiary(String(r.business_id), from, to);
+  if (diary.status !== "ok") return diary;
+  const a = diary.value.find((x) => x.id === appointmentId);
+  if (!a) return { status: "ok", value: null };
+  // The waiver never blocks a desk booking; a booked one says when it is still owed.
+  const w = a.status === "booked" && a.clientId ? await fetchWaiverPending(String(r.business_id), a.clientId) : null;
+  return {
+    status: "ok",
+    value: { ...a, bookedAt: typeof r.created_at === "string" ? r.created_at : null, paymentMethod: r.payment_method === "whish" ? "whish" : "cash", waiverPending: w && w.status === "ok" ? w.value : null },
+  };
+}
+
+export async function markAppointment(id: string, status: "completed" | "no_show"): Promise<Write<null>> {
+  const { error } = await db.rpc("mark_appointment", { p_appointment_id: id, p_status: status });
+  if (error) return writeFail(error, "Could not mark the appointment");
+  return { ok: true, value: null };
+}
+
+export async function markAppointmentPaid(id: string): Promise<Write<null>> {
+  const { error } = await db.rpc("mark_appointment_paid", { p_appointment_id: id });
+  if (error) return writeFail(error, "Could not record the payment");
+  return { ok: true, value: null };
+}
+
+/**
+ * book_appointment_for (B12 follow-up, schedule or front_desk): the business
+ * books for one of its own people (within 90 days, else ATX96). staffId null
+ * = "Any available". The waiver doesn't block it: waiverPending says the
+ * client still has terms to accept.
+ */
+export async function bookAppointmentFor(
+  businessId: string,
+  personId: string,
+  serviceId: string,
+  staffId: string | null,
+  startsAt: string
+): Promise<Write<{ id: string; waiverPending: boolean }>> {
+  const { data, error } = await db.rpc("book_appointment_for", {
+    p_business_id: businessId,
+    p_person_id: personId,
+    p_service_id: serviceId,
+    p_staff_id: staffId,
+    p_starts_at: startsAt,
+    p_method: "cash",
+  });
+  if (error) return writeFail(error, "Could not add the appointment");
+  const row = (Array.isArray(data) ? data[0] : data) as Row | null;
+  return { ok: true, value: { id: String(row?.appointment_id ?? ""), waiverPending: row?.waiver_pending === true } };
+}
+
+/**
+ * Whether a client still has this business's appointment terms to accept,
+ * read by the business (published documents are public; a business insider
+ * reads acceptances of its own documents). The waiverPending test of
+ * book_appointment_for, for an appointment opened later.
+ */
+export async function fetchWaiverPending(businessId: string, clientId: string): Promise<Load<boolean>> {
+  const docs = await db.from("policy_documents").select("id, kind, current_version").eq("business_id", businessId).in("kind", [...APPOINTMENT_TERMS_KINDS]);
+  if (docs.error) return loadFail(docs.error, "Could not read the terms");
+  const d = ((docs.data ?? []) as Row[]).map((r) => ({ id: String(r.id), kind: String(r.kind), currentVersion: r.current_version === null || r.current_version === undefined ? null : Number(r.current_version) }));
+  if (d.length === 0) return { status: "ok", value: false };
+  const vers = await db.from("policy_versions").select("id, document_id, version, published_at, requires_reacceptance").in("document_id", d.map((x) => x.id));
+  if (vers.error) return loadFail(vers.error, "Could not read the terms");
+  const v = ((vers.data ?? []) as Row[]).map((r) => ({ id: String(r.id), documentId: String(r.document_id), version: Number(r.version), published: !!r.published_at, requiresReacceptance: r.requires_reacceptance === true }));
+  if (v.length === 0) return { status: "ok", value: false };
+  const acc = await db.from("policy_acceptances").select("version_id").eq("person_id", clientId).in("version_id", v.map((x) => x.id));
+  if (acc.error) return loadFail(acc.error, "Could not read the acceptances");
+  return { status: "ok", value: waiverPending(d, v, new Set(((acc.data ?? []) as Row[]).map((r) => String(r.version_id)))) };
+}
+
+/** The business's own people for the Add appointment client search (business_people: shared name or member number). */
+export async function searchClients(businessId: string, search: string): Promise<Load<{ id: string; label: string }[]>> {
+  const r = await fetchBusinessPeople(businessId, { segment: "all", search, limit: 8 });
+  if (!r.ok) return r.pending ? { status: "pending" } : { status: "error", offline: false };
+  return { status: "ok", value: r.people.map((p) => ({ id: p.personId, label: p.label })) };
+}
+
+// ---------------------------------------------------------------------------
+// Both sides
+
+/** cancel_appointment: the client (own) or the business (schedule), before the start. */
+export async function cancelAppointment(id: string, reason: string | null = null): Promise<Write<{ paidToRefund: boolean }>> {
+  const { data, error } = await db.rpc("cancel_appointment", { p_appointment_id: id, p_reason: reason?.trim() || null });
+  if (error) return writeFail(error, "Could not cancel the appointment");
+  const row = (Array.isArray(data) ? data[0] : data) as Row | null;
+  return { ok: true, value: { paidToRefund: row?.paid_to_refund === true } };
+}
+
+// ---------------------------------------------------------------------------
+// Client
+
+/** Cash only today; Whish is "Soon". The error carries the server's code (ATXE4 → the terms step). */
+export async function bookAppointment(serviceId: string, staffId: string, startsAt: string): Promise<Write<string>> {
+  const { data, error } = await db.rpc("book_appointment", { p_service_id: serviceId, p_staff_id: staffId, p_starts_at: startsAt, p_method: "cash" });
+  if (error) return writeFail(error, "Could not book the appointment");
+  return { ok: true, value: String(data ?? "") };
+}
+
+export async function fetchMyAppointments(includePast = true): Promise<Load<MyAppt[]>> {
+  const { data, error } = await db.rpc("my_appointments", { p_include_past: includePast });
+  if (error) return loadFail(error, "Could not read your appointments");
+  return { status: "ok", value: ((data ?? []) as Row[]).map(toMyAppt) };
+}
+
+/** One of the caller's appointments (my_appointments, past included). */
+export async function fetchMyAppointment(id: string): Promise<Load<MyAppt | null>> {
+  const r = await fetchMyAppointments(true);
+  if (r.status !== "ok") return r;
+  return { status: "ok", value: r.value.find((a) => a.id === id) ?? null };
 }

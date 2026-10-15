@@ -1,23 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import clsx from "clsx";
-import { Banknote, CalendarClock, CalendarPlus, Sparkles, Wallet } from "lucide-react";
+import { Banknote, CalendarClock, CalendarPlus, Sparkles, User, Wallet } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { useApp } from "../../context/AppContext";
-import { bookAppointment, fetchFreeSlots, fetchServices, type Service, type Slot } from "../../services/appointments";
+import { fetchServices, fetchSlots, refreshesTimes, slotTimes, staffChoices, type Service, type Slot } from "../../services/appointments";
 import { fetchStoreInfo } from "../../services/store/customer";
 import { dayTitle, isoDate, money, shortDate } from "../../services/store/format";
 import { clock12, rangeClock12 } from "../../utils/time12";
 import { DAY_SHORT, mondayIndex } from "../../utils/week";
 import { useOnline } from "../../hooks/useOnline";
 import { useLive } from "../business-ops/store/storeShared";
+import { ClassTermsSheet } from "../marketplace/ClassTermsSheet";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RadioRow, RetryLine, Section, SkeletonCards, SoonChip } from "../store/clientKit";
+import { useAppointmentBooking, type ApptBookOutcome } from "./useAppointmentBooking";
 
 // OURS-customer-appointment-booking (Designed by us): service → day and time
-// (Monday-first strip, 12-hour slots) → confirm → My appointments. Cash at
-// the visit; Whish "Soon". Entry: the store's page on Explore ("Book an
-// appointment").
+// (Monday-first strip, 12-hour slots) → who (when more than one person is
+// free then) → confirm → My appointments. Cash at the visit; Whish "Soon".
+// Entry: the store's page on Explore ("Book an appointment").
+//
+// B12: free times are appointment_slots(service, day): a start every 15
+// minutes per staff member; the grid shows each time once. A person's first
+// name shows only when they are listed publicly, otherwise "Any available".
+// book_appointment(service, staff, start, 'cash'); ATXE4 = the business's
+// terms first (ClassTermsSheet, the class flow), then book.
 
 const DAYS = 14;
 
@@ -25,7 +33,7 @@ export default function BookAppointmentPage() {
   const { businessId = "" } = useParams();
   const navigate = useNavigate();
   const online = useOnline();
-  const { user } = useApp();
+  const { user, authUserId } = useApp();
   const live = useLive(
     async () => {
       const [st, sv] = await Promise.all([fetchStoreInfo(businessId), fetchServices(businessId, true)]);
@@ -36,11 +44,12 @@ export default function BookAppointmentPage() {
     0,
     businessId
   );
+  const booking = useAppointmentBooking(businessId, authUserId ?? null);
   const [service, setService] = useState<Service | null>(null);
   const [date, setDate] = useState(isoDate(new Date()));
   const [slots, setSlots] = useState<Slot[] | null | "error">(null);
-  const [slot, setSlot] = useState<Slot | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [time, setTime] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const s = live.state;
@@ -55,18 +64,22 @@ export default function BookAppointmentPage() {
     if (!service) return;
     let alive = true;
     setSlots(null);
-    setSlot(null);
-    void fetchFreeSlots(businessId, service.id, date, date).then((r) => {
+    setTime(null);
+    setStaffId(null);
+    void fetchSlots(service.id, date).then((r) => {
       if (!alive) return;
       setSlots(r.status === "ok" ? r.value.filter((x) => new Date(x.startsAt).getTime() > Date.now()) : r.status === "pending" ? [] : "error");
     });
     return () => {
       alive = false;
     };
-  }, [businessId, service, date, tick]);
+  }, [service, date, tick]);
 
-  const am = useMemo(() => (Array.isArray(slots) ? slots.filter((x) => new Date(x.startsAt).getHours() < 12) : []), [slots]);
-  const pm = useMemo(() => (Array.isArray(slots) ? slots.filter((x) => new Date(x.startsAt).getHours() >= 12) : []), [slots]);
+  const times = useMemo(() => (Array.isArray(slots) ? slotTimes(slots) : []), [slots]);
+  const am = useMemo(() => times.filter((x) => new Date(x.startsAt).getHours() < 12), [times]);
+  const pm = useMemo(() => times.filter((x) => new Date(x.startsAt).getHours() >= 12), [times]);
+  const choices = useMemo(() => (Array.isArray(slots) && time ? staffChoices(slots, time) : []), [slots, time]);
+  const picked = Array.isArray(slots) && time ? slots.find((x) => x.startsAt === time && x.staffId === staffId) ?? null : null;
 
   if (s.status === "loading") {
     return (
@@ -85,31 +98,41 @@ export default function BookAppointmentPage() {
     );
   }
 
-  const book = async () => {
-    if (!service || !slot) return;
-    setBusy(true);
-    setError(null);
-    const r = await bookAppointment(service.id, slot.startsAt);
-    setBusy(false);
-    if (!r.ok) {
-      if (r.taken) {
-        setError("That time was just booked. Pick another.");
-        setTick((t) => t + 1);
-      } else setError(r.pending ? "Booking is coming soon." : "Couldn't book. Try again.");
-      return;
+  const after = (r: ApptBookOutcome) => {
+    if (r.kind === "booked") navigate(`/app/appointments/${r.id}?booked=1`, { replace: true });
+    else if (r.kind === "error" && r.message) {
+      setError(r.message);
+      if (refreshesTimes(r.code)) setTick((t) => t + 1);
     }
-    navigate(`/app/appointments/${r.value}?booked=1`, { replace: true });
+  };
+  const book = async () => {
+    if (!service || !picked) return;
+    setError(null);
+    after(await booking.start(service.id, picked.staffId, picked.startsAt));
+  };
+  const agree = async () => {
+    if (!service || !picked) return;
+    setError(null);
+    after(await booking.agree(service.id, picked.staffId, picked.startsAt));
+  };
+
+  const pickTime = (startsAt: string) => {
+    setTime(startsAt);
+    setError(null);
+    const c = Array.isArray(slots) ? staffChoices(slots, startsAt) : [];
+    // One person free then: theirs. Several: the client chooses.
+    setStaffId(c.length === 1 ? c[0].staffId : null);
   };
 
   const slotChip = (x: Slot) => {
-    const on = slot?.startsAt === x.startsAt;
+    const on = time === x.startsAt;
     return (
       <button
         key={x.startsAt}
         type="button"
         role="radio"
         aria-checked={on}
-        onClick={() => setSlot(x)}
+        onClick={() => pickTime(x.startsAt)}
         className={clsx("tap rounded-[12px] text-[14px] font-semibold tabular-nums", on ? "bg-primary-fill text-on-primary-fill" : "bg-cream-card border border-charcoal/[0.08] text-charcoal")}
         style={{ height: 44, padding: "0 10px" }}
       >
@@ -117,6 +140,8 @@ export default function BookAppointmentPage() {
       </button>
     );
   };
+
+  const who = choices.find((c) => c.staffId === staffId)?.label ?? null;
 
   return (
     <div>
@@ -139,7 +164,7 @@ export default function BookAppointmentPage() {
                     selected={service?.id === x.id}
                     onSelect={() => setService(x)}
                     title={x.name}
-                    sub={`${x.durationMin} min${x.price !== null ? ` · ${money(x.price)}` : ""}`}
+                    sub={`${x.durationMin} min · ${money(x.price)}`}
                   />
                 ))}
               </div>
@@ -178,7 +203,7 @@ export default function BookAppointmentPage() {
                 <SkeletonCards heights={[44, 44]} label="Loading free times" />
               ) : slots === "error" ? (
                 <RetryLine text="Couldn't load the free times." onRetry={() => setTick((t) => t + 1)} />
-              ) : slots.length === 0 ? (
+              ) : times.length === 0 ? (
                 <p className="text-[13px] font-medium text-charcoal-faint">No free times this day. Try another day.</p>
               ) : (
                 <div role="radiogroup" aria-label="Time">
@@ -199,10 +224,23 @@ export default function BookAppointmentPage() {
             </Section>
           )}
 
-          {service && slot && (
+          {service && time && choices.length > 1 && (
+            <Section label="With">
+              <ClientCard>
+                <div role="radiogroup" aria-label="With">
+                  {choices.map((c) => (
+                    <RadioRow key={c.staffId} icon={User} selected={staffId === c.staffId} onSelect={() => setStaffId(c.staffId)} title={c.label} />
+                  ))}
+                </div>
+              </ClientCard>
+            </Section>
+          )}
+
+          {service && picked && (
             <Section label="Confirm">
               <ClientCard label="Your booking">
-                <ClientRow icon={Sparkles} title={service.name} sub={`${shortDate(new Date(slot.startsAt))}, ${rangeClock12(slot.startsAt, slot.endsAt)}`} value={service.price !== null ? money(service.price) : undefined} />
+                <ClientRow icon={Sparkles} title={service.name} sub={`${shortDate(new Date(picked.startsAt))}, ${rangeClock12(picked.startsAt, picked.endsAt)}`} value={money(service.price)} />
+                {who && <ClientRow icon={User} title={who} sub="With" />}
                 <ClientRow icon={Banknote} title="Cash" sub="Pay at the visit" />
                 <ClientRow icon={Wallet} title="Whish" sub="Pay in the app" trailing={<SoonChip />} />
               </ClientCard>
@@ -220,9 +258,10 @@ export default function BookAppointmentPage() {
           {user.accountType === "customer" && (
             <>
               <div aria-hidden style={{ height: 60 }} />
-              <PinnedCta primary={{ label: slot ? `Book ${clock12(slot.startsAt)}` : "Book", onClick: () => void book(), disabled: !service || !slot || !online, loading: busy }} />
+              <PinnedCta primary={{ label: picked ? `Book ${clock12(picked.startsAt)}` : "Book", onClick: () => void book(), disabled: !service || !picked || !online, loading: booking.busy && !booking.terms }} />
             </>
           )}
+          <ClassTermsSheet docs={booking.terms} businessName={d.store.name} busy={booking.busy} online={online} error={booking.termsError} onAgree={() => void agree()} onClose={booking.closeTerms} />
         </>
       )}
     </div>

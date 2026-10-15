@@ -33,7 +33,7 @@ export default function BusinessOperationsTab() {
   // Batch 4 store: Orders (To fulfil · Completed · Returns); a Wellness
   // Service with appointments only: Appointments (O11).
   if (kind === "store") return <ConsoleGate need="store"><StoreOrdersPage /></ConsoleGate>;
-  if (kind === "appointments") return <ConsoleGate need="owner"><AppointmentsPage /></ConsoleGate>;
+  if (kind === "appointments") return <ConsoleGate need="schedule"><AppointmentsPage /></ConsoleGate>;
   return <ConsoleGate need="owner"><OperationsLanding /></ConsoleGate>;
 }
 
