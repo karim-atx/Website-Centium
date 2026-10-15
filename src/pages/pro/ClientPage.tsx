@@ -23,6 +23,7 @@ import { FilesTab } from "../../components/pro/client/FilesTab";
 import { CarePlanTab } from "../../components/pro/client/CarePlanTab";
 import { HealthRecordsTab } from "../../components/pro/client/HealthRecordsTab";
 import { ChangeHistorySheet } from "../../components/pro/client/ChangeHistorySheet";
+import { ClientInsightsRoute } from "../../components/pro/insights/ClientInsightsRoute";
 import { TagsSheet, EndCoachingPopup } from "../../components/pro/client/ClientActions";
 import type { Tone } from "../../components/pro/client/kit";
 import { addTag, CLIENT_STAGES, removeTag, setClientStage, STAGE_LABEL, type ClientStage } from "../../services/pro/clients";
@@ -89,6 +90,8 @@ export default function ClientPage() {
   const next = useMemo(() => (data.sessions ?? []).find((s) => `${s.date} ${s.startTime}` >= nowKey) ?? null, [data.sessions, nowKey]);
 
   if (!lane) return null;
+  // W5: "Client insights" (NU14) for Full coaching and Nutrition, a sub-page of the client page.
+  if (tab === "insights" && lane !== "clinical_overview") return <ClientInsightsRoute clientId={id} lane={lane} />;
   const tabs = CLIENT_TABS[lane];
   const current = pickTab(tabs, tab);
   if (tab !== undefined && tab !== current) return <Navigate to={proClientPath(id, current)} replace />;

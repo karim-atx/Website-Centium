@@ -1,0 +1,269 @@
+// Release 3 · W5 Library › Programmes: the pure rules behind TR1, TR5, TR7,
+// TR14 and TR22, kept out of the components so they can be tested.
+//
+// Data honesty (FINAL_PLAN 3): every line is built from stored values only.
+// workout_templates stores one workout (its exercise list) and duration_weeks;
+// it has no week-by-day schedule and no "workouts a week", so nothing here
+// invents either.
+
+import type { Exercise, LoggedExercise, WorkoutSession, WorkoutTemplate, WorkoutTemplateAssignment } from "../../../types";
+import { resolveWeight } from "../../../services/workout/resolveWeight";
+
+const DAY = 86400000;
+const toDate = (iso: string) => new Date(`${iso}T00:00:00`);
+export const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export const addDays = (iso: string, n: number) => {
+  const d = toDate(iso);
+  d.setDate(d.getDate() + n);
+  return isoOf(d);
+};
+const daysBetween = (a: string, b: string) => Math.round((toDate(b).getTime() - toDate(a).getTime()) / DAY);
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** TR1 card meta: "{n} weeks · {n} exercises" from what the row stores. */
+export function templateMeta(t: Pick<WorkoutTemplate, "durationWeeks" | "exercises">): string {
+  const parts: string[] = [];
+  if (t.durationWeeks) parts.push(plural(t.durationWeeks, "week", "weeks"));
+  parts.push(plural(t.exercises.length, "exercise", "exercises"));
+  return parts.join(" · ");
+}
+
+/** "{n} clients" / "{n} client" (TR1 COPY). */
+export const clientsLabel = (n: number) => plural(n, "client", "clients");
+
+/** Active = not ended (Release 3 end_template_assignment keeps the row with ended_at). */
+export const isActive = (a: Pick<WorkoutTemplateAssignment, "endedAt">) => !a.endedAt;
+
+/**
+ * The programme end date, mirroring assign_template_to_client:
+ * starts_on + ((duration_weeks - join_week + 1) × 7 - 1) days; null without a length.
+ */
+export function programmeEnd(startsOn: string, joinWeek: number, durationWeeks: number | null | undefined): string | null {
+  if (!durationWeeks) return null;
+  return addDays(startsOn, (durationWeeks - joinWeek + 1) * 7 - 1);
+}
+
+/**
+ * The week the client is in today: floor(days since start ÷ 7) + join week,
+ * capped by the length (W3's weekOf in services/pro/clients.ts, same rule).
+ * null before the start or after the end.
+ */
+export function currentWeek(
+  startsOn: string | null | undefined,
+  joinWeek: number | undefined,
+  durationWeeks: number | null | undefined,
+  today: string
+): { n: number; of: number | null } | null {
+  if (!startsOn) return null;
+  const days = daysBetween(startsOn, today);
+  if (days < 0) return null;
+  const n = Math.floor(days / 7) + (joinWeek ?? 1);
+  if (durationWeeks && n > durationWeeks) return null;
+  return { n, of: durationWeeks ?? null };
+}
+
+/** TR1 assigned row: "Week {n} of {n} · {n}% done"; parts drop out when unknown. */
+export function assignedLine(week: { n: number; of: number | null } | null, pct: number | null | undefined): string | null {
+  const parts: string[] = [];
+  if (week) parts.push(week.of ? `Week ${week.n} of ${week.of}` : `Week ${week.n}`);
+  if (typeof pct === "number") parts.push(`${pct}% done`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** The programme weeks the client covers: join week to the length (TR7 columns). */
+export function programmeWeeks(a: Pick<WorkoutTemplateAssignment, "startsOn" | "joinWeek">, durationWeeks: number): { week: number; from: string; until: string }[] {
+  if (!a.startsOn) return [];
+  const join = a.joinWeek ?? 1;
+  const out: { week: number; from: string; until: string }[] = [];
+  for (let w = join; w <= durationWeeks; w += 1) {
+    const from = addDays(a.startsOn, (w - join) * 7);
+    out.push({ week: w, from, until: addDays(from, 6) });
+  }
+  return out;
+}
+
+export type WeekCell = "all" | "part" | "none" | "future";
+
+/** TR7 legend: All done / Partly done / Not yet, from planned vs completed for that week. */
+export function weekCell(planned: number | null, completed: number | null, future: boolean): WeekCell {
+  if (future) return "future";
+  if (!planned || completed == null) return "none";
+  if (completed >= planned) return "all";
+  return completed > 0 ? "part" : "none";
+}
+
+// ---------------------------------------------------------------------------
+// TR14 targets per client
+// ---------------------------------------------------------------------------
+
+export interface ClientTarget {
+  clientId: string;
+  oneRmKg: number | null;
+  /** resolve_weight(1RM, intensity, kg); null without a 1RM or an intensity. */
+  fromOneRm: number | null;
+}
+
+export function targetFor(clientId: string, oneRmKg: number | null, intensityPct: number | undefined): ClientTarget {
+  return { clientId, oneRmKg, fromOneRm: resolveWeight(oneRmKg, intensityPct ?? null, "kg") };
+}
+
+/** "John Doe 82.5 kg · Jane Smith 40 kg": clients with a computed weight only. */
+export function targetsSummary(rows: { name: string; kg: number | null }[]): string | null {
+  const parts = rows.filter((r) => r.kg != null).map((r) => `${r.name} ${fmtKg(r.kg!)} kg`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+export const fmtKg = (kg: number) => (Number.isInteger(kg) ? String(kg) : String(Math.round(kg * 10) / 10));
+
+// ---------------------------------------------------------------------------
+// TR22 the client's workout log against the targets
+// ---------------------------------------------------------------------------
+
+export interface Swap {
+  from: string;
+  to: string;
+  reason: string | null;
+}
+
+/**
+ * workout_sessions.swaps is a jsonb array whose element shape the backend
+ * does not specify (only the array check). Read defensively: an element
+ * names what was planned and what was done, under the most likely keys.
+ */
+export function parseSwaps(raw: unknown): Swap[] {
+  if (!Array.isArray(raw)) return [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const out: Swap[] = [];
+  for (const e of raw) {
+    if (!e || typeof e !== "object") continue;
+    const o = e as Record<string, unknown>;
+    const from = str(o.from) ?? str(o.from_name) ?? str(o.original) ?? str(o.planned);
+    const to = str(o.to) ?? str(o.to_name) ?? str(o.replacement) ?? str(o.done);
+    if (!from || !to) continue;
+    out.push({ from, to, reason: str(o.reason) ?? str(o.note) });
+  }
+  return out;
+}
+
+export type LogStatus = "planned" | "above" | "below" | "changed" | "skipped";
+
+export interface LogRow {
+  name: string;
+  swapped: boolean;
+  target: string | null;
+  logged: string | null;
+  status: LogStatus;
+}
+
+const doneSets = (ex: LoggedExercise) => ex.sets.filter((s) => (s.outcome ?? (s.completed ? "completed" : "skipped")) !== "skipped");
+
+const kgText = (kg: number | null | undefined) => (kg == null ? null : kg === 0 ? null : `${fmtKg(kg)} kg`);
+
+/** "Target 4 × 6 at 82.5 kg" (sets × reps, then the prescribed weight when there is one). */
+export function targetText(ex: Exercise): string | null {
+  const sets = ex.sets ?? ex.maxSets ?? ex.minSets;
+  const reps = ex.reps ?? ex.maxReps ?? ex.minReps;
+  if (!sets && !reps) return null;
+  const w = kgText(ex.weightKg);
+  return `Target ${sets ?? "?"} × ${reps ?? "?"}${w ? ` at ${w}` : ""}`;
+}
+
+/** "logged 3 × 8 at 28 kg": sets done × the most common reps, at the heaviest weight. */
+export function loggedText(ex: LoggedExercise): string | null {
+  const sets = doneSets(ex);
+  if (sets.length === 0) return null;
+  const reps = Math.max(...sets.map((s) => s.reps ?? 0));
+  const top = Math.max(...sets.map((s) => s.weightKg ?? 0));
+  return `logged ${sets.length} × ${reps}${top > 0 ? ` at ${fmtKg(top)} kg` : ""}`;
+}
+
+/**
+ * One row per prescribed exercise: matched to what was logged by name (or by
+ * the swap that replaced it), then judged against the target: Skipped when
+ * nothing was done, Changed when swapped, Above / Below on volume (sets ×
+ * reps × weight, or sets × reps without a weight), else As planned.
+ */
+export function compareLog(prescribed: Exercise[], session: Pick<WorkoutSession, "exercises">, swaps: Swap[]): LogRow[] {
+  const byName = new Map(session.exercises.map((e) => [e.name.toLowerCase(), e]));
+  const used = new Set<string>();
+  const rows: LogRow[] = [];
+  for (const p of prescribed) {
+    const swap = swaps.find((s) => s.from.toLowerCase() === p.name.toLowerCase());
+    const logged = byName.get((swap ? swap.to : p.name).toLowerCase());
+    if (logged) used.add(logged.name.toLowerCase());
+    const target = targetText(p);
+    const loggedLine = logged ? loggedText(logged) : null;
+    if (!logged || !loggedLine) {
+      rows.push({ name: swap ? swap.to : p.name, swapped: !!swap, target, logged: null, status: "skipped" });
+      continue;
+    }
+    if (swap) {
+      rows.push({ name: swap.to, swapped: true, target, logged: loggedLine, status: "changed" });
+      continue;
+    }
+    const sets = doneSets(logged);
+    const tSets = p.sets ?? p.maxSets ?? p.minSets ?? 0;
+    const tReps = p.reps ?? p.maxReps ?? p.minReps ?? 0;
+    const tW = p.weightKg && p.weightKg > 0 ? p.weightKg : 1;
+    const tVol = tSets * tReps * tW;
+    const vol = sets.reduce((sum, s) => sum + (s.reps ?? 0) * (p.weightKg && p.weightKg > 0 ? s.weightKg ?? 0 : 1), 0);
+    const status: LogStatus = tVol === 0 ? "planned" : vol > tVol ? "above" : vol < tVol ? "below" : "planned";
+    rows.push({ name: p.name, swapped: false, target, logged: loggedLine, status });
+  }
+  // Anything logged that the prescription doesn't name (and no swap explains).
+  for (const e of session.exercises) {
+    if (used.has(e.name.toLowerCase())) continue;
+    const line = loggedText(e);
+    if (line) rows.push({ name: e.name, swapped: false, target: null, logged: line, status: "changed" });
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
+// TR7 top lifts this block
+// ---------------------------------------------------------------------------
+
+export interface TopLift {
+  exercise: string;
+  firstKg: number;
+  lastKg: number;
+  reps: number;
+}
+
+/**
+ * The client's biggest change in top working weight between their first and
+ * latest session of this programme, over exercises logged at least twice.
+ */
+export function topLift(sessions: Pick<WorkoutSession, "startedAt" | "exercises">[]): TopLift | null {
+  const ordered = [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const series = new Map<string, { kg: number; reps: number }[]>();
+  for (const s of ordered) {
+    for (const ex of s.exercises) {
+      const sets = doneSets(ex).filter((x) => (x.weightKg ?? 0) > 0);
+      if (!sets.length) continue;
+      const best = sets.reduce((a, b) => ((b.weightKg ?? 0) > (a.weightKg ?? 0) ? b : a));
+      const list = series.get(ex.name) ?? [];
+      list.push({ kg: best.weightKg ?? 0, reps: best.reps ?? 0 });
+      series.set(ex.name, list);
+    }
+  }
+  let best: TopLift | null = null;
+  for (const [exercise, list] of series) {
+    if (list.length < 2) continue;
+    const first = list[0];
+    const last = list[list.length - 1];
+    const delta = last.kg - first.kg;
+    if (!best || Math.abs(delta) > Math.abs(best.lastKg - best.firstKg)) best = { exercise, firstKg: first.kg, lastKg: last.kg, reps: last.reps };
+  }
+  return best;
+}
+
+/** "+10 kg" / "-2.5 kg" / "0 kg". */
+export const deltaKg = (l: TopLift) => {
+  const d = Math.round((l.lastKg - l.firstKg) * 10) / 10;
+  return `${d > 0 ? "+" : ""}${fmtKg(d)} kg`;
+};
+
+/** True while a Library › Programmes sub-screen is open (?view=…); the Library page may hide its title and tabs then. */
+export const programmesDetailOpen = (params: URLSearchParams) => !!params.get("view");

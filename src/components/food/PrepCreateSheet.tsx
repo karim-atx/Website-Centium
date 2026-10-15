@@ -5,9 +5,10 @@ import type { PrepKind } from "./MealPrepFlowSheet";
 import type { CustomMeal, Recipe } from "../../types";
 
 /**
- * The Meal Prep create screen (and the meal-plan builder's meal editor) in a
- * sheet: the shared form (usePrepForm). Save, delete and the back chevron
- * return to `onBack` when there is one, otherwise the sheet closes.
+ * The Meal Prep create screen in a sheet: the shared form (usePrepForm).
+ * Save, delete and the back chevron return to `onBack` when there is one,
+ * otherwise the sheet closes. Professionals use it for their own recipes
+ * (Release 3 NU9).
  */
 export const PrepCreateSheet: React.FC<{
   kind: PrepKind;
@@ -16,10 +17,8 @@ export const PrepCreateSheet: React.FC<{
   editMeal?: CustomMeal | null;
   editRecipe?: Recipe | null;
   onBack?: () => void;
-  /** Professional meal-plan builder: the client whose plan this meal belongs to. */
-  clientId?: string;
-}> = ({ kind, open, onClose, editMeal, editRecipe, onBack, clientId }) => {
-  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, clientId, onDone: () => (onBack ?? onClose)() });
+}> = ({ kind, open, onClose, editMeal, editRecipe, onBack }) => {
+  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, onDone: () => (onBack ?? onClose)() });
   return (
     <BottomSheet
       open={open}

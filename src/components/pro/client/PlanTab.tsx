@@ -9,7 +9,10 @@ import { Toggle } from "../../ui/Toggle";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { INK } from "../proInk";
 import { LockLine } from "../LockLine";
-import { ComingSoonPill } from "../ComingSoon";
+import { mealPlansHref } from "../nutrition/nav";
+import { itemMacros } from "../nutrition/itemFacts";
+import { SLOT_ORDER } from "../nutrition/nutritionModel";
+import { fetchPlan } from "../../../services/pro/nutrition";
 import { ProCardSkeleton, ProError } from "../states";
 import { Card, Chip, ListCard, SectionHead, SoftLine, type ListRow, type Tone } from "./kit";
 import { fmtDay } from "./clientFormat";
@@ -23,11 +26,9 @@ import {
   fetchClientProgrammes,
   fetchClientTargets,
   fetchDayItems,
-  fetchMealPlanDay,
   type ClientMealPlan,
   type ClientProgramme,
   type ClientTargets,
-  type MealPlanItem,
 } from "../../../services/pro/clientPage";
 import { setNutritionCoaching } from "../../../services/pro/clients";
 import { mondayFirstWeek, DAY_SHORT } from "../../../utils/week";
@@ -50,7 +51,9 @@ import type { AccessCategory } from "../../../services/pro/access";
  *   targets and food journal rows; off: "Off for {name}. Nutrition sections
  *   are hidden.";
  * - Nutrition lane: the meal plan card with the macro split bars, today's
- *   meals (meal_plan_detail), targets, food journal (W5: Coming soon).
+ *   meals (meal_plan_detail), the targets you set (my_client_nutrition_targets,
+ *   NU8) and the food journal (NU5 / NU6, behind the Food diary switch); the
+ *   rows open the W5 Meal plans screens.
  */
 export const PlanTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: (c: AccessCategory) => void }> = ({ data, lane, onAsk }) => {
   const { authUserId } = useApp();
@@ -59,26 +62,25 @@ export const PlanTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: (c:
   const [meal, setMeal] = useState<{ plan: ClientMealPlan | null; error: boolean } | null>(null);
   const [targets, setTargets] = useState<ClientTargets | null | undefined>(undefined);
   const [nonce, setNonce] = useState(0);
-  const showProgress = data.access.has("progress");
 
   useEffect(() => {
     if (!authUserId) return;
     let live = true;
     if (lane === "full_coaching") void fetchClientProgrammes(authUserId, clientId).then((r) => live && setProgrammes(r.ok ? { list: r.data, error: false } : { list: null, error: true }));
     void fetchClientMealPlan(authUserId, clientId).then((r) => live && setMeal(r.ok ? { plan: r.data, error: false } : { plan: null, error: true }));
-    if (showProgress) void fetchClientTargets(authUserId, clientId).then((r) => live && setTargets(r.ok ? r.data : null));
+    void fetchClientTargets(clientId).then((r) => live && setTargets(r.ok ? r.data : null));
     return () => {
       live = false;
     };
-  }, [authUserId, clientId, lane, nonce, showProgress]);
+  }, [authUserId, clientId, lane, nonce]);
 
   if (lane === "nutrition") {
-    return <MealPlanSection data={data} meal={meal} targets={targets} showProgress={showProgress} retry={() => setNonce((n) => n + 1)} onAsk={onAsk} standalone />;
+    return <MealPlanSection data={data} meal={meal} targets={targets} retry={() => setNonce((n) => n + 1)} onAsk={onAsk} standalone lane={lane} />;
   }
   return (
     <>
       <ProgrammeSection data={data} programmes={programmes} retry={() => setNonce((n) => n + 1)} onAsk={onAsk} />
-      <NutritionSection data={data} meal={meal} targets={targets} showProgress={showProgress} onAsk={onAsk} retry={() => setNonce((n) => n + 1)} />
+      <NutritionSection data={data} meal={meal} targets={targets} onAsk={onAsk} retry={() => setNonce((n) => n + 1)} />
     </>
   );
 };
@@ -252,10 +254,9 @@ const NutritionSection: React.FC<{
   data: ClientPageData;
   meal: { plan: ClientMealPlan | null; error: boolean } | null;
   targets: ClientTargets | null | undefined;
-  showProgress: boolean;
   onAsk: (c: AccessCategory) => void;
   retry: () => void;
-}> = ({ data, meal, targets, showProgress, onAsk, retry }) => {
+}> = ({ data, meal, targets, onAsk, retry }) => {
   const navigate = useNavigate();
   const { rel, firstName, stage } = data;
   const [on, setOn] = useState<boolean>(stage?.nutritionCoaching ?? true);
@@ -288,7 +289,7 @@ const NutritionSection: React.FC<{
           {err}
         </p>
       )}
-      {on && <MealPlanSection data={data} meal={meal} targets={targets} showProgress={showProgress} retry={retry} onAsk={onAsk} />}
+      {on && <MealPlanSection data={data} meal={meal} targets={targets} retry={retry} onAsk={onAsk} lane="full_coaching" />}
     </>
   );
 };
@@ -299,63 +300,89 @@ const MealPlanSection: React.FC<{
   data: ClientPageData;
   meal: { plan: ClientMealPlan | null; error: boolean } | null;
   targets: ClientTargets | null | undefined;
-  showProgress: boolean;
   retry: () => void;
   onAsk: (c: AccessCategory) => void;
   standalone?: boolean;
-}> = ({ data, meal, targets, showProgress, retry, onAsk, standalone }) => {
+  lane: ProLane;
+}> = ({ data, meal, targets, retry, onAsk, standalone, lane }) => {
   const navigate = useNavigate();
   const { today, firstName } = data;
-  const [items, setItems] = useState<MealPlanItem[] | null | undefined>(undefined);
+  const { recipes, customMeals } = useApp();
+  const [items, setItems] = useState<{ slot: string; name: string; kcal: number | null; protein: number | null }[] | null | undefined>(undefined);
   const plan = meal?.plan ?? null;
   const dayIndex = plan && plan.startsOn && plan.daysCount ? Math.max(0, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${plan.startsOn}T00:00:00`).getTime()) / 86400000)) % plan.daysCount : null;
   useEffect(() => {
     if (!standalone || !plan || dayIndex === null) return;
     let live = true;
-    void fetchMealPlanDay(plan.planId, dayIndex).then((r) => live && setItems(r.ok ? r.data : null));
+    // day_index is 1-based (meal_plan_days). Each item scaled to its portion with the
+    // builder's own math (meal_plan_detail returns per-serving facts, not item totals).
+    void fetchPlan(plan.planId).then((r) => {
+      if (!live) return;
+      if (!r.ok || !r.data) return setItems(r.ok ? [] : null);
+      const day = r.data.days.find((d) => d.dayIndex === dayIndex + 1);
+      setItems(
+        (day?.items ?? [])
+          .slice()
+          .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || a.position - b.position)
+          .map((it) => {
+            const m = itemMacros(it, { recipes, customMeals });
+            return { slot: it.slot, name: it.name, kcal: m ? m.kcal : null, protein: m ? m.p : null };
+          })
+      );
+    });
     return () => {
       live = false;
     };
-  }, [standalone, plan, dayIndex]);
+  }, [standalone, plan, dayIndex, recipes, customMeals]);
 
   if (!meal) return <ProCardSkeleton lines={3} />;
   if (meal.error) return <ProError onRetry={retry} />;
-  const toPlans = () => navigate(PRO_ROUTES.mealPlans);
+  // W5: the rows open the Meal plans area (Nutrition's tab, Full coaching's Library › Meal plans).
+  const toPlans = () => navigate(mealPlansHref(lane, "plans"));
+  const toCopy = () => (plan ? navigate(mealPlansHref(lane, "plans", { plan: plan.planId })) : toPlans());
+  const toTargets = () => navigate(mealPlansHref(lane, "targets", { client: data.clientId }));
+  const toJournal = () => navigate(mealPlansHref(lane, "journals", { client: data.clientId }));
+  const diaryShared = data.access.has("food_diary");
   const weekN = plan?.startsOn ? Math.floor(Math.max(0, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${plan.startsOn}T00:00:00`).getTime()) / 86400000)) / 7) + 1 : null;
   const kcal = plan?.kcal ? `${Math.round(plan.kcal).toLocaleString("en-GB")} kcal` : null;
 
-  const targetsRow: ListRow = !showProgress
-    ? {
-        key: "t",
-        icon: Target,
-        title: "Targets",
-        meta: "Progress isn't shared, so targets are hidden.",
-        trailing: (
-          <button type="button" onClick={() => onAsk("progress")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
-            Ask to share
-          </button>
-        ),
-      }
-    : targets === undefined
+  // my_client_nutrition_targets: the targets you set, no switch needed.
+  const targetsRow: ListRow =
+    targets === undefined
       ? { key: "t", icon: Target, title: "Targets", meta: "Loading…" }
       : !targets
-        ? { key: "t", icon: Target, title: "No targets set yet", meta: "Set them from Meal plans" }
+        ? { key: "t", icon: Target, title: "No targets set by you", meta: "Set calories and macros", onClick: toTargets }
         : {
             key: "t",
             icon: Target,
-            title: targets.setByMe ? "Targets set by you" : `Targets set by ${firstName}`,
-            meta: [targets.calories ? `${Math.round(targets.calories).toLocaleString("en-GB")} kcal` : null, targets.proteinPct ? `${targets.proteinPct}% protein` : null, targets.setByMe && targets.locked ? `locked for ${firstName}` : null].filter(Boolean).join(" · "),
+            title: "Targets set by you",
+            meta: [targets.calories ? `${Math.round(targets.calories).toLocaleString("en-GB")} kcal` : null, targets.proteinPct ? `${targets.proteinPct}% protein` : null, targets.locked ? `locked for ${firstName}` : null].filter(Boolean).join(" · "),
+            onClick: toTargets,
           };
+  // The diary reaches you only through the Food diary switch.
+  const journalRow: ListRow = diaryShared
+    ? { key: "j", icon: BookOpenCheck, title: "Food journal", meta: "Review and feedback", onClick: toJournal }
+    : {
+        key: "j",
+        icon: BookOpenCheck,
+        title: "Food journal",
+        meta: "Food diary isn't shared.",
+        trailing: (
+          <button type="button" onClick={() => onAsk("food_diary")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
+            Ask to share
+          </button>
+        ),
+      };
 
   if (!standalone) {
     return (
       <ListCard
         rows={[
           plan
-            ? { key: "mp", icon: UtensilsCrossed, title: [plan.name, kcal].filter(Boolean).join(" · "), meta: macroLine(plan), onClick: toPlans }
+            ? { key: "mp", icon: UtensilsCrossed, title: [plan.name, kcal].filter(Boolean).join(" · "), meta: macroLine(plan), onClick: toCopy }
             : { key: "mp", icon: UtensilsCrossed, title: "No meal plan yet", meta: "Assign one from Meal plans", onClick: toPlans },
           targetsRow,
-          { key: "j", icon: BookOpenCheck, title: "Food journal", meta: "Review and feedback", trailing: <ComingSoonPill /> },
+          journalRow,
         ]}
       />
     );
@@ -392,7 +419,7 @@ const MealPlanSection: React.FC<{
                 );
               })}
             <div className="flex flex-wrap" style={{ gap: 8, marginTop: 14 }}>
-              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label="Edit plan" onClick={toPlans} />
+              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label="Edit plan" onClick={toCopy} />
               <CtaButton className="flex-1 min-w-[150px]" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label="Assign another" onClick={toPlans} />
             </div>
           </>
@@ -419,14 +446,14 @@ const MealPlanSection: React.FC<{
                 key: `${i}`,
                 icon: Apple,
                 title: `${SLOT_LABEL[it.slot] ?? it.slot} · ${it.name}`,
-                meta: [it.calories != null ? `${Math.round(it.calories)} kcal` : null, it.proteinG != null ? `${Math.round(it.proteinG)} g protein` : null].filter(Boolean).join(" · "),
+                meta: [it.kcal != null ? `${Math.round(it.kcal)} kcal` : null, it.protein != null ? `${Math.round(it.protein)} g protein` : null].filter(Boolean).join(" · "),
               }))}
             />
           )}
         </>
       )}
       <SectionHead label="Targets and journal" />
-      <ListCard rows={[targetsRow, { key: "j", icon: BookOpenCheck, title: "Food journal", meta: "Review and feedback", trailing: <ComingSoonPill /> }]} />
+      <ListCard rows={[targetsRow, journalRow]} />
     </>
   );
 };

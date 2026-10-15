@@ -14,9 +14,9 @@ import { initialsOf } from "./initials";
  * gen/hub5.js plans5): header row only (tile 36 r11, title 14 / 600, line 12,
  * chevron), and when open a divider and the rows (avatar 32, "Name · item",
  * line 11), then See all. Card r20, card fill and border.
- * Full coaching: programmes ending in the next 14 days (W2). Nutrition (meal
- * plans ending) and Clinical overview (referrals and results) are wired by W5
- * and W6 (FINAL_PLAN W2); until then they show Coming soon.
+ * Full coaching: programmes ending in the next 14 days (W2). Nutrition: meal
+ * plans ending in the next 14 days (W5, meal_plan_assignments). Clinical
+ * overview (referrals and results) is wired by W6; until then Coming soon.
  */
 export interface LaneCardRow {
   key: string;
@@ -82,7 +82,7 @@ export const LaneCard: React.FC<{
             </div>
           ) : !wired ? (
             <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>
-              {lane === "nutrition" ? "Meal plans ending soon will show here." : "Referrals awaiting a reply and results due will show here."}
+              Referrals awaiting a reply and results due will show here.
             </p>
           ) : n === 0 ? (
             <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>Nothing ending yet. Plans show here two weeks before they end.</p>

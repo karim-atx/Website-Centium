@@ -114,8 +114,13 @@ const STAGE_WORD: Record<ClientStage, string> = { onboarding: "Onboarding", acti
 /** pro_change_log.summary is jsonb written by the assign, plan and target functions; this reads the keys it can. */
 export function changeLine(subjectType: string, summary: Record<string, unknown>): string {
   const action = typeof summary.action === "string" ? summary.action : null;
-  const name = typeof summary.name === "string" ? summary.name : typeof summary.title === "string" ? summary.title : null;
-  const subject = subjectType.replace(/_/g, " ");
+  // The assign, plan and target functions name their subject under their own key (DB-3, DB-5).
+  const str = (k: string) => (typeof summary[k] === "string" ? (summary[k] as string) : null);
+  const name = str("name") ?? str("title") ?? str("programme") ?? str("plan");
+  // W5: the subject words for the Release 3 writers (template_assignment, meal_plan,
+  // nutrition_targets, routine = the client's copy edited by the professional).
+  const SUBJECT: Record<string, string> = { template_assignment: "programme", meal_plan: "meal plan", nutrition_targets: "nutrition targets", routine: "their copy of a programme" };
+  const subject = SUBJECT[subjectType] ?? subjectType.replace(/_/g, " ");
   if (subjectType === "care_plan" && action === "published") {
     const v = typeof summary.version === "number" ? ` (version ${summary.version})` : "";
     return `Published the care plan${v}`;
@@ -708,46 +713,30 @@ export async function fetchClientMealPlan(me: string, clientId: string): Promise
   };
 }
 
-export interface MealPlanItem {
-  dayIndex: number;
-  dayLabel: string | null;
-  slot: string;
-  name: string;
-  calories: number | null;
-  proteinG: number | null;
-}
-
-export async function fetchMealPlanDay(planId: string, dayIndex: number): Promise<Read<MealPlanItem[]>> {
-  const { data, error } = await rpc("meal_plan_detail", { p_meal_plan_id: planId });
-  if (error) return readFail(error);
-  type Row = { day_index: number; day_label: string | null; meal_slot: string; item_position: number; name: string; calories: unknown; protein_g: unknown };
-  return {
-    ok: true,
-    data: ((data ?? []) as Row[])
-      .filter((r) => r.day_index === dayIndex)
-      .sort((a, b) => a.item_position - b.item_position)
-      .map((r) => ({ dayIndex: r.day_index, dayLabel: r.day_label, slot: r.meal_slot, name: r.name, calories: num(r.calories), proteinG: num(r.protein_g) })),
-  };
-}
-
 export interface ClientTargets {
   calories: number | null;
   proteinPct: number | null;
   carbsPct: number | null;
   fatPct: number | null;
-  setByMe: boolean;
   locked: boolean;
+  setAt: string;
 }
 
-/** nutrition_goals (current row), readable by a professional with the Progress switch. */
-export async function fetchClientTargets(me: string, clientId: string): Promise<Read<ClientTargets | null>> {
-  const { data, error } = await from("nutrition_goals").select("target_calories, protein_pct, carbs_pct, fat_pct, set_by_professional_id, locked").eq("user_id", clientId).eq("is_current", true).limit(1);
+/**
+ * The targets this professional set for the client (W5, follow-up "The
+ * targets you set": my_client_nutrition_targets). It returns a row only when
+ * the caller set the current targets and is still connected; no switch is
+ * needed. The client's own targets and weight goal stay behind Progress
+ * (nutrition_goals), read on the NU8 screen only.
+ */
+export async function fetchClientTargets(clientId: string): Promise<Read<ClientTargets | null>> {
+  const { data, error } = await rpc("my_client_nutrition_targets", { p_client_id: clientId });
   if (error) return readFail(error);
-  const r = ((data ?? []) as unknown as { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; set_by_professional_id: string | null; locked: boolean | null }[])[0];
+  const r = ((data ?? []) as { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; locked: boolean | null; set_at: string }[])[0];
   if (!r) return { ok: true, data: null };
   return {
     ok: true,
-    data: { calories: num(r.target_calories), proteinPct: num(r.protein_pct), carbsPct: num(r.carbs_pct), fatPct: num(r.fat_pct), setByMe: r.set_by_professional_id === me, locked: !!r.locked },
+    data: { calories: num(r.target_calories), proteinPct: num(r.protein_pct), carbsPct: num(r.carbs_pct), fatPct: num(r.fat_pct), locked: !!r.locked, setAt: r.set_at },
   };
 }
 

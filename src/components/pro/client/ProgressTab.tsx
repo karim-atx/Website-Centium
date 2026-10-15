@@ -15,6 +15,10 @@ import { fetchAdherenceRow, fetchBiomarkerFlags, fetchDayItems, fetchLoggedDays,
 import { shiftIso } from "../../../services/pro/home";
 import { DAY_LETTERS, mondayIndex } from "../../../utils/week";
 import { BP_NONE_LOGGED } from "../../../services/blood-pressure/guidance";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
+import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
+import { CaloriesMacrosChart, MicronutrientsBlock, RpeChart, StrengthChart, VolumeChart, WeightTrendChart } from "../insights/ProgressCharts";
 import type { AccessCategory } from "../../../services/pro/access";
 
 /**
@@ -29,9 +33,12 @@ import type { AccessCategory } from "../../../services/pro/access";
  *   per-day items (pro_client_day_items);
  * - Body: the latest shared weight; Vitals: shared blood pressure, steps
  *   and sleep averages; Biomarkers: client_biomarker_flags;
- * - Strength, Volume, RPE, Calories and macros over time, Micronutrients,
- *   Sleep stages and Check-ins render Coming soon here: their charts are
- *   Insights (W5) and Forms (W6) work, never sample data.
+ * - W5: Strength, Volume, RPE, the weight trend, Calories and macros over
+ *   time and Micronutrients are the Insights charts (insights/
+ *   ProgressCharts.tsx); Sleep stages (wearable stage data) and Check-ins
+ *   (Forms, W6) stay Coming soon, never sample data;
+ * - W5: the top row opens Client insights (Full coaching, Nutrition) or
+ *   this patient in Insights (Clinical overview).
  * Each group is gated by its switch: LockLine when off.
  */
 
@@ -49,6 +56,8 @@ interface Group {
 
 export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: (c: AccessCategory) => void }> = ({ data, lane, onAsk }) => {
   const [range, setRange] = useState<Range>("week");
+  const navigate = useNavigate();
+  const chartInitial = range === "month" ? "M" : "W";
   const [open, setOpen] = useState<string | null>(null);
   const { access, clientId, today, firstName, rel, stage } = data;
   const days = Array.from({ length: RANGE_DAYS[range] }, (_, i) => shiftIso(today, -(RANGE_DAYS[range] - 1 - i)));
@@ -128,16 +137,16 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
     icon: Scale,
     title: "Body",
     summary: !access.has("weight") ? "Not shared" : rel?.lastWeightKg != null ? `Latest weight ${rel.lastWeightKg} kg${rel.weightTrend ? `, ${rel.weightTrend > 0 ? "up" : "down"} ${Math.abs(rel.weightTrend)} kg` : ""}` : "No weigh-ins yet",
-    body: !access.has("weight") ? lock("Weight", "weight") : soon("The weight trend chart arrives with Insights."),
+    body: !access.has("weight") ? lock("Weight", "weight") : <WeightTrendChart clientId={clientId} today={today} initial={chartInitial} bodyOn={access.has("body_measurements")} progressOn={access.has("progress")} />,
   };
 
   let groups: Group[];
   if (lane === "full_coaching") {
     groups = [
-      { key: "str", icon: TrendingUp, title: "Strength", summary: access.has("workout_activity") ? "Best sets and PRs" : "Not shared", body: access.has("workout_activity") ? soon("Strength charts arrive with Insights.") : lock("Workout activity", "workout_activity") },
-      { key: "vol", icon: BarChart3, title: "Volume", summary: access.has("workout_activity") ? "Sets a week" : "Not shared", body: access.has("workout_activity") ? soon("Volume charts arrive with Insights.") : lock("Workout activity", "workout_activity") },
+      { key: "str", icon: TrendingUp, title: "Strength", summary: access.has("workout_activity") ? "Best sets and PRs" : "Not shared", body: access.has("workout_activity") ? <StrengthChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
+      { key: "vol", icon: BarChart3, title: "Volume", summary: access.has("workout_activity") ? "Sets a week" : "Not shared", body: access.has("workout_activity") ? <VolumeChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
       adherenceGroup("Workouts vs planned", "workouts"),
-      { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? "Effort per session" : "Not shared", body: access.has("workout_activity") ? soon("RPE charts arrive with Insights.") : lock("Workout activity", "workout_activity") },
+      { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? "Effort per session" : "Not shared", body: access.has("workout_activity") ? <RpeChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
       bodyGroup,
       { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: "Answers over time", body: soon("Check-in answers arrive with Forms.") },
     ];
@@ -147,7 +156,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         icon: UtensilsCrossed,
         title: "Nutrition",
         summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString("en-GB")} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
-        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : soon("Calories and macros over time arrive with Insights."),
+        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       });
   } else if (lane === "nutrition") {
     const logged = loggedDays ? days.filter((d) => loggedDays.includes(d)).length : null;
@@ -158,17 +167,9 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         icon: UtensilsCrossed,
         title: "Calories and macros",
         summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString("en-GB")} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
-        body: !access.has("food_diary") ? (
-          lock("Food diary", "food_diary")
-        ) : rel?.nutrition ? (
-          <p style={{ fontSize: textPx(13), color: INK.ch }}>
-            {`${fmtDay(rel.nutrition.lastLoggedDate)}: ${Math.round(rel.nutrition.protein)} g protein · ${Math.round(rel.nutrition.carbs)} g carbs · ${Math.round(rel.nutrition.fat)} g fat`}
-          </p>
-        ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF }}>Nothing logged yet.</p>
-        ),
+        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       },
-      { key: "mic", icon: FlaskConical, title: "Micronutrients", summary: access.has("food_diary") ? "Fibre, salt, iron and more" : "Not shared", body: access.has("food_diary") ? soon("Micronutrient analysis arrives with Insights.") : lock("Food diary", "food_diary") },
+      { key: "mic", icon: FlaskConical, title: "Micronutrients", summary: access.has("food_diary") ? "Fibre, salt, iron and more" : "Not shared", body: access.has("food_diary") ? <MicronutrientsBlock clientId={clientId} today={today} days={RANGE_DAYS[range]} firstName={firstName} /> : lock("Food diary", "food_diary") },
       {
         key: "log",
         icon: CalendarCheck,
@@ -247,6 +248,22 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         />
       </div>
       {early && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>Early data: trends start after the first full week.</p>}
+      <button
+        type="button"
+        onClick={() => navigate(lane === "clinical_overview" ? `${PRO_ROUTES.insights}/vitals?client=${encodeURIComponent(clientId)}` : proClientPath(clientId, "insights"))}
+        className="tap w-full flex items-center text-left"
+        style={{ gap: 12, minHeight: 52, padding: "12px 16px", borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, marginBottom: 10 }}
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
+            {lane === "clinical_overview" ? "Open in Insights" : "Client insights"}
+          </span>
+          <span className="block" style={{ fontSize: textPx(12), color: INK.chS }}>
+            Activity, nutrition, vitals{lane === "full_coaching" ? "" : " and biomarkers"}
+          </span>
+        </span>
+        <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+      </button>
       <div className="flex flex-col" style={{ gap: 10 }}>
         {groups.map((g) => (
           <GroupCard key={g.key} group={g} open={open === g.key} onToggle={() => setOpen((o) => (o === g.key ? null : g.key))} />

@@ -14,6 +14,9 @@ import { ProTrendRing, type RingAction } from "../../components/pro/home/ProTren
 import { LANE_ACTION_ICONS } from "../../components/pro/home/ringActions";
 import { ClientStrip, FocusRow, type StripEntry } from "../../components/pro/home/ClientStrip";
 import { LaneCard, type LaneCardRow } from "../../components/pro/home/LaneCard";
+import { fetchMealPlansEnding } from "../../services/pro/nutrition";
+import { mealPlansHref } from "../../components/pro/nutrition/nav";
+import { weekOfPlan } from "../../components/pro/nutrition/nutritionModel";
 import { periodModel, todayModel, type HubRange, type RingModel } from "../../components/pro/home/trendModel";
 import { useProInbox } from "../../components/pro/home/useProInbox";
 import { NotificationsHub, type HubTab, type HubToast } from "../../components/pro/NotificationsHub";
@@ -51,8 +54,8 @@ import type { ProNotification } from "../../services/pro/notifications";
  *   when clients can't hire this professional;
  * - the ProTrendRing hero (hub_trend by range and client, the calendar track,
  *   actions) with the client strip of sharing clients;
- * - one card, collapsed (programmes ending soon, Full coaching; Nutrition and
- *   Clinical overview's cards are wired in W5 and W6), or "Ways to add" with
+ * - one card, collapsed (programmes ending soon, Full coaching; meal plans
+ *   ending soon, Nutrition (W5); Clinical overview's is wired in W6), or "Ways to add" with
  *   no clients yet.
  * The roster list moved to Clients (W3); the hire plans editor stays reachable
  * from Get set up until More (W6) gives it a row.
@@ -165,6 +168,33 @@ export default function Home() {
           line: `Ends ${shortDate(x.endsOn)}${x.week ? ` · week ${x.week.n} of ${x.week.of}` : ""}`,
           onOpen: () => navigate(proClientPath(x.clientId, "plan")),
         })),
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, [lane, authUserId, today, nameOf, navigate, endingNonce]);
+
+  // ---- meal plans ending soon (Nutrition; W5, HANDOVER i: ends within 14 days, not ended) ----
+  const [mealEnding, setMealEnding] = useState<{ rows: LaneCardRow[] | null; error: boolean }>({ rows: null, error: false });
+  useEffect(() => {
+    if (lane !== "nutrition" || !authUserId) return;
+    let live = true;
+    void fetchMealPlansEnding(authUserId, today).then((r) => {
+      if (!live) return;
+      if (!r.ok) return setMealEnding({ rows: null, error: true });
+      setMealEnding({
+        error: false,
+        rows: r.data.map((x) => {
+          const wk = weekOfPlan(x.startsOn, today);
+          return {
+            key: x.id,
+            name: nameOf(x.clientId),
+            item: x.name,
+            line: `Ends ${shortDate(x.endsOn ?? today)}${wk ? ` · week ${wk}` : ""}`,
+            onOpen: () => navigate(mealPlansHref("nutrition", "plans", { plan: x.planId })),
+          };
+        }),
       });
     });
     return () => {
@@ -497,10 +527,10 @@ export default function Home() {
       ) : (
         <LaneCard
           lane={lane}
-          rows={lane === "full_coaching" ? ending.rows : undefined}
-          error={ending.error}
+          rows={lane === "full_coaching" ? ending.rows : lane === "nutrition" ? mealEnding.rows : undefined}
+          error={lane === "nutrition" ? mealEnding.error : ending.error}
           onRetry={() => setEndingNonce((n) => n + 1)}
-          onSeeAll={() => navigate(PRO_ROUTES.clients)}
+          onSeeAll={() => navigate(lane === "nutrition" ? PRO_ROUTES.mealPlans : PRO_ROUTES.clients)}
         />
       )}
 

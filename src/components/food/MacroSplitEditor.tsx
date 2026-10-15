@@ -47,7 +47,7 @@ interface Props {
    * Goals & Macros (FO2.2 / FO4.2 / FO5.2): each macro's grams and share sit
    * in a square at the end of its line and the slider is shortened to make
    * room. The caller renders MACRO_REBALANCE_NOTE itself. Off by default, so
-   * the meal-plan builder is unchanged.
+   * the other editors are unchanged.
    */
   squares?: boolean;
 }

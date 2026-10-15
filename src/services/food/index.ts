@@ -746,9 +746,9 @@ export async function findCatalogFoodByName(name: string): Promise<FoodSearchRes
  * rewritten.
  *
  * scoped_to_client_id is deliberately never set here. That column is for a
- * professional authoring a food FOR a named client, and the meal-plan builder
- * currently identifies clients by relationship id rather than profile id — see
- * addClientCustomFood, which stays local until that is threaded through.
+ * professional authoring a food FOR a named client; no screen writes it yet
+ * (the Release 3 meal-plan builder uses the professional's own foods,
+ * recipes and meals on meal_plan_items).
  */
 export async function createCustomFood(
   userId: string,

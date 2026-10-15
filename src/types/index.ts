@@ -1,5 +1,4 @@
 import type { BloodPressureReading } from "../services/blood-pressure/reading";
-import type { ClientPregnancyStatus } from "../services/cycle/types";
 // Core data model for the Centium prototype.
 // Deliberately simple — a real backend can replace these shapes later
 // without changing how the UI consumes them.
@@ -357,33 +356,6 @@ export interface ProfessionalClient {
    * measurements draw above.
    */
   bloodPressure?: BloodPressureReading[];
-  /**
-   * The client's cycle phase — ONE WORD, from client_cycle_phase().
-   *
-   * Undefined is "not fetched"; "unavailable" is the function's own answer for
-   * a client who HAS shared and has no phase to report (no logs, tracker off,
-   * or a pregnancy they have not also shared). Those are different sentences.
-   */
-  cyclePhase?: string;
-  /** "Pregnant" and a trimester, from client_pregnancy_status(). */
-  /**
-   * What client_pregnancy_status() answered.
-   *
-   * THE VOCABULARY IS THE FUNCTION'S, NOT pregnancies.status'S, and the two
-   * look alike enough to have cost a bug: the table stores 'active' | 'ended',
-   * while the function returns the literal 'pregnant' or no row at all
-   * (rendered here as 'unavailable'). The sheet tested for 'active' and so
-   * showed "No pregnancy recorded." to a professional looking at a client who
-   * was 20 weeks pregnant and had granted exactly that. A union rather than
-   * a plain string makes the next such test a compile error.
-   */
-  pregnancy?: { status: ClientPregnancyStatus; trimester: number | null };
-  /**
-   * Latest tape measurements and body fat, behind the `body_measurements`
-   * grant — its own category, never the vitals one. Undefined means not yet
-   * fetched; an empty object means the grant is held and nothing is logged.
-   */
-  measurements?: Partial<Record<string, { value: number; change: number | null; goal: "decrease" | "increase" | "maintain" | null }>>;
   // NO recoverySensitive HERE (task X). A client's recovery-sensitive mode is
   // their private setting (recovery_mode_settings, owner-only); a
   // professional's view of a client never carries it, by the database's
@@ -395,27 +367,6 @@ export interface ProfessionalClient {
   contactStyle?: string;
   reminderPreference?: string;
   communicationBoundaries?: string;
-  // QA 13.0: "Anything added by the client in the health tab from past
-  // comorbidities, previous surgeries, medications in the Client UI health
-  // tab should also appear here [Professional Health Metrics]." Mocked
-  // directly on the client row as a stand-in for a real sync of the
-  // client's own `comorbidities`/`surgeries`/`medications` state.
-  medicalHistory?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
-  /**
-   * Blood work, gated on lab_results — its OWN category, not the one
-   * covering medications and surgeries. Undefined means not shared or not
-   * loaded; null means shared with no panels recorded. Those are different
-   * answers and the surfaces render them differently.
-   */
-  labs?: ClientLabsSummary | null;
-  /**
-   * Imaging and other tests, gated on medical_history — the same category
-   * as medications and surgeries, deliberately not lab_results.
-   *
-   * An empty array is a real answer here ("nothing recorded"), so absence is
-   * carried by undefined alone.
-   */
-  imaging?: ImagingRecord[];
 }
 
 // V4 (QA 4.0): a professional's own rating + written review for a professional,
@@ -506,6 +457,12 @@ export interface WorkoutTemplate {
    */
   isVerified: boolean;
   ownerId?: string | null;
+  /**
+   * Release 3 (DB-3): the programme's length in weeks (1 to 104), or null for
+   * an open-ended template. Settable on insert only: the UPDATE column grant
+   * on workout_templates does not include duration_weeks.
+   */
+  durationWeeks?: number | null;
 }
 
 export type TemplateLevel = "beginner" | "intermediate" | "advanced";
@@ -529,6 +486,14 @@ export interface WorkoutTemplateAssignment {
   routineId: string | null;
   assignedDay?: string | null;
   assignedAt: string;
+  /** Release 3 (DB-3): the programme's first day for this client. */
+  startsOn?: string | null;
+  /** Release 3 (DB-3): the programme week the client starts at (1 = from the start). */
+  joinWeek?: number;
+  /** Release 3 (DB-3): computed by assign_template_to_client from duration_weeks. */
+  endsOn?: string | null;
+  /** Release 3 (DB-3): set by end_template_assignment; the row is then a Past programme. */
+  endedAt?: string | null;
 }
 
 // V7 (QA 7.0): same shape as RoutineFolder, kept as its own store since
@@ -883,7 +848,22 @@ export interface Exercise {
   pinnedNote?: string;
   /** The block this belongs to, or absent for a standalone exercise. */
   blockId?: string | null;
+  /**
+   * Release 3 (DB-5): the professional's note on this exercise
+   * (workout_template_exercises / routine_exercises.coach_note, at most 500
+   * characters), copied to the client's routine by assign_template_to_client.
+   */
+  coachNote?: string;
+  /**
+   * Release 3 (DB-5): the prescribed type of each set, index = set number - 1
+   * (set_types jsonb; set_types_valid accepts an array of at most 50 of
+   * "normal", "warmup", "pr", "dropset" or null). Absent = every set normal.
+   */
+  setTypes?: (PrescribedSetType | null)[];
 }
+
+/** A set type a coach can prescribe (set_types_valid's accepted values). */
+export type PrescribedSetType = "normal" | "warmup" | "pr" | "dropset";
 
 // V4 (QA 4.0): a custom exercise, saved to the searchable library on
 // creation — it's only added to a routine when a user explicitly taps it,
@@ -1252,18 +1232,6 @@ export interface LabReport {
   fileBytes?: number | null;
 }
 
-/** A professional's view of one client's blood work. */
-export interface ClientLabsSummary {
-  markers: BloodMarker[];
-  /** yyyy-mm-dd of the most recent panel. */
-  latestPanelDate: string;
-  panelCount: number;
-  /** Results typed in on their own, with no panel (B2). */
-  standaloneCount?: number;
-  /** Panels with an attached report, newest first. */
-  reports: LabReport[];
-}
-
 // QA 12.0: "I would like the biomarker widget to be inside a tab that not
 // only has biomarkers but the ability to add imaging and/or other tests
 // like urine analysis... comorbidities, past surgeries, medications."
@@ -1516,8 +1484,6 @@ export interface Recipe {
   items: RecipeItem[];
   servings: number;
   steps?: string;
-  /** Professional-authored recipe scoped to one client — mirrors CustomMeal's client-scoped local list, handoff Q6. */
-  scopedToClientId?: string;
 }
 
 // V2: Journal — organized into folders, entries retain their date.

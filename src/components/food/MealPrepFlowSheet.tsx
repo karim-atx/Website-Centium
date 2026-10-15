@@ -47,7 +47,13 @@ export const MealPrepFlowSheet: React.FC<{
   /** Opened from a row's ⋮ Edit. */
   startEditing?: boolean;
   onClose: () => void;
-}> = ({ kind, itemId, startEditing = false, onClose }) => {
+  /**
+   * Release 3 professional recipe library (NU9): view and edit only. The
+   * diary logging (and the nutrient details measured against the signed-in
+   * user's own targets) is hidden. Off by default: the client flow is unchanged.
+   */
+  professional?: boolean;
+}> = ({ kind, itemId, startEditing = false, onClose, professional = false }) => {
   const { customMeals, recipes, selectedDate, logCustomMeal, logRecipe, removeCustomMeal, removeRecipe } = useApp();
   const dark = useIsDark();
   const isR = kind === "recipes";
@@ -170,6 +176,7 @@ export const MealPrepFlowSheet: React.FC<{
             onLog={() => void doLog()}
             logging={logging}
             logError={logError}
+            hideLog={professional}
           />
         )}
         {!item && <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>}
@@ -230,7 +237,9 @@ const DetailScreen: React.FC<{
   onLog: () => void;
   logging: boolean;
   logError: string | null;
-}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError }) => {
+  /** Professional recipe library: no Servings, Meal, Add to Diary or nutrient details. */
+  hideLog?: boolean;
+}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError, hideLog = false }) => {
   const dark = useIsDark();
   const GREY = dark ? GREY_CONTAINER_DARK : GREY_CONTAINER;
   const isR = kind === "recipes";
@@ -295,6 +304,8 @@ const DetailScreen: React.FC<{
         </div>
       )}
 
+      {!hideLog && (
+      <>
       <div className="flex items-center gap-3" style={GREY}>
         <span className="flex-none" style={{ fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>
           {isR ? "Servings" : "Quantity"}
@@ -347,6 +358,8 @@ const DetailScreen: React.FC<{
           <SlidersHorizontal size={20} strokeWidth={1.9} />
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 };

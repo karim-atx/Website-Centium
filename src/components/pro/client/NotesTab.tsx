@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, History, Lock, Plus, Search, Trash2 } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
+import { clearLegacyClientHealthNote, readLegacyClientHealthNote, useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
@@ -37,7 +37,7 @@ const KIND_WORD: Record<NoteKind, string> = { training: "Training", nutrition: "
 type Filter = "all" | "session" | "private" | "templates";
 
 export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory: () => void }> = ({ data, lane, onHistory }) => {
-  const { authUserId, user, clientHealthNotes, updateClientHealthNote } = useApp();
+  const { authUserId, user } = useApp();
   const { clientId, rel, firstName } = data;
   const [notes, setNotes] = useState<{ list: SessionNote[] | null; error: boolean; offline: boolean }>({ list: null, error: false, offline: false });
   const [templates, setTemplates] = useState<NoteTemplate[] | null>(null);
@@ -60,7 +60,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
   // J4: the one-time import, once the notes have loaded (so a failed read never imports twice).
   useEffect(() => {
     if (imported.current || !authUserId || !rel || !notes.list) return;
-    const old = clientHealthNotes[rel.id];
+    const old = readLegacyClientHealthNote(rel.id);
     const injuries = old?.currentInjuries?.trim();
     const personality = old?.personalityType?.trim();
     if (!injuries && !personality) return;
@@ -71,10 +71,10 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
         imported.current = false;
         return;
       }
-      updateClientHealthNote(rel.id, { currentInjuries: undefined, personalityType: undefined });
+      clearLegacyClientHealthNote(rel.id);
       setNonce((n) => n + 1);
     });
-  }, [authUserId, rel, notes.list, clientHealthNotes, updateClientHealthNote, clientId, lane]);
+  }, [authUserId, rel, notes.list, clientId, lane]);
 
   const q = query.trim().toLowerCase();
   const shown = useMemo(
