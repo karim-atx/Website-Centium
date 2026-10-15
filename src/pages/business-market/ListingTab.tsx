@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOnline } from "../../hooks/useOnline";
 import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
@@ -8,7 +8,8 @@ import { useMarket } from "./MarketContext";
 import { Store } from "lucide-react";
 import { MBlock, MEmpty, MError, useMarketToast } from "./kit";
 import { CategoriesCard, PhotosCard, RatingCard, StrengthCard, YourCard, type CardModel } from "./listingParts";
-import { hoursSummary, notEnded, strengthItems, strengthPct, type StrengthItem } from "./model";
+import { hoursSummary, notEnded, strengthItems, strengthPct, type StrengthInput, type StrengthItem } from "./model";
+import { AMENITY_LABEL, isAmenityKey, photoCounts, photoLine as galleryLine, sortPhotos } from "../../services/business-market/listingLogic";
 import { useListingSwitch } from "./useListingSwitch";
 import { AmenitiesSheet, FirstVisitSheet } from "./DetailsSheets";
 import { OfferingsCard } from "./OfferingsCard";
@@ -17,9 +18,12 @@ import { OfferingsCard } from "./OfferingsCard";
 // (Gym) and MA1-067 (Store, under Products). Live data only: the B5 business
 // row (logo, cover, bio, location, contacts, categories, active), the perk
 // and discounts (chips), the venue's hours (gym_hours, one shared hours
-// sheet, V6-163) and its reviews (my_venues). The gallery, amenities and
-// first-visit text are B13 (MK-02, MK-03): they show their empty values and
-// their editors say "Coming soon" until the server has them.
+// sheet, V6-163) and its reviews (my_venues). B13: the gallery
+// (business_photos, MK-03), the venue's amenities and first-visit text
+// (MK-02) and listing_strength(), whose done flags win for photos, amenities
+// and first visit (the server counts 3 approved photos and any venue). While
+// a B13 piece is absent its item keeps the client value and its editor its
+// pending note.
 
 export const REVIEWS_ROUTE = "/app/business/analytics/reputation";
 
@@ -38,31 +42,39 @@ export function ListingTab() {
   const [now] = useState(() => Date.now());
 
   const reviews = { average: m.venue?.reviewsAverage ?? null, count: m.venue?.reviewsCount ?? 0 };
-  const photos = business?.coverUrl ? [business.coverUrl] : [];
+  const gallery = sortPhotos(m.photos ?? []);
+  const counts = photoCounts(gallery);
+  // The cover first (MA1-033 K1), then the approved photos; in-review photos
+  // are counted on the line, not shown to the public yet.
+  const photos = [...(business?.coverUrl ? [business.coverUrl] : []), ...gallery.filter((p) => p.status === "approved").map((p) => p.url)];
+  const thumbs = [...(business?.coverUrl ? [business.coverUrl] : []), ...gallery.filter((p) => p.status !== "rejected").map((p) => p.url)];
+  const amenities = m.details?.amenities ?? [];
+  const amenitiesDone = m.strength?.amenities ?? amenities.length > 0;
+  const firstVisitDone = m.strength?.first_visit ?? !!m.details?.firstVisit;
   const summary = hoursSummary(m.hours);
-  const items = useMemo(
-    () =>
-      business
-        ? strengthItems({
-            store: kind === "store",
-            logo: !!business.logoUrl,
-            cover: !!business.coverUrl,
-            photos: photos.length,
-            description: !!business.bio?.trim(),
-            categories: business.categories.map((k) => CATEGORY_LABEL[k] ?? k),
-            address: business.location,
-            hoursSummary: summary,
-            amenities: [],
-            delivery: !!m.store && (m.store.deliveryEnabled || m.store.pickupEnabled),
-            contact: !!(business.publicEmail || business.publicPhone || business.publicWebsite || business.instagram),
-            firstVisit: false,
-            returns: m.returnsSet,
-            reviews,
-          })
-        : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [business, kind, summary, m.store, m.returnsSet, reviews.average, reviews.count, photos.length]
-  );
+  const inputFor = (hours: string | null): StrengthInput | null =>
+    business
+      ? {
+          store: kind === "store",
+          logo: !!business.logoUrl,
+          cover: !!business.coverUrl,
+          photos: photos.length,
+          photosDone: m.strength?.photos,
+          description: !!business.bio?.trim(),
+          categories: business.categories.map((k) => CATEGORY_LABEL[k] ?? k),
+          address: business.location,
+          hoursSummary: hours,
+          amenities: amenities.map((k) => (isAmenityKey(k) ? AMENITY_LABEL[k] : k)),
+          amenitiesDone,
+          delivery: !!m.store && (m.store.deliveryEnabled || m.store.pickupEnabled),
+          contact: !!(business.publicEmail || business.publicPhone || business.publicWebsite || business.instagram),
+          firstVisit: firstVisitDone,
+          returns: m.returnsSet,
+          reviews,
+        }
+      : null;
+  const input = inputFor(summary);
+  const items = input ? strengthItems(input) : [];
 
   if (m.error && !business) return <MError c={c} onRetry={m.reload} />;
   if (m.loading) {
@@ -155,7 +167,7 @@ export function ListingTab() {
     }
   };
 
-  const photoLine = photos.length === 0 ? "No photos yet. Add at least 6 of your real space." : `${photos.length} of 6 recommended`;
+  const photoLine = galleryLine(photos.length, counts.inReview);
   const catSub = kind === "store" ? "Customers filter Explore by these." : kind === "gym" ? "People filter Explore by these." : "Clients filter Explore by these.";
 
   return (
@@ -176,7 +188,7 @@ export function ListingTab() {
         emptyBio={`Add a short description so ${v.people} know what you're about.`}
         error={sw.error}
       />
-      <PhotosCard c={c} photos={photos} line={photoLine} onOpen={() => navigate(`${m.base}/photos`)} />
+      <PhotosCard c={c} photos={thumbs} line={photoLine} onOpen={() => navigate(`${m.base}/photos`)} />
       <CategoriesCard
         c={c}
         kind={kind}
@@ -206,25 +218,36 @@ export function ListingTab() {
             const wasDone = !!summary;
             m.setHours(rows);
             setHoursOpen(false);
-            const next = strengthItems({
-              ...{ store: kind === "store", logo: !!business.logoUrl, cover: !!business.coverUrl, photos: photos.length, description: !!business.bio?.trim() },
-              categories: business.categories,
-              address: business.location,
-              hoursSummary: hoursSummary(rows),
-              amenities: [],
-              delivery: !!m.store && (m.store.deliveryEnabled || m.store.pickupEnabled),
-              contact: !!(business.publicEmail || business.publicPhone || business.publicWebsite || business.instagram),
-              firstVisit: false,
-              returns: m.returnsSet,
-              reviews,
-            });
+            const nextInput = inputFor(hoursSummary(rows));
+            const next = nextInput ? strengthItems(nextInput) : [];
+            m.refreshStrength();
             flash("hours");
             showToast(!wasDone && hoursSummary(rows) ? `Opening hours added. Listing strength is now ${strengthPct(next)}%.` : "Opening hours saved.");
           }}
         />
       )}
-      <AmenitiesSheet open={amenitiesOpen} onClose={() => setAmenitiesOpen(false)} />
-      <FirstVisitSheet open={firstVisitOpen} onClose={() => setFirstVisitOpen(false)} />
+      {amenitiesOpen && (
+        <AmenitiesSheet
+          open
+          onClose={() => setAmenitiesOpen(false)}
+          onSaved={() => {
+            setAmenitiesOpen(false);
+            flash("amenities");
+            showToast("Amenities saved.");
+          }}
+        />
+      )}
+      {firstVisitOpen && (
+        <FirstVisitSheet
+          open
+          onClose={() => setFirstVisitOpen(false)}
+          onSaved={() => {
+            setFirstVisitOpen(false);
+            flash("firstVisit");
+            showToast("First visit info saved.");
+          }}
+        />
+      )}
       {sw.popup}
       {sw.toast}
       {toast}

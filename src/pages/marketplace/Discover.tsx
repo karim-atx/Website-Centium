@@ -19,6 +19,9 @@ import { VenueImage } from "../../components/marketplace/VenueImage";
 import { CalendarDays, Search, Store, Dumbbell, ChevronRight } from "lucide-react";
 import { ClassCard, ExploreEmptyState, RetryLine, isOffline } from "../../components/marketplace/ClassCard";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { FeaturedChip } from "../../components/marketplace/FeaturedChip";
+import { recordListingEvent, useImpression } from "../../services/marketplace/listingEvents";
+import { exploreSource, isLivePassState, viewerSpotsLeft, type ListingEvent } from "../../services/marketplace/listingLogic";
 
 // Marketplace discovery: real classes, real venues, real bookings.
 //
@@ -67,6 +70,15 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 // (components/marketplace, also the gym page's Classes tab); 0.5px hairlines
 // (X-09); 12-hour date block (V6-148); "Under $15" strictly less (V6-148);
 // errors as our own line with Retry. Distances stay BACKEND (PB-O-50, B9).
+//
+// B13 (MK-04, MK-06, MK-07): every list comes featured first (the views'
+// order; the Gyms tab's ids come from marketplace_venues, so a hidden or
+// unlisted venue is never listed, even to its members), with the Featured
+// chip on a live featured week. A class card shows the spots this viewer can
+// take: a non-member's are capped by the class's Centium spots. Listing
+// events: an impression per card once per session (half on screen), and the
+// source a venue page is opened from (&src=search / featured / category);
+// Book on a class card is a book_tap. Fire and forget (listingEvents.ts).
 
 const priceCeilings = [
   { label: "Any price", value: null },
@@ -111,6 +123,9 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
   const dark = useIsDark();
   // S7 / S8: the card and Book open the class page.
   const openClass = (c: MarketplaceClass) => navigate(`/app/marketplace/class?id=${encodeURIComponent(c.classId)}`);
+  // B13 MK-07: Book on a card, with the source the card was found from.
+  const bookTap = (c: MarketplaceClass) =>
+    recordListingEvent({ businessId: c.businessId, kind: "book_tap", source: exploreSource({ query, featured: c.isFeatured }), itemId: c.classId });
 
   useEffect(() => {
     if (!profileReady) return;
@@ -165,6 +180,20 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
       return [c.title, c.businessName, c.location ?? "", c.classType ?? ""].some((f) => f.toLowerCase().includes(q));
     });
   }, [classes, query, maxPrice]);
+
+  // B13 MK-04: the businesses whose classes this viewer books as a member (a
+  // live venue pass; book_class() also counts an accepted business
+  // membership, which the client can't see, and refuses past the Centium
+  // spots with ATXF6 either way).
+  const memberOf = useMemo(() => {
+    const bizOf = new Map(gyms.map((g) => [g.id, g.businessId]));
+    return new Set(gymMemberships.filter((m) => isLivePassState(m.passState)).flatMap((m) => (bizOf.get(m.gymId) ? [bizOf.get(m.gymId) as string] : [])));
+  }, [gyms, gymMemberships]);
+  const forViewer = (c: MarketplaceClass): MarketplaceClass => {
+    if (c.centiumSpotsLeft == null || memberOf.has(c.businessId)) return c;
+    const left = viewerSpotsLeft(c.spotsRemaining, c.centiumSpotsLeft, false);
+    return { ...c, spotsRemaining: left, isFull: c.isFull || left <= 0 };
+  };
 
   const businesses = venues.filter((v) => v.kind === "business");
   // MO1.4.1's sub-tabs, plus any other business type actually listed, except
@@ -335,7 +364,9 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
         // 14 from the rail to the first card; cards 10 apart (#37).
         <div className="space-y-2.5 mt-[14px]">
           {filtered.map((c) => (
-            <ClassCard key={c.classId} c={c} booked={booked.has(c.classId)} onOpen={openClass} />
+            <Seen key={c.classId} event={{ businessId: c.businessId, kind: "impression", source: exploreSource({ query, featured: c.isFeatured }), itemId: c.classId }}>
+              <ClassCard c={forViewer(c)} booked={booked.has(c.classId)} onOpen={openClass} onBook={bookTap} />
+            </Seen>
           ))}
 
           {/* K14 / O-EMPTY: no classes, or none matching the filters. */}
@@ -358,22 +389,26 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           {shownBusinesses.map((v) => (
             // K12: the row opens the business's page; 0.5px hairline; the
             // initials tile and type line in #7D67D9 / #9A8CD6.
+            <Seen key={v.venueId} event={{ businessId: v.venueId, kind: "impression", source: exploreSource({ featured: v.isFeatured }) }}>
             <button
-              key={v.venueId}
               type="button"
-              onClick={() => navigate(`/app/marketplace/business?id=${encodeURIComponent(v.venueId)}`)}
+              onClick={() => navigate(`/app/marketplace/business?id=${encodeURIComponent(v.venueId)}&src=${exploreSource({ featured: v.isFeatured })}`)}
               className="tap w-full text-left rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 flex items-center gap-3 animate-fade-slide-up"
             >
               <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-th-7d67d9 dark:text-primary-accent">
                 {initials(v.name)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-bold text-charcoal truncate">{v.name}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="min-w-0 block text-[14px] font-bold text-charcoal truncate">{v.name}</span>
+                  {v.isFeatured && <FeaturedChip />}
+                </span>
                 <span className="block text-[12px] font-semibold text-th-7d67d9 dark:text-primary-accent truncate">{typeLabel(v.venueType)}</span>
                 {v.location && <span className="block text-[11.5px] text-charcoal-faint truncate">{v.location}</span>}
               </span>
               <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
             </button>
+            </Seen>
           ))}
           {shownBusinesses.length === 0 && !loading && !errors.businesses && (
             businesses.length === 0 ? (
@@ -391,14 +426,15 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
             const from = v.businessId ? membershipFromLine(gymPlans.filter((p) => p.businessId === v.businessId)) : null;
             const mine = currentMembership(gymMemberships, v.id);
             const tag = mine ? memberTag(mine.passState) : null;
+            const source = exploreSource({ featured: v.isFeatured });
             return (
               // K13: the card opens the gym page; 0.5px hairline; cover (A4)
               // or the tint with the logo / initials; the Member tag on the
               // cover; "Membership from $X/month" #7D67D9 / #9A8CD6.
+              <Seen key={v.id} event={v.businessId ? { businessId: v.businessId, kind: "impression", source } : null}>
               <button
-                key={v.id}
                 type="button"
-                onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(v.id)}`)}
+                onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(v.id)}&src=${source}`)}
                 className="tap block w-full text-left rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 overflow-hidden animate-fade-slide-up"
               >
                 <span className="relative h-[84px] bg-primary-pale flex items-center justify-center overflow-hidden">
@@ -415,13 +451,17 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
                 </span>
                 <span className="px-4 py-3 flex items-center gap-3">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-bold text-charcoal truncate">{v.name}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="min-w-0 block text-[15px] font-bold text-charcoal truncate">{v.name}</span>
+                      {v.isFeatured && <FeaturedChip />}
+                    </span>
                     {v.location && <span className="block text-[11.5px] text-charcoal-faint truncate">{v.location}</span>}
                     {from && <span className="block text-[12.5px] font-bold text-th-7d67d9 dark:text-primary-accent truncate">{from}</span>}
                   </span>
                   <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
                 </span>
               </button>
+              </Seen>
             );
           })}
           {gyms.length === 0 && !loading && !errors.gyms && (
@@ -445,6 +485,20 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * B13 MK-07: an Explore card's impression, once per session when it is half
+ * on screen (useImpression). A plain block wrapper, so the list's spacing
+ * holds; `event` null (an unclaimed venue) records nothing.
+ */
+function Seen({ event, children }: { event: ListingEvent | null; children: React.ReactNode }) {
+  const ref = useImpression<HTMLDivElement>(event);
+  return (
+    <div ref={ref} data-impression="">
+      {children}
     </div>
   );
 }

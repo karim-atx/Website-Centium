@@ -2,89 +2,141 @@ import React, { useMemo, useState } from "react";
 import { Calendar, ChevronDown, Lock, Trash2, CalendarX2 } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { initialsOf } from "../../components/business-more/kind";
+import { useOnline } from "../../hooks/useOnline";
+import { createPromotion, endPromotion, offerLocked, updatePromotion, type PromoStatus, type Promotion } from "../../services/business-market/promotions";
 import { useMarket } from "./MarketContext";
-import { lh, MFieldLabel, MPopup, MPrimary, MSheet, MSoonNote, px } from "./kit";
+import { lh, MFieldLabel, MPopup, MPrimary, MSaveError, MSheet, MSoonNote, px } from "./kit";
 import { RangeCalendar } from "./RangeCalendar";
 import { dayMonth, isoOf } from "./model";
-import { promoText, promoTypes, validatePromo, type PromoDraft, type PromoErrors, type Promotable } from "./promoModel";
+import { draftOf, editPatch, editStatusOf, promoName, promoTarget, promoText, promoTypes, validatePromo, valueFor, type PromoDraft, type PromoErrors, type Promotable } from "./promoModel";
 
 // MA1-099 / 101 / 102 / 103 / 104 / 106 (Create promotion), MA1-137 / 139 /
 // 141 / 142 / 144 / 146 / 149 (Edit, active, ended) and
-// OURS-MA1-promotion-type-menu. The form works in full (listboxes, type
-// value, inline range calendar, audience, the Explore preview, validation on
-// Save, discard confirm). Writing a promotion is B13 (MK-05, not on the local
-// stack): a valid Save says so under the button and nothing is stored.
-
-/** B13 MK-05 promotion writes are wired (flip when the stage lands and HANDOVER_API.md names them). */
-export const PROMO_WRITES = false;
+// OURS-MA1-promotion-type-menu. B13 MK-05 (live): Save inserts or updates the
+// promotions row; End sets ended_at. ATX10: once a promotion has started its
+// offer (what, type, value, who sees it) and its start are locked here and on
+// the server; the end date can still change. When the probe answers that the
+// table is absent (pending), a valid Save says so and nothing is stored.
 
 export interface PromoEdit {
-  status: "scheduled" | "active" | "ended";
-  name: string;
-  draft: PromoDraft;
+  promo: Promotion;
+  status: PromoStatus;
+  item: Promotable;
 }
+
+/** MA1-139 R0, rewritten for ATX10 (the drawn copy said the offer and who sees it could change). */
+const LOCK_NOTE = "The offer can't change once a promotion has started, because people may already have used it. You can still change the end date. To change the offer, end it and create another.";
+const ENDED_NOTE = "This promotion has ended, so it can't be changed. Duplicate it to run it again.";
 
 export function PromotionSheet({
   open,
   onClose,
   items,
   initialWhat,
+  prefill,
   edit,
   onDuplicate,
+  onSaved,
+  onEnded,
 }: {
   open: boolean;
   onClose: () => void;
   items: Promotable[];
   initialWhat?: string | null;
+  /** Run again / Duplicate: a new promotion prefilled from an ended one, dates cleared. */
+  prefill?: PromoDraft | null;
   edit?: PromoEdit | null;
   onDuplicate?: (d: PromoDraft) => void;
+  onSaved: (p: Promotion, toast: string) => void;
+  onEnded: (p: Promotion) => void;
 }) {
   const m = useMarket();
   const { c, v, kind, business } = m;
+  const online = useOnline();
   const today = isoOf(new Date());
-  const blank: PromoDraft = useMemo(() => edit?.draft ?? { what: initialWhat ?? null, type: null, value: null, from: today, to: null, audience: "new" }, [edit, initialWhat, today]);
+  const pending = m.backend.promotions === "pending";
+  const blank: PromoDraft = useMemo(
+    () => (edit ? draftOf(edit.promo, edit.item) : prefill ?? { what: initialWhat ?? null, type: null, value: null, from: today, to: null, audience: "new" }),
+    [edit, prefill, initialWhat, today]
+  );
   const [d, setD] = useState<PromoDraft>(blank);
   const [errors, setErrors] = useState<PromoErrors>({});
   const [menu, setMenu] = useState<"what" | "type" | null>(null);
   const [cal, setCal] = useState(false);
   const [confirm, setConfirm] = useState<"discard" | "end" | null>(null);
   const [soon, setSoon] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [whatEl, setWhatEl] = useState<HTMLButtonElement | null>(null);
   const [typeEl, setTypeEl] = useState<HTMLButtonElement | null>(null);
 
-  const ro = edit?.status === "ended";
-  const whatLocked = !!edit && edit.status !== "scheduled";
+  const status = edit ? editStatusOf(edit.status) : null;
+  const ro = status === "ended";
+  const locked = !!edit && offerLocked(edit.status);
+  const pool = edit && !items.some((i) => i.id === edit.item.id) ? [edit.item, ...items] : items;
   const changed = JSON.stringify(d) !== JSON.stringify(blank);
   const touched = edit ? changed : !!(d.what || d.type || d.to);
-  const item = items.find((i) => i.id === d.what) ?? null;
+  const item = pool.find((i) => i.id === d.what) ?? null;
   const text = promoText(kind, d.type, d.value);
   const types = promoTypes(kind);
+  const canWrite = online && m.can("marketing") && !!business;
 
   const close = () => (touched && !ro ? setConfirm("discard") : onClose());
-  const save = () => {
+  const save = async () => {
     const e = validatePromo(d, v.whatError);
     setErrors(e);
-    if (Object.keys(e).length) return;
-    if (!PROMO_WRITES) setSoon(true);
+    setSaveError(null);
+    if (Object.keys(e).length || !item || !d.type) return;
+    if (pending) return setSoon(true);
+    if (!business) return;
+    setBusy(true);
+    if (edit) {
+      const patch = editPatch(edit.promo, edit.status, d, item, kind);
+      const r = await updatePromotion(edit.promo.id, patch);
+      setBusy(false);
+      if (!r.ok) return setSaveError(r.message);
+      const runs = patch.ends_on && d.to ? ` It now runs until ${dayMonth(d.to)}.` : "";
+      onSaved(r.value, `${r.value.name} updated.${runs}`);
+      return;
+    }
+    const value = valueFor(d.type, d.value);
+    const target = promoTarget(item);
+    const name = promoName(kind, item.title, d.type, value);
+    const from = d.from ?? today;
+    const r = await createPromotion(business.id, { name, targetKind: target.kind, targetId: target.id, type: d.type, value, startsOn: from, endsOn: d.to, audience: d.audience });
+    setBusy(false);
+    if (!r.ok) return setSaveError(r.message);
+    onSaved(r.value, from > today ? `${r.value.name} starts on ${dayMonth(from)}.` : `${r.value.name} is live on Explore.`);
+  };
+  const doEnd = async () => {
+    if (!edit) return;
+    setBusy(true);
+    const r = await endPromotion(edit.promo.id);
+    setBusy(false);
+    setConfirm(null);
+    if (!r.ok) return setSaveError(r.message);
+    onEnded(r.value);
   };
   const set = (patch: Partial<PromoDraft>) => {
     setSoon(false);
+    setSaveError(null);
     setD((x) => ({ ...x, ...patch }));
   };
 
   const title = ro ? "Promotion details" : edit ? "Edit promotion" : "Create promotion";
   const footer = ro ? (
-    <MPrimary c={c} onClick={() => onDuplicate?.({ ...d, from: today, to: null })}>
+    <MPrimary c={c} onClick={() => onDuplicate?.({ ...d, from: today, to: null })} disabled={!canWrite}>
       Duplicate as new promotion
     </MPrimary>
   ) : (
     <>
-      <MPrimary c={c} onClick={save} disabled={!!edit && !changed}>
+      <MPrimary c={c} onClick={() => void save()} disabled={(!!edit && !changed) || busy || !canWrite}>
         {edit ? "Save changes" : "Save promotion"}
       </MPrimary>
       {soon && <MSoonNote c={c}>Saving promotions is coming soon. Nothing was saved.</MSoonNote>}
-      {edit?.status === "active" && (
-        <MPrimary c={c} tone="destructive" style={{ marginTop: 14 }} onClick={() => setConfirm("end")}>
+      {saveError && <MSaveError c={c}>{saveError}</MSaveError>}
+      {(status === "active" || status === "paused") && (
+        <MPrimary c={c} tone="destructive" style={{ marginTop: 14 }} onClick={() => setConfirm("end")} disabled={busy || !canWrite}>
           End promotion
         </MPrimary>
       )}
@@ -95,14 +147,10 @@ export function PromotionSheet({
     <>
       <MSheet open={open} onClose={close} title={title} footer={footer}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {(whatLocked || ro) && (
+          {(locked || ro) && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 12px", borderRadius: 12, background: c.soft, color: c.inkSoft }}>
               <Lock size={15} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: px(12), lineHeight: lh(17) }}>
-                {ro
-                  ? "This promotion has ended, so it can't be changed. Duplicate it to run it again."
-                  : "What's being promoted can't change once a promotion is live, because clients may already have claimed it. You can change the dates, who sees it and the offer."}
-              </p>
+              <p style={{ fontSize: px(12), lineHeight: lh(17) }}>{ro ? ENDED_NOTE : LOCK_NOTE}</p>
             </div>
           )}
           <div>
@@ -114,8 +162,8 @@ export function PromotionSheet({
               placeholder={!item}
               error={!!errors.what}
               focused={menu === "what"}
-              locked={whatLocked || ro}
-              icon={whatLocked || ro ? <Lock size={16} strokeWidth={2.2} /> : <ChevronDown size={16} strokeWidth={2.2} />}
+              locked={locked}
+              icon={locked ? <Lock size={16} strokeWidth={2.2} /> : <ChevronDown size={16} strokeWidth={2.2} />}
               onClick={() => setMenu("what")}
               haspopup
             />
@@ -126,12 +174,12 @@ export function PromotionSheet({
             <Field
               refEl={setTypeEl}
               labelledBy="pc-type"
-              value={d.type ? promoText(kind, d.type, null).field : "Choose a type"}
+              value={d.type ? promoText(kind, d.type, d.type === "first_n_free" ? d.value : null).field : "Choose a type"}
               placeholder={!d.type}
               error={!!errors.type}
               focused={menu === "type"}
-              locked={ro}
-              icon={<ChevronDown size={16} strokeWidth={2.2} />}
+              locked={locked}
+              icon={locked ? <Lock size={16} strokeWidth={2.2} /> : <ChevronDown size={16} strokeWidth={2.2} />}
               onClick={() => setMenu("type")}
               haspopup
             />
@@ -141,14 +189,14 @@ export function PromotionSheet({
                 <input
                   aria-label="Percent off"
                   inputMode="numeric"
-                  readOnly={ro}
+                  readOnly={locked}
                   value={d.value ?? ""}
                   onChange={(e) => {
                     const n = parseInt(e.target.value.replace(/\D/g, "").slice(0, 2), 10);
                     set({ value: Number.isFinite(n) ? n : null });
                   }}
                   placeholder="25"
-                  style={{ width: 40, background: "transparent", border: 0, outline: "none", fontSize: px(13.5), fontWeight: 700, color: c.ink }}
+                  style={{ width: 40, background: "transparent", border: 0, outline: "none", fontSize: px(13.5), fontWeight: 700, color: locked ? c.faint : c.ink }}
                 />
                 <span style={{ fontSize: px(13.5), fontWeight: 700, color: c.faint }}>% off</span>
               </label>
@@ -162,7 +210,7 @@ export function PromotionSheet({
                 labelledBy="pc-from"
                 value={d.from ? (d.from === today ? "Today" : dayMonth(d.from)) : "Today"}
                 focused={cal}
-                locked={ro || (!!edit && edit.status === "active")}
+                locked={locked}
                 icon={<Calendar size={16} strokeWidth={2.2} />}
                 onClick={() => setCal(true)}
               />
@@ -186,9 +234,10 @@ export function PromotionSheet({
             <RangeCalendar
               from={d.from}
               to={d.to}
+              fixedStart={locked}
               onCancel={() => setCal(false)}
               onDone={(from, to) => {
-                set({ from, to });
+                set(locked ? { to } : { from, to });
                 setErrors((e) => ({ ...e, to: undefined }));
                 setCal(false);
               }}
@@ -210,7 +259,7 @@ export function PromotionSheet({
                     type="button"
                     role="radio"
                     aria-checked={on}
-                    disabled={ro}
+                    disabled={locked}
                     onClick={() => set({ audience: k })}
                     style={{ minHeight: 38, borderRadius: 10, background: on ? c.card : "transparent", color: on ? c.ink : c.faint, border: 0, fontSize: px(12.5), fontWeight: 800, boxShadow: on ? "0 1px 3px rgba(36,31,27,0.1)" : "none" }}
                   >
@@ -240,7 +289,7 @@ export function PromotionSheet({
         matchWidth={whatEl}
         variant="field"
         heading="Promote"
-        options={items.map((i) => ({ value: i.id, label: i.title, note: i.sub }))}
+        options={pool.map((i) => ({ value: i.id, label: i.title, note: i.sub }))}
         selected={d.what}
         onSelect={(id) => {
           set({ what: id });
@@ -258,7 +307,7 @@ export function PromotionSheet({
         options={types.map((t) => ({ value: t.value, label: t.label, note: t.note }))}
         selected={d.type}
         onSelect={(t) => {
-          set({ type: t, value: t === "percent_off" ? d.value ?? 25 : null });
+          set({ type: t, value: t === "percent_off" ? (d.type === "percent_off" ? d.value : null) ?? 25 : t === "first_n_free" ? 2 : null });
           setErrors((e) => ({ ...e, type: undefined, value: undefined }));
           setMenu(null);
         }}
@@ -268,7 +317,7 @@ export function PromotionSheet({
         icon={Trash2}
         disc={{ bg: c.soft, ink: c.inkSoft }}
         title={edit ? "Discard your changes?" : "Discard this promotion?"}
-        body={edit ? `${edit.name} will keep its current details.` : "You'll lose what you've entered."}
+        body={edit ? `${edit.promo.name} will keep its current details.` : "You'll lose what you've entered."}
         action={edit ? "Discard changes" : "Discard"}
         keep="Keep editing"
         onAction={() => {
@@ -283,11 +332,11 @@ export function PromotionSheet({
         open={confirm === "end"}
         icon={CalendarX2}
         title="End this promotion now?"
-        body={`${edit?.name ?? "This promotion"} will stop showing on Explore today instead of ${d.to ? dayMonth(d.to) : "its end date"}. People who already claimed it keep it.`}
+        body={`${edit?.promo.name ?? "This promotion"} will stop showing on Explore today instead of ${d.to ? dayMonth(d.to) : "its end date"}. People who already claimed it keep it.`}
         action="End promotion"
         keep="Keep it running"
-        extra={!PROMO_WRITES ? <MSoonNote c={c}>Ending promotions is coming soon.</MSoonNote> : undefined}
-        onAction={() => setConfirm(null)}
+        busy={busy}
+        onAction={() => void doEnd()}
         onCancel={() => setConfirm(null)}
       />
     </>

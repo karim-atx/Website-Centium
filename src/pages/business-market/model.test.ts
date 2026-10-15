@@ -83,3 +83,12 @@ test("promotion texts and validation", () => {
   assert.equal(e.type, "Pick a promotion type.");
   assert.equal(e.to, "The end date must be after the start date.");
 });
+
+test("strength: B13 listing_strength flags win for photos and amenities", () => {
+  const items = strengthItems({ ...base, photos: 2, photosDone: true, amenities: [], amenitiesDone: true });
+  assert.equal(items.find((x) => x.key === "photos")?.done, true);
+  assert.equal(items.find((x) => x.key === "amenities")?.done, true);
+  const off = strengthItems({ ...base, photos: 7, photosDone: false });
+  assert.equal(off.find((x) => x.key === "photos")?.sub, "7 of 6");
+  assert.equal(strengthItems({ ...base, photos: 2 }).find((x) => x.key === "photos")?.sub, "2 of 6 · add 4 more");
+});

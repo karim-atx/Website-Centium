@@ -1,23 +1,27 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarPlus, ChevronLeft, ChevronRight, Megaphone, Minus, Plus, SlidersHorizontal } from "lucide-react";
+import { Award, CalendarPlus, ChevronLeft, ChevronRight, Megaphone, Minus, Plus, SlidersHorizontal } from "lucide-react";
+import { useOnline } from "../../hooks/useOnline";
+import { fetchClassCentium, fetchFeaturedClassIds, saveClassCentium, type ClassCentium } from "../../services/business-market/listing";
+import { centiumSpotsFor, openOnCentium } from "../../services/business-market/listingLogic";
 import { time12Split } from "../../utils/time12";
 import { DAY_SHORT } from "../../utils/week";
 import type { BusinessClassRow } from "../../services/business-classes";
 import { useMarket } from "./MarketContext";
-import { lh, MBlock, MCard, MEmpty, MError, MPrimary, MSheet, MSoonNote, MSwitch, px } from "./kit";
+import { lh, MBlock, MCard, MEmpty, MError, MPrimary, MSaveError, MSheet, MSoonNote, MSwitch, px, useMarketToast } from "./kit";
 import { addDays, classFlag, dateOf, dayMonth, dowTime, isoOf, mondayOf, type ClassFlag } from "./model";
 
-// MA1-003 / 040 / 042 / 048 / 064 / 117 · Open spots (Classes). Live: the
-// week's classes (business_classes), their bookings and instructors. B13
-// (MK-04, not on the stack): the Centium spot count per class, the per-class
-// "Show on Explore" switch and the booking source ("From Centium"). Until
-// then the hatch is empty, the switches are drawn disabled, the two Centium
-// figures read "–" and the Spots sheet's Save says "Coming soon". The rule
-// itself (V6-86) is enforced by the booking function, not here.
-
-/** B13 MK-04 writes are wired (flip when the stage lands and HANDOVER_API.md names the write). */
-const SPOT_WRITES = false;
+// MA1-003 / 040 / 042 / 048 / 064 / 117 · Open spots (Classes). The week's
+// classes (business_classes), their bookings and instructors, and B13 MK-04:
+// business_classes.centium_spots (total places for people from Centium, null
+// = no separate limit), listed_on_explore (the row switch: off keeps a class
+// off Explore while members still book it) and the booking source set by
+// the database ("From Centium"). Writing either needs the Schedule
+// permission (business_classes_update_insider). The rule itself (ATXF6) is
+// enforced by book_class(), not here. Classes in a live featured week
+// (MK-06) carry the Featured flag. While the columns are absent (probe
+// "pending") the hatch is empty, the switches are drawn disabled, the two
+// Centium figures read "–" and the Spots sheet's Save says "Coming soon".
 
 export function SpotsTab() {
   const m = useMarket();
@@ -28,7 +32,33 @@ export function SpotsTab() {
   const [day, setDay] = useState(today);
   const [spotsFor, setSpotsFor] = useState<BusinessClassRow | null>(null);
   const [now] = useState(() => Date.now());
+  const [toast, showToast] = useMarketToast();
+  const online = useOnline();
   const spotsLive = m.backend.spots === "live";
+  const canWrite = spotsLive && online && m.can("schedule");
+  const [centium, setCentium] = useState<Map<string, ClassCentium> | null>(null);
+  const [featured, setFeatured] = useState<Set<string>>(new Set());
+  const [saved, setSaved] = useState<string | null>(null);
+  const classIds = useMemo(() => classes.classes.map((x) => x.id).join(","), [classes.classes]);
+  const businessId = business?.id ?? null;
+  useEffect(() => {
+    if (!spotsLive || !classIds) return;
+    let alive = true;
+    void fetchClassCentium(classIds.split(",")).then((r) => {
+      if (alive && r.ok) setCentium(r.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [spotsLive, classIds]);
+  useEffect(() => {
+    if (!businessId || m.backend.placements !== "live") return;
+    let alive = true;
+    void fetchFeaturedClassIds(businessId).then((ids) => alive && setFeatured(ids));
+    return () => {
+      alive = false;
+    };
+  }, [businessId, m.backend.placements]);
 
   const days = useMemo(() => [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(week, i)), [week]);
   const byDay = useMemo(() => {
@@ -57,13 +87,39 @@ export function SpotsTab() {
   const weekCount = days.reduce((n, d) => n + (byDay.get(d)?.length ?? 0), 0);
   const rows = byDay.get(day) ?? [];
   const listed = !!business?.active;
-  const todayCount = byDay.get(today)?.length ?? 0;
+  const todayRows = byDay.get(today) ?? [];
+  const todayCount = todayRows.length;
   const dash = "–";
+  const openOf = (x: BusinessClassRow): number | null => {
+    const cc = centium?.get(x.id);
+    if (!cc) return null;
+    return openOnCentium(x.maxCapacity, m.booked?.get(x.id) ?? 0, cc.centiumSpots, cc.centiumBooked);
+  };
+  // On Centium = spots open on Centium in today's upcoming classes on Explore;
+  // From Centium = today's bookings that came through Centium (MA1-003 row 6a).
+  const onCentium = !centium
+    ? null
+    : !listed
+      ? 0
+      : todayRows.filter((x) => new Date(`${x.date}T${x.endTime}:00`).getTime() > now && centium.get(x.id)?.listed).reduce((a, x) => a + (openOf(x) ?? 0), 0);
+  const fromCentium = centium ? todayRows.reduce((a, x) => a + (centium.get(x.id)?.centiumBooked ?? 0), 0) : null;
   const cells = [
     { v: String(todayCount), l: "Today" },
-    { v: dash, l: "On Centium" },
-    { v: dash, l: "From Centium" },
+    { v: onCentium === null ? dash : String(onCentium), l: "On Centium" },
+    { v: fromCentium === null ? dash : String(fromCentium), l: "From Centium" },
   ];
+
+  const toggleListed = async (x: BusinessClassRow, on: boolean) => {
+    const cc = centium?.get(x.id);
+    if (!cc || !centium) return;
+    setCentium(new Map(centium).set(x.id, { ...cc, listed: on }));
+    const r = await saveClassCentium(x.id, { listed: on });
+    if (!r.ok) {
+      setCentium((cur) => (cur ? new Map(cur).set(x.id, cc) : cur));
+      return showToast(r.message);
+    }
+    showToast(on ? `${x.title} is on Explore.` : `${x.title} is off Explore. Members can still book.`);
+  };
 
   const moveWeek = (n: number) => {
     const w = addDays(week, n * 7);
@@ -162,6 +218,12 @@ export function SpotsTab() {
               who={x.professionalId ? m.instructors.get(x.professionalId) ?? null : null}
               listed={listed}
               spotsLive={spotsLive}
+              canWrite={canWrite}
+              centium={centium?.get(x.id) ?? null}
+              open={openOf(x)}
+              featured={featured.has(x.id)}
+              saved={saved === x.id}
+              onListed={(on) => void toggleListed(x, on)}
               onSpots={() => setSpotsFor(x)}
               onPromote={() => navigate(`${m.tabHref("promo")}&promote=${encodeURIComponent(x.id)}`)}
             />
@@ -181,7 +243,23 @@ export function SpotsTab() {
           <span>The rest stay for members.</span>
         </p>
       )}
-      {spotsFor && <SpotsSheet x={spotsFor} booked={m.booked?.get(spotsFor.id) ?? 0} who={spotsFor.professionalId ? m.instructors.get(spotsFor.professionalId) ?? null : null} onClose={() => setSpotsFor(null)} />}
+      {spotsFor && (
+        <SpotsSheet
+          x={spotsFor}
+          booked={m.booked?.get(spotsFor.id) ?? 0}
+          who={spotsFor.professionalId ? m.instructors.get(spotsFor.professionalId) ?? null : null}
+          centium={centium?.get(spotsFor.id) ?? null}
+          canWrite={canWrite}
+          onClose={() => setSpotsFor(null)}
+          onSaved={(cc, open) => {
+            setCentium((cur) => new Map(cur ?? []).set(spotsFor.id, cc));
+            setSpotsFor(null);
+            setSaved(spotsFor.id);
+            showToast(`${spotsFor.title} now has ${open} spot${open === 1 ? "" : "s"} open on Centium.`);
+          }}
+        />
+      )}
+      {toast}
     </div>
   );
 }
@@ -201,6 +279,12 @@ function ClassRow({
   who,
   listed,
   spotsLive,
+  canWrite,
+  centium,
+  open,
+  featured,
+  saved,
+  onListed,
   onSpots,
   onPromote,
 }: {
@@ -210,6 +294,12 @@ function ClassRow({
   who: string | null;
   listed: boolean;
   spotsLive: boolean;
+  canWrite: boolean;
+  centium: ClassCentium | null;
+  open: number | null;
+  featured: boolean;
+  saved: boolean;
+  onListed: (on: boolean) => void;
   onSpots: () => void;
   onPromote: () => void;
 }) {
@@ -220,10 +310,12 @@ function ClassRow({
   const flagText = flag === "almost" ? "Almost full" : flag === "low" ? "Low in 48 h" : flag === "ended" ? "Ended" : "";
   const flagBg = flag === "almost" ? c.goodBg : flag === "low" ? c.cautionBg : c.soft;
   const flagInk = flag === "almost" ? c.good : flag === "low" ? c.caution : c.faint;
-  const state = !listed ? "Listing is off" : ended ? "Not bookable" : "On Explore";
+  const classListed = centium ? centium.listed : true;
+  const state = !listed ? "Listing is off" : ended ? "Not bookable" : !classListed ? "Members only" : "On Explore";
+  const mp = !ended && listed && classListed && open !== null ? open : 0;
   const chipStyle: React.CSSProperties = { fontSize: px(9.5), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", padding: "1px 7px", borderRadius: 999, flexShrink: 0 };
   return (
-    <MCard c={c} r={20} style={{ padding: "12px 12px 12px 14px", marginBottom: 8, opacity: ended ? 0.6 : 1 }}>
+    <MCard c={c} r={20} borderColor={saved ? c.teal : undefined} style={{ padding: "12px 12px 12px 14px", marginBottom: 8, opacity: ended ? 0.6 : 1 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
         <span style={{ width: 52, flexShrink: 0, borderRadius: 14, background: c.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "8px 0" }}>
           <span style={{ fontSize: px(14), fontWeight: 800, lineHeight: lh(16), fontVariantNumeric: "tabular-nums", color: c.ink }}>{t?.time ?? x.startTime}</span>
@@ -233,14 +325,34 @@ function ClassRow({
           <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: px(14), fontWeight: 800, lineHeight: lh(18), color: c.ink, flexWrap: "wrap" }}>
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{x.title}</span>
             {flagText && <span style={{ ...chipStyle, background: flagBg, color: flagInk }}>{flagText}</span>}
+            {featured && (
+              <span style={{ ...chipStyle, background: c.pale, color: c.pDark, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                <Award size={10} strokeWidth={2.6} aria-hidden />
+                Featured
+              </span>
+            )}
           </p>
           <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(17.25) }}>{`${who ? `With ${who} · ` : ""}${x.maxCapacity} spots`}</p>
           <div style={{ position: "relative", height: 6, borderRadius: 999, background: c.track, marginTop: 8, overflow: "hidden" }} aria-hidden>
             <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.min(100, (booked / cap) * 100)}%`, background: flag === "low" ? c.caution : c.primary }} />
+            {mp > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: `${Math.min(100, (booked / cap) * 100)}%`,
+                  top: 0,
+                  bottom: 0,
+                  width: `${(mp / cap) * 100}%`,
+                  opacity: 0.9,
+                  background: `repeating-linear-gradient(90deg, ${c.teal} 0 3px, transparent 3px 5px)`,
+                }}
+              />
+            )}
           </div>
           <p style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: px(11.5), marginTop: 5, color: c.ink }}>
             <span style={{ fontWeight: 700 }}>{`${booked} of ${x.maxCapacity} booked`}</span>
-            {!ended && !listed && <span style={{ color: c.tealInk, fontWeight: 700, whiteSpace: "nowrap" }}>Not on Explore</span>}
+            {!ended && (!listed || !classListed) && <span style={{ color: c.tealInk, fontWeight: 700, whiteSpace: "nowrap" }}>Not on Explore</span>}
+            {!ended && listed && classListed && open !== null && <span style={{ color: c.tealInk, fontWeight: 700, whiteSpace: "nowrap" }}>{`${open} open on Centium`}</span>}
           </p>
         </div>
       </div>
@@ -258,18 +370,46 @@ function ClassRow({
             Spots
           </button>
         )}
-        <MSwitch c={c} on={listed && !ended} onChange={() => undefined} label={`Show ${x.title} on Explore`} disabled={!spotsLive || ended || !listed} />
+        <MSwitch c={c} on={listed && !ended && classListed} onChange={(on) => onListed(on)} label={`Show ${x.title} on Explore`} disabled={!spotsLive || !canWrite || !centium || ended || !listed} />
       </div>
     </MCard>
   );
 }
 
-/** MA1-040: Spots on Centium. The count is B13 (business_classes.centium_spots): Save stays "Coming soon". */
-function SpotsSheet({ x, booked, who, onClose }: { x: BusinessClassRow; booked: number; who: string | null; onClose: () => void }) {
-  const { c, backend } = useMarket();
+/** MA1-040: Spots on Centium. Stores centium_spots = Centium bookings so far + the spots left open (B13 MK-04). */
+function SpotsSheet({
+  x,
+  booked,
+  who,
+  centium,
+  canWrite,
+  onClose,
+  onSaved,
+}: {
+  x: BusinessClassRow;
+  booked: number;
+  who: string | null;
+  centium: ClassCentium | null;
+  canWrite: boolean;
+  onClose: () => void;
+  onSaved: (cc: ClassCentium, open: number) => void;
+}) {
+  const { c, backend, can } = useMarket();
   const free = Math.max(0, x.maxCapacity - booked);
-  const [offered, setOffered] = useState(0);
-  const writes = SPOT_WRITES && backend.spots === "live";
+  const [offered, setOffered] = useState(() => (centium ? openOnCentium(x.maxCapacity, booked, centium.centiumSpots, centium.centiumBooked) : 0));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const writes = canWrite && !!centium;
+  const save = async () => {
+    if (!centium || busy) return;
+    setBusy(true);
+    setError(null);
+    const spots = centiumSpotsFor(offered, centium.centiumBooked);
+    const r = await saveClassCentium(x.id, { centiumSpots: spots });
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    onSaved({ ...centium, centiumSpots: spots }, offered);
+  };
   const step = (d: number) => setOffered((o) => Math.max(0, Math.min(free, o + d)));
   const stepBtn = (label: string, d: number, Icon: typeof Minus, dis: boolean) => (
     <button
@@ -290,10 +430,12 @@ function SpotsSheet({ x, booked, who, onClose }: { x: BusinessClassRow; booked: 
       title="Spots on Centium"
       footer={
         <>
-          <MPrimary c={c} disabled={!writes}>
+          {error && <MSaveError c={c}>{error}</MSaveError>}
+          <MPrimary c={c} disabled={!writes || busy} onClick={() => void save()}>
             Save
           </MPrimary>
-          {!writes && <MSoonNote c={c}>Saving this is coming soon.</MSoonNote>}
+          {backend.spots !== "live" && <MSoonNote c={c}>Saving this is coming soon.</MSoonNote>}
+          {backend.spots === "live" && !can("schedule") && <MSoonNote c={c}>You need the Schedule permission to change this. Ask the owner.</MSoonNote>}
         </>
       }
     >

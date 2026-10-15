@@ -7,9 +7,9 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 // LIVE NOW: business_profiles.active (listing switch), .perk (the listing
 // perk, V6-88 moved here from the Dashboard), .categories (Activities /
 // Item categories, B5 OB-09 = BU3-04). Everything else MA1 draws is stage
-// B13 (BACKEND_REQUIREMENTS-v6 MK-02 to MK-07) or B7 (MB-03 day-pass flags),
-// which are not in HANDOVER_API.md nor on the local stack. Each of those is
-// PROBED: the screen is "pending" only when the server itself answers that the
+// B13 (HANDOVER_API.md "B13", MK-02 to MK-07: listing.ts, promotions and
+// featuring) or B7 (MB-03 day-pass flags). Each of those is PROBED: the
+// screen keeps its pending state only when the server itself answers that the
 // table, column or function does not exist (42P01, 42703, PGRST200/202/204/205).
 // Any other failure is an error, never a pending state. Nothing here is
 // invented: a B13 number is shown only when a B13 reader returns it.
@@ -95,26 +95,23 @@ export const ALL_PENDING: MarketBackend = {
 // Feature for a week: the price comes from the database only (V6-45). No
 // price row (or no table) = the drawn copy without a price.
 
-export type FeatureArea = "classes_near_you" | "gyms_near_you" | "shops_near_you";
+/** B13 feature_area: "Classes near you", "Gyms near you", "Shops near you". */
+export type FeatureArea = "classes" | "gyms" | "shops";
 
 export interface FeaturePrice {
   amount: number;
   currency: string;
 }
 
-export async function fetchFeaturePrice(area: FeatureArea): Promise<FeaturePrice | null> {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await db
-    .from("feature_prices")
-    .select("price, currency, active_from")
-    .eq("area", area)
-    .lte("active_from", today)
-    .order("active_from", { ascending: false })
-    .limit(1);
-  if (error || !data || data.length === 0) return null;
-  const r = data[0] as { price: number | string; currency: string | null };
-  const amount = Number(r.price);
-  return Number.isFinite(amount) ? { amount, currency: r.currency || "USD" } : null;
+/**
+ * B13 feature_price_for(area, on): the price in force on that day (USD only,
+ * the feature_prices check). Null = not on sale (or the function is absent).
+ */
+export async function fetchFeaturePrice(area: FeatureArea, on?: string): Promise<FeaturePrice | null> {
+  const { data, error } = await db.rpc("feature_price_for", on ? { p_area: area, p_on: on } : { p_area: area });
+  if (error || data === null || data === undefined) return null;
+  const amount = Number(data);
+  return Number.isFinite(amount) && amount > 0 ? { amount, currency: "USD" } : null;
 }
 
 export function priceLabel(p: FeaturePrice, cents = false): string {

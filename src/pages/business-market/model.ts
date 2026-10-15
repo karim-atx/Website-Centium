@@ -33,11 +33,15 @@ export interface StrengthInput {
   logo: boolean;
   cover: boolean;
   photos: number;
+  /** B13 listing_strength "photos" (3 or more approved); without it, 6 photos. */
+  photosDone?: boolean;
   description: boolean;
   categories: string[];
   address: string | null;
   hoursSummary: string | null;
   amenities: string[];
+  /** B13 listing_strength "amenities" (any venue); without it, this venue's list. */
+  amenitiesDone?: boolean;
   delivery: boolean;
   contact: boolean;
   firstVisit: boolean;
@@ -47,8 +51,8 @@ export interface StrengthInput {
 
 /** The 11 items in the board's order (source `CK`, lines 440-442), with live subs. */
 export function strengthItems(i: StrengthInput): StrengthItem[] {
-  const photosDone = i.photos >= 6;
-  const photoSub = photosDone ? "" : i.photos === 0 ? "0 of 6" : `${i.photos} of 6 · add ${6 - i.photos} more`;
+  const photosDone = i.photosDone ?? i.photos >= 6;
+  const photoSub = photosDone ? "" : i.photos === 0 ? "0 of 6" : i.photos >= 6 ? `${i.photos} of 6` : `${i.photos} of 6 · add ${6 - i.photos} more`;
   const reviewsSub = i.reviews.count > 0 && i.reviews.average !== null ? `${i.reviews.average.toFixed(1)} · ${i.reviews.count} review${i.reviews.count === 1 ? "" : "s"}` : "None yet";
   const common = {
     logo: { key: "logo", title: "Logo", done: i.logo, sub: "" },
@@ -83,7 +87,7 @@ export function strengthItems(i: StrengthInput): StrengthItem[] {
     { key: "categories", title: "Activities", done: i.categories.length > 0, sub: cats || "Not set" },
     common.address,
     common.hours,
-    { key: "amenities", title: "Amenities", done: i.amenities.length > 0, sub: i.amenities.join(", ") || "Not set" },
+    { key: "amenities", title: "Amenities", done: i.amenitiesDone ?? i.amenities.length > 0, sub: i.amenities.join(", ") || "Not set" },
     common.contact,
     { key: "firstVisit", title: "What to bring, first visit", done: i.firstVisit, sub: i.firstVisit ? "" : "Not set" },
     common.reviews,

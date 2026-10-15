@@ -20,6 +20,8 @@ import {
   type FeaturePrice,
   type MarketBackend,
 } from "../../services/business-market";
+import { fetchBusinessPhotos, fetchStrength, fetchVenueDetails, type VenueDetails } from "../../services/business-market/listing";
+import type { BusinessPhoto, ServerStrength } from "../../services/business-market/listingLogic";
 import { useMarketPalette } from "./kit";
 import type { MarketPalette } from "./palette";
 import { vocabOf, type Vocab } from "./vocab";
@@ -61,6 +63,15 @@ export interface MarketData {
   /** Instructor first names by professional id. */
   instructors: Map<string, string>;
   backend: MarketBackend;
+  /** B13 listing_strength() done flags; null when absent or not readable (the client derivation stands). */
+  strength: ServerStrength | null;
+  refreshStrength: () => void;
+  /** B13 gyms.amenities / first_visit of the selected venue; null until read (or absent). */
+  details: VenueDetails | null;
+  setDetails: (d: VenueDetails) => void;
+  /** B13 business_photos, every status (the business sees all of its own); null until read (or absent). */
+  photos: BusinessPhoto[] | null;
+  setPhotos: (p: BusinessPhoto[]) => void;
   featurePrice: FeaturePrice | null;
   store: StoreSettings | null;
   returnsSet: boolean;
@@ -107,6 +118,10 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   const [instructors, setInstructors] = useState<Map<string, string>>(new Map());
   const [backend, setBackend] = useState<MarketBackend>(ALL_PENDING);
   const [featurePrice, setFeaturePrice] = useState<FeaturePrice | null>(null);
+  const [strength, setStrength] = useState<ServerStrength | null>(null);
+  const [details, setDetails] = useState<VenueDetails | null>(null);
+  const [photos, setPhotos] = useState<BusinessPhoto[] | null>(null);
+  const [strengthTick, setStrengthTick] = useState(0);
   const [store, setStore] = useState<StoreSettings | null>(null);
   const [returnsSet, setReturnsSet] = useState(false);
   const [extraError, setExtraError] = useState<string | null>(null);
@@ -121,6 +136,10 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
       if (p.ok) setPerk(p.value);
       else setExtraError(p.message);
       setBackend(probes);
+      if (probes.photos === "live") {
+        const ph = await fetchBusinessPhotos(businessId);
+        if (alive && ph.ok) setPhotos(ph.value);
+      }
       if (probes.featurePrices === "live") {
         const price = await fetchFeaturePrice(vocabOf(kind).featureArea);
         if (alive) setFeaturePrice(price);
@@ -150,6 +169,32 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
       alive = false;
     };
   }, [gymId, tick]);
+
+  const detailsLive = backend.details === "live";
+  useEffect(() => {
+    if (!gymId || !detailsLive) return;
+    let alive = true;
+    void fetchVenueDetails(gymId).then((r) => {
+      if (alive && r.ok) setDetails(r.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [gymId, detailsLive, tick]);
+
+  // listing_strength() is derived on the server: re-read after any listing
+  // change (refreshStrength). Absent or refused = null.
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    void fetchStrength(businessId).then((r) => {
+      if (alive) setStrength(r.ok ? r.value : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId, tick, strengthTick]);
+  const refreshStrength = useCallback(() => setStrengthTick((t) => t + 1), []);
 
   const classIds = useMemo(() => classes.classes.map((x) => x.id).join(","), [classes.classes]);
   useEffect(() => {
@@ -215,6 +260,12 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
     booked: classIds ? booked : new Map(),
     instructors,
     backend,
+    strength,
+    refreshStrength,
+    details,
+    setDetails,
+    photos,
+    setPhotos,
     featurePrice,
     store,
     returnsSet,

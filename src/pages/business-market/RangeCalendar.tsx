@@ -7,7 +7,9 @@ import { addDays, dateOf, dayMonth, daysBetween, isoOf } from "./model";
 // MA1-102 / 133 / 134: the inline date-range calendar (opens in place under
 // the date fields, never a sheet). Monday first (user rule; October 2026
 // starts with 3 blanks). Past days disabled. `fixedDays` = Feature for a
-// week: one tap picks the start and the 7 days run from it.
+// week: one tap picks the start and the 7 days run from it. `max` = the last
+// day that can be picked (featuring: today + 90). `fixedStart` = a started
+// promotion (ATX10): its start stays, a tap picks only the end.
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WD = ["M", "T", "W", "T", "F", "S", "S"];
@@ -16,12 +18,16 @@ export function RangeCalendar({
   from,
   to,
   fixedDays,
+  fixedStart,
+  max,
   onCancel,
   onDone,
 }: {
   from: string | null;
   to: string | null;
   fixedDays?: number;
+  fixedStart?: boolean;
+  max?: string;
   onCancel: () => void;
   onDone: (from: string, to: string) => void;
 }) {
@@ -41,6 +47,10 @@ export function RangeCalendar({
     if (fixedDays) {
       setA(iso);
       setB(addDays(iso, fixedDays - 1));
+      return;
+    }
+    if (fixedStart && a) {
+      if (iso >= a) setB(iso);
       return;
     }
     if (!a || (a && b) || iso < a) {
@@ -76,7 +86,7 @@ export function RangeCalendar({
         ))}
         {Array.from({ length: daysIn }, (_, i) => {
           const iso = isoOf(new Date(month.y, month.m, i + 1));
-          const past = iso < today;
+          const past = iso < today || (!!max && iso > max) || (!!fixedStart && !!a && iso < a);
           const edge = iso === a || iso === b;
           const inR = !!a && !!b && iso > a && iso < b;
           const isToday = iso === today && !edge;
