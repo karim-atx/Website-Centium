@@ -44,9 +44,10 @@ import { consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./
  * "Save, come back later" and Home shows "Continue your check-in". Send
  * submits (p_submit true). A flagged response (safety_flag, set by the
  * database) shows the Mood check-in's "talk to a doctor" follow-up and its
- * warning signs. Recovery-sensitive mode (J12) skips the body-measure
- * questions (form_question_is_body_measure, mirrored by isBodyMeasure): not
- * rendered, not sent, and not required by save_form_response either.
+ * warning signs. Recovery-sensitive mode (J12) skips the body-measure and
+ * progress-photo questions (form_question_hidden_in_recovery, mirrored by
+ * isHiddenInRecovery): not rendered, not sent, and not required by
+ * save_form_response either, and the consent line names neither.
  */
 
 const SAVE_DELAY_MS = 800;
@@ -64,7 +65,7 @@ interface FormSheetProps {
   open: boolean;
   bundle: ClientFormBundle | null;
   me: string;
-  /** Recovery-sensitive (or not yet known): weight and measurement questions are skipped. */
+  /** Recovery-sensitive (or not yet known): weight, measurement and photo questions are skipped. */
   hideBody: boolean;
   timezone: string | null;
   onClose: (changed: boolean) => void;

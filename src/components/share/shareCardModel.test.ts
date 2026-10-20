@@ -18,6 +18,10 @@ import {
   winRowText,
   type CardPayload,
   type ClientWin,
+  canAskToShare,
+  readWinSharing,
+  shareableWins,
+  winsShieldLine,
 } from "./shareCardModel";
 
 const win = (kind: ClientWin["kind"], value: Record<string, unknown>, occurredAt = "2026-10-14T09:00:00Z"): ClientWin => ({ winId: "w1", clientId: "c1", kind, occurredAt, value });
@@ -115,4 +119,36 @@ test("shareDate uses the app's short date (month first, year only when another y
   assert.equal(shareDate(new Date(2026, 9, 12, 9).toISOString(), now), "Oct 12");
   assert.equal(shareDate("2025-10-12", now), "Oct 12, 2025");
   assert.equal(shareDate("not a date", now), "");
+});
+
+// 815efc5 W8-2: the client's win-sharing setting on the professional's side.
+test("readWinSharing: null and unknown values read as always_ask", () => {
+  assert.equal(readWinSharing("always_allow"), "always_allow");
+  assert.equal(readWinSharing("never"), "never");
+  assert.equal(readWinSharing("always_ask"), "always_ask");
+  assert.equal(readWinSharing(null), "always_ask");
+  assert.equal(readWinSharing(undefined), "always_ask");
+  assert.equal(readWinSharing("sometimes"), "always_ask");
+});
+
+test("canAskToShare: only Never allow hides the share and ask controls", () => {
+  assert.equal(canAskToShare("never"), false);
+  assert.equal(canAskToShare("always_ask"), true);
+  assert.equal(canAskToShare("always_allow"), true);
+});
+
+test("shareableWins: a Never allow client's wins drop out; an unknown client counts as always_ask", () => {
+  const ws = [{ clientId: "a" }, { clientId: "b" }, { clientId: "c" }, { clientId: "d" }];
+  const settings = new Map([["a", "never"], ["b", "always_ask"], ["c", "always_allow"]] as const);
+  assert.deepEqual(shareableWins(ws, settings).map((w) => w.clientId), ["b", "c", "d"]);
+});
+
+test("winsShieldLine: the SH4 setting line, and the neutral Never allow line", () => {
+  assert.equal(winsShieldLine("Sam", "full_coaching", "always_ask"), "Sharing a win asks Sam first. Sam's setting: Always ask.");
+  assert.equal(winsShieldLine("Sam", "full_coaching", "always_allow"), "Sam lets professionals share wins by initials. Sam's setting: Always allow.");
+  assert.equal(winsShieldLine("Sam", "full_coaching", "never"), "Sam doesn't want wins shared.");
+  assert.equal(winsShieldLine("Lina", "nutrition", "always_ask"), "Sharing a win asks Lina first. Food entries and photos are never on a card.");
+  assert.equal(winsShieldLine("Lina", "nutrition", "always_allow"), "Lina lets professionals share wins by initials. Food entries and photos are never on a card.");
+  assert.equal(winsShieldLine("Lina", "nutrition", "never"), "Lina doesn't want wins shared.");
+  for (const s of ["always_ask", "always_allow", "never"] as const) assert.doesNotMatch(winsShieldLine("Sam", "full_coaching", s), /[—’]/);
 });

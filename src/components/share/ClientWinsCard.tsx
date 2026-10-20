@@ -8,7 +8,7 @@ import { Toast } from "../ui/Toast";
 import { shiftIso } from "../../services/pro/home";
 import type { ProLane } from "../pro/subtypeLanes";
 import { SHARE_ICONS, ShareIconButton, SharePill, ToneTile } from "./shareKit";
-import { shareDate, winCard, winRowText, type CardSpec, type ClientWin, type WinIcon, type WinTone } from "./shareCardModel";
+import { canAskToShare, shareDate, winCard, winRowText, winsShieldLine, type CardSpec, type ClientWin, type WinIcon, type WinSharingSetting, type WinTone } from "./shareCardModel";
 import { AskPermissionSheet } from "./AskPermissionSheet";
 import { ShareFlow } from "./ShareFlow";
 import { useSharePro } from "./useSharePro";
@@ -57,8 +57,14 @@ interface Row {
  * percentage, no weight change), so the frame's "87% of the meal plan
  * followed", "94% of sessions done" and "4.1 kg down since August" rows are
  * not drawn. A Clinical overview client page never mounts this.
+ *
+ * The client's win-sharing setting (my_client_stages().win_sharing, 815efc5
+ * W8-2) decides the controls: Never allow hides every share and ask button
+ * (SH4 "Share icons hidden for Never allow"; the state pills stay) and the
+ * shield line says "{first} doesn't want wins shared."; otherwise the line
+ * carries the setting where SH4 draws it (winsShieldLine).
  */
-export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstName: string; today: string; lane: ProLane }> = ({ clientId, name, firstName, today, lane }) => {
+export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstName: string; today: string; lane: ProLane; winSharing?: WinSharingSetting }> = ({ clientId, name, firstName, today, lane, winSharing = "always_ask" }) => {
   const { authUserId } = useApp();
   const pro = useSharePro();
   const [wins, setWins] = useState<ClientWin[] | null>(null);
@@ -102,6 +108,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
       .filter((x): x is Row => !!x);
   }, [wins, requests, items, today]);
 
+  const mayAsk = canAskToShare(winSharing);
   const right = (r: Row) => {
     const s = r.request?.status;
     if (r.removal) return <SharePill tone="gold">Removal asked</SharePill>;
@@ -112,10 +119,10 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
       return (
         <span className="flex items-center shrink-0" style={{ gap: 6 }}>
           <SharePill tone="teal">Allowed</SharePill>
-          <ShareIconButton on label={`Share ${r.title}`} disabled={!pro} onClick={() => setSharing(r)} />
+          {mayAsk && <ShareIconButton on label={`Share ${r.title}`} disabled={!pro} onClick={() => setSharing(r)} />}
         </span>
       );
-    return <ShareIconButton label={`Ask ${firstName} to share ${r.title}`} disabled={!pro} onClick={() => setAsking(r)} />;
+    return mayAsk ? <ShareIconButton label={`Ask ${firstName} to share ${r.title}`} disabled={!pro} onClick={() => setAsking(r)} /> : null;
   };
   const note = (r: Row) => {
     const s = r.request?.status;
@@ -164,10 +171,10 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
       </div>
       <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chF, marginTop: 10, padding: "0 4px" }}>
         <ShieldCheck size={12} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
-        {lane === "nutrition" ? `Sharing a win asks ${firstName} first. Food entries and photos are never on a card.` : `Sharing a win asks ${firstName} first.`}
+        <span data-win-sharing={winSharing}>{winsShieldLine(firstName, lane, winSharing)}</span>
       </p>
 
-      {asking && pro && (
+      {asking && pro && mayAsk && (
         <AskPermissionSheet
           open
           onClose={() => setAsking(null)}
@@ -182,7 +189,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
           }}
         />
       )}
-      {sharing && pro && sharing.request && (
+      {sharing && pro && sharing.request && mayAsk && (
         <ShareFlow
           open
           onClose={() => setSharing(null)}

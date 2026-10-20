@@ -3,9 +3,14 @@ import assert from "node:assert/strict";
 import { consentLine } from "./copy.ts";
 
 describe("client forms consent line", () => {
-  it("names photos and measurements, or photos only when recovery mode hides the measurements", () => {
+  it("names photos and measurements when they're shown", () => {
     assert.equal(consentLine("Rami", "check_in"), "Your answers go to Rami when you send. Rami sees your photos and measurements with this check-in only.");
-    assert.equal(consentLine("Rami", "check_in", true), "Your answers go to Rami when you send. Rami sees your photos with this check-in only.");
-    assert.equal(consentLine("Dana", "intake", true), "Your answers go to Dana when you send. Dana sees your photos with this form only.");
+    assert.equal(consentLine("Dana", "intake"), "Your answers go to Dana when you send. Dana sees your photos and measurements with this form only.");
+  });
+
+  it("names neither photos nor measurements when recovery mode hides both", () => {
+    assert.equal(consentLine("Rami", "check_in", true), "Your answers go to Rami when you send. Rami sees them with this check-in only.");
+    assert.equal(consentLine("Dana", "intake", true), "Your answers go to Dana when you send. Dana sees them with this form only.");
+    for (const kind of ["check_in", "intake"] as const) assert.doesNotMatch(consentLine("Rami", kind, true), /photo|measurement/i);
   });
 });

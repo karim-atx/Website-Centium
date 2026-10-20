@@ -56,7 +56,7 @@ export function visibleAnswers(answers: Answers, visible: ClientQuestion[]): Ans
 }
 
 // ---------------------------------------------------------------------------
-// J12: recovery-sensitive mode skips the body-measure questions
+// J12: recovery-sensitive mode skips the body-measure and photo questions
 // ---------------------------------------------------------------------------
 
 /**
@@ -66,22 +66,33 @@ export function visibleAnswers(answers: Answers, visible: ClientQuestion[]): Ans
 export const BODY_MEASURE_UNITS: readonly string[] = ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"];
 
 /**
- * A mirror of public.form_question_is_body_measure(p_type, p_unit), the one
- * rule (HANDOVER_API "Client-side readers"): a number question whose unit,
- * lower-cased with spaces trimmed (btrim), is a body unit. Recovery-sensitive
- * mode hides exactly these, and save_form_response doesn't require them of
- * that client. Nothing else is hidden: not the prompt's wording, and not a
- * question's safety topic (a safety-marked body measure is hidden too, as the
- * rule says "exactly").
+ * A mirror of public.form_question_is_body_measure(p_type, p_unit), the
+ * measurement predicate (HANDOVER_API "Client-side readers"): a number
+ * question whose unit, lower-cased with spaces trimmed (btrim), is a body
+ * unit. It keeps that meaning and is never true for a photo; it is one arm of
+ * the recovery rule (isHiddenInRecovery below). Not the prompt's wording, and
+ * not a question's safety topic.
  */
 export function isBodyMeasure(type: QuestionType | string, unit: string | null | undefined): boolean {
   return type === "number" && BODY_MEASURE_UNITS.includes((unit ?? "").replace(/^ +| +$/g, "").toLowerCase());
 }
 
-/** The questions to render, in order. Recovery-sensitive: body measures are not rendered, not required, not sent. */
+/**
+ * A mirror of public.form_question_hidden_in_recovery(p_type, p_unit)
+ * (migration 20261124190000), THE recovery-sensitive rule (J12): a body
+ * measure or a progress photo. Recovery-sensitive mode hides exactly these,
+ * and save_form_response doesn't require them of that client. A
+ * safety-marked body measure is hidden too (the rule has no exception).
+ * Text, scale, choice, date and a number without a body unit stay.
+ */
+export function isHiddenInRecovery(type: QuestionType | string, unit: string | null | undefined): boolean {
+  return isBodyMeasure(type, unit) || type === "photo";
+}
+
+/** The questions to render, in order. Recovery-sensitive: body measures and photos are not rendered, not required, not sent. */
 export function visibleQuestions(questions: ClientQuestion[], recoverySensitive: boolean): ClientQuestion[] {
   const sorted = [...questions].sort((a, b) => a.position - b.position);
-  return recoverySensitive ? sorted.filter((q) => !isBodyMeasure(q.type, q.unit)) : sorted;
+  return recoverySensitive ? sorted.filter((q) => !isHiddenInRecovery(q.type, q.unit)) : sorted;
 }
 
 // ---------------------------------------------------------------------------

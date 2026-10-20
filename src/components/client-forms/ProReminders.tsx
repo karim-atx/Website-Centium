@@ -30,7 +30,7 @@ import { WinPermissionPopup } from "../share/client/WinPermissionPopup";
 import { answerToast, sharedTitle } from "../share/client/sharingText";
 import { specFromPayload } from "../share/shareCardModel";
 import { fetchMyPendingShareRequests, type ShareRequest } from "../../services/share";
-import { fetchProSummaries } from "../../services/share/client";
+import { fetchProfessionalHandles, fetchProSummaries } from "../../services/share/client";
 
 /**
  * Release 3 · W7 CU5 / CU6 / CU23 / CU26 on Home, an addition between the
@@ -68,6 +68,8 @@ interface ShareAsk {
   request: ShareRequest;
   proName: string;
   proAvatarUrl: string | null;
+  /** professional_handle(); null: the preview has no handle line, link or QR. */
+  proHandle: string | null;
   winTitle: string;
 }
 
@@ -75,11 +77,12 @@ interface ShareAsk {
 async function fetchShareAsks(me: string): Promise<ShareAsk[] | null> {
   const r = await fetchMyPendingShareRequests(me);
   if (!r.ok) return null;
-  const names = await fetchProSummaries(r.data.map((x) => x.professionalId));
+  const ids = r.data.map((x) => x.professionalId);
+  const [names, handles] = await Promise.all([fetchProSummaries(ids), fetchProfessionalHandles(ids)]);
   return r.data.map((request) => {
     const proName = names.get(request.professionalId)?.firstName ?? "Your professional";
     const card = specFromPayload(request.card, proName);
-    return { request, proName, proAvatarUrl: names.get(request.professionalId)?.avatarUrl ?? null, winTitle: card ? sharedTitle(card.spec) : "" };
+    return { request, proName, proAvatarUrl: names.get(request.professionalId)?.avatarUrl ?? null, proHandle: handles.get(request.professionalId) ?? null, winTitle: card ? sharedTitle(card.spec) : "" };
   });
 }
 
@@ -208,6 +211,7 @@ export const ProReminders: React.FC = () => {
       request={sa.request}
       proName={sa.proName}
       proAvatarUrl={sa.proAvatarUrl}
+      proHandle={sa.proHandle}
       onAnswered={(a) => {
         close();
         setToast(answerToast(a));

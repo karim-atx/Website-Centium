@@ -3,7 +3,9 @@
 // DB-3 · Clients, the numbers, notes and habits; DB-6 for care plans).
 //
 // - my_client_stages(): stage (a label, never access: J5), stage_changed_at,
-//   joined_at, nutrition_coaching and the professional's own tags.
+//   joined_at, nutrition_coaching, the professional's own tags and the
+//   client's win_sharing (815efc5: always_ask, always_allow or never; the
+//   professional hides share and ask controls for never).
 // - set_client_stage(p_client_id, p_stage): writes the history row too.
 // - client_flags(p_client_id): last activity, gone quiet, at risk, programme
 //   and meal plan ending. Null numbers mean "nothing shared".
@@ -20,6 +22,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import { fetchAdherencePct, localIso, shiftIso } from "./home";
 import { fetchClientAccess } from "./access";
+import { readWinSharing, type WinSharingSetting } from "../../components/share/shareCardModel";
 
 export type ClientStage = "onboarding" | "active" | "paused" | "completed";
 export const CLIENT_STAGES: ClientStage[] = ["onboarding", "active", "paused", "completed"];
@@ -42,6 +45,8 @@ export interface StageRow {
   joinedAt: string;
   nutritionCoaching: boolean;
   tags: string[];
+  /** The client's profiles.win_sharing (815efc5, W8-2); null or unknown reads as always_ask. */
+  winSharing: WinSharingSetting;
 }
 
 export async function fetchClientStages(): Promise<Read<StageRow[]>> {
@@ -54,6 +59,7 @@ export async function fetchClientStages(): Promise<Read<StageRow[]>> {
     joined_at: string;
     nutrition_coaching: boolean;
     tags: string[] | null;
+    win_sharing?: string | null;
   }[];
   return {
     ok: true,
@@ -64,6 +70,7 @@ export async function fetchClientStages(): Promise<Read<StageRow[]>> {
       joinedAt: r.joined_at,
       nutritionCoaching: r.nutrition_coaching,
       tags: (r.tags ?? []).slice().sort((a, b) => a.localeCompare(b)),
+      winSharing: readWinSharing(r.win_sharing),
     })),
   };
 }

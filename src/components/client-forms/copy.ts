@@ -10,11 +10,17 @@ export const SEE_WARNING_SIGNS = "See warning signs";
 
 /**
  * FINAL_PLAN 3 §6.2 (CU6, decision 6): the fixed consent line above Send.
- * W9: in recovery-sensitive mode (J12) the measurement questions are hidden
- * and never sent, so the line names photos only.
+ * In recovery-sensitive mode (J12, form_question_hidden_in_recovery since
+ * 20261124190000) both the measurement and the photo questions are hidden and
+ * never sent, so the line names neither: the answers themselves are what the
+ * professional sees, with this check-in only.
  */
-export const consentLine = (pro: string, kind: "intake" | "check_in", measurementsHidden = false) =>
-  `Your answers go to ${pro} when you send. ${pro} sees your ${measurementsHidden ? "photos" : "photos and measurements"} with this ${kind === "check_in" ? "check-in" : "form"} only.`;
+export const consentLine = (pro: string, kind: "intake" | "check_in", bodyHidden = false) => {
+  const what = kind === "check_in" ? "check-in" : "form";
+  return bodyHidden
+    ? `Your answers go to ${pro} when you send. ${pro} sees them with this ${what} only.`
+    : `Your answers go to ${pro} when you send. ${pro} sees your photos and measurements with this ${what} only.`;
+};
 
 /** FINAL_PLAN 3 §6.2: no service promise. */
 export const thanksLine = (pro: string) => `Thanks. ${pro} will review it.`;

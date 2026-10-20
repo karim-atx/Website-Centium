@@ -10,6 +10,7 @@ import {
   groupReminders,
   BODY_MEASURE_UNITS,
   isBodyMeasure,
+  isHiddenInRecovery,
   itemsOf,
   longDate,
   missingMessage,
@@ -66,7 +67,7 @@ const template = () => [
   q({ type: "text", prompt: "Anything else for your coach?" }),
 ];
 
-describe("J12: recovery-sensitive mode hides exactly form_question_is_body_measure", () => {
+describe("J12: isBodyMeasure mirrors form_question_is_body_measure (one arm of the recovery rule)", () => {
   it("lists every unit of the database rule, and only those", () => {
     assert.deepEqual([...BODY_MEASURE_UNITS], ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"]);
     for (const unit of ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"]) {
@@ -94,12 +95,14 @@ describe("J12: recovery-sensitive mode hides exactly form_question_is_body_measu
     const qs = template().reverse();
     assert.equal(visibleQuestions(qs, false).length, 9);
     const shown = visibleQuestions(qs, true);
-    assert.equal(shown.length, 8);
+    assert.equal(shown.length, 7);
     assert.ok(!shown.some((x) => x.prompt === "Weight"));
+    assert.ok(!shown.some((x) => x.type === "photo"));
     assert.deepEqual(shown.map((x) => x.position), [...shown.map((x) => x.position)].sort((a, b) => a - b));
     const weight = qs.find((x) => x.prompt === "Weight")!;
+    const photo = qs.find((x) => x.type === "photo")!;
     const energy = qs.find((x) => x.prompt.startsWith("How was"))!;
-    const sent = visibleAnswers({ [weight.id]: 81.9, [energy.id]: 4 }, shown);
+    const sent = visibleAnswers({ [weight.id]: 81.9, [photo.id]: ["me/p1.jpg"], [energy.id]: 4 }, shown);
     assert.deepEqual(sent, { [energy.id]: 4 });
   });
 
@@ -108,6 +111,48 @@ describe("J12: recovery-sensitive mode hides exactly form_question_is_body_measu
     const shown = visibleQuestions([req], true);
     assert.deepEqual(missingRequired(shown, {}), []);
     assert.deepEqual(missingRequired(visibleQuestions([req], false), {}), [req.id]);
+  });
+});
+
+describe("J12: isHiddenInRecovery mirrors form_question_hidden_in_recovery (20261124190000)", () => {
+  it("hides a photo question, with or without a unit", () => {
+    assert.equal(isHiddenInRecovery("photo", null), true);
+    assert.equal(isHiddenInRecovery("photo", "kg"), true);
+    assert.equal(isHiddenInRecovery("photo", ""), true);
+  });
+
+  it("hides every body measure, exactly as isBodyMeasure (which keeps its meaning)", () => {
+    for (const unit of BODY_MEASURE_UNITS) {
+      assert.equal(isHiddenInRecovery("number", unit), true, unit);
+      assert.equal(isHiddenInRecovery("number", ` ${unit.toUpperCase()} `), true, unit);
+    }
+    // A photo is not a body measure: the measurement predicate never says yes to it.
+    assert.equal(isBodyMeasure("photo", null), false);
+  });
+
+  it("does not hide text, a number without a body unit, scale, choice, multi or date", () => {
+    assert.equal(isHiddenInRecovery("text", null), false);
+    assert.equal(isHiddenInRecovery("number", null), false);
+    assert.equal(isHiddenInRecovery("number", ""), false);
+    assert.equal(isHiddenInRecovery("number", "hours"), false);
+    assert.equal(isHiddenInRecovery("scale", null), false);
+    for (const type of ["choice", "multi", "date"]) assert.equal(isHiddenInRecovery(type, null), false, type);
+  });
+
+  it("makes a required photo not rendered, not required and not sent in recovery mode, and still required otherwise", () => {
+    const photo = q({ type: "photo", prompt: "Upload a progress photo", required: true });
+    const week = q({ type: "text", prompt: "How was your week", required: true });
+    const shown = visibleQuestions([photo, week], true);
+    assert.deepEqual(shown.map((x) => x.id), [week.id]);
+    assert.deepEqual(missingRequired(shown, { [week.id]: "fine" }), []);
+    assert.deepEqual(visibleAnswers({ [photo.id]: ["me/p.jpg"], [week.id]: "fine" }, shown), { [week.id]: "fine" });
+    assert.deepEqual(missingRequired(visibleQuestions([photo, week], false), { [week.id]: "fine" }), [photo.id]);
+  });
+
+  it("leaves no photo part in recovery mode: the built-in check-in starts with the questions", () => {
+    const parts = partsOf(itemsOf(visibleQuestions(template(), true)));
+    assert.ok(!parts.some((p) => partQuestions(p).some((x) => x.type === "photo" || isBodyMeasure(x.type, x.unit))));
+    assert.equal(partQuestions(parts[0])[0].prompt, "How was your energy this week?");
   });
 });
 

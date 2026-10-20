@@ -241,7 +241,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   return (
     <>
       {/* W8 SH4: the client's wins with Share, above the range row (Full coaching and Nutrition). */}
-      {lane !== "clinical_overview" && <ClientWinsCard clientId={clientId} name={data.name} firstName={firstName} today={today} lane={lane} />}
+      {lane !== "clinical_overview" && <ClientWinsCard clientId={clientId} name={data.name} firstName={firstName} today={today} lane={lane} winSharing={stage?.winSharing} />}
       <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 12 }}>
         <span style={{ fontSize: textPx(12.5), fontWeight: 500, color: INK.chS }}>{RANGE_LINE[range]}</span>
         <SegmentedTabs

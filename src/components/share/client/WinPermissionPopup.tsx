@@ -24,8 +24,10 @@ import { askBody, askTitle, type ShareAnswerKind } from "./sharingText";
  * then the queue's dots 6 below. Tapping outside is "Not now": the request
  * stays pending and comes back on a later open.
  *
- * The client's handle can't be read for a pending request (no documented
- * reader), so the preview has no handle line, link or QR.
+ * The preview shows where the win would appear, as the real card does: the
+ * professional's "@handle on Centium" line, the centium.app/p/{handle} link
+ * and the QR, from professional_handle() (815efc5, W8-1). A professional with
+ * no handle (or a failed read) gets the card without them, as before.
  */
 export const WinPermissionPopup: React.FC<{
   open: boolean;
@@ -34,12 +36,14 @@ export const WinPermissionPopup: React.FC<{
   request: ShareRequest;
   proName: string;
   proAvatarUrl?: string | null;
+  /** professional_handle(p_professional_id); null: no handle line, link or QR. */
+  proHandle?: string | null;
   /** Answered: the toast and the next pop-up. */
   onAnswered: (answer: ShareAnswerKind) => void;
   /** ATX08: already answered or withdrawn; drop it from the queue. */
   onGone: () => void;
   onDismiss: () => void;
-}> = ({ open, index, count, request, proName, proAvatarUrl, onAnswered, onGone, onDismiss }) => {
+}> = ({ open, index, count, request, proName, proAvatarUrl, proHandle = null, onAnswered, onGone, onDismiss }) => {
   const dark = useIsDark();
   const tn = toneSet("pr", dark);
   const [busy, setBusy] = useState<ShareAnswerKind | null>(null);
@@ -83,7 +87,7 @@ export const WinPermissionPopup: React.FC<{
         <div data-win-preview className="flex justify-center" style={{ margin: "-4px 0 14px" }}>
           <ShareCard
             spec={card.spec}
-            pro={{ name: proName, handle: null }}
+            pro={{ name: proName, handle: proHandle }}
             format={card.format}
             style={card.style}
             width={176}

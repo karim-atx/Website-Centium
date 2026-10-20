@@ -27,6 +27,7 @@ import {
   promoCard,
   reachedMilestone,
   reviewCard,
+  shareableWins,
   slotsCard,
   tipCard,
   winRowText,
@@ -34,7 +35,9 @@ import {
   type CardStat,
   type ClientWin,
   type WinKind,
+  type WinSharingSetting,
 } from "./shareCardModel";
+import { fetchClientStages } from "../../services/pro/clients";
 
 type Step = { at: "menu" } | { at: "wins"; kinds: WinKind[]; title: string } | { at: "reviews" } | { at: "promo" } | { at: "posts" };
 type Flow = { spec: CardSpec; kind: ItemKind | null };
@@ -69,6 +72,8 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
   const [step, setStep] = useState<Step>({ at: "menu" });
   const [flow, setFlow] = useState<Flow | null>(null);
   const [wins, setWins] = useState<ClientWin[] | null | "error">(null);
+  // 815efc5 W8-2: a Never allow client's wins aren't offered (a failed read hides nothing; ask_to_share_win still refuses).
+  const [sharing, setSharing] = useState<Map<string, WinSharingSetting>>(new Map());
   const [totals, setTotals] = useState<PracticeTotals | null | undefined | "error">(undefined);
   const [slots, setSlots] = useState<string[] | null | undefined | "error">(undefined);
   const [promo, setPromo] = useState<PromoItem[] | null | "error">(null);
@@ -81,7 +86,12 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
   useEffect(() => {
     if (!open || !authUserId) return;
     let live = true;
-    if (!clinical) void fetchAllWins().then((r) => live && setWins(r.ok ? r.data : "error"));
+    if (!clinical)
+      void Promise.all([fetchAllWins(), fetchClientStages()]).then(([r, s]) => {
+        if (!live) return;
+        if (s.ok) setSharing(new Map(s.data.map((x) => [x.clientId, x.winSharing])));
+        setWins(r.ok ? r.data : "error");
+      });
     void fetchPracticeTotals().then((r) => live && setTotals(r.ok ? r.data : "error"));
     void fetchWeekSlots(authUserId, new Date()).then((r) => live && setSlots(r.ok ? r.data : "error"));
     void fetchMyProfile(authUserId).then((r) => live && r.ok && r.profile && setOwn(r.profile));
@@ -108,7 +118,7 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
   };
 
   const nameOf = (clientId: string) => professionalClients.find((c) => c.clientId === clientId)?.name ?? "A client";
-  const monthWins = Array.isArray(wins) ? wins.filter((w) => inMonth(w.occurredAt, now)) : [];
+  const monthWins = Array.isArray(wins) ? shareableWins(wins, sharing).filter((w) => inMonth(w.occurredAt, now)) : [];
   const of = (kinds: WinKind[]) => monthWins.filter((w) => kinds.includes(w.kind));
   const winGroups: { kinds: WinKind[]; label: string; icon: keyof typeof SHARE_ICONS; tone: "gold" | "pr" | "teal"; sub: () => string }[] =
     lane === "nutrition"

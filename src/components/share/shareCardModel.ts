@@ -492,3 +492,36 @@ export function itemKind(spec: CardSpec, promo?: PromoKind): "win" | "profile" |
       return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// The client's win-sharing setting, as the professional sees it (815efc5,
+// W8-2: my_client_stages().win_sharing)
+// ---------------------------------------------------------------------------
+
+/** profiles.win_sharing; anything else (null, unknown) reads as "always_ask", the column default. */
+export type WinSharingSetting = "always_ask" | "always_allow" | "never";
+export const readWinSharing = (v: unknown): WinSharingSetting => (v === "always_allow" || v === "never" ? v : "always_ask");
+
+/** Share and ask controls show only when the client hasn't chosen Never allow. */
+export const canAskToShare = (setting: WinSharingSetting) => setting !== "never";
+
+/** The wins this professional may still offer to share: a Never allow client's wins drop out. */
+export function shareableWins<W extends { clientId: string }>(wins: W[], settings: ReadonlyMap<string, WinSharingSetting>): W[] {
+  return wins.filter((w) => canAskToShare(settings.get(w.clientId) ?? "always_ask"));
+}
+
+/**
+ * The shield line under the client page's "Wins this month" (SH4,
+ * source/gen/r31.js clientFC31 / clientNT31). Full coaching draws the
+ * setting after the ask line ("Sharing a win asks Sam first. Sam's setting:
+ * Always ask."); Nutrition draws its own second sentence and no setting.
+ * Always allow shares by initials without asking (ask_to_share_win), so the
+ * ask sentence would be untrue and gives way to the app's existing "lets
+ * professionals share wins by initials". Never allow: one neutral line.
+ */
+export function winsShieldLine(firstName: string, lane: "full_coaching" | "nutrition" | "clinical_overview", setting: WinSharingSetting): string {
+  if (setting === "never") return `${firstName} doesn't want wins shared.`;
+  const lead = setting === "always_allow" ? `${firstName} lets professionals share wins by initials.` : `Sharing a win asks ${firstName} first.`;
+  if (lane === "nutrition") return `${lead} Food entries and photos are never on a card.`;
+  return `${lead} ${firstName}'s setting: ${setting === "always_allow" ? "Always allow" : "Always ask"}.`;
+}
