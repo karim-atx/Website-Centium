@@ -10,14 +10,16 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { LockLine } from "../LockLine";
 import { ProCardSkeleton, ProError } from "../states";
-import { fmtKg, isActive, targetFor } from "./libraryModel";
+import { resolveWeights } from "../../../services/workout/coach";
+import { fmtKg, isActive } from "./libraryModel";
 
 /**
  * Release 3 · W5 TR14 v2 "Targets per client" for one exercise of a template.
  *
  * Each client on this programme: their estimated 1RM (current_personal_records,
  * behind Progress; a LockLine when not shared), the weight from it
- * (resolve_weight: 1RM × intensity, rounded to 2.5 kg) labelled "From 1RM",
+ * (the database's resolve_weight(one_rm, intensity_pct, 'kg'), called when
+ * rendering as the follow-up 20261124160000 says; nothing is stored) labelled "From 1RM",
  * or the coach's own figure ("Set by you", Reset). Save targets writes the
  * weight into each client's own copy (set_routine_exercises, allowed for the
  * assigning professional while the client is connected:
@@ -32,6 +34,8 @@ export const TargetsSheet: React.FC<{
 }> = ({ open, onClose, onBack, template, exercise }) => {
   const { templateAssignments, professionalClients } = useApp();
   const [oneRms, setOneRms] = useState<Record<string, number> | null>(null);
+  // resolve_weight per client id; a client left out has no 1RM or the call failed.
+  const [fromRm, setFromRm] = useState<Record<string, number>>({});
   const [failed, setFailed] = useState(false);
   const [editable, setEditable] = useState<Record<string, boolean>>({});
   const [override, setOverride] = useState<Record<string, string>>({});
@@ -58,12 +62,16 @@ export const TargetsSheet: React.FC<{
     void Promise.all([
       fetchOneRepMaxes(shared, exercise.exerciseId),
       Promise.all(rows.map(async (r) => [r.a.id, await canEditClientRoutine(r.a.routineId!)] as const)),
-    ]).then(([prs, edits]) => {
+    ]).then(async ([prs, edits]) => {
       if (cancelled) return;
       if (!prs.ok) {
         setFailed(true);
         return;
       }
+      const pct = exercise.intensityPct;
+      const kg = pct ? await resolveWeights(Object.entries(prs.data).map(([clientId, oneRm]) => ({ key: clientId, oneRm, intensityPct: pct }))) : {};
+      if (cancelled) return;
+      setFromRm(kg);
       setOneRms(prs.data);
       setEditable(Object.fromEntries(edits));
     });
@@ -82,7 +90,7 @@ export const TargetsSheet: React.FC<{
   const weightFor = (clientId: string): number | null => {
     const o = override[clientId];
     if (o !== undefined && o !== "") return Number(o);
-    return targetFor(clientId, oneRms?.[clientId] ?? null, pct).fromOneRm;
+    return fromRm[clientId] ?? null;
   };
 
   const save = async () => {
@@ -123,10 +131,10 @@ export const TargetsSheet: React.FC<{
               );
             }
             const rm = oneRms[a.clientId] ?? null;
-            const t = targetFor(a.clientId, rm, pct);
+            const from = fromRm[a.clientId] ?? null;
             const o = override[a.clientId];
             const overridden = o !== undefined;
-            const shown = overridden ? o : t.fromOneRm != null ? fmtKg(t.fromOneRm) : "";
+            const shown = overridden ? o : from != null ? fmtKg(from) : "";
             return (
               <div key={a.id} style={{ paddingBottom: 12, borderBottom: i < rows.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                 <div className="flex items-center mb-2" style={{ gap: 10 }}>
@@ -145,7 +153,7 @@ export const TargetsSheet: React.FC<{
                     className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
                   />
                   {shown && <span style={{ fontSize: textPx(13), color: INK.chS }}>kg</span>}
-                  {!overridden && t.fromOneRm != null && (
+                  {!overridden && from != null && (
                     <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.tealDark, background: INK.tealPale, borderRadius: 8, padding: "3px 8px" }}>From 1RM</span>
                   )}
                   {overridden && (

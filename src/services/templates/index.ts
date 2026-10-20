@@ -524,7 +524,6 @@ export async function createTemplate(
       level: template.level ?? null,
       folder_id: template.folderId ?? null,
       coach_note: template.coachNote ?? null,
-      // Insert only: the UPDATE column grant leaves duration_weeks out.
       duration_weeks: template.durationWeeks ?? null,
     })
     .select("id, created_at")
@@ -583,8 +582,6 @@ export async function createTemplate(
  */
 export async function updateTemplate(
   id: string,
-  // durationWeeks is not updatable (no UPDATE grant on duration_weeks), so a
-  // patch carrying it is ignored here rather than refused with a 42501.
   patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "exercises" | "isPublic" | "isVerified" | "ownerId">>,
   exercises: Exercise[] | undefined,
   lookup: ExerciseLookup
@@ -597,6 +594,7 @@ export async function updateTemplate(
     level?: TemplateLevel | null;
     folder_id?: string | null;
     coach_note?: string | null;
+    duration_weeks?: number | null;
   } = {};
   if (patch.name !== undefined) payload.name = patch.name.trim();
   if (patch.category !== undefined) payload.category = patch.category ?? null;
@@ -605,6 +603,8 @@ export async function updateTemplate(
   if (patch.level !== undefined) payload.level = patch.level ?? null;
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId ?? null;
   if (patch.coachNote !== undefined) payload.coach_note = patch.coachNote ?? null;
+  // The owner may update duration_weeks (follow-up 20261124160000).
+  if (patch.durationWeeks !== undefined) payload.duration_weeks = patch.durationWeeks ?? null;
 
   if (Object.keys(payload).length > 0) {
     const { error } = await supabase.from("workout_templates").update(payload).eq("id", id);
@@ -851,9 +851,11 @@ export async function adoptTemplate(templateId: string): Promise<AdoptResult> {
 
 /**
  * Release 3 (DB-3): ends a programme for its client. The row stays, with
- * ended_at set and ends_on clamped to today, and shows under Past programmes;
- * the client's routine is untouched. ATX08 = no active assignment with that
- * id, ATX09 = not yours.
+ * ended_at set and ends_on clamped to today (or to starts_on when it hasn't
+ * started: it works before the start date, so it is also "Remove"), and
+ * shows under Past programmes. Sessions after today leave the calendar; the
+ * client's routine is untouched. ATX08 = no active assignment with that id,
+ * ATX09 = not yours.
  */
 export async function endTemplateAssignment(assignmentId: string): Promise<WriteResult> {
   const { error } = await (supabase as unknown as {
@@ -864,27 +866,6 @@ export async function endTemplateAssignment(assignmentId: string): Promise<Write
     if (error.code === "ATX08") return { ok: false, message: "That programme has already ended." };
     if (error.code === "ATX09") return { ok: false, message: "Only the professional who assigned it can end it." };
     return { ok: false, message: describe(error) };
-  }
-  return { ok: true };
-}
-
-/** Un-records an assignment. Deliberately leaves the client's routine alone —
- *  the table comment is explicit that the client keeps what they have. */
-export async function unassignTemplate(assignmentId: string): Promise<WriteResult> {
-  const { data, error } = await supabase
-    .from("workout_template_assignments")
-    .delete()
-    .eq("id", assignmentId)
-    .select("id");
-
-  if (error) {
-    console.error("[templates] Could not unassign template:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-  // A policy rejection on DELETE is silent — zero rows, no error — so the row
-  // count is the only honest check, as deleteWorkoutSession documents.
-  if (!data || data.length === 0) {
-    return { ok: false, message: "That assignment couldn't be removed." };
   }
   return { ok: true };
 }

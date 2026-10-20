@@ -334,6 +334,8 @@ export interface SharedResult {
   shareId: string;
   markerId: string | null;
   panelId: string | null;
+  /** blood_markers.marker_key: the catalogue key (null for a marker outside the catalogue). */
+  markerKey: string | null;
   name: string;
   value: number | null;
   unit: string;
@@ -354,21 +356,22 @@ export async function fetchSharedResults(me: string, clientId: string): Promise<
   const panelIds = shares.map((s) => s.blood_panel_id).filter((x): x is string => !!x);
   const [markers, panelMarkers] = await Promise.all([
     markerIds.length
-      ? from("blood_markers").select("id, name, value, unit, range_low, range_high, status, result_date, created_at").in("id", markerIds)
+      ? from("blood_markers").select("id, marker_key, name, value, unit, range_low, range_high, status, result_date, created_at").in("id", markerIds)
       : Promise.resolve({ data: [], error: null }),
     panelIds.length
-      ? from("blood_markers").select("id, blood_panel_id, name, value, unit, range_low, range_high, status, result_date, created_at").in("blood_panel_id", panelIds)
+      ? from("blood_markers").select("id, blood_panel_id, marker_key, name, value, unit, range_low, range_high, status, result_date, created_at").in("blood_panel_id", panelIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   const e = markers.error ?? panelMarkers.error;
   if (e) return readFail(e);
-  type M = { id: string; blood_panel_id?: string | null; name: string; value: unknown; unit: string; range_low: unknown; range_high: unknown; status: SharedResult["status"]; result_date: string | null; created_at: string };
+  type M = { id: string; blood_panel_id?: string | null; marker_key: string | null; name: string; value: unknown; unit: string; range_low: unknown; range_high: unknown; status: SharedResult["status"]; result_date: string | null; created_at: string };
   const byId = new Map(((markers.data ?? []) as unknown as M[]).map((m) => [m.id, m]));
   const out: SharedResult[] = [];
   const mk = (s: (typeof shares)[number], m: M): SharedResult => ({
     shareId: s.id,
     markerId: m.id,
     panelId: s.blood_panel_id,
+    markerKey: m.marker_key,
     name: m.name,
     value: num(m.value),
     unit: m.unit,

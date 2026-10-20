@@ -29,7 +29,7 @@ const dayMonth = (iso: string) => new Date(iso).toLocaleDateString("en-US", { mo
 
 /**
  * Release 3 · W6 MO6 Reviews (/app/more/reviews; more.js reviews), the
- * reviews about the professional (the old ReviewsAboutMeCard's data) on its own page:
+ * reviews about the professional (the old reviews-about-me card's data) on its own page:
  * - summary (gap 18, pad 4 0 16): the average 40 / 800 -0.03em, stars 13,
  *   "{n} reviews" 11 text.faint; the 5 to 1 bars (10.5 text.faint, 6 high
  *   r9999 soft track, #D9A441 fill by share, count 14 wide right);

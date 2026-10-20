@@ -1,19 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../../lib/supabase/client";
-import { fetchNotifications, markRead, subscribeNotifications, type ProNotification } from "../../../services/pro/notifications";
+import { clearAllNotifications, dismissNotification, fetchNotifications, markRead, subscribeNotifications, type ProNotification } from "../../../services/pro/notifications";
 import { fetchHireInbox, type HireRequestRow } from "../../../services/hire-inbox";
 import { fetchMyEmployments, type MyEmployment } from "../../../services/business-team/employment";
 import { fetchPendingHires, type PendingHire } from "../../../services/hires/pro";
+import { fetchRecentDeclines, fetchRequestDetails, undoRequestDecline, type RecentDecline } from "../../../services/pro/requests";
+import { nextUndoClose, requestPlanLine, undoOpen } from "./requestModel";
+
+/** A pending request with the plan the client chose and their message (20261124120000). */
+export interface ProRequest extends HireRequestRow {
+  /** "Monthly coaching · $120 a month", or null when no plan was chosen. */
+  planLine: string | null;
+  /** The plan's name alone (the Clients Requests card: "Asked for Monthly coaching"). */
+  planName: string | null;
+  message: string | null;
+}
 
 /**
  * Release 3 · everything the bell and the notifications hub read, in one
  * place so Home's badge and the hub agree.
  * - notifications: professional_notifications, re-read on every realtime
- *   change for this professional (DB-2);
- * - requests: pending_client_requests waiting for an answer;
+ *   change for this professional (DB-2); Clear all and dismiss delete rows;
+ * - requests: pending_client_requests waiting for an answer, with plan and
+ *   message;
+ * - declined: requests declined in the last 5 minutes ("Declined · Undo");
  * - invitations: business team invitations not yet accepted
- *   (my_business_employments, replacing TeamInvitesNotice);
+ *   (my_business_employments: business_employees with accepted_at null).
+ *   Team invitations never come from a notification row;
  * - hires: professional_pending_hires (Pending payment).
  * The badge is the unread notification count.
  */
@@ -23,12 +37,19 @@ export interface ProInbox {
   offline: boolean;
   notifications: ProNotification[];
   names: Record<string, string>;
-  requests: HireRequestRow[];
+  requests: ProRequest[];
+  declined: RecentDecline[];
   invitations: MyEmployment[];
   hires: PendingHire[];
   unread: number;
   reload: () => void;
   markRead: (ids: string[]) => Promise<void>;
+  /** clear_my_professional_notifications(); false when it failed. */
+  clearAll: () => Promise<boolean>;
+  /** Deletes one own notification; false when it failed. */
+  dismiss: (id: string) => Promise<boolean>;
+  /** undo_client_request_decline; the message is ATXH2's "too late" or another failure. */
+  undoDecline: (id: string) => Promise<{ ok: true } | { ok: false; message: string; final?: boolean }>;
 }
 
 export function useProInbox(): ProInbox {
@@ -38,21 +59,25 @@ export function useProInbox(): ProInbox {
     error: boolean;
     offline: boolean;
     notifications: ProNotification[];
-    requests: HireRequestRow[];
+    requests: ProRequest[];
+    declined: RecentDecline[];
     invitations: MyEmployment[];
     hires: PendingHire[];
     extraNames: Record<string, string>;
-  }>({ loading: true, error: false, offline: false, notifications: [], requests: [], invitations: [], hires: [], extraNames: {} });
+  }>({ loading: true, error: false, offline: false, notifications: [], requests: [], declined: [], invitations: [], hires: [], extraNames: {} });
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  // Re-renders when an undo window closes, so "Declined · Undo" goes away on time.
+  const [tick, setTick] = useState(() => Date.now());
 
   useEffect(() => {
     if (!authUserId) return;
     let live = true;
     void (async () => {
-      const [n, r, e, h] = await Promise.all([fetchNotifications(), fetchHireInbox(authUserId), fetchMyEmployments(), fetchPendingHires()]);
+      const [n, r, e, h, d] = await Promise.all([fetchNotifications(), fetchHireInbox(authUserId), fetchMyEmployments(), fetchPendingHires(), fetchRecentDeclines(authUserId)]);
       if (!live) return;
       const notifications = n.ok ? n.data : [];
+      const details = r.status === "ok" ? await fetchRequestDetails(r.requests.map((x) => x.id)) : {};
       // Names the roster doesn't have (a prospect asking to work with you).
       const ids = [...new Set(notifications.map((x) => x.clientId).filter((x): x is string => !!x))];
       let extraNames: Record<string, string> = {};
@@ -61,12 +86,20 @@ export function useProInbox(): ProInbox {
         extraNames = Object.fromEntries((data ?? []).filter((p) => p.id && p.first_name).map((p) => [p.id as string, (p.first_name as string).trim()]));
       }
       if (!live) return;
+      setTick(Date.now());
       setState((prev) => ({
         loading: false,
         error: !n.ok && !n.offline,
         offline: !n.ok && n.offline,
         notifications: n.ok ? notifications : prev.notifications,
-        requests: r.status === "ok" ? r.requests : prev.requests,
+        requests:
+          r.status === "ok"
+            ? r.requests.map((x) => {
+                const dt = details[x.id];
+                return { ...x, planLine: dt ? requestPlanLine(dt.planName, dt.planPrice, dt.planBilling) : null, planName: dt?.planName?.trim() || null, message: dt?.message ?? null };
+              })
+            : prev.requests,
+        declined: d,
         invitations: e.ok ? e.value.filter((x) => !x.acceptedAt) : prev.invitations,
         hires: h.ok ? h.hires : prev.hires,
         extraNames,
@@ -81,6 +114,17 @@ export function useProInbox(): ProInbox {
     if (!authUserId) return;
     return subscribeNotifications(authUserId, reload);
   }, [authUserId, reload]);
+
+  const declined = useMemo(() => state.declined.filter((x) => undoOpen(x.resolvedAt, tick)), [state.declined, tick]);
+  useEffect(() => {
+    const left = nextUndoClose(
+      declined.map((x) => x.resolvedAt),
+      Date.now()
+    );
+    if (left === null) return;
+    const t = window.setTimeout(() => setTick(Date.now()), left + 50);
+    return () => window.clearTimeout(t);
+  }, [declined]);
 
   const names = useMemo(() => {
     const out: Record<string, string> = { ...state.extraNames };
@@ -99,11 +143,42 @@ export function useProInbox(): ProInbox {
     [state.notifications, reload]
   );
 
+  const clearAll = useCallback(async () => {
+    const ok = await clearAllNotifications();
+    if (ok) setState((s) => ({ ...s, notifications: [] }));
+    reload();
+    return ok;
+  }, [reload]);
+
+  const dismiss = useCallback(
+    async (id: string) => {
+      const ok = await dismissNotification(id);
+      if (ok) setState((s) => ({ ...s, notifications: s.notifications.filter((x) => x.id !== id) }));
+      else reload();
+      return ok;
+    },
+    [reload]
+  );
+
+  const undoDecline = useCallback(
+    async (id: string) => {
+      const r = await undoRequestDecline(id);
+      if (r.ok || r.final) setState((s) => ({ ...s, declined: s.declined.filter((x) => x.id !== id) }));
+      reload();
+      return r;
+    },
+    [reload]
+  );
+
   return {
     ...state,
+    declined,
     names,
     unread: state.notifications.filter((x) => !x.readAt).length,
     reload,
     markRead: doMarkRead,
+    clearAll,
+    dismiss,
+    undoDecline,
   };
 }

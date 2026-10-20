@@ -6,11 +6,10 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { toneSet } from "../client-forms/tone";
 import { useReviewsAboutMe } from "../../hooks/useProfessionalReviews";
 import { reviewerLabel } from "../pro/profile/profileModel";
-import { fmtDay } from "../pro/client/clientFormat";
 import { SHARE_ICONS, ShareIconButton, ToneTile } from "./shareKit";
 import { ShareFlow } from "./ShareFlow";
 import { useSharePro } from "./useSharePro";
-import { clipQuote, fmtInt, milestoneCard, reachedMilestone, reviewCard, type CardSpec } from "./shareCardModel";
+import { clipQuote, fmtInt, milestoneCard, shareDate, reachedMilestone, reviewCard, type CardSpec } from "./shareCardModel";
 import type { PracticeTotals } from "../../services/pro/practiceInsights";
 import type { ItemKind } from "../../services/share";
 
@@ -78,8 +77,8 @@ export const LatestReviewsShare: React.FC = () => {
             <div key={r.id} className="flex items-center" style={{ gap: 12, padding: "12px 14px", borderTop: `1px solid ${INK.b06}` }}>
               <ToneTile icon={SHARE_ICONS.star} tone="gold" size={36} radius={11} iconSize={17} />
               <span className="flex-1 min-w-0">
-                <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: "18px", color: INK.ch }}>{`“${clipQuote(r.body ?? "", 34)}”`}</span>
-                <span className="block" style={{ fontSize: textPx(11.5), lineHeight: "16px", color: INK.chF, marginTop: 1 }}>{`${by} · ${r.rating} star${r.rating === 1 ? "" : "s"} · ${fmtDay(r.createdAt)}`}</span>
+                <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: "18px", color: INK.ch }}>{`"${clipQuote(r.body ?? "", 34)}"`}</span>
+                <span className="block" style={{ fontSize: textPx(11.5), lineHeight: "16px", color: INK.chF, marginTop: 1 }}>{`${by} · ${r.rating} star${r.rating === 1 ? "" : "s"} · ${shareDate(r.createdAt)}`}</span>
               </span>
               <ShareIconButton label={`Share the review from ${by}`} disabled={!pro} onClick={() => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: by }), kind: "review" })} />
             </div>

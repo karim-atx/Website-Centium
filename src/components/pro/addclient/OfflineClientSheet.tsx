@@ -7,6 +7,7 @@ import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { addOfflineClient, defaultInviteMessage, inviteByContact, smsHref } from "../../../services/pro/invites";
+import { INVITE_NAME_MAX, OFFLINE_GOAL_MAX } from "../../../services/pro/inviteErrors";
 import { ProField } from "./fields";
 
 /**
@@ -14,7 +15,8 @@ import { ProField } from "./fields";
  * contact details only, no health data, until the person joins). With
  * "Invite them to connect" on, an email address gets the email invite
  * (invite_client) and a phone number opens the device's messages app.
- * Not carried: the frame's Goal field (offline_clients has no goal).
+ * The frame draws Goal with a chevron but names no options; offline_clients.goal
+ * is free text (at most 200), so it is a text field.
  */
 export const OfflineClientSheet: React.FC<{
   open: boolean;
@@ -28,6 +30,7 @@ export const OfflineClientSheet: React.FC<{
   const [last, setLast] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [goal, setGoal] = useState("");
   const [invite, setInvite] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +40,7 @@ export const OfflineClientSheet: React.FC<{
     setLast("");
     setEmail("");
     setPhone("");
+    setGoal("");
     setInvite(true);
     setError(null);
     setBusy(false);
@@ -48,7 +52,7 @@ export const OfflineClientSheet: React.FC<{
     if (!authUserId || !first.trim() || busy) return;
     setBusy(true);
     setError(null);
-    const r = await addOfflineClient(authUserId, { name, email, phone });
+    const r = await addOfflineClient(authUserId, { name, email, phone, goal });
     if (!r.ok) {
       setBusy(false);
       setError(r.message);
@@ -57,7 +61,7 @@ export const OfflineClientSheet: React.FC<{
     let note: string | null = null;
     if (invite && invitesAllowed && (email.trim() || phone.trim())) {
       const channel = email.trim() ? "email" : "phone";
-      const sent = await inviteByContact(channel, channel === "email" ? email : phone);
+      const sent = await inviteByContact(channel, channel === "email" ? email : phone, { firstName: first.trim().slice(0, INVITE_NAME_MAX) });
       if (!sent.ok) note = sent.message;
       else if (channel === "phone" && sent.data.code) window.location.href = smsHref(phone, defaultInviteMessage(user.firstName || "your professional", sent.data.code));
     }
@@ -83,6 +87,7 @@ export const OfflineClientSheet: React.FC<{
         </div>
         <ProField label="Email (optional)" type="email" inputMode="email" value={email} onChange={setEmail} />
         <ProField label="Phone (optional)" type="tel" inputMode="tel" value={phone} onChange={setPhone} placeholder="Add a number" />
+        <ProField label="Goal" value={goal} onChange={setGoal} autoComplete="off" maxLength={OFFLINE_GOAL_MAX} placeholder="Add a goal" />
         {invitesAllowed && (
           <div className="flex items-center justify-between" style={{ minHeight: 52, borderRadius: 12, background: INK.soft, padding: "6px 12px", gap: 12 }}>
             <span className="min-w-0">

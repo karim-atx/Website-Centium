@@ -15,6 +15,7 @@
 //   offered (Coming soon) rather than saved as something it isn't.
 // Sections and a description have no column either (reported).
 
+import { signedNum } from "../proRules";
 import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
 
@@ -330,7 +331,7 @@ export const numericAnswer = (v: unknown): number | null => {
 /** "+2", "-0.5", "0": a change, rounded to one decimal. */
 export function deltaText(now: number, was: number): string {
   const d = Math.round((now - was) * 10) / 10;
-  return d > 0 ? `+${d}` : `${d}`;
+  return signedNum(d);
 }
 
 /** Count of answered questions, for "{n} of {n} answered". */

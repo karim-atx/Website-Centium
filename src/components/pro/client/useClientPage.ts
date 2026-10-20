@@ -10,7 +10,7 @@ import type { ProfessionalClient } from "../../../types";
 /**
  * Release 3 · W3 what every tab of the client page shares, read once:
  * - the relationship row from the roster (AppContext, the same reads the old
- *   ClientDetailSheet used: names, communication preferences, and the gated
+ *   the old client detail sheet used: names, communication preferences, and the gated
  *   tiles the roster already fetches per category);
  * - the stage row (my_client_stages), the flags (client_flags);
  * - the access switches (useClientAccess);

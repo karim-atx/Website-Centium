@@ -15,6 +15,7 @@ import { REPORT_NAME_DEFAULT } from "../../health/records/kit";
 import { HealthDataPending } from "../../professionals/HealthDataPending";
 import { INK } from "../proInk";
 import { BiomarkerChart } from "./BiomarkerChart";
+import { catalogueByKey, flagFor } from "../insights/biomarkerMatch";
 import type { ClientPageData } from "./useClientPage";
 import { getBloodMarkers } from "../../../services/labs";
 import { getLabResults, type LabResult } from "../../../services/labs/results";
@@ -44,7 +45,9 @@ import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from 
  *   History needs Medical history. Locked: the frame's centred card (lock
  *   tile 44 r14, 14 / 700 title, 12 text.soft body, "Ask {name} to share").
  * - Panels (lab_marker_category) filter the markers; a marker opens the CL8
- *   BiomarkerChart with client_biomarker_flags.
+ *   BiomarkerChart with client_biomarker_flags. W9: a shared result carries
+ *   its blood_markers.marker_key, and the catalogue and the flag are matched
+ *   by that key (insights/biomarkerMatch.ts), never by name.
  * - Nothing shared at all: HealthDataPending (HANDOVER m).
  */
 
@@ -71,7 +74,7 @@ function sharedToMarker(s: SharedResult): BloodMarker {
     range: formatRange(s.rangeLow, s.rangeHigh),
     status: s.status,
     history: [{ date: s.date, value: s.value ?? 0 }],
-    markerKey: null,
+    markerKey: s.markerKey,
     rangeLow: s.rangeLow,
     rangeHigh: s.rangeHigh,
     previous: null,
@@ -149,7 +152,7 @@ export const HealthRecordsTab: React.FC<{
     };
   }, [clientId, historyOn, nonce]);
 
-  const entryOf = (m: BloodMarker) => (m.markerKey && lab.catalogue ? lab.catalogue.find((c) => c.key === m.markerKey) ?? null : null);
+  const entryOf = (m: BloodMarker) => catalogueByKey(lab.catalogue, m.markerKey);
   const panels = useMemo(() => {
     const m = new Map<string, number>();
     for (const mk of labs?.markers ?? []) {
@@ -161,7 +164,7 @@ export const HealthRecordsTab: React.FC<{
   }, [labs, lab.catalogue]);
   const shownMarkers = (labs?.markers ?? []).filter((m) => !panel || (entryOf(m)?.category ?? "other") === panel);
   const latestDate = (labs?.markers ?? []).reduce<string | null>((a, m) => m.history.reduce<string | null>((b, h) => (!b || h.date > b ? h.date : b), a), null);
-  const flagFor = (m: BloodMarker) => flags.find((f) => (m.markerKey && f.markerKey === m.markerKey) || f.name.toLowerCase() === m.name.toLowerCase()) ?? null;
+  const flagOf = (m: BloodMarker) => flagFor(flags, m.markerKey, m.name);
 
   const nothing = !access.loading && !labsVisible && !historyOn && imagingCount === 0;
   const onInk = dark ? "#B2D4CF" : "#3C6B65";
@@ -334,7 +337,7 @@ export const HealthRecordsTab: React.FC<{
         open={!!open}
         onClose={() => setOpen(null)}
         marker={open}
-        flag={open ? flagFor(open) : null}
+        flag={open ? flagOf(open) : null}
         panel={open ? PANEL_LABEL[entryOf(open)?.category ?? ""] ?? null : null}
         sharedNote={open ? labs?.shared.find((s) => s.markerId === open.id)?.note ?? null : null}
         firstName={firstName}

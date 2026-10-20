@@ -2,16 +2,17 @@ import React, { useMemo, useState } from "react";
 import { Activity, Droplets, Flame, Footprints, HeartPulse, Moon, Scale } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { INK } from "../proInk";
+import { signedNum } from "../proRules";
 import { textPx } from "../../../theme/textSize";
 import { ProChart } from "../ProChart";
-import { ComingSoon } from "../ComingSoon";
 import { EmptyState } from "../EmptyState";
 import { OfflineLine } from "../states";
 import { fetchClientBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
 import { classifyBloodPressure, splitByTimeOfDay, averageReading } from "../../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL } from "../../../services/blood-pressure/guidance";
 import { NO_READINGS } from "../../../services/health-metrics/series";
-import { fetchActivityDays, fetchInsightTargets, fetchMetricRows, fetchTrackedTypes, localDay, type MetricRow, type MetricType } from "../../../services/pro/insights";
+import { fetchActivityDays, fetchInsightTargets, fetchMetricRows, fetchSleepNights, fetchTrackedTypes, localDay, type MetricRow, type MetricType } from "../../../services/pro/insights";
+import { SleepView } from "./SleepCharts";
 import {
   addDays,
   bpByBucket,
@@ -46,9 +47,10 @@ import type { PanelProps } from "./panelProps";
  * burned; blood pressure from blood_pressure_readings): a tab shows when
  * its switch is on and at least one reading exists; Blood pressure, Heart
  * rate, Weight and Sleep also show when the switch is off, as the TR9 v4
- * "No … shared yet" state with Ask to share. Sleep stages, bedtime and the
- * hypnogram need wearable stage data: Coming soon. HRV is not tracked: no
- * tab.
+ * "No … shared yet" state with Ask to share. W9: Sleep also shows when
+ * sleep_details has a night, and draws the stages, bedtime and hypnogram
+ * from sleep_details and sleep_segments (SleepCharts.tsx). HRV is not
+ * tracked: no tab.
  *
  * Charts: BP buckets as dumbbells (systolic filled, diastolic hollow) over
  * the AHA categories (services/blood-pressure/classify.ts; an average of
@@ -79,6 +81,7 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
   const tracked = useRead(hmOn, () => fetchTrackedTypes(clientId, ["heart_rate", "sleep", "steps", "water", "calories_burned"]), [clientId]);
   const vit = useRead(hmOn, () => fetchMetricRows(clientId, ["heart_rate", "sleep", "steps", "water", "calories_burned"], since), [clientId, since]);
   const daily = useRead(hmOn, () => fetchActivityDays(clientId, since), [clientId, since]);
+  const sleep = useRead(hmOn, () => fetchSleepNights(clientId, since), [clientId, since]);
   const weight = useRead(wOn, () => fetchMetricRows(clientId, ["weight"], "2000-01-01"), [clientId]);
   const body = useRead(bmOn, () => fetchMetricRows(clientId, ["waist", "body_fat_pct"], addDays(today, -400)), [clientId, today]);
   const targets = useRead(wOn && access.has("progress"), () => fetchInsightTargets(clientId, true), [clientId]);
@@ -90,17 +93,17 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
     if (!bpOn || (bp.data?.length ?? 0) > 0) out.push({ key: "bp", label: "Blood pressure" });
     if (!hmOn || hrTracked) out.push({ key: "hr", label: "Heart rate" });
     if (!wOn || (weight.data?.length ?? 0) > 0) out.push({ key: "weight", label: "Weight" });
-    if (!hmOn || has("sleep")) out.push({ key: "sleep", label: "Sleep" });
+    if (!hmOn || has("sleep") || (sleep.data?.length ?? 0) > 0 || sleep.error) out.push({ key: "sleep", label: "Sleep" });
     if (hmOn && has("steps")) out.push({ key: "steps", label: "Steps" });
     if (hmOn && has("water")) out.push({ key: "water", label: "Water" });
     if (hmOn && has("calories_burned")) out.push({ key: "calories", label: "Calories burned" });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bpOn, hmOn, wOn, bp.data, weight.data, tracked.data, hrTracked]);
+  }, [bpOn, hmOn, wOn, bp.data, weight.data, tracked.data, hrTracked, sleep.data, sleep.error]);
   const [chosen, setChosen] = useState<Sub | null>(null);
   const sub = subs.find((s) => s.key === chosen)?.key ?? subs[0]?.key ?? null;
 
-  const waiting = (bpOn && bp.loading) || (hmOn && (tracked.loading || daily.loading)) || (wOn && weight.loading);
+  const waiting = (bpOn && bp.loading) || (hmOn && (tracked.loading || daily.loading || sleep.loading)) || (wOn && weight.loading);
   if (waiting) return <>{readGate({ data: undefined, loading: true, error: false, offline: false, retry: () => undefined })}</>;
   const failed = ([bpOn && bp, hmOn && tracked, wOn && weight] as (ReadState<unknown> | false)[]).find((r): r is ReadState<unknown> => !!r && r.error && r.data === undefined);
   if (failed) return <>{readGate(failed)}</>;
@@ -112,7 +115,7 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
 
   return (
     <>
-      {(bp.offline || vit.offline || weight.offline) && <OfflineLine />}
+      {(bp.offline || vit.offline || weight.offline || sleep.offline) && <OfflineLine />}
       <ChipRow label="Vitals" items={subs} active={sub} onChange={(k) => setChosen(k as Sub)} />
       {sub === "bp" &&
         (!bpOn ? (
@@ -136,7 +139,18 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
         (!hmOn ? (
           <NotShared icon={Moon} title="No sleep shared yet" line={`This fills in when ${firstName} shares Activity and vitals with you.`} {...ask("health_metrics")} />
         ) : (
-          readGate(vit) ?? <SimpleView kind="sleep" rows={(vit.data ?? []).filter((r) => r.type === "sleep")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />
+          readGate(vit) ?? (
+            <SleepView
+              nights={sleep}
+              durationRows={(vit.data ?? []).filter((r) => r.type === "sleep")}
+              duration={(rows) => <SimpleView kind="sleep" rows={rows} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />}
+              range={range}
+              onRange={shift}
+              today={today}
+              winStart={winStart}
+              firstName={firstName}
+            />
+          )
         ))}
       {sub === "steps" && (readGate(vit) ?? <SimpleView kind="steps" rows={(vit.data ?? []).filter((r) => r.type === "steps")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "water" && (readGate(vit) ?? <SimpleView kind="water" rows={(vit.data ?? []).filter((r) => r.type === "water")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
@@ -175,9 +189,9 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
   const latestCat = readings.length ? classifyBloodPressure(readings[0].systolic, readings[0].diastolic) : null;
 
   const boxes: StatBox[] = [
-    { label: "Average", value: avg ? `${avg.systolic}/${avg.diastolic}` : "–", unit: avg ? "mmHg" : undefined, delta: avg && prev && avg.systolic !== prev.systolic ? `${avg.systolic > prev.systolic ? "+" : ""}${avg.systolic - prev.systolic}` : null, dir: avg && prev ? (avg.systolic < prev.systolic ? "up" : avg.systolic > prev.systolic ? "down" : null) : null, sub: `${inWin.length} reading${inWin.length === 1 ? "" : "s"}` },
+    { label: "Average", value: avg ? `${avg.systolic}/${avg.diastolic}` : "–", unit: avg ? "mmHg" : undefined, delta: avg && prev && avg.systolic !== prev.systolic ? signedNum(avg.systolic - prev.systolic) : null, dir: avg && prev ? (avg.systolic < prev.systolic ? "up" : avg.systolic > prev.systolic ? "down" : null) : null, sub: `${inWin.length} reading${inWin.length === 1 ? "" : "s"}` },
     { label: "In the normal band", value: String(normal), unit: `of ${inWin.length}`, sub: "Readings in this range" },
-    ...(am && pm ? [{ label: "Mornings", value: `${am.systolic - pm.systolic > 0 ? "+" : ""}${am.systolic - pm.systolic}`, unit: "mmHg", sub: am.systolic >= pm.systolic ? "Higher than evenings" : "Lower than evenings" } as StatBox] : []),
+    ...(am && pm ? [{ label: "Mornings", value: signedNum(am.systolic - pm.systolic), unit: "mmHg", sub: am.systolic >= pm.systolic ? "Higher than evenings" : "Lower than evenings" } as StatBox] : []),
   ];
 
   if (spanDays < 14 && readings.length < 6) {
@@ -302,7 +316,7 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
       />
       <StatBoxes
         boxes={[
-          { label: "Resting heart rate", value: restAvg != null ? String(restAvg) : "–", unit: restAvg != null ? "bpm" : undefined, delta: restAvg != null && restPrev != null && restAvg !== restPrev ? `${restAvg > restPrev ? "+" : ""}${restAvg - restPrev}` : null, dir: restAvg != null && restPrev != null ? (restAvg < restPrev ? "up" : restAvg > restPrev ? "down" : null) : null, sub: `${daysBetween(winStart, today) + 1}-day average` },
+          { label: "Resting heart rate", value: restAvg != null ? String(restAvg) : "–", unit: restAvg != null ? "bpm" : undefined, delta: restAvg != null && restPrev != null && restAvg !== restPrev ? signedNum(restAvg - restPrev) : null, dir: restAvg != null && restPrev != null ? (restAvg < restPrev ? "up" : restAvg > restPrev ? "down" : null) : null, sub: `${daysBetween(winStart, today) + 1}-day average` },
           { label: "Highest today", value: todayMax != null ? String(todayMax) : "–", unit: todayMax != null ? "bpm" : undefined, sub: "From shared readings" },
           { label: "Lowest this week", value: weekMins.length ? String(Math.min(...weekMins)) : "–", unit: weekMins.length ? "bpm" : undefined, sub: "From shared readings" },
         ]}
@@ -345,7 +359,7 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
   };
   const waist = latestOf("waist");
   const fat = latestOf("body_fat_pct");
-  const signed = (n: number) => `${n > 0 ? "+" : ""}${n}`;
+  const signed = (n: number) => signedNum(n);
 
   return (
     <>
@@ -392,7 +406,8 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
 };
 
 // ---------------------------------------------------------------------------
-// Sleep (duration only; stages Coming soon), steps, water, calories burned
+// Sleep duration (SleepView adds the boxes, stages, bedtime and hypnogram),
+// steps, water, calories burned
 // ---------------------------------------------------------------------------
 
 const SIMPLE: Record<"sleep" | "steps" | "water" | "calories", { title: string; unit: string; icon: typeof Activity }> = {
@@ -437,22 +452,19 @@ const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; row
         tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? (kind === "sleep" ? `${show(v[i] as number)} asleep` : show(v[i] as number)) : "No reading"] })}
         summary={m != null ? `${meta.title} ${show(m)} on average.` : undefined}
       />
-      <StatBoxes
-        boxes={[
-          {
-            label: kind === "sleep" ? "Sleep per night" : `${meta.title} a day`,
-            value: m != null ? (kind === "sleep" ? hm(m * 60) : fmt(m)) : "–",
-            unit: m != null && kind !== "sleep" ? meta.unit : undefined,
-            delta: delta != null && Math.abs(delta) > 1e-9 ? (kind === "sleep" ? `${delta > 0 ? "+" : "-"}${Math.round(Math.abs(delta) * 60)}m` : `${delta > 0 ? "+" : "-"}${fmt(Math.abs(delta))}`) : null,
-            dir: delta == null || Math.abs(delta) < 1e-9 ? null : delta > 0 ? "up" : "down",
-            sub: `${win.length} of ${daysBetween(winStart, today) + 1} days`,
-          },
-        ]}
-      />
-      {kind === "sleep" && (
-        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "0 14px", marginBottom: 12 }}>
-          <ComingSoon line="Sleep stages and bedtimes need wearable stage data." />
-        </div>
+      {kind !== "sleep" && (
+        <StatBoxes
+          boxes={[
+            {
+              label: `${meta.title} a day`,
+              value: m != null ? fmt(m) : "–",
+              unit: m != null ? meta.unit : undefined,
+              delta: delta != null && Math.abs(delta) > 1e-9 ? signedNum(delta, fmt) : null,
+              dir: delta == null || Math.abs(delta) < 1e-9 ? null : delta > 0 ? "up" : "down",
+              sub: `${win.length} of ${daysBetween(winStart, today) + 1} days`,
+            },
+          ]}
+        />
       )}
     </>
   );

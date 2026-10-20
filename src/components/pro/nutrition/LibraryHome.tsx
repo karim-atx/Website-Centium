@@ -337,7 +337,7 @@ const Chip11: React.FC<{ label: string; tone: "pr" | "pau" }> = ({ label, tone }
 
 const DAY_CHOICES = [7, 14, 28];
 
-const NewPlanSheet: React.FC<{ open: boolean; onClose: () => void; onCreate: (name: string, days: number) => Promise<string | null> }> = ({ open, onClose, onCreate }) => {
+export const NewPlanSheet: React.FC<{ open: boolean; onClose: () => void; onCreate: (name: string, days: number) => Promise<string | null> }> = ({ open, onClose, onCreate }) => {
   const [name, setName] = useState("");
   const [days, setDays] = useState(7);
   const [busy, setBusy] = useState(false);

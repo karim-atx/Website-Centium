@@ -7,21 +7,22 @@ import { Toggle } from "../../ui/Toggle";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
-import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 
 /**
  * Release 3 · W5 TR3 / TR13: the template builder = the shared
  * CreateRoutineSheet with its professional props, plus what the old
- * CreateWorkoutTemplateSheet carried, in the "For your clients" block:
+ * the old create-template sheet carried, in the "For your clients" block:
  * - Assign to: clients to assign right after saving (TR5 opens with them
  *   picked; assigning needs a saved template, assign_template_to_client);
  * - Save as template: always on. A professional can only give a client a
  *   programme through a template (the assign function copies one), so there
  *   is no "don't keep it" mode to switch to;
- * - Programme length (weeks, 1 to 104): set when the template is created; the
- *   UPDATE grant on workout_templates leaves duration_weeks out, so it is
- *   shown read only when editing;
+ * - Programme length (weeks, 1 to 104, empty = open-ended):
+ *   workout_templates.duration_weeks, which the owner can set on create and
+ *   update (follow-up 20261124160000). No frame draws this field, so it
+ *   keeps the sheet's own numeric field style. Existing assignments keep
+ *   the ends_on computed when they were assigned;
  * - Folder (Unfiled or one of the template folders) and the note to the
  *   client (workout_templates.coach_note, shown on their routine) — both kept
  *   from the old sheet.
@@ -71,6 +72,7 @@ export const TemplateEditor: React.FC<{
       folderId,
       durationMin: draft.durationMin,
       coachNote: note.trim() || undefined,
+      durationWeeks: weeks ? w : null,
     };
     if (template) {
       const message = await updateWorkoutTemplate(template.id, payload);
@@ -79,7 +81,7 @@ export const TemplateEditor: React.FC<{
       return undefined;
     }
     const before = new Set(workoutTemplates.map((t) => t.id));
-    const message = await addWorkoutTemplate({ ...payload, durationWeeks: weeks ? w : null });
+    const message = await addWorkoutTemplate(payload);
     if (message) return message;
     // addWorkoutTemplate appends the saved row; the new id is the one not seen before.
     onSaved(null, assignTo, before);
@@ -121,15 +123,8 @@ export const TemplateEditor: React.FC<{
           value={weeks}
           onChange={(e) => setWeeks(e.target.value.replace(/\D/g, "").slice(0, 3))}
           inputMode="numeric"
-          disabled={!!template}
-          aria-describedby={template ? "weeks-note" : undefined}
-          className="w-28 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+          className="w-28 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
-        {template && (
-          <span id="weeks-note" className="block mt-1.5" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-            Set when the template is created.
-          </span>
-        )}
       </label>
       {workoutTemplateFolders.length > 0 && (
         <div>

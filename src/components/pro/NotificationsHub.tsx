@@ -35,9 +35,10 @@ import { OfflineLine, ProError } from "./states";
 import { Initials } from "./home/ProTrendRing";
 import { initialsOf } from "./home/initials";
 import { notificationText, whenLabel, type NotificationText } from "./home/notificationText";
-import type { ProInbox } from "./home/useProInbox";
+import type { ProInbox, ProRequest } from "./home/useProInbox";
+import { HubCta, HubCtaRow } from "./home/HubCta";
 import type { ProNotification } from "../../services/pro/notifications";
-import type { HireRequestRow } from "../../services/hire-inbox";
+import type { RecentDecline } from "../../services/pro/requests";
 import type { MyEmployment } from "../../services/business-team/employment";
 import type { PendingHire } from "../../services/hires/pro";
 import { PendingHiresSection } from "../hire-pro/PendingHiresSection";
@@ -52,14 +53,17 @@ import type { FreePeriodFacts } from "../../services/subscription-tiers/freePeri
  * towards the bell. Header "Notifications" 16 / 800 and Mark all read; tabs
  * Requests, To review, Updates (SegmentedTabs h36, 12).
  *
- * Requests holds what needs an answer: people asking to work with you
- * (Accept, Decline with a reason), business team invitations (FINAL_PLAN 2.4:
- * replaces TeamInvitesNotice), hires waiting for payment (Release 2
- * PendingHiresSection: Confirm payment, Decline with a reason), and any other
- * request the database sends. To review and Updates are
- * professional_notifications rows; the counts are the unread ones. Opening a
- * row marks it read. Rows are never deleted (there is no delete), so the
- * frame's Clear all is not offered.
+ * Requests holds what needs an answer: people asking to work with you, with
+ * the plan they chose and their message (Accept, Decline with a reason; for 5
+ * minutes after a decline the row reads "Declined · Undo"), business team
+ * invitations from business_employees (never a notification row; FINAL_PLAN
+ * 2.4: replaces the old team invites notice), hires waiting for payment
+ * (PendingHiresSection, HO7 row style: Confirm payment, Decline with a
+ * reason), and any other request the database sends. To review and Updates
+ * are professional_notifications rows; the counts are the unread ones.
+ * Opening a row marks it read; its X dismisses it (deletes the own row; not
+ * drawn in the frames). Clear all (the frame's footer, 12.5 / 700 text.soft
+ * over a b06 rule) is clear_my_professional_notifications().
  */
 export type HubTab = "requests" | "review" | "updates";
 
@@ -79,7 +83,6 @@ const ICONS: Record<NotificationText["icon"], LucideIcon> = {
   clipboard: ClipboardList,
   shield: ShieldCheck,
   share: Share2,
-  building: Building2,
   bell: Bell,
   activity: Activity,
 };
@@ -97,7 +100,7 @@ const REVIEW_EMPTY: Record<ProLane, string> = {
 const REVIEW_ICON: Record<ProLane, LucideIcon> = { full_coaching: ClipboardCheck, nutrition: BookOpenCheck, clinical_overview: ListChecks };
 
 /** Request rows the dedicated groups already show (live data wins). */
-const COVERED = new Set(["client_request", "hire", "team_invitation"]);
+const COVERED = new Set(["client_request", "hire"]);
 
 export const NotificationsHub: React.FC<{
   open: boolean;
@@ -112,8 +115,10 @@ export const NotificationsHub: React.FC<{
   freeEnded: boolean;
   planLabel: string | null;
   hireReloadKey: number;
-  onAccept: (r: HireRequestRow) => void;
-  onDecline: (r: HireRequestRow) => void;
+  onAccept: (r: ProRequest) => void;
+  onDecline: (r: ProRequest) => void;
+  /** "Declined · Undo" (undo_client_request_decline), for 5 minutes after a decline. */
+  onUndo: (d: RecentDecline) => void;
   onInvitation: (e: MyEmployment, accept: boolean) => void;
   invitationBusy: string | null;
   onHireDecline: (h: PendingHire) => void;
@@ -182,77 +187,60 @@ export const NotificationsHub: React.FC<{
     const tone = toneOf(t.tone, dark);
     const last = i === list.length - 1;
     return (
-      <button
-        key={n.id}
-        type="button"
-        onClick={() => openRow(n)}
-        className="tap w-full flex text-left"
-        style={{ alignItems: withAction ? "center" : "flex-start", gap: 10, padding: "11px 0", borderBottom: last ? "none" : `1px solid ${INK.b06}` }}
-      >
-        {dot(!n.readAt)}
-        {withAction && n.clientId ? (
-          <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={34} />
-        ) : (
-          <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: tone.bg }}>
-            <Icon size={16} strokeWidth={1.75} aria-hidden style={{ color: tone.ink }} />
-          </span>
-        )}
-        <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(13), fontWeight: withAction ? 700 : 600, color: INK.ch, lineHeight: 1.35 }}>
-            {t.title}
-          </span>
-          <span className="block" style={{ fontSize: textPx(withAction ? 12 : 11), color: withAction ? INK.chS : INK.chF, marginTop: 1 }}>
-            {withAction ? t.line : `${t.line}`}
-          </span>
-          {withAction && (
-            <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-              {whenLabel(n.createdAt, p.now)}
+      <div key={n.id} className="flex" style={{ alignItems: withAction ? "center" : "flex-start", gap: 4, borderBottom: last ? "none" : `1px solid ${INK.b06}` }}>
+        <button
+          type="button"
+          onClick={() => openRow(n)}
+          className="tap flex-1 min-w-0 flex text-left"
+          style={{ alignItems: withAction ? "center" : "flex-start", gap: 10, padding: "11px 0" }}
+        >
+          {dot(!n.readAt)}
+          {withAction && n.clientId ? (
+            <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={34} />
+          ) : (
+            <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: tone.bg }}>
+              <Icon size={16} strokeWidth={1.75} aria-hidden style={{ color: tone.ink }} />
             </span>
           )}
-        </span>
-        {withAction ? (
-          <span
-            className="flex items-center shrink-0"
-            style={{ height: 30, padding: "0 12px", borderRadius: 10, background: INK.prPale, color: INK.prDeep, fontSize: textPx(12), fontWeight: 700 }}
-          >
-            {withAction}
+          <span className="flex-1 min-w-0">
+            <span className="block" style={{ fontSize: textPx(13), fontWeight: withAction ? 700 : 600, color: INK.ch, lineHeight: 1.35 }}>
+              {t.title}
+            </span>
+            <span className="block" style={{ fontSize: textPx(withAction ? 12 : 11), color: withAction ? INK.chS : INK.chF, marginTop: 1 }}>
+              {t.line}
+            </span>
+            {withAction && (
+              <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
+                {whenLabel(n.createdAt, p.now)}
+              </span>
+            )}
           </span>
-        ) : (
-          <span style={{ fontSize: textPx(11), color: INK.chT, whiteSpace: "nowrap" }}>{whenLabel(n.createdAt, p.now)}</span>
-        )}
-      </button>
+          {withAction ? (
+            <span
+              className="flex items-center shrink-0"
+              style={{ height: 30, padding: "0 12px", borderRadius: 10, background: INK.prPale, color: INK.prDeep, fontSize: textPx(12), fontWeight: 700 }}
+            >
+              {withAction}
+            </span>
+          ) : (
+            <span style={{ fontSize: textPx(11), color: INK.chT, whiteSpace: "nowrap" }}>{whenLabel(n.createdAt, p.now)}</span>
+          )}
+        </button>
+        <button
+          type="button"
+          aria-label={`Dismiss: ${t.title}`}
+          onClick={() => void inbox.dismiss(n.id)}
+          className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[8px] before:content-['']"
+          style={{ width: 28, height: 28, marginTop: withAction ? 0 : 8, marginRight: -6 }}
+        >
+          <X size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
+        </button>
+      </div>
     );
   };
 
-  const requestButtons = (onNo: () => void, onYes: () => void, busy: boolean, label: string) => (
-    <div className="flex" style={{ gap: 8, marginTop: 10 }}>
-      <button
-        type="button"
-        onClick={onNo}
-        disabled={busy}
-        aria-label={`Decline ${label}`}
-        className="tap flex-1 inline-flex items-center justify-center rounded-xl bg-primary-pale text-primary-deep-text font-bold disabled:opacity-40"
-        style={{ height: 36, gap: 6, fontSize: textPx(13) }}
-      >
-        <X size={14} strokeWidth={2.4} aria-hidden />
-        Decline
-      </button>
-      <button
-        type="button"
-        onClick={onYes}
-        disabled={busy}
-        aria-label={`Accept ${label}`}
-        className="tap flex-1 inline-flex items-center justify-center rounded-xl bg-primary-fill text-on-primary-fill font-bold disabled:opacity-40"
-        style={{ height: 36, gap: 6, fontSize: textPx(13) }}
-      >
-        <Check size={14} strokeWidth={2.4} aria-hidden />
-        Accept
-      </button>
-    </div>
-  );
-
   const requestsBody = () => {
-    const empty = inbox.requests.length + inbox.invitations.length + inbox.hires.length + otherRequests.length === 0;
+    const empty = inbox.requests.length + inbox.declined.length + inbox.invitations.length + inbox.hires.length + otherRequests.length === 0;
     return (
       <>
         {p.freeEnded ? <FreePeriodEnded className="mb-2" /> : <FreePeriodNotice plan={p.plan} className="mb-2" />}
@@ -265,8 +253,37 @@ export const NotificationsHub: React.FC<{
                 <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{r.name}</p>
                 <span style={{ fontSize: textPx(11), color: INK.chT, whiteSpace: "nowrap" }}>{whenLabel(r.requestedAt, p.now)}</span>
               </div>
-              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>Asked to work with you</p>
-              {requestButtons(() => p.onDecline(r), () => p.onAccept(r), false, r.name)}
+              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{requestLine(r, p.lane)}</p>
+              {r.message && (
+                <p className="truncate" style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>
+                  "{r.message}"
+                </p>
+              )}
+              <HubCtaRow>
+                <HubCta variant="secondary" icon={X} label="Decline" ariaLabel={`Decline ${r.name}`} onClick={() => p.onDecline(r)} />
+                <HubCta icon={Check} label="Accept" ariaLabel={`Accept ${r.name}`} onClick={() => p.onAccept(r)} />
+              </HubCtaRow>
+            </div>
+          </div>
+        ))}
+        {inbox.declined.map((d) => (
+          <div key={d.id} className="flex items-center" style={{ gap: 10, padding: "12px 0", borderBottom: `1px solid ${INK.b06}` }}>
+            {dot(false)}
+            <Initials text={initialsOf(d.name)} size={40} tone="gold" />
+            <div className="flex-1 min-w-0">
+              <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{d.name}</p>
+              <p className="flex items-center flex-wrap" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, columnGap: 4 }}>
+                Declined ·
+                <button
+                  type="button"
+                  onClick={() => p.onUndo(d)}
+                  aria-label={`Undo declining ${d.name}`}
+                  className="tap relative before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
+                  style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
+                >
+                  Undo
+                </button>
+              </p>
             </div>
           </div>
         ))}
@@ -280,20 +297,24 @@ export const NotificationsHub: React.FC<{
               <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{e.businessName} invited you to their team</p>
               <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{e.role ? `As ${e.role}` : "Team invitation"}</p>
               {e.message && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>"{e.message}"</p>}
-              {requestButtons(() => p.onInvitation(e, false), () => p.onInvitation(e, true), p.invitationBusy === e.businessId, `${e.businessName}'s invitation`)}
+              <HubCtaRow>
+                <HubCta
+                  variant="secondary"
+                  icon={X}
+                  label="Decline"
+                  ariaLabel={`Decline ${e.businessName}'s invitation`}
+                  disabled={p.invitationBusy === e.businessId}
+                  onClick={() => p.onInvitation(e, false)}
+                />
+                <HubCta icon={Check} label="Accept" ariaLabel={`Accept ${e.businessName}'s invitation`} disabled={p.invitationBusy === e.businessId} onClick={() => p.onInvitation(e, true)} />
+              </HubCtaRow>
               <button type="button" onClick={p.onBusinesses} className="tap" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
                 Businesses
               </button>
             </div>
           </div>
         ))}
-        <PendingHiresSection
-          planLabel={p.planLabel}
-          onConfirmed={p.onHireConfirmed}
-          onDecline={p.onHireDecline}
-          reloadKey={p.hireReloadKey}
-          className="pt-3 pb-1"
-        />
+        <PendingHiresSection planLabel={p.planLabel} onConfirmed={p.onHireConfirmed} onDecline={p.onHireDecline} reloadKey={p.hireReloadKey} now={p.now} />
         {otherRequests.map((n, i) => notificationRow(n, i, otherRequests))}
         {empty && <EmptyState icon={UserPlus} title="No new requests" line="When someone asks to work with you, they appear here to accept or decline." />}
       </>
@@ -410,6 +431,18 @@ export const NotificationsHub: React.FC<{
           <div className="min-h-0 overflow-y-auto overscroll-contain" style={{ marginRight: -6, paddingRight: 6 }}>
             {body}
           </div>
+          {inbox.notifications.length > 0 && (
+            <div className="flex justify-center shrink-0" style={{ padding: "10px 0 2px", borderTop: `1px solid ${INK.b06}` }}>
+              <button
+                type="button"
+                onClick={() => void inbox.clearAll()}
+                className="tap relative before:absolute before:-inset-x-3 before:-inset-y-3 before:content-['']"
+                style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, whiteSpace: "nowrap" }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>,
@@ -431,4 +464,12 @@ function toneOf(t: NotificationText["tone"], dark: boolean): { bg: string; ink: 
     default:
       return { bg: INK.prPale, ink: INK.prDeep };
   }
+}
+
+/** HO7's second line: the plan and its price ("Appointment request · $60" for Clinical overview), or the plain request. */
+function requestLine(r: ProRequest, lane: ProLane): string {
+  if (!r.planLine) return "Asked to work with you";
+  if (lane !== "clinical_overview") return r.planLine;
+  const price = r.planLine.split(" · ")[1];
+  return price ? `Appointment request · ${price}` : "Appointment request";
 }

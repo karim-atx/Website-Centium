@@ -11,10 +11,13 @@ import { ProField } from "./fields";
 /**
  * Release 3 · HO11 "Accept request" (CentredPopup). Accepting is
  * accept_client_request: the client starts in Onboarding and the database
- * asks them for the professional's default data (practice_settings).
+ * asks them for the professional's default data (practice_settings). The body
+ * leads with the plan they chose, as HO11 draws it ("Monthly coaching · $120 a
+ * month."); intake forms on accept stay for a later release.
  */
-export const AcceptRequestPopup: React.FC<{ name: string | null; busy: boolean; error: string | null; onAccept: () => void; onClose: () => void }> = ({
+export const AcceptRequestPopup: React.FC<{ name: string | null; plan?: string | null; busy: boolean; error: string | null; onAccept: () => void; onClose: () => void }> = ({
   name,
+  plan,
   busy,
   error,
   onAccept,
@@ -25,7 +28,7 @@ export const AcceptRequestPopup: React.FC<{ name: string | null; busy: boolean; 
     onClose={onClose}
     title={`Accept ${name ?? ""}?`}
     icon={<UserCheck size={22} strokeWidth={2} aria-hidden />}
-    body="They move to Onboarding."
+    body={plan ? `${plan}. They move to Onboarding.` : "They move to Onboarding."}
   >
     {error && (
       <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 4 }}>

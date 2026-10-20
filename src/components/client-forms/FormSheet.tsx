@@ -431,7 +431,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
           )}
           {last && (
             <p style={{ fontSize: textPx(11), lineHeight: 1.6, color: INK.chF, padding: "2px 0" }} data-consent>
-              {consentLine(pro, bundle.kind)}
+              {consentLine(pro, bundle.kind, hideBody)}
             </p>
           )}
         </>

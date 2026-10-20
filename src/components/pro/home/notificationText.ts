@@ -1,8 +1,10 @@
 // Release 3 · what one professional_notifications row says (DB-2). The
 // database stores a title_key and a payload of ids and labels, never health
-// values; the sentence is the website's. Keys come from notify_professional's
-// callers (20261124020100 to 20261124080000); an unknown key falls back to
-// its kind, so a new key never renders blank.
+// values; the sentence is the website's. The keys are the ones HANDOVER_API
+// "Invite codes and the hub's speed" lists as written by the backend (each has a
+// sentence; notificationText.test.ts checks); team invitations are never a
+// notification (they come from business_employees). An unknown key falls
+// back to its kind, so a new key never renders blank.
 
 import type { ProNotification } from "../../../services/pro/notifications";
 import { CATEGORY_LABEL } from "./categoryLabels";
@@ -13,7 +15,7 @@ export type NotificationTone = "pr" | "req" | "att" | "act" | "done";
 export interface NotificationText {
   title: string;
   line: string;
-  icon: "calendar-check" | "calendar-x" | "message" | "star" | "banknote" | "user-plus" | "clipboard" | "shield" | "share" | "building" | "bell" | "activity";
+  icon: "calendar-check" | "calendar-x" | "message" | "star" | "banknote" | "user-plus" | "clipboard" | "shield" | "share" | "bell" | "activity";
   tone: NotificationTone;
 }
 
@@ -29,10 +31,8 @@ export function notificationText(n: ProNotification, names: Record<string, strin
   const key = n.titleKey;
   switch (key) {
     case "pro.request.new":
-    case "pro.notify.new_request":
       return { title: `${who} asked to work with you`, line: "Accept or decline in Requests", icon: "user-plus", tone: "req" };
     case "pro.hire.new":
-    case "pro.notify.hire_pending_payment":
       return { title: `${who} chose ${str(p.plan) ?? "one of your plans"}`, line: "Confirm you received the payment", icon: "banknote", tone: "act" };
     case "pro.hire.cancelled":
       return { title: `${who} cancelled their hire`, line: "Hire", icon: "calendar-x", tone: "att" };
@@ -47,7 +47,6 @@ export function notificationText(n: ProNotification, names: Record<string, strin
     case "pro.booking.booked":
       return { title: `${who} booked ${str(p.service) ?? "a session"}`, line: "Booking", icon: "calendar-check", tone: "pr" };
     case "pro.booking.requested":
-    case "pro.notify.booking_requested":
       return { title: `${who} asked to book ${str(p.service) ?? "a session"}`, line: "Booking request", icon: "calendar-check", tone: "pr" };
     case "pro.booking.cancelled":
       return { title: `${who} cancelled a booking`, line: "Booking", icon: "calendar-x", tone: "att" };
@@ -58,7 +57,6 @@ export function notificationText(n: ProNotification, names: Record<string, strin
     case "pro.workout.finished":
       return { title: who, line: `Finished ${str(p.routine) ?? "a workout"}`, icon: "activity", tone: "pr" };
     case "pro.form.submitted":
-    case "pro.notify.check_in_submitted":
       return { title: who, line: "Sent you a form", icon: "clipboard", tone: "pr" };
     case "pro.form.flagged": {
       // W6: the payload carries the marked topics (save_form_response); FINAL_PLAN 3 §6.2 wording.
@@ -66,21 +64,11 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: who, line: topics.length ? `Check-in flagged: answers mention ${topicsPhrase(topics)}` : "Check-in flagged", icon: "clipboard", tone: "att" };
     }
     case "pro.result.shared":
-    case "pro.notify.result_shared":
       return { title: who, line: str(p.marker) ? `Shared a result: ${str(p.marker)}` : "Shared a result with you", icon: "share", tone: "pr" };
     case "pro.client.allergies_updated":
-    case "pro.notify.allergy_added":
       return { title: who, line: "Updated their allergies", icon: "shield", tone: "att" };
     case "pro.diary.reply":
       return { title: `${who} replied to your feedback`, line: "Food journal", icon: "message", tone: "pr" };
-    case "pro.notify.gone_quiet":
-      return { title: `${who} has gone quiet`, line: typeof p.days === "number" ? `No activity for ${p.days} days` : "No recent activity", icon: "bell", tone: "att" };
-    case "pro.notify.meal_plan_ending":
-      return { title: `${who}'s meal plan ends soon`, line: typeof p.days_left === "number" ? `${p.days_left} days left` : "Meal plan", icon: "calendar-check", tone: "pr" };
-    case "pro.notify.monitoring_threshold":
-      return { title: who, line: str(p.metric) ? `${str(p.metric)} passed its care-plan threshold` : "A care-plan threshold was passed", icon: "activity", tone: "att" };
-    case "pro.notify.team_invitation":
-      return { title: `${str(p.business) ?? "A business"} invited you to their team`, line: "Businesses", icon: "building", tone: "pr" };
     case "pro.care_network.request":
       return { title: "A colleague wants to connect", line: "Care network", icon: "user-plus", tone: "req" };
     case "pro.care_network.accepted":
@@ -107,6 +95,8 @@ export function notificationText(n: ProNotification, names: Record<string, strin
     case "pro.share.removal_requested":
       return { title: `${who} asked you to remove a shared card`, line: "Share cards", icon: "share", tone: "req" };
     default:
+      if (key.startsWith("pro.referral.")) return { title: "A referral was updated", line: "Care network", icon: "share", tone: "pr" };
+      if (key.startsWith("pro.care_network.")) return { title: "Your care network was updated", line: "Care network", icon: "user-plus", tone: "pr" };
       if (key.startsWith("pro.share.")) return { title: `${who} answered your request to share a win`, line: "Share cards", icon: "share", tone: "pr" };
       return n.kind === "request"
         ? { title: "New request", line: who, icon: "user-plus", tone: "req" }

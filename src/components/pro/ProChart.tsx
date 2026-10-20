@@ -543,7 +543,7 @@ export const ProChart: React.FC<ProChartProps> = ({
   return <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 14px 12px", marginBottom: 12 }}>{body}</div>;
 };
 
-const Swatch: React.FC<{ kind: "dot" | "hollow" | "fill" | "bar" | "line"; color: string; dashed?: boolean; on: boolean }> = ({ kind, color, dashed, on }) => {
+export const Swatch: React.FC<{ kind: "dot" | "hollow" | "fill" | "bar" | "line"; color: string; dashed?: boolean; on: boolean }> = ({ kind, color, dashed, on }) => {
   const o = on ? 1 : 0.4;
   if (kind === "bar") return <span style={{ width: 9, height: 9, borderRadius: 3, background: color, opacity: o }} />;
   if (kind === "dot") return <span style={{ width: 9, height: 9, borderRadius: 9999, background: color, opacity: o }} />;
@@ -552,7 +552,7 @@ const Swatch: React.FC<{ kind: "dot" | "hollow" | "fill" | "bar" | "line"; color
   return <span style={{ width: 12, borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}`, opacity: o }} />;
 };
 
-const LegendChip: React.FC<{ on: boolean; label: string; onClick: () => void; children: React.ReactNode }> = ({ on, label, onClick, children }) => (
+export const LegendChip: React.FC<{ on: boolean; label: string; onClick: () => void; children: React.ReactNode }> = ({ on, label, onClick, children }) => (
   <button
     type="button"
     role="switch"

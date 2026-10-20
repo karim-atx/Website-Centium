@@ -219,7 +219,7 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
   } else if (step.at === "reviews") {
     title = "A review";
     body = list(
-      reviewsLoading && !reviews.length ? null : published.map((r) => ({ id: r.id, label: `“${clipQuote(r.body ?? "", 60)}”`, sub: `${reviewerLabel(r.reviewerName)} · ${r.rating} star${r.rating === 1 ? "" : "s"}`, icon: "star" as const, tone: "gold" as const, onClick: () => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: reviewerLabel(r.reviewerName) }), kind: "review" }) })),
+      reviewsLoading && !reviews.length ? null : published.map((r) => ({ id: r.id, label: `"${clipQuote(r.body ?? "", 60)}"`, sub: `${reviewerLabel(r.reviewerName)} · ${r.rating} star${r.rating === 1 ? "" : "s"}`, icon: "star" as const, tone: "gold" as const, onClick: () => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: reviewerLabel(r.reviewerName) }), kind: "review" }) })),
       "Written reviews show here after clients review you.",
       () => undefined
     );

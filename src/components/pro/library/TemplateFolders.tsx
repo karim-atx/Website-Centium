@@ -18,7 +18,7 @@ import { INK } from "../proInk";
 
 /**
  * Release 3 · W5: the template folders, ported whole from the old
- * WorkoutTemplateBuilderTab (FINAL_PLAN W5 "folders keep Rename, Edit colour,
+ * the old template builder tab (FINAL_PLAN W5 "folders keep Rename, Edit colour,
  * Add subfolder, Add template, Delete"). The same AppContext
  * workoutTemplateFolders functions, FolderParts, folderList and the Routines
  * tab's useRoutineDrag: folders drag above, below or inside another folder

@@ -22,7 +22,7 @@ import { textPx } from "../../../theme/textSize";
 // business seat), the client count against the cap, Monthly / Yearly, the
 // swipeable plan cards with Current and Recommended for you, All plans at a
 // glance, and no in-app payment: the CTA is the upgrade email (FreePeriodNotice
-// stays where W2 shows it). Replaces Subscription.tsx's ProfessionalSubscription.
+// stays where W2 shows it). Replaces the old professional branch of Subscription.tsx.
 
 const money2 = (v: number) => (Number.isInteger(v) ? formatPrice(v) : `$${v.toFixed(2)}`);
 const savePct = (t: SubscriptionTier) => (t.yearlyPrice && t.monthlyPrice > 0 ? Math.round((1 - t.yearlyPrice / (t.monthlyPrice * 12)) * 100) : 0);

@@ -123,7 +123,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
             ))}
           </div>
         ) : null}
-        <div style={{ fontSize: px((sq ? 5.4 : story ? 7 : 6.4) * u), fontWeight: 700, lineHeight: 1.24, letterSpacing: "-0.02em", color: ink, textWrap: "pretty", textShadow: shadow }}>{`“${c.quote ?? ""}”`}</div>
+        <div style={{ fontSize: px((sq ? 5.4 : story ? 7 : 6.4) * u), fontWeight: 700, lineHeight: 1.24, letterSpacing: "-0.02em", color: ink, textWrap: "pretty", textShadow: shadow }}>{`"${c.quote ?? ""}"`}</div>
         <div style={{ marginTop: px(2.6 * u), fontSize: px((sq ? 3 : 3.4) * u), fontWeight: 600, color: sub, textShadow: shadow }}>{c.by}</div>
       </>
     );

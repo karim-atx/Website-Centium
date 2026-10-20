@@ -74,7 +74,6 @@ import {
   getTemplateAssignments,
   getTemplateFolders,
   getTemplates,
-  unassignTemplate as unassignTemplateRemote,
   endTemplateAssignment as endTemplateAssignmentRemote,
   updateTemplate as updateTemplateRemote,
   updateTemplateFolder,
@@ -1158,17 +1157,11 @@ interface AppState {
   refreshRoster: () => Promise<void>;
   removeProfessionalClient: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
-  // The hire inbox that used to be simulated here is real: ProfessionalDashboard
+  // The hire inbox that used to be simulated here is real: the professional hub
   // reads `pending_client_requests` and answers through accept_client_request /
   // reject_client_request. The localStorage array and its three functions are
   // gone with the mock hire flow that was its only writer.
-  updateProfessionalClientAccess: (
-    id: string,
-    access: Partial<ProfessionalClient["access"]>
-  ) => void;
   updateProfessionalClient: (id: string, patch: Partial<ProfessionalClient>) => void;
-  assignProgramToClient: (clientId: string, programName: string) => void;
-  assignFoodTemplateToClient: (clientId: string, templateName: string) => void;
 
   // V6 (QA 6.0): Professional UI — Calendar, Workout Template Builder,
   // per-client health notes, and a messaging board.
@@ -1201,8 +1194,8 @@ interface AppState {
    * WRITTEN ONLY BY THE DATABASE FUNCTION. No client role holds INSERT or
    * UPDATE on workout_template_assignments; `assignTemplate` calls
    * assign_template_to_client, which also creates or refreshes the client's
-   * routine and syncs their calendar event. Deleting is the one thing a
-   * professional may do directly, and it deliberately leaves the routine.
+   * routine and syncs their calendar event. Ending (end_template_assignment)
+   * deliberately leaves the routine.
    */
   templateAssignments: WorkoutTemplateAssignment[];
   assignTemplate: (
@@ -1213,10 +1206,10 @@ interface AppState {
     /** Release 3 (DB-3): p_starts_on and p_join_week; omitted = the function's defaults. */
     schedule?: { startsOn?: string | null; joinWeek?: number }
   ) => Promise<AssignResult>;
-  unassignTemplate: (assignmentId: string) => Promise<string | undefined>;
   /**
    * Release 3 (DB-3): end_template_assignment. The row stays with ended_at
-   * set (a Past programme); unassignTemplate still deletes a row outright.
+   * set (a Past programme). It also works before the start date, so it is
+   * both "Remove" and "End" (follow-up 20261124160000).
    */
   endTemplateAssignment: (assignmentId: string) => Promise<string | undefined>;
   /**
@@ -1435,7 +1428,7 @@ function forgetPersisted(key: string): void {
 /**
  * Release 3 (J4): the old Health metrics notes (current injuries, personality
  * type) a professional typed into this browser, keyed by the relationship id.
- * Nothing writes them any more (HealthMetricsTab is gone); the client page's
+ * Nothing writes them any more (the old health metrics tab is gone); the client page's
  * Notes tab reads one client's entry once, imports it as a private note and
  * clears it. Plain reads of the persisted key, not React state.
  */
@@ -3412,7 +3405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   //
   // affiliateWithBusiness matched a typed id against `businessDirectory` --
   // itself localStorage -- and on a hit set a local flag plus a local
-  // employee row. Nothing reached the database. Meanwhile PublicListingSheet
+  // employee row. Nothing reached the database. Meanwhile the old listing sheet
   // read the real `professional_profiles.affiliated_business_id`, so the two
   // surfaces disagreed and the authoritative one was the one the professional
   // could not see: affiliation is what gates `listed_publicly`.
@@ -3918,13 +3911,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const refreshed = await getTemplateAssignments();
     if (refreshed.ok) setTemplateAssignments(refreshed.assignments);
     return result;
-  };
-
-  const unassignTemplate: AppState["unassignTemplate"] = async (assignmentId) => {
-    const result = await unassignTemplateRemote(assignmentId);
-    if (!result.ok) return result.message ?? "Could not remove that assignment.";
-    setTemplateAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
-    return undefined;
   };
 
   const endTemplateAssignment: AppState["endTemplateAssignment"] = async (assignmentId) => {
@@ -6257,47 +6243,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const updateProfessionalClientAccess = (id: string, access: Partial<ProfessionalClient["access"]>) =>
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
-    );
   const updateProfessionalClient: AppState["updateProfessionalClient"] = (id, patch) =>
     setProfessionalClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  // V6 (QA 6.0) asked that "the calendar app should update automatically when
-  // the professional assigns a workout and/or food template for the client on
-  // a specific day", and both assign actions used to drop a same-day event
-  // titled `Assigned "X" to Y` onto the PROFESSIONAL's own calendar.
-  //
-  // RETIRED IN CALENDAR PHASE 2, because it was never the thing V6 asked for
-  // and it is now actively wrong in three ways:
-  //
-  //   1. IT IS A LOG ENTRY, NOT AN EVENT. It was dated the day the assignment
-  //      was made rather than the day of the session, so it never moved when
-  //      the session did and accumulated one permanent row per assignment.
-  //   2. THE REAL THING NOW EXISTS. assign_template_to_client writes a real
-  //      calendar_events row onto the CLIENT's calendar, on the assigned day,
-  //      which the professional reads through
-  //      calendar_events_select_assigning_professional. That is what V6
-  //      described; this was a stand-in from before it was built.
-  //   3. ITS invitees: [client.name] WAS THE LEAK. Under the old name-matching
-  //      filter, a professional's private note about assigning a program
-  //      appeared on the client's own calendar — and on the calendar of every
-  //      other client sharing that first name.
-  //
-  // The underlying record is not lost: workout_template_assignments.assigned_at
-  // already holds exactly "who was assigned what, when". If a professional
-  // activity feed is wanted, that is its source, and a feed is a different
-  // surface from a calendar.
-  const assignProgramToClient = (clientId: string, programName: string) => {
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === clientId ? { ...c, assignedProgramName: programName } : c))
-    );
-  };
-  const assignFoodTemplateToClient = (clientId: string, templateName: string) => {
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === clientId ? { ...c, assignedFoodTemplateName: templateName } : c))
-    );
-  };
 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
     setBusinessListing((prev) => ({ ...prev, ...patch }));
@@ -6660,10 +6607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshRoster,
       professionalClients,
       removeProfessionalClient,
-      updateProfessionalClientAccess,
       updateProfessionalClient,
-      assignProgramToClient,
-      assignFoodTemplateToClient,
       calendarEvents,
       addCalendarEvent,
       updateCalendarEvent,
@@ -6674,7 +6618,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeWorkoutTemplate,
       templateAssignments,
       assignTemplate,
-      unassignTemplate,
       endTemplateAssignment,
       adoptTemplate,
       templatesError,

@@ -86,7 +86,7 @@ export const ChatInfo: React.FC<{
   onDelete?: () => void;
 }> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group, onDelete }) => {
   const s = settings ?? NO_SETTINGS;
-  const { professionalClients } = useApp();
+  const { professionalClients, user } = useApp();
   const dark = useIsDark();
   const displayName = group ? group.name : thread.participantName;
   const nameFor = (senderId: string | null) =>
@@ -407,6 +407,7 @@ export const ChatInfo: React.FC<{
             .filter((c) => c.clientId)
             .map((c) => ({ userId: c.clientId!, name: c.name, avatarUrl: c.avatarUrl ?? null }))}
           onChanged={group.onChanged}
+          pro={user.accountType === "professional" || undefined}
         />
       )}
 

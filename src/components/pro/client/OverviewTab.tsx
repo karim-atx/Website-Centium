@@ -32,7 +32,7 @@ import type { AccessCategory } from "../../../services/pro/access";
  *   systolic and diastolic from the shared blood pressure readings);
  * - Recent activity from the roster's gated reads;
  * - Shared with you (profile.js sharedRow) and the LockLine for what isn't;
- * - About (FINAL_PLAN 2.4, the old ClientDetailSheet extras): communication
+ * - About (FINAL_PLAN 2.4, the old client detail sheet extras): communication
  *   preferences (saved on the relationship), social handles
  *   (client_social_handles), cycle phase and "pregnant, week n" only with the
  *   switch on (Karim's answer 2), and Habits (Habits switch; hidden for

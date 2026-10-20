@@ -127,7 +127,17 @@ export default function InviteLanding() {
         <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-3 py-2.5" role="note">
           <Link2 size={15} strokeWidth={2} aria-hidden className="shrink-0 text-primary-deep-text" />
           <p className="flex-1 text-charcoal leading-[1.45]" style={{ fontSize: textPx(12.5) }}>
-            <b>{first} invited you.</b> Hire a plan below or send a message first.
+            {view.kind === "signed_out" ? (
+              // Signed out nothing is below yet (plans show after sign-in),
+              // so this is the CU11 invite line (r18 cuInvite18) instead.
+              <>
+                <b>{first} invited you</b> to work together on Centium.
+              </>
+            ) : (
+              <>
+                <b>{first} invited you.</b> Hire a plan below or send a message first.
+              </>
+            )}
           </p>
         </div>
       )}

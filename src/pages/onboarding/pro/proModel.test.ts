@@ -17,6 +17,7 @@ import {
   initials,
   isRegulated,
   credentialWord,
+  specialtyNote,
   PRO_KINDS,
   PRO_LABEL,
   SPECIALTY_CARDS,
@@ -113,4 +114,13 @@ test("places go to session_places, and Home visits only with a radius", () => {
 
 test("Closest group offers the four professional_group values", () => {
   assert.deepEqual(CLOSEST_GROUPS.map((g) => g.value), ["fitness", "clinical", "nutrition", "other"]);
+});
+
+test("W9: the specialty note names a licence for doctor, physiotherapist and dietitian, a certificate otherwise", () => {
+  assert.equal(specialtyNote(proKindOf("doctor")), "Next: about you, your licence and your background.");
+  assert.equal(specialtyNote(proKindOf("physiotherapist")), "Next: about you, your licence and your background.");
+  assert.equal(specialtyNote(proKindOf("dietitian")), "Next: about you, your licence and your background.");
+  assert.equal(specialtyNote(proKindOf("trainer")), "Next: about you, your certificate and your background.");
+  assert.equal(specialtyNote(proKindOf("nutritionist")), "Next: about you, your certificate and your background.");
+  assert.equal(specialtyNote(null), "Next: about you, your background, then a quick review.");
 });

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Microscope, Pencil, Plus, Share2, Trash2, UserRoundCheck } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useBackCloses } from "../../../hooks/useBackCloses";
@@ -49,6 +49,23 @@ import {
 // no band and no status word, only the value and the remark.
 
 type Span = "6M" | "1Y" | "All";
+
+/** A box's content width as it lays out (ResizeObserver), for the drawings sized in px. */
+function useBoxWidth(): [(el: HTMLElement | null) => void, number | null] {
+  const [width, setWidth] = useState<number | null>(null);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: HTMLElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    const read = () => setWidth(el.clientWidth);
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    observer.current = new ResizeObserver(read);
+    observer.current.observe(el);
+  }, []);
+  return [ref, width];
+}
 const SPAN_DAYS: Record<Span, number | null> = { "6M": 183, "1Y": 365, All: null };
 
 export const MarkerPage: React.FC<{
@@ -75,6 +92,10 @@ export const MarkerPage: React.FC<{
   const [deleting, setDeleting] = useState<LabResult | "marker" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // W9: the drawings keep their HE1.9.1 widths (chart 330, range bar 326) and
+  // narrow only when the card is narrower (360px), so nothing leaves the screen.
+  const [chartBox, chartBoxWidth] = useBoxWidth();
+  const [barBox, barBoxWidth] = useBoxWidth();
 
   const latest = results[results.length - 1];
   const status = isThreshold ? null : latest?.status ?? null;
@@ -98,7 +119,8 @@ export const MarkerPage: React.FC<{
   if (!latest) return null;
   const hasRange = !isThreshold && (latest.rangeLow !== null || latest.rangeHigh !== null);
   const firstYear = results[0]?.date.slice(0, 4);
-  const chartW = 330;
+  const chartW = Math.min(330, chartBoxWidth ?? 330);
+  const barW = Math.min(326, barBoxWidth ?? 326);
 
   const doDelete = async () => {
     if (!deleting) return;
@@ -181,8 +203,8 @@ export const MarkerPage: React.FC<{
         </div>
         <p style={{ marginTop: 4, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: INK_FAINT }}>{`Latest · ${fmtDate(latest.date)} · ${reportLabel(latest)}`}</p>
         {hasRange && (
-          <div style={{ marginTop: 18 }}>
-            <RangeBar value={latest.value} low={latest.rangeLow} high={latest.rangeHigh} status={status} width={326} height={6} dot={14} border={2.2} labels="inrange" trackFill={dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)"} />
+          <div ref={barBox} style={{ marginTop: 18 }}>
+            <RangeBar value={latest.value} low={latest.rangeLow} high={latest.rangeHigh} status={status} width={barW} height={6} dot={14} border={2.2} labels="inrange" trackFill={dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)"} />
           </div>
         )}
         {hasRange && (
@@ -210,7 +232,7 @@ export const MarkerPage: React.FC<{
             {span === "6M" ? "No results in the last 6 months." : "No results in the last year."}
           </p>
         ) : (
-          <div className="relative" style={{ marginTop: 14 }}>
+          <div ref={chartBox} className="relative" style={{ marginTop: 14 }}>
             <BiomarkerLineChart
               points={shown.map((r) => ({ date: r.date, value: r.value }))}
               low={isThreshold ? null : latest.rangeLow}
@@ -221,6 +243,7 @@ export const MarkerPage: React.FC<{
               selected={selected}
               onSelect={setSelected}
               label={`${marker.name}, ${shown.length} results`}
+              noIconScale
             />
             {selected !== null && shown[selected] && (
               <ChartTooltip

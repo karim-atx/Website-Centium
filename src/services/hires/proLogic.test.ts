@@ -1,7 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
-  cancelledLine,
   describeCancelError,
   describeConfirmError,
   describePlanWriteError,
@@ -76,14 +75,6 @@ test("plan write errors", () => {
   assert.match(describePlanWriteError({ code: "23514" }, false), /can't be saved/);
   assert.match(describePlanWriteError(null, true), /connection/i);
   assert.match(describePlanWriteError({ code: "PGRST116" }, false), /isn't there/);
-});
-
-test("cancelledLine picks the wording from was_free and names no charge", () => {
-  assert.match(cancelledLine("Lea", true), /^Lea's hire is cancelled\. No payment had been confirmed/);
-  const after = cancelledLine("Lea", false);
-  assert.match(after, /recorded the cancellation/);
-  assert.doesNotMatch(after, /\$|fee|charge|refund/i);
-  assert.match(cancelledLine("", true), /^The client's hire/);
 });
 
 test("labels", () => {

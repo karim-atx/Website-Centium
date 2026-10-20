@@ -20,3 +20,14 @@ export const lockLineText = (what: string, clientFirstName: string): string =>
 /** ProChart ranges (HANDOVER e). */
 export type ProChartRange = "W" | "M" | "3M" | "Y";
 export const PRO_CHART_RANGES: ProChartRange[] = ["W", "M", "3M", "Y"];
+
+/**
+ * COPY 6.3: a signed number for deltas. Positives get "+", negatives the true
+ * minus "−" (U+2212, as the dashboard deltas already use), zero stays "0".
+ * `body` formats the absolute value (defaults to String).
+ */
+export function signedNum(n: number, body: (abs: number) => string = String): string {
+  if (n > 0) return `+${body(n)}`;
+  if (n < 0) return `−${body(Math.abs(n))}`;
+  return body(0);
+}

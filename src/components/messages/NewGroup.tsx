@@ -1,16 +1,29 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Check, Search } from "lucide-react";
 import { MessagesHeader } from "./MessagesHeader";
-import { ClientPicker, type PickableClient } from "./ClientPicker";
+import { type PickableClient } from "./ClientPicker";
 import { createGroup, GROUP_NAME_MAX, inviteToGroup } from "../../services/messaging/groups";
+import { PinnedCta } from "../ui/PinnedCta";
+import { INK } from "../pro/proInk";
+import { Avatar } from "../pro/client/kit";
+import { ComingSoonPill } from "../pro/ComingSoon";
+import { textPx } from "../../theme/textSize";
 
 /**
- * New group (phase 2B), professional only: name it, pick connected clients,
- * send invitations. Nobody is added directly — each person sees an invitation
- * and joins only if they choose to.
+ * New group (phase 2B; Release 3 MO27 "New group", gen/r16.js newGroup16).
+ * Professional only (ProMessages is its one caller): name it, pick connected
+ * clients, send invitations. Nobody is added directly: each person sees an
+ * invitation and joins only if they choose to.
  *
- * The design shows the client's side of a group (screen 4) and the broadcast
- * form (screen 5) but no "new group" screen, so this uses the broadcast form's
- * fields, type and spacing.
+ * Drawn as the frame: the teal-pale note (r14, pad 12 14, 13 / 1.5); the
+ * group photo (64, striped) beside "Group name" (field: label 12 / 600
+ * text.soft 6 above, 40 tall, r12, soft fill, 1px 10% border, 14);
+ * "Description (optional)"; "Invite · {n} clients" (12.5 / 700 text.soft)
+ * over GroupPicker; the hired-clients line (12 text.soft); the pinned CTA
+ * "Create and invite {n} clients". The title row stays the shared Messages
+ * header (one title size for pages reached from More, X-12).
+ * message_threads has no photo or description column (backend gap), so both
+ * show Coming soon and nothing is sent for them.
  *
  * Invitations go one person at a time, so somebody the database refuses (under
  * 18, no longer a client) is named and the rest still go.
@@ -59,80 +72,164 @@ export const NewGroup: React.FC<{
     onCreated(made.threadId);
   };
 
-  const field = "h-12 rounded-[14px] border border-charcoal/10 bg-cream-card px-3.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
-  const label = "text-[12.5px] font-bold text-charcoal-soft";
+  const n = picked.size;
+  const clientsWord = (k: number) => `${k} ${k === 1 ? "client" : "clients"}`;
 
   if (refused && createdId) {
     return (
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col" style={{ gap: 14, paddingBottom: 172 }}>
         <Header title="Group created" onBack={() => onCreated(createdId)} />
-        <p className="text-sm text-charcoal">
-          These people weren't invited. Everyone else has an invitation.
-        </p>
-        <ul className="flex flex-col gap-2">
+        <p style={{ fontSize: textPx(14), color: INK.ch }}>These people weren't invited. Everyone else has an invitation.</p>
+        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
           {refused.map((r, i) => (
-            <li key={i} className="rounded-[14px] bg-cream-card border border-charcoal/10 px-3.5 py-2.5">
-              <p className="text-sm font-semibold text-charcoal">{r.name}</p>
-              <p className="text-xs text-charcoal-soft">{r.reason}</p>
-            </li>
+            <div key={i} style={{ padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}>
+              <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{r.name}</p>
+              <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{r.reason}</p>
+            </div>
           ))}
-        </ul>
-        <button
-          type="button"
-          onClick={() => onCreated(createdId)}
-          className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold"
-        >
-          Open the group
-        </button>
+        </div>
+        <PinnedCta primary={{ label: "Open the group", onClick: () => onCreated(createdId) }} />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3.5 pb-6">
-      <Header title="New group" onBack={onBack} />
-      <div className="rounded-[14px] bg-teal-pale px-3.5 py-3 text-[13px] leading-[1.5] text-charcoal-soft dark:text-teal-deep-text">
-        Each person you pick gets an invitation and joins only if they accept. Members see each other's first
-        names and messages in the group, never health data or other chats.
+    <div className="flex flex-col" style={{ paddingBottom: 172 }}>
+      <Header title="New group" onBack={onBack} className="mb-3.5" />
+      <div style={{ borderRadius: 14, background: INK.tealPale, padding: "12px 14px", fontSize: textPx(13), lineHeight: 1.5, marginBottom: 14 }} className="text-charcoal-soft dark:text-teal-deep-text">
+        Each person you pick gets an invitation and joins only if they accept. Members see each other's first names and messages in the group, never health data or other chats.
       </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="gname" className={label}>
-          Group name
-        </label>
-        <input
-          id="gname"
-          value={name}
-          maxLength={GROUP_NAME_MAX}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Spring Strength Group"
-          className={field}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className={label}>
-          Invite · {picked.size} {picked.size === 1 ? "client" : "clients"}
+      <div className="flex items-center" style={{ gap: 14, marginBottom: 14 }}>
+        <span className="flex flex-col items-center shrink-0" style={{ gap: 4 }} role="img" aria-label="Group photo, coming soon">
+          <GroupPhoto size={64} />
+          <ComingSoonPill />
         </span>
-        <ClientPicker clients={clients} selected={picked} onToggle={toggle} />
-        <p className="text-xs text-charcoal-soft">Only your connected clients can be invited. Accounts under 18 can't join groups.</p>
+        <div className="flex-1 min-w-0">
+          <FieldLabel htmlFor="gname">Group name</FieldLabel>
+          <input id="gname" value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} placeholder="e.g. Spring Strength Group" style={FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
+        </div>
       </div>
-      {error && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{error}</p>}
-      <button
-        type="button"
-        onClick={() => void create()}
-        disabled={!trimmed || busy}
-        className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold disabled:opacity-40 sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] lg:bottom-4"
-      >
-        {busy
-          ? "Creating…"
-          : picked.size > 0
-            ? `Create and invite ${picked.size} ${picked.size === 1 ? "client" : "clients"}`
-            : "Create group"}
-      </button>
+      <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 6 }}>
+        <FieldLabel htmlFor="gdesc" bare>
+          Description (optional)
+        </FieldLabel>
+        <ComingSoonPill />
+      </div>
+      <input id="gdesc" disabled aria-describedby="gdesc-soon" style={{ ...FIELD, opacity: 0.6 }} />
+      <span id="gdesc-soon" className="sr-only">
+        Coming soon
+      </span>
+      <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, margin: "14px 0 6px" }}>Invite · {clientsWord(n)}</p>
+      <GroupPicker clients={clients} selected={picked} onToggle={toggle} />
+      <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 6 }}>Only your hired clients can be invited. Accounts under 18 can't join groups.</p>
+      {error && (
+        <p role="alert" className="rounded-xl" style={{ fontSize: textPx(12), color: INK.hi, background: INK.hiBg, padding: "10px 14px", marginTop: 12 }}>
+          {error}
+        </p>
+      )}
+      <PinnedCta primary={{ label: n > 0 ? `Create and invite ${clientsWord(n)}` : "Create group", onClick: () => void create(), disabled: !trimmed, loading: busy }} />
     </div>
   );
 };
 
 /** v6 MO1.7 K12: the Messages title row (#2-#4) on New group and the broadcast editor. */
-export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
-  <MessagesHeader title={title} onBack={onBack} />
+export const Header: React.FC<{ title: string; onBack: () => void; className?: string }> = ({ title, onBack, className }) => (
+  <MessagesHeader title={title} onBack={onBack} className={className} />
 );
+
+/** ui.js field: 40 tall, r12, soft fill, 1px 10% border, pad 0 12, 14 text. */
+const FIELD: React.CSSProperties = {
+  width: "100%",
+  height: 40,
+  borderRadius: 12,
+  background: INK.soft,
+  border: `1px solid ${INK.b10}`,
+  padding: "0 12px",
+  fontSize: textPx(14),
+  color: INK.ch,
+};
+
+const FieldLabel: React.FC<{ htmlFor: string; bare?: boolean; children: React.ReactNode }> = ({ htmlFor, bare, children }) => (
+  <label htmlFor={htmlFor} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: bare ? 0 : 6 }}>
+    {children}
+  </label>
+);
+
+/** gPhoto16: the group photo placeholder, striped soft / card, 1px 10% border. */
+export const GroupPhoto: React.FC<{ size: number }> = ({ size }) => (
+  <span
+    aria-hidden
+    className="flex shrink-0"
+    style={{ width: size, height: size, borderRadius: 9999, border: `1px solid ${INK.b10}`, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 5px, ${INK.card} 5px 10px)` }}
+  />
+);
+
+/**
+ * picker16 (MO27): "Search your clients" (the field with a 15 / 2 search
+ * glyph), 8 below, then the roster card (card fill, 1px card border, r16, pad
+ * 2 12): rows pad 9 0, gap 12, the 36 avatar, 14 / 600 name, a 22 r7 box
+ * (2px primary.deep border, filled when picked, check 13 / 3). People in
+ * `disabled` show at 55% with "In the group" (11.5 / 700 text.faint).
+ */
+export const GroupPicker: React.FC<{
+  clients: PickableClient[];
+  selected: Set<string>;
+  onToggle: (userId: string) => void;
+  disabled?: Set<string>;
+}> = ({ clients, selected, onToggle, disabled }) => {
+  const [q, setQ] = useState("");
+  const shown = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return [...clients].sort((a, b) => a.name.localeCompare(b.name)).filter((c) => !term || c.name.toLowerCase().includes(term));
+  }, [clients, q]);
+
+  if (clients.length === 0) {
+    return <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "24px 0" }}>You don't have any connected clients yet.</p>;
+  }
+  return (
+    <div className="flex flex-col">
+      <label className="flex items-center" style={{ ...FIELD, gap: 8 }}>
+        <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
+        <span className="sr-only">Search your clients</span>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your clients" className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint" style={{ fontSize: textPx(14), color: INK.ch }} />
+      </label>
+      <div style={{ height: 8 }} />
+      {shown.length === 0 ? (
+        <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "18px 0" }}>No clients match.</p>
+      ) : (
+        <div role="group" aria-label="Your clients" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
+          {shown.map((c, i) => {
+            const fixed = disabled?.has(c.userId) ?? false;
+            const on = !fixed && selected.has(c.userId);
+            return (
+              <button
+                key={c.userId}
+                type="button"
+                role="checkbox"
+                aria-checked={fixed || on}
+                disabled={fixed}
+                onClick={() => onToggle(c.userId)}
+                className="tap w-full flex items-center text-left"
+                style={{ gap: 12, padding: "9px 0", minHeight: 44, borderTop: i ? `1px solid ${INK.b06}` : undefined, opacity: fixed ? 0.55 : 1 }}
+              >
+                <Avatar name={c.name} url={c.avatarUrl} size={36} />
+                <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
+                  {c.name}
+                </span>
+                {fixed ? (
+                  <span className="shrink-0" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.chF }}>
+                    In the group
+                  </span>
+                ) : (
+                  <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.prDeep : "transparent" }}>
+                    {on && <Check size={13} strokeWidth={3} style={{ color: INK.card }} />}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};

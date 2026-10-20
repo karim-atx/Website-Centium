@@ -332,8 +332,6 @@ export interface ProfessionalClient {
     cyclePhase: boolean;
     pregnancy: boolean;
   };
-  assignedProgramName?: string;
-  assignedFoodTemplateName?: string;
   /**
    * Averages from the client's OWN health_metrics rows, behind the
    * `health_metrics` grant.
@@ -459,8 +457,8 @@ export interface WorkoutTemplate {
   ownerId?: string | null;
   /**
    * Release 3 (DB-3): the programme's length in weeks (1 to 104), or null for
-   * an open-ended template. Settable on insert only: the UPDATE column grant
-   * on workout_templates does not include duration_weeks.
+   * an open-ended template. The owner can set it on insert and update
+   * (follow-up 20261124160000).
    */
   durationWeeks?: number | null;
 }

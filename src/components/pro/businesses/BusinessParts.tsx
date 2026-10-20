@@ -70,7 +70,7 @@ export const LogoTile: React.FC<{ name: string; logoUrl?: string | null; size?: 
  * bizCard13: card r20, pad 14 16, 10 below; the logo tile, gap 12, name
  * 15 / 800 and "Gym · Beirut" 12 text.faint, chevron 16 text.faint; 10
  * under, the lines 12 text.soft gap 4 (briefcase 13: role · since; calendar
- * 13: the next classes there). Kept under it (MyBusinessesPage): the console
+ * 13: the next classes there). Kept under it (from the old Your businesses page): the console
  * areas this team's permissions open.
  */
 export const BizCard: React.FC<{
@@ -115,7 +115,7 @@ export const BizCard: React.FC<{
 
 
 /**
- * Kept from MyBusinessesPage (B7): the console areas this team's owner turned
+ * Kept from the old Your businesses page (B7): the console areas this team's owner turned
  * on for me (staffAreas); a tap makes the business the console's current one
  * and opens the area. None turned on: the owner line. The business I own:
  * every area.
@@ -158,7 +158,7 @@ export const ConsoleLinks: React.FC<{ businessId: string; businessName: string; 
   );
 };
 
-/** Kept from MyBusinessesPage: an invitation with Accept / Decline (business_employees, accepted_at null). */
+/** Kept from the old Your businesses page: an invitation with Accept / Decline (business_employees, accepted_at null). */
 export const InvitationCard: React.FC<{ e: MyEmployment; busy: boolean; onAccept: () => void; onDecline: () => void }> = ({ e, busy, onAccept, onDecline }) => (
   <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 16px", marginBottom: 10 }}>
     <div className="flex items-center" style={{ gap: 12 }}>
@@ -262,7 +262,7 @@ export const LeavePopup: React.FC<{ name: string | null; busy: boolean; onLeave:
   </CentredPopup>
 );
 
-/** Kept from MyBusinessesPage: declining an invitation, confirmed. */
+/** Kept from the old Your businesses page: declining an invitation, confirmed. */
 export const DeclinePopup: React.FC<{ name: string | null; busy: boolean; onDecline: () => void; onClose: () => void }> = ({ name, busy, onDecline, onClose }) => (
   <CentredPopup open={!!name} onClose={onClose} title={`Decline ${name ?? ""}'s invitation?`} icon={<X size={22} strokeWidth={2} aria-hidden />} body="They can invite you again later.">
     <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>

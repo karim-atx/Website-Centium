@@ -25,7 +25,7 @@ import { range12, time12 } from "../../../utils/time12";
  *   (business_classes.professional_id), with the change from last month;
  * - Your schedule here: my next classes there (a tap opens that day in Calendar);
  * - Contact: the business's public email, phone and location;
- * - the console areas this team's owner turned on (kept from MyBusinessesPage).
+ * - the console areas this team's owner turned on (kept from the old Your businesses page).
  * NOT DRAWN (no source): "Clients from here" (no booking-through-a-business
  * link) and "Earnings this month" (Centium moves no money); the owner's name
  * (their profile isn't readable by staff). A pending invitation shows its

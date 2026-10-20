@@ -1,6 +1,14 @@
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { ChevronRight, Pencil, UserPlus, Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { CentredPopup } from "../ui/CentredPopup";
+import { CtaButton } from "../ui/PinnedCta";
+import { INK } from "../pro/proInk";
+import { Avatar } from "../pro/client/kit";
+import { ComingSoonPill } from "../pro/ComingSoon";
+import { GroupPicker } from "./NewGroup";
+import { useIsDark } from "../../hooks/useIsDark";
+import { textPx } from "../../theme/textSize";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { ClientPicker, type PickableClient } from "./ClientPicker";
 import {
@@ -34,12 +42,17 @@ export const GroupInfoSection: React.FC<{
   ended: null | "closed" | "left" | "removed";
   clients: PickableClient[];
   onChanged: () => void;
-}> = ({ threadId, authUserId, name, members, isHost, ended, clients, onChanged }) => {
+  /**
+   * Release 3 MO27 "Group info" for a professional viewer (the group's
+   * admin): drawn as gen/r16.js groupInfo16. Unset keeps the client look.
+   */
+  pro?: boolean;
+}> = ({ threadId, authUserId, name, members, isHost, ended, clients, onChanged, pro }) => {
   const [adding, setAdding] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(name);
-  const [confirm, setConfirm] = useState<null | "close" | "leave" | { remove: GroupMember }>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,6 +98,49 @@ export const GroupInfoSection: React.FC<{
   };
 
   const row = "tap w-full min-h-[52px] text-left text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
+
+  const runConfirm = () => {
+    const c = confirm;
+    if (!c) return;
+    void run(
+      () => (c === "close" ? closeGroup(threadId) : c === "leave" ? leaveGroup(threadId) : removeGroupMember(threadId, c.remove.userId)),
+      () => setConfirm(null)
+    );
+  };
+
+  if (pro) {
+    return (
+      <ProGroupInfo
+        name={name}
+        joined={joined}
+        authUserId={authUserId}
+        isHost={isHost}
+        open={open}
+        clients={clients}
+        inGroup={inGroup}
+        busy={busy}
+        error={error}
+        notice={notice}
+        adding={adding}
+        setAdding={setAdding}
+        picked={picked}
+        setPicked={setPicked}
+        invite={() => void invite()}
+        renaming={renaming}
+        startRename={() => {
+          setNewName(name);
+          setRenaming(true);
+        }}
+        stopRename={() => setRenaming(false)}
+        newName={newName}
+        setNewName={setNewName}
+        saveName={() => void run(() => renameGroup(threadId, newName.trim()), () => setRenaming(false))}
+        confirm={confirm}
+        setConfirm={setConfirm}
+        runConfirm={runConfirm}
+      />
+    );
+  }
 
   return (
     <>
@@ -256,4 +312,211 @@ export const GroupInfoSection: React.FC<{
       </BottomSheet>
     </>
   );
+};
+
+type Confirm = null | "close" | "leave" | { remove: GroupMember };
+
+/**
+ * MO27 Group info for the professional (gen/r16.js groupInfo16), below Chat
+ * info's own header, tiles and gallery:
+ * - members card (card fill, 1px 8% border, r16, pad 4 14): "{n} members"
+ *   14 / 700 and "Add people" 13 / 700 primary.deep with UserPlus 15 / 2 on a
+ *   44 row; member rows 52 tall with a 6% top rule, gap 12, the 36 avatar,
+ *   the first name 14 / 600, "Admin" 12 / 700 primary.deep 6 after it,
+ *   "Remove" 13 / 600 status.high; the note 12 text.soft 1.45, pad 8 0;
+ * - "Rename or edit description" (pencil 17 / 1.75 text.soft, 14 / 600,
+ *   chevron 15 / 2 text.faint) in its own card (pad 2 14, 10 under). Mute,
+ *   Pinned messages and Media and files are Chat info's tiles and gallery
+ *   above, not drawn twice;
+ * - "End group" (14 / 700 status.high, 52) in its own card, then 11.5
+ *   text.faint 1.5, 8 above: the admin can't leave, no calls in groups;
+ * - Add people: the bottom sheet with the line (12 text.soft, 8 under), the
+ *   picker (people in the group at 55%, "In the group") and the footer CTA
+ *   "Invite {n} client(s)";
+ * - End group: the popup (users tile, "End {name}?", the body, End group 48
+ *   r14 status.high with white / #0D0B1A ink, 14 / 700, and Keep group as
+ *   the secondary CTA). Remove uses the same popup (not drawn: own pick).
+ * message_threads has no description column (backend gap): the rename
+ * sheet's Description shows Coming soon.
+ */
+const ProGroupInfo: React.FC<{
+  name: string;
+  joined: GroupMember[];
+  authUserId: string;
+  isHost: boolean;
+  open: boolean;
+  clients: PickableClient[];
+  inGroup: Set<string>;
+  busy: boolean;
+  error: string | null;
+  notice: string | null;
+  adding: boolean;
+  setAdding: (v: boolean) => void;
+  picked: Set<string>;
+  setPicked: React.Dispatch<React.SetStateAction<Set<string>>>;
+  invite: () => void;
+  renaming: boolean;
+  startRename: () => void;
+  stopRename: () => void;
+  newName: string;
+  setNewName: (v: string) => void;
+  saveName: () => void;
+  confirm: Confirm;
+  setConfirm: (c: Confirm) => void;
+  runConfirm: () => void;
+}> = (p) => {
+  const dark = useIsDark();
+  const admin = p.isHost && p.open;
+  const card: React.CSSProperties = { borderRadius: 16, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.08)" };
+  const n = p.picked.size;
+  const c = p.confirm;
+  const first = (s: string) => s.trim().split(/\s+/)[0] ?? s;
+  return (
+    <>
+      <section aria-label="Members" style={{ ...card, padding: "4px 14px" }}>
+        <div className="flex items-center justify-between" style={{ minHeight: 44 }}>
+          <h2 style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
+            {p.joined.length} {p.joined.length === 1 ? "member" : "members"}
+          </h2>
+          {admin && (
+            <button type="button" onClick={() => p.setAdding(true)} className="tap inline-flex items-center" style={{ gap: 6, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
+              <UserPlus size={15} strokeWidth={2} aria-hidden /> Add people
+            </button>
+          )}
+        </div>
+        {p.joined.map((m) => (
+          <div key={m.userId} className="flex items-center" style={{ gap: 12, minHeight: 52, borderTop: `1px solid ${INK.b06}` }}>
+            <Avatar name={m.firstName?.trim() || "?"} url={m.avatarUrl} size={36} />
+            <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
+              {m.userId === p.authUserId ? "You" : m.firstName}
+              {m.role === "owner" && <span style={{ marginLeft: 6, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>Admin</span>}
+            </span>
+            {admin && m.role !== "owner" && (
+              <button type="button" onClick={() => p.setConfirm({ remove: m })} className="tap shrink-0" style={{ minHeight: 44, paddingLeft: 8, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+        <p style={{ fontSize: textPx(12), color: INK.chS, padding: "8px 0", lineHeight: 1.45 }}>Members see each other's first names, photos and messages here, never health data, profiles or other chats.</p>
+      </section>
+
+      {p.notice && (
+        <p role="status" className="rounded-xl" style={{ fontSize: textPx(12), color: INK.ch, background: INK.soft, padding: "10px 14px" }}>
+          {p.notice}
+        </p>
+      )}
+      {p.error && (
+        <p role="alert" className="rounded-xl" style={{ fontSize: textPx(12), color: INK.hi, background: INK.hiBg, padding: "10px 14px" }}>
+          {p.error}
+        </p>
+      )}
+
+      {p.open && (
+        <div>
+          {p.isHost && (
+            <section style={{ ...card, padding: "2px 14px", marginBottom: 10 }}>
+              <button type="button" onClick={p.startRename} className="tap w-full flex items-center text-left" style={{ gap: 12, minHeight: 52 }}>
+                <Pencil size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
+                <span className="flex-1" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
+                  Rename or edit description
+                </span>
+                <ChevronRight size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+              </button>
+            </section>
+          )}
+          <section style={{ ...card, padding: "2px 14px" }}>
+            <button type="button" onClick={() => p.setConfirm(p.isHost ? "close" : "leave")} className="tap w-full flex items-center text-left" style={{ minHeight: 52, fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>
+              {p.isHost ? "End group" : "Leave group"}
+            </button>
+          </section>
+          {p.isHost && (
+            <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>As the admin you can't leave; ending the group closes it for everyone. Calls aren't available in groups.</p>
+          )}
+        </div>
+      )}
+
+      <BottomSheet
+        open={p.adding}
+        onClose={() => p.setAdding(false)}
+        title="Add people"
+        footer={<CtaButton className="w-full" size="sheet" label={`Invite ${n} ${n === 1 ? "client" : "clients"}`} disabled={n === 0} loading={p.busy} onClick={p.invite} />}
+      >
+        <p style={{ fontSize: textPx(12), color: INK.chS, marginBottom: 8 }}>Each person gets an invitation and joins only if they accept.</p>
+        <GroupPicker
+          clients={p.clients}
+          selected={p.picked}
+          disabled={p.inGroup}
+          onToggle={(id) =>
+            p.setPicked((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+        />
+      </BottomSheet>
+
+      <BottomSheet
+        open={p.renaming}
+        onClose={p.stopRename}
+        title="Rename or edit description"
+        footer={<CtaButton className="w-full" size="sheet" label="Save" loading={p.busy} disabled={!p.newName.trim() || p.newName.trim() === p.name} onClick={p.saveName} />}
+      >
+        <label htmlFor="grename" className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
+          Group name
+        </label>
+        <input id="grename" value={p.newName} maxLength={GROUP_NAME_MAX} onChange={(e) => p.setNewName(e.target.value)} style={PRO_FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
+        <div className="flex items-center justify-between" style={{ gap: 8, margin: "14px 0 6px" }}>
+          <label htmlFor="gredesc" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
+            Description (optional)
+          </label>
+          <ComingSoonPill />
+        </div>
+        <input id="gredesc" disabled style={{ ...PRO_FIELD, opacity: 0.6 }} />
+      </BottomSheet>
+
+      <CentredPopup
+        open={!!c}
+        onClose={() => p.setConfirm(null)}
+        alert
+        icon={<Users size={22} strokeWidth={2} aria-hidden />}
+        title={c === "close" ? `End ${p.name}?` : c === "leave" ? "Leave group?" : c ? `Remove ${first(c.remove.firstName)}?` : ""}
+        body={
+          c === "close"
+            ? "Nobody will be able to send messages here any more. Members keep what was already said, read-only."
+            : c === "leave"
+              ? "You'll keep what was said while you were here, read-only, and won't see anything new. The host can invite you again."
+              : c
+                ? `${first(c.remove.firstName)} will keep what was said while they were here, read-only, and won't see anything new.`
+                : undefined
+        }
+      >
+        <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
+          <button
+            type="button"
+            disabled={p.busy}
+            onClick={p.runConfirm}
+            className="tap w-full inline-flex items-center justify-center disabled:opacity-40"
+            style={{ height: 48, borderRadius: 14, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: textPx(14), fontWeight: 700 }}
+          >
+            {c === "close" ? "End group" : c === "leave" ? "Leave group" : "Remove"}
+          </button>
+          <CtaButton size="page" variant="secondary" label={c === "close" ? "Keep group" : "Cancel"} onClick={() => p.setConfirm(null)} disabled={p.busy} />
+        </div>
+      </CentredPopup>
+    </>
+  );
+};
+
+const PRO_FIELD: React.CSSProperties = {
+  width: "100%",
+  height: 40,
+  borderRadius: 12,
+  background: INK.soft,
+  border: `1px solid ${INK.b10}`,
+  padding: "0 12px",
+  fontSize: textPx(14),
+  color: INK.ch,
 };

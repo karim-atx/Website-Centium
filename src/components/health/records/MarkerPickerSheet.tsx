@@ -109,7 +109,7 @@ export const MarkerPickerSheet: React.FC<{
         className="tap w-full text-left"
         style={{ minHeight: 48, marginTop: 10, padding: "0 2px", fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: deepInk(dark) }}
       >
-        {q ? `Other: “${q}”` : "Other (not on the list)"}
+        {q ? `Other: "${q}"` : "Other (not on the list)"}
       </button>
     </BottomSheet>
   );

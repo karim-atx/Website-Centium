@@ -21,7 +21,7 @@ import { todayLocal } from "../../../utils/date";
 /**
  * Release 3 · Businesses (/app/more/businesses; MO9 v3, decision 1: a
  * professional may work with several businesses). Replaces
- * pages/professionals/MyBusinessesPage.tsx, keeping every feature it had:
+ * the old Your businesses page, keeping every feature it had:
  * - Invitations (business_employees with accepted_at null, my_business_employments):
  *   Accept (accept_business_employment) and Decline (own row deleted), confirmed;
  * - Connected teams, each with the console areas its owner turned on for me

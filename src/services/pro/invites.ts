@@ -13,11 +13,15 @@
 //   Edge Function sends it (never called from the browser).
 //   invite_client('phone', number) only records it (no SMS provider): the
 //   device's own messages app sends the text.
-// - offline_clients: a name and notes only, until the person joins.
+// - offline_clients: a name, contact details and a goal (at most 200), until
+//   the person joins.
+// - invite_client also takes the first name (at most 40) and a message (at
+//   most 500) for the email (follow-up 20261124120000); 22023 when too long.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { invite22023, OFFLINE_GOAL_MAX } from "./inviteErrors";
 
 export interface InviteLink {
   id: string;
@@ -99,17 +103,26 @@ export async function fetchInviteJoins(): Promise<Result<InviteJoin[]>> {
 
 export type ContactChannel = "email" | "phone";
 
-/** invite_client(channel, address): email is queued and sent by the server; phone is only recorded. */
-export async function inviteByContact(channel: ContactChannel, address: string): Promise<Result<{ code: string | null }>> {
-  const { data, error } = await rpc("invite_client", { p_channel: channel, p_address: address });
+/**
+ * invite_client(channel, address, first_name, message): email is queued and
+ * sent by the server, with the first name (at most 40) and message (at most
+ * 500) in the email; phone is only recorded. Blank name or message is sent as null.
+ */
+export async function inviteByContact(
+  channel: ContactChannel,
+  address: string,
+  extra?: { firstName?: string; message?: string }
+): Promise<Result<{ code: string | null }>> {
+  const { data, error } = await rpc("invite_client", {
+    p_channel: channel,
+    p_address: address,
+    p_first_name: extra?.firstName?.trim() || null,
+    p_message: extra?.message?.trim() || null,
+  });
   if (error) {
     if (error.code === "ATXG3") return { ok: false, message: INVITE_LOCKED_MESSAGE };
     if (error.code === "ATX02") return { ok: false, message: "You've sent a lot of invites today. Try again tomorrow." };
-    if (error.code === "22023") {
-      const m = error.message ?? "";
-      if (/already invited/.test(m)) return { ok: false, message: "You already invited them today." };
-      return { ok: false, message: channel === "email" ? "Enter a valid email address." : "Enter a valid phone number." };
-    }
+    if (error.code === "22023") return { ok: false, message: invite22023(error.message, channel) };
     return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't send the invite. Try again.", offline: isOffline(error) };
   }
   const row = ((data ?? []) as { code: string | null }[])[0];
@@ -120,15 +133,22 @@ export interface OfflineDraft {
   name: string;
   email: string;
   phone: string;
+  /** offline_clients.goal: at most 200 characters; blank is null. */
+  goal: string;
 }
 
 export async function addOfflineClient(me: string, d: OfflineDraft): Promise<Result<{ id: string }>> {
+  // goal isn't in the generated types yet: cast at this boundary.
+  const row = { professional_id: me, name: d.name.trim(), email: d.email.trim() || null, phone: d.phone.trim() || null, goal: d.goal.trim() || null };
   const { data, error } = await supabase
     .from("offline_clients")
-    .insert({ professional_id: me, name: d.name.trim(), email: d.email.trim() || null, phone: d.phone.trim() || null })
+    .insert(row as unknown as { professional_id: string; name: string })
     .select("id")
     .single();
-  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't add them. Try again.", offline: isOffline(error) };
+  if (error) {
+    if (error.code === "23514" && d.goal.trim().length > OFFLINE_GOAL_MAX) return { ok: false, message: `Keep the goal to ${OFFLINE_GOAL_MAX} characters or fewer.` };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't add them. Try again.", offline: isOffline(error) };
+  }
   return { ok: true, data: { id: data.id } };
 }
 

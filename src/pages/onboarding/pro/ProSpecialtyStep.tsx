@@ -4,7 +4,7 @@ import { ObSelectCard } from "../shell/ObBlocks";
 import { Composed, OB } from "../shell/visuals";
 import { ProDietitianArt, ProOtherArt, ProPhysioArt, ProTrainerArt } from "../../../components/icons/BusinessArt";
 import type { ProfessionalSubtype } from "../../../types";
-import { SPECIALTY_CARDS, specialtyNote, type ProKind } from "./proModel";
+import { SPECIALTY_CARDS, proKindOf, specialtyNote, type ProKind } from "./proModel";
 
 const ART: Record<ProKind, React.FC<{ size?: number }>> = {
   trainer: ProTrainerArt,
@@ -70,7 +70,7 @@ export const ProSpecialtyStep: React.FC<{
           );
         })}
       </div>
-      <p className="ob-cards-note">{specialtyNote(!!value)}</p>
+      <p className="ob-cards-note">{specialtyNote(value ? proKindOf(value) : null)}</p>
     </div>
     <ObFooter primary={{ label: "Continue", onClick: onNext, disabled: !value }} />
   </ObPage>

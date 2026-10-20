@@ -2,11 +2,14 @@
 // professional_notifications, select own, realtime, mark read by update).
 // Rows are written only by the database (notify_professional); the website
 // reads them, marks read_at, and subscribes to changes for the signed-in
-// professional. There is no delete policy, so nothing here removes a row.
+// professional. Release 3 follow-up (20261124120000): Clear all is
+// clear_my_professional_notifications() (returns the count), and dismissing
+// one deletes the own row (professional_notifications_delete_own).
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
+import { rpc } from "./rpc";
 
 export type ProNotificationKind = "request" | "to_review" | "update";
 
@@ -49,6 +52,18 @@ export async function fetchNotifications(): Promise<{ ok: true; data: ProNotific
 export async function markRead(ids: string[]): Promise<boolean> {
   if (ids.length === 0) return true;
   const { error } = await supabase.from("professional_notifications").update({ read_at: new Date().toISOString() }).in("id", ids).is("read_at", null);
+  return !error;
+}
+
+/** Clear all: deletes every one of the caller's hub notifications. */
+export async function clearAllNotifications(): Promise<boolean> {
+  const { error } = await rpc("clear_my_professional_notifications", {});
+  return !error;
+}
+
+/** Dismisses one notification (own rows only). */
+export async function dismissNotification(id: string): Promise<boolean> {
+  const { error } = await supabase.from("professional_notifications").delete().eq("id", id);
   return !error;
 }
 

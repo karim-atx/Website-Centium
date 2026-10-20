@@ -3,6 +3,7 @@ import { Activity, Dumbbell, Eye, Footprints } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
+import { signedNum } from "../proRules";
 import { ProChart } from "../ProChart";
 import { LeafStreak } from "../LeafStreak";
 import { LockLine } from "../LockLine";
@@ -234,12 +235,12 @@ export const Training: React.FC<PanelProps & { workouts: Workout[] }> = ({ worko
         { label: "Average RPE", value: "–", sub: "After a week of logs" },
       ]
     : [
-        { label: "Workouts", value: String(thisWeek.length), delta: thisWeek.length !== lastWeek.length ? `${thisWeek.length > lastWeek.length ? "+" : ""}${thisWeek.length - lastWeek.length}` : null, dir: thisWeek.length > lastWeek.length ? "up" : thisWeek.length < lastWeek.length ? "down" : null, sub: "This week" },
+        { label: "Workouts", value: String(thisWeek.length), delta: thisWeek.length !== lastWeek.length ? signedNum(thisWeek.length - lastWeek.length) : null, dir: thisWeek.length > lastWeek.length ? "up" : thisWeek.length < lastWeek.length ? "down" : null, sub: "This week" },
         (() => {
           const a = vol(thisWeek);
           const b = vol(lastWeek);
           const pct = b > 0 ? Math.round(((a - b) / b) * 100) : null;
-          return { label: "Volume", value: fmt(a), unit: "kg", delta: pct ? `${pct > 0 ? "+" : ""}${pct}%` : null, dir: pct ? (pct > 0 ? "up" : "down") : null, sub: "This week" } as StatBox;
+          return { label: "Volume", value: fmt(a), unit: "kg", delta: pct ? `${signedNum(pct)}%` : null, dir: pct ? (pct > 0 ? "up" : "down") : null, sub: "This week" } as StatBox;
         })(),
         { label: "Average RPE", value: rpes.length ? (Math.round((rpes.reduce((x, y) => x + y, 0) / rpes.length) * 10) / 10).toString() : "–", sub: "This week" },
       ];

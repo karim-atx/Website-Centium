@@ -23,7 +23,7 @@ import { clientsLabel, isActive, programmeEnd } from "./libraryModel";
  * function takes one client per call, so the picked clients are assigned one
  * at a time, in order.
  *
- * KEPT FROM AssignTemplateSheet (ATX18): assigning again replaces the
+ * KEPT FROM the old assign-template sheet (ATX18): assigning again replaces the
  * client's copy, and when the client has edited it since the last push the
  * function refuses; the sheet then stops on that client, lists what would be
  * lost (getOverwriteDiff) and asks: "Keep theirs" skips them, "Replace it"

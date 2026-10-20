@@ -6,6 +6,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { BiomarkerLineChart } from "../../health/BiomarkerLineChart";
 import { INK } from "../proInk";
+import { signedNum } from "../proRules";
 import { fmtDay } from "./clientFormat";
 import type { BiomarkerFlag } from "../../../services/pro/clientPage";
 import type { BloodMarker } from "../../../types";
@@ -67,7 +68,7 @@ export const BiomarkerChart: React.FC<{
   const sel = selected != null ? points[selected] : null;
   const prev = selected != null && selected > 0 ? points[selected - 1] : null;
   const change = sel && prev ? Math.round((sel.value - prev.value) * 100) / 100 : null;
-  const signed = (n: number) => `${n > 0 ? "+" : ""}${n}`;
+  const signed = (n: number) => signedNum(n);
 
   return (
     <BottomSheet

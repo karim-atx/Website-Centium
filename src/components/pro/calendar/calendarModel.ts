@@ -235,11 +235,6 @@ export function timeOffDates(first: string, repeat: TimeOffRepeat, until: string
   return out.length ? out : [first];
 }
 
-/** Does this entry block this moment of a day? (a whole day blocks it all). */
-export function blocksDay(e: { dates: string[]; start: string | null }, iso: string): boolean {
-  return e.dates.includes(iso) && e.start === null;
-}
-
 // ---------------------------------------------------------------------------
 // Reminders (CA12, CA22): two calendar_alert slots
 // ---------------------------------------------------------------------------

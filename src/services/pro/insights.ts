@@ -4,7 +4,8 @@
 // useClientAccess says is off).
 //
 // - activity_daily / activity_hourly, health_metrics (water, steps,
-//   heart_rate, sleep, calories_burned): Activity and vitals;
+//   heart_rate, sleep, calories_burned), sleep_details + sleep_segments
+//   (W9): Activity and vitals;
 // - health_metrics weight: Weight; waist / body fat: Body measurements;
 // - blood_pressure_readings: Blood pressure (services/blood-pressure);
 // - workout_sessions + logged_exercises + logged_sets: Workout activity;
@@ -19,6 +20,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
+import type { SleepNight, SleepStage } from "../../components/pro/insights/sleepModel";
 
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
 const from = (table: string) => supabase.from(table as never);
@@ -96,6 +98,60 @@ export async function fetchMetricRows(clientId: string, types: MetricType[], sin
   );
   if (!r.ok) return readFail(r.error);
   return { ok: true, data: r.rows.map((x) => ({ type: x.metric_type, value: Number(x.value), at: x.recorded_at, day: localDay(x.recorded_at), rest: x.context === "rest" })) };
+}
+
+// ---------------------------------------------------------------------------
+// Sleep detail (HANDOVER_API "sleep_details: real times, and naps"): the
+// professional reads sleep_details through sleep_details_select_granted_
+// professional (Activity and vitals, has_client_access 'health_metrics') and
+// the stage timeline sleep_segments through sleep_segments_select_via_sleep.
+// Main nights only (is_nap false); the timeline comes embedded per night.
+// ---------------------------------------------------------------------------
+
+// The shapes live with the pure model (node tests import it without this
+// module's Supabase client).
+export type { SleepNight, SleepSegment, SleepStage } from "../../components/pro/insights/sleepModel";
+
+export async function fetchSleepNights(clientId: string, since: string): Promise<Read<SleepNight[]>> {
+  type Row = {
+    id: string;
+    sleep_date: string;
+    bed_start: string | null;
+    wake_end: string | null;
+    asleep_min: unknown;
+    in_bed_min: unknown;
+    deep_min: unknown;
+    rem_min: unknown;
+    light_min: unknown;
+    awake_min: unknown;
+    sleep_segments: { stage: SleepStage; starts_at: string; ends_at: string }[] | null;
+  };
+  const r = await paged<Row>((a, b) =>
+    from("sleep_details")
+      .select("id, sleep_date, bed_start, wake_end, asleep_min, in_bed_min, deep_min, rem_min, light_min, awake_min, sleep_segments(stage, starts_at, ends_at)")
+      .eq("user_id", clientId)
+      .eq("is_nap", false)
+      .gte("sleep_date", since)
+      .order("sleep_date")
+      .range(a, b)
+  );
+  if (!r.ok) return readFail(r.error);
+  return {
+    ok: true,
+    data: r.rows.map((x) => ({
+      id: x.id,
+      date: x.sleep_date,
+      bedStart: x.bed_start,
+      wakeEnd: x.wake_end,
+      asleepMin: num(x.asleep_min),
+      inBedMin: num(x.in_bed_min),
+      deepMin: num(x.deep_min),
+      remMin: num(x.rem_min),
+      lightMin: num(x.light_min),
+      awakeMin: num(x.awake_min),
+      segments: [...(x.sleep_segments ?? [])].sort((p, q) => (p.starts_at < q.starts_at ? -1 : 1)).map((s) => ({ stage: s.stage, startsAt: s.starts_at, endsAt: s.ends_at })),
+    })),
+  };
 }
 
 /** Which metric types have at least one row the caller can read (vitals tabs only for what is tracked). */

@@ -39,11 +39,11 @@ describe("CU29 / CU30 words", () => {
     assert.equal(visibilityFromPayload({}), "none");
   });
 
-  it("dates rows as the frame does", () => {
+  it("dates rows in the app's short-date convention, as the professional side does", () => {
     const now = new Date(2026, 9, 15);
-    assert.equal(sharedDate(new Date(2026, 9, 14, 9).toISOString(), now), "14 Oct");
-    assert.equal(sharedDate(new Date(2025, 9, 14, 9).toISOString(), now), "14 Oct 2025");
-    assert.equal(sharedSub("Rami", new Date(2026, 9, 14, 9).toISOString(), "none", now), "Rami · 14 Oct · without your name");
+    assert.equal(sharedDate(new Date(2026, 9, 14, 9).toISOString(), now), "Oct 14");
+    assert.equal(sharedDate(new Date(2025, 9, 14, 9).toISOString(), now), "Oct 14, 2025");
+    assert.equal(sharedSub("Rami", new Date(2026, 9, 14, 9).toISOString(), "none", now), "Rami · Oct 14 · without your name");
   });
 
   it("keeps the COPY radio rows verbatim, straight apostrophes", () => {

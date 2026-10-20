@@ -103,7 +103,7 @@ export default function NoteTemplates() {
   );
 }
 
-const EditTemplateSheet: React.FC<{ open: boolean; row: NoteTemplateRow | null; kind: TemplateKind; onClose: () => void; onSaved: (text: string) => void }> = ({ open, row, kind, onClose, onSaved }) => {
+export const EditTemplateSheet: React.FC<{ open: boolean; row: NoteTemplateRow | null; kind: TemplateKind; onClose: () => void; onSaved: (text: string) => void }> = ({ open, row, kind, onClose, onSaved }) => {
   const { authUserId } = useApp();
   const online = useOnline();
   const nameId = useId();

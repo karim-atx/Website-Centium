@@ -3,7 +3,7 @@
 // "### CU30" (source/gen/r31.js clientAsk31, clientSet31, sentToast31), with
 // straight apostrophes.
 
-import type { CardSpec, Visibility } from "../shareCardModel";
+import { shareDate, type CardSpec, type Visibility } from "../shareCardModel";
 
 export type ShareAnswerKind = "allowed" | "allowed_no_name" | "declined";
 export type WinSharingValue = "always_ask" | "always_allow" | "never";
@@ -79,15 +79,11 @@ export function sharedTitle(spec: CardSpec): string {
   }
 }
 
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** CU30 "14 Oct"; another year adds it ("14 Oct 2025"). */
-export function sharedDate(iso: string, now: Date = new Date()): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const base = `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
-  return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
-}
+/**
+ * CU30 row date in the app's short-date convention, the same as the
+ * professional's share screens: "Oct 14"; another year adds it ("Oct 14, 2025").
+ */
+export const sharedDate = (iso: string, now: Date = new Date()): string => shareDate(iso, now);
 
 /** CU30 sub line: "{pro_name} · {date} · without your name". */
 export const sharedSub = (proName: string, iso: string, v: Visibility, now?: Date) => [proName, sharedDate(iso, now), visibilityPhrase(v)].filter(Boolean).join(" · ");

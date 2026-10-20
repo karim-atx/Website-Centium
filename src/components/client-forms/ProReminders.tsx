@@ -13,6 +13,7 @@ import {
   groupReminders,
   popupQueue,
   referralBody,
+  referralTitle,
   referralReminder,
   sessionReminder,
   shareReminder,
@@ -253,7 +254,7 @@ export const ProReminders: React.FC = () => {
       if (!ref) return null;
       return {
         ...common,
-        title: `${ref.fromName} wants to refer you`,
+        title: referralTitle(ref),
         body: referralBody(ref),
         primary: {
           label: "Review",

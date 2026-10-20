@@ -7,24 +7,27 @@ import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { defaultInviteMessage, fetchCurrentInviteLink, inviteByContact, smsHref, type ContactChannel } from "../../../services/pro/invites";
+import { INVITE_MESSAGE_MAX, INVITE_NAME_MAX } from "../../../services/pro/inviteErrors";
 import { ProField, ProTextArea } from "./fields";
 
 /**
  * Release 3 · HO3 "Invite by email or phone" (DB-2 invite_client; DECISIONS:
  * phone invites are never sent by the server).
- * - Email: invite_client('email', address) queues it and the
- *   send-client-invite Edge Function sends it. The server's email carries the
- *   professional's invite link; the address is cleared once sent.
- * - Phone: invite_client('phone', number) records it (rate limit, sent list),
- *   then the device's messages app opens with the message and the link. The
- *   message is editable and goes only into that text.
- * Not carried: the frame's First name field (invite_client takes no name).
+ * - Email (the frame: First name, Email, Message): invite_client('email',
+ *   address, first_name, message) queues it and the send-client-invite Edge
+ *   Function sends it, with the name (at most 40) and message (at most 500)
+ *   in the email beside the professional's invite link.
+ * - Phone: invite_client('phone', number, first_name) records it (rate
+ *   limit, sent list), then the device's messages app opens with the message
+ *   and the link. That message is editable and goes only into that text.
  */
 export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void; onBack?: () => void; locked: boolean }> = ({ open, onClose, onBack, locked }) => {
   const { user } = useApp();
   const [tab, setTab] = useState<ContactChannel>("email");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +48,8 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
   const close = () => {
     setEmail("");
     setPhone("");
+    setName("");
+    setEmailMessage("");
     setMessage(null);
     setError(null);
     setSent(null);
@@ -60,7 +65,7 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
     if (busy || !address.trim()) return;
     setBusy(true);
     setError(null);
-    const r = await inviteByContact(tab, address);
+    const r = await inviteByContact(tab, address, tab === "email" ? { firstName: name, message: emailMessage } : { firstName: name });
     setBusy(false);
     if (!r.ok) {
       setError(r.message);
@@ -111,8 +116,12 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
             className="mb-4"
           />
           <div className="flex flex-col" style={{ gap: 14 }}>
+            <ProField label="First name" value={name} onChange={setName} autoComplete="off" maxLength={INVITE_NAME_MAX} />
             {tab === "email" ? (
-              <ProField label="Email" type="email" inputMode="email" autoComplete="email" value={email} onChange={setEmail} placeholder="name@example.com" />
+              <>
+                <ProField label="Email" type="email" inputMode="email" autoComplete="email" value={email} onChange={setEmail} placeholder="name@example.com" />
+                <ProTextArea label="Message" value={emailMessage} onChange={setEmailMessage} maxLength={INVITE_MESSAGE_MAX} placeholder="Add a short message" />
+              </>
             ) : (
               <>
                 <ProField label="Phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={setPhone} placeholder="Add a number" />

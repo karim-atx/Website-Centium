@@ -14,11 +14,12 @@ import { savePaymentModalities } from "../../../services/pro/profile";
 
 /**
  * Release 3 · W6 MO8 Payments and billing (/app/more/payments; more.js payments):
- * - Payment methods you accept: Cash (professional_profiles.payment_modalities
- *   'cash': "You confirm each payment"); Card in the app, Coming soon (no
- *   in-app payments; Whish is out of scope); Bank transfer, Coming soon:
- *   payment_modality has no bank transfer value yet (backend gap). Values the
- *   old sheet stored (card, whish) are kept as they are on every save.
+ * - Payment methods you accept: Cash and Card at sessions
+ *   (professional_profiles.payment_modalities 'cash' and 'card', each "You
+ *   confirm each payment": a card taken in person is confirmed like cash);
+ *   Card in the app, Coming soon (no in-app payments); Bank transfer, Coming
+ *   soon: payment_modality has no bank transfer value yet (backend gap). Any
+ *   other stored value (whish) is kept as it is on every save.
  * - Payouts, Invoices and receipts: states only (no in-app payments).
  * - Your Centium plan: the effective tier (useEffectiveProfessionalTier, the
  *   sidebar's own read) opening Subscription.
@@ -31,10 +32,10 @@ export default function Payments() {
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const cash = !!facts?.paymentModalities.includes("cash");
-  const setCash = async (on: boolean) => {
+  const accepts = (m: "cash" | "card") => !!facts?.paymentModalities.includes(m);
+  const setModality = async (m: "cash" | "card", on: boolean) => {
     if (!authUserId || !facts || busy) return;
-    const next = on ? [...new Set([...facts.paymentModalities, "cash"])] : facts.paymentModalities.filter((m) => m !== "cash");
+    const next = on ? [...new Set([...facts.paymentModalities, m])] : facts.paymentModalities.filter((x) => x !== m);
     setBusy(true);
     setSaveError(null);
     const r = await savePaymentModalities(authUserId, next);
@@ -61,7 +62,8 @@ export default function Payments() {
       ) : (
         <>
           <Section label="Payment methods you accept" first>
-            <SettingsRow icon={Banknote} title="Cash" sub="You confirm each payment" right={<Toggle checked={cash} onChange={(v) => void setCash(v)} disabled={busy} label="Cash" />} />
+            <SettingsRow icon={Banknote} title="Cash" sub="You confirm each payment" right={<Toggle checked={accepts("cash")} onChange={(v) => void setModality("cash", v)} disabled={busy} label="Cash" />} />
+            <SettingsRow icon={CreditCard} title="Card at sessions" sub="You confirm each payment" right={<Toggle checked={accepts("card")} onChange={(v) => void setModality("card", v)} disabled={busy} label="Card at sessions" />} />
             <SettingsRow icon={CreditCard} title="Card in the app" sub="Coming soon" right={<Toggle checked={false} onChange={() => {}} disabled label="Card in the app, coming soon" />} />
             <SettingsRow icon={Landmark} title="Bank transfer" sub="Show your details on invoices" value={<ComingSoonPill />} last />
             {saveError && <ErrorLine>{saveError}</ErrorLine>}

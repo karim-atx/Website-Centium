@@ -5,22 +5,21 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { ProCardSkeleton, ProError, OfflineLine } from "../pro/states";
 import { Toast } from "../ui/Toast";
-import { fmtDay } from "../pro/client/clientFormat";
 import { shiftIso } from "../../services/pro/home";
 import type { ProLane } from "../pro/subtypeLanes";
 import { SHARE_ICONS, ShareIconButton, SharePill, ToneTile } from "./shareKit";
-import { winCard, winRowText, type CardSpec, type ClientWin, type WinIcon, type WinTone } from "./shareCardModel";
+import { shareDate, winCard, winRowText, type CardSpec, type ClientWin, type WinIcon, type WinTone } from "./shareCardModel";
 import { AskPermissionSheet } from "./AskPermissionSheet";
 import { ShareFlow } from "./ShareFlow";
 import { useSharePro } from "./useSharePro";
 import { fetchClientWins, fetchMyShareRequests, fetchMySharedItemsFor, type MySharedItem, type ShareRequest } from "../../services/share";
 
-/** "Yesterday", "Today" or "Oct 12" (the client page's date words). */
+/** "Yesterday", "Today" or "Oct 12" ("Oct 12, 2025" in another year; the app's short date, shareDate). */
 function whenWord(iso: string, today: string): string {
   const day = iso.slice(0, 10);
   if (day === today) return "Today";
   if (day === shiftIso(today, -1)) return "Yesterday";
-  return fmtDay(iso);
+  return shareDate(iso);
 }
 
 /** The local calendar month of `today` ("Wins this month"). */

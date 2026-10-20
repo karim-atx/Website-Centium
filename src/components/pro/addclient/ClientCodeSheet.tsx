@@ -15,7 +15,7 @@ import { FreePeriodEnded, FreePeriodNotice } from "../../professionals/FreePerio
 /**
  * Release 3 · HO1 "Client code" row (FINAL_PLAN Q-B1 and 2.4: client codes
  * are kept beside the invite link). Moved here from the Release 2
- * AddClientSheet, unchanged in behaviour: a real single-use client_codes row
+ * the old add-client sheet, unchanged in behaviour: a real single-use client_codes row
  * (generateClientCode), which the client enters when signing up as a client
  * of a professional. Generating one creates no relationship.
  *

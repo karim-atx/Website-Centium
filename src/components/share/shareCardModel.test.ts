@@ -11,6 +11,7 @@ import {
   itemKind,
   milestoneCard,
   reachedMilestone,
+  shareDate,
   slotsCard,
   specFromPayload,
   winCard,
@@ -106,4 +107,12 @@ test("milestones and quotes", () => {
   assert.equal(reachedMilestone(537), 500);
   assert.equal(clipQuote("a ".repeat(200), 20).endsWith("…"), true);
   assert.equal(clipQuote("Short one.", 20), "Short one.");
+});
+
+test("shareDate uses the app's short date (month first, year only when another year)", () => {
+  const now = new Date(2026, 9, 20);
+  assert.equal(shareDate("2026-10-12", now), "Oct 12");
+  assert.equal(shareDate(new Date(2026, 9, 12, 9).toISOString(), now), "Oct 12");
+  assert.equal(shareDate("2025-10-12", now), "Oct 12, 2025");
+  assert.equal(shareDate("not a date", now), "");
 });

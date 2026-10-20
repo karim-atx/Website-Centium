@@ -43,7 +43,7 @@ export const ProgrammeDetail: React.FC<{
   onOpenCopy: (assignmentId: string) => void;
   onOpenLog: (sessionId: string) => void;
 }> = ({ template, onBack, onAssign, onMenu, onProgress, onOpenCopy, onOpenLog }) => {
-  const { templateAssignments, professionalClients, endTemplateAssignment, unassignTemplate } = useApp();
+  const { templateAssignments, professionalClients, endTemplateAssignment } = useApp();
   const [sessions, setSessions] = useState<ProgrammeSession[] | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "error" | "offline">("loading");
   const [reload, setReload] = useState(0);
@@ -200,11 +200,11 @@ export const ProgrammeDetail: React.FC<{
                         return;
                       }
                       setConfirmEnd(null);
-                      // Not started yet: end_template_assignment would clamp ends_on to
-                      // today, before starts_on, and the dates check refuses it (reported
-                      // to the backend); removing the assignment is the honest way out.
-                      const notStarted = !!a.startsOn && a.startsOn > today;
-                      void (notStarted ? unassignTemplate(a.id) : endTemplateAssignment(a.id)).then((m) => setActionError(m ?? null));
+                      // Remove (not started yet) and End are one call: end_template_assignment
+                      // works before the start date and takes the sessions after today off
+                      // the client's calendar (follow-up 20261124160000). The row then
+                      // shows under Past programmes; the client keeps their routine.
+                      void endTemplateAssignment(a.id).then((m) => setActionError(m ?? null));
                     }}
                     className="tap"
                     style={{ minHeight: 44, fontSize: textPx(12), fontWeight: 700, color: confirmEnd === a.id ? INK.hi : INK.chS }}
@@ -229,13 +229,10 @@ export const ProgrammeDetail: React.FC<{
                         {c?.name ?? "A client"}
                       </span>
                       <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                        {[a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter(Boolean).join(" to ")}
+                        {/* Removed before its start: starts_on = ends_on, one date. */}
+                        {[...new Set([a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter(Boolean))].join(" to ")}
                       </span>
                     </span>
-                    {/* The old unassign: deletes the record (the client keeps their routine). */}
-                    <button type="button" onClick={() => void unassignTemplate(a.id).then((m) => setActionError(m ?? null))} className="tap" style={{ minHeight: 44, fontSize: textPx(12), fontWeight: 700, color: INK.chS }}>
-                      Remove
-                    </button>
                   </div>
                 );
               })}

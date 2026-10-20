@@ -83,6 +83,8 @@ export const ChatCard: React.FC<{
         // 12.5 / 700 charcoal 4 below, the points as the plan's features (gap
         // 4, 8 below), then on the client's side the 33-high button 12 below:
         // "Add to my week" as Choose, "Added to your week" as Selected.
+        // W9: the button's target is 44 high (5.5 above and below the drawn
+        // 33, taken back by the margins), so the card lays out as drawn.
         <div className="rounded-[14px] border border-charcoal/10 bg-cream-card p-3 flex flex-col">
           <p className="text-[13.5px] font-bold leading-[1.3] text-primary-deep-text break-words">{card.title}</p>
           {card.lead && <p className="text-[12.5px] font-bold text-charcoal mt-1 break-words">{card.lead}</p>}
@@ -111,9 +113,11 @@ export const ChatCard: React.FC<{
                 onClick={onAdd}
                 onPointerDown={(e) => e.stopPropagation()}
                 aria-label={`Add ${card.title} to my week`}
-                className="tap mt-3 h-[33px] w-full rounded-[10px] text-[12.5px] font-bold bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill disabled:opacity-60"
+                className="tap mt-[6.5px] -mb-[5.5px] h-11 w-full flex items-center disabled:opacity-60"
               >
-                Add to my week
+                <span className="h-[33px] w-full rounded-[10px] text-[12.5px] font-bold bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center">
+                  Add to my week
+                </span>
               </button>
             ))}
         </div>

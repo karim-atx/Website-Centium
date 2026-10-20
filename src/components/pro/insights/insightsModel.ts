@@ -556,9 +556,3 @@ export function topFoods(entries: { name: string; p: number; f: number; c: numbe
   return { protein: top("p"), carbs: top("c"), fat: top("f") };
 }
 
-/** Text summary fallback: "{metric} {n} {unit}, {trend}". */
-export function summaryLine(metric: string, value: number | null, unit: string, delta: number | null): string {
-  if (value == null) return `${metric}: no readings in this range.`;
-  const trend = delta == null || Math.abs(delta) < 1e-9 ? "steady" : delta > 0 ? "up" : "down";
-  return `${metric} ${value.toLocaleString("en-GB")} ${unit}, ${trend}`.replace(/\s+,/, ",");
-}

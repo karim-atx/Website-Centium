@@ -10,11 +10,13 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { FileViewerScreen } from "../../health/FileViewerSheet";
 import { useLabCatalogue } from "../../health/useLabCatalogue";
 import { INK } from "../proInk";
+import { signedNum } from "../proRules";
 import { ProChart, type ProChartSeries } from "../ProChart";
 import { EmptyState } from "../EmptyState";
 import { OfflineLine } from "../states";
 import { Chip, ListCard, RoundBtn, SectionHead, SoftLine, type Tone } from "../client/kit";
 import { BiomarkerChart } from "../client/BiomarkerChart";
+import { catalogueByKey, flagFor, markerIdentity } from "./biomarkerMatch";
 import { getLabResults, type LabPanel, type LabResult } from "../../../services/labs/results";
 import { fetchBiomarkerFlags, fetchSharedResults, type BiomarkerFlag } from "../../../services/pro/clientPage";
 import type { CatalogueMarker } from "../../../services/labs/catalogueLogic";
@@ -38,7 +40,9 @@ import type { PanelProps } from "./panelProps";
  * one at a time) plus result_shares (services/pro/clientPage
  * fetchSharedResults) and client_biomarker_flags for the range when the
  * lab gave none (the reference range by sex). Every test sits on its true
- * date. Status (HANDOVER i): out of range, borderline within 10% of a
+ * date. W9: markers group, find their catalogue entry and their flag by
+ * blood_markers.marker_key (shared results carry it too; biomarkerMatch.ts),
+ * never by name. Status (HANDOVER i): out of range, borderline within 10% of a
  * limit, change flag over 50% between tests.
  * Nutrition sees lipids, glucose, HbA1c, iron, ferritin and vitamin D
  * (HANDOVER k); Full coaching doesn't get this tab.
@@ -105,20 +109,19 @@ function convert(v: number, from: string, to: string, entry: CatalogueMarker | n
 function buildMarkers(results: (LabResult & { note?: string | null; sharedAt?: string | null })[], flags: BiomarkerFlag[], catalogue: CatalogueMarker[] | null, nutritionOnly: boolean): Marker[] {
   const groups = new Map<string, typeof results>();
   for (const r of results) {
-    const k = r.markerKey ?? r.name.trim().toLowerCase();
+    const k = markerIdentity(r.markerKey, r.name);
     groups.set(k, [...(groups.get(k) ?? []), r]);
   }
   const out: Marker[] = [];
   for (const [key, list] of groups) {
     const sorted = [...list].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     const last = sorted[sorted.length - 1];
-    // A result shared one at a time comes without its key (result_shares reader): match the catalogue by name.
-    const nm = last.name.trim().toLowerCase();
-    const entry = catalogue ? (last.markerKey ? catalogue.find((c) => c.key === last.markerKey) : catalogue.find((c) => c.displayName.toLowerCase() === nm || c.aliases.includes(nm))) ?? null : null;
-    const markerKey = last.markerKey ?? entry?.key ?? null;
+    // The catalogue by blood_markers.marker_key only (shared results carry it too).
+    const markerKey = last.markerKey ?? null;
+    const entry = catalogueByKey(catalogue, markerKey);
     const category = entry?.category ?? "other";
     if (nutritionOnly && !(category === "lipids" || (markerKey && NUTRITION_KEYS.has(markerKey)))) continue;
-    const flag = flags.find((f) => (markerKey && f.markerKey === markerKey) || f.name.toLowerCase() === nm) ?? null;
+    const flag = flagFor(flags, markerKey, last.name);
     const points: Point[] = [];
     for (const r of sorted) {
       const v = convert(r.value, r.unit, last.unit, entry);
@@ -154,7 +157,7 @@ function buildMarkers(results: (LabResult & { note?: string | null; sharedAt?: s
 const statusInk = (s: MarkerStatus, dark: boolean) => (s === "in" ? INK.good : s === "border" ? (dark ? "#E0B360" : "#9A7424") : s === "out" ? INK.hi : INK.chS);
 const statusWord = (s: MarkerStatus) => (s === "in" ? "In range" : s === "border" ? "Borderline" : s === "out" ? "Out of range" : "No range");
 const rangeText = (lo: number | null, hi: number | null, unit: string) => (lo != null && hi != null && lo > 0 ? `${lo} to ${hi} ${unit}` : hi != null ? `under ${hi} ${unit}` : lo != null ? `above ${lo} ${unit}` : null);
-const signed = (n: number) => `${n > 0 ? "+" : ""}${roundMarker(n)}`;
+const signed = (n: number) => signedNum(roundMarker(n));
 const ago = (date: string, today: string) => {
   const d = daysBetween(date, today);
   if (d <= 0) return "Today";
@@ -190,7 +193,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
         for (const s of shared.data) {
           if (s.markerId) notes.set(s.markerId, { note: s.note, sharedAt: s.sharedAt });
           if (s.markerId && !ids.has(s.markerId) && s.value != null)
-            extra.push({ id: s.markerId, panelId: s.panelId, date: s.date, filePath: null, reportName: null, name: s.name, markerKey: null, value: s.value, unit: s.unit, rangeLow: s.rangeLow, rangeHigh: s.rangeHigh, status: s.status, note: s.note, sharedAt: s.sharedAt });
+            extra.push({ id: s.markerId, panelId: s.panelId, date: s.date, filePath: null, reportName: null, name: s.name, markerKey: s.markerKey, value: s.value, unit: s.unit, rangeLow: s.rangeLow, rangeHigh: s.rangeHigh, status: s.status, note: s.note, sharedAt: s.sharedAt });
         }
       const results = [...res.results.map((r) => ({ ...r, note: notes.get(r.id)?.note ?? null, sharedAt: notes.get(r.id)?.sharedAt ?? null })), ...extra];
       return { ok: true as const, data: { results, panels: res.panels, flags: flags.ok ? flags.data : [] } };
@@ -294,7 +297,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
       <div className="grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 12 }}>
         {[
           { l: "Last test", v: lastDate ? dayLabel(lastDate) : "–", s: lastDate ? ago(lastDate, today) : "", hi: false },
-          { l: "Out of range", v: String(outNow.length), s: newOut != null && prevTest ? `${newOut > 0 ? "+" : ""}${newOut} since ${monthShort(prevTest)}` : "Latest results", hi: outNow.length > 0 },
+          { l: "Out of range", v: String(outNow.length), s: newOut != null && prevTest ? `${signedNum(newOut)} since ${monthShort(prevTest)}` : "Latest results", hi: outNow.length > 0 },
           { l: "Improving", v: String(improving.length), s: improving.map((m) => m.name.replace(/ cholesterol$/i, "")).join(", ") || "None yet", hi: false },
         ].map((x) => (
           <div key={x.l} className="min-w-0" style={{ borderRadius: 16, background: x.hi ? INK.hiBg : INK.card, border: `1px solid ${x.hi ? "transparent" : INK.bCard}`, padding: 11 }}>
@@ -522,7 +525,7 @@ const MarkerTrend: React.FC<{
               <span className="inline-flex items-center flex-wrap" style={{ gap: 4, fontSize: textPx(12), fontWeight: 800, color: INK.ch }}>
                 {L.value >= P.value ? <ArrowUpRight size={13} strokeWidth={2.4} aria-hidden style={{ color: INK.chS }} /> : <ArrowDownRight size={13} strokeWidth={2.4} aria-hidden style={{ color: INK.chS }} />}
                 {`${signed((k(L.value) as number) - (k(P.value) as number))} ${unit}`}
-                <span style={{ fontWeight: 600, color: INK.chF }}>{`(${L.value >= P.value ? "+" : ""}${P.value ? Math.round(((L.value - P.value) / P.value) * 100) : 0}%) since ${dayLabel(P.date)}`}</span>
+                <span style={{ fontWeight: 600, color: INK.chF }}>{`(${signedNum(P.value ? Math.round(((L.value - P.value) / P.value) * 100) : 0)}%) since ${dayLabel(P.date)}`}</span>
               </span>
             ) : (
               <span style={{ fontSize: textPx(12), color: INK.chF }}>First test</span>
@@ -563,7 +566,7 @@ const MarkerTrend: React.FC<{
             title: dateLong(x.date),
             lines: [
               `${fmtV(v)} ${unit} · ${statusWord(stOf(i))}`,
-              ...(prev ? [`${signed(v - (k(prev.value) as number))} since ${dayLabel(prev.date)} (${x.value >= prev.value ? "+" : ""}${prev.value ? Math.round(((x.value - prev.value) / prev.value) * 100) : 0}%)`] : []),
+              ...(prev ? [`${signed(v - (k(prev.value) as number))} since ${dayLabel(prev.date)} (${signedNum(prev.value ? Math.round(((x.value - prev.value) / prev.value) * 100) : 0)}%)`] : []),
               x.report ?? "Lab report",
             ],
           };
@@ -900,7 +903,7 @@ const TestPage: React.FC<{
   };
   const toBlood = (m: Marker): BloodMarker => {
     const last = m.points[m.points.length - 1];
-    return { id: last.id, name: m.name, value: last.value, unit: m.unit, range: rangeText(m.low, m.high, m.unit) ?? "—", status: m.status === "out" ? (m.high != null && last.value > m.high ? "high" : "low") : m.status === "none" ? null : "normal", history: m.points.map((x) => ({ date: x.date, value: x.value })), markerKey: m.markerKey, rangeLow: m.low, rangeHigh: m.high, previous: null };
+    return { id: last.id, name: m.name, value: last.value, unit: m.unit, range: rangeText(m.low, m.high, m.unit) ?? "–", status: m.status === "out" ? (m.high != null && last.value > m.high ? "high" : "low") : m.status === "none" ? null : "normal", history: m.points.map((x) => ({ date: x.date, value: x.value })), markerKey: m.markerKey, rangeLow: m.low, rangeHigh: m.high, previous: null };
   };
 
   return (

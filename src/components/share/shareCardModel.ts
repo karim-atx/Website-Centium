@@ -179,10 +179,20 @@ export const fmtLoad = (kg: number) => {
 };
 export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-US");
 
-const shortDay = (iso: string) => {
+/**
+ * Every date the share features show, professional and client side: the
+ * app's short date as Messages writes it (components/messages/chatTime
+ * listTime): month first, "Oct 12", and "Oct 12, 2025" in another year.
+ */
+export function shareDate(iso: string, now: Date = new Date()): string {
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-};
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : null),
+  });
+}
 
 /** The card for one win. Null for a row whose value can't make an honest card. */
 export function winCard(w: ClientWin): CardSpec | null {
@@ -219,7 +229,7 @@ export function winCard(w: ClientWin): CardSpec | null {
       const n = num(v.logging_streak_days);
       if (n == null) return null;
       const end = new Date(w.occurredAt.length === 10 ? `${w.occurredAt}T00:00:00` : w.occurredAt);
-      const since = Number.isNaN(end.getTime()) ? "" : shortDay(new Date(end.getTime() - (n - 1) * 86400000).toISOString());
+      const since = Number.isNaN(end.getTime()) ? "" : shareDate(new Date(end.getTime() - (n - 1) * 86400000).toISOString());
       return { template: "logging", eyebrow: "Streak milestone", hero: "num", big: fmtInt(n), unit: "days", heroKey: "logging_streak_days", subject: "Logging every day", line: since ? `{c} · since ${since}` : "{c}", extra: "leaves", stats: [] };
     }
     case "meal_plan_complete": {

@@ -184,8 +184,8 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
   }
 
   const label = (text: string, extra?: React.ReactNode) => (
-    <div className="flex items-center justify-between" style={{ paddingBottom: 7.5, marginBottom: 10, borderBottom: `1.5px solid ${INK.pr}` }}>
-      <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", color: INK.chF }}>{text}</h2>
+    <div className="flex items-center justify-between gap-2" style={{ paddingBottom: 7.5, marginBottom: 10, borderBottom: `1.5px solid ${INK.pr}` }}>
+      <h2 className="min-w-0" style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", color: INK.chF }}>{text}</h2>
       {extra}
     </div>
   );
@@ -236,7 +236,9 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
 
       {label(
         "Choose a time",
-        <span className="flex items-center gap-1">
+        // W9: the week stays on one line (360 with Larger text). The arrows keep
+        // 44px targets, overlapping the gap and the edge by 12 so the label fits.
+        <span className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             aria-label="Previous week"
@@ -245,12 +247,12 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
               setWeekOffset((w) => Math.max(0, w - 1));
               setDay(null);
             }}
-            className="tap w-11 h-11 -my-3 flex items-center justify-center rounded-full disabled:opacity-30"
+            className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
             <ChevronLeft size={16} strokeWidth={2} aria-hidden />
           </button>
-          <span className="tabular-nums" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
+          <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             {weekTitle}
           </span>
           <button
@@ -261,7 +263,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
               setWeekOffset((w) => Math.min(MAX_WEEKS_AHEAD, w + 1));
               setDay(null);
             }}
-            className="tap w-11 h-11 -my-3 flex items-center justify-center rounded-full disabled:opacity-30"
+            className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
             <ChevronRight size={16} strokeWidth={2} aria-hidden />

@@ -16,7 +16,7 @@ import { CtaButton, ErrorLine } from "./kit";
 //   FINAL_PLAN section 3: specialties are data). Chips as MO4 draws them
 //   (more.js credentials): pad 7 13, r9999, 12 / 700; chosen fill / onFill
 //   with an X 12 / 2.4, the rest 1 px 11% border, 12 / 600 text.soft.
-// - ListingDetailsSheet: the listing fields PublicListingSheet carried
+// - ListingDetailsSheet: the listing fields the old listing sheet carried
 //   (specialty, location, website, Instagram, Facebook, X), written with
 //   saveMyProfile (only the keys sent). The listing switch itself is Settings ›
 //   Practice › Public listing.
@@ -161,7 +161,7 @@ export const AddChip: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 /**
- * The monthly and consultation rates PaymentsSheet carried (QA 12.0:
+ * The monthly and consultation rates the old payments sheet carried (QA 12.0:
  * "what his monthly rate is to be hired, alongside other types like
  * consultations"), now on MO5. "" is not set; 0 is a real rate.
  */

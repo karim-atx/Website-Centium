@@ -185,9 +185,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           body={
             notListed
               ? `${notListed} You can still work with the clients you add.`
-              : verified
-              ? "Your licence is checked. Clients can now find and book you."
-              : "Your certificate is checked. Clients can now find and book you."
+              : `Your ${doc} is checked. Clients can now find and book you.`
           }
           ringOpacity={a.ro}
           ringScale={a.rs}

@@ -8,7 +8,6 @@ import {
   parseSwaps,
   programmeEnd,
   programmeWeeks,
-  targetFor,
   targetsSummary,
   templateMeta,
   topLift,
@@ -60,10 +59,7 @@ test("programmeWeeks and weekCell", () => {
   assert.equal(weekCell(2, 2, true), "future");
 });
 
-test("targets per client: resolve_weight and the summary", () => {
-  assert.deepEqual(targetFor("a", 100, 80), { clientId: "a", oneRmKg: 100, fromOneRm: 80 });
-  assert.deepEqual(targetFor("b", 52, 80), { clientId: "b", oneRmKg: 52, fromOneRm: 42.5 });
-  assert.deepEqual(targetFor("c", null, 80), { clientId: "c", oneRmKg: null, fromOneRm: null });
+test("targets per client: the summary", () => {
   assert.equal(targetsSummary([{ name: "John Doe", kg: 82.5 }, { name: "Omar", kg: null }, { name: "Jane Smith", kg: 40 }]), "John Doe 82.5 kg · Jane Smith 40 kg");
   assert.equal(targetsSummary([{ name: "Omar", kg: null }]), null);
 });
@@ -129,6 +125,8 @@ test("topLift picks the biggest change between first and latest", () => {
   const lift = topLift([s("2026-10-08T10:00:00Z", 80), s("2026-10-01T10:00:00Z", 70)]);
   assert.deepEqual(lift, { exercise: "Back squat", firstKg: 70, lastKg: 80, reps: 5 });
   assert.equal(deltaKg(lift!), "+10 kg");
+  assert.equal(deltaKg({ ...lift!, firstKg: 82.5, lastKg: 80 }), "−2.5 kg");
+  assert.equal(deltaKg({ ...lift!, firstKg: 80, lastKg: 80 }), "0 kg");
   assert.equal(topLift([s("2026-10-01T10:00:00Z", 70)]), null);
 });
 

@@ -8,9 +8,13 @@
 export const DOCTOR_FOLLOW_UP = "It may help to talk to a doctor about how you've been feeling.";
 export const SEE_WARNING_SIGNS = "See warning signs";
 
-/** FINAL_PLAN 3 §6.2 (CU6, decision 6): the fixed consent line above Send. */
-export const consentLine = (pro: string, kind: "intake" | "check_in") =>
-  `Your answers go to ${pro} when you send. ${pro} sees your photos and measurements with this ${kind === "check_in" ? "check-in" : "form"} only.`;
+/**
+ * FINAL_PLAN 3 §6.2 (CU6, decision 6): the fixed consent line above Send.
+ * W9: in recovery-sensitive mode (J12) the measurement questions are hidden
+ * and never sent, so the line names photos only.
+ */
+export const consentLine = (pro: string, kind: "intake" | "check_in", measurementsHidden = false) =>
+  `Your answers go to ${pro} when you send. ${pro} sees your ${measurementsHidden ? "photos" : "photos and measurements"} with this ${kind === "check_in" ? "check-in" : "form"} only.`;
 
 /** FINAL_PLAN 3 §6.2: no service promise. */
 export const thanksLine = (pro: string) => `Thanks. ${pro} will review it.`;

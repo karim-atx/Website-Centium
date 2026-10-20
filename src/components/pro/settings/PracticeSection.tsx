@@ -10,7 +10,7 @@ import { fetchPracticeSettings, saveCallsWithHiredClients } from "../../../servi
  * (source/gen r16.js settings16): the Practice section between Security and
  * Data & account, professionals only. Rows as drawn: Booking defaults, Default
  * data requests, Invoice details, Calls with hired clients (a switch). Plus the
- * public listing switch FINAL_PLAN W6 moves here from PublicListingSheet.
+ * public listing switch FINAL_PLAN W6 moves here from the old listing sheet.
  */
 export function PracticeSection() {
   const navigate = useNavigate();

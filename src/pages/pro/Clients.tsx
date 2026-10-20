@@ -14,7 +14,7 @@ import { PRO_ROUTES, proClientPath } from "../../components/pro/subtypeLanes";
 import { StatusTabs, QuickFilter, FilterPanel, ScrollRow, type FilterGroup } from "../../components/pro/client/RosterControls";
 import { TagsSheet, EndCoachingPopup, type TagTarget } from "../../components/pro/client/ClientActions";
 import { Avatar } from "../../components/pro/client/kit";
-import { useProInbox } from "../../components/pro/home/useProInbox";
+import { useProInbox, type ProRequest } from "../../components/pro/home/useProInbox";
 import { AddClientFlows } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
 import { CtaButton } from "../../components/ui/PinnedCta";
@@ -40,8 +40,8 @@ import {
 } from "../../services/pro/clients";
 import { fetchSessions, localIso, shiftIso, type RangeSession } from "../../services/pro/home";
 import { fetchInvitesAllowed } from "../../services/pro/invites";
-import { declineRequestWithReason, DECLINE_REASONS, type DeclineReason } from "../../services/pro/requests";
-import { acceptHireRequest, rejectHireRequest, type HireRequestRow } from "../../services/hire-inbox";
+import { declineRequestWithReason, DECLINE_REASONS, type DeclineReason, type RecentDecline } from "../../services/pro/requests";
+import { acceptHireRequest, rejectHireRequest } from "../../services/hire-inbox";
 import { fetchThreads, startThread } from "../../services/messaging";
 import type { ProfessionalClient } from "../../types";
 
@@ -100,9 +100,14 @@ interface ClientEntry {
 }
 interface RequestEntry {
   kind: "request";
-  req: HireRequestRow;
+  req: ProRequest;
 }
-type Entry = ClientEntry | RequestEntry;
+/** A request declined in the last 5 minutes: "Declined · Undo" (Requests segment only). */
+interface DeclinedEntry {
+  kind: "declined";
+  d: RecentDecline;
+}
+type Entry = ClientEntry | RequestEntry | DeclinedEntry;
 
 const fullName = (c: ProfessionalClient) => `${c.prefix ? `${c.prefix} ` : ""}${c.name}`;
 
@@ -260,8 +265,8 @@ export default function Clients() {
   const q = query.trim().toLowerCase();
   const matchesQuery = (e: Entry) =>
     !q ||
-    (e.kind === "request"
-      ? e.req.name.toLowerCase().includes(q)
+    (e.kind === "request" || e.kind === "declined"
+      ? (e.kind === "request" ? e.req.name : e.d.name).toLowerCase().includes(q)
       : e.name.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q)) || !!e.plan?.name.toLowerCase().includes(q));
 
   const counts: Record<StatusKey, number> = {
@@ -289,11 +294,13 @@ export default function Clients() {
   const visible: Entry[] = useMemo(() => {
     const cs = sortClients(clients.filter((c) => (status === "all" || c.status === status) && passes(c) && matchesQuery(c)));
     const rs = filtering ? [] : requests.filter(matchesQuery);
-    if (status === "requests") return rs;
+    if (status === "requests") return [...rs, ...(filtering ? [] : inbox.declined.map((d): DeclinedEntry => ({ kind: "declined", d })).filter(matchesQuery))];
     if (status === "all") return [...cs, ...rs];
     return cs;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, requests, status, passes, q, sort, filtering]);
+  }, [clients, requests, inbox.declined, status, passes, q, sort, filtering]);
+
+  const shownCount = visible.filter((e) => e.kind !== "declined").length;
 
   const SORTS: { value: SortKey; label: string }[] = [
     { value: "next", label: "Next session" },
@@ -305,16 +312,18 @@ export default function Clients() {
 
   // ---- actions ----
   const [toast, setToast] = useState<string | null>(null);
+  /** The decline the toast can undo (HO14 "Undo"; 20261124120000). */
+  const [toastUndo, setToastUndo] = useState<{ id: string; name: string; text: string } | null>(null);
   const [preview, setPreview] = useState<ClientEntry | null>(null);
   const [menuEl, setMenuEl] = useState<HTMLElement | null>(null);
   const [stageEl, setStageEl] = useState<HTMLElement | null>(null);
   const [tagTargets, setTagTargets] = useState<TagTarget[] | null>(null);
   const [ending, setEnding] = useState<ClientEntry | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [accepting, setAccepting] = useState<HireRequestRow | null>(null);
+  const [accepting, setAccepting] = useState<ProRequest | null>(null);
   const [acceptBusy, setAcceptBusy] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
-  const [declining, setDeclining] = useState<HireRequestRow | null>(null);
+  const [declining, setDeclining] = useState<ProRequest | null>(null);
   const [declineBusy, setDeclineBusy] = useState(false);
   const [declineError, setDeclineError] = useState<string | null>(null);
 
@@ -400,9 +409,18 @@ export default function Clients() {
     setDeclining(null);
     if (!err) {
       const label = reason ? DECLINE_REASONS.find((x) => x.value === reason)?.label : null;
-      setToast(label ? `Request declined: ${label}. ${target.name} has been told.` : `Request declined. ${target.name} has been told.`);
+      // The client hears about it only once the 5-minute undo window has passed.
+      const text = `${label ? `Request declined: ${label}.` : "Request declined."} ${target.name} is told in 5 minutes.`;
+      setToast(text);
+      setToastUndo({ id: target.id, name: target.name, text });
     }
     inbox.reload();
+  };
+
+  const undoDecline = async (id: string, name: string) => {
+    setToastUndo(null);
+    const r = await inbox.undoDecline(id);
+    setToast(r.ok ? `${name}'s request is back in Requests.` : r.message);
   };
 
   const pickedEntries = clients.filter((c) => picked.has(c.clientId));
@@ -519,7 +537,7 @@ export default function Clients() {
               <ChevronDown size={12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
             <span className="flex items-center" style={{ gap: 12 }}>
-              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{`${visible.length} ${visible.length === 1 ? one : word}`}</span>
+              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{`${shownCount} ${shownCount === 1 ? one : word}`}</span>
               {clients.length > 0 && (
                 <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
                   Select
@@ -549,7 +567,11 @@ export default function Clients() {
       ) : (
         <div className="flex flex-col" style={{ gap: 8 }} role="list">
           {visible.map((e) =>
-            e.kind === "request" ? (
+            e.kind === "declined" ? (
+              <div role="listitem" key={`d:${e.d.id}`}>
+                <DeclinedCard d={e.d} onUndo={() => void undoDecline(e.d.id, e.d.name)} />
+              </div>
+            ) : e.kind === "request" ? (
               <div role="listitem" key={`r:${e.req.id}`}>
                 {status === "requests" ? (
                   <RequestCard req={e.req} onAccept={() => { setAcceptError(null); setAccepting(e.req); }} onDecline={() => { setDeclineError(null); setDeclining(e.req); }} />
@@ -716,7 +738,7 @@ export default function Clients() {
           return null;
         }}
       />
-      <AcceptRequestPopup name={accepting?.name ?? null} busy={acceptBusy} error={acceptError} onAccept={() => void accept()} onClose={() => setAccepting(null)} />
+      <AcceptRequestPopup name={accepting?.name ?? null} plan={accepting?.planLine} busy={acceptBusy} error={acceptError} onAccept={() => void accept()} onClose={() => setAccepting(null)} />
       <DeclineRequestPopup key={declining?.id ?? "none"} name={declining?.name ?? null} busy={declineBusy} error={declineError} onDecline={(r, m) => void decline(r, m)} onClose={() => setDeclining(null)} />
       <AddClientFlows
         open={addOpen}
@@ -730,7 +752,15 @@ export default function Clients() {
         }}
         onOfflineAdded={(name) => setToast(`${name} added.`)}
       />
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast
+        open={!!toast}
+        message={toast ?? ""}
+        onUndo={toastUndo && toastUndo.text === toast ? () => void undoDecline(toastUndo.id, toastUndo.name) : undefined}
+        onExpire={() => {
+          setToast(null);
+          setToastUndo(null);
+        }}
+      />
     </div>
   );
 
@@ -766,20 +796,44 @@ const SquareButton: React.FC<{ icon: typeof UserPlus; label: string; onClick: ()
   </button>
 );
 
-/** r6b Requests segment card: avatar 40 gold, name 14 / 700, line 12, when 11; Decline and Accept (sm). */
-const RequestCard: React.FC<{ req: HireRequestRow; onAccept: () => void; onDecline: () => void }> = ({ req, onAccept, onDecline }) => (
+/** r6b Requests segment card: avatar 40 gold, name 14 / 700, line 12 ("Asked for Monthly coaching" with the plan the client chose), when 11; Decline and Accept (sm). */
+const RequestCard: React.FC<{ req: ProRequest; onAccept: () => void; onDecline: () => void }> = ({ req, onAccept, onDecline }) => (
   <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
     <div className="flex items-center" style={{ gap: 12 }}>
       <Avatar name={req.name} url={req.avatarUrl} size={40} tone="gold" />
       <div className="flex-1 min-w-0">
         <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{req.name}</p>
-        <p style={{ fontSize: textPx(12), color: INK.chS }}>Asked to work with you</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS }}>{req.planName ? `Asked for ${req.planName}` : "Asked to work with you"}</p>
         <p style={{ fontSize: textPx(11), color: INK.chF }}>{`Requested ${agoLabel(req.requestedAt) ?? ""}`}</p>
       </div>
     </div>
     <div className="flex" style={{ gap: 8, marginTop: 12 }}>
       <CtaButton className="flex-1" size="base" variant="secondary" icon={<X size={15} />} label="Decline" onClick={onDecline} />
       <CtaButton className="flex-1" size="base" icon={<Check size={15} />} label="Accept" onClick={onAccept} />
+    </div>
+  </div>
+);
+
+/** A request declined in the last 5 minutes: the request card with "Declined · Undo" (HANDOVER_API 20261124120000). */
+const DeclinedCard: React.FC<{ d: RecentDecline; onUndo: () => void }> = ({ d, onUndo }) => (
+  <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
+    <div className="flex items-center" style={{ gap: 12 }}>
+      <Avatar name={d.name} url={d.avatarUrl} size={40} tone="gold" />
+      <div className="flex-1 min-w-0">
+        <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{d.name}</p>
+        <p className="flex items-center flex-wrap" style={{ fontSize: textPx(12), color: INK.chS, columnGap: 4 }}>
+          Declined ·
+          <button
+            type="button"
+            onClick={onUndo}
+            aria-label={`Undo declining ${d.name}`}
+            className="tap relative before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
+            style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
+          >
+            Undo
+          </button>
+        </p>
+      </div>
     </div>
   </div>
 );

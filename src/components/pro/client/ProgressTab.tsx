@@ -6,7 +6,6 @@ import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { INK } from "../proInk";
 import { ProChart } from "../ProChart";
 import { LockLine } from "../LockLine";
-import { ComingSoon } from "../ComingSoon";
 import { ProCardSkeleton } from "../states";
 import { fmtDay } from "./clientFormat";
 import type { ClientPageData } from "./useClientPage";
@@ -19,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { CaloriesMacrosChart, MicronutrientsBlock, RpeChart, StrengthChart, VolumeChart, WeightTrendChart } from "../insights/ProgressCharts";
+import { SleepTrendChart } from "../insights/SleepCharts";
 import type { AccessCategory } from "../../../services/pro/access";
 import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
 import { ClientWinsCard } from "../../share/ClientWinsCard";
@@ -37,8 +37,10 @@ import { ClientWinsCard } from "../../share/ClientWinsCard";
  *   and sleep averages; Biomarkers: client_biomarker_flags;
  * - W5: Strength, Volume, RPE, the weight trend, Calories and macros over
  *   time and Micronutrients are the Insights charts (insights/
- *   ProgressCharts.tsx); Sleep stages (wearable stage data)
- *   stays Coming soon, never sample data;
+ *   ProgressCharts.tsx);
+ * - W9: Sleep (Clinical overview) is CL2 v5 "Sleep per night (h)" from
+ *   sleep_details (else the health_metrics duration) with the average
+ *   stage split (insights/SleepCharts.tsx SleepTrendChart);
  * - W6: Check-ins (Full coaching and Nutrition; HANDOVER d "Check-ins: Full")
  *   is CL11, the client's check-in answers over time with the safety flag
  *   banner (forms/CheckInsProgress.tsx); not fetched for Clinical overview;
@@ -112,7 +114,6 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       }
     />
   );
-  const soon = (line: string) => <ComingSoon line={line} />;
 
   const adherenceGroup = (title: string, unit: string): Group => {
     const shared = access.has(counted);
@@ -231,8 +232,8 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         key: "slp",
         icon: Moon,
         title: "Sleep",
-        summary: !access.has("health_metrics") ? "Not shared" : v?.sleepHours != null ? `${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m a night` : "No sleep logged yet",
-        body: !access.has("health_metrics") ? lock("Activity & vitals", "health_metrics") : soon("Sleep stages and bedtimes need wearable stage data."),
+        summary: !access.has("health_metrics") ? "Not shared" : v?.sleepHours != null ? `${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m a night` : "Sleep per night and stages",
+        body: !access.has("health_metrics") ? lock("Activity & vitals", "health_metrics") : <SleepTrendChart clientId={clientId} today={today} initial={chartInitial} />,
       },
     ];
   }

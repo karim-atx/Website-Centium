@@ -196,7 +196,7 @@ export const RemoveReportPopup: React.FC<{ report: LabReport | null; onClose: ()
       open={report !== null}
       geometry="ours"
       title="Remove lab report?"
-      body={`The report from ${report ? fmtDate(report.date) : ""} will be deleted, along with the results it recorded. Those readings will no longer appear in your biomarker history. This can’t be undone.`}
+      body={`The report from ${report ? fmtDate(report.date) : ""} will be deleted, along with the results it recorded. Those readings will no longer appear in your biomarker history. This can't be undone.`}
       confirmLabel={busy ? "Removing…" : "Remove"}
       busy={busy}
       error={error}

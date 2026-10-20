@@ -164,14 +164,3 @@ export function describeCancelError(code: string | undefined): string {
   }
 }
 
-/**
- * What cancelling did, from was_free. Before confirmation nothing had been
- * acknowledged; after it Centium only records the cancellation — no money
- * passed through it, so there is no charge or refund to name.
- */
-export function cancelledLine(firstName: string, wasFree: boolean): string {
-  const who = firstName.trim() || "The client";
-  return wasFree
-    ? `${who}'s hire is cancelled. No payment had been confirmed, so there's nothing to settle.`
-    : `${who}'s hire is cancelled. You'd already confirmed their payment, so Centium has recorded the cancellation; anything owed is between you and ${who}.`;
-}

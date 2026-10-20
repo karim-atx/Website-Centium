@@ -298,7 +298,7 @@ export function layoutShareCard(o: CardLayoutInput, m: CardMeasure): CardLayout 
       items.push(pieceRow(c.stars, s, s, r1(1 * u), after, (box) => ({ k: "star", box, color: P.star })));
       after = r1(3 * u);
     }
-    items.push(textBlock(`“${c.quote ?? ""}”`, { weight: 700, size: r1((sq ? 5.4 : story ? 7 : 6.4) * u), lh: 1.24, ls: -0.02, color: ink, shadow: hasShadow }, colX, colW, after, { pretty: true }));
+    items.push(textBlock(`"${c.quote ?? ""}"`, { weight: 700, size: r1((sq ? 5.4 : story ? 7 : 6.4) * u), lh: 1.24, ls: -0.02, color: ink, shadow: hasShadow }, colX, colW, after, { pretty: true }));
     after = 0;
     items.push(textBlock(c.by ?? "", { weight: 600, size: r1((sq ? 3 : 3.4) * u), lh: INHERITED_LH, color: sub, shadow: hasShadow }, colX, colW, r1(2.6 * u)));
   } else if (c.hero === "title") {

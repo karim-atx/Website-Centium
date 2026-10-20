@@ -20,6 +20,7 @@ import {
   partsOf,
   popupQueue,
   referralBody,
+  referralTitle,
   referralReminder,
   resumePart,
   scaleColumns,
@@ -301,7 +302,9 @@ describe("Home reminders and the pop-up queue (CU5, CU23, CU26)", () => {
     const rem = referralReminder(ref);
     assert.equal(rem.level, 2);
     assert.equal(rem.title, "Rami wants to refer you to Dana");
-    assert.equal(referralBody(ref), "To Dana. If you agree, Dana gets Rami's referral and the reason for it. Nothing else is shared.");
+    assert.equal(referralTitle(ref), rem.title);
+    assert.equal(referralBody(ref), "If you agree, Dana gets Rami's referral and the reason for it. Nothing else is shared.");
+    assert.equal(referralBody({ ...ref, toName: null }), "To another professional. If you agree, they get Rami's referral and the reason for it. Nothing else is shared.");
     assert.equal(referralReminder({ ...ref, toName: null }).title, "Rami wants to refer you");
   });
 

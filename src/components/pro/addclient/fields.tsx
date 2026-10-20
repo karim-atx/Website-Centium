@@ -44,7 +44,7 @@ export const ProField: React.FC<
   );
 };
 
-export const ProTextArea: React.FC<{ label: string; value: string; onChange: (v: string) => void; maxLength?: number }> = ({ label, value, onChange, maxLength }) => {
+export const ProTextArea: React.FC<{ label: string; value: string; onChange: (v: string) => void; maxLength?: number; placeholder?: string }> = ({ label, value, onChange, maxLength, placeholder }) => {
   const id = useId();
   return (
     <div className="min-w-0">
@@ -53,8 +53,9 @@ export const ProTextArea: React.FC<{ label: string; value: string; onChange: (v:
         id={id}
         value={value}
         maxLength={maxLength}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="outline-none focus:border-primary block resize-none"
+        className="outline-none focus:border-primary block resize-none placeholder:text-charcoal-faint"
         style={{ ...well, minHeight: 78, padding: "10px 12px", lineHeight: 1.45 }}
       />
     </div>

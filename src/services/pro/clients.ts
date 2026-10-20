@@ -265,7 +265,7 @@ export interface CommunicationPreferences {
 
 /**
  * The communication preferences, saved on the relationship row (the old
- * ClientDetailSheet only patched local state, so an edit was lost on reload;
+ * The old client detail sheet only patched local state, so an edit was lost on reload;
  * the columns are in the professional's UPDATE grant).
  */
 export async function saveCommunicationPreferences(relationshipId: string, p: CommunicationPreferences): Promise<Write> {

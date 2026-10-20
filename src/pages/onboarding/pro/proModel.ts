@@ -128,9 +128,9 @@ export const SPECIALTY_CARDS: SpecialtyCard[] = [
   },
 ];
 
-/** The line under the cards (proType cardsNote). */
-export const specialtyNote = (picked: boolean): string =>
-  picked ? "Next: about you, your certificate and your background." : "Next: about you, your background, then a quick review.";
+/** The line under the cards (proType cardsNote): a regulated kind (doctor, physiotherapist, dietitian) is checked on its licence. */
+export const specialtyNote = (picked: ProKind | null): string =>
+  picked ? `Next: about you, your ${credentialWord(picked)} and your background.` : "Next: about you, your background, then a quick review.";
 
 // ---------------------------------------------------------------------------
 // Step content (BizOnboardingV10, PR branch)

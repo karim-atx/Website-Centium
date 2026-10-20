@@ -94,7 +94,7 @@ describe("answers", () => {
     const r2 = { id: "2", answers: { w: 81.9, e: 7 }, submittedAt: "2026-10-08T10:00:00Z" };
     const boxes = numberBoxes([w, e], r2, [r2, r1]);
     assert.deepEqual(boxes.map((b) => [b.label, b.value, b.unit, b.delta, b.was]), [
-      ["Weight", "81.9", "kg", "-0.5", 82.4],
+      ["Weight", "81.9", "kg", "−0.5", 82.4],
       ["Energy", "7", "/10", "+2", 5],
     ]);
     assert.equal(weekNumber(r2, [r2, r1]), 2);

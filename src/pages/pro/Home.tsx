@@ -18,7 +18,7 @@ import { fetchMealPlansEnding } from "../../services/pro/nutrition";
 import { mealPlansHref } from "../../components/pro/nutrition/nav";
 import { weekOfPlan } from "../../components/pro/nutrition/nutritionModel";
 import { periodModel, todayModel, type HubRange, type RingModel } from "../../components/pro/home/trendModel";
-import { useProInbox } from "../../components/pro/home/useProInbox";
+import { useProInbox, type ProRequest } from "../../components/pro/home/useProInbox";
 import { NotificationsHub, type HubTab, type HubToast } from "../../components/pro/NotificationsHub";
 import { AddClientFlows, GatedRow, type AddStep } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
@@ -37,7 +37,7 @@ import { mondayFirstWeek } from "../../utils/week";
 import { fetchHubTrend, fetchProgrammesEnding, fetchSessions, fetchStrip, localIso, shiftIso, type RangeSession, type StripClient } from "../../services/pro/home";
 import { fetchInvitesAllowed, INVITE_LOCKED_MESSAGE } from "../../services/pro/invites";
 import { declineHireWithReason, declineRequestWithReason, DECLINE_REASONS, type DeclineReason } from "../../services/pro/requests";
-import { acceptHireRequest, rejectHireRequest, type HireRequestRow } from "../../services/hire-inbox";
+import { acceptHireRequest, rejectHireRequest } from "../../services/hire-inbox";
 import { cancelHire, type PendingHire } from "../../services/hires/pro";
 import { acceptEmployment, removeMyEmployment, type MyEmployment } from "../../services/business-team/employment";
 import { startThread } from "../../services/messaging";
@@ -239,10 +239,10 @@ export default function Home() {
     setHubOpen(true);
   };
 
-  const [accepting, setAccepting] = useState<HireRequestRow | null>(null);
+  const [accepting, setAccepting] = useState<ProRequest | null>(null);
   const [acceptBusy, setAcceptBusy] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
-  const [declining, setDeclining] = useState<{ kind: "request"; row: HireRequestRow } | { kind: "hire"; row: PendingHire } | null>(null);
+  const [declining, setDeclining] = useState<{ kind: "request"; row: ProRequest } | { kind: "hire"; row: PendingHire } | null>(null);
   const [declineBusy, setDeclineBusy] = useState(false);
   const [declineError, setDeclineError] = useState<string | null>(null);
   const [hireReloadKey, setHireReloadKey] = useState(0);
@@ -314,10 +314,21 @@ export default function Home() {
     const who = target.kind === "request" ? target.row.name : target.row.clientFirstName || "The client";
     if (ok) {
       const label = reason ? DECLINE_REASONS.find((r) => r.value === reason)?.label : null;
-      setHubToast({ tone: "info", text: label ? `Request declined: ${label}. ${who} has been told.` : `Request declined. ${who} has been told.` });
+      const head = label ? `Request declined: ${label}.` : "Request declined.";
+      // HO14: a declined request can be undone for 5 minutes, and the client
+      // hears about it only after that (20261124120000); a hire's decline is final.
+      if (target.kind === "request") {
+        const row = target.row;
+        setHubToast({ tone: "info", text: `${head} ${who} is told in 5 minutes.`, action: { label: "Undo", onClick: () => void undoDecline(row.id, row.name) } });
+      } else setHubToast({ tone: "info", text: `${head} ${who} has been told.` });
     }
     if (target.kind === "hire") setHireReloadKey((k) => k + 1);
     inbox.reload();
+  };
+
+  const undoDecline = async (id: string, name: string) => {
+    const r = await inbox.undoDecline(id);
+    setHubToast(r.ok ? { tone: "ok", text: `${name}'s request is back in Requests.` } : { tone: "info", text: r.message });
   };
 
   const answerInvitation = async (e: MyEmployment, yes: boolean) => {
@@ -335,10 +346,6 @@ export default function Home() {
       case "hire":
       case "client_request":
         setHubTab("requests");
-        return;
-      case "team_invitation":
-        setHubOpen(false);
-        navigate(`${PRO_ROUTES.more}/businesses`);
         return;
       case "appointment":
       case "booking":
@@ -580,6 +587,7 @@ export default function Home() {
           setDeclineError(null);
           setDeclining({ kind: "request", row: r });
         }}
+        onUndo={(d) => void undoDecline(d.id, d.name)}
         onInvitation={(e, yes) => void answerInvitation(e, yes)}
         invitationBusy={invitationBusy}
         onHireDecline={(h) => {
@@ -597,7 +605,7 @@ export default function Home() {
         }}
       />
 
-      <AcceptRequestPopup name={accepting?.name ?? null} busy={acceptBusy} error={acceptError} onAccept={() => void accept()} onClose={() => setAccepting(null)} />
+      <AcceptRequestPopup name={accepting?.name ?? null} plan={accepting?.planLine} busy={acceptBusy} error={acceptError} onAccept={() => void accept()} onClose={() => setAccepting(null)} />
       <DeclineRequestPopup
         key={declining ? `${declining.kind}:${declining.row.id}` : "none"}
         name={declining ? (declining.kind === "request" ? declining.row.name : declining.row.clientFirstName || "This client") : null}

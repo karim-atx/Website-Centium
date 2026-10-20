@@ -23,6 +23,7 @@ import { initialsOf } from "./initials";
 import { G, LEAF_D, actionSectors, arc, barLayout, barMid, barStart, hourAngle, pol, polarOf, sector } from "./ringGeometry";
 import { DAY_FIRST_HOUR, DAY_LAST_HOUR, TODAY_LEGEND, type HubRange, type RingModel } from "./trendModel";
 import { hourLabel12 } from "../../../utils/time12";
+import { signedNum } from "../proRules";
 
 /**
  * Release 3 · ProTrendRing (HANDOVER e, CL1 v6; source gen/hub5.js
@@ -630,7 +631,7 @@ const Delta: React.FC<{ value: number }> = ({ value }) => {
   return (
     <span className="inline-flex items-center" style={{ gap: 2, fontSize: textPx(11), fontWeight: 800, color: c, whiteSpace: "nowrap" }}>
       <Icon size={11} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
-      {value > 0 ? `+${value}` : value < 0 ? `-${Math.abs(value)}` : "0"}
+      {signedNum(value)}
     </span>
   );
 };

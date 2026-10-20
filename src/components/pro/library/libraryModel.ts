@@ -7,7 +7,7 @@
 // invents either.
 
 import type { Exercise, LoggedExercise, WorkoutSession, WorkoutTemplate, WorkoutTemplateAssignment } from "../../../types";
-import { resolveWeight } from "../../../services/workout/resolveWeight";
+import { signedNum } from "../proRules";
 
 const DAY = 86400000;
 const toDate = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -96,17 +96,6 @@ export function weekCell(planned: number | null, completed: number | null, futur
 // ---------------------------------------------------------------------------
 // TR14 targets per client
 // ---------------------------------------------------------------------------
-
-export interface ClientTarget {
-  clientId: string;
-  oneRmKg: number | null;
-  /** resolve_weight(1RM, intensity, kg); null without a 1RM or an intensity. */
-  fromOneRm: number | null;
-}
-
-export function targetFor(clientId: string, oneRmKg: number | null, intensityPct: number | undefined): ClientTarget {
-  return { clientId, oneRmKg, fromOneRm: resolveWeight(oneRmKg, intensityPct ?? null, "kg") };
-}
 
 /** "John Doe 82.5 kg · Jane Smith 40 kg": clients with a computed weight only. */
 export function targetsSummary(rows: { name: string; kg: number | null }[]): string | null {
@@ -287,11 +276,8 @@ export function topLift(sessions: Pick<WorkoutSession, "startedAt" | "exercises"
   return best;
 }
 
-/** "+10 kg" / "-2.5 kg" / "0 kg". */
-export const deltaKg = (l: TopLift) => {
-  const d = Math.round((l.lastKg - l.firstKg) * 10) / 10;
-  return `${d > 0 ? "+" : ""}${fmtKg(d)} kg`;
-};
+/** "+10 kg" / "−2.5 kg" / "0 kg" (COPY 6.3: true minus sign). */
+export const deltaKg = (l: TopLift) => `${signedNum(Math.round((l.lastKg - l.firstKg) * 10) / 10, fmtKg)} kg`;
 
 /** True while a Library › Programmes sub-screen is open (?view=…); the Library page may hide its title and tabs then. */
 export const programmesDetailOpen = (params: URLSearchParams) => !!params.get("view");

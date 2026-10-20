@@ -397,16 +397,27 @@ export function referralReminder(r: PendingReferral): Reminder {
     proId: r.fromId,
     proName: r.fromName,
     tone: "pr",
-    title: r.toName ? `${r.fromName} wants to refer you to ${r.toName}` : `${r.fromName} wants to refer you`,
+    title: referralTitle(r),
     detail: r.reason,
     action: "Review",
   };
 }
 
-/** The referral pop-up's body. Agreeing sends the referral; no health data moves with it. */
+/**
+ * CU23 "{pro} wants to refer you to {pro_name}": one title for the Home
+ * card, the pop-up and the sheet (W9: they used to differ).
+ */
+export function referralTitle(r: PendingReferral): string {
+  return r.toName ? `${r.fromName} wants to refer you to ${r.toName}` : `${r.fromName} wants to refer you`;
+}
+
+/**
+ * The referral pop-up's and sheet's body, under referralTitle (which already
+ * names who it goes to). Agreeing sends the referral; no health data moves with it.
+ */
 export function referralBody(r: PendingReferral): string {
-  const to = r.toName ?? "another professional";
-  return `To ${to}. If you agree, ${to} gets ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
+  if (r.toName) return `If you agree, ${r.toName} gets ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
+  return `To another professional. If you agree, they get ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
 }
 
 export interface TodaySession {

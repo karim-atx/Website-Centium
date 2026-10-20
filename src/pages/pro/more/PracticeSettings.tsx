@@ -65,7 +65,7 @@ import { textPx } from "../../../theme/textSize";
  * Release 3 W6 · Settings › Practice (/app/more/practice/*), MO23 v3
  * (source/gen r16.js bookingDefaults16, dataRequests16) and the two rows the
  * frames don't open (Invoice details; Public listing, moved here from
- * PublicListingSheet by FINAL_PLAN W6).
+ * the old listing sheet by FINAL_PLAN W6).
  */
 export default function PracticeSettings() {
   return (
@@ -325,7 +325,7 @@ function InvoicePage() {
 }
 
 // ---------------------------------------------------------------------------
-// Public listing: the switch from the old PublicListingSheet, unchanged in
+// Public listing: the switch from the old listing sheet, unchanged in
 // behaviour (set_public_listing; ATX03 affiliated, ATX08 no profile, ATX47,
 // ATX48 date of birth, ATXC6 verification). The profile fields it used to
 // carry are on Edit public profile (MO14); the map area is on Where you work.

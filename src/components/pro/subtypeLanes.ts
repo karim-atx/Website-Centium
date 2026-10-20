@@ -16,8 +16,6 @@ import type { ProfessionalSubtype } from "../../types";
 
 export type ProLane = "full_coaching" | "nutrition" | "clinical_overview";
 
-export const PRO_LANES: readonly ProLane[] = ["full_coaching", "nutrition", "clinical_overview"];
-
 /** subtype_for_type(professional_subtype), 20261124000000 (DB-1). */
 export const LANE_FOR_TYPE: Record<ProfessionalSubtype, ProLane> = {
   trainer: "full_coaching",

@@ -68,7 +68,7 @@ import { startThread } from "../../services/messaging";
 /**
  * Release 3 · W4 Calendar (/app/pro/calendar; HANDOVER f "CA · Calendar",
  * FINAL_PLAN W4, IMPLEMENTATION_FRONTEND Batch 4). Replaces the old
- * pages/professionals/CalendarTab. Built on the client calendar's patterns
+ * the old professional calendar tab. Built on the client calendar's patterns
  * (pages/profile/ClientCalendarTab.tsx, not edited): Year, Month, Week, Day
  * (the CA frames draw all four), Monday first, 12-hour times.
  *

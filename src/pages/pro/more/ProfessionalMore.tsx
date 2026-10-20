@@ -364,16 +364,16 @@ export default function ProfessionalMore() {
   const templates: Row[] = co
     ? [
         { icon: FileText, label: "Clinical note templates", desc: "Consultation & follow-up notes", to: "/app/more/note-templates" },
-        { icon: Send, label: "Referral templates", desc: "Letters to dietitians, trainers & physios", to: "/app/more/templates" },
+        { icon: Send, label: "Referral templates", desc: "Letters to dietitians, trainers & physios", to: "/app/more/templates?tab=referrals" },
       ]
     : nt
       ? [
-          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: PRO_ROUTES.mealPlans },
+          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: "/app/more/templates?tab=meal-plans" },
           { icon: FileText, label: "Note templates", desc: "Nutrition and session notes", to: "/app/more/note-templates" },
         ]
       : [
-          { icon: Dumbbell, label: "Programme templates", desc: "Workouts & multi-week programmes", to: `${PRO_ROUTES.library}/programmes` },
-          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: `${PRO_ROUTES.library}/meal-plans` },
+          { icon: Dumbbell, label: "Programme templates", desc: "Workouts & multi-week programmes", to: "/app/more/templates?tab=programmes" },
+          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: "/app/more/templates?tab=meal-plans" },
           { icon: FileText, label: "Note templates", desc: "Training and session notes", to: "/app/more/note-templates" },
         ];
   const reputation: Row[] = [

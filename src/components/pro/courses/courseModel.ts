@@ -38,7 +38,6 @@ export function statusLabel(status: CourseStatus): string {
 
 /** The steps of Create course (stepBar18 CSTEPS18). */
 export const STEPS = ["Basics", "Structure", "Lessons", "Access", "Review"] as const;
-export type Step = 0 | 1 | 2 | 3 | 4;
 
 /** MO28 1 Basics, validation: "At least 8 characters." (the frame's rule; the database's own floor is 4). */
 export const TITLE_MIN = 8;
