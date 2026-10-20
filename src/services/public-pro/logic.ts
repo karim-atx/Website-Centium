@@ -3,6 +3,7 @@
 // No Supabase import, so node --test loads it.
 
 import { rangeClock12 } from "../../utils/time12";
+import type { ReviewRow } from "../professional-reviews/types";
 
 /** The error codes the booking readers and request raise (HANDOVER_API Release 3). */
 export const NOT_TAKING_BOOKINGS = "This professional isn't taking bookings from you.";
@@ -154,4 +155,55 @@ export function readReturn(raw: string | null, now = Date.now()): string | null 
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Reviews on the signed-out profile (professional_reviews_public, anon)
+// ---------------------------------------------------------------------------
+
+/** One row as professional_reviews_public returns it. */
+export interface PublicReviewDbRow {
+  id: string;
+  rating: number | null;
+  body: string | null;
+  created_at: string;
+  edited_at: string | null;
+  redacted: boolean | null;
+  reply_body: string | null;
+  reply_at: string | null;
+}
+
+/** How many reviews the public profile reads at a time (the function allows 1 to 100). */
+export const PUBLIC_REVIEWS_PAGE = 10;
+
+/**
+ * A public row as the shared ReviewItem's ReviewRow. EVERY REVIEWER IS "A
+ * client" here: reviewerName and reviewerId stay null whatever the reader
+ * returns, so no name or id reaches this page even for a signed-in viewer.
+ * A removed review (redacted, so no rating or words) is left out: only its
+ * author and the professional are ever shown one. A reply is shown only when
+ * reply_body is set; null means none, withdrawn or removed, and the page does
+ * not say which.
+ */
+export function publicReviewRows(rows: PublicReviewDbRow[], professionalId: string): ReviewRow[] {
+  const out: ReviewRow[] = [];
+  for (const r of rows) {
+    if (r.redacted || r.rating == null) continue;
+    const reply = r.reply_body?.trim() ? r.reply_body : null;
+    out.push({
+      id: r.id,
+      professionalId,
+      rating: r.rating,
+      body: r.body?.trim() ? r.body : null,
+      createdAt: r.created_at,
+      editedAt: r.edited_at,
+      redactedAt: null,
+      redactionReason: null,
+      reviewerId: null,
+      reviewerNameVisible: false,
+      reviewerName: null,
+      reply: reply ? { reviewId: r.id, body: reply, createdAt: r.reply_at ?? r.created_at, editedAt: null, redactedAt: null } : null,
+    });
+  }
+  return out;
 }
