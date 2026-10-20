@@ -8,7 +8,7 @@ import { PassQr } from "../../marketplace/PassQr";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { ComingSoon, ComingSoonPill } from "../ComingSoon";
-import { bookingUrl, saveBookingPolicy, saveReminderDefaults, type BookingAudience, type BookingPolicy } from "../../../services/pro/calendar";
+import { bookingHref, bookingUrl, saveBookingPolicy, saveReminderDefaults, type BookingAudience, type BookingPolicy } from "../../../services/pro/calendar";
 import { ChoiceCard, FieldButton, SettingsRow } from "./calendarFields";
 import type { AlertValue } from "./calendarModel";
 
@@ -132,14 +132,15 @@ export const BookingSheet: React.FC<{
   };
 
   const url = handle ? bookingUrl(handle) : null;
+  const href = handle ? bookingHref(handle) : "";
   const copy = () => {
     if (!url) return;
-    void navigator.clipboard?.writeText(`https://${url}`).catch(() => {});
+    void navigator.clipboard?.writeText(href).catch(() => {});
     onToast("Link copied");
   };
   const share = async () => {
     if (!url) return;
-    const data = { title: "Book a session", url: `https://${url}` };
+    const data = { title: "Book a session", url: href };
     if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
       try {
         await navigator.share(data);
@@ -166,7 +167,7 @@ export const BookingSheet: React.FC<{
         <div className="flex flex-col items-center" style={{ gap: 12 }}>
           {url ? (
             <div className="flex items-center justify-center" style={{ width: 168, height: 168, borderRadius: 20, border: `1px solid ${INK.b10}`, background: "#FFFFFF" }}>
-              <PassQr value={`https://${url}`} size={136} label="Booking link QR code" failedText="Couldn't draw the QR code. Try again." />
+              <PassQr value={href} size={136} label="Booking link QR code" failedText="Couldn't draw the QR code. Try again." />
             </div>
           ) : null}
           <p className="text-center" style={{ fontSize: textPx(12.5), color: INK.chS, maxWidth: 280, lineHeight: 1.55 }}>

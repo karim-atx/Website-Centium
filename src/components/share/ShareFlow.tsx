@@ -3,6 +3,7 @@ import { ShareEditorSheet, type EditorResult, type WinConsent } from "./ShareEdi
 import { ShareOptionsSheet } from "./ShareOptionsSheet";
 import { cardPayload, itemFormat, type CardPro, type CardSpec, type ShareFormat } from "./shareCardModel";
 import { recordErrorMessage, recordSharedItem, sharedItemPath, type ItemKind } from "../../services/share";
+import { siteHref } from "../../config/site";
 
 /**
  * Release 3 · W8: one share, from the SH6 editor to the SH7 options. Each
@@ -42,7 +43,7 @@ export const ShareFlow: React.FC<{
     const shown = { ...spec, stats: spec.stats.filter((_, i) => !result.hide.includes(i)) };
     const payload = cardPayload(shown, format, result.style, win ? (result.client ?? null) : null);
     const key = JSON.stringify(payload);
-    const link = (id: string) => `${window.location.origin}${sharedItemPath(id)}`;
+    const link = (id: string) => siteHref(sharedItemPath(id));
     const hit = recorded.current.get(key);
     if (hit) return { ok: true, link: link(hit) };
     const r = await recordSharedItem(kind, itemFormat(format), payload, win?.requestId ?? null);

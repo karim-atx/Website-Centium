@@ -8,8 +8,9 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { Field, FieldError, Label } from "./courseUi";
+import { siteHref } from "../../../config/site";
 
-const courseUrl = (id: string) => `${window.location.origin}/app/forum/courses/${id}`;
+const courseUrl = (id: string) => siteHref(`/app/forum/courses/${id}`);
 
 /**
  * Release 3 · W6 MO28 "6 Published, share and suggest" (cAssign18), opened

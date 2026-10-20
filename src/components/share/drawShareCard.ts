@@ -1,7 +1,7 @@
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { qrRows } from "./ShareQr";
-import { EXPORT_WIDTH, PALETTE, cardHeight, cardLink, cardQrValue, fillClient, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
+import { EXPORT_WIDTH, PALETTE, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
 
 // Release 3 · W8 SH1 / SH7: the share card as a PNG. A canvas port of
 // ShareCard.tsx (itself a literal port of source/gen/r31.js card31) at the
@@ -428,7 +428,12 @@ export function layoutShareCard(o: CardLayoutInput, m: CardMeasure): CardLayout 
     const linkS: TextStyle = { weight: 800, size: r1((sq ? 3 : 3.3) * u), lh: INHERITED_LH, color: ink, shadow: hasShadow };
     const scanS: TextStyle = { weight: 600, size: r1((sq ? 2.6 : 2.9) * u), lh: INHERITED_LH, color: sub, shadow: hasShadow };
     const link = cardLink(pro.handle!);
-    const linkW = widthOf(link, linkS);
+    let linkW = widthOf(link, linkS);
+    const fitted = fitLinkSize(linkS.size, linkW, Math.max(0, colW - (stk ? 0 : tile + gap)));
+    if (fitted !== linkS.size) {
+      linkS.size = fitted;
+      linkW = widthOf(link, linkS);
+    }
     const scan = "Scan to see my profile";
     const scanW = stk ? 0 : widthOf(scan, scanS);
     const textH = linkS.lh * linkS.size + (stk ? 0 : scanS.lh * scanS.size);

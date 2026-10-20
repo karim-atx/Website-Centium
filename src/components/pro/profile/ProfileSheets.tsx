@@ -14,7 +14,8 @@ import { textPx } from "../../../theme/textSize";
 import type { ProfessionalSubtype } from "../../../types";
 import { INK } from "../proInk";
 import { CtaButton, ErrorLine } from "./kit";
-import { profileUrl } from "./profileModel";
+import { profileHref, profileUrl } from "./profileModel";
+import { SITE_HOST } from "../../../config/site";
 import { typeLabel } from "./typeLabel";
 
 // Release 3 · W6 the profile's sheets and pop-ups:
@@ -234,7 +235,7 @@ const OneFieldSheet: React.FC<{
           <div className="min-w-0">
             <FieldLabel htmlFor="one-field">{label}</FieldLabel>
             <span className="flex items-center focus-within:!border-primary" style={{ ...wellStyle(), height: 40 }}>
-              <span style={{ color: INK.chF, fontSize: textPx(14) }}>{prefix}</span>
+              <span style={{ color: INK.chF, fontSize: textPx(14), whiteSpace: "nowrap", flex: "none" }}>{prefix}</span>
               <input
                 id="one-field"
                 value={value}
@@ -304,7 +305,7 @@ export const HandleSheet: React.FC<{ open: boolean; onClose: () => void; handle:
     onClose={onClose}
     title="Handle"
     label="Your handle"
-    prefix="centium.app/p/"
+    prefix={`${SITE_HOST}/p/`}
     initial={handle ?? ""}
     note={
       <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>
@@ -338,7 +339,7 @@ export const ShareProfileSheet: React.FC<{
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const url = handle ? profileUrl(handle) : null;
-  const full = url ? `https://${url}` : "";
+  const full = handle ? profileHref(handle) : "";
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(full);

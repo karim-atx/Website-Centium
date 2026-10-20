@@ -4,12 +4,14 @@
 
 // No imports that reach the Supabase client: the node test runner loads this file.
 import { licenceStatus, type LicenceReviewRow } from "../../../services/professional-cv/licenceStatus";
+import { siteHref, siteText } from "../../../config/site";
 
 type WorkModeDb = "in_person" | "online" | "both";
 type LicenceLike = { id: string; documentPath: string | null };
 
-/** COPY `{profile_url}` = centium.app/p/{handle} (FINAL_PLAN section 3). */
-export const profileUrl = (handle: string) => `centium.app/p/${handle}`;
+/** COPY `{profile_url}`: the site address + /p/{handle} (config/site). profileUrl is the text shown, profileHref the link copied and shared. */
+export const profileUrl = (handle: string) => siteText(`/p/${handle}`);
+export const profileHref = (handle: string) => siteHref(`/p/${handle}`);
 
 /** "1 word", "92 words". */
 export function wordCount(text: string | null | undefined): number {

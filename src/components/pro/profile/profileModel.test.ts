@@ -10,6 +10,7 @@ import {
   parsePriceInput,
   planLine,
   planPrice,
+  profileHref,
   priceLabel,
   profileUrl,
   radiusFill,
@@ -46,8 +47,9 @@ const review = (licenceId: string, doc: string, approvedAt: string | null): Lice
   rejectionReason: null,
 });
 
-test("profile url is on /p/", () => {
-  assert.equal(profileUrl("rami.coach"), "centium.app/p/rami.coach");
+test("profile url is on /p/ of the site address, never centium.app", () => {
+  assert.equal(profileUrl("rami.coach"), "centium.atraxia.org/p/rami.coach");
+  assert.equal(profileHref("rami.coach"), "https://centium.atraxia.org/p/rami.coach");
 });
 
 test("counts words", () => {

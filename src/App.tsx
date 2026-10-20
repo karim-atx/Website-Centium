@@ -397,7 +397,7 @@ function AppRoutes() {
           either: it should carry no nav, no footer and nothing to sell. */}
       <Route path="/certificate/:serial" element={<PublicCertificate />} />
 
-      {/* Release 3 W7: a professional's invite link (centium.app/i/{code}),
+      {/* Release 3 W7: a professional's invite link (the site address + /i/{code}),
           public profile and booking page. Public like the certificate: the
           readers (preview_invite_link, professional_by_handle,
           professional_open_slots) are granted to anon and reveal only what
@@ -405,7 +405,7 @@ function AppRoutes() {
       <Route path="/i/:code" element={<InviteLanding />} />
       <Route path="/p/:handle" element={<PublicProfile />} />
       <Route path="/p/:handle/book" element={<PublicBooking />} />
-      {/* Release 3 W8: a shared card (centium.app/s/{id}); shared_item_public is anon. */}
+      {/* Release 3 W8: a shared card (the site address + /s/{id}); shared_item_public is anon. */}
       <Route path="/s/:id" element={<SharedCard />} />
 
       {/* The one route a recovery session may reach. Deliberately outside

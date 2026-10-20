@@ -25,6 +25,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { siteHref, siteText } from "../../config/site";
 import type { Read, Write } from "./clients";
 import type { EventAlert } from "../../components/calendar/eventAlert";
 
@@ -325,8 +326,9 @@ export async function fetchMyHandle(me: string): Promise<Read<string | null>> {
   return { ok: true, data: (data as unknown as { handle: string | null } | null)?.handle ?? null };
 }
 
-/** COPY `{booking_url}` = centium.app/p/{handle}/book (FINAL_PLAN section 3). */
-export const bookingUrl = (handle: string) => `centium.app/p/${handle}/book`;
+/** COPY `{booking_url}`: the site address + /p/{handle}/book (config/site). bookingUrl is the text shown, bookingHref the link copied, shared and put in the QR. */
+export const bookingUrl = (handle: string) => siteText(`/p/${handle}/book`);
+export const bookingHref = (handle: string) => siteHref(`/p/${handle}/book`);
 
 // ---------------------------------------------------------------------------
 // Booking requests and bookings (appointments, own practice)
