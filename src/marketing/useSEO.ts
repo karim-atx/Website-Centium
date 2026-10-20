@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { SITE_URL } from "../config/site";
 
 const SITE_NAME = "Centium";
-const SITE_ORIGIN = "https://centium.atraxia.org";
+const SITE_ORIGIN = SITE_URL;
 const DEFAULT_DESCRIPTION =
   "Centium brings nutrition tracking, workout logging, health tracking, AI-powered guidance and community into one place.";
 

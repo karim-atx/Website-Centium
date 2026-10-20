@@ -12,7 +12,7 @@ import { textPx } from "../../theme/textSize";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignInButtons } from "./publicKit";
 
 /**
- * Release 3 · W7 the public profile, centium.app/p/{handle} (the MO15 share
+ * Release 3 · W7 the public profile, {site}/p/{handle} (the MO15 share
  * link and its QR). professional_by_handle (anon) gives the name, photo,
  * type, headline and licence_verified; a listed professional's directory row
  * (public_professional_directory, also anon) adds the place, the rating and

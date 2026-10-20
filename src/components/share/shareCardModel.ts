@@ -17,6 +17,8 @@
 // [{ key, label, value }] with an allowlisted key. The database refuses
 // anything else (ATXH1).
 
+import { siteHref, siteText } from "../../config/site";
+
 export type ShareFormat = "story" | "post" | "square" | "sticker";
 export type ShareStyle = "L" | "D" | "B" | "P";
 export type CardTemplate = "pr" | "prog" | "streak" | "logging" | "cons" | "mealplan" | "mile" | "review" | "profile" | "promo" | "slots" | "tip";
@@ -132,9 +134,20 @@ export function cardHeight(format: ShareFormat, width: number): number {
 /** Exports (SH1 "Type and numbers"): 1080 wide; Story 1920, Post 1350, Square 1080, Sticker a transparent 1080 × 1920. */
 export const EXPORT_WIDTH = 1080;
 
-/** "centium.app/p/{handle}" (FINAL_PLAN section 3 {profile_url}); the QR opens https:// of it. */
-export const cardLink = (handle: string) => `centium.app/p/${handle}`;
-export const cardQrValue = (handle: string) => `https://${cardLink(handle)}`;
+/** The profile link printed on the card (FINAL_PLAN section 3 {profile_url}): the site address + /p/{handle} (config/site); the QR opens the full link. */
+export const cardLink = (handle: string) => siteText(`/p/${handle}`);
+export const cardQrValue = (handle: string) => siteHref(`/p/${handle}`);
+
+/**
+ * The link's font size: the frame's size, shrunk just enough that the whole
+ * link fits the space beside the QR. A link is never clipped or wrapped, and
+ * the site address plus a 30-character handle is longer than the frame's
+ * "centium.app/p/…" was drawn for. One rule for the DOM card and the export.
+ */
+export function fitLinkSize(base: number, naturalWidth: number, available: number): number {
+  if (!(naturalWidth > 0) || naturalWidth <= available) return base;
+  return Math.max(0, Math.floor(((base * available) / naturalWidth) * 10) / 10);
+}
 
 // ---------------------------------------------------------------------------
 // How the client is shown

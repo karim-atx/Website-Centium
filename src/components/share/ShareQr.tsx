@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { qrModules } from "../../services/venues/venueLogic";
 
-// Release 3 · W8: the share card's QR to centium.app/p/{handle}. The same
+// Release 3 · W8: the share card's QR to the profile link (cardQrValue). The same
 // zxing-wasm writer as marketplace/PassQr.tsx (no new dependency), loaded
 // lazily; copied rather than imported so PassQr stays as it is. The DOM card
 // draws the modules as an SVG; the canvas export reads them through

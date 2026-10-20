@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { CentiumMark } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { ShareQr } from "./ShareQr";
@@ -11,11 +11,23 @@ import {
   cardLink,
   cardQrValue,
   fillClient,
+  fitLinkSize,
   type CardPro,
   type CardSpec,
   type ShareFormat,
   type ShareStyle,
 } from "./shareCardModel";
+import { cardFont } from "./drawShareCard";
+
+// Text width in the card font, for fitting the profile link (fitLinkSize). The
+// export measures the same way, so the preview and the PNG agree.
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function measureText(text: string, font: string): number {
+  if (measureCtx === undefined) measureCtx = typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return 0;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
+}
 
 /**
  * Release 3 · W8 SH1 to SH3: one share card, a literal port of
@@ -24,7 +36,7 @@ import {
  * or 1080 (the export reference). Manrope throughout; the Centium mark, the
  * pro's name and "@handle on Centium" at the top; eyebrow 800 in capitals;
  * the hero (number, quote, title or profile); the stat row over a 1px rule;
- * the QR (white tile) with "centium.app/p/{handle}" and "Scan to see my
+ * the QR (white tile) with the profile link (cardLink) and "Scan to see my
  * profile". Story and Sticker are 9:16, Post 4:5, Square 1:1.
  *
  * Colours are the card's own (PAL31), never the app theme: a card looks the
@@ -67,6 +79,17 @@ const Leaf: React.FC<{ h: number; col: string; op: number }> = ({ h, col, op }) 
 );
 
 export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, style, width: W, client = "A client", qr = true, hide, photoUrl, onChecker, flat, className }) => {
+  // Re-measure the link once Manrope has loaded (the first render may measure the fallback face).
+  const [, setFontsReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) setFontsReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const P = PALETTE[style];
   const u = W / 100;
   const stk = format === "sticker";
@@ -220,6 +243,10 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
   ) : null;
 
   const qs = sq ? 11 : story ? 15 : 12.5;
+  const linkBase = (sq ? 3 : 3.3) * u;
+  const linkSize = showLink
+    ? fitLinkSize(linkBase, measureText(cardLink(pro.handle!), cardFont(800, linkBase)), W - 2 * pad - (stk ? 0 : qs * u + 2 * 1.1 * u + 3 * u))
+    : linkBase;
   const foot = showLink ? (
     <div style={{ display: "flex", alignItems: "center", gap: px(3 * u), marginTop: px((sq ? 4 : 6) * u), justifyContent: center }}>
       {!stk && (
@@ -228,7 +255,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         </span>
       )}
       <div style={{ minWidth: 0, textShadow: shadow }}>
-        <div style={{ fontSize: px((sq ? 3 : 3.3) * u), fontWeight: 800, color: ink, whiteSpace: "nowrap" }}>{cardLink(pro.handle!)}</div>
+        <div style={{ fontSize: px(linkSize), fontWeight: 800, color: ink, whiteSpace: "nowrap" }}>{cardLink(pro.handle!)}</div>
         {!stk && <div style={{ fontSize: px((sq ? 2.6 : 2.9) * u), fontWeight: 600, color: sub }}>Scan to see my profile</div>}
       </div>
     </div>

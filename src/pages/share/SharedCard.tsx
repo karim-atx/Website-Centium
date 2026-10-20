@@ -13,7 +13,7 @@ import { textPx } from "../../theme/textSize";
 import { PublicCard, PublicFrame, PublicMessage } from "../public/publicKit";
 
 /**
- * Release 3 · W8 the public shared card, centium.app/s/{id} (the link a
+ * Release 3 · W8 the public shared card, {site}/s/{id} (the link a
  * professional shares with "More"). shared_item_public (anon) returns the
  * card and the professional's handle, nothing about the client beyond what
  * the card itself shows; professional_by_handle (anon) gives the first name

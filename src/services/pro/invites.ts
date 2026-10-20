@@ -23,6 +23,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import { invite22023, OFFLINE_GOAL_MAX } from "./inviteErrors";
+import { siteHref, siteText } from "../../config/site";
 
 export interface InviteLink {
   id: string;
@@ -36,9 +37,9 @@ export type Result<T> = { ok: true; data: T } | { ok: false; message: string; of
 
 export const INVITE_LOCKED_MESSAGE = "Invite links open once your licence is verified.";
 
-/** COPY {invite_url} = centium.app/i/{code}. */
-export const inviteUrl = (code: string) => `centium.app/i/${code}`;
-export const inviteHref = (code: string) => `https://${inviteUrl(code)}`;
+/** COPY {invite_url}: the site address + /i/{code} (config/site). inviteUrl is the text shown, inviteHref the link copied, shared and put in the QR. */
+export const inviteUrl = (code: string) => siteText(`/i/${code}`);
+export const inviteHref = (code: string) => siteHref(`/i/${code}`);
 
 export async function fetchInvitesAllowed(me: string): Promise<Result<boolean>> {
   const { data, error } = await rpc("professional_invites_allowed", { p_professional: me });
@@ -201,4 +202,4 @@ export function smsHref(number: string, body: string): string {
 
 /** COPY HO2 default message: "Hi, it's {pro_first_name}. Here's my Centium page, where you can see my plans and hire me. {invite_url}". */
 export const defaultInviteMessage = (firstName: string, code: string) =>
-  `Hi, it's ${firstName}. Here's my Centium page, where you can see my plans and hire me. ${inviteUrl(code)}`;
+  `Hi, it's ${firstName}. Here's my Centium page, where you can see my plans and hire me. ${inviteHref(code)}`;

@@ -12,7 +12,7 @@ import type { ProfessionalSubtype } from "../../types";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignInButtons } from "./publicKit";
 
 /**
- * Release 3 · W7 a professional's invite link, centium.app/i/{code}
+ * Release 3 · W7 a professional's invite link, {site}/i/{code}
  * (DB-2 invite links; J13; CU27; Karim's answer 1).
  *
  * preview_invite_link(code) works signed out and returns the professional

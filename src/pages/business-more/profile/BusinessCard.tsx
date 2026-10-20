@@ -11,7 +11,7 @@ import { copyText } from "../../../components/business-more/share";
 // rating 11.5/700 with a 13 / 2.4 star; info rows 11.5/600 line 15 with 13 /
 // 2.2 glyphs; Share (fill) and Save image (soft), 46 r14.
 //
-// PUBLIC FIELDS ONLY (HANDOVER 4). THE QR AND THE centium.app/b/{slug} LINK
+// PUBLIC FIELDS ONLY (HANDOVER 4). THE QR AND THE /b/{slug} LINK
 // ARE NOT DRAWN: there is no public business page for them to open yet
 // (BU6-13), and a code that leads nowhere would be worse than none. Share
 // sends the card's text instead; Save image renders the card to a PNG.

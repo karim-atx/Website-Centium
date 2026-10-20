@@ -2,6 +2,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  cardLink,
+  cardQrValue,
+  fitLinkSize,
   STAT_KEYS,
   cardHeight,
   cardPayload,
@@ -151,4 +154,17 @@ test("winsShieldLine: the SH4 setting line, and the neutral Never allow line", (
   assert.equal(winsShieldLine("Lina", "nutrition", "always_allow"), "Lina lets professionals share wins by initials. Food entries and photos are never on a card.");
   assert.equal(winsShieldLine("Lina", "nutrition", "never"), "Lina doesn't want wins shared.");
   for (const s of ["always_ask", "always_allow", "never"] as const) assert.doesNotMatch(winsShieldLine("Sam", "full_coaching", s), /[—’]/);
+});
+
+test("the card link and QR use the site address, never centium.app", () => {
+  assert.equal(cardLink("rami.coach"), "centium.atraxia.org/p/rami.coach");
+  assert.equal(cardQrValue("rami.coach"), "https://centium.atraxia.org/p/rami.coach");
+});
+
+test("the card link shrinks only when it would not fit", () => {
+  assert.equal(fitLinkSize(35.6, 600, 711), 35.6);
+  assert.equal(fitLinkSize(35.6, 711, 711), 35.6);
+  assert.equal(fitLinkSize(35.6, 992, 711), 25.5);
+  assert.equal(fitLinkSize(35.6, 0, 711), 35.6);
+  assert.equal(fitLinkSize(35.6, 900, 0), 0);
 });

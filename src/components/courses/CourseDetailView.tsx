@@ -48,6 +48,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { PinnedCta } from "../ui/PinnedCta";
 import { useBack } from "../../hooks/useBack";
 import { formatShortDate } from "../../utils/date";
+import { siteHref } from "../../config/site";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -509,7 +510,7 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const url = certificate ? `${window.location.origin}/certificate/${certificate.serial}` : "";
+  const url = certificate ? siteHref(`/certificate/${certificate.serial}`) : "";
 
   const toggle = async (next: boolean) => {
     if (!certificate || busy) return;

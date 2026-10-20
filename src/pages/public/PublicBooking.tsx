@@ -7,7 +7,7 @@ import { BookingFlow } from "./BookingFlow";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton } from "./publicKit";
 
 /**
- * Release 3 · W7 the public booking page, centium.app/p/{handle}/book. The
+ * Release 3 · W7 the public booking page, {site}/p/{handle}/book. The
  * professional from professional_by_handle (anon), then BookingFlow: session
  * types, Monday-first weeks of open times, and the booking, which needs
  * sign-in. Signed out, Sign in / Create an account remember this page with

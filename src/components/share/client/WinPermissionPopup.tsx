@@ -25,7 +25,7 @@ import { askBody, askTitle, type ShareAnswerKind } from "./sharingText";
  * stays pending and comes back on a later open.
  *
  * The preview shows where the win would appear, as the real card does: the
- * professional's "@handle on Centium" line, the centium.app/p/{handle} link
+ * professional's "@handle on Centium" line, the profile link
  * and the QR, from professional_handle() (815efc5, W8-1). A professional with
  * no handle (or a failed read) gets the card without them, as before.
  */
