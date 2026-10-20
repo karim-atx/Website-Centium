@@ -17,6 +17,7 @@ import { Avatar } from "../../components/pro/client/kit";
 import { useProInbox, type ProRequest } from "../../components/pro/home/useProInbox";
 import { AddClientFlows } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
+import { SentInvitesSection } from "../../components/pro/addclient/SentInvitesSection";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Toast } from "../../components/ui/Toast";
@@ -67,6 +68,10 @@ import type { ProfessionalClient } from "../../types";
  * coaching), the frames having moved quick actions off the rows.
  * Select turns on multi-select with the bulk bar (Message, Template / Meal
  * plan / Care note, Tag) 92 above the bottom.
+ *
+ * "Invites sent" (W9 post-review, no frame): the professional's
+ * client_invites under the All list (and under the empty state), hidden
+ * while searching, filtering or selecting, and when there are none.
  */
 
 type StatusKey = "all" | "requests" | "onboarding" | "active" | "attention" | "paused" | "completed";
@@ -320,6 +325,12 @@ export default function Clients() {
   const [tagTargets, setTagTargets] = useState<TagTarget[] | null>(null);
   const [ending, setEnding] = useState<ClientEntry | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  /** Re-reads "Invites sent" after the add flows close (an invite may have gone out). */
+  const [invitesKey, setInvitesKey] = useState(0);
+  const closeAdd = () => {
+    setAddOpen(false);
+    setInvitesKey((n) => n + 1);
+  };
   const [accepting, setAccepting] = useState<ProRequest | null>(null);
   const [acceptBusy, setAcceptBusy] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -473,9 +484,10 @@ export default function Clients() {
         <div className="flex" style={{ marginTop: 8 }}>
           <CtaButton className="flex-1" size="page" icon={<UserPlus size={15} />} label={`Add your first ${one}`} onClick={() => setAddOpen(true)} />
         </div>
+        <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />
         <AddClientFlows
           open={addOpen}
-          onClose={() => setAddOpen(false)}
+          onClose={closeAdd}
           invitesAllowed={invitesAllowed}
           pendingCount={requests.length}
           onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}
@@ -616,6 +628,8 @@ export default function Clients() {
         </div>
       )}
 
+      {status === "all" && !q && !filtering && !selecting && <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />}
+
       {selecting && (
         <div
           className="fixed flex"
@@ -742,7 +756,7 @@ export default function Clients() {
       <DeclineRequestPopup key={declining?.id ?? "none"} name={declining?.name ?? null} busy={declineBusy} error={declineError} onDecline={(r, m) => void decline(r, m)} onClose={() => setDeclining(null)} />
       <AddClientFlows
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={closeAdd}
         invitesAllowed={invitesAllowed}
         pendingCount={requests.length}
         onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}

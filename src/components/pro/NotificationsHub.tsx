@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,6 +25,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
+import { CentredPopup } from "../ui/CentredPopup";
+import { CtaButton } from "../ui/PinnedCta";
+import { useOnline } from "../../hooks/useOnline";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { textPx } from "../../theme/textSize";
@@ -63,7 +66,9 @@ import type { FreePeriodFacts } from "../../services/subscription-tiers/freePeri
  * are professional_notifications rows; the counts are the unread ones.
  * Opening a row marks it read; its X dismisses it (deletes the own row; not
  * drawn in the frames). Clear all (the frame's footer, 12.5 / 700 text.soft
- * over a b06 rule) is clear_my_professional_notifications().
+ * over a b06 rule) asks first (CentredPopup "Clear all notifications?",
+ * W9 post-review); only its "Clear all" calls
+ * clear_my_professional_notifications().
  */
 export type HubTab = "requests" | "review" | "updates";
 
@@ -130,6 +135,27 @@ export const NotificationsHub: React.FC<{
   const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
   useBackCloses(p.open, p.onClose);
+  const online = useOnline();
+  // Clear all asks first (W9 post-review); only "Clear all" in the popup calls
+  // clear_my_professional_notifications().
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearBusy, setClearBusy] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  useEffect(() => {
+    if (p.open) return;
+    setConfirmClear(false);
+    setClearError(null);
+  }, [p.open]);
+  const runClearAll = async () => {
+    if (clearBusy) return;
+    if (!online) return setClearError("You're offline. Try again when you're connected.");
+    setClearBusy(true);
+    setClearError(null);
+    const ok = await p.inbox.clearAll();
+    setClearBusy(false);
+    if (!ok) return setClearError("Couldn't clear your notifications. Try again.");
+    setConfirmClear(false);
+  };
 
   useEffect(() => {
     if (!p.open) return;
@@ -435,7 +461,11 @@ export const NotificationsHub: React.FC<{
             <div className="flex justify-center shrink-0" style={{ padding: "10px 0 2px", borderTop: `1px solid ${INK.b06}` }}>
               <button
                 type="button"
-                onClick={() => void inbox.clearAll()}
+                onClick={() => {
+                  setClearError(null);
+                  setConfirmClear(true);
+                }}
+                aria-haspopup="dialog"
                 className="tap relative before:absolute before:-inset-x-3 before:-inset-y-3 before:content-['']"
                 style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, whiteSpace: "nowrap" }}
               >
@@ -445,6 +475,17 @@ export const NotificationsHub: React.FC<{
           )}
         </div>
       </div>
+      <CentredPopup open={confirmClear} onClose={() => !clearBusy && setConfirmClear(false)} title="Clear all notifications?" body="They'll be removed from your hub. This can't be undone.">
+        <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
+          {clearError && (
+            <p role="alert" className="text-center" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.hi, lineHeight: 1.4 }}>
+              {clearError}
+            </p>
+          )}
+          <CtaButton size="page" label="Clear all" loading={clearBusy} onClick={() => void runClearAll()} />
+          <CtaButton size="page" variant="outline" label="Cancel" disabled={clearBusy} onClick={() => setConfirmClear(false)} />
+        </div>
+      </CentredPopup>
     </div>,
     document.body
   );

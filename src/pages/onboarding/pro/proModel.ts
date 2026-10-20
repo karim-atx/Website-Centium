@@ -122,7 +122,7 @@ export const SPECIALTY_CARDS: SpecialtyCard[] = [
     kind: "other",
     subtype: "other",
     title: "Other health or fitness professional",
-    description: "Coaching, wellness and more.",
+    description: "Wellness and anything not listed above.",
     points: ["Work with clients your way", "Messages and progress in one place"],
     tile: "tealPale",
   },

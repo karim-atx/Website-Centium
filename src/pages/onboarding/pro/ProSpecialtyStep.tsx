@@ -2,7 +2,7 @@ import React from "react";
 import { ObPage, ObProgress, ObHeader, ObTitle, ObFooter } from "../shell/ObShell";
 import { ObSelectCard } from "../shell/ObBlocks";
 import { Composed, OB } from "../shell/visuals";
-import { ProDietitianArt, ProOtherArt, ProPhysioArt, ProTrainerArt } from "../../../components/icons/BusinessArt";
+import { ProCoachArt, ProDietitianArt, ProDoctorArt, ProNutritionistArt, ProOtherArt, ProPhysioArt, ProTrainerArt } from "../../../components/icons/BusinessArt";
 import type { ProfessionalSubtype } from "../../../types";
 import { SPECIALTY_CARDS, proKindOf, specialtyNote, type ProKind } from "./proModel";
 
@@ -10,12 +10,11 @@ const ART: Record<ProKind, React.FC<{ size?: number }>> = {
   trainer: ProTrainerArt,
   physio: ProPhysioArt,
   diet: ({ size }) => <ProDietitianArt size={size} ground="var(--ob-pale)" />,
-  // Release 3: no new drawings were supplied; each new card reuses its
-  // nearest lane's (Nutritionist the Dietitian plate, Coach the Trainer,
-  // Doctor the Physiotherapist).
-  nutritionist: ({ size }) => <ProDietitianArt size={size} ground="var(--ob-pale)" />,
-  coach: ProTrainerArt,
-  doctor: ProPhysioArt,
+  // Release 3: no drawings were supplied for the new types; these are ours,
+  // in the set's style (BusinessArt).
+  nutritionist: ProNutritionistArt,
+  coach: ProCoachArt,
+  doctor: ProDoctorArt,
   other: ProOtherArt,
 };
 

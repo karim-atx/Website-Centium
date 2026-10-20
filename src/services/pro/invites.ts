@@ -18,6 +18,7 @@
 // - invite_client also takes the first name (at most 40) and a message (at
 //   most 500) for the email (follow-up 20261124120000); 22023 when too long.
 
+import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
@@ -102,6 +103,46 @@ export async function fetchInviteJoins(): Promise<Result<InviteJoin[]>> {
 }
 
 export type ContactChannel = "email" | "phone";
+
+/** A client_invites row as the professional reads it (Clients "Invites sent"). */
+export interface SentInviteRow {
+  id: string;
+  channel: string;
+  /** The masked address ("k***@mail.com", "***123"); the full one isn't readable. */
+  addressHint: string;
+  firstName: string | null;
+  message: string | null;
+  createdAt: string;
+}
+
+type SentQuery = PromiseLike<{ data: unknown; error: PostgrestError | null }> & {
+  order: (col: string, o: { ascending: boolean }) => SentQuery;
+  limit: (n: number) => SentQuery;
+};
+
+/** How many sent invites Clients reads (newest first). */
+export const SENT_INVITES_LIMIT = 50;
+
+/**
+ * The professional's sent invitations (client_invites_select_own; follow-up
+ * 20261124120000: first_name and message are readable by the professional).
+ * Only the granted columns are selected; email, address_hash, status and
+ * the outbox fields are left alone (statuses wait for a later release).
+ */
+export async function fetchSentInvites(): Promise<Result<SentInviteRow[]>> {
+  // first_name / message aren't in the generated types yet: cast at this boundary.
+  const table = (supabase as unknown as { from: (t: string) => { select: (cols: string) => SentQuery } }).from("client_invites");
+  const { data, error } = await table
+    .select("id, channel, address_hint, first_name, message, created_at")
+    .order("created_at", { ascending: false })
+    .limit(SENT_INVITES_LIMIT);
+  if (error) return { ok: false, message: "Couldn't load your invites. Try again.", offline: isOffline(error) };
+  const rows = (data ?? []) as unknown as { id: string; channel: string; address_hint: string; first_name: string | null; message: string | null; created_at: string }[];
+  return {
+    ok: true,
+    data: rows.map((r) => ({ id: r.id, channel: r.channel, addressHint: r.address_hint, firstName: r.first_name, message: r.message, createdAt: r.created_at })),
+  };
+}
 
 /**
  * invite_client(channel, address, first_name, message): email is queued and

@@ -22,12 +22,12 @@ export const PRO_CHIP_VIS: Record<ProKind, Shape[]> = {
   physio: [CI(36, 50, 13, "none", { s: OB.brand, sw: 5 }), CI(64, 50, 13, "none", { s: OB.lav, sw: 5 }), LF(50, 80, 0.07, -45, OB.leaf)],
   diet: [CI(50, 58, 30, "none", { s: OB.lav, sw: 4 }), CI(50, 58, 19, OB.pale), LF(46, 72, 0.075, -45, OB.leaf)],
   other: [CI(50, 52, 32, "none", { s: OB.lav, sw: 3 }), CI(50, 52, 21, "none", { s: OB.brand, sw: 3, o: 0.7 }), LF(50, 68, 0.07, -45, OB.leaf)],
-  // Release 3: no new chip drawings were supplied; each reuses its nearest
-  // lane's (Nutritionist the Dietitian plate, Coach the Trainer bar, Doctor
-  // the Physiotherapist rings).
-  nutritionist: [CI(50, 58, 30, "none", { s: OB.lav, sw: 4 }), CI(50, 58, 19, OB.pale), LF(46, 72, 0.075, -45, OB.leaf)],
-  coach: [RC(22, 60, 56, 5, 2.5, OB.lav), RC(16, 48, 9, 29, 3, OB.brand), RC(75, 48, 9, 29, 3, OB.brand), LF(50, 60, 0.07, -45, OB.leaf)],
-  doctor: [CI(36, 50, 13, "none", { s: OB.brand, sw: 5 }), CI(64, 50, 13, "none", { s: OB.lav, sw: 5 }), LF(50, 80, 0.07, -45, OB.leaf)],
+  // Release 3: no chip drawings were supplied for the new types; these are
+  // ours, chip versions of BusinessArt's ProNutritionistArt (bowl and sprout),
+  // ProCoachArt (stopwatch) and ProDoctorArt (rounded plus).
+  nutritionist: [LF(47, 56, 0.075, -90, OB.leaf), LF(53, 56, 0.065, 0, OB.brand), RC(20, 52, 60, 26, 13, OB.lav)],
+  coach: [RC(43, 20, 14, 8, 3, OB.brand), CI(50, 56, 25, "none", { s: OB.lav, sw: 5 }), LF(50, 58, 0.06, -45, OB.leaf), CI(50, 58, 4.5, OB.brand)],
+  doctor: [RC(26, 43, 48, 17, 6, OB.lav), RC(41.5, 28, 17, 46, 6, OB.brand), LF(74, 82, 0.065, -45, OB.leaf)],
 };
 
 /** Submitted / pending: the leaf in a faint ring. */
