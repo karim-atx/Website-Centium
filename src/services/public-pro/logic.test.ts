@@ -9,6 +9,8 @@ import {
   declineText,
   describeBookingError,
   inviteView,
+  publicReviewRows,
+  PUBLIC_REVIEWS_PAGE,
   isPublicReturnPath,
   localDay,
   mondayOf,
@@ -102,4 +104,27 @@ test("a stored return expires after an hour", () => {
   assert.equal(readReturn(raw("/app", 0), now), null);
   assert.equal(readReturn("not json", now), null);
   assert.equal(readReturn(null, now), null);
+});
+
+test("public reviews: every reviewer is 'A client', removed reviews and empty replies are not shown", () => {
+  const rows = publicReviewRows(
+    [
+      { id: "a", rating: 5, body: "Great coach", created_at: "2026-10-01T10:00:00Z", edited_at: null, redacted: false, reply_body: "Thank you!", reply_at: "2026-10-02T10:00:00Z" },
+      { id: "b", rating: 4, body: "  ", created_at: "2026-09-01T10:00:00Z", edited_at: "2026-09-02T10:00:00Z", redacted: false, reply_body: null, reply_at: null },
+      { id: "c", rating: null, body: null, created_at: "2026-08-01T10:00:00Z", edited_at: null, redacted: true, reply_body: null, reply_at: null },
+    ],
+    "pro-1"
+  );
+  assert.equal(rows.length, 2);
+  for (const r of rows) {
+    assert.equal(r.reviewerName, null);
+    assert.equal(r.reviewerId, null);
+    assert.equal(r.reviewerNameVisible, false);
+    assert.equal(r.professionalId, "pro-1");
+  }
+  assert.equal(rows[0].reply?.body, "Thank you!");
+  assert.equal(rows[0].reply?.createdAt, "2026-10-02T10:00:00Z");
+  assert.equal(rows[1].body, null);
+  assert.equal(rows[1].reply, null);
+  assert.equal(PUBLIC_REVIEWS_PAGE, 10);
 });

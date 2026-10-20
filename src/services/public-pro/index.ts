@@ -2,7 +2,8 @@ import { supabase } from "../../../lib/supabase/client";
 import { rpc } from "../pro/rpc";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Enums } from "../../../lib/supabase/database.types";
-import { describeBookingError, isPublicReturnPath, readReturn, type Slot } from "./logic";
+import { describeBookingError, isPublicReturnPath, publicReviewRows, readReturn, PUBLIC_REVIEWS_PAGE, type PublicReviewDbRow, type Slot } from "./logic";
+import type { ReviewRow } from "../professional-reviews";
 
 export * from "./logic";
 
@@ -18,6 +19,9 @@ export * from "./logic";
 // - professional_open_slots(p_professional, p_from, p_to, p_service_id): ATXG5
 //   when the caller may not book;
 // - request_professional_booking(p_service_id, p_starts_at): signed in.
+// - professional_reviews_public(p_professional_id, p_sort, p_limit, p_offset):
+//   the reviews, no reviewer names or ids for a visitor; an unlisted
+//   professional returns none.
 // The functions are called through the untyped rpc (pro/rpc.ts) and cast at
 // this boundary: the generated types predate them.
 
@@ -175,6 +179,27 @@ export async function fetchBookableSessions(professionalId: string): Promise<Rea
     };
   } catch (e) {
     return fail(e, "Couldn't load session types. Try again.");
+  }
+}
+
+/**
+ * A page of reviews, newest first. `read` is how many rows the database
+ * returned (removed reviews included), which is what the next offset must
+ * advance by; `more` is true when a full page came back.
+ */
+export async function fetchPublicReviews(professionalId: string, offset = 0): Promise<Read<{ reviews: ReviewRow[]; read: number; more: boolean }>> {
+  try {
+    const { data, error } = await rpc("professional_reviews_public", {
+      p_professional_id: professionalId,
+      p_sort: "recent",
+      p_limit: PUBLIC_REVIEWS_PAGE,
+      p_offset: offset,
+    });
+    if (error) return fail(error, "Couldn't load reviews. Try again.");
+    const rows = (data ?? []) as PublicReviewDbRow[];
+    return { ok: true, data: { reviews: publicReviewRows(rows, professionalId), read: rows.length, more: rows.length === PUBLIC_REVIEWS_PAGE } };
+  } catch (e) {
+    return fail(e, "Couldn't load reviews. Try again.");
   }
 }
 
