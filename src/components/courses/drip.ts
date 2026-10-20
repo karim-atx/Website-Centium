@@ -5,17 +5,40 @@
 // course_drip_schedule(course) gives every module's opens_at for the caller:
 // null when it is open from the start (all at once, offset 0, the author, or
 // not enrolled), otherwise the day it opens (a date cast to a timestamp at
-// 00:00 UTC, so it is read back in UTC to keep the day the author meant).
+// 00:00 UTC, so it is read back in UTC to keep the day the author meant),
+// and every module's lesson_count and minutes, locked weeks included
+// (migration 20261124180000): a locked week's lessons stay hidden by
+// course_lessons RLS, so these two are its only size.
 
 export interface DripRow {
   moduleId: string;
   position: number;
   opensAt: string | null;
   isOpen: boolean;
+  lessonCount: number;
+  minutes: number;
+}
+
+/**
+ * The course's lesson total for "{n} of {m} lessons": the schedule's counts,
+ * which include locked weeks. Without a schedule (no rows), the lessons the
+ * learner can read, which is every lesson when nothing is locked.
+ */
+export function courseLessonTotal(rows: DripRow[], readable: number): number {
+  return rows.length ? rows.reduce((s, r) => s + r.lessonCount, 0) : readable;
+}
+
+/** A locked week's size from the schedule ("3 lessons" and its minutes), or null for an open week or one not in it. */
+export function lockedWeekSize(rows: DripRow[], moduleId: string): { lessons: number; minutes: number } | null {
+  const r = rows.find((x) => x.moduleId === moduleId);
+  return r && !r.isOpen ? { lessons: r.lessonCount, minutes: r.minutes } : null;
 }
 
 /** The schedule drips for this learner: some module has its own opening day. */
 export const hasDrip = (rows: DripRow[]): boolean => rows.some((r) => r.opensAt !== null);
+
+/** A locked week's syllabus contents: its kinds are hidden with its lessons, so the count ("3 lessons"). */
+export const lockedWeekContents = (lessons: number): string => (lessons === 1 ? "1 lesson" : `${lessons} lessons`);
 
 /** The next module still to open (lowest position), or null when every week is open. */
 export function nextLocked(rows: DripRow[]): DripRow | null {

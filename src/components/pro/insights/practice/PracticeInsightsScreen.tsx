@@ -11,6 +11,7 @@ import { ProChart } from "../../ProChart";
 import { EmptyState } from "../../EmptyState";
 import { ComingSoon } from "../../ComingSoon";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../states";
+import { LatestReviewsShare, MilestoneShareCard } from "../../../share/PracticeShareParts";
 import { Group, RangeTabs } from "../parts";
 import type { PageRange } from "../panelProps";
 import { CHead, NumBoxes, RangeTrack, type NumBoxData } from "../../forms/moKit";
@@ -199,7 +200,10 @@ export const PracticeInsightsScreen: React.FC = () => {
         <RangeTabs value={range} onChange={setRange} />
       </div>
       {state === "offline" && <OfflineLine />}
+      {/* W8 SH4: the milestone with Share, and the latest reviews with Share (below the boxes). */}
+      <MilestoneShareCard totals={totals} />
       <NumBoxes boxes={boxes} />
+      <LatestReviewsShare />
       {early && weeksIn != null && (
         <div className="flex" style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", marginBottom: 12, gap: 10 }}>
           <Sprout size={16} strokeWidth={2} aria-hidden style={{ color: "#4F8F8A", flexShrink: 0, marginTop: 2 }} />

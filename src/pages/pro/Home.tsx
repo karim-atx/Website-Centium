@@ -350,6 +350,12 @@ export default function Home() {
         navigate(day ? `${PRO_ROUTES.calendar}?day=${day}` : PRO_ROUTES.calendar);
         return;
       }
+      case "share_request":
+      case "shared_item":
+        // W8: share answers and removal requests open the client's wins (Progress).
+        setHubOpen(false);
+        navigate(n.clientId ? proClientPath(n.clientId, "progress") : PRO_ROUTES.clients);
+        return;
       case "review":
         setHubOpen(false);
         navigate(`${PRO_ROUTES.more}/reviews`);

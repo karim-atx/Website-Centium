@@ -250,6 +250,8 @@ export function HireSheet({
         expiresOn: null,
         confirmedAt: null,
         cancelledAt: null,
+        cancellationReason: null,
+        cancellationMessage: null,
       }
     );
     onHired(mine.ok ? mine.hires : null);

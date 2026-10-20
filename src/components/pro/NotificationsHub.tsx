@@ -328,7 +328,8 @@ export const NotificationsHub: React.FC<{
     ) : updates.length === 0 ? (
       <EmptyState icon={Bell} title="No updates" line="Bookings, cancellations, messages, reviews and payments appear here." />
     ) : (
-      updates.map((n, i) => notificationRow(n, i, updates))
+      // W8 SH4: an allowed share request carries a Share button (it opens the client's wins).
+      updates.map((n, i) => notificationRow(n, i, updates, n.titleKey === "pro.share.allowed" || n.titleKey === "pro.share.allowed_no_name" ? "Share" : undefined))
     );
 
   return createPortal(

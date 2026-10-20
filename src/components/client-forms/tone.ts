@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardCheck, ClipboardList, Send, type LucideIcon } from "lucide-react";
+import { CalendarClock, ClipboardCheck, ClipboardList, Send, Share2, type LucideIcon } from "lucide-react";
 import { INK } from "../pro/proInk";
 import type { ReminderTone } from "../../services/client-forms/logic";
 
@@ -26,5 +26,7 @@ export function iconFor(kind: string): LucideIcon {
   if (kind === "session") return CalendarClock;
   if (kind === "referral") return Send;
   if (kind === "intake") return ClipboardList;
+  // Release 3 · W8 CU29: a professional asks to share a win (remIcon21 'share-2').
+  if (kind === "share_request") return Share2;
   return ClipboardCheck;
 }

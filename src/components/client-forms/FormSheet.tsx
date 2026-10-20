@@ -9,7 +9,6 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import {
   firstPartMissing,
-  isWeightOrMeasurement,
   itemsOf,
   longDate,
   missingMessage,
@@ -45,8 +44,9 @@ import { consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./
  * "Save, come back later" and Home shows "Continue your check-in". Send
  * submits (p_submit true). A flagged response (safety_flag, set by the
  * database) shows the Mood check-in's "talk to a doctor" follow-up and its
- * warning signs. Recovery-sensitive mode (J12) skips weight and measurement
- * questions: not rendered, not required, not sent.
+ * warning signs. Recovery-sensitive mode (J12) skips the body-measure
+ * questions (form_question_is_body_measure, mirrored by isBodyMeasure): not
+ * rendered, not sent, and not required by save_form_response either.
  */
 
 const SAVE_DELAY_MS = 800;
@@ -76,7 +76,6 @@ export const FormSheet: React.FC<FormSheetProps> = (props) =>
 
 const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = ({ open, bundle, me, hideBody, timezone, onClose }) => {
   const visible = useMemo(() => visibleQuestions(bundle.questions, hideBody), [bundle, hideBody]);
-  const hiddenRequired = useMemo(() => bundle.questions.some((q) => q.required && hideBody && isWeightOrMeasurement(q)), [bundle, hideBody]);
   const parts = useMemo(() => partsOf(itemsOf(visible)), [visible]);
 
   const [initial] = useState(() => visibleAnswers(bundle.answers, visible));
@@ -179,9 +178,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     const res = await saveFormResponse(bundle.assignmentId, final, true);
     setSending(false);
     if (!res.ok) {
-      if (res.code === "missing" && hiddenRequired) {
-        setSendError(`This ${bundle.kind === "check_in" ? "check-in" : "form"} asks for a measurement your settings hide. Ask ${bundle.proName} to make it optional.`);
-      } else setSendError(res.message);
+      setSendError(res.message);
       return;
     }
     dirty.current = false;

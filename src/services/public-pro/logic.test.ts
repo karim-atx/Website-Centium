@@ -86,6 +86,8 @@ test("only our public pages are kept as a return path", () => {
   assert.equal(isPublicReturnPath("/i/RAMI-R3COACH1"), true);
   assert.equal(isPublicReturnPath("/p/dana.diet"), true);
   assert.equal(isPublicReturnPath("/p/dana.diet/book?service=abc&slot=2026-10-20T09%3A00%3A00.000Z"), true);
+  assert.equal(isPublicReturnPath("/s/0b9f6a52-3c1e-4d55-9a1f-2f7f3c1d2e4b"), true);
+  assert.equal(isPublicReturnPath("/s/../app"), false);
   assert.equal(isPublicReturnPath("/app/settings"), false);
   assert.equal(isPublicReturnPath("https://evil.example/i/X"), false);
   assert.equal(isPublicReturnPath("//evil.example"), false);

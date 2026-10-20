@@ -56,42 +56,40 @@ export function visibleAnswers(answers: Answers, visible: ClientQuestion[]): Ans
 }
 
 // ---------------------------------------------------------------------------
-// J12: recovery-sensitive mode skips weight and measurement questions
+// J12: recovery-sensitive mode skips the body-measure questions
 // ---------------------------------------------------------------------------
 
-const BODY_UNITS = /^(kg|kgs|kilos?|lb|lbs|pounds?|st|stone|cm|mm|m|in|inch|inches|%)$/i;
-const WEIGHT_WORDS = /\b(weigh|weight|weighed|weighing|bodyweight|body weight|bmi|body fat)\b/i;
-const MEASURE_WORDS = /\b(waist|hips?|chest|bust|thighs?|arms?|biceps?|neck|calf|calves|measurements?|circumference)\b/i;
+/**
+ * The units of public.form_question_is_body_measure (migration
+ * 20261124180000), exactly as the database lists them.
+ */
+export const BODY_MEASURE_UNITS: readonly string[] = ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"];
 
 /**
- * A weight or body-measurement question: a number with a body unit, or a
- * question that asks about weight. A question the professional marked as a
- * safety topic is never one of these, so a recovery-sensitive setting can't
- * hide a pain or illness question.
+ * A mirror of public.form_question_is_body_measure(p_type, p_unit), the one
+ * rule (HANDOVER_API "Client-side readers"): a number question whose unit,
+ * lower-cased with spaces trimmed (btrim), is a body unit. Recovery-sensitive
+ * mode hides exactly these, and save_form_response doesn't require them of
+ * that client. Nothing else is hidden: not the prompt's wording, and not a
+ * question's safety topic (a safety-marked body measure is hidden too, as the
+ * rule says "exactly").
  */
-export function isWeightOrMeasurement(q: Pick<ClientQuestion, "type" | "prompt" | "unit" | "safetyTopic">): boolean {
-  if (q.safetyTopic) return false;
-  if (q.type === "photo") return false;
-  if (WEIGHT_WORDS.test(q.prompt)) return true;
-  if (q.type === "number") {
-    if (q.unit && BODY_UNITS.test(q.unit.trim())) return true;
-    if (MEASURE_WORDS.test(q.prompt)) return true;
-  }
-  return false;
+export function isBodyMeasure(type: QuestionType | string, unit: string | null | undefined): boolean {
+  return type === "number" && BODY_MEASURE_UNITS.includes((unit ?? "").replace(/^ +| +$/g, "").toLowerCase());
 }
 
-/** The questions to render, in order. Recovery-sensitive: weight and measurements are not rendered, not required, not sent. */
+/** The questions to render, in order. Recovery-sensitive: body measures are not rendered, not required, not sent. */
 export function visibleQuestions(questions: ClientQuestion[], recoverySensitive: boolean): ClientQuestion[] {
   const sorted = [...questions].sort((a, b) => a.position - b.position);
-  return recoverySensitive ? sorted.filter((q) => !isWeightOrMeasurement(q)) : sorted;
+  return recoverySensitive ? sorted.filter((q) => !isBodyMeasure(q.type, q.unit)) : sorted;
 }
 
 // ---------------------------------------------------------------------------
 // Items and parts (CU6: "part 1 of 3")
 // ---------------------------------------------------------------------------
 
-/** A number question with a body unit, drawn in the measurements row. */
-export const isMeasureField = (q: ClientQuestion) => q.type === "number" && !!q.unit && BODY_UNITS.test(q.unit.trim());
+/** A body-measure question (the same rule), drawn in the measurements row. */
+export const isMeasureField = (q: ClientQuestion) => isBodyMeasure(q.type, q.unit);
 
 /** One numbered entry: a run of measurement fields shares one number ("This week's measurements"). */
 export interface FormItem {
@@ -435,5 +433,30 @@ export function sessionReminder(s: TodaySession, now: Date): Reminder | null {
     title: sessionTitle(s.proName, s.startsAt, now),
     detail: `Today ${clock12(s.startsAt)} · ${s.serviceName}`,
     action: "View",
+  };
+}
+
+export interface PendingShareAsk {
+  id: string;
+  proId: string;
+  proName: string;
+  createdAt: string;
+  /** The win in a few words ("New PR · Back squat"), from the card. */
+  winTitle: string;
+}
+
+/** Release 3 · W8 CU29 "{pro} would like to share your win": level 2, needs an answer. */
+export function shareReminder(s: PendingShareAsk): Reminder {
+  return {
+    key: `share:${s.id}`,
+    kind: "share_request",
+    level: 2,
+    at: new Date(s.createdAt).getTime() || 0,
+    proId: s.proId,
+    proName: s.proName,
+    tone: "pr",
+    title: `${s.proName} would like to share your win`,
+    detail: s.winTitle,
+    action: "Review",
   };
 }

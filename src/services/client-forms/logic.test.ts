@@ -8,7 +8,8 @@ import {
   firstPartMissing,
   formReminder,
   groupReminders,
-  isWeightOrMeasurement,
+  BODY_MEASURE_UNITS,
+  isBodyMeasure,
   itemsOf,
   longDate,
   missingMessage,
@@ -26,6 +27,7 @@ import {
   sessionLevel,
   sessionReminder,
   sessionTitle,
+  shareReminder,
   showDoctorFollowUp,
   visibleAnswers,
   visibleQuestions,
@@ -63,24 +65,28 @@ const template = () => [
   q({ type: "text", prompt: "Anything else for your coach?" }),
 ];
 
-describe("J12: recovery-sensitive mode skips weight and measurement questions", () => {
-  it("knows weight and body measurements", () => {
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Weight", unit: "kg" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Waist", unit: "cm" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Hips", unit: "in" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Body fat", unit: "%" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Chest" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "text", prompt: "What do you weigh now?" })), true);
-    assert.equal(isWeightOrMeasurement(q({ type: "choice", prompt: "Has your weight changed?", options: ["Yes", "No"] })), true);
+describe("J12: recovery-sensitive mode hides exactly form_question_is_body_measure", () => {
+  it("lists every unit of the database rule, and only those", () => {
+    assert.deepEqual([...BODY_MEASURE_UNITS], ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"]);
+    for (const unit of ["kg", "g", "lb", "lbs", "st", "cm", "mm", "m", "in", "inch", "inches", "ft"]) {
+      assert.equal(isBodyMeasure("number", unit), true, unit);
+      // lower(btrim(unit)): case and surrounding spaces don't matter.
+      assert.equal(isBodyMeasure("number", ` ${unit.toUpperCase()} `), true, unit);
+      // Only a number question.
+      for (const type of ["scale", "choice", "multi", "text", "photo", "date"]) assert.equal(isBodyMeasure(type, unit), false, `${type} ${unit}`);
+    }
   });
 
-  it("leaves everything else, and never hides a safety question", () => {
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Workouts done", unit: "sessions" })), false);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Steps a day" })), false);
-    assert.equal(isWeightOrMeasurement(q({ type: "text", prompt: "Did you lift heavier weights?" })), false);
-    assert.equal(isWeightOrMeasurement(q({ type: "choice", prompt: "Any pain in your hips?", options: ["No", "Yes"] })), false);
-    assert.equal(isWeightOrMeasurement(q({ type: "photo", prompt: "Progress photos" })), false);
-    assert.equal(isWeightOrMeasurement(q({ type: "number", prompt: "Weight", unit: "kg", safetyTopic: "symptoms" })), false);
+  it("hides nothing else: other units, no unit, the prompt's wording, or a safety topic don't change it", () => {
+    for (const unit of ["%", "kgs", "kilos", "pounds", "stone", "sessions", "steps", "bpm", "", null, undefined]) assert.equal(isBodyMeasure("number", unit), false, String(unit));
+    // btrim trims spaces only.
+    assert.equal(isBodyMeasure("number", "\tkg"), false);
+    assert.equal(isBodyMeasure("text", null), false);
+    // The rule is exact: a safety-marked body measure is hidden too; a weight-worded text question isn't.
+    const safetyWeight = q({ type: "number", prompt: "Weight", unit: "kg", safetyTopic: "symptoms" });
+    const wordy = q({ type: "text", prompt: "What do you weigh now?" });
+    const pain = q({ type: "choice", prompt: "Any pain in your hips?", options: ["No", "Yes"], safetyTopic: "pain" });
+    assert.deepEqual(visibleQuestions([safetyWeight, wordy, pain], true).map((x) => x.id), [wordy.id, pain.id]);
   });
 
   it("filters only in recovery-sensitive mode, keeps order, and drops hidden answers so they're never sent", () => {
@@ -297,5 +303,18 @@ describe("Home reminders and the pop-up queue (CU5, CU23, CU26)", () => {
     assert.equal(rem.title, "Rami wants to refer you to Dana");
     assert.equal(referralBody(ref), "To Dana. If you agree, Dana gets Rami's referral and the reason for it. Nothing else is shared.");
     assert.equal(referralReminder({ ...ref, toName: null }).title, "Rami wants to refer you");
+  });
+
+  it("writes the CU29 share request as a level-2 reminder queued with the others", () => {
+    const s = shareReminder({ id: "sr1", proId: "p1", proName: "Rami", createdAt: "2026-10-15T07:00:00Z", winTitle: "New PR · Back squat" });
+    assert.equal(s.key, "share:sr1");
+    assert.equal(s.kind, "share_request");
+    assert.equal(s.level, 2);
+    assert.equal(s.tone, "pr");
+    assert.equal(s.title, "Rami would like to share your win");
+    assert.equal(s.detail, "New PR · Back squat");
+    assert.equal(s.action, "Review");
+    const all = [s, r({ key: "session:1", level: 1, at: 99 }), referralReminder({ id: "c1", fromId: "p2", fromName: "Dana", toName: null, reason: "x", createdAt: "2026-10-15T08:00:00Z" })];
+    assert.deepEqual(popupQueue(all, new Set(), new Set()).map((x) => x.key), ["session:1", "share:sr1"]);
   });
 });

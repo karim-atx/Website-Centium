@@ -83,6 +83,7 @@ import PublicCertificate from "./pages/courses/PublicCertificate";
 import InviteLanding from "./pages/public/InviteLanding";
 import PublicProfile from "./pages/public/PublicProfile";
 import PublicBooking from "./pages/public/PublicBooking";
+import SharedCard from "./pages/share/SharedCard";
 import { PublicReturnResume } from "./pages/public/PublicReturnResume";
 import CarePlan from "./pages/health/CarePlan";
 import { ConsoleGate } from "./components/business-console/ConsoleGate";
@@ -404,6 +405,8 @@ function AppRoutes() {
       <Route path="/i/:code" element={<InviteLanding />} />
       <Route path="/p/:handle" element={<PublicProfile />} />
       <Route path="/p/:handle/book" element={<PublicBooking />} />
+      {/* Release 3 W8: a shared card (centium.app/s/{id}); shared_item_public is anon. */}
+      <Route path="/s/:id" element={<SharedCard />} />
 
       {/* The one route a recovery session may reach. Deliberately outside
           RequireOnboarded: those guards redirect INTO here, so putting it

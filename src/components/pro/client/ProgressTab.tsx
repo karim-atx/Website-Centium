@@ -21,6 +21,7 @@ import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { CaloriesMacrosChart, MicronutrientsBlock, RpeChart, StrengthChart, VolumeChart, WeightTrendChart } from "../insights/ProgressCharts";
 import type { AccessCategory } from "../../../services/pro/access";
 import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
+import { ClientWinsCard } from "../../share/ClientWinsCard";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -238,6 +239,8 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
 
   return (
     <>
+      {/* W8 SH4: the client's wins with Share, above the range row (Full coaching and Nutrition). */}
+      {lane !== "clinical_overview" && <ClientWinsCard clientId={clientId} name={data.name} firstName={firstName} today={today} lane={lane} />}
       <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 12 }}>
         <span style={{ fontSize: textPx(12.5), fontWeight: 500, color: INK.chS }}>{RANGE_LINE[range]}</span>
         <SegmentedTabs

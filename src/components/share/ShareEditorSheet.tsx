@@ -1,0 +1,217 @@
+import React, { useEffect, useRef, useState } from "react";
+import { Camera, Images, Lock, Share2 } from "lucide-react";
+import { BottomSheet } from "../ui/BottomSheet";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
+import { CtaButton } from "../ui/PinnedCta";
+import { Toggle } from "../ui/Toggle";
+import { INK } from "../pro/proInk";
+import { textPx } from "../../theme/textSize";
+import { ShareCard } from "./ShareCard";
+import { EditorLabel, StyleChip } from "./shareKit";
+import { FORMATS, FORMAT_LABEL, STYLES, STYLE_LABEL, cardLink, clientShownAs, type CardPro, type CardSpec, type ShareFormat, type ShareStyle, type Visibility } from "./shareCardModel";
+
+/** What the editor hands on to the share options. */
+export interface EditorResult {
+  format: ShareFormat;
+  style: ShareStyle;
+  hide: number[];
+  qr: boolean;
+  /** The client as shown (wins only). */
+  client: string | undefined;
+  visibility: Visibility | null;
+  photoUrl: string | null;
+}
+
+/** A win's consent: the client's name and the most they allowed. */
+export interface WinConsent {
+  fullName: string;
+  firstName: string;
+  /** share_requests.visibility after the answer (allowed_no_name sets "none"). */
+  allowed: Visibility;
+}
+
+const RANK: Record<Visibility, number> = { none: 0, initials: 1, name: 2 };
+const VIS_LABEL: Record<Visibility, string> = { name: "Name", initials: "Initials", none: "Nothing" };
+
+/**
+ * Release 3 · W8 SH6 Share editor (source/gen/r31.js editor31), a tall
+ * BottomSheet "Share this win" (or "Share this card" for the practice):
+ * - the format tabs Story / Post / Square / Sticker (SegmentedTabs, 12 below);
+ * - the live preview (r20 soft, padding 14, centred, 14 below) at 150 for
+ *   Story and Sticker, 196 for Post, 212 for Square; the sticker on the
+ *   transparency checker;
+ * - Style chips Light / Dark / Brand / Photo (chip23, gap 6);
+ * - Photo: "Background photo", Take a photo / Choose from library (44 r12
+ *   tiles, as BiomarkerCaptureFlow's two inputs), the photo permission line;
+ * - Sticker: "The sticker has no background…";
+ * - "Show on the card": the win itself (Always on, lock), then a switch per
+ *   stat; "{first} shown as" Name / Initials / Nothing, never more than the
+ *   client allowed ("Name · off" and the lock line when they allowed it
+ *   without their name); "Link": QR code and link to your profile;
+ * - pinned Share (share-2).
+ * A photo stays on the device: it is drawn into the image, never uploaded.
+ */
+export const ShareEditorSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  spec: CardSpec;
+  pro: CardPro;
+  /** A client win; null for the professional's own practice. */
+  win: WinConsent | null;
+  /** The label of the always-on row ("Back squat 120 kg"). */
+  winLabel?: string;
+  /** The stat switches' lines (one per spec.stats entry): title and value. */
+  statRows?: { title: string; sub: string }[];
+  initialFormat?: ShareFormat;
+  initialStyle?: ShareStyle;
+  onShare: (r: EditorResult) => void;
+}> = ({ open, onClose, spec, pro, win, winLabel, statRows, initialFormat = "story", initialStyle = "B", onShare }) => {
+  const [format, setFormat] = useState<ShareFormat>(initialFormat);
+  const [style, setStyle] = useState<ShareStyle>(initialStyle);
+  const [hide, setHide] = useState<number[]>([]);
+  const [qr, setQr] = useState(true);
+  const [visibility, setVisibility] = useState<Visibility>(() => (win ? win.allowed : "none"));
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
+
+  // The object URL lives as long as the sheet.
+  useEffect(
+    () => () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    },
+    [photoUrl]
+  );
+
+  const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !f.type.startsWith("image/")) return;
+    setPhotoUrl(URL.createObjectURL(f));
+  };
+
+  const shownAs = win ? clientShownAs(win.fullName, visibility) : undefined;
+  const W = format === "story" || format === "sticker" ? 150 : format === "post" ? 196 : 212;
+  const needsPhoto = style === "P" && format !== "sticker" && !photoUrl;
+  const rows = statRows ?? spec.stats.map((s) => ({ title: s.label, sub: s.value }));
+
+  const trow = (title: string, sub: string | undefined, right: React.ReactNode, key: string) => (
+    <div key={key} className="flex items-center" style={{ gap: 12, padding: "10px 0", borderTop: `1px solid ${INK.b06}` }}>
+      <span className="flex-1 min-w-0">
+        <span className="block" style={{ fontSize: textPx(14), color: INK.ch }}>
+          {title}
+        </span>
+        {sub ? (
+          <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
+            {sub}
+          </span>
+        ) : null}
+      </span>
+      {right}
+    </div>
+  );
+
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={win ? "Share this win" : "Share this card"}
+      size="tall"
+      footer={<CtaButton label="Share" icon={<Share2 size={15} strokeWidth={2} aria-hidden />} disabled={needsPhoto} onClick={() => onShare({ format, style, hide, qr, client: shownAs, visibility: win ? visibility : null, photoUrl })} />}
+    >
+      <SegmentedTabs items={FORMATS.map((f) => ({ key: f, label: FORMAT_LABEL[f] }))} activeKey={format} onChange={(k) => setFormat(k as ShareFormat)} className="mb-3" />
+      <div className="flex justify-center" style={{ borderRadius: 20, background: INK.soft, padding: 14, marginBottom: 14 }}>
+        <ShareCard spec={spec} pro={pro} format={format} style={style} width={W} client={shownAs} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
+      </div>
+
+      <EditorLabel first>Style</EditorLabel>
+      <div role="radiogroup" aria-label="Style" className="flex flex-wrap" style={{ gap: 6 }}>
+        {STYLES.map((k) => (
+          <StyleChip key={k} on={k === style} label={STYLE_LABEL[k]} onClick={() => setStyle(k)} />
+        ))}
+      </div>
+      {style === "P" && format !== "sticker" && (
+        <>
+          <EditorLabel>Background photo</EditorLabel>
+          <div className="grid grid-cols-2" style={{ gap: 8 }}>
+            {[
+              { icon: Camera, label: "Take a photo", ref: camera },
+              { icon: Images, label: "Choose from library", ref: gallery },
+            ].map((b) => (
+              <button
+                key={b.label}
+                type="button"
+                onClick={() => b.ref.current?.click()}
+                className="tap flex items-center justify-center min-w-0"
+                style={{ height: 44, borderRadius: 12, border: "1px solid rgb(var(--c-charcoal) / 0.11)", background: INK.card, gap: 7, fontSize: textPx(13), fontWeight: 700, color: INK.ch }}
+              >
+                <b.icon size={15} strokeWidth={2} aria-hidden className="shrink-0" style={{ color: INK.chS }} />
+                <span className="truncate">{b.label}</span>
+              </button>
+            ))}
+          </div>
+          <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
+          <input ref={gallery} type="file" accept="image/*" className="hidden" onChange={pick} />
+          <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6 }}>Use your own photo. A client's photo needs that client's permission for photos.</p>
+        </>
+      )}
+      {format === "sticker" && (
+        <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF, marginTop: 10 }}>The sticker has no background. Copy it, then paste it onto your own photo or video in Instagram.</p>
+      )}
+
+      {(win || rows.length > 0) && (
+        <>
+          <EditorLabel>Show on the card</EditorLabel>
+          <div>
+            {win &&
+              trow(
+                winLabel ?? spec.subject ?? spec.title ?? spec.eyebrow,
+                "The win itself",
+                <span className="inline-flex items-center shrink-0" style={{ gap: 4, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}>
+                  <Lock size={12} strokeWidth={2} aria-hidden />
+                  Always on
+                </span>,
+                "win"
+              )}
+            {rows.map((r, i) =>
+              trow(
+                r.title,
+                r.sub,
+                <Toggle checked={!hide.includes(i)} onChange={(on) => setHide((h) => (on ? h.filter((x) => x !== i) : [...h, i]))} label={`Show ${r.title} on the card`} />,
+                `s${i}`
+              )
+            )}
+          </div>
+        </>
+      )}
+
+      {win && (
+        <>
+          <EditorLabel>{`${win.firstName} shown as`}</EditorLabel>
+          <SegmentedTabs
+            items={(["name", "initials", "none"] as Visibility[]).map((v) => ({ key: v, label: RANK[v] <= RANK[win.allowed] ? VIS_LABEL[v] : `${VIS_LABEL[v]} · off` }))}
+            activeKey={visibility}
+            onChange={(k) => {
+              // A level above what the client allowed stays off ("Name · off").
+              if (RANK[k as Visibility] <= RANK[win.allowed]) setVisibility(k as Visibility);
+            }}
+            className="mb-0"
+          />
+          {win.allowed !== "name" && (
+            <p className="flex items-center" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>
+              <Lock size={12} strokeWidth={2} aria-hidden className="shrink-0" />
+              {win.allowed === "none" ? `${win.firstName} allowed sharing without their name.` : `${win.firstName} allowed sharing by their initials.`}
+            </p>
+          )}
+        </>
+      )}
+
+      {pro.handle && (
+        <>
+          <EditorLabel>Link</EditorLabel>
+          <div>{trow("QR code and link to your profile", cardLink(pro.handle), <Toggle checked={qr} onChange={setQr} label="QR code and link to your profile" />, "qr")}</div>
+        </>
+      )}
+    </BottomSheet>
+  );
+};

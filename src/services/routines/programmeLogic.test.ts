@@ -8,7 +8,6 @@ import {
   pastProgrammesLine,
   programmeCountLine,
   splitAssignments,
-  totalWeeks,
   wasUpdatedByCoach,
   weekDayOf,
   type ProgrammeAssignment,
@@ -25,10 +24,11 @@ const strength: ProgrammeAssignment = {
   endedAt: null,
   assignedAt: "2026-10-01T12:00:00Z",
   createdAt: "2026-10-01T12:00:00Z",
+  templateName: "Strength foundations",
+  durationWeeks: 4,
 };
 
-test("week x of y from the assignment's dates", () => {
-  assert.equal(totalWeeks(strength), 4);
+test("week x from the assignment's dates, y from the template's duration_weeks", () => {
   assert.deepEqual(weekDayOf(strength, "2026-10-01"), { week: 1, day: 1 });
   assert.deepEqual(weekDayOf(strength, "2026-10-15"), { week: 3, day: 1 });
   assert.deepEqual(weekDayOf(strength, "2026-10-17"), { week: 3, day: 3 });
@@ -38,15 +38,16 @@ test("week x of y from the assignment's dates", () => {
 
 test("joining at a later week counts from that week", () => {
   // An 8-week programme joined at week 3: ends_on = start + (8 - 3 + 1) * 7 - 1.
-  const joined: ProgrammeAssignment = { ...strength, startsOn: "2026-10-05", endsOn: "2026-11-15", joinWeek: 3 };
-  assert.equal(totalWeeks(joined), 8);
+  const joined: ProgrammeAssignment = { ...strength, startsOn: "2026-10-05", endsOn: "2026-11-15", joinWeek: 3, durationWeeks: 8 };
   assert.equal(programmeCountLine(joined, "2026-10-05", 3), "Week 3 of 8 · 3 routines");
   assert.equal(programmeCountLine(joined, "2026-10-12", 3), "Week 4 of 8 · 3 routines");
 });
 
 test("not started, and no end date", () => {
   assert.equal(programmeCountLine({ ...strength, startsOn: "2026-10-20", endsOn: "2026-11-16" }, "2026-10-15", 1), "Starts Oct 20 · 1 routine");
-  assert.equal(programmeCountLine({ ...strength, endsOn: null }, "2026-10-15", 2), "Week 3 · 2 routines");
+  assert.equal(programmeCountLine({ ...strength, endsOn: null, durationWeeks: null }, "2026-10-15", 2), "Week 3 · 2 routines");
+  // y is the template's length, never derived from the dates.
+  assert.equal(programmeCountLine({ ...strength, endsOn: "2026-12-31", durationWeeks: 6 }, "2026-10-15", 1), "Week 3 of 6 · 1 routine");
   assert.equal(programmeCountLine({ ...strength, startsOn: null, endsOn: null }, "2026-10-15", 1), "1 routine");
 });
 

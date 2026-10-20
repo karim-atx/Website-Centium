@@ -137,7 +137,8 @@ export const REQUEST_MESSAGE_MAX = 500;
 /** Only our own public pages are kept as a place to return to. */
 export function isPublicReturnPath(path: string | null | undefined): path is string {
   if (!path) return false;
-  return /^\/(i\/[A-Za-z0-9-]{1,64}|p\/[a-z0-9._-]{1,64}(\/book)?)(\?[A-Za-z0-9=&_:.%-]{0,200})?$/.test(path);
+  // W8: /s/{shared item id}, the public share card (Report needs a sign-in).
+  return /^\/(s\/[0-9a-f-]{36}|i\/[A-Za-z0-9-]{1,64}|p\/[a-z0-9._-]{1,64}(\/book)?)(\?[A-Za-z0-9=&_:.%-]{0,200})?$/.test(path);
 }
 
 /** A stored return lasts an hour: long enough to sign up, short enough to never surprise. */

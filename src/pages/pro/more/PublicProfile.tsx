@@ -19,6 +19,8 @@ import { capLabel, effectiveTierLabel } from "../../../services/subscription-tie
 import { fetchMyProfile, type ProfessionalProfile } from "../../../services/professional-profile";
 import type { DirectoryListing } from "../../../services/directory";
 import { textPx } from "../../../theme/textSize";
+import { WhatToShareSheet } from "../../../components/share/WhatToShareSheet";
+import { useProSubtype } from "../../../hooks/useProSubtype";
 
 /**
  * Release 3 · W6 MO3 v3 public profile preview (/app/more/public-profile) and
@@ -46,6 +48,9 @@ export default function PublicProfile() {
   const { plan } = useMyProfessionalPlan();
   const [own, setOwn] = useState<ProfessionalProfile | null | undefined>(undefined);
   const [shareOpen, setShareOpen] = useState(false);
+  // W8 SH4: Share opens "What do you want to share?"; MO15 Share profile is its "Profile link" row.
+  const [cardsOpen, setCardsOpen] = useState(false);
+  const { lane } = useProSubtype();
   const [handleOpen, setHandleOpen] = useState(false);
   const [toast, setToast] = useState<string | null>((location.state as { toast?: string } | null)?.toast ?? null);
 
@@ -118,7 +123,7 @@ export default function PublicProfile() {
       <button type="button" onClick={() => navigate("/app/more/edit-profile")} aria-label="Edit public profile" className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
         <Pencil size={15} strokeWidth={2} aria-hidden />
       </button>
-      <button type="button" onClick={() => setShareOpen(true)} aria-label="Share profile" className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
+      <button type="button" onClick={() => setCardsOpen(true)} aria-label="Share" className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
         <Share2 size={15} strokeWidth={2} aria-hidden />
       </button>
     </div>
@@ -161,6 +166,17 @@ export default function PublicProfile() {
           ),
         }}
       />
+      {lane && (
+        <WhatToShareSheet
+          open={cardsOpen}
+          onClose={() => setCardsOpen(false)}
+          lane={lane}
+          onProfileLink={() => {
+            setCardsOpen(false);
+            setShareOpen(true);
+          }}
+        />
+      )}
       <ShareProfileSheet
         open={shareOpen}
         onClose={() => setShareOpen(false)}

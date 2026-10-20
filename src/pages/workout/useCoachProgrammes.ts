@@ -104,7 +104,8 @@ export function useCoachProgrammes(routines: Routine[], userId: string | null, t
       const next = nextSession(data.sessions[a.id] ?? [], today, a);
       const programme: CoachProgramme = {
         assignment: a,
-        name: routine.name,
+        // The programme's name is its template's (readable by the client it was assigned to).
+        name: a.templateName,
         routine,
         countLine: programmeCountLine(a, today, 1),
         meta: coachRoutineMeta(a, next, routine.exercises.length, routine.estimatedDurationMin),
@@ -117,10 +118,7 @@ export function useCoachProgrammes(routines: Routine[], userId: string | null, t
       ids.add(routine.id);
     }
     for (const a of ended) {
-      const routine = a.routineId ? byId.get(a.routineId) : undefined;
-      // Its name: the routine (named after the template), else the title its
-      // sessions carried; the template itself is not readable by the client.
-      past.push({ id: a.id, name: routine?.name ?? data.titles[a.id] ?? "Programme", endedOn: endedOn(a) });
+      past.push({ id: a.id, name: a.templateName, endedOn: endedOn(a) });
     }
     return { groups, past, ids };
   }, [data, routines, today]);

@@ -13,7 +13,7 @@ import { CvView } from "../../components/cv/CvView";
 import { VerifiedCheck } from "../../components/cv/CvBadges";
 import { HireSheet } from "../../components/hire/HireSheet";
 import { YourHireCard } from "../../components/hire/YourHireCard";
-import { fetchMyHires, liveHireWith, type MyHire } from "../../services/hires";
+import { fetchMyHires, hireDecline, liveHireWith, type MyHire } from "../../services/hires";
 import {
   fetchDeclineReasonLabel,
   fetchMyHireRequest,
@@ -254,8 +254,10 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   const [requestError, setRequestError] = useState<string | null>(null);
   // Release 3 · W7 (CU12): the professional's decline of the client's request,
   // with its reason, shown where the client's own cancel note goes, once the
-  // professional's 5-minute undo has passed.
-  const [decline, setDecline] = useState<{ id: string; text: string } | null>(null);
+  // professional's 5-minute undo has passed. A hire declined with
+  // decline_hire() reads its reason from my_hires() (no undo window); the
+  // newer of the two decides.
+  const [decline, setDecline] = useState<{ id: string; text: string; at: string | null } | null>(null);
   useEffect(() => {
     if (!realProfessionalId || !authUserId || isPreview) return;
     let cancelled = false;
@@ -266,14 +268,18 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
       if (r && r.status === "rejected" && declineIsFinal(r.resolvedAt)) {
         const label = !r.declineMessage?.trim() && r.declineReason ? await fetchDeclineReasonLabel(r.declineReason) : null;
         const text = declineText(label, r.declineMessage ?? null);
-        if (!cancelled && text) setDecline({ id: realProfessionalId, text });
+        if (!cancelled && text) setDecline({ id: realProfessionalId, text, at: r.resolvedAt });
       }
     });
     return () => {
       cancelled = true;
     };
   }, [realProfessionalId, authUserId, isPreview]);
-  const declineLine = decline && decline.id === realProfessionalId && hireRequestState !== "pending" ? decline.text : null;
+  const requestDecline = decline && decline.id === realProfessionalId ? decline : null;
+  const hireDeclined = realProfessionalId !== null && hiresState.id === realProfessionalId ? hireDecline(hiresState.hires, realProfessionalId) : null;
+  const hireDeclineLine = hireDeclined ? declineText(hireDeclined.label, hireDeclined.message) : null;
+  const hireIsNewer = !!hireDeclineLine && (!requestDecline || new Date(hireDeclined?.at ?? 0).getTime() >= new Date(requestDecline.at ?? 0).getTime());
+  const declineLine = hireRequestState === "pending" ? null : hireIsNewer ? hireDeclineLine : requestDecline?.text ?? null;
   const sendRequest = async (extras?: HireRequestExtras) => {
     if (!realProfessionalId || !authUserId || requestSending) return;
     setRequestSending(true);

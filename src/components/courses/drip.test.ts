@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { courseDripLine, hasDrip, lessonDripLine, nextLocked, openingDay, type DripRow } from "./drip.ts";
+import { courseDripLine, courseLessonTotal, hasDrip, lessonDripLine, lockedWeekContents, lockedWeekSize, nextLocked, openingDay, type DripRow } from "./drip.ts";
 
 const rows: DripRow[] = [
-  { moduleId: "w1", position: 0, opensAt: null, isOpen: true },
-  { moduleId: "w3", position: 2, opensAt: "2026-10-22T00:00:00+00:00", isOpen: false },
-  { moduleId: "w2", position: 1, opensAt: "2026-10-15T00:00:00+00:00", isOpen: false },
+  { moduleId: "w1", position: 0, opensAt: null, isOpen: true, lessonCount: 4, minutes: 18 },
+  { moduleId: "w3", position: 2, opensAt: "2026-10-22T00:00:00+00:00", isOpen: false, lessonCount: 1, minutes: 0 },
+  { moduleId: "w2", position: 1, opensAt: "2026-10-15T00:00:00+00:00", isOpen: false, lessonCount: 3, minutes: 26 },
 ];
 
 test("no drip: every module open from the start (all at once, the author, not enrolled)", () => {
@@ -38,4 +38,18 @@ test("CU25 lesson line", () => {
 
 test("a fallback author name starts the sentence capitalised", () => {
   assert.equal(lessonDripLine("the professional", 2, "2026-10-15T00:00:00+00:00"), "Week 2 opens Thursday 15 Oct. The professional opens a week at a time.");
+});
+
+test("CU25 total: the schedule's lesson_count over every module, locked weeks included", () => {
+  assert.equal(courseLessonTotal(rows, 4), 8);
+  // No schedule rows: the readable lessons.
+  assert.equal(courseLessonTotal([], 5), 5);
+});
+
+test("a locked week's syllabus size comes from the schedule; an open week's doesn't", () => {
+  assert.deepEqual(lockedWeekSize(rows, "w2"), { lessons: 3, minutes: 26 });
+  assert.equal(lockedWeekSize(rows, "w1"), null);
+  assert.equal(lockedWeekSize(rows, "nope"), null);
+  assert.equal(lockedWeekContents(3), "3 lessons");
+  assert.equal(lockedWeekContents(1), "1 lesson");
 });

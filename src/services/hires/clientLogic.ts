@@ -44,6 +44,10 @@ export interface MyHire {
   expiresOn: string | null;
   confirmedAt: string | null;
   cancelledAt: string | null;
+  /** "declined: <reason label>" for a hire declined with decline_hire(), else cancel_hire()'s reason, or null. */
+  cancellationReason: string | null;
+  /** The professional's own note on a decline, or null. */
+  cancellationMessage: string | null;
 }
 
 /** professional_plans_for() as PostgREST returns it. numeric may be a string. */
@@ -71,6 +75,8 @@ export interface MyHireRow {
   expires_on: string | null;
   confirmed_at: string | null;
   cancelled_at: string | null;
+  cancellation_reason: string | null;
+  cancellation_message: string | null;
 }
 
 export function toPlan(r: PlanRow): Plan {
@@ -99,7 +105,25 @@ export function toMyHire(r: MyHireRow): MyHire {
     expiresOn: r.expires_on,
     confirmedAt: r.confirmed_at,
     cancelledAt: r.cancelled_at,
+    cancellationReason: r.cancellation_reason ?? null,
+    cancellationMessage: r.cancellation_message ?? null,
   };
+}
+
+/** decline_hire() stores the reason as "declined: " plus decline_reason_label() (HANDOVER_API "Client-side readers"). */
+export const HIRE_DECLINE_PREFIX = "declined: ";
+
+/**
+ * CU12 for a hire: the professional declined the caller's newest hire with
+ * them (decline_hire). The reason's label and the note as the client reads
+ * them, and when; null when the newest hire with this professional wasn't
+ * declined (a later hire, or the client's own cancel, replaces it).
+ */
+export function hireDecline(hires: MyHire[], professionalId: string): { label: string | null; message: string | null; at: string | null } | null {
+  const newest = hires.find((h) => h.professionalId === professionalId);
+  const reason = newest?.cancellationReason ?? "";
+  if (!newest || newest.status !== "cancelled" || !reason.startsWith(HIRE_DECLINE_PREFIX)) return null;
+  return { label: reason.slice(HIRE_DECLINE_PREFIX.length).trim() || null, message: newest.cancellationMessage?.trim() || null, at: newest.cancelledAt };
 }
 
 /**

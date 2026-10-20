@@ -39,7 +39,7 @@ import { DangerLine, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CalendarClock, Check, ChevronRight, Star } from "lucide-react";
 import { fetchDripSchedule } from "../../services/courses/drip";
-import { courseDripLine, hasDrip, nextLocked, type DripRow } from "./drip";
+import { courseDripLine, courseLessonTotal, hasDrip, lockedWeekContents, lockedWeekSize, nextLocked, type DripRow } from "./drip";
 import { CentredPopup } from "../ui/CentredPopup";
 import { StarRating } from "../ui/StarRating";
 import { CoverPill, Instructor, StarIcon } from "./courseParts";
@@ -303,8 +303,15 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
               {weeksShown.map((m, i) => {
-                const contents = weekContents(lessons.filter((l) => l.moduleId === m.id).map((l) => l.kind));
-                const mins = minutesByWeek(m.id);
+                // CU25: a locked week's lessons are hidden, so its size comes
+                // from the schedule (lesson_count, minutes).
+                const locked = enrolment && !isAuthor ? lockedWeekSize(state.drip, m.id) : null;
+                const contents = locked
+                  ? locked.lessons > 0
+                    ? lockedWeekContents(locked.lessons)
+                    : ""
+                  : weekContents(lessons.filter((l) => l.moduleId === m.id).map((l) => l.kind));
+                const mins = locked ? minutesLabel(locked.minutes) : minutesByWeek(m.id);
                 return (
                   <div
                     key={m.id}
@@ -427,10 +434,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 }
 
 /**
- * CU25: "Your progress" and the drip line. While a week is still to open,
- * its lessons are hidden from the learner (course_lessons RLS through
- * course_lesson_is_open), so the course's lesson total isn't readable: the
- * count and the bar show only once every week is open (backend gap, reported).
+ * CU25: "Your progress" ("4 of 18 lessons" and the bar) and the drip line.
+ * A locked week's lessons stay hidden (course_lessons RLS), so the total is
+ * the schedule's lesson_count summed over every module, locked weeks
+ * included; done counts the learner's completed lessons.
  */
 function DripProgress({
   author,
@@ -447,16 +454,16 @@ function DripProgress({
 }) {
   const next = nextLocked(drip);
   const week = next ? modules.findIndex((m) => m.id === next.moduleId) + 1 : 0;
-  const done = lessons.filter((l) => completed.has(l.id)).length;
-  const total = lessons.length;
+  const total = courseLessonTotal(drip, lessons.length);
+  const done = Math.min(lessons.filter((l) => completed.has(l.id)).length, total);
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div className="rounded-[18px] p-[14px] flex flex-col gap-2" style={{ background: fv("rules-bg") }}>
       <div className="flex justify-between gap-3 text-[13px]" style={{ color: fv("rules-ink") }}>
         <strong>Your progress</strong>
-        {!next && <span>{`${done} of ${total} ${total === 1 ? "lesson" : "lessons"}`}</span>}
+        {total > 0 && <span>{`${done} of ${total} ${total === 1 ? "lesson" : "lessons"}`}</span>}
       </div>
-      {!next && (
+      {total > 0 && (
         <span
           role="progressbar"
           aria-label="Your progress"

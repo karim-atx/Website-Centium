@@ -15,6 +15,7 @@ import {
   referralBody,
   referralReminder,
   sessionReminder,
+  shareReminder,
   visibleQuestions,
   type PendingReferral,
   type Reminder,
@@ -24,6 +25,11 @@ import { ReminderCard } from "./ReminderCard";
 import { ReminderPopup } from "./ReminderPopup";
 import { FormSheet } from "./FormSheet";
 import { ReferralSheet } from "./ReferralSheet";
+import { WinPermissionPopup } from "../share/client/WinPermissionPopup";
+import { answerToast, sharedTitle } from "../share/client/sharingText";
+import { specFromPayload } from "../share/shareCardModel";
+import { fetchMyPendingShareRequests, type ShareRequest } from "../../services/share";
+import { fetchProSummaries } from "../../services/share/client";
 
 /**
  * Release 3 · W7 CU5 / CU6 / CU23 / CU26 on Home, an addition between the
@@ -56,10 +62,33 @@ function addAck(key: string) {
   }
 }
 
+/** Release 3 · W8 CU29: a pending ask to share a win, with the professional's first name. */
+interface ShareAsk {
+  request: ShareRequest;
+  proName: string;
+  proAvatarUrl: string | null;
+  winTitle: string;
+}
+
+/** Pending share requests; a failed read is an empty list, so the reminders above it keep working. */
+async function fetchShareAsks(me: string): Promise<ShareAsk[] | null> {
+  const r = await fetchMyPendingShareRequests(me);
+  if (!r.ok) return null;
+  const names = await fetchProSummaries(r.data.map((x) => x.professionalId));
+  return r.data.map((request) => {
+    const proName = names.get(request.professionalId)?.firstName ?? "Your professional";
+    const card = specFromPayload(request.card, proName);
+    return { request, proName, proAvatarUrl: names.get(request.professionalId)?.avatarUrl ?? null, winTitle: card ? sharedTitle(card.spec) : "" };
+  });
+}
+
+const toShareReminder = (s: ShareAsk) => shareReminder({ id: s.request.id, proId: s.request.professionalId, proName: s.proName, createdAt: s.request.createdAt, winTitle: s.winTitle });
+
 interface Data {
   forms: ClientFormBundle[];
   referrals: PendingReferral[];
   sessions: TodaySession[];
+  shares: ShareAsk[];
 }
 
 type Status = "loading" | "ready" | "error" | "offline";
@@ -77,6 +106,8 @@ export const ProReminders: React.FC = () => {
   const [queue, setQueue] = useState<Reminder[] | null>(null);
   const [handled, setHandled] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  // CU29 reopened from the Home card ("Review"): the request id.
+  const [shareOpen, setShareOpen] = useState<string | null>(null);
 
   const hideBody = recoverySensitive || recoveryModePending;
 
@@ -84,7 +115,7 @@ export const ProReminders: React.FC = () => {
   const load = useCallback(async () => {
     if (!authUserId) return;
     const at = new Date();
-    const [f, r, s] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at)]);
+    const [f, r, s, sh] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at), fetchShareAsks(authUserId)]);
     setNow(at);
     if (!f.ok || !r.ok || !s.ok) {
       const offline = (!f.ok && f.offline) || (!r.ok && r.offline) || (!s.ok && s.offline);
@@ -92,12 +123,12 @@ export const ProReminders: React.FC = () => {
       setStatus((prev) => (prev === "ready" ? prev : offline ? "offline" : "error"));
       return;
     }
-    setData({ forms: f.data, referrals: r.data, sessions: s.data });
+    setData((prev) => ({ forms: f.data, referrals: r.data, sessions: s.data, shares: sh ?? prev?.shares ?? [] }));
     setStatus("ready");
     // The pop-up queue is set once, from what was waiting when Home opened.
     if (!queued.current) {
       queued.current = true;
-      const candidates = [...s.data.map((x) => sessionReminder(x, at)).filter((x): x is Reminder => !!x), ...r.data.map(referralReminder)];
+      const candidates = [...s.data.map((x) => sessionReminder(x, at)).filter((x): x is Reminder => !!x), ...r.data.map(referralReminder), ...(sh ?? []).map(toShareReminder)];
       const q = popupQueue(candidates, shownThisOpen, readAck());
       q.forEach((x) => shownThisOpen.add(x.key));
       setQueue(q);
@@ -114,18 +145,25 @@ export const ProReminders: React.FC = () => {
     const forms = data.forms.map((f) => formReminder({ ...f, questions: visibleQuestions(f.questions, hideBody) }, now));
     const refs = data.referrals.map(referralReminder);
     const sess = data.sessions.map((s) => sessionReminder(s, now)).filter((x): x is Reminder => !!x);
-    return [...sess, ...refs, ...forms];
+    const shares = data.shares.map(toShareReminder);
+    return [...sess, ...refs, ...shares, ...forms];
   }, [data, hideBody, now]);
 
   const groups = useMemo(() => groupReminders(reminders), [reminders]);
-  const avatars = useMemo(() => new Map((data?.forms ?? []).map((f) => [f.proId, f.proAvatarUrl])), [data]);
+  const avatars = useMemo(() => {
+    const m = new Map<string, string | null>((data?.shares ?? []).map((x) => [x.request.professionalId, x.proAvatarUrl]));
+    for (const f of data?.forms ?? []) m.set(f.proId, f.proAvatarUrl);
+    return m;
+  }, [data]);
 
   const formByKey = (key: string) => data?.forms.find((f) => `form:${f.assignmentId}` === key) ?? null;
   const referralByKey = (key: string) => data?.referrals.find((r) => `referral:${r.id}` === key) ?? null;
   const sessionByKey = (key: string) => data?.sessions.find((s) => `session:${s.id}` === key) ?? null;
+  const shareByKey = (key: string) => data?.shares.find((s) => `share:${s.request.id}` === key) ?? null;
+  const waiting = (r: Reminder) => (r.kind === "session" ? !!sessionByKey(r.key) : r.kind === "share_request" ? !!shareByKey(r.key) : !!referralByKey(r.key));
 
   // The next pop-up: queued, not handled, and still waiting (answered elsewhere drops out).
-  const live = (queue ?? []).filter((r) => !handled.includes(r.key) && (r.kind === "session" ? !!sessionByKey(r.key) : !!referralByKey(r.key)));
+  const live = (queue ?? []).filter((r) => !handled.includes(r.key) && waiting(r));
   const current = live[0] ?? null;
   const qi = current && queue ? queue.indexOf(current) : 0;
   const advance = (note?: string) => {
@@ -143,12 +181,48 @@ export const ProReminders: React.FC = () => {
       setReferralOpen(referralByKey(r.key));
       return;
     }
+    if (r.kind === "share_request") {
+      const sa = shareByKey(r.key);
+      if (sa) setShareOpen(sa.request.id);
+      return;
+    }
     const f = formByKey(r.key);
     if (f) setFormOpen(f);
   };
 
+  // CU29: an answered (or already gone) request leaves the card and the queue at once.
+  const dropShare = (id: string) => {
+    setData((prev) => (prev ? { ...prev, shares: prev.shares.filter((x) => x.request.id !== id) } : prev));
+    setHandled((h) => [...h, `share:${id}`]);
+    void load();
+  };
+  const queuedShare = current && queue && current.kind === "share_request" && !formOpen && !referralOpen && !shareOpen ? shareByKey(current.key) : null;
+  const reopenedShare = shareOpen ? (data?.shares.find((x) => x.request.id === shareOpen) ?? null) : null;
+  const sharePopup = (sa: ShareAsk, index: number, count: number, close: () => void) => (
+    <WinPermissionPopup
+      key={sa.request.id}
+      open
+      index={index}
+      count={count}
+      request={sa.request}
+      proName={sa.proName}
+      proAvatarUrl={sa.proAvatarUrl}
+      onAnswered={(a) => {
+        close();
+        setToast(answerToast(a));
+        dropShare(sa.request.id);
+      }}
+      onGone={() => {
+        close();
+        setToast("This request was already answered.");
+        dropShare(sa.request.id);
+      }}
+      onDismiss={close}
+    />
+  );
+
   const popupProps = (() => {
-    if (!current || !queue || formOpen || referralOpen) return null;
+    if (!current || !queue || formOpen || referralOpen || shareOpen || current.kind === "share_request") return null;
     const common = { index: qi, count: queue.length, kind: current.kind, tone: current.tone, proName: current.proName, proAvatarUrl: avatars.get(current.proId) ?? null };
     if (current.kind === "session") {
       const s = sessionByKey(current.key);
@@ -214,6 +288,8 @@ export const ProReminders: React.FC = () => {
       ))}
 
       {popupProps && <ReminderPopup open {...popupProps} />}
+      {queuedShare && queue && sharePopup(queuedShare, qi, queue.length, () => advance())}
+      {reopenedShare && sharePopup(reopenedShare, 0, 1, () => setShareOpen(null))}
 
       <FormSheet
         open={!!formOpen}

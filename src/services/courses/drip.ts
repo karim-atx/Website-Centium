@@ -5,7 +5,8 @@ import type { DripRow } from "../../components/courses/drip";
 // learner's reads. Newer than the generated types, so the client is cast.
 //
 // - course_drip_schedule(p_course_id): every module's opening day for the
-//   caller (null = open from the start).
+//   caller (null = open from the start), and its lesson_count and minutes,
+//   locked weeks included (20261124180000).
 // - course_lesson_is_open(p_lesson_id): whether a lesson is open to the
 //   caller. A lesson that isn't is also hidden by course_lessons' RLS, so this
 //   is how a locked lesson's page tells "not open yet" from "not available".
@@ -22,11 +23,14 @@ export async function fetchDripSchedule(courseId: string): Promise<DripRow[]> {
     console.error("[courses] Could not load the drip schedule:", error.message);
     return [];
   }
-  return ((data ?? []) as { module_id: string; module_position: number; opens_at: string | null; is_open: boolean }[]).map((r) => ({
+  type Row = { module_id: string; module_position: number; opens_at: string | null; is_open: boolean; lesson_count: number | null; minutes: number | null };
+  return ((data ?? []) as Row[]).map((r) => ({
     moduleId: r.module_id,
     position: r.module_position,
     opensAt: r.opens_at,
     isOpen: r.is_open,
+    lessonCount: r.lesson_count ?? 0,
+    minutes: r.minutes ?? 0,
   }));
 }
 

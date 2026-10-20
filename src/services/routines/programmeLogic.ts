@@ -6,8 +6,9 @@
 // the client's calendar (calendar_events.source_template_assignment_id). Its
 // dates (DB-3): starts_on is the client's first day, join_week the programme
 // week they start at, ends_on = starts_on + (duration_weeks - join_week + 1) * 7 - 1.
-// The client cannot read workout_templates (owner-only), so the length is
-// derived back from those dates rather than read from duration_weeks.
+// The client reads the template assigned to them (workout_templates, policy
+// workout_templates_select_assigned_client, 20261124180000), so the
+// programme's name and length are the template's own name and duration_weeks.
 
 export interface ProgrammeAssignment {
   id: string;
@@ -19,6 +20,10 @@ export interface ProgrammeAssignment {
   endedAt: string | null;
   assignedAt: string;
   createdAt: string;
+  /** workout_templates.name (the programme's name). */
+  templateName: string;
+  /** workout_templates.duration_weeks: the programme's length, or null for one with no end. */
+  durationWeeks: number | null;
 }
 
 const DAY_MS = 86_400_000;
@@ -56,12 +61,6 @@ export function splitAssignments(
   return { current, past };
 }
 
-/** The programme's length in weeks, or null when it has no end date. */
-export function totalWeeks(a: ProgrammeAssignment): number | null {
-  if (!a.startsOn || !a.endsOn) return null;
-  return a.joinWeek - 1 + Math.ceil((daysBetween(a.startsOn, a.endsOn) + 1) / 7);
-}
-
 /** Programme week and day (1-based) of a date, counted from starts_on at join_week. */
 export function weekDayOf(a: ProgrammeAssignment, day: string): { week: number; day: number } | null {
   if (!a.startsOn) return null;
@@ -81,7 +80,7 @@ export function programmeCountLine(a: ProgrammeAssignment, today: string, routin
   if (a.startsOn && a.startsOn > today) return `Starts ${shortDay(a.startsOn)} · ${routinesText}`;
   const now = a.startsOn ? weekDayOf(a, today) : null;
   if (!now) return routinesText;
-  const total = totalWeeks(a);
+  const total = a.durationWeeks;
   const week = total != null ? Math.min(now.week, total) : now.week;
   return `${total != null ? `Week ${week} of ${total}` : `Week ${week}`} · ${routinesText}`;
 }

@@ -55,6 +55,7 @@ import { ProfessionalCodeCard } from "../../components/profile/ProfessionalCodeC
 import { CycleTrackingRow } from "../../components/profile/CycleTrackingRow";
 import { initials } from "../../components/professionals/typeColour";
 import { ProProfile } from "../../components/pro/profile/ProProfile";
+import { SharingYourWinsRow } from "../../components/share/client/SharingYourWinsSheet";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -483,11 +484,16 @@ function ClientProfile() {
         <section className="mb-6 animate-fade-slide-up">
           {sectionLabel(connectedProfessionals.length > 0 ? "Connected professionals" : "Professionals")}
           {connectedProfessionals.length === 0 ? (
-            // MO1.5 anatomy row 4: the code card is radius 18 with 14 padding
-            // (measured on the 2x frame, as the Memberships card).
-            <Card padded={false} className="!rounded-[18px] p-3.5">
-              <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
-            </Card>
+            <>
+              {/* MO1.5 anatomy row 4: the code card is radius 18 with 14 padding
+                  (measured on the 2x frame, as the Memberships card). */}
+              <Card padded={false} className="!rounded-[18px] p-3.5">
+                <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
+              </Card>
+              {/* Release 3 W8 CU30: with no connected professional, the row
+                  shows only when something was shared about the customer. */}
+              <SharingYourWinsRow me={authUserId} connectedCount={0} className="mt-2" />
+            </>
           ) : (
             // MO1.5.1: 8 between the rows (2x frame: 1129 → 1146).
             <div className="space-y-2">
@@ -516,6 +522,8 @@ function ClientProfile() {
                   <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
+              {/* Release 3 W8 CU30: "Sharing your wins", after the professional rows. */}
+              <SharingYourWinsRow me={authUserId} connectedCount={connectedProfessionals.length} />
               {connectOpen ? (
                 <Card padded={false} className="!rounded-[18px] p-3.5">
                   <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />

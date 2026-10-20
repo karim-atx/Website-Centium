@@ -17,6 +17,10 @@ export interface NotificationText {
   tone: NotificationTone;
 }
 
+/** A win kind (share_requests.win_kind) in a sentence. */
+const WIN_WORD: Record<string, string> = { pr: "PR", programme_complete: "finished programme", consistency: "consistency", streak: "streak", logging_streak: "logging streak", meal_plan_complete: "finished meal plan" };
+const winWord = (k: unknown) => (typeof k === "string" && WIN_WORD[k]) || "win";
+
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 export function notificationText(n: ProNotification, names: Record<string, string>): NotificationText {
@@ -93,6 +97,13 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: "Your referral was accepted", line: "Care network", icon: "share", tone: "pr" };
     case "pro.referral.declined":
       return { title: "Your referral was declined", line: "Care network", icon: "share", tone: "pr" };
+    // W8 SH4: answer_share_request sends pro.share.{answer} with payload.win_kind.
+    case "pro.share.allowed":
+      return { title: `${who} allowed you to share their ${winWord(p.win_kind)}`, line: "Share cards", icon: "share", tone: "pr" };
+    case "pro.share.allowed_no_name":
+      return { title: `${who} allowed you to share their ${winWord(p.win_kind)}, without their name`, line: "Share cards", icon: "share", tone: "pr" };
+    case "pro.share.declined":
+      return { title: `${who} declined sharing their ${winWord(p.win_kind)}. You can't ask again for this win.`, line: "Share cards", icon: "share", tone: "pr" };
     case "pro.share.removal_requested":
       return { title: `${who} asked you to remove a shared card`, line: "Share cards", icon: "share", tone: "req" };
     default:
