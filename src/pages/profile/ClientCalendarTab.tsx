@@ -13,6 +13,8 @@ import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/Re
 import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
 import type { EventAlert } from "../../components/calendar/eventAlert";
+import { fetchInviteExtras, type InviteExtra } from "../../components/calendar/inviteExtras";
+import { monthReminderLine, packLine, reminderLine } from "../../components/calendar/inviteLines";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOnline } from "../../hooks/useOnline";
 import { YearScroll } from "../../components/calendar/YearScroll";
@@ -55,6 +57,7 @@ import {
   Paperclip,
   Link as LinkIcon,
   AlertCircle,
+  Bell,
 } from "lucide-react";
 import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
@@ -134,10 +137,8 @@ const HOUR_PX = 56;
 // migration and calendar_event_invitees was added for exactly this; both were
 // unused by any client code.
 //
-// THE SHARED LOCAL STORE IS LEFT ALONE. The professional's CalendarTab writes
-// the same `calendarEvents` state and is Phase 2. Reading it here as well
-// would put two sources behind one screen; it is used below for one thing
-// only — carrying pre-existing local events up to the server once.
+// THE LOCAL STORE IS READ FOR ONE THING ONLY: carrying pre-existing local
+// events up to the server once (below). Nothing else writes it any more.
 export default function ClientCalendarTab() {
   const back = useBack();
   const navigate = useNavigate();
@@ -168,6 +169,8 @@ export default function ClientCalendarTab() {
   const dark = useIsDark();
 
   const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
+  /** CU7: a professional's session invitation's pack and reminder lines, by invite id. */
+  const [inviteExtras, setInviteExtras] = useState<Record<string, InviteExtra>>({});
   /** B3: one-off changes to this account's repeating events (calendar_event_exceptions). */
   const [exceptions, setExceptions] = useState<ExceptionMap>({});
   // OURS O-LD: false until the first read settles (success or failure), so
@@ -203,6 +206,8 @@ export default function ClientCalendarTab() {
     setLoadError(false);
     setEvents(result.events);
     setExceptions(result.exceptions);
+    // CU7: read beside the calendar; a failure only leaves the two lines off.
+    if (result.events.some((e) => e.invite)) setInviteExtras(await fetchInviteExtras(authUserId));
   }, [authUserId]);
 
   useEffect(() => {
@@ -620,6 +625,12 @@ export default function ClientCalendarTab() {
     setEvents((prev) =>
       prev.map((x) => (x.invite && x.invite.id === e.invite!.id ? { ...x, invite: { ...x.invite, alert } } : x))
     );
+    // CU7: the reminder line reads the same column, so it follows the change.
+    setInviteExtras((prev) => {
+      const x = prev[e.invite!.id];
+      if (!x?.reminder) return prev;
+      return { ...prev, [e.invite!.id]: { ...x, reminder: { ...x.reminder, alert } } };
+    });
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
@@ -658,6 +669,29 @@ export default function ClientCalendarTab() {
         <LinkIcon size={size} className="shrink-0" aria-hidden />
         <span className="truncate">{linkLabel(href)}</span>
       </a>
+    );
+  };
+
+  /** CU7: the pack and reminder lines for a session invitation (Day, Week). */
+  const extraLines = (e: ClientCalendarEvent) => {
+    const x = e.invite && e.invite.status !== "declined" ? inviteExtras[e.invite.id] : undefined;
+    if (!x) return null;
+    const pack = x.packLeft !== undefined ? packLine(x.price, x.packLeft) : null;
+    const remind = x.reminder ? reminderLine(x.reminder.first, x.reminder.alert, x.reminder.alert2) : null;
+    if (!pack && !remind) return null;
+    return (
+      <div className="flex flex-col gap-1 py-0.5">
+        {pack && (
+          <p className="flex items-center gap-1 text-xs text-charcoal-faint">
+            <Ticket size={11} strokeWidth={2} className="shrink-0" aria-hidden />{pack}
+          </p>
+        )}
+        {remind && (
+          <p className="flex items-center gap-1 text-xs text-charcoal-faint">
+            <Bell size={11} strokeWidth={2} className="shrink-0" aria-hidden />{remind}
+          </p>
+        )}
+      </div>
     );
   };
 
@@ -743,6 +777,12 @@ export default function ClientCalendarTab() {
             </span>
           ) : null}
         </div>
+
+        {/* CU7 (Release 3): a professional's session invitation says what it
+            takes from the session pack and when the professional reminds
+            you (r25 invCard25: column gap 4, padding 2 0, 12 charcoal-faint,
+            11 icons). Not on a declined invitation. */}
+        {extraLines(e)}
 
         {eventLink(e)}
 
@@ -1019,6 +1059,9 @@ export default function ClientCalendarTab() {
                 const booked = bookingOf(e);
                 const { tint, bar } = eventColours(e.color, dark);
                 const link = eventLink(e, 10, "text-[10px]");
+                // CU7: the professional's reminder (r25: 10 / 600 charcoal-faint, a 10 bell, 4 above).
+                const rx = e.invite && e.invite.status !== "declined" ? inviteExtras[e.invite.id]?.reminder : undefined;
+                const remind = rx ? monthReminderLine(rx.first, rx.alert, rx.alert2) : null;
                 return (
                   // MO1.6 #22-#29: r15, padding 12 14, the event colour at
                   // 16% (dark shade in dark), a 3 pill gap 11, the title
@@ -1053,6 +1096,11 @@ export default function ClientCalendarTab() {
                         {e.invite && <Check size={12} aria-label="Invitation" className="text-charcoal-tertiary shrink-0" />}
                         {booked && <Ticket size={12} aria-label="Booked" className="text-[#9A7424] dark:text-[#CAB082] shrink-0" />}
                       </button>
+                      {remind && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint">
+                          <Bell size={10} strokeWidth={2} className="shrink-0" aria-hidden />{remind}
+                        </span>
+                      )}
                       {link}
                     </span>
                   </div>

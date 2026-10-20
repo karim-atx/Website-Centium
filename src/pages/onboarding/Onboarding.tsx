@@ -406,7 +406,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     if (finishNotice) {
       clearPersistedDraft();
       if (authUserId) void deleteDrafts(authUserId);
-      navigate(isProfessional ? "/app/professionals" : "/app");
+      navigate(isProfessional ? "/app/pro" : "/app");
       return { ok: true };
     }
     if (finishing) return { ok: false };
@@ -528,7 +528,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       return { ok: true };
     }
     void deleteDrafts(authUserId);
-    navigate(isProfessional ? "/app/professionals" : "/app");
+    navigate(isProfessional ? "/app/pro" : "/app");
     return { ok: true };
   };
 

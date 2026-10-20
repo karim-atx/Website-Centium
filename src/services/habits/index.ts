@@ -5,6 +5,7 @@ import type { HabitColour, HabitIconKey } from "../../types";
 export * from "./streak";
 export * from "./icons";
 export * from "./colours";
+export * from "./coachGroups";
 import { toHabitIcon, validateHabitIcon } from "./icons";
 import { toHabitColour } from "./colours";
 
@@ -54,6 +55,9 @@ export const HABIT_LIMITS = { labelMax: 40, maxHabits: 30 } as const;
 /** MO1.1.1 O4: the handover's write-failure copy (tick, colour, edit, delete). */
 export const HABIT_SAVE_FAILED = "Couldn't save. Try again.";
 
+/** ATXG4, as HANDOVER_API words it: a coach's habit can't be renamed by the client. */
+export const COACH_HABIT_LOCKED = "This habit was set by your coach. Ask them to change it.";
+
 /** MO1.1.1.1 O3: the handover's duplicate-name line. */
 export const DUPLICATE_HABIT = "You already have a habit with this name.";
 /** MO1.1.1.1 O4 (OURS): at the 30-habit limit. */
@@ -77,6 +81,9 @@ function describe(error: PostgrestError): string {
   // Database B3 (HANDOVER_API.md "Habits"): the guard triggers raise their
   // rule as the message's ATX prefix under a standard SQLSTATE (23514 /
   // 23505), so the prefix is read first and mapped to the checklist's copy.
+  // Release 3 (DB-3): a habit a coach assigned can be ticked and archived,
+  // never renamed; the guard trigger raises ATXG4 (HANDOVER_API error table).
+  if (code === "ATXG4" || message.startsWith("ATXG4")) return COACH_HABIT_LOCKED;
   if (message.startsWith("ATXA8")) return TOO_MANY_HABITS; // thirty active habits
   if (message.startsWith("ATXA9")) return DUPLICATE_HABIT; // same active name
   // A tick outside this Monday-start week in the owner's timezone. The screen
@@ -307,3 +314,29 @@ export async function setCompletion(
   }
   return { ok: true };
 }
+
+/**
+ * Release 3 (CU28): which of the client's active habits a coach assigned, and
+ * who (habit_items.assigned_by_professional_id, set only by assign_habit).
+ * A separate read so the app's habit list and its context stay as they are;
+ * Mind groups these under "From {coach}". Fails to an empty map, which shows
+ * every habit as the client's own, exactly as before.
+ */
+export async function getCoachHabits(userId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("habit_items")
+    .select("id, assigned_by_professional_id")
+    .eq("owner_id", userId)
+    .is("archived_at", null)
+    .not("assigned_by_professional_id", "is", null);
+  if (error) {
+    console.error("[habits] Could not read coach habits:", error.message);
+    return {};
+  }
+  const out: Record<string, string> = {};
+  for (const r of (data ?? []) as { id: string; assigned_by_professional_id: string | null }[]) {
+    if (r.assigned_by_professional_id) out[r.id] = r.assigned_by_professional_id;
+  }
+  return out;
+}
+

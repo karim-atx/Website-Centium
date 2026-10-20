@@ -32,7 +32,18 @@ async function loadWriter() {
   return writer;
 }
 
-export function PassQr({ value, size }: { value: string; size: number }) {
+/** `label` and `failedText` (Release 3 invite QR) default to the pass wording. */
+export function PassQr({
+  value,
+  size,
+  label = "Membership pass QR code",
+  failedText = "Couldn't draw your pass. Close it and try again.",
+}: {
+  value: string;
+  size: number;
+  label?: string;
+  failedText?: string;
+}) {
   const [state, setState] = useState<{ value: string; rows: boolean[][] | null; failed: boolean } | null>(null);
 
   useEffect(() => {
@@ -61,13 +72,13 @@ export function PassQr({ value, size }: { value: string; size: number }) {
   if (current.failed || !current.rows) {
     return (
       <p role="alert" className="m-0 flex items-center justify-center text-center text-[12px] font-semibold text-status-high" style={{ width: size, height: size }}>
-        Couldn't draw your pass. Close it and try again.
+        {failedText}
       </p>
     );
   }
   const n = current.rows.length;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label="Membership pass QR code">
+    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label={label}>
       <rect width={n} height={n} fill="#FFFFFF" />
       {current.rows.flatMap((row, y) => row.map((dark, x) => (dark ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="#241F1B" /> : null)))}
     </svg>

@@ -57,11 +57,6 @@ const toFood = (r: FoodSearchResult): Food => ({
  * live macro strip (recipes per serving, re-dividing as servings change),
  * recipe steps, and Save plus — when editing — the destructive button (two
  * taps: the first arms it).
- *
- * With `clientId` (the professional meal-plan builder, meals only) the same
- * screen works on that client's plan: the search offers the catalog plus the
- * client's own foods, an inline food is saved to the client's food database,
- * and saving/deleting uses the client-meal actions.
  */
 export interface PrepFormOptions {
   kind: PrepKind;
@@ -69,13 +64,11 @@ export interface PrepFormOptions {
   active: boolean;
   editMeal?: CustomMeal | null;
   editRecipe?: Recipe | null;
-  /** Professional meal-plan builder: the client whose plan this meal belongs to. */
-  clientId?: string;
   /** After a save or a delete. */
   onDone: () => void;
   /**
    * FO3.2: the trash button asks the caller, which confirms (ConfirmCard) and
-   * deletes. Without it (the meal-plan builder) the button keeps its two-tap
+   * deletes. Without it (PrepCreateSheet) the button keeps its two-tap
    * arm-then-delete.
    */
   onDeleteRequest?: () => void;
@@ -86,7 +79,7 @@ export interface PrepFormOptions {
  * component per item type). PrepCreateSheet wraps it in a sheet; the Custom
  * tab's detail popup renders the same body in place when editing.
  */
-export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDone, onDeleteRequest }: PrepFormOptions) {
+export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDeleteRequest }: PrepFormOptions) {
   const open = active;
   const dark = useIsDark();
   const containerStyle = dark ? containerStyleDark : containerStyleLight;
@@ -101,11 +94,6 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
     updateRecipe,
     removeRecipe,
     addCustomFood,
-    clientCustomFoods,
-    addClientCustomFood,
-    addClientCustomMeal,
-    updateClientCustomMeal,
-    removeClientCustomMeal,
   } = useApp();
 
   const [step, setStep] = useState<"form" | "search">("form");
@@ -150,33 +138,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
       () => {
         void (term ? searchFoods(term) : listFoods()).then((rows) => {
           if (cancelled) return;
-          if (clientId) {
-            // A client's plan: the catalog plus that client's own foods (not
-            // the professional's personal ones).
-            const own = (clientCustomFoods[clientId] ?? [])
-              .filter((f) => !term || f.name.toLowerCase().includes(term.toLowerCase()))
-              .map(
-                (f): FoodSearchResult => ({
-                  id: f.id,
-                  source: "custom",
-                  name: f.name,
-                  nameAr: f.nameAr ?? null,
-                  category: f.category,
-                  servingLabel: f.serving,
-                  calories: f.calories,
-                  protein: f.protein,
-                  carbs: f.carbs,
-                  fat: f.fat,
-                  isLebanese: false,
-                  isVerified: false,
-                  barcode: null,
-                  overridesFoodId: null,
-                })
-              );
-            setResults([...own, ...rows.filter((r) => r.source === "catalog")]);
-          } else {
-            setResults(rows);
-          }
+          setResults(rows);
           setSearching(false);
         });
       },
@@ -186,7 +148,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, open, step, clientId, clientCustomFoods]);
+  }, [query, open, step]);
 
   const servingsN = Math.max(1, Number(servings) || 1);
   const total = useMemo(() => sumItems(items), [items]);
@@ -224,7 +186,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
       carbs: Number(foodDraft.carbs) || 0,
       fat: Number(foodDraft.fat) || 0,
     };
-    const food = clientId ? addClientCustomFood(clientId, payload) : await addCustomFood(payload);
+    const food = await addCustomFood(payload);
     // A food saved to the database is a custom_foods row; one kept local only
     // (signed out, or the write failed) has no row to point at yet.
     addFood(food, isUuid(food.id) ? "custom" : undefined);
@@ -242,13 +204,6 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
 
   const save = async () => {
     if (!title.trim() || items.length === 0 || saving) return;
-    if (clientId && !isR) {
-      // Client plans are local to the professional's workspace; these writes can't fail.
-      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType);
-      else addClientCustomMeal(clientId, title, items);
-      done();
-      return;
-    }
     setSaving(true);
     setSaveError(null);
     const message = isR
@@ -277,8 +232,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
       window.setTimeout(() => setConfirmDelete(false), 3000);
       return;
     }
-    if (clientId && !isR) removeClientCustomMeal(clientId, editing.id);
-    else if (isR) await removeRecipe(editing.id);
+    if (isR) await removeRecipe(editing.id);
     else await removeCustomMeal(editing.id);
     done();
   };
@@ -350,11 +304,6 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
           </button>
           {creatingFood && (
             <div className="flex flex-col gap-2" style={containerStyle}>
-              {clientId && (
-                <p className="text-[11px] text-charcoal-faint">
-                  Saved only to this client's own food database, not your personal foods.
-                </p>
-              )}
               <input
                 value={foodDraft.name}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}

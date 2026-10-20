@@ -48,7 +48,7 @@ interface StatusRow {
 }
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 function describe(error: PostgrestError): { message: string; code?: string } {
   switch (error.code) {

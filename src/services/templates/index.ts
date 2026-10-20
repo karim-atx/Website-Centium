@@ -9,9 +9,11 @@ import {
   updateFolder,
 } from "../folders";
 import { resolveExerciseRef, type ExerciseLookup } from "../routines";
+import { setTypesColumn } from "./setTypes";
 import type {
   BlockKind,
   EndurancePlan,
+  PrescribedSetType,
   Exercise,
   ExerciseClassification,
   MuscleGroup,
@@ -67,6 +69,9 @@ function describe(error: PostgrestError): string {
   if (code === "ATX08") return "That template no longer exists.";
   if (code === "ATX09") return "Only the template's owner can assign it.";
   if (code === "ATX12") return "That person isn't one of your clients.";
+  // Release 3: assign_template_to_client's join-week check (p_join_week must
+  // be 1 to duration_weeks) raises 22023.
+  if (code === "22023") return "Pick a start week inside the programme.";
   if (code === "42501") return "You don't have permission to do that.";
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
   if (code === "23514" || code === "22003") {
@@ -128,14 +133,16 @@ const PRESCRIPTION_COLUMNS =
   "intensity_pct, rep_max_kg, rep_max_update_mode, rest_seconds, rpe, tempo, " +
   "estimated_one_rep_max_kg, duration_seconds, endurance_plan, block_id, " +
   "cardio_duration_min, cardio_distance_km, " +
-  "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate";
+  "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate, " +
+  // Release 3 (DB-5): the coach's note per exercise and the per-set types.
+  "coach_note, set_types";
 
 const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, rounds";
 
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const TEMPLATE_SELECT =
-  "id, owner_id, name, category, description, duration_min, level, folder_id, coach_note, is_public, is_verified, created_at, " +
+  "id, owner_id, name, category, description, duration_min, duration_weeks, level, folder_id, coach_note, is_public, is_verified, created_at, " +
   `workout_template_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `workout_template_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
@@ -174,6 +181,8 @@ interface PrescriptionRow {
   duration_seconds: number | null;
   endurance_plan: EndurancePlan | null;
   block_id: string | null;
+  coach_note?: string | null;
+  set_types?: (PrescribedSetType | null)[] | null;
   exercises: DefinitionRow | null;
   custom_exercise_library_items: DefinitionRow | null;
 }
@@ -191,6 +200,8 @@ interface TemplateRow {
   is_public: boolean;
   is_verified: boolean;
   created_at: string;
+  /** Absent on the signed-out starter-program read, which doesn't select it. */
+  duration_weeks?: number | null;
   workout_template_exercise_blocks: BlockRow[];
   workout_template_exercises: PrescriptionRow[];
 }
@@ -263,6 +274,8 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     durationSeconds: num(r.duration_seconds),
     endurancePlan: r.endurance_plan ?? null,
     blockId: r.block_id,
+    ...(r.coach_note ? { coachNote: r.coach_note } : {}),
+    ...(Array.isArray(r.set_types) ? { setTypes: r.set_types } : {}),
   };
 }
 
@@ -285,6 +298,7 @@ function toTemplate(r: TemplateRow): WorkoutTemplate {
     isVerified: r.is_verified,
     ownerId: r.owner_id,
     blocks: (r.workout_template_exercise_blocks ?? []).map(toBlock),
+    durationWeeks: r.duration_weeks ?? null,
   };
 }
 
@@ -401,8 +415,15 @@ function prescriptionOf(
     duration_seconds: ex.durationSeconds ?? null,
     endurance_plan: ex.classification === "cardio" ? ex.endurancePlan ?? null : null,
     block_id: blockId,
+    // Release 3 (DB-5). rep_max_kg / rep_max_update_mode above are written
+    // back exactly as they were read (the professional editor no longer shows
+    // them: FINAL_PLAN two-phase removal), so a save never nulls them.
+    coach_note: ex.coachNote?.trim().slice(0, 500) || null,
+    set_types: setTypesColumn(ex.setTypes),
   };
 }
+
+export { setTypesColumn };
 
 /**
  * Writes the prescriptions for a template that already exists.
@@ -503,6 +524,7 @@ export async function createTemplate(
       level: template.level ?? null,
       folder_id: template.folderId ?? null,
       coach_note: template.coachNote ?? null,
+      duration_weeks: template.durationWeeks ?? null,
     })
     .select("id, created_at")
     .single();
@@ -572,6 +594,7 @@ export async function updateTemplate(
     level?: TemplateLevel | null;
     folder_id?: string | null;
     coach_note?: string | null;
+    duration_weeks?: number | null;
   } = {};
   if (patch.name !== undefined) payload.name = patch.name.trim();
   if (patch.category !== undefined) payload.category = patch.category ?? null;
@@ -580,6 +603,8 @@ export async function updateTemplate(
   if (patch.level !== undefined) payload.level = patch.level ?? null;
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId ?? null;
   if (patch.coachNote !== undefined) payload.coach_note = patch.coachNote ?? null;
+  // The owner may update duration_weeks (follow-up 20261124160000).
+  if (patch.durationWeeks !== undefined) payload.duration_weeks = patch.durationWeeks ?? null;
 
   if (Object.keys(payload).length > 0) {
     const { error } = await supabase.from("workout_templates").update(payload).eq("id", id);
@@ -637,6 +662,10 @@ interface AssignmentRow {
   routine_id: string | null;
   assigned_day: string | null;
   assigned_at: string;
+  starts_on: string | null;
+  join_week: number | null;
+  ends_on: string | null;
+  ended_at: string | null;
 }
 
 export interface AssignmentsResult {
@@ -652,6 +681,10 @@ const toAssignment = (r: AssignmentRow): WorkoutTemplateAssignment => ({
   routineId: r.routine_id,
   assignedDay: r.assigned_day,
   assignedAt: r.assigned_at,
+  startsOn: r.starts_on,
+  joinWeek: r.join_week ?? 1,
+  endsOn: r.ends_on,
+  endedAt: r.ended_at,
 });
 
 /**
@@ -664,7 +697,7 @@ const toAssignment = (r: AssignmentRow): WorkoutTemplateAssignment => ({
 export async function getTemplateAssignments(): Promise<AssignmentsResult> {
   const { data, error } = await supabase
     .from("workout_template_assignments")
-    .select("id, workout_template_id, client_id, routine_id, assigned_day, assigned_at")
+    .select("id, workout_template_id, client_id, routine_id, assigned_day, assigned_at, starts_on, join_week, ends_on, ended_at")
     .order("assigned_at", { ascending: true });
 
   if (error) {
@@ -702,7 +735,13 @@ export async function assignTemplate(
   templateId: string,
   clientId: string,
   assignedDay: string | null,
-  confirmOverwrite = false
+  confirmOverwrite = false,
+  /**
+   * Release 3 (DB-3): the programme's first day and the week the client joins
+   * at (1 to duration_weeks). Sent only when given, so a caller that passes
+   * neither sends the same body as before.
+   */
+  schedule?: { startsOn?: string | null; joinWeek?: number }
 ): Promise<AssignResult> {
   const { data, error } = await supabase.rpc("assign_template_to_client", {
     p_template_id: templateId,
@@ -712,7 +751,7 @@ export async function assignTemplate(
     // `p_assigned_day date default null` comes back from the type generator as
     // an OPTIONAL string — optional because it HAS a default, never nullable —
     // which is how it renders every defaulted parameter. "Assigned, no day
-    // set" is exactly the null case, it is what AssignTemplateSheet sends when
+    // set" is exactly the null case, it is what the library assign sheet sends when
     // the day field is blank, and the function is written to take it.
     //
     // CAST RATHER THAN `?? undefined`, deliberately. Omitting the key would
@@ -724,6 +763,8 @@ export async function assignTemplate(
     // output that the next regeneration silently reverts.
     p_assigned_day: assignedDay as string | undefined,
     p_confirm_overwrite: confirmOverwrite,
+    ...(schedule?.startsOn ? { p_starts_on: schedule.startsOn } : {}),
+    ...(schedule?.joinWeek ? { p_join_week: schedule.joinWeek } : {}),
   });
 
   if (error) {
@@ -808,23 +849,23 @@ export async function adoptTemplate(templateId: string): Promise<AdoptResult> {
   return { ok: true, routineId: routine?.id };
 }
 
-/** Un-records an assignment. Deliberately leaves the client's routine alone —
- *  the table comment is explicit that the client keeps what they have. */
-export async function unassignTemplate(assignmentId: string): Promise<WriteResult> {
-  const { data, error } = await supabase
-    .from("workout_template_assignments")
-    .delete()
-    .eq("id", assignmentId)
-    .select("id");
-
+/**
+ * Release 3 (DB-3): ends a programme for its client. The row stays, with
+ * ended_at set and ends_on clamped to today (or to starts_on when it hasn't
+ * started: it works before the start date, so it is also "Remove"), and
+ * shows under Past programmes. Sessions after today leave the calendar; the
+ * client's routine is untouched. ATX08 = no active assignment with that id,
+ * ATX09 = not yours.
+ */
+export async function endTemplateAssignment(assignmentId: string): Promise<WriteResult> {
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: PostgrestError | null }>;
+  }).rpc("end_template_assignment", { p_assignment_id: assignmentId });
   if (error) {
-    console.error("[templates] Could not unassign template:", error.message);
+    console.error("[templates] Could not end the assignment:", error.message);
+    if (error.code === "ATX08") return { ok: false, message: "That programme has already ended." };
+    if (error.code === "ATX09") return { ok: false, message: "Only the professional who assigned it can end it." };
     return { ok: false, message: describe(error) };
-  }
-  // A policy rejection on DELETE is silent — zero rows, no error — so the row
-  // count is the only honest check, as deleteWorkoutSession documents.
-  if (!data || data.length === 0) {
-    return { ok: false, message: "That assignment couldn't be removed." };
   }
   return { ok: true };
 }

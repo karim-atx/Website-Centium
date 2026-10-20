@@ -74,7 +74,7 @@ import {
   getTemplateAssignments,
   getTemplateFolders,
   getTemplates,
-  unassignTemplate as unassignTemplateRemote,
+  endTemplateAssignment as endTemplateAssignmentRemote,
   updateTemplate as updateTemplateRemote,
   updateTemplateFolder,
   type AssignResult,
@@ -220,14 +220,10 @@ import {
 } from "../../lib/supabase/recovery";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import {
-  fetchClientImaging,
-  fetchClientLabs,
-  fetchClientMedicalHistory,
   fetchClientNutrition,
   fetchClientWeight,
   fetchClientWorkoutActivity,
   fetchClientVitals,
-  fetchClientMeasurements,
 } from "../services/professional-client";
 import {
   addComorbidityRemote,
@@ -260,8 +256,6 @@ import {
   type BloodPressureReading,
 } from "../services/blood-pressure";
 import {
-  fetchClientCyclePhase,
-  fetchClientPregnancy,
   getCycleLogs,
   getCyclePrediction,
   getCycleSettings,
@@ -300,6 +294,8 @@ import { todayLocal } from "../utils/date";
 import { normalizeColorTheme } from "../theme/colorThemes";
 import { useSystemDark } from "../theme/useSystemDark";
 import { usePresentationSync } from "../theme/usePresentationSync";
+import { useProfessionalTargetsSync } from "./useProfessionalTargetsSync";
+import type { ProfessionalTargets } from "../services/nutrition/clientNutritionModel";
 import type { Presentation, ThemeMode } from "../services/presentation/mapping";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
@@ -813,6 +809,12 @@ interface AppState {
 
   nutritionGoal: NutritionGoal;
   setNutritionGoal: (goal: NutritionGoal) => void;
+  /**
+   * Release 3 · W7 (CU3): the targets a professional set for this client
+   * (null when none, or not a customer). Synced into nutritionGoal here, so
+   * every screen follows them; Food's Goals panel shows them locked.
+   */
+  professionalTargets: ProfessionalTargets | null;
   setWeightGoal: (weightGoal: WeightGoalType, weeklyRateKg: number) => void;
   setMacroSplit: (split: MacroSplit) => void;
   // QA 11.0: shared between Goals & Macros (where it's picked) and the
@@ -877,33 +879,14 @@ interface AppState {
   removeCustomMeal: (id: string) => Promise<void>;
   /** Null until the first hydration finishes or fails. */
   customMealsError: string | null;
-  // QA 11.0: "Meal plans created by the professional should ONLY appear
-  // for the assigned client and not everyone" — a professional-authored
-  // plan now lives in its own per-client store instead of the single
-  // shared `customMeals` list every client's Meal Prep tab read from.
-  //
-  // STILL LOCAL, AND NOT FOR WANT OF A TABLE. custom_meals.scoped_to_client_id
-  // is exactly this, and its RLS already lets the scoped client read the meal.
-  // What is missing is the id: `clientId` here is a RELATIONSHIP id, and that
-  // column references profiles(id). Writing one into the other would point at
-  // nothing. addClientCustomFood is local for the same reason and says so.
-  clientCustomMeals: Record<string, CustomMeal[]>;
-  addClientCustomMeal: (clientId: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
-  updateClientCustomMeal: (
-    clientId: string,
-    id: string,
-    title: string,
-    items: CustomMeal["items"],
-    mealType?: MealType
-  ) => void;
-  removeClientCustomMeal: (clientId: string, id: string) => void;
+  // Release 3 (W5): the professional-side per-client meal, recipe and food
+  // stores (clientCustomMeals, clientRecipes, clientCustomFoods, local only)
+  // are gone. Professionals build meal plans on meal_plans / meal_plan_items
+  // (pages/pro/MealPlans, components/pro/nutrition).
   logCustomMeal: (mealId: string, meal: MealType, date: string) => Promise<void>;
 
   // Mobile handoff item 10: Recipes. Mirrors the customMeals block above
-  // exactly — same offline-first local-id pattern, same client-scoped local
-  // store for professional-authored recipes (handoff Q6), same reasoning in
-  // services/recipes for why it stays local rather than writing
-  // scoped_to_client_id from a relationship id that would point at nothing.
+  // exactly — same offline-first local-id pattern.
   recipes: Recipe[];
   addRecipe: (
     title: string,
@@ -922,17 +905,6 @@ interface AppState {
   recipesError: string | null;
   /** Re-reads custom meals and recipes (Meal Prep's pull-to-refresh). Local-only items are kept. */
   reloadMealPrep: () => Promise<void>;
-  clientRecipes: Record<string, Recipe[]>;
-  addClientRecipe: (clientId: string, title: string, items: RecipeItem[], servings: number, steps?: string) => void;
-  updateClientRecipe: (
-    clientId: string,
-    id: string,
-    title: string,
-    items: RecipeItem[],
-    servings: number,
-    steps?: string
-  ) => void;
-  removeClientRecipe: (clientId: string, id: string) => void;
   // Logs `servingsToLog` servings' worth of the recipe's ingredients,
   // per-serving (`ingredient total / recipe.servings`), never the whole
   // batch — matching the handoff's "per-serving arithmetic" rule.
@@ -1044,12 +1016,6 @@ interface AppState {
    */
   syncCustomFood: (food: Omit<CustomFood, "isCustom">) => void;
   forgetCustomFood: (id: string) => void;
-
-  // V7 (QA 7.0): a food a professional creates while building a specific
-  // client's meal plan goes only into that client's own food database, not
-  // the professional's personal custom foods or any other client's.
-  clientCustomFoods: Record<string, CustomFood[]>;
-  addClientCustomFood: (clientId: string, food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
 
   /**
    * The public exercise catalog, read from public.exercises.
@@ -1191,17 +1157,11 @@ interface AppState {
   refreshRoster: () => Promise<void>;
   removeProfessionalClient: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
-  // The hire inbox that used to be simulated here is real: ProfessionalDashboard
+  // The hire inbox that used to be simulated here is real: the professional hub
   // reads `pending_client_requests` and answers through accept_client_request /
   // reject_client_request. The localStorage array and its three functions are
   // gone with the mock hire flow that was its only writer.
-  updateProfessionalClientAccess: (
-    id: string,
-    access: Partial<ProfessionalClient["access"]>
-  ) => void;
   updateProfessionalClient: (id: string, patch: Partial<ProfessionalClient>) => void;
-  assignProgramToClient: (clientId: string, programName: string) => void;
-  assignFoodTemplateToClient: (clientId: string, templateName: string) => void;
 
   // V6 (QA 6.0): Professional UI — Calendar, Workout Template Builder,
   // per-client health notes, and a messaging board.
@@ -1234,17 +1194,24 @@ interface AppState {
    * WRITTEN ONLY BY THE DATABASE FUNCTION. No client role holds INSERT or
    * UPDATE on workout_template_assignments; `assignTemplate` calls
    * assign_template_to_client, which also creates or refreshes the client's
-   * routine and syncs their calendar event. Deleting is the one thing a
-   * professional may do directly, and it deliberately leaves the routine.
+   * routine and syncs their calendar event. Ending (end_template_assignment)
+   * deliberately leaves the routine.
    */
   templateAssignments: WorkoutTemplateAssignment[];
   assignTemplate: (
     templateId: string,
     clientId: string,
     assignedDay: string | null,
-    confirmOverwrite?: boolean
+    confirmOverwrite?: boolean,
+    /** Release 3 (DB-3): p_starts_on and p_join_week; omitted = the function's defaults. */
+    schedule?: { startsOn?: string | null; joinWeek?: number }
   ) => Promise<AssignResult>;
-  unassignTemplate: (assignmentId: string) => Promise<string | undefined>;
+  /**
+   * Release 3 (DB-3): end_template_assignment. The row stays with ended_at
+   * set (a Past programme). It also works before the start date, so it is
+   * both "Remove" and "End" (follow-up 20261124160000).
+   */
+  endTemplateAssignment: (assignmentId: string) => Promise<string | undefined>;
   /**
    * Copies a curated starter program into a routine of the user's own.
    *
@@ -1269,8 +1236,6 @@ interface AppState {
   reorderWorkoutTemplateFolders: (parentId: string | null, orderedIds: string[]) => Promise<string | undefined>;
   moveWorkoutTemplateFolder: (id: string, parentId: string | null, index: number) => Promise<string | undefined>;
 
-  clientHealthNotes: Record<string, ClientHealthNote>;
-  updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
 
 
   signOut: () => Promise<void>;
@@ -1458,6 +1423,25 @@ function forgetPersisted(key: string): void {
   } catch {
     // As above.
   }
+}
+
+/**
+ * Release 3 (J4): the old Health metrics notes (current injuries, personality
+ * type) a professional typed into this browser, keyed by the relationship id.
+ * Nothing writes them any more (the old health metrics tab is gone); the client page's
+ * Notes tab reads one client's entry once, imports it as a private note and
+ * clears it. Plain reads of the persisted key, not React state.
+ */
+export function readLegacyClientHealthNote(relationshipId: string): ClientHealthNote | undefined {
+  return loadPersisted<Record<string, ClientHealthNote>>("clientHealthNotes", {})[relationshipId];
+}
+
+export function clearLegacyClientHealthNote(relationshipId: string): void {
+  const all = loadPersisted<Record<string, ClientHealthNote>>("clientHealthNotes", {});
+  if (!(relationshipId in all)) return;
+  delete all[relationshipId];
+  if (Object.keys(all).length === 0) forgetPersisted("clientHealthNotes");
+  else writePersisted("clientHealthNotes", all);
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -3421,7 +3405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   //
   // affiliateWithBusiness matched a typed id against `businessDirectory` --
   // itself localStorage -- and on a hit set a local flag plus a local
-  // employee row. Nothing reached the database. Meanwhile PublicListingSheet
+  // employee row. Nothing reached the database. Meanwhile the old listing sheet
   // read the real `professional_profiles.affiliated_business_id`, so the two
   // surfaces disagreed and the authoritative one was the one the professional
   // could not see: affiliation is what gates `listed_publicly`.
@@ -3727,74 +3711,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const weightIds = mapped
       .filter((c) => c.access.weight && c.clientId)
       .map((c) => c.clientId!);
-    // The most sensitive grant in the app, and gated entirely on its own.
-    // medical_history was split out of health_metrics precisely so that
-    // sharing step counts would stop implying sharing a medication list, so
-    // nothing about this list is derived from any other consent.
-    const medicalIds = mapped
-      .filter((c) => c.access.medicalHistory && c.clientId)
-      .map((c) => c.clientId!);
-    // Imaging rides on medical_history, the same grant as medications and
-    // surgeries. Blood work does NOT -- lab_results is its own category, so a
-    // client can share their medication list while withholding their bloods,
-    // or the reverse, and each list is built from its own flag.
-    const imagingIds = medicalIds;
+    // Release 3 W5: medical history, imaging, labs, body measurements, cycle
+    // phase and pregnancy are no longer fetched for the roster. Their only
+    // readers were the old client sheet and Health metrics page; the client
+    // page (W3) reads each of them itself, for one client, when opened.
     // Vitals — sleep and steps — ride on health_metrics, which is the
     // category that does NOT cover tape measurements.
     const vitalsIds = mapped
       .filter((c) => c.access.healthMetrics && c.clientId)
       .map((c) => c.clientId!);
-    // Body measurements are their own grant, and deliberately not derived
-    // from the vitals one: Database 20260924320000 kept them out of the
-    // vitals policy so that sharing step counts could never start sharing a
-    // waist. This list is built from that flag alone.
-    const measurementIds = mapped
-      .filter((c) => c.access.bodyMeasurements && c.clientId)
-      .map((c) => c.clientId!);
-    const labIds = mapped
-      .filter((c) => c.access.labResults && c.clientId)
-      .map((c) => c.clientId!);
-    // Blood pressure is its own category too, for the same reason body
-    // measurements is: Database 20260924410000 gave it a separate policy so
-    // that a client already sharing "steps, sleep, water" did not start
-    // sharing their blood pressure the moment the column existed.
+    // Blood pressure is its own category: Database 20260924410000 gave it a
+    // separate policy so that a client already sharing "steps, sleep, water"
+    // did not start sharing their blood pressure the moment the column existed.
     const bpIds = mapped
       .filter((c) => c.access.bloodPressure && c.clientId)
       .map((c) => c.clientId!);
-    // TWO SEPARATE LISTS, because they are two separate disclosures: a client
-    // can tell their trainer which phase they are in without telling them they
-    // are pregnant, and the reverse. Each function checks its own category.
-    const phaseIds = mapped
-      .filter((c) => c.access.cyclePhase && c.clientId)
-      .map((c) => c.clientId!);
-    const pregnancyIds = mapped
-      .filter((c) => c.access.pregnancy && c.clientId)
-      .map((c) => c.clientId!);
 
-    // Both reads are issued together rather than in sequence — they are
+    // The reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements, bloodPressures, phases, pregnancies] =
-      await Promise.all([
+    const [nutrition, workouts, weights, vitals, bloodPressures] = await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
       weightIds.length > 0 ? fetchClientWeight(weightIds) : null,
-      medicalIds.length > 0 ? fetchClientMedicalHistory(medicalIds) : null,
-      labIds.length > 0 ? fetchClientLabs(labIds) : null,
-      imagingIds.length > 0 ? fetchClientImaging(imagingIds) : null,
       vitalsIds.length > 0 ? fetchClientVitals(vitalsIds) : null,
-      measurementIds.length > 0 ? fetchClientMeasurements(measurementIds) : null,
       bpIds.length > 0 ? fetchClientBloodPressure(bpIds, metricWindowStart) : null,
-      // ONE CALL PER CLIENT, because both functions take a single id rather
-      // than a set — they return one word each, and batching them would mean
-      // a view or a second function that returns several clients' phases at
-      // once, which is a wider disclosure than the one that was granted.
-      Promise.all(
-        phaseIds.map(async (id) => [id, await fetchClientCyclePhase(id)] as const)
-      ),
-      Promise.all(
-        pregnancyIds.map(async (id) => [id, await fetchClientPregnancy(id)] as const)
-      ),
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -3804,12 +3745,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((c) => {
         if (!c.clientId) return c;
         let next = c;
-        const phase = phases.find(([id]) => id === c.clientId)?.[1];
-        if (phase?.ok) next = { ...next, cyclePhase: phase.phase };
-        const pregnancy = pregnancies.find(([id]) => id === c.clientId)?.[1];
-        if (pregnancy?.ok) {
-          next = { ...next, pregnancy: { status: pregnancy.status, trimester: pregnancy.trimester } };
-        }
         if (bloodPressures?.ok && c.clientId in bloodPressures.byClient) {
           // An empty array is a real answer here -- "sharing, nothing logged"
           // -- and is distinct from undefined, which is "not fetched". The
@@ -3831,28 +3766,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const w = weights.byClient[c.clientId];
           if (w) next = { ...next, lastWeightKg: w.lastWeightKg, weightTrend: w.weightTrend };
         }
-        if (labs?.ok && c.clientId in labs.byClient) {
-          next = { ...next, labs: labs.byClient[c.clientId] };
-        }
-        if (imaging?.ok && c.clientId in imaging.byClient) {
-          next = { ...next, imaging: imaging.byClient[c.clientId] };
-        }
         if (vitals?.ok && c.clientId in vitals.byClient) {
           // Assigned even when empty: the sheet reads undefined as "not
           // loaded" and {} as "granted, nothing logged", which are different
           // sentences on screen.
           next = { ...next, vitals: vitals.byClient[c.clientId] };
-        }
-        if (measurements?.ok && c.clientId in measurements.byClient) {
-          next = { ...next, measurements: measurements.byClient[c.clientId] };
-        }
-        if (medical?.ok && c.clientId in medical.byClient) {
-          const h = medical.byClient[c.clientId];
-          // Assigned even when all three lists are empty. Both surfaces
-          // reading this already branch on the lists being non-empty, so an
-          // empty object renders as "nothing recorded" while undefined keeps
-          // meaning "not shared, or not loaded" — which are different answers.
-          if (h) next = { ...next, medicalHistory: h };
         }
         return next;
       })
@@ -3976,13 +3894,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     templateId,
     clientId,
     assignedDay,
-    confirmOverwrite = false
+    confirmOverwrite = false,
+    schedule
   ) => {
     const result = await assignTemplateRemote(
       templateId,
       clientId,
       assignedDay,
-      confirmOverwrite
+      confirmOverwrite,
+      schedule
     );
     if (!result.ok) return result;
 
@@ -3993,10 +3913,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return result;
   };
 
-  const unassignTemplate: AppState["unassignTemplate"] = async (assignmentId) => {
-    const result = await unassignTemplateRemote(assignmentId);
-    if (!result.ok) return result.message ?? "Could not remove that assignment.";
-    setTemplateAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+  const endTemplateAssignment: AppState["endTemplateAssignment"] = async (assignmentId) => {
+    const result = await endTemplateAssignmentRemote(assignmentId);
+    if (!result.ok) return result.message ?? "Could not end that programme.";
+    // Re-read: the function sets ended_at and clamps ends_on.
+    const refreshed = await getTemplateAssignments();
+    if (refreshed.ok) setTemplateAssignments(refreshed.assignments);
     return undefined;
   };
 
@@ -4172,12 +4094,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return undefined;
   };
 
-  const [clientHealthNotes, setClientHealthNotes] = usePersistentState<Record<string, ClientHealthNote>>(
-    "clientHealthNotes",
-    {}
-  );
-  const updateClientHealthNote: AppState["updateClientHealthNote"] = (clientId, patch) =>
-    setClientHealthNotes((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }));
 
   const completeOnboarding = (profile: Partial<UserProfile>) => {
     // V7 (QA 7.0): a business account gets its own unique ID at signup, so
@@ -5694,6 +5610,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // too, so a write from this profile never changes the stored value.
   const setNutritionGoal = (goal: NutritionGoal) =>
     setNutritionGoalState((prev) => (cycleOffered ? goal : { ...goal, pregnancyKcal: prev.pregnancyKcal }));
+  // Release 3 · W7 (CU3): customers only; professionals and businesses read nothing.
+  const professionalTargets = useProfessionalTargetsSync(
+    authUserId && user.accountType === "customer" ? authUserId : null,
+    visibleNutritionGoal,
+    setNutritionGoal
+  );
   const setWeightGoal = (weightGoal: WeightGoalType, weeklyRateKg: number) =>
     setNutritionGoalState((prev) => {
       const suggested = suggestNutritionGoal(user, weightGoal, weeklyRateKg);
@@ -5778,20 +5700,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomMeals((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const addClientCustomMeal: AppState["addClientCustomMeal"] = (clientId, title, items, mealType) =>
-    setClientCustomMeals((prev) => ({
-      ...prev,
-      [clientId]: [...(prev[clientId] ?? []), { id: `ccm${Date.now()}`, title: title.trim(), items, mealType }],
-    }));
-  const updateClientCustomMeal: AppState["updateClientCustomMeal"] = (clientId, id, title, items, mealType) =>
-    setClientCustomMeals((prev) => ({
-      ...prev,
-      [clientId]: (prev[clientId] ?? []).map((m) =>
-        m.id === id ? { ...m, title: title.trim(), items, mealType } : m
-      ),
-    }));
-  const removeClientCustomMeal: AppState["removeClientCustomMeal"] = (clientId, id) =>
-    setClientCustomMeals((prev) => ({ ...prev, [clientId]: (prev[clientId] ?? []).filter((m) => m.id !== id) }));
   // Written with NULL provenance. A custom meal's items may reference foods
   // that only exist in localStorage and were never written to custom_foods, so
   // there is often no id to point at -- see the README follow-up on custom-food
@@ -5868,21 +5776,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (authUserId && isRemoteRecipeId(id)) await deleteRecipeRemote(id);
     setRecipes((prev) => prev.filter((r) => r.id !== id));
   };
-
-  const addClientRecipe: AppState["addClientRecipe"] = (clientId, title, items, servings, steps) =>
-    setClientRecipes((prev) => ({
-      ...prev,
-      [clientId]: [...(prev[clientId] ?? []), { id: `crc${Date.now()}`, title: title.trim(), items, servings, steps }],
-    }));
-  const updateClientRecipe: AppState["updateClientRecipe"] = (clientId, id, title, items, servings, steps) =>
-    setClientRecipes((prev) => ({
-      ...prev,
-      [clientId]: (prev[clientId] ?? []).map((r) =>
-        r.id === id ? { ...r, title: title.trim(), items, servings, steps } : r
-      ),
-    }));
-  const removeClientRecipe: AppState["removeClientRecipe"] = (clientId, id) =>
-    setClientRecipes((prev) => ({ ...prev, [clientId]: (prev[clientId] ?? []).filter((r) => r.id !== id) }));
 
   // Per-serving arithmetic: `ingredient total / recipe.servings`, computed
   // here and never stored as a second figure (handoff: "Lentil Mujaddara
@@ -6274,24 +6167,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomFoods((prev) => prev.map((f) => (f.id === food.id ? { ...food, isCustom: true } : f)));
   const forgetCustomFood: AppState["forgetCustomFood"] = (id) => setCustomFoods((prev) => prev.filter((f) => f.id !== id));
 
-  const [clientCustomFoods, setClientCustomFoods] = usePersistentState<Record<string, CustomFood[]>>(
-    "clientCustomFoods",
-    {}
-  );
-  const [clientCustomMeals, setClientCustomMeals] = usePersistentState<Record<string, CustomMeal[]>>(
-    "clientCustomMeals",
-    {}
-  );
-  const [clientRecipes, setClientRecipes] = usePersistentState<Record<string, Recipe[]>>("clientRecipes", {});
-  const addClientCustomFood: AppState["addClientCustomFood"] = (clientId, food) => {
-    const custom: CustomFood = {
-      ...food,
-      id: `custom${Date.now()}${Math.random().toString(16).slice(2)}`,
-      isCustom: true,
-    };
-    setClientCustomFoods((prev) => ({ ...prev, [clientId]: [...(prev[clientId] ?? []), custom] }));
-    return custom;
-  };
 
   // A LOCAL ID MEANS NEVER SYNCED, the same shape isRemoteMealId gives meals.
   // An exercise saved before this reached Supabase carries no id at all; one
@@ -6368,47 +6243,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const updateProfessionalClientAccess = (id: string, access: Partial<ProfessionalClient["access"]>) =>
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
-    );
   const updateProfessionalClient: AppState["updateProfessionalClient"] = (id, patch) =>
     setProfessionalClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  // V6 (QA 6.0) asked that "the calendar app should update automatically when
-  // the professional assigns a workout and/or food template for the client on
-  // a specific day", and both assign actions used to drop a same-day event
-  // titled `Assigned "X" to Y` onto the PROFESSIONAL's own calendar.
-  //
-  // RETIRED IN CALENDAR PHASE 2, because it was never the thing V6 asked for
-  // and it is now actively wrong in three ways:
-  //
-  //   1. IT IS A LOG ENTRY, NOT AN EVENT. It was dated the day the assignment
-  //      was made rather than the day of the session, so it never moved when
-  //      the session did and accumulated one permanent row per assignment.
-  //   2. THE REAL THING NOW EXISTS. assign_template_to_client writes a real
-  //      calendar_events row onto the CLIENT's calendar, on the assigned day,
-  //      which the professional reads through
-  //      calendar_events_select_assigning_professional. That is what V6
-  //      described; this was a stand-in from before it was built.
-  //   3. ITS invitees: [client.name] WAS THE LEAK. Under the old name-matching
-  //      filter, a professional's private note about assigning a program
-  //      appeared on the client's own calendar — and on the calendar of every
-  //      other client sharing that first name.
-  //
-  // The underlying record is not lost: workout_template_assignments.assigned_at
-  // already holds exactly "who was assigned what, when". If a professional
-  // activity feed is wanted, that is its source, and a feed is a different
-  // surface from a calendar.
-  const assignProgramToClient = (clientId: string, programName: string) => {
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === clientId ? { ...c, assignedProgramName: programName } : c))
-    );
-  };
-  const assignFoodTemplateToClient = (clientId: string, templateName: string) => {
-    setProfessionalClients((prev) =>
-      prev.map((c) => (c.id === clientId ? { ...c, assignedFoodTemplateName: templateName } : c))
-    );
-  };
 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
     setBusinessListing((prev) => ({ ...prev, ...patch }));
@@ -6663,6 +6499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       replaceWidgets,
       nutritionGoal: visibleNutritionGoal,
       setNutritionGoal,
+      professionalTargets,
       setWeightGoal,
       setMacroSplit,
       dietaryRestriction,
@@ -6680,10 +6517,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addCustomMeal,
       updateCustomMeal,
       removeCustomMeal,
-      clientCustomMeals,
-      addClientCustomMeal,
-      updateClientCustomMeal,
-      removeClientCustomMeal,
       logCustomMeal,
       recipes,
       recipesError,
@@ -6691,10 +6524,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addRecipe,
       updateRecipe,
       removeRecipe,
-      clientRecipes,
-      addClientRecipe,
-      updateClientRecipe,
-      removeClientRecipe,
       logRecipe,
       journalFolders,
       journalLoading,
@@ -6743,8 +6572,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addCustomFood,
       syncCustomFood,
       forgetCustomFood,
-      clientCustomFoods,
-      addClientCustomFood,
       exerciseCatalog,
       exerciseCatalogError,
       retryExerciseCatalog,
@@ -6780,10 +6607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshRoster,
       professionalClients,
       removeProfessionalClient,
-      updateProfessionalClientAccess,
       updateProfessionalClient,
-      assignProgramToClient,
-      assignFoodTemplateToClient,
       calendarEvents,
       addCalendarEvent,
       updateCalendarEvent,
@@ -6794,7 +6618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeWorkoutTemplate,
       templateAssignments,
       assignTemplate,
-      unassignTemplate,
+      endTemplateAssignment,
       adoptTemplate,
       templatesError,
       workoutTemplateFolders,
@@ -6804,8 +6628,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateWorkoutTemplateFolder,
       reorderWorkoutTemplateFolders,
       moveWorkoutTemplateFolder,
-      clientHealthNotes,
-      updateClientHealthNote,
       signOut,
       deleteAccount,
       cancelDeletion,
@@ -6890,14 +6712,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricGoalRows,
       widgets,
       visibleNutritionGoal,
+      professionalTargets,
       customMeals,
       customMealsError,
-      clientCustomMeals,
       // FO3.2: these were missing, so a recipe added or deleted only reached
       // the screen when some other dependency happened to change.
       recipes,
       recipesError,
-      clientRecipes,
       rosterLoading,
       rosterError,
       today,
@@ -6928,7 +6749,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedDate,
       colorTheme,
       customFoods,
-      clientCustomFoods,
       exerciseCatalog,
       exerciseCatalogError,
       retryExerciseCatalog,
@@ -6957,7 +6777,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       templateAssignments,
       templatesError,
       workoutTemplateFolders,
-      clientHealthNotes,
       businessListing,
     ]
   );

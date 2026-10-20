@@ -7,8 +7,34 @@ import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { EndurancePlanBuilder } from "./EndurancePlanBuilder";
 import { checkPlan, emptyPlan, serializePlan } from "../../services/workout/endurance";
-import { X, ChevronRight, Trash2 } from "lucide-react";
+import { X, ChevronRight, Trash2, Briefcase, Info, MessageSquareText } from "lucide-react";
 import clsx from "clsx";
+import { rpeOptions } from "../../services/workout";
+import { SetOptionsSheet } from "./SetOptionsSheet";
+import { typeStyles } from "./setTypeStyle";
+import { useIsDark } from "../../hooks/useIsDark";
+import type { LoggedSet, PrescribedSetType } from "../../types";
+
+/**
+ * Release 3 · W5 (TR4 v3, HANDOVER g): the professional's mode. Present (even
+ * as {}) = pro mode; absent = the client sheet exactly as before. Pro mode:
+ * - hides Estimated 1RM (it writes the signed-in user's own personal record,
+ *   the professional's, not a client's) and Rep Max / Rep Max update mode
+ *   (FINAL_PLAN W5 two-phase removal; the stored values pass through a save
+ *   untouched because the draft keeps them);
+ * - labels Intensity "(% of 1RM)" with the template hint, Target RPE from
+ *   rpeOptions (6 to 10 in 0.5 steps, the column's own check);
+ * - adds Set types (SetOptionsSheet coach mode, set_types per set) and the
+ *   "For your clients" block: Coach note (coach_note, at most 500) and the
+ *   Targets per client row;
+ * - Delete with tap again to confirm in status.high.
+ */
+export interface ExerciseSettingsPro {
+  targets?: { summary: string | null; onOpen: () => void };
+}
+
+const COACH_NOTE_MAX = 500;
+const RPE_CHOICES = [...rpeOptions].sort((a, b) => a - b);
 
 const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = [
   { value: "no_update", label: "Does not update", desc: "Rep Max stays unchanged" },
@@ -63,8 +89,11 @@ export const ExerciseSettingsSheet: React.FC<{
   onSave: (patch: Partial<Exercise>) => void;
   // V8 (QA 8.0): "I want a delete exercise under the save settings button."
   onDelete?: () => void;
-}> = ({ open, onClose, exercise, routineId, onSave, onDelete }) => {
+  pro?: ExerciseSettingsPro;
+}> = ({ open, onClose, exercise, routineId, onSave, onDelete, pro }) => {
   const { personalRecords, setPersonalRecord, pausedSessions, savePausedSession } = useApp();
+  const dark = useIsDark();
+  const [setOptionsIndex, setSetOptionsIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Partial<Exercise>>({});
   const [oneRmDraft, setOneRmDraft] = useState("");
   const [replaceOpen, setReplaceOpen] = useState(false);
@@ -83,6 +112,13 @@ export const ExerciseSettingsSheet: React.FC<{
   }, [exercise]);
 
   if (!exercise) return null;
+
+  // Pro: how many sets the prescription asks for, which is how many set types there are.
+  const proSetCount = Math.min(50, draft.maxSets ?? draft.sets ?? draft.minSets ?? 0);
+  const coachSet = (i: number): LoggedSet => {
+    const t = draft.setTypes?.[i] ?? null;
+    return { setNumber: i + 1, reps: 0, weightKg: null, completed: false, ...(t && t !== "normal" ? { setType: t } : {}) };
+  };
 
   const isOneRmEligible = draft.classification && ONE_RM_CLASSIFICATIONS.includes(draft.classification);
 
@@ -140,7 +176,7 @@ export const ExerciseSettingsSheet: React.FC<{
     setPlanProblem(null);
 
     onSave(next);
-    if (isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
+    if (!pro && isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
 
     // V6 (QA 6.0): editing Min/Max sets should change an already-started
     // routine — resize the live/paused session's logged sets for this
@@ -236,7 +272,7 @@ export const ExerciseSettingsSheet: React.FC<{
             </div>
           )}
 
-          {isOneRmEligible && (
+          {!pro && isOneRmEligible && (
             <label className="block">
               <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Estimated 1RM (kg)</span>
               <input
@@ -339,6 +375,39 @@ export const ExerciseSettingsSheet: React.FC<{
               <p className="text-[11px] text-charcoal-faint -mt-1">
                 Leave max reps empty for AMRAP.
               </p>
+              {pro ? (
+                <>
+                  <p className="flex items-start text-[12px] text-charcoal-soft" style={{ gap: 8 }}>
+                    <Info size={14} className="shrink-0 mt-0.5 text-charcoal-faint" aria-hidden />
+                    Templates store intensity only. Weights fill in from each client's 1RM when you assign it.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Intensity (% of 1RM)</span>
+                      {num("intensityPct")}
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                      {num("restSeconds")}
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Target RPE</span>
+                      <select
+                        value={draft.rpe == null ? "" : String(draft.rpe)}
+                        onChange={(e) => setDraft((d) => ({ ...d, rpe: e.target.value === "" ? undefined : Number(e.target.value) }))}
+                        className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="">–</option>
+                        {RPE_CHOICES.map((r) => (
+                          <option key={r} value={String(r)}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              ) : (
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
@@ -357,6 +426,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   {num("rpe")}
                 </label>
               </div>
+              )}
 
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
@@ -371,6 +441,7 @@ export const ExerciseSettingsSheet: React.FC<{
                 />
               </label>
 
+              {!pro && (
               <div>
                 <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                   Rep Max update mode
@@ -393,7 +464,67 @@ export const ExerciseSettingsSheet: React.FC<{
                   ))}
                 </div>
               </div>
+              )}
             </>
+          )}
+
+          {pro && proSetCount > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Type</p>
+              <div className="flex flex-wrap" style={{ gap: 6 }}>
+                {Array.from({ length: proSetCount }, (_, i) => {
+                  const t = draft.setTypes?.[i] ?? null;
+                  const style = t && t !== "normal" ? typeStyles(dark)[t === "dropset" ? "drop" : t] : null;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setSetOptionsIndex(i)}
+                      className="tap inline-flex items-center rounded-xl text-[12px] font-semibold"
+                      style={{ gap: 6, minHeight: 36, padding: "0 12px", background: style ? style.field : "rgb(var(--c-cream-soft))", color: style ? style.ink : "rgb(var(--c-charcoal))", border: `1px solid ${style ? style.border : "rgb(var(--c-charcoal) / 0.1)"}` }}
+                    >
+                      {style && <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: style.dot }} />}
+                      {`Set ${i + 1}`}
+                      {style && <span className="sr-only">{`, ${style.short}`}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pro && (
+            <div className="border-t border-charcoal/[0.08] pt-4 space-y-3">
+              <p className="flex items-center text-[11px] font-semibold uppercase text-charcoal-faint" style={{ gap: 8, letterSpacing: "0.14em" }}>
+                <Briefcase size={13} aria-hidden /> For your clients
+              </p>
+              <label className="block">
+                <span className="flex items-center text-[13px] font-medium text-charcoal mb-1.5" style={{ gap: 8 }}>
+                  <MessageSquareText size={15} aria-hidden style={{ color: "rgb(var(--th-7d6bb5))" }} /> Coach note
+                </span>
+                <textarea
+                  value={draft.coachNote ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, coachNote: e.target.value.slice(0, COACH_NOTE_MAX) }))}
+                  maxLength={COACH_NOTE_MAX}
+                  rows={3}
+                  className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                />
+              </label>
+              {pro.targets && (
+                <button
+                  type="button"
+                  onClick={pro.targets.onOpen}
+                  className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3 text-left"
+                  style={{ minHeight: 44 }}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-charcoal">Targets per client</span>
+                    {pro.targets.summary && <span className="block text-[12px] text-charcoal-faint truncate">{pro.targets.summary}</span>}
+                  </span>
+                  <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
+                </button>
+              )}
+            </div>
           )}
 
           <Button fullWidth size="lg" onClick={save}>
@@ -403,7 +534,7 @@ export const ExerciseSettingsSheet: React.FC<{
             <Button
               fullWidth
               variant="outline"
-              className="!border-teal/30 !text-teal-dark"
+              className={pro ? "!border-status-high/30 !bg-status-high/10 !text-status-high" : "!border-teal/30 !text-teal-dark"}
               onClick={() => {
                 if (!confirmDelete) {
                   setConfirmDelete(true);
@@ -428,6 +559,27 @@ export const ExerciseSettingsSheet: React.FC<{
         mode="replace"
         alreadyAdded={[]}
       />
+
+      {pro && (
+        <SetOptionsSheet
+          open={setOptionsIndex !== null}
+          onClose={() => setSetOptionsIndex(null)}
+          set={setOptionsIndex !== null ? coachSet(setOptionsIndex) : null}
+          title={`Set ${(setOptionsIndex ?? 0) + 1} options`}
+          routineName=""
+          pinnedNote={undefined}
+          coach={{ coachRpe: draft.rpe }}
+          onSave={(result) => {
+            if (setOptionsIndex === null) return;
+            const kind: PrescribedSetType | null = result.kind === "warmup" ? "warmup" : result.kind === "pr" ? "pr" : result.kind === "drop" ? "dropset" : null;
+            setDraft((d) => {
+              const types = Array.from({ length: Math.max(proSetCount, d.setTypes?.length ?? 0) }, (_, i) => d.setTypes?.[i] ?? null);
+              types[setOptionsIndex] = kind;
+              return { ...d, setTypes: types };
+            });
+          }}
+        />
+      )}
     </>
   );
 };

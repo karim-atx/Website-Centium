@@ -32,16 +32,25 @@ const DEFAULT_ROW = {
   notification_memberships: true,
   notification_referral_rewards: true,
   notification_health_checks: true,
+  notification_reviews: true,
+  notification_pro_requests: true,
+  notification_pro_booking_changes: true,
+  notification_pro_submissions: true,
+  notification_pro_gone_quiet: true,
+  notification_pro_care_network: true,
+  notification_pro_payments: true,
+  notification_pro_unpaid_sessions: true,
   quiet_hours_enabled: false,
   quiet_hours_from: "22:00:00",
   quiet_hours_to: "07:00:00",
 };
 
-test("every MO1.8.3 row has its contract column, and the select names all eighteen", () => {
-  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 18);
+test("every MO1.8.3 row has its contract column, and the select names all twenty-six", () => {
+  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 26);
   assert.deepEqual(new Set(Object.values(NOTIFICATION_COLUMNS)), new Set(Object.keys(DEFAULT_ROW)));
-  assert.equal(NOTIFICATION_SELECT.split(", ").length, 18);
-  assert.ok(!NOTIFICATION_SELECT.includes("notification_reviews"), "reviews is not on MO1.8.3");
+  assert.equal(NOTIFICATION_SELECT.split(", ").length, 26);
+  // Release 3 W6: notification_reviews is read for the professional MO12 v2 "New reviews" row.
+  assert.ok(NOTIFICATION_SELECT.includes("notification_reviews"));
 });
 
 test("a row maps to the screen's values, times as HH:MM", () => {

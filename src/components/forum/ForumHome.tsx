@@ -27,7 +27,8 @@ import {
   HeldNote,
   ReplyIcon,
 } from "./parts";
-import { AlertCircle, Ban, Flag, MessagesSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { AlertCircle, BadgeCheck, Ban, Flag, Info, MessageSquare, MessagesSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { textPx } from "../../theme/textSize";
 import { CentiumMark } from "../icons/CentiumMark";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { Toast } from "../ui/Toast";
@@ -62,6 +63,7 @@ export function ForumHome({
   recoveryOn,
   recoveryPending,
   stripSlot,
+  proLook = false,
 }: {
   userId: string;
   categories: ForumCategory[];
@@ -75,6 +77,13 @@ export function ForumHome({
    * undefined draws the strip in place.
    */
   stripSlot?: HTMLElement | null;
+  /**
+   * Release 3 · W6 MO18 v2 (professionals): the board's own forum list
+   * (r15 community15): chipRow10 categories, postCard15 cards, the "You post
+   * under your name and title" line and fab15. Unset (clients) leaves the
+   * list exactly as it was.
+   */
+  proLook?: boolean;
 }) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<string | null>(null);
@@ -218,7 +227,21 @@ export function ForumHome({
   // contrast #5B48B8). The Plus is white; in dark it takes #0D0B1A on the
   // light fill (V6-02 / X-11: the drawn white on #A991FE is 2.2:1). The
   // accessible name is MO1.3 §10's Plus = "Add".
-  const fab = (
+  // MO18 v2 (fab15): 52 round, 18 from the right, 104 up, the fill with
+  // 0 8px 22px rgba(95,80,147,0.28), plus 22 / 2.4; named "New post".
+  const fab = proLook ? (
+    <Link
+      to="/app/forum/new"
+      aria-label="New post"
+      data-forum-fab=""
+      className="tap fixed z-30 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+18px)] lg:bottom-8 lg:right-8"
+      style={{ width: 52, height: 52, boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </Link>
+  ) : (
     <Link
       to="/app/forum/new"
       aria-label="Add"
@@ -236,7 +259,43 @@ export function ForumHome({
   // running off the right edge. K4: while the recovery setting loads, blocks
   // in the skeleton fill stand where the chips will be (32, r9), so a chip
   // the mode would hide is never shown for a moment first.
-  const strip = recoveryPending ? (
+  // MO18 v2 (chipRow10 in scrollRow8): chips r10, pad 7 13, 12, 1px 11%
+  // border (the fill when on), card / fill, 600 / 700; gap 6, running off the
+  // right edge under a 44 fade to the page.
+  const proStrip = (
+    <div className="relative -mr-4">
+      <div className="flex overflow-x-auto no-scrollbar pr-4" style={{ gap: 6 }} role="group" aria-label="Categories" data-forum-strip="">
+        {[{ key: null as string | null, name: "All" }, ...chips].map((c) => {
+          const on = activeFilter === c.key;
+          return (
+            <button
+              key={c.key ?? "all"}
+              type="button"
+              aria-pressed={on}
+              disabled={recoveryPending}
+              onClick={() => setFilter(c.key)}
+              className="tap shrink-0 whitespace-nowrap relative before:absolute before:-inset-y-1.5 before:inset-x-0 before:content-['']"
+              style={{
+                borderRadius: 10,
+                padding: "7px 13px",
+                fontSize: textPx(12),
+                border: `1px solid ${on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-charcoal) / 0.11)"}`,
+                background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+                color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
+                fontWeight: on ? 700 : 600,
+                visibility: recoveryPending && c.key ? "hidden" : undefined,
+              }}
+            >
+              {c.name}
+            </button>
+          );
+        })}
+      </div>
+      <span aria-hidden className="absolute inset-y-0 right-0 pointer-events-none" style={{ width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
+    </div>
+  );
+
+  const strip = proLook ? proStrip : recoveryPending ? (
     <div
       className="flex gap-1 -mr-4 p-1 pr-4 overflow-hidden bg-th-f4f3f9 dark:bg-cream-soft"
       style={{ borderRadius: "12px 0 0 12px" }}
@@ -363,9 +422,22 @@ export function ForumHome({
             </div>
           )}
 
-          <div className="flex flex-col gap-2.5">
+          <div className={proLook ? "flex flex-col gap-2" : "flex flex-col gap-2.5"}>
             {feed.map((t) => {
               const author = authors.get(t.id) ?? UNKNOWN_AUTHOR;
+              if (proLook) {
+                return (
+                  <ProThreadCard
+                    key={t.id}
+                    thread={t}
+                    author={author}
+                    categoryName={byKey.get(t.categoryKey)?.name ?? ""}
+                    photoUrl={t.photoPath ? photos.get(t.photoPath) ?? null : null}
+                    onOpen={() => navigate(`/app/forum/post/${t.id}`)}
+                    onMenu={(anchor) => setMenu({ anchor, thread: t, mine: author.isMine, label: author.label })}
+                  />
+                );
+              }
               return (
                 <ThreadCard
                   key={t.id}
@@ -386,6 +458,13 @@ export function ForumHome({
             {/* O3 (OURS): Foundations › Empty state, tile r16 (as MO1.7.e). */}
             {feed.length === 0 && held.length === 0 && !shownError && (
               <EmptyBlock partB icon={<MessagesSquare size={26} strokeWidth={1.75} />} title="No posts here yet" line="Start the conversation." />
+            )}
+            {/* MO18 v2: 11.5 text.faint 1.5, info 13, gap 6, 4 down. */}
+            {proLook && (
+              <p className="m-0 flex text-charcoal-faint" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: 1.5, marginTop: 4 }}>
+                <Info size={13} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
+                <span>You post under your name and title. Clients post under a nickname.</span>
+              </p>
             )}
             {/* K7: older posts load as the end of the list scrolls into view,
                 with no visible control. The sentinel is also a button that
@@ -662,6 +741,141 @@ function ThreadCard({
         </button>
         <span className="flex gap-[5px] items-center">
           <ReplyIcon color={iconInk} size={14} /> {replies}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Release 3 · W6 MO18 v2 (r15 postCard15), the professional's forum card:
+ * r18, card fill, 1px card border, pad 13 14; header gap 8, 6 under: a 26
+ * avatar (initial; primary for a professional, teal for a nickname, gold
+ * for a first name), the label 12 / 700, a verified professional's badge
+ * (badge-check 11 and "Professional" 10.5 / 700 in status.good), the age 11
+ * text.faint on the right; title 14.5 / 700 line 1.35; meta 8 under, gap 12,
+ * 11.5 text.faint: the category (700 teal ink on teal pale, r8, pad 2 8) and
+ * the reply count (message-square 12). Kept from the client card: the photo,
+ * and the long-press / right-click / focus ⋮ menu (Report, Block; Edit,
+ * Withdraw on your own). "You answered" has no reader (who replied is not
+ * readable per thread), so it is not drawn.
+ */
+function ProThreadCard({
+  thread,
+  author,
+  categoryName,
+  photoUrl,
+  onOpen,
+  onMenu,
+}: {
+  thread: ForumThread;
+  author: Author;
+  categoryName: string;
+  photoUrl: string | null;
+  onOpen: () => void;
+  onMenu: (anchor: HTMLElement) => void;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const cancelPress = () => {
+    if (press.current) window.clearTimeout(press.current.timer);
+  };
+  const tone =
+    author.isProfessional || author.professionalId
+      ? { bg: "rgb(var(--c-primary-pale))", ink: "rgb(var(--c-primary-deep-text))" }
+      : thread.identity === "nickname"
+      ? { bg: "rgb(var(--c-teal-pale))", ink: "rgb(var(--c-teal-text))" }
+      : { bg: "rgb(var(--c-gold-pale))", ink: "rgb(var(--c-team-gold-ink))" };
+  const initials = author.label.trim().slice(0, 2);
+  return (
+    <div
+      ref={cardRef}
+      role="link"
+      tabIndex={0}
+      data-forum-card=""
+      onClick={() => {
+        if (press.current?.fired) {
+          press.current = null;
+          return;
+        }
+        onOpen();
+      }}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && e.key === "Enter") onOpen();
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (cardRef.current) onMenu(cardRef.current);
+      }}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        cancelPress();
+        press.current = {
+          x: e.clientX,
+          y: e.clientY,
+          fired: false,
+          timer: window.setTimeout(() => {
+            if (!press.current) return;
+            press.current.fired = true;
+            if (cardRef.current) onMenu(cardRef.current);
+          }, LONG_PRESS_MS),
+        };
+      }}
+      onPointerMove={(e) => {
+        const p = press.current;
+        if (p && !p.fired && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 8) cancelPress();
+      }}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onPointerLeave={cancelPress}
+      className="tap relative cursor-pointer flex flex-col select-none [-webkit-touch-callout:none] bg-cream-card"
+      style={{ border: "1px solid var(--c-pro-card-border)", borderRadius: 18, padding: "13px 14px" }}
+    >
+      <button
+        type="button"
+        aria-label="Post options"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (cardRef.current) onMenu(cardRef.current);
+        }}
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center focus:bg-cream-soft text-charcoal-soft"
+      >
+        <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
+      </button>
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
+        <span aria-hidden className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 26, height: 26, background: tone.bg, color: tone.ink, fontSize: 9, fontWeight: 800 }}>
+          {initials}
+        </span>
+        <span className="min-w-0 font-bold text-charcoal [overflow-wrap:anywhere]" style={{ fontSize: textPx(12) }}>
+          {author.label}
+        </span>
+        {author.professionalId && (
+          <span className="inline-flex items-center shrink-0 text-status-good" style={{ gap: 3, fontSize: textPx(10.5), fontWeight: 700 }}>
+            <BadgeCheck size={11} strokeWidth={2} aria-hidden />
+            Professional
+          </span>
+        )}
+        <span className="ml-auto shrink-0 text-charcoal-faint" style={{ fontSize: textPx(11) }}>
+          {thread.pinned ? `Pinned · ${forumAge(thread.createdAt)}` : forumAge(thread.createdAt)}
+        </span>
+      </div>
+      <p className="m-0 font-bold text-charcoal [overflow-wrap:anywhere]" style={{ fontSize: textPx(14.5), lineHeight: 1.35 }}>
+        {thread.title}
+      </p>
+      {thread.photoPath && (
+        <div className="h-[120px] rounded-xl overflow-hidden bg-cream-soft" style={{ marginTop: 8 }}>
+          {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />}
+        </div>
+      )}
+      <div className="flex items-center text-charcoal-faint" style={{ gap: 12, marginTop: 8, fontSize: textPx(11.5) }}>
+        {categoryName && (
+          <span className="font-bold" style={{ color: "rgb(var(--c-teal-text))", background: "rgb(var(--c-teal-pale))", borderRadius: 8, padding: "2px 8px" }}>
+            {categoryName}
+          </span>
+        )}
+        <span className="inline-flex items-center" style={{ gap: 4 }} aria-label={`${thread.replyCount} ${thread.replyCount === 1 ? "reply" : "replies"}`}>
+          <MessageSquare size={12} strokeWidth={2} aria-hidden />
+          {thread.replyCount}
         </span>
       </div>
     </div>

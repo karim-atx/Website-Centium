@@ -18,7 +18,7 @@ export * from "./model";
 // each screen keeps its earlier behaviour; it is never a flag.
 
 type LooseRpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: { code?: string; message?: string } | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as LooseRpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as LooseRpc;
 
 export type Read<T> =
   | { ok: true; value: T }

@@ -41,7 +41,12 @@ import { appliedLine, previewOfferLine, redemptionsLine } from "../../services/r
 // summary does know: how many friends joined and the points earned.
 //
 // QA 11.0: shared across Client / Professional / Business More pages.
-export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+/**
+ * `colleague` (Release 3 W6 · MO25, professionals): "Refer a colleague", the
+ * colleague reward line and the note that clients and colleagues can both use
+ * the code. Unset, the popup is the client's, unchanged.
+ */
+export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colleague?: boolean }> = ({ open, onClose, colleague = false }) => {
   const { authUserId } = useApp();
   const [codeDraft, setCodeDraft] = useState("");
   const [copied, setCopied] = useState(false);
@@ -194,7 +199,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
     <CentredPopup
       open={open}
       onClose={onClose}
-      title="Invite friends"
+      title={colleague ? "Refer a colleague" : "Invite friends"}
       titleSize={19}
       className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<Gift size={23} strokeWidth={1.75} />}
@@ -203,7 +208,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
         {label("Rewards")}
         <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
           {[
-            { icon: UserPlus, who: "Your friend", what: "10% off their subscription" },
+            colleague
+              ? { icon: UserPlus, who: "Your colleague", what: "10% off their first plan" }
+              : { icon: UserPlus, who: "Your friend", what: "10% off their subscription" },
             { icon: Sparkles, who: "You", what: "1,500 points plus 15% off your next month" },
           ].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
@@ -223,6 +230,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = (
         {/* The points are real: redeem_referral_code() writes them to the
             referrer's points_ledger, shown under "from referrals" on both
             tier cards. What they are for is a tier and, so far, nothing else. */}
+        {colleague && <p className="mt-2 text-[12px] text-charcoal-faint">Clients and colleagues can both use your code.</p>}
         <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
 
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code

@@ -37,6 +37,7 @@ import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceho
 import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
 import BusinessSettings from "../business-more/BusinessSettings";
+import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -310,6 +311,10 @@ function SettingsHub() {
           onClick={() => navigate("/app/settings/two-factor")}
         />
       </SettingsSection>
+
+      {/* Release 3 W6 · MO23 v3: professionals get Practice here, between
+          Security and Data & account, as the frame draws it. */}
+      {user.accountType === "professional" && <PracticeSection />}
 
       {/* MO1.8 draws Data & account (Storage, Time zone, Use device time
           zone, Blocked members). Change password stays here, first (DECIDED),

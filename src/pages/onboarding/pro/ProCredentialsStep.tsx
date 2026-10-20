@@ -12,7 +12,7 @@ import {
   saveRegistration,
   type CredentialRows,
 } from "../../../services/professional-onboarding";
-import { credentialsComplete, fileLine, isRegulated, licenceNumberError } from "./proModel";
+import { asRegulated, credentialsComplete, fileLine, isRegulated, licenceNumberError } from "./proModel";
 import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { UploadRow, type UploadState } from "./parts";
@@ -139,7 +139,8 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
   };
 
   const pickProof = async (file: File) => {
-    if (!userId || (kind !== "physio" && kind !== "diet")) return;
+    const regKind = asRegulated(kind);
+    if (!userId || !regKind) return;
     if (offline) {
       setProofState("err");
       setProofError(OB_STRINGS.uploadFailed);
@@ -149,7 +150,7 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
     setProofError(null);
     const r = await saveRegistration(
       userId,
-      kind,
+      regKind,
       { body: pro.registeringBody, number: pro.licenceNumber },
       rows?.registration ?? null,
       file,
@@ -178,11 +179,12 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
     if (!ok || busy || !userId) return;
     setBusy(true);
     let r: { ok: true } | { ok: false; message: string } = { ok: true };
-    if (reg && rows?.registration && (kind === "physio" || kind === "diet")) {
+    const regKind = asRegulated(kind);
+    if (reg && rows?.registration && regKind) {
       const changed =
         (rows.registration.issuingBody ?? "") !== pro.registeringBody.trim() || (rows.registration.credentialId ?? "") !== pro.licenceNumber.trim();
       if (changed) {
-        const s = await saveRegistration(userId, kind, { body: pro.registeringBody, number: pro.licenceNumber }, rows.registration, null, rows.count);
+        const s = await saveRegistration(userId, regKind, { body: pro.registeringBody, number: pro.licenceNumber }, rows.registration, null, rows.count);
         r = s.ok ? { ok: true } : s;
         if (s.ok) setRows((prev) => (prev ? { ...prev, registration: s.licence } : prev));
       }
@@ -248,6 +250,8 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
           ? "Physiotherapy is regulated, so we check your licence before your profile goes live."
           : kind === "diet"
           ? "Dietetics is regulated, so we check your registration before your profile goes live."
+          : kind === "doctor"
+          ? "Medicine is regulated, so we check your licence before your profile goes live."
           : "We check your certificate before your profile goes live. It adds a badge clients trust too."
       }
       onBack={onBack}

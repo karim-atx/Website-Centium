@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, ClipboardCheck, ClipboardList, Droplet, Eye, Flame, Footprints, Gauge, HeartPulse, Microscope, Moon, Plus } from "lucide-react";
+import { ChevronRight, ClipboardCheck, ClipboardList, ClipboardPlus, Droplet, Eye, Flame, Footprints, Gauge, HeartPulse, Microscope, Moon, Plus } from "lucide-react";
 import { SCREENING_COPY, bmiOf, screeningRows } from "../../services/health-checks/screening";
 import { usePregnancyFlags } from "../../components/pregnancy/usePregnancyFlags";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
@@ -29,6 +29,8 @@ import { CycleCalendarIcon, WeightScaleIcon } from "../../components/icons/PartB
 import { textPx, linePx } from "../../theme/textSize";
 import { clock12, rangeClock12 } from "../../utils/time12";
 import { fetchLinkedProfessionals } from "../../services/consent";
+import { getMyCarePlan, type MyCarePlan } from "../../services/care-plan";
+import { fromLine, shortDay } from "../../services/care-plan/logic";
 import { activityByDay, localDay, syncState, useActivityDaily, useHealthSources, useDrinks, useMetricRows, useSleepSessions, whenText } from "../../services/health-metrics/b1";
 import { OFFLINE_CACHED, hairline, useHealthMode, useMetricsLoad } from "../../components/health/metric/MetricKit";
 
@@ -133,6 +135,25 @@ export default function Health() {
       cancelled = true;
     };
   }, [user.accountType]);
+
+  // Release 3 CU16 v2 (J14): "Your care plan", only when the client has a
+  // published care plan. A failed read draws no row (as before Release 3).
+  const [carePlan, setCarePlan] = useState<MyCarePlan | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (user.accountType !== "customer") return;
+    void getMyCarePlan().then((r) => {
+      if (!cancelled && r.ok) setCarePlan(r.plan);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.accountType]);
+  const carePlanSubtitle = carePlan
+    ? `From ${fromLine(carePlan.professionalName, carePlan.professionalRole, carePlan.roleIsSpecialty)}${
+        carePlan.nextFollowUp ? ` · next review ${shortDay(carePlan.nextFollowUp.dueOn)}` : ""
+      }`
+    : undefined;
 
   const go = (path: string) => navigate(path);
 
@@ -453,6 +474,8 @@ export default function Health() {
             is active; its title is the plan's own (never the mode's name). */}
         {checkFlags.active && <RecordRow icon={<ClipboardList size={21} strokeWidth={1.5} />} title={CHECKS_COPY.planTitle} onClick={() => go("/app/health/checks")} />}
         <RecordRow icon={<Microscope size={21} strokeWidth={1.5} />} title="Biomarkers & imaging" subtitle={biomarkersSubtitle} onClick={() => go("/app/health/records#biomarkers")} />
+        {/* Release 3 CU16 v2 (J14): after "Biomarkers & imaging", only with a care plan. */}
+        {carePlan && <RecordRow icon={<ClipboardPlus size={21} strokeWidth={1.5} />} title="Your care plan" subtitle={carePlanSubtitle} onClick={() => go("/app/health/care-plan")} />}
         {/* K14: the tracker's way in; "Pregnancy" during a pregnancy (V6-135). */}
         {showCycle && <RecordRow icon={<CycleCalendarIcon size={21} />} title={pregnancy ? "Pregnancy" : "Cycle tracking"} onClick={() => go("/app/cycle")} />}
         {/* #84-#88: who can see the data → Profile › Connected professionals. */}

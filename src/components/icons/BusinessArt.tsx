@@ -213,3 +213,39 @@ export const ProTrainerArt: React.FC<ArtProps> = ({ size = 100, className, style
     <path d={LEAF_PATH} fill={LEAF} transform="translate(50 60) scale(0.08) rotate(-45) translate(-566 -884)" />
   </Art>
 );
+
+// Release 3 (W9 post-review): the three professional types added in Release 3
+// have no handoff drawing (handoff-professional ASSETS lists none), so these
+// are ours, in the set's own vocabulary: 100 × 100 viewBox, the mark purple,
+// the lavender (th-aea1dc / dark th-c3b3fb) and the leaf, one simple object
+// each, never another type's drawing.
+
+// Nutritionist: a lavender bowl with a two-leaf sprout (leaf and mark).
+export const ProNutritionistArt: React.FC<ArtProps> = ({ size = 100, className, style }) => (
+  <Art viewBox="0 0 100 100" size={size} className={className} style={style}>
+    <path d={LEAF_PATH} fill={LEAF} transform="translate(48 58) scale(0.07) rotate(-90) translate(-566 -884)" />
+    <path d={LEAF_PATH} fill={MARK} transform="translate(52 58) scale(0.06) rotate(0) translate(-566 -884)" />
+    <path d="M22 56h56a28 26 0 0 1-56 0z" className="fill-th-aea1dc dark:fill-th-c3b3fb" />
+  </Art>
+);
+
+// Coach or instructor: a stopwatch, the leaf as its hand.
+export const ProCoachArt: React.FC<ArtProps> = ({ size = 100, className, style }) => (
+  <Art viewBox="0 0 100 100" size={size} className={className} style={style}>
+    <rect x="44" y="22" width="12" height="7" rx="2.5" fill={MARK} />
+    <rect x="68" y="30" width="8" height="6" rx="2" fill={MARK} opacity="0.7" transform="rotate(45 72 33)" />
+    <circle cx="50" cy="56" r="24" strokeWidth="4" className="stroke-th-aea1dc dark:stroke-th-c3b3fb" />
+    <path d={LEAF_PATH} fill={LEAF} transform="translate(50 58) scale(0.055) rotate(-45) translate(-566 -884)" />
+    <circle cx="50" cy="58" r="3.5" fill={MARK} />
+  </Art>
+);
+
+// Doctor or GP: a rounded plus (lavender bar under a mark bar) on the ground line, with the leaf.
+export const ProDoctorArt: React.FC<ArtProps> = ({ size = 100, className, style }) => (
+  <Art viewBox="0 0 100 100" size={size} className={className} style={style}>
+    <rect x="14" y="80" width="72" height="2" rx="1" opacity="0.7" className="fill-th-aea1dc dark:fill-th-c3b3fb" />
+    <rect x="28" y="44" width="44" height="15" rx="5" className="fill-th-aea1dc dark:fill-th-c3b3fb" />
+    <rect x="42.5" y="30" width="15" height="43" rx="5" fill={MARK} />
+    <path d={LEAF_PATH} fill={LEAF} transform="translate(72 79) scale(0.06) rotate(-45) translate(-566 -884)" />
+  </Art>
+);

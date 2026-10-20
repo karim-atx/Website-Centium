@@ -89,8 +89,8 @@ export const Layout: React.FC = () => {
 
   // Handover 2026-09-29, 01 GLOBAL: the client app is a single phone-width
   // column — at most 430px, centred, no desktop sidebar — on every screen
-  // size. Professional and Business accounts are outside the handover and
-  // keep their sidebar + wide layout.
+  // size. Professional and Business accounts keep the desktop sidebar, with
+  // the same 430 column beside it.
   const { user } = useApp();
   const isClient = user.accountType !== "professional" && user.accountType !== "business";
 
@@ -116,12 +116,11 @@ export const Layout: React.FC = () => {
                   // floating nav below, plus the WO17 bar while it shows
                   // (--active-bar is its height + gap, else 0).
                   "max-w-[430px] mx-auto px-4 pt-[calc(env(safe-area-inset-top)+24px)] pb-[calc(env(safe-area-inset-bottom)+112px+var(--active-bar,0px))]"
-                : user.accountType === "business"
-                  ? // OURS-NAV-desktop-sidebar row 7: business pages keep the
-                    // 430 phone column (the frames are phone-only), centred
-                    // beside the sidebar at lg.
-                    "max-w-[430px] mx-auto px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+112px)] lg:pb-12"
-                  : "max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12"
+                : // OURS-NAV-desktop-sidebar row 7: business pages keep the
+                  // 430 phone column (the frames are phone-only), centred
+                  // beside the sidebar at lg. Release 3 (FINAL_PLAN, Karim's
+                  // answer 5): professionals use the same column.
+                  "max-w-[430px] mx-auto px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+112px)] lg:pb-12"
             }
           >
             {/* First, because it explains why the other two might not be able to

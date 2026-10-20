@@ -1,14 +1,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
-  cancelledLine,
   describeCancelError,
   describeConfirmError,
   describePlanWriteError,
   hireGate,
   paymentMethodLabel,
   planPriceLine,
-  reorderPlans,
   sortByPosition,
   validatePlanDraft,
   type PlanDraft,
@@ -45,29 +43,6 @@ test("validatePlanDraft mirrors the table checks", () => {
   assert.deepEqual(eleven, { ok: false, message: "A plan can list up to 10 features." });
 });
 
-test("reorderPlans rewrites positions 0..n-1 and returns only the changed ones", () => {
-  const plans = [
-    { id: "a", position: 0 },
-    { id: "b", position: 0 },
-    { id: "c", position: 0 },
-  ];
-  assert.deepEqual(reorderPlans(plans, "c", "up"), [
-    { id: "c", position: 1 },
-    { id: "b", position: 2 },
-  ]);
-  const tidy = [
-    { id: "a", position: 0 },
-    { id: "b", position: 1 },
-  ];
-  assert.deepEqual(reorderPlans(tidy, "a", "down"), [
-    { id: "b", position: 0 },
-    { id: "a", position: 1 },
-  ]);
-  assert.deepEqual(reorderPlans(tidy, "a", "up"), []);
-  assert.deepEqual(reorderPlans(tidy, "b", "down"), []);
-  assert.deepEqual(reorderPlans(tidy, "zz", "up"), []);
-});
-
 test("sortByPosition breaks ties by creation, like professional_plans_for", () => {
   const sorted = sortByPosition([
     { id: "late", position: 0, createdAt: "2026-10-02T00:00:00Z" },
@@ -100,14 +75,6 @@ test("plan write errors", () => {
   assert.match(describePlanWriteError({ code: "23514" }, false), /can't be saved/);
   assert.match(describePlanWriteError(null, true), /connection/i);
   assert.match(describePlanWriteError({ code: "PGRST116" }, false), /isn't there/);
-});
-
-test("cancelledLine picks the wording from was_free and names no charge", () => {
-  assert.match(cancelledLine("Lea", true), /^Lea's hire is cancelled\. No payment had been confirmed/);
-  const after = cancelledLine("Lea", false);
-  assert.match(after, /recorded the cancellation/);
-  assert.doesNotMatch(after, /\$|fee|charge|refund/i);
-  assert.match(cancelledLine("", true), /^The client's hire/);
 });
 
 test("labels", () => {

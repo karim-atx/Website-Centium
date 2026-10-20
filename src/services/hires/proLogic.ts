@@ -82,28 +82,6 @@ export function validatePlanDraft(draft: PlanDraft): { ok: true; row: PlanWrite 
   return { ok: true, row: { name, price: price.value, billing: draft.billing, features, active: draft.active } };
 }
 
-/**
- * The position each plan should have after moving one up or down, as the
- * changed (id, position) pairs only. Positions are rewritten as 0..n-1 in the
- * new order, so plans that shared a position (the column defaults to 0) come
- * out distinct and the order the professional sees is the order saved.
- */
-export function reorderPlans<T extends { id: string; position: number }>(
-  plans: T[],
-  id: string,
-  direction: "up" | "down"
-): { id: string; position: number }[] {
-  const order = [...plans];
-  const from = order.findIndex((p) => p.id === id);
-  const to = direction === "up" ? from - 1 : from + 1;
-  if (from < 0 || to < 0 || to >= order.length) return [];
-  [order[from], order[to]] = [order[to], order[from]];
-  return order
-    .map((p, index) => ({ id: p.id, position: index, before: p.position }))
-    .filter((p) => p.position !== p.before)
-    .map(({ id: planId, position }) => ({ id: planId, position }));
-}
-
 /** Plans in the order the hire sheet shows them: position, then creation. */
 export function sortByPosition<T extends { position: number; createdAt: string }>(plans: T[]): T[] {
   return [...plans].sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
@@ -186,14 +164,3 @@ export function describeCancelError(code: string | undefined): string {
   }
 }
 
-/**
- * What cancelling did, from was_free. Before confirmation nothing had been
- * acknowledged; after it Centium only records the cancellation — no money
- * passed through it, so there is no charge or refund to name.
- */
-export function cancelledLine(firstName: string, wasFree: boolean): string {
-  const who = firstName.trim() || "The client";
-  return wasFree
-    ? `${who}'s hire is cancelled. No payment had been confirmed, so there's nothing to settle.`
-    : `${who}'s hire is cancelled. You'd already confirmed their payment, so Centium has recorded the cancellation; anything owed is between you and ${who}.`;
-}

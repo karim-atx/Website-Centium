@@ -225,6 +225,22 @@ export default {
           leaf: "rgb(var(--c-brand-leaf) / <alpha-value>)",
         },
         "sheet-border-business": "var(--sheet-border-business)",
+        // Release 3 · Professional UI (index.css --c-pro-*, design-tokens.json).
+        pro: {
+          "card-border": "var(--c-pro-card-border)",
+          "ring-track": "var(--c-pro-ring-track)",
+          "list-bg": "var(--c-pro-list-bg)",
+          "list-rule": "var(--c-pro-list-rule)",
+          "tab-idle": "var(--c-pro-tab-idle)",
+          "tab-idle-ink": "var(--c-pro-tab-idle-ink)",
+          "mint-hero": "var(--c-pro-mint-hero)",
+          "mint-tile": "var(--c-pro-mint-tile)",
+          "tile-icon": "var(--c-pro-tile-icon)",
+          "tile-sub": "var(--c-pro-tile-sub)",
+          "hero-title": "var(--c-pro-hero-title)",
+          "hero-sub": "var(--c-pro-hero-sub)",
+          "done-leaf": "var(--c-pro-done-leaf)",
+        },
         "wheel-band-business": "var(--wheel-band-business)",
         type: {
           classes: "rgb(var(--c-type-classes) / <alpha-value>)",

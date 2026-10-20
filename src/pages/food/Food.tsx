@@ -26,7 +26,11 @@ import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
 import { todayLocal } from "../../utils/date";
 import type { MealType, FoodLogEntry } from "../../types";
 import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check, AlertCircle } from "lucide-react";
-import { isFoodRestricted } from "../../utils/dietaryRestrictions";
+import { dietaryRestrictionOptions, isFoodRestricted } from "../../utils/dietaryRestrictions";
+import { FoodConflictBadge } from "../../components/food/FoodConflictBadge";
+import { FoodFeedbackLine } from "../../components/food/FoodFeedbackLine";
+import { worstBadge } from "../../services/nutrition/clientNutritionModel";
+import { useDiaryExtras } from "./useFoodProfessional";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel, { MealPrepSubTabs, type SubTab } from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
@@ -73,6 +77,10 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: s
 };
 
 const SWIPE_THRESHOLD = 60;
+
+// Release 3 · CU13: a food_conflicts restriction or preference named as the
+// dropdown names it ("Dairy-Free").
+const restrictionName = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
 const SAVE_FAILED = "Couldn't save. Try again.";
 
 // The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
@@ -130,6 +138,13 @@ export default function Food() {
     () => foodLog.filter((e) => e.date === selectedDate),
     [foodLog, selectedDate]
   );
+  // Release 3 · CU3: AppContext syncs the targets a professional set into the
+  // device goal (so Home has them too); the Goals panel shows them locked.
+  const { professionalTargets: proTargets } = useApp();
+  // Release 3 · CU13 / CU4: food_conflicts badges and the professional's
+  // feedback per entry of the day. Saving allergies re-reads the conflicts.
+  const [allergyVersion, setAllergyVersion] = useState(0);
+  const { conflicts, feedback, setFeedbackReply } = useDiaryExtras(todaysEntries, allergyVersion);
   const totals = useMemo(() => sumNutrition(todaysEntries), [todaysEntries]);
   // FO1 B-1 (B3 PB-O-30): a PAST day is measured against the goal that
   // applied on it (nutrition_goal_on); today, a future day, no stored goal or
@@ -670,6 +685,13 @@ export default function Food() {
                             // highlight specific food diary items that are not
                             // compatible with the restriction."
                             const restricted = !!dietaryRestriction && isFoodRestricted(e, dietaryRestriction);
+                            // Release 3 · CU13: the worst food_conflicts row as a badge beside
+                            // the client's own one (a restriction already flagged above is
+                            // not flagged twice). Only a confirmed allergy tints the row red.
+                            const conflict = worstBadge(conflicts.get(e.id) ?? [], restrictionName);
+                            const conflictBadge = conflict && !(restricted && (conflict.kind === "restriction" || conflict.kind === "preference")) ? conflict : null;
+                            const flagged = restricted || conflictBadge?.kind === "allergy_confirmed";
+                            const entryFeedback = feedback.get(e.id) ?? [];
                             return (
                               <div key={e.id} className="flex items-center" style={{ gap: inSelection ? 9 : 0 }}>
                                 {inSelection && (
@@ -729,10 +751,10 @@ export default function Food() {
                                   }}
                                   className={clsx(
                                     "tap relative w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left",
-                                    restricted && "bg-status-high-bg"
+                                    flagged && "bg-status-high-bg"
                                   )}
                                   // FO1 #45: #AEA1DC@10% (dark #A991FE@10%).
-                                  style={restricted ? undefined : { background: lav(0.1) }}
+                                  style={flagged ? undefined : { background: lav(0.1) }}
                                 >
                                   <span className="min-w-0">
                                     <span className="flex items-center gap-1.5 text-[12px] leading-[18px] font-semibold text-charcoal">
@@ -743,6 +765,7 @@ export default function Food() {
                                           Not compatible
                                         </span>
                                       )}
+                                      {conflictBadge && <FoodConflictBadge badge={conflictBadge} />}
                                     </span>
                                     {/* FO1 #47 / V6-145: one line with an ellipsis. */}
                                     <span className="block truncate text-[9.5px] leading-[14.3px] text-charcoal-tertiary">
@@ -757,6 +780,8 @@ export default function Food() {
                                   )}
                                 </button>
                               </SwipeActions>
+                              {/* Release 3 · CU4: the professional's feedback on this entry, with Reply. */}
+                              {!inSelection && entryFeedback.map((f) => <FoodFeedbackLine key={f.id} f={f} onReplied={setFeedbackReply} />)}
                               </div>
                               </div>
                             );
@@ -827,7 +852,7 @@ export default function Food() {
         </div>
       )}
 
-      {tab === "goals" && <GoalsPanel />}
+      {tab === "goals" && <GoalsPanel clientTargets={proTargets} onAllergiesSaved={() => setAllergyVersion((v) => v + 1)} />}
       {tab === "prep" && <MealPrepPanel sub={prepSub} />}
 
       {tab === "diary" && (

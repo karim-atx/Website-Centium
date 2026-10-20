@@ -41,7 +41,7 @@ export * from "./model";
 export type Read<T> = { ok: true; value: T } | { ok: false; pending?: boolean; denied?: boolean; message: string };
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 const LOAD_FAIL = "Couldn't load your numbers.";
 

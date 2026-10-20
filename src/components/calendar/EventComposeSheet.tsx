@@ -47,6 +47,12 @@ const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
 ];
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** Minutes every `step`, plus the value's own minute when it is off the step. */
+const stepOptions = (step: number, current: number) => {
+  const steps = Array.from({ length: Math.ceil(60 / step) }, (_, i) => i * step);
+  return steps.includes(current) ? steps : [...steps, current].sort((a, b) => a - b);
+};
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 
 const FIELD = "w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -55,7 +61,13 @@ const LABEL = "text-xs font-semibold text-charcoal-soft mb-1.5 block";
 /** The DD/MM/YYYY MO1.6.4 draws ("01/10/2026"). */
 const dateLabel = (isoDate: string) => new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-GB");
 
-function TimeField({
+/**
+ * A Starts / Ends field with its wheel opening under it. Exported for the
+ * professional's New session (Release 3 W4, CA5 v2), which draws the same
+ * field. The optional props change only that caller; their defaults are this
+ * sheet's own.
+ */
+export function TimeField({
   label,
   value,
   open,
@@ -63,6 +75,9 @@ function TimeField({
   onClose,
   onChange,
   notBefore,
+  minuteStep = 5,
+  fieldClass = FIELD,
+  labelClass = LABEL,
 }: {
   label: string;
   value: string;
@@ -72,6 +87,10 @@ function TimeField({
   onChange: (hhmm: string) => void;
   /** Ends: nothing earlier than this ("HH:MM") can be chosen. */
   notBefore?: string;
+  /** The wheel's minute step (5 here; the pro New session's wheel draws 15). */
+  minuteStep?: number;
+  fieldClass?: string;
+  labelClass?: string;
 }) {
   const parts = toParts(value);
   const floor = notBefore ? minutesOf(notBefore) : -1;
@@ -82,13 +101,13 @@ function TimeField({
   };
   return (
     <div className="relative min-w-0">
-      <span className={LABEL}>{label}</span>
+      <span className={labelClass}>{label}</span>
       <button
         type="button"
         onClick={open ? onClose : onOpen}
         aria-expanded={open}
         aria-label={`${label}, ${fieldTime(value)}`}
-        className={`tap ${FIELD} flex items-center justify-between text-left`}
+        className={`tap ${fieldClass} flex items-center justify-between text-left`}
       >
         <span className="tabular-nums">{fieldTime(value)}</span>
         <Clock size={16} strokeWidth={1.75} className="text-charcoal-faint shrink-0" />
@@ -109,7 +128,7 @@ function TimeField({
                 {
                   label: "Minutes",
                   value: parts.minute,
-                  options: minuteOptions(parts.minute).map((m) => ({
+                  options: (minuteStep === 5 ? minuteOptions(parts.minute) : stepOptions(minuteStep, parts.minute)).map((m) => ({
                     value: m,
                     label: String(m).padStart(2, "0"),
                     disabled: tooEarly({ ...parts, minute: m }),
@@ -144,7 +163,12 @@ export const EventComposeSheet: React.FC<{
   onSave: () => void;
   onDelete: () => void;
   confirmDelete: boolean;
-}> = ({ open, onClose, editing, draft, setDraft, todayIso, saving, error, linkError, onSave, onDelete, confirmDelete }) => {
+  /**
+   * Optional rows above Save (Release 3 W4: the professional's invitees and
+   * attachment, kept from the old CalendarTab). Absent for the client.
+   */
+  extra?: React.ReactNode;
+}> = ({ open, onClose, editing, draft, setDraft, todayIso, saving, error, linkError, onSave, onDelete, confirmDelete, extra }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const [dateOpen, setDateOpen] = useState(false);
@@ -410,6 +434,8 @@ export const EventComposeSheet: React.FC<{
             <span className="mt-1.5 block text-xs font-semibold text-status-high">Links need to be a web address (http or https).</span>
           )}
         </label>
+
+        {extra}
 
         {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}
 

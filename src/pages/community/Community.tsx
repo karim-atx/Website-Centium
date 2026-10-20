@@ -18,6 +18,8 @@ import { useState } from "react";
 import { Users } from "lucide-react";
 import { FixedHeader } from "../../components/ui/FixedHeader";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { textPx } from "../../theme/textSize";
+import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
 
 // The Community page: Forum and Courses (design PgYuBboDr8DEL2bk7EJKtU,
 // screen 1), and the forum's own screens behind it.
@@ -31,6 +33,8 @@ type Ctx = {
   userId: string;
   firstName: string;
   isProfessional: boolean;
+  /** A professional's title for "Posting as" (MO18 v2), from their type. */
+  proTitle: string;
   categories: ForumCategory[];
   nickname: string | null;
   recoveryOn: boolean;
@@ -38,6 +42,12 @@ type Ctx = {
 };
 
 type Section = "forum" | "courses";
+
+/** "Personal trainer", "Dietitian" (the type as one noun, capitalised). */
+function proTitleOf(type: string | undefined): string {
+  const noun = SUBTYPE_SINGULAR[(type ?? "other") as keyof typeof SUBTYPE_SINGULAR] ?? SUBTYPE_SINGULAR.other;
+  return noun.charAt(0).toUpperCase() + noun.slice(1);
+}
 
 function useForumGate(section: Section):
   | { state: "redirect" }
@@ -76,6 +86,7 @@ function useForumGate(section: Section):
       userId: authUserId,
       firstName: user.firstName,
       isProfessional: user.accountType === "professional",
+      proTitle: proTitleOf(user.professionalSubtype),
       categories: me.categories,
       nickname: me.nickname,
       recoveryOn: recoverySensitive,
@@ -89,6 +100,35 @@ function useForumGate(section: Section):
 // #B8B3C7 6 under it; 16 to the tabs (the caller's).
 function Heading({ className = "mb-4" }: { className?: string }) {
   const back = useBack();
+  const { user } = useApp();
+  // Release 3 · W6 MO18 v2 (r15 cHead15 with size 27), professionals only:
+  // back 36 (ml -7), gap 6; title 27 / 700 -0.03em line 1.25, 3 down;
+  // subtitle 13 text.faint, 4 under; 16 to the tabs.
+  if (user.accountType === "professional") {
+    return (
+      <div className={`flex items-start ${className}`} style={{ gap: 6 }}>
+        <button
+          type="button"
+          onClick={back}
+          aria-label="Back"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-charcoal-soft relative before:absolute before:-inset-1 before:content-['']"
+          style={{ marginLeft: -7 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <div className="min-w-0" style={{ marginTop: 3 }}>
+          <h1 className="m-0 font-bold text-charcoal" style={{ fontSize: textPx(27), letterSpacing: "-0.03em", lineHeight: 1.25 }}>
+            Community
+          </h1>
+          <p className="m-0 text-charcoal-faint" style={{ marginTop: 4, fontSize: textPx(13) }}>
+            Answer questions from clients and colleagues, or teach a course
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`flex items-start gap-2.5 ${className}`}>
       <button
@@ -204,9 +244,11 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                 activeKey={tab}
                 onChange={(t) => setParams(t === "courses" ? { tab: "courses" } : {}, { replace: true })}
                 labelSize={15}
-                idleInk="rgb(var(--c-charcoal-soft))"
+                // Release 3 · W6 MO18 v2 (professionals): segTabs 56 high, 15,
+                // 12 under, the board's idle ink; clients keep 44 and #5B5349.
+                {...(ctx.isProfessional ? { tabHeight: 56 } : { idleInk: "rgb(var(--c-charcoal-soft))" })}
                 darkTone="partB"
-                className={tab === "forum" ? "mb-2.5" : undefined}
+                className={tab === "forum" ? (ctx.isProfessional ? "mb-3" : "mb-2.5") : undefined}
               />
               {/* #9: 10 under the tabs. */}
               {tab === "forum" && <div ref={setStripSlot} data-forum-strip-slot="" />}
@@ -229,6 +271,7 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                   categories={ctx.categories}
                   recoveryOn={ctx.recoveryOn}
                   recoveryPending={ctx.recoveryPending}
+                  postingAs={ctx.isProfessional ? { name: ctx.firstName, title: ctx.proTitle } : undefined}
                 />
               )}
               <ForumHome
@@ -239,6 +282,7 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                 recoveryOn={ctx.recoveryOn}
                 recoveryPending={ctx.recoveryPending}
                 stripSlot={stripSlot}
+                proLook={ctx.isProfessional}
               />
               </>
             )}
@@ -329,7 +373,7 @@ export function CourseBuilderPage() {
     <Gated
       section="courses"
       render={(ctx) =>
-        ctx.isProfessional ? <CourseBuilder key={courseId} courseId={courseId ?? ""} /> : <Navigate to="/app/forum?tab=courses" replace />
+        ctx.isProfessional ? <CourseBuilder key={courseId} courseId={courseId ?? ""} userId={ctx.userId} /> : <Navigate to="/app/forum?tab=courses" replace />
       }
     />
   );

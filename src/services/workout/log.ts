@@ -5,6 +5,8 @@ import { SET_TYPES } from "../../types";
 import { localDayOf } from "../../utils/date";
 import { isUuid } from "../food";
 import { serializeEnduranceResult } from "./results";
+import type { SessionSwap } from "./coachLogic";
+import type { Json } from "../../../lib/supabase/database.types";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -105,7 +107,10 @@ function exerciseRef(ex: LoggedExercise): {
  */
 export async function saveWorkoutSession(
   userId: string,
-  session: Omit<WorkoutSession, "id">
+  // `swaps` rides along on the session object the logger hands to the app
+  // context, which passes it here unchanged (WorkoutSession has no swaps
+  // field of its own; the column is write-once from this one place).
+  session: Omit<WorkoutSession, "id"> & { swaps?: SessionSwap[] | null }
 ): Promise<WorkoutSaveResult> {
   const { data: sessionRow, error: sessionError } = await supabase
     .from("workout_sessions")
@@ -133,6 +138,10 @@ export async function saveWorkoutSession(
       duration_sec: Math.max(0, Math.round(session.durationSec)),
       total_volume_kg: round2(Math.max(0, session.totalVolumeKg)),
       notes: session.notes ?? null,
+      // Release 3 (CU1, J7): the coach routine's swaps, in the documented
+      // shape (swapsPayload). INSERT-ONLY for the client (no update grant),
+      // so they travel with the session row itself.
+      ...(session.swaps?.length ? { swaps: session.swaps as unknown as Json } : {}),
     })
     .select("id")
     .single();

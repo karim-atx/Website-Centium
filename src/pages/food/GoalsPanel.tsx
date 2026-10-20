@@ -12,9 +12,13 @@ import {
   REFERENCE_INTAKE_NOTE,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { canDrawSparkline, trendLabel, withinDays } from "../../services/health-metrics/series";
-import type { WeightGoalType, PlanType } from "../../types";
-import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal } from "lucide-react";
+import { canDrawSparkline, trendLabel, withinDays, type MetricReadings } from "../../services/health-metrics/series";
+import type { WeightGoalType, PlanType, NutritionGoal, MacroSplit } from "../../types";
+import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal, TriangleAlert } from "lucide-react";
+import { AllergiesSheet } from "../../components/food/AllergiesSheet";
+import { MealPlanCard } from "../../components/food/MealPlanCard";
+import { allergyLine, TARGETS_LOCKED_MESSAGE, withProfessionalTargets, type ProfessionalTargets } from "../../services/nutrition/clientNutritionModel";
+import { useMyAllergies } from "./useFoodProfessional";
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // Item 8 shares Food's own tab bar (labels + literal flex-weights) instead
 // of a second, drifting copy of them.
@@ -77,11 +81,67 @@ const existingPlanPreset = {
   macroSplit: { proteinPct: 35, carbsPct: 40, fatPct: 25 },
 };
 
+/**
+ * Release 3 professional mode (NU8 v3 "Targets", HANDOVER h: the targets are
+ * the client Goals panel cards). Everything comes from the caller instead of
+ * the signed-in user's own context: the client's goal (a draft the caller
+ * saves with set_client_nutrition_targets), their weigh-ins (Weight switch,
+ * or null when not shared), the TDEE (calculateTDEEFromParts, or null when an
+ * input isn't available) and the lock line. Pregnancy guidance and the Plan
+ * card (the client's own choices) are not shown. Absent, the panel is the
+ * client's own Food › Goals, unchanged.
+ */
+export interface GoalsPanelPro {
+  goal: { weightGoal: WeightGoalType; weeklyRateKg: number; targetCalories: number; macroSplit: MacroSplit; desiredWeightKg?: number };
+  onChange: (goal: GoalsPanelPro["goal"]) => void;
+  /** Clinical overview: shown, never edited. */
+  readOnly: boolean;
+  /** The client's weigh-ins; null when Weight isn't shared (weightLocked renders instead). */
+  weight: MetricReadings | null;
+  weightLocked?: React.ReactNode;
+  tdee: number | null;
+  /** Shown in the TDEE card when tdee is null: a title and a line. */
+  tdeeMissing: { title: string; line: string };
+  /** Under the weight goal (who sees it as locked, or who set it). */
+  lockNote?: React.ReactNode;
+  /** The desired weight is the client's own (set_client_nutrition_targets doesn't write it). */
+  desiredWeightEditable?: boolean;
+  /** The client's own weight goal isn't known (Progress not shared): no option is highlighted. */
+  weightGoalUnknown?: boolean;
+  /** Draw the caller's own macro card instead of the editor. */
+  hideMacros?: boolean;
+  today: string;
+}
+
 // v6 FO1 S1: the Food tab bar is the page's one fixed header on every tab,
 // so this panel no longer draws a second copy of it.
-export default function GoalsPanel() {
-  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy, cycleOffered } =
-    useApp();
+/**
+ * Release 3 · W7 client additions (CU3, CU13 to CU15), client mode only:
+ * - clientTargets: the targets a professional set (Food reads them,
+ *   AppContext professionalTargets). Locked, every editing control locks (the
+ *   existing lock line stays as written), Existing plan applies them instead
+ *   of the stand-in preset, and Custom plan says ATXG8's words.
+ * - the Allergies chip beside Dietary restriction (unchanged, CU14), the
+ *   allergy line under it, and AllergiesSheet (CU15);
+ * - the "Meal plan from {pro}" card under Plan (MealPlanCard).
+ * An account with no professional and no allergies sees the panel as before.
+ */
+export default function GoalsPanel({
+  pro,
+  clientTargets,
+  onAllergiesSaved,
+}: { pro?: GoalsPanelPro; clientTargets?: ProfessionalTargets | null; onAllergiesSaved?: () => void } = {}) {
+  const app = useApp();
+  const { user, healthSeries, metricValues, dietaryRestriction, setDietaryRestriction, pregnancy, cycleOffered, authUserId, recoverySensitive, recoveryModePending } = app;
+  const proTargets = pro ? null : clientTargets ?? null;
+  const myAllergies = useMyAllergies(!pro);
+  const [allergiesOpen, setAllergiesOpen] = useState(false);
+  const today = pro ? pro.today : app.today;
+  const nutritionGoal: NutritionGoal = pro ? { ...pro.goal, planType: "custom", desiredWeightConfirmed: pro.goal.desiredWeightKg != null } : app.nutritionGoal;
+  const setNutritionGoal = (g: NutritionGoal) =>
+    pro ? pro.onChange({ weightGoal: g.weightGoal, weeklyRateKg: g.weeklyRateKg, targetCalories: g.targetCalories, macroSplit: g.macroSplit, desiredWeightKg: g.desiredWeightKg }) : app.setNutritionGoal(g);
+  const setWeightGoal = (g: WeightGoalType, rate: number) => (pro ? pro.onChange({ ...pro.goal, weightGoal: g, weeklyRateKg: rate }) : app.setWeightGoal(g, rate));
+  const setMacroSplit = (s: MacroSplit) => (pro ? pro.onChange({ ...pro.goal, macroSplit: s }) : app.setMacroSplit(s));
   const dark = useIsDark();
   const CARD = dark ? CARD_DARK : CARD_LIGHT;
   const TITLE = dark ? TITLE_DARK : TITLE_LIGHT;
@@ -90,7 +150,11 @@ export default function GoalsPanel() {
   // always on screen, that stale figure would be one tap from being saved.
   const [calorieEdit, setCalorieEdit] = useState<string | null>(null);
   const calorieDraft = calorieEdit ?? String(nutritionGoal.targetCalories);
-  const setCalorieDraft = (v: string | null) => setCalorieEdit(v);
+  const setCalorieDraft = (v: string | null) => {
+    setCalorieEdit(v);
+    // Professional mode: the stepper is the draft the caller saves.
+    if (pro && v && Number(v) > 0) pro.onChange({ ...pro.goal, targetCalories: Number(v) });
+  };
   const [planError, setPlanError] = useState<string | null>(null);
   // FO6: the options open in the shared floating popup (PopupMenu, the
   // Nutrient Summary filter style) anchored to the chip, not inline.
@@ -107,9 +171,9 @@ export default function GoalsPanel() {
   // V6 (QA 6.0): "Existing plan" is a dietitian-provided plan — the client
   // can view it but only the dietitian edits it (from the professional UI),
   // so every editable control here locks while it's selected.
-  const locked = nutritionGoal.planType === "existing";
+  const locked = pro ? pro.readOnly : nutritionGoal.planType === "existing" || !!proTargets?.locked;
 
-  const tdee = calculateTDEE(user);
+  const tdee = pro ? pro.tdee : calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
   // V9 (QA 9.0): "TDEE estimate should include the maintenance calorie as
   // well as the calories based on what goal is chosen" — same formula
@@ -133,14 +197,15 @@ export default function GoalsPanel() {
   // landed on the user's real weight — which produced a chart whose ending
   // was true and whose whole trajectory was somebody else's, then printed a
   // "↓ 1.2 kg this week" derived from the invented end of it.
-  const weightMeta = withinDays(healthSeries.weight, 7, today);
+  const weightMeta = withinDays(pro ? pro.weight ?? { ...healthSeries.weight, history: [], current: null, trend: null } : healthSeries.weight, 7, today);
   const weight = {
-    current: metricValues.weight,
+    current: pro ? pro.weight?.current ?? null : metricValues.weight,
     history: weightMeta.history,
   };
 
   const rate = nutritionGoal.weeklyRateKg || 0.5;
-  const desiredWeightKg = nutritionGoal.desiredWeightKg ?? user.weightKg;
+  const desiredWeightKg = nutritionGoal.desiredWeightKg ?? (pro ? null : user.weightKg);
+  const currentKg = pro ? weight.current : user.weightKg;
   // NO PROJECTION WITHOUT A STARTING POINT. "Reach 75 kg by 12 March" needs
   // a weight to count down from; with no weigh-in on record there is nothing
   // to measure the distance from, so no date is offered.
@@ -173,12 +238,12 @@ export default function GoalsPanel() {
       setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
       return;
     }
-    if (nutritionGoal.weightGoal === "lose" && user.weightKg !== null && kg >= user.weightKg) {
-      setWeightGoalError(`Desired weight must be lower than your current weight (${user.weightKg}kg) to lose weight.`);
+    if (nutritionGoal.weightGoal === "lose" && currentKg !== null && kg >= currentKg) {
+      setWeightGoalError(`Desired weight must be lower than your current weight (${currentKg}kg) to lose weight.`);
       return;
     }
-    if (nutritionGoal.weightGoal === "gain" && user.weightKg !== null && kg <= user.weightKg) {
-      setWeightGoalError(`Desired weight must be higher than your current weight (${user.weightKg}kg) to gain weight.`);
+    if (nutritionGoal.weightGoal === "gain" && currentKg !== null && kg <= currentKg) {
+      setWeightGoalError(`Desired weight must be higher than your current weight (${currentKg}kg) to gain weight.`);
       return;
     }
     setWeightGoalError(null);
@@ -195,7 +260,13 @@ export default function GoalsPanel() {
   };
 
   const applyExistingPlan = () => {
-    const suggested = calculateTDEE(user);
+    // Release 3 · CU3: with targets a professional set, Existing plan is those targets.
+    if (proTargets) {
+      setNutritionGoal(withProfessionalTargets({ ...nutritionGoal, planType: "existing" }, proTargets));
+      setCalorieDraft(null);
+      return;
+    }
+    const suggested = pro ? pro.tdee : calculateTDEE(user);
     if (suggested === null) return;
     setNutritionGoal({
       ...nutritionGoal,
@@ -209,7 +280,7 @@ export default function GoalsPanel() {
   };
 
   const applySuggested = () => {
-    const suggested = calculateTDEE(user);
+    const suggested = tdee;
     if (suggested === null) return;
     const delta = (nutritionGoal.weeklyRateKg * 7700) / 7;
     const cals =
@@ -229,7 +300,7 @@ export default function GoalsPanel() {
   const rateTint = nutritionGoal.weightGoal === "gain" ? "#9FC8B2" : "#DF9C95";
   const rateFrac = (((nutritionGoal.weeklyRateKg || 0.5) - 0.1) / 0.9) * 100;
 
-  const useSuggestedButton = (
+  const useSuggestedButton = pro?.readOnly ? null : (
     <button
       onClick={applySuggested}
       disabled={locked || tdee === null}
@@ -247,13 +318,13 @@ export default function GoalsPanel() {
           to my targets" writes into the calorie goal two cards below, so it
           belongs on the same screen as that number rather than somewhere the
           user has to remember what it did. */}
-      {cycleOffered && pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
+      {!pro && cycleOffered && pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
 
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Weight goal</p>
         <div className="grid grid-cols-3" style={{ gap: 6 }}>
           {goalOptions.map((g) => {
-            const on = nutritionGoal.weightGoal === g.value;
+            const on = !pro?.weightGoalUnknown && nutritionGoal.weightGoal === g.value;
             return (
               <button
                 key={g.value}
@@ -292,7 +363,7 @@ export default function GoalsPanel() {
                   onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
                   onBlur={confirmDesiredWeight}
                   onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                  disabled={locked}
+                  disabled={locked || (!!pro && !pro.desiredWeightEditable)}
                   inputMode="decimal"
                   enterKeyHint="done"
                   aria-label="Desired weight in kg"
@@ -316,7 +387,7 @@ export default function GoalsPanel() {
                   onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
                   // V8 (QA 8.0): the weekly rate can only be edited once a
                   // desired weight is confirmed.
-                  disabled={locked || !nutritionGoal.desiredWeightConfirmed}
+                  disabled={locked || (!pro && !nutritionGoal.desiredWeightConfirmed)}
                   aria-label="Desired weekly rate"
                   className="flex-1 min-w-0 h-[6px] rounded-full appearance-none disabled:opacity-50"
                   style={{
@@ -336,11 +407,13 @@ export default function GoalsPanel() {
           <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{weightGoalError}</p>
         )}
 
-        {locked && (
-          <p className="text-[10.5px] text-charcoal-faint mt-2">
-            Locked: only your dietitian can edit this plan.
-          </p>
-        )}
+        {pro
+          ? pro.lockNote
+          : locked && (
+              <p className="text-[10.5px] text-charcoal-faint mt-2">
+                Locked: only your dietitian can edit this plan.
+              </p>
+            )}
       </section>
 
       {maintain ? (
@@ -350,6 +423,10 @@ export default function GoalsPanel() {
         <div className="flex" style={{ gap: 6 }}>
           <section style={{ ...CARD, flex: 138, minWidth: 0 }}>
             <p style={{ ...TITLE, marginBottom: 10 }}>Current weight</p>
+            {pro && !pro.weight ? (
+              pro.weightLocked
+            ) : (
+            <>
             <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Last logged</p>
             {weight.current === null ? (
               <p className="text-[13px] font-semibold text-charcoal-tertiary" style={{ marginTop: 2 }}>
@@ -361,14 +438,16 @@ export default function GoalsPanel() {
                 <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kg</span>
               </p>
             )}
+            </>
+            )}
           </section>
           <section style={{ ...CARD, flex: 215, minWidth: 0 }}>
             <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
             {tdee === null ? (
               <>
-                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : "Needs your height and weight"}</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.
+                  {pro ? pro.tdeeMissing.line : "Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate."}
                 </p>
               </>
             ) : (
@@ -394,6 +473,10 @@ export default function GoalsPanel() {
               <p style={TITLE}>Weight trend</p>
               <span className="text-[10px] text-charcoal-faint">{reachDate ? "To goal" : "7 days"}</span>
             </div>
+            {pro && !pro.weight ? (
+              pro.weightLocked
+            ) : (
+            <>
             <div className="flex items-end justify-between gap-2.5">
               <div className="shrink-0">
                 {weight.current === null ? (
@@ -427,15 +510,17 @@ export default function GoalsPanel() {
                 At this rate, reach {desiredWeightKg}kg by {reachDate}
               </p>
             )}
+            </>
+            )}
           </section>
 
           <section style={CARD}>
             <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
             {tdee === null ? (
               <>
-                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : "Needs your height and weight"}</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.
+                  {pro ? pro.tdeeMissing.line : "Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate."}
                 </p>
               </>
             ) : (
@@ -513,6 +598,7 @@ export default function GoalsPanel() {
               <Plus size={14} strokeWidth={2.2} />
             </button>
           </span>
+          {!pro?.readOnly && (
           <button
             onClick={() => {
               const kcal = Number(calorieDraft);
@@ -526,10 +612,11 @@ export default function GoalsPanel() {
           >
             <Check size={13} /> Use custom
           </button>
+          )}
           </div>
         </div>
         {/* WHAT THIS NUMBER IS, when it is not this user's. */}
-        {isReferenceOnlyTarget(user) && (
+        {!pro && isReferenceOnlyTarget(user) && (
           <p className="mt-2 text-[10.5px] leading-[1.4] text-charcoal-faint">{REFERENCE_INTAKE_NOTE}</p>
         )}
         {/* WHAT ELSE IS IN THE NUMBER. The field above edits the base target;
@@ -544,6 +631,7 @@ export default function GoalsPanel() {
         )}
       </section>
 
+      {!pro?.hideMacros && (
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Macro distribution</p>
         <MacroSplitEditor split={nutritionGoal.macroSplit} calories={targets.calories} onChange={setMacroSplit} disabled={locked} squares />
@@ -551,7 +639,9 @@ export default function GoalsPanel() {
           {MACRO_REBALANCE_NOTE}
         </p>
       </section>
+      )}
 
+      {!pro && (
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Plan</p>
         <div className="flex gap-1.5 flex-wrap">
@@ -567,8 +657,13 @@ export default function GoalsPanel() {
                 // make it so that when pressed it reverts back to custom
                 // plan with an error message saying that they should hire a
                 // professional."
+                // Release 3 · CU3: locked targets can't be replaced (ATXG8).
+                if (proTargets?.locked) {
+                  setPlanError(p === "existing" ? null : TARGETS_LOCKED_MESSAGE);
+                  return;
+                }
                 if (p === "existing") {
-                  if (!user.linkedProfessionalName) {
+                  if (!user.linkedProfessionalName && !proTargets) {
                     setPlanError("You need to hire a professional before switching to an existing plan.");
                     setNutritionGoal({ ...nutritionGoal, planType: "custom" });
                     return;
@@ -597,11 +692,23 @@ export default function GoalsPanel() {
               <ChevronDown size={11} className={restrictionOpen ? "rotate-180" : undefined} />
             </span>
           </Chip>
+          {/* Release 3 · CU13: the Allergies chip beside Dietary restriction (same chip). */}
+          <Chip
+            active={myAllergies.allergies.length > 0 || allergiesOpen}
+            className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
+            onClick={() => setAllergiesOpen(true)}
+            aria-haspopup="dialog"
+          >
+            <span className="flex items-center gap-1">
+              Allergies
+              <ChevronDown size={11} />
+            </span>
+          </Chip>
         </div>
         {planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{planError}</p>}
         {!planError && nutritionGoal.planType === "existing" && (
           <p className="text-[10.5px] text-charcoal-faint mt-1.5">
-            {user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
+            {proTargets?.professionalName || user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
         <PopupMenu
@@ -628,7 +735,43 @@ export default function GoalsPanel() {
             items are highlighted. Tap to clear.
           </button>
         )}
+        {/* Release 3 · CU13 (gen/r23.js goals23 o.allergy): 12 / 700 status.high,
+            TriangleAlert 12 / 2.4, 8 above, 2 × 0. Severity from the client's own rows. */}
+        {(() => {
+          const line = allergyLine(myAllergies.allergies, myAllergies.sharedWith);
+          return line ? (
+            <p className="flex items-center text-status-high" style={{ gap: 6, margin: "8px 0 0", padding: "2px 0", fontSize: textPx(12), fontWeight: 700 }}>
+              <TriangleAlert size={12} strokeWidth={2.4} className="shrink-0" aria-hidden />
+              {line}
+            </p>
+          ) : null;
+        })()}
+        {myAllergies.status === "error" && (
+          <p className="flex items-center" style={{ gap: 10, margin: "8px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>
+            Couldn't load your allergies.
+            <button type="button" onClick={myAllergies.reload} className="tap relative text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']" style={{ fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        )}
       </section>
+      )}
+
+      {/* Release 3 · CU3: the meal plan a professional assigned (nothing without one). */}
+      {!pro && authUserId && <MealPlanCard userId={authUserId} today={today} card={CARD} title={TITLE} hideNumbers={recoverySensitive || recoveryModePending} />}
+
+      {!pro && allergiesOpen && (
+        <AllergiesSheet
+          open
+          onClose={() => setAllergiesOpen(false)}
+          userId={authUserId}
+          initial={myAllergies.allergies}
+          onSaved={() => {
+            myAllergies.reload();
+            onAllergiesSaved?.();
+          }}
+        />
+      )}
     </div>
   );
 }

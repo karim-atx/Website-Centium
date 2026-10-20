@@ -55,7 +55,7 @@ import {
 // cast at this boundary.
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
   ok: false,

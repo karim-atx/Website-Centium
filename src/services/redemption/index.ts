@@ -174,7 +174,7 @@ type LooseRpc = (
   fn: string,
   args?: Record<string, unknown>
 ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
-const referralRpc = (): LooseRpc => supabase.rpc.bind(supabase) as unknown as LooseRpc;
+const referralRpc = (): LooseRpc => (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as LooseRpc;
 
 function describeReferralError(error: { code?: string; message: string }, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;

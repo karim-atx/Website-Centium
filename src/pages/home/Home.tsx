@@ -12,10 +12,10 @@ import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
+import { ProReminders } from "../../components/client-forms/ProReminders";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -47,12 +47,8 @@ export default function Home() {
 
   const isBusiness = user.accountType === "business";
 
-  // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
-  // dashboard of their own — "My Clients" is their main page instead,
-  // same pattern already used by the Professionals/Explore routes.
-  if (user.accountType === "professional") {
-    return <ProfessionalDashboard />;
-  }
+  // Release 3: a professional never renders this page. /app sends them to
+  // /app/pro (ProHomeRedirect, J1), whose Home replaced their dashboard.
   // V6 (QA 6.0): "remove everything that does not pertain to the business
   // owner related UI" — same treatment as professionals, a business account
   // lands on its own management dashboard instead of the personal
@@ -130,6 +126,11 @@ export default function Home() {
       {/* Widget order per QA: Calendar (fixed, non-adjustable) > Streaks > Quick Actions > Your Health Today */}
       {/* OURS-home-shell H5: the HO1.1 pill's hairline border (X-09, both modes) and 44 hit areas. */}
       <DateSelector partB />
+
+      {/* Release 3 · W7 (CU5, CU6, CU23, CU26), an addition: what the client's
+          professionals are waiting on, between the date pill and the streak
+          board, and the pop-up queue. Renders nothing when nothing is waiting. */}
+      <ProReminders />
 
       {/* QA 12.0 recovery-sensitive experience: "Disable fasting, streaks,
           badges, and weight-loss prompts." */}

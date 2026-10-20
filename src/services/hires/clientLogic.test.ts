@@ -6,6 +6,7 @@ import {
   describeClientCancelError,
   describeHireError,
   describePlansCardError,
+  hireDecline,
   hireStatusLabel,
   hireUntilLabel,
   isLiveHire,
@@ -32,6 +33,8 @@ const hireRow = (over: Partial<MyHireRow> = {}): MyHireRow => ({
   expires_on: "2026-11-07",
   confirmed_at: null,
   cancelled_at: null,
+  cancellation_reason: null,
+  cancellation_message: null,
   ...over,
 });
 
@@ -82,6 +85,26 @@ test("liveHireWith finds only a pending or active hire with that professional", 
   assert.equal(liveHireWith(hires, "p1")?.id, "z");
   assert.equal(liveHireWith(hires, "p3"), null);
   assert.equal(isLiveHire({ status: "expired" }), false);
+});
+
+test("hireDecline reads a decline_hire() reason from my_hires(), newest hire only", () => {
+  const declined = hireRow({
+    id: "d",
+    status: "cancelled",
+    cancelled_at: "2026-10-10T09:00:00Z",
+    cancellation_reason: "declined: Fully booked",
+    cancellation_message: " Back in touch in March. ",
+  });
+  const h = toMyHire(declined);
+  assert.equal(h.cancellationReason, "declined: Fully booked");
+  assert.deepEqual(hireDecline([h], "p1"), { label: "Fully booked", message: "Back in touch in March.", at: "2026-10-10T09:00:00Z" });
+  assert.deepEqual(hireDecline([toMyHire({ ...declined, cancellation_message: null })], "p1")?.message, null);
+  // The client's own cancel isn't a decline.
+  assert.equal(hireDecline([toMyHire(hireRow({ status: "cancelled", cancellation_reason: "cancelled by the client" }))], "p1"), null);
+  // A newer hire with the same professional replaces it; another professional's hire doesn't.
+  assert.equal(hireDecline([toMyHire(hireRow({ id: "n" })), h], "p1"), null);
+  assert.equal(hireDecline([toMyHire(hireRow({ id: "o", professional_id: "p2" })), h], "p1")?.label, "Fully booked");
+  assert.equal(hireDecline([h], "p2"), null);
 });
 
 test("describeHireError covers every hire_professional() code; ATXA0 gives no reason", () => {

@@ -5,24 +5,38 @@
 
 import type { ProfessionalSubtype } from "../../../types";
 
-/** The handoff's own short keys for the four specialties. */
-export type ProKind = "trainer" | "physio" | "diet" | "other";
+/**
+ * The handoff's own short keys for the specialties. Release 3 (Professional UI
+ * HANDOVER d, FINAL_PLAN W1) adds nutritionist, coach (coach_instructor) and
+ * doctor; the shell's lanes are add-only, so these extend the set.
+ */
+export type ProKind = "trainer" | "physio" | "diet" | "nutritionist" | "coach" | "doctor" | "other";
+
+export const PRO_KINDS: ProKind[] = ["trainer", "physio", "diet", "nutritionist", "coach", "doctor", "other"];
 
 export const PRO_KIND: Record<ProfessionalSubtype, ProKind> = {
   trainer: "trainer",
   physiotherapist: "physio",
   dietitian: "diet",
+  nutritionist: "nutritionist",
+  coach_instructor: "coach",
+  doctor: "doctor",
   other: "other",
 };
 
 export const proKindOf = (s: ProfessionalSubtype | null | undefined): ProKind => PRO_KIND[s ?? "other"] ?? "other";
 
 /**
- * Physiotherapy and dietetics are regulated: a registering body, number and
- * proof are required. Every lane goes live only once checked (Fitness / Other
- * on their certificate).
+ * Physiotherapy, dietetics and medicine are regulated: a registering body,
+ * number and proof are required (Release 3 J2: a doctor is a regulated lane).
+ * Every lane goes live only once checked: Fitness, Nutritionist, Coach or
+ * instructor and Other on their certificate.
  */
-export const isRegulated = (k: ProKind): boolean => k === "physio" || k === "diet";
+export const isRegulated = (k: ProKind): boolean => k === "physio" || k === "diet" || k === "doctor";
+
+/** The regulated kinds, for the registration record's name. */
+export type RegulatedKind = "physio" | "diet" | "doctor";
+export const asRegulated = (k: ProKind): RegulatedKind | null => (k === "physio" || k === "diet" || k === "doctor" ? k : null);
 
 /** The lane's six numbered steps, by name (resume works by name, not position). */
 export const PRO_STEP_KEYS = ["about", "work", "services", "creds", "background", "review"] as const;
@@ -34,6 +48,9 @@ export const PRO_LABEL: Record<ProKind, string> = {
   trainer: "Personal Trainer",
   physio: "Physiotherapist",
   diet: "Dietitian",
+  nutritionist: "Nutritionist",
+  coach: "Coach or instructor",
+  doctor: "Doctor or GP",
   other: "Other professional",
 };
 
@@ -76,19 +93,44 @@ export const SPECIALTY_CARDS: SpecialtyCard[] = [
     points: ["Meal plans and food diaries", "Spot patterns in what clients eat"],
     tile: "pale",
   },
+  // Release 3 (HANDOVER d): Nutritionist, Coach or instructor and Doctor or GP.
+  {
+    kind: "nutritionist",
+    subtype: "nutritionist",
+    title: "Nutritionist",
+    description: "Healthy eating and nutrition coaching.",
+    points: ["Meal plans and food diaries", "Targets that fit each client"],
+    tile: "tealPale",
+  },
+  {
+    kind: "coach",
+    subtype: "coach_instructor",
+    title: "Coach or instructor",
+    description: "Classes, coaching and movement.",
+    points: ["Build programs and run classes", "Check in on every client"],
+    tile: "pale",
+  },
+  {
+    kind: "doctor",
+    subtype: "doctor",
+    title: "Doctor or GP",
+    description: "Clinical care and follow-ups.",
+    points: ["Care plans and follow-ups", "See client health records, with consent"],
+    tile: "tealPale",
+  },
   {
     kind: "other",
     subtype: "other",
     title: "Other health or fitness professional",
-    description: "Coaching, wellness and more.",
+    description: "Wellness and anything not listed above.",
     points: ["Work with clients your way", "Messages and progress in one place"],
     tile: "tealPale",
   },
 ];
 
-/** The line under the cards (proType cardsNote). */
-export const specialtyNote = (picked: boolean): string =>
-  picked ? "Next: about you, your certificate and your background." : "Next: about you, your background, then a quick review.";
+/** The line under the cards (proType cardsNote): a regulated kind (doctor, physiotherapist, dietitian) is checked on its licence. */
+export const specialtyNote = (picked: ProKind | null): string =>
+  picked ? `Next: about you, your ${credentialWord(picked)} and your background.` : "Next: about you, your background, then a quick review.";
 
 // ---------------------------------------------------------------------------
 // Step content (BizOnboardingV10, PR branch)
@@ -99,6 +141,9 @@ export const GUIDE: Record<ProKind, string> = {
   trainer: "Strong trainer profiles name who they help, show one result, and list where they train.",
   physio: "Strong physio profiles name the conditions you treat and how long a first session takes.",
   diet: "Strong dietitian profiles explain your approach to food and who you work with most.",
+  nutritionist: "Strong nutritionist profiles explain your approach to food and who you work with most.",
+  coach: "Strong coach profiles say what a class or session feels like and who it suits.",
+  doctor: "Strong doctor profiles name the conditions you see and how long a first appointment takes.",
   other: "Strong profiles say what a first session feels like and who it suits.",
 };
 
@@ -107,12 +152,18 @@ export const SPECIALTIES: Record<ProKind, string[]> = {
   trainer: ["Strength", "Weight loss", "Mobility", "Pre and postnatal", "Sports performance", "Older adults"],
   physio: ["Sports injuries", "Back and neck", "Post-surgery rehab", "Neurological", "Women's health", "Children"],
   diet: ["Weight management", "Sports nutrition", "Diabetes", "Gut health", "Eating disorder support", "Children"],
+  nutritionist: ["Weight management", "Sports nutrition", "Healthy eating", "Gut health", "Plant-based eating", "Children"],
+  coach: ["Yoga", "Pilates", "Running", "Boxing", "Swimming", "Wellness coaching"],
+  doctor: ["General practice", "Sports medicine", "Women's health", "Weight management", "Diabetes", "Heart health"],
   other: ["Yoga", "Pilates", "Mindfulness", "Breathwork", "Stretching", "Wellness coaching"],
 };
 export const MORE_SPECIALTIES: Record<ProKind, string[]> = {
   trainer: ["Injury prevention"],
   physio: ["Pelvic health"],
   diet: ["Allergies"],
+  nutritionist: ["Allergies"],
+  coach: ["Meditation"],
+  doctor: ["Children"],
   other: ["Meditation"],
 };
 export const MAX_SPECIALTIES = 5;
@@ -122,6 +173,9 @@ export const FORMATS: Record<ProKind, string[]> = {
   trainer: ["One to one", "Small group", "Online", "At a gym", "Home visits"],
   physio: ["In clinic", "Home visits", "Online follow-ups"],
   diet: ["Online", "In clinic", "Messages between sessions"],
+  nutritionist: ["Online", "One to one", "Messages between sessions"],
+  coach: ["Group classes", "One to one", "Small group", "Online", "Outdoors"],
+  doctor: ["In clinic", "Online follow-ups", "Home visits"],
   other: ["Group classes", "One to one", "Online", "Outdoors"],
 };
 
@@ -160,6 +214,18 @@ export const SESSION_BOXES: Record<ProKind, [{ label: string; min: number }, { l
   diet: [
     { label: "First consultation, min", min: 60 },
     { label: "Follow-up, min", min: 30 },
+  ],
+  nutritionist: [
+    { label: "First consultation, min", min: 60 },
+    { label: "Follow-up, min", min: 30 },
+  ],
+  coach: [
+    { label: "Session, min", min: 60 },
+    { label: "Online session, min", min: 45 },
+  ],
+  doctor: [
+    { label: "First appointment, min", min: 30 },
+    { label: "Follow-up, min", min: 15 },
   ],
   other: [
     { label: "Session, min", min: 60 },
@@ -330,7 +396,7 @@ export function workSummary(d: Pick<ProLaneDraft, "workMode" | "area" | "homeVis
   const mode = WORK_MODES.find((m) => m.value === d.workMode)?.title ?? "Not set";
   const parts = [mode];
   if (d.workMode !== "online" && d.area) {
-    parts.push(kind === "physio" && d.workMode === "independent" ? `clinic in ${d.area.label}` : d.area.label);
+    parts.push((kind === "physio" || kind === "doctor") && d.workMode === "independent" ? `clinic in ${d.area.label}` : d.area.label);
   }
   let line = parts.join(" · ");
   if (d.workMode === "mix") line += " and online";

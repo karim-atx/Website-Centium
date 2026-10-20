@@ -25,6 +25,11 @@ import {
   Trophy,
 } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
+import { CoachAvatar } from "../../components/workout/CoachAvatar";
+import { coachTone } from "../workout/coachColors";
+import { getCoachHabits, groupCoachHabits } from "../../services/habits";
+import { sharedWith } from "../../services/routines/programmes";
+import { fetchConnectedProfessional } from "../../services/connected-professional";
 import type { HabitItem, Streak } from "../../types";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
@@ -40,6 +45,43 @@ const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
   workout: Dumbbell,
   nutrition: Apple,
 };
+
+/**
+ * Release 3 (CU28): which habits a coach assigned (habit_items.
+ * assigned_by_professional_id), each coach's first name and avatar
+ * (connected_professional_summary), and who the client shares Habits with.
+ * Every read fails to "none", which shows the Today card exactly as before.
+ */
+function useCoachHabits(userId: string | null, habitCount: number) {
+  const [coachOf, setCoachOf] = useState<Record<string, string>>({});
+  const [coaches, setCoaches] = useState<Record<string, { name: string; avatarUrl: string | null }>>({});
+  const [shared, setShared] = useState<Set<string>>(new Set());
+  React.useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void getCoachHabits(userId).then(async (map) => {
+      if (cancelled) return;
+      setCoachOf(map);
+      const ids = [...new Set(Object.values(map))];
+      if (ids.length === 0) return;
+      const [rows, sharing] = await Promise.all([
+        Promise.all(ids.map(async (id) => [id, await fetchConnectedProfessional(id)] as const)),
+        sharedWith(userId, "habits"),
+      ]);
+      if (cancelled) return;
+      const next: Record<string, { name: string; avatarUrl: string | null }> = {};
+      for (const [id, r] of rows) {
+        if (r.ok && r.professional) next[id] = { name: r.professional.firstName?.trim() || "Your coach", avatarUrl: r.professional.avatarUrl };
+      }
+      setCoaches(next);
+      setShared(sharing);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, habitCount]);
+  return { coachOf, coaches, sharedWith: shared };
+}
 
 // MO1.1 #4 "Today": 10.5/700 #8C8378; tracking measured on the 2x frame
 // ("TODAY" 39 pt wide, cap 8) at about 0.1em. Decision 23: the label takes
@@ -109,6 +151,7 @@ export default function Mind() {
     habitsLoading,
     journalLoading,
     accessibility,
+    authUserId,
   } = useApp();
   const navigate = useNavigate();
   const back = useBack();
@@ -117,6 +160,10 @@ export default function Mind() {
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
   const [autoOpen, setAutoOpen] = useState(false);
+  const coachHabits = useCoachHabits(authUserId, habits.length);
+  // CU28: each coach's group starts open (the frame draws its rows); the
+  // chevron folds it like Auto-tracked.
+  const [foldedCoaches, setFoldedCoaches] = useState<Set<string>>(new Set());
 
   // OPENING MIND EVALUATES. my_achievements() awards before it returns, so this
   // is the sweep for anything earned on a screen that does not itself trigger
@@ -149,6 +196,48 @@ export default function Mind() {
   );
   const leadBest = lead ? Math.max(habitBestStreak(lead.doneDates ?? []), lead.streakDays) : 0;
   const LeadIcon = lead ? habitIcon[lead.icon] : null;
+
+  // CU28: the coach's habits in their own groups; the rest as before.
+  const { groups: coachGroups, own: ownHabits } = groupCoachHabits(habits, coachHabits.coachOf);
+  /** One Today row (MO1.1 #6), the habit's colour on its tile, the teal check. */
+  const habitRow = (h: HabitItem, divider: boolean) => {
+    const Icon = habitIcon[h.icon];
+    // B3 PB-O-01: the habit's colour wherever its icon appears
+    // (MO1.1.1 S3); lavender stays the theme classes.
+    const shade = habitShade(h.colour, dark, hc);
+    return (
+      <Row
+        key={h.id}
+        divider={divider}
+        shade={shade}
+        icon={
+          <Icon
+            size={14}
+            strokeWidth={1.75}
+            className={shade ? undefined : "text-primary-dark"}
+            style={shade ? { color: shade.ink } : undefined}
+          />
+        }
+        label={h.label}
+        days={h.streakDays}
+        check={
+          <button
+            onClick={() => toggleHabit(h.id)}
+            aria-label={`${h.label}, today: ${h.done ? "done" : "not done"}`}
+            aria-pressed={h.done}
+            // MO1.1 #6 (2x frame): done #4F7F78 with a white tick, open
+            // a 1 px #6F9993-at-35% ring on the strip (decision 22).
+            className={clsx(
+              "tap w-6 h-6 rounded-full flex items-center justify-center border shrink-0",
+              h.done ? "bg-team-teal-deep border-team-teal-deep" : "border-th-6f9993/[0.35] dark:border-[#807C93]"
+            )}
+          >
+            {h.done && <Check size={13} strokeWidth={3} className="text-white" />}
+          </button>
+        }
+      />
+    );
+  };
 
   const meditationLine =
     meditationSummary && !isEmptySummary(meditationSummary)
@@ -321,44 +410,50 @@ export default function Mind() {
                 })}
             </>
           )}
-          {habits.map((h, i) => {
-            const Icon = habitIcon[h.icon];
-            // B3 PB-O-01: the habit's colour wherever its icon appears
-            // (MO1.1.1 S3); lavender stays the theme classes.
-            const shade = habitShade(h.colour, dark, hc);
+          {/* CU28: a coach's habits, one group per coach, in the Auto-tracked
+              header pattern (avatar, "From Alex", count pill, chevron), then
+              the full-width rule; tickable, not editable. */}
+          {coachGroups.map((g, gi) => {
+            const info = coachHabits.coaches[g.professionalId];
+            const name = info?.name ?? "Your coach";
+            const folded = foldedCoaches.has(g.professionalId);
             return (
-              <Row
-                key={h.id}
-                divider={i > 0 || (autoOpen && autoStreaks.length > 0)}
-                shade={shade}
-                icon={
-                  <Icon
-                    size={14}
-                    strokeWidth={1.75}
-                    className={shade ? undefined : "text-primary-dark"}
-                    style={shade ? { color: shade.ink } : undefined}
+              <React.Fragment key={g.professionalId}>
+                <button
+                  onClick={() =>
+                    setFoldedCoaches((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(g.professionalId)) next.delete(g.professionalId);
+                      else next.add(g.professionalId);
+                      return next;
+                    })
+                  }
+                  aria-expanded={!folded}
+                  className={clsx(
+                    "tap w-full flex items-center gap-2 px-3.5 py-3 text-left border-b border-charcoal/[0.08]",
+                    // Under open Auto-tracked rows, its own rule on top.
+                    gi === 0 && autoOpen && autoStreaks.length > 0 && "border-t border-t-charcoal/[0.08]"
+                  )}
+                  style={{ background: "rgb(var(--th-aea1dc) / 0.08)" }}
+                >
+                  <CoachAvatar name={name} avatarUrl={info?.avatarUrl} size={20} tone={coachTone(gi)} />
+                  <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint truncate min-w-0">
+                    From {name}
+                  </span>
+                  <span className="min-w-[20px] h-[13px] px-1 rounded-full bg-primary-pale text-[10px] leading-[13px] font-bold text-primary-dark flex items-center justify-center tabular-nums shrink-0">
+                    {g.habits.length}
+                  </span>
+                  <ChevronRight
+                    size={15}
+                    className={clsx("ml-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded && "rotate-90")}
                   />
-                }
-                label={h.label}
-                days={h.streakDays}
-                check={
-                  <button
-                    onClick={() => toggleHabit(h.id)}
-                    aria-label={`${h.label}, today: ${h.done ? "done" : "not done"}`}
-                    aria-pressed={h.done}
-                    // MO1.1 #6 (2x frame): done #4F7F78 with a white tick, open
-                    // a 1 px #6F9993-at-35% ring on the strip (decision 22).
-                    className={clsx(
-                      "tap w-6 h-6 rounded-full flex items-center justify-center border shrink-0",
-                      h.done ? "bg-team-teal-deep border-team-teal-deep" : "border-th-6f9993/[0.35] dark:border-[#807C93]"
-                    )}
-                  >
-                    {h.done && <Check size={13} strokeWidth={3} className="text-white" />}
-                  </button>
-                }
-              />
+                </button>
+                {!folded && g.habits.map((h, i) => habitRow(h, i > 0))}
+                <div aria-hidden className="h-px bg-charcoal/[0.08]" />
+              </React.Fragment>
             );
           })}
+          {ownHabits.map((h, i) => habitRow(h, i > 0 || (coachGroups.length === 0 && autoOpen && autoStreaks.length > 0)))}
           {habits.length === 0 && habitsLoading && (
             // Loading: skeleton rows at the row positions (56 tall, 28 pt
             // icon tile r8, the label, the teal strip), in surface.soft.
@@ -387,6 +482,18 @@ export default function Mind() {
         <p className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
           Auto streaks count from what you log across the app. To track something new, add a habit.
         </p>
+        {/* CU28: the helper line under the card, per coach. "Sees your
+            streaks" only while the client shares Habits with them. */}
+        {coachGroups.map((g) => {
+          const name = coachHabits.coaches[g.professionalId]?.name ?? "your coach";
+          const Name = name.charAt(0).toUpperCase() + name.slice(1);
+          return (
+            <p key={g.professionalId} className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
+              Habits from {name} can be ticked but not edited.
+              {coachHabits.sharedWith.has(g.professionalId) ? ` ${Name} sees your streaks.` : ""}
+            </p>
+          );
+        })}
       </div>
     </div>
   );

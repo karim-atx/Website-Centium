@@ -18,6 +18,10 @@ import {
   type FoodSearchResult,
 } from "../../services/food";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
+import { fetchFoodConflicts } from "../../services/nutrition/client";
+import { addNotice, type ConflictRow } from "../../services/nutrition/clientNutritionModel";
+import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
+import { FoodConflictNotice } from "./FoodConflictBadge";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
@@ -278,7 +282,19 @@ export const AddFoodSheet: React.FC<{
     setMultiSaving(true);
     setMultiError(null);
     const failed = new Map(picked);
+    // Release 3 · CU13: a food with an allergen the client has is never added.
+    const blocked: string[] = [];
     for (const [id, p] of picked) {
+      const c = await fetchFoodConflicts(authUserId, {
+        foodId: p.food.source === "catalog" ? p.food.id : null,
+        customFoodId: p.food.source === "custom" ? p.food.id : null,
+        name: p.food.name,
+      });
+      if (c.ok && addNotice(p.food.name, c.data)?.blocks) {
+        blocked.push(p.food.name);
+        failed.delete(id);
+        continue;
+      }
       const result = await logFoodEntry({
         userId: authUserId,
         food: p.food,
@@ -294,7 +310,12 @@ export const AddFoodSheet: React.FC<{
       }
     }
     setMultiSaving(false);
-    const added = picked.size - failed.size;
+    const added = picked.size - failed.size - blocked.length;
+    if (blocked.length > 0) {
+      setPicked(failed);
+      setMultiError(`${blocked.join(", ")} ${blocked.length === 1 ? "wasn't" : "weren't"} added: ${blocked.length === 1 ? "it contains" : "they contain"} an allergen you have.`);
+      return;
+    }
     if (failed.size > 0) {
       // What didn't save stays selected, so trying again logs only those.
       setPicked(failed);
@@ -327,6 +348,31 @@ export const AddFoodSheet: React.FC<{
       cancelled = true;
     };
   }, [selectedFood]);
+
+  // Release 3 · CU13 (DECISIONS DB-5): food_conflicts for the picked food,
+  // before it's added. A confirmed allergy (an allergen tag the client has)
+  // blocks Add to Diary; a restriction turns it into "Add anyway"; a keyword
+  // match only says "Check this". Nothing shows for a food with no conflict.
+  const [conflictRows, setConflictRows] = useState<{ id: string; rows: ConflictRow[] } | null>(null);
+  useEffect(() => {
+    if (!selectedFood || !authUserId) return;
+    let cancelled = false;
+    const food = selectedFood;
+    void fetchFoodConflicts(authUserId, {
+      foodId: food.source === "catalog" ? food.id : null,
+      customFoodId: food.source === "custom" ? food.id : null,
+      name: food.name,
+    }).then((r) => {
+      if (!cancelled) setConflictRows({ id: food.id, rows: r.ok ? r.data : [] });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFood, authUserId]);
+  const restrictionName = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
+  const conflictNotice =
+    selectedFood && conflictRows?.id === selectedFood.id ? addNotice(selectedFood.name, conflictRows.rows, restrictionName) : null;
+  const addBlocked = !!conflictNotice?.blocks;
 
   // Foods the user created before custom-food writes were wired to Supabase
   // still live in localStorage. Merged in so they stay searchable; see the
@@ -433,7 +479,7 @@ export const AddFoodSheet: React.FC<{
    * logged a meal they had not, which in a food diary is worse than an error.
    */
   const handleAdd = async () => {
-    if (!selectedFood || saving) return;
+    if (!selectedFood || saving || addBlocked) return;
     if (!authUserId) {
       setAddError("You need to be signed in to log food.");
       return;
@@ -709,6 +755,8 @@ export const AddFoodSheet: React.FC<{
               ))}
             </div>
 
+            {conflictNotice && <FoodConflictNotice notice={conflictNotice} />}
+
             {addError && (
               <p className="text-xs font-semibold text-status-high text-center" style={{ marginBottom: 10 }}>
                 {addError}
@@ -729,11 +777,11 @@ export const AddFoodSheet: React.FC<{
               <button
                 type="button"
                 onClick={handleAdd}
-                disabled={justAdded || saving}
+                disabled={justAdded || saving || addBlocked}
                 className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
                 style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
               >
-                {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
+                {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : conflictNotice?.addAnyway ? "Add anyway" : "Add to Diary"}
               </button>
               <button
                 type="button"

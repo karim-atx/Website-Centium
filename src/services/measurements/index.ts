@@ -243,29 +243,6 @@ export async function getMeasurementGoals(userId: string): Promise<MeasurementGo
   return { ok: true, goals };
 }
 
-/**
- * Goals for several clients at once, for the professional's view. The
- * database returns a client's goals only while they share body_measurements
- * (the same consent that gates the measurements), so a client who doesn't
- * simply has none here.
- */
-export async function getClientMeasurementGoals(
-  clientIds: string[]
-): Promise<Record<string, Partial<Record<MeasurementType, MeasurementGoal>>>> {
-  if (clientIds.length === 0) return {};
-  const { data, error } = await readGoals(clientIds);
-  if (error) {
-    console.error("[measurements] Could not load client goals:", error.message);
-    return {};
-  }
-  const out: Record<string, Partial<Record<MeasurementType, MeasurementGoal>>> = {};
-  for (const row of data ?? []) {
-    if (!isMeasurementType(row.metric_type)) continue;
-    (out[row.user_id] ??= {})[row.metric_type] = row.goal;
-  }
-  return out;
-}
-
 /** Sets (or, with null, clears) one measurement's goal. */
 export async function setMeasurementGoal(
   userId: string,

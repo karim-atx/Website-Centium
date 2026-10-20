@@ -93,11 +93,13 @@ type CodeCheck =
   | { status: "unusable"; message: string }
   | { status: "error"; message: string };
 
-const subtypeLabel: Record<ProfessionalSubtype | "doctor", string> = {
+const subtypeLabel: Record<ProfessionalSubtype, string> = {
   trainer: "Personal trainer",
   physiotherapist: "Physiotherapist",
   dietitian: "Dietitian",
   doctor: "Doctor",
+  nutritionist: "Nutritionist",
+  coach_instructor: "Coach or instructor",
   other: "Health professional",
 };
 

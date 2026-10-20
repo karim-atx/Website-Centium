@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pin } from "lucide-react";
+import { Info, Pin } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { sessionChipStyle } from "./sessionSheetStyles";
@@ -34,6 +34,11 @@ const TYPE_BLURB: Partial<Record<HandoverSetType, string>> = {
 // RPE runs 6 → 10 in one row (WO10), scrollable if needed.
 const RPE_ASCENDING = [...rpeOptions].sort((a, b) => a - b);
 
+/** Release 3 · W5 (TR11 v2, HANDOVER g): the coach's three set types. */
+const COACH_TYPES: HandoverSetType[] = ["warmup", "pr", "drop"];
+/** HANDOVER g: choosing Warm up switches the target to RPE 6. */
+const WARMUP_RPE = 6;
+
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
  * same light value, as [light, dark]. The slider's empty track (the board's
@@ -50,6 +55,10 @@ const SET_OPTIONS_COLORS = {
   notesLabel: ["#575863", "#B8B3C7"],
   pinIdle: ["#A39D95", "#918DA0"],
   pinned: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
+  // Release 3 (CU1 v5): the coach's target line (chF #8C8378 / #B8B3C7) and
+  // the target RPE ring (tealDark #6F9993 / #4F8F8A, as the handover's tokens).
+  targetInk: ["#8C8378", "#B8B3C7"],
+  targetRing: ["#6F9993", "#4F8F8A"],
 } as const;
 const optionsColor = (key: keyof typeof SET_OPTIONS_COLORS, dark: boolean): string => SET_OPTIONS_COLORS[key][dark ? 1 : 0];
 
@@ -92,7 +101,24 @@ export const SetOptionsSheet: React.FC<{
   /** The exercise's current pinned note, to show whether this note is it. */
   pinnedNote: string | undefined;
   onSave: (result: SetOptionsResult) => void;
-}> = ({ open, onClose, set, title, routineName, pinnedNote, onSave }) => {
+  /**
+   * Release 3 · W5 (TR11 v2): the professional's set options for a
+   * prescription. Unset = the client logger's sheet exactly as before. Set:
+   * Type is Warm up, Personal record or Drop set only; Target RPE shows the
+   * coach's exercise RPE, switching to 6 while Warm up is on and back when it
+   * is cleared (a template stores one RPE per exercise, so the row is not
+   * editable per set); no Pain, Mood or Notes (nothing stores them on a
+   * template).
+   */
+  coach?: { coachRpe?: number };
+  /**
+   * Release 3 · W7 (CU1 v5 "set 2 options"): the client logging a coach's
+   * routine. Adds the coach's target above Type ("Alex's target: 6 × 82.5 kg
+   * at RPE 8") and outlines the target RPE chip in teal, with its caption.
+   * Unset = the sheet exactly as before. Additions only.
+   */
+  target?: { text: string; rpe?: number; coachName: string };
+}> = ({ open, onClose, set, title, routineName, pinnedNote, onSave, coach, target }) => {
   const [kind, setKindState] = useState<HandoverSetType>("normal");
   const [notes, setNotes] = useState("");
   const [pinned, setPinned] = useState(false);
@@ -124,6 +150,7 @@ export const SetOptionsSheet: React.FC<{
   })();
 
   const hasNote = notes.trim().length > 0;
+  const coachTarget = coach ? (kind === "warmup" ? WARMUP_RPE : coach.coachRpe) : undefined;
 
   return (
     <BottomSheet
@@ -138,7 +165,11 @@ export const SetOptionsSheet: React.FC<{
           fullWidth
           size="lg"
           onClick={() => {
-            onSave({ kind, rpe, mood, pain, notes: notes.trim() || undefined, pinned: pinned && hasNote });
+            onSave(
+              coach
+                ? { kind, rpe: coachTarget, mood, pain, notes: undefined, pinned: false }
+                : { kind, rpe, mood, pain, notes: notes.trim() || undefined, pinned: pinned && hasNote }
+            );
             onClose();
           }}
         >
@@ -146,11 +177,15 @@ export const SetOptionsSheet: React.FC<{
         </Button>
       }
     >
+      {target && (
+        // CU1 v5: 12px in text.faint, pulled 6 up under the title, 12 above Type.
+        <p style={{ margin: "-6px 0 12px", fontSize: textPx(12), color: optionsColor("targetInk", dark) }}>{target.text}</p>
+      )}
       <div className="flex flex-col" style={{ gap: 12 }}>
         <div>
           <p style={sectionLabel}>Type</p>
           <div className="grid grid-cols-3" style={{ gap: 6 }}>
-            {HANDOVER_SET_TYPES.filter((t) => t.value !== "normal").map((t) => {
+            {HANDOVER_SET_TYPES.filter((t) => (coach ? COACH_TYPES.includes(t.value) : t.value !== "normal")).map((t) => {
               const on = kind === t.value;
               const color = typeStyles(dark)[t.value as Exclude<HandoverSetType, "normal">].dot;
               return (
@@ -177,6 +212,38 @@ export const SetOptionsSheet: React.FC<{
           {TYPE_BLURB[kind] && <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{TYPE_BLURB[kind]}</p>}
         </div>
 
+        {coach && (
+          <div>
+            <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
+              <p style={{ ...sectionLabel, margin: 0 }}>Target RPE</p>
+              <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
+                {kind === "warmup" ? `Warm-up RPE ${WARMUP_RPE}` : coach.coachRpe != null ? "Set by you" : ""}
+              </span>
+            </div>
+            <div className="flex scroll-row no-scrollbar" style={{ gap: 6 }} role="list" aria-label="Target RPE">
+              {RPE_ASCENDING.map((r) => (
+                <span
+                  key={r}
+                  role="listitem"
+                  aria-current={coachTarget === r ? "true" : undefined}
+                  className="flex-none inline-flex items-center justify-center"
+                  style={{ ...sessionChipStyle(coachTarget === r, dark), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
+                >
+                  {r}
+                </span>
+              ))}
+            </div>
+            {kind === "warmup" && coach.coachRpe != null && coach.coachRpe !== WARMUP_RPE && (
+              <p className="flex items-start" style={{ gap: 6, margin: "8px 0 0", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
+                <Info size={13} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />
+                {`Switched to the warm-up RPE automatically. Clear Warm up to restore your RPE ${coach.coachRpe}.`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {!coach && (
+        <>
         <div>
           <p style={sectionLabel}>RPE</p>
           <div className="flex scroll-row no-scrollbar" style={{ gap: 6 }}>
@@ -186,12 +253,26 @@ export const SetOptionsSheet: React.FC<{
                 onClick={() => setRpe(rpe === r ? undefined : r)}
                 aria-pressed={rpe === r}
                 className="tap flex-none"
-                style={{ ...sessionChipStyle(rpe === r, dark), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
+                aria-describedby={target?.rpe === r ? "rpe-target-note" : undefined}
+                style={{
+                  ...sessionChipStyle(rpe === r, dark),
+                  minWidth: 30,
+                  height: 30,
+                  padding: "0 8px",
+                  borderRadius: 6,
+                  // CU1 v5: the coach's target RPE, an inset 1.5 teal (tealDark) outline.
+                  ...(target?.rpe === r ? { boxShadow: `inset 0 0 0 1.5px ${optionsColor("targetRing", dark)}` } : {}),
+                }}
               >
                 {r}
               </button>
             ))}
           </div>
+          {target?.rpe != null && (
+            <p id="rpe-target-note" style={{ margin: "6px 0 0", fontSize: textPx(11), color: optionsColor("targetInk", dark) }}>
+              Teal outline: {target.coachName}'s target.
+            </p>
+          )}
         </div>
 
         <div>
@@ -270,6 +351,8 @@ export const SetOptionsSheet: React.FC<{
             </p>
           )}
         </div>
+        </>
+        )}
       </div>
     </BottomSheet>
   );

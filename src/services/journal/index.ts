@@ -284,7 +284,9 @@ export async function deleteJournalFolderRemote(id: string): Promise<WriteResult
 // file (as services/recoveryCodes).
 
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+// Through unknown first: binding the fully typed rpc makes TypeScript
+// instantiate every function signature (TS2589 once the Release 3 types landed).
+const rpc = (supabase as unknown as { rpc: Rpc }).rpc.bind(supabase) as Rpc;
 
 interface UnlockRow {
   success: boolean;

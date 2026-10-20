@@ -7,6 +7,7 @@ import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { time12 } from "../../../utils/time12";
 import { STATUS_PENDING_VIS, STATUS_REJECTED_VIS, statusFanVis } from "./proVisuals";
+import { isRegulated, type ProKind } from "./proModel";
 import { ProfilePreview, SummaryCard, Timeline } from "./parts";
 import { formatShortDate } from "../../../utils/date";
 
@@ -23,7 +24,7 @@ const K_AT = [0, 300, 650, 1100];
 
 export interface ProStatusProps {
   status: ProStatus | "loading" | "error";
-  kind: "trainer" | "physio" | "diet" | "other";
+  kind: ProKind;
   firstName: string;
   /** When the submission was made (the Submitted row of the timeline). */
   submittedAt?: Date | null;
@@ -76,7 +77,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   }, [celebrate, reduced]);
 
   const nm = firstName.trim().split(/\s+/)[0] || "there";
-  const reg = kind === "physio" || kind === "diet";
+  const reg = isRegulated(kind);
   // Every lane is listed once checked (14 Oct 2026): a licence for the
   // regulated lanes, a certificate for Fitness / Other.
   const doc = reg ? "licence" : "certificate";
@@ -120,12 +121,12 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           eyebrow="Set up"
           eyebrowColor="var(--ob-accent)"
           title="Add a certificate to go live"
-          body="Clients find you on Explore once we've checked a certificate. Add one in My CV. You can set up your services now."
+          body="Clients find you on Explore once we've checked a certificate. Add one in Edit public profile. You can set up your services now."
         />
         <Timeline
           items={[
             submittedRow,
-            { title: "Certificate", desc: "Add one in My CV", value: "Now", state: "now" },
+            { title: "Certificate", desc: "Add one in Edit public profile", value: "Now", state: "now" },
             { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
           ]}
         />
@@ -184,9 +185,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
           body={
             notListed
               ? `${notListed} You can still work with the clients you add.`
-              : verified
-              ? "Your licence is checked. Clients can now find and book you."
-              : "Your certificate is checked. Clients can now find and book you."
+              : `Your ${doc} is checked. Clients can now find and book you.`
           }
           ringOpacity={a.ro}
           ringScale={a.rs}

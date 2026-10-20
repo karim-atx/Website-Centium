@@ -28,6 +28,7 @@ import { BizAvatar } from "./BusinessList";
 import { useBizChatColours } from "./bizAvatar";
 import { useListColors, type ListColors } from "./listColors";
 import { typeColours } from "../professionals/typeColour";
+import { linePx, textPx } from "../../theme/textSize";
 
 /**
  * The caller's conversations (Messages phase 2A, screen 1; v6 MO1.7).
@@ -112,7 +113,12 @@ export const ThreadList: React.FC<{
   actions?: RowActions;
   /** OP1-190: a business reads the ClientChatV2 rows (BusinessList.tsx); everyone else MO1.7's. */
   business?: boolean;
-}> = ({ items, settings, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions, business }) => {
+  /**
+   * Release 3 · MO22 v5 (professionals only): the row19 layout with a quiet
+   * status line. Unset keeps every other account's rows exactly as they are.
+   */
+  pro?: ProRowOptions;
+}> = ({ items, settings, onOpenInvitation, onOpenBroadcast, readState, delivered, authUserId, onOpen, actions, business, pro }) => {
   const unread = useUnread();
   const live = useThreadLive();
   const c = useListColors();
@@ -160,6 +166,24 @@ export const ThreadList: React.FC<{
           }
           if (item.type === "broadcast") {
             const list = item.list;
+            if (pro)
+              return (
+                <li key={`bc-${list.id}`} style={{ borderBottom: `1px solid ${PRO_RULE}` }}>
+                  <button type="button" onClick={() => onOpenBroadcast(list)} className="tap w-full text-left">
+                    <ProRowBody
+                      avatar={<ProTile kind="broadcast" />}
+                      name={list.name}
+                      time={list.lastSentAt ? listTime(list.lastSentAt) : ""}
+                      preview={
+                        item.lastSentCount !== null
+                          ? `Broadcast · sent to ${item.lastSentCount} ${item.lastSentCount === 1 ? "client" : "clients"}`
+                          : `${list.memberCount} ${list.memberCount === 1 ? "client" : "clients"} · not sent yet`
+                      }
+                      status={{ label: "Replies come to you privately", color: "rgb(var(--c-charcoal-faint))" }}
+                    />
+                  </button>
+                </li>
+              );
             return (
               <li key={`bc-${list.id}`} style={rule}>
                 <button
@@ -207,6 +231,7 @@ export const ThreadList: React.FC<{
               onMuteMenu={(anchor) => setMuteMenu({ thread: t, anchor })}
               c={c}
               business={business}
+              pro={pro}
             />
           );
         })}
@@ -294,7 +319,8 @@ const ThreadRow: React.FC<{
   onMuteMenu: (anchor: HTMLElement) => void;
   c: ListColors;
   business?: boolean;
-}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c, business }) => {
+  pro?: ProRowOptions;
+}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c, business, pro }) => {
   const bc = useBizChatColours();
   const rowRef = useRef<HTMLLIElement | null>(null);
   const group = t.kind === "group";
@@ -577,8 +603,77 @@ const ThreadRow: React.FC<{
     </div>
   );
 
+  // Release 3 · MO22 v5 (gen/r19.js row19): the professional's row.
+  const proStatus = pro?.statusFor(t) ?? null;
+  const proBody = pro ? (
+    <div className="group relative" style={{ background: "rgb(var(--c-cream))" }}>
+      <button
+        type="button"
+        onClick={() => onOpen(t)}
+        onKeyDown={(e) => {
+          if (actions && ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu")) {
+            e.preventDefault();
+            if (rowRef.current) onMenu(rowRef.current);
+          }
+        }}
+        className="tap w-full text-left"
+      >
+        <ProRowBody
+          avatar={
+            <span className="relative shrink-0">
+              {group ? <ProTile kind="group" /> : <ProAvatar thread={t} tone={pro.toneFor?.(t) ?? "pr"} />}
+              {online && (
+                <span
+                  aria-label="Online"
+                  className="absolute rounded-full"
+                  style={{ right: 1, bottom: 1, width: 11, height: 11, background: "#2E9E6B", border: "2px solid rgb(var(--c-cream))" }}
+                />
+              )}
+            </span>
+          }
+          name={name}
+          marks={
+            <>
+              {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0" style={{ color: c.muted }} />}
+              {muted && <BellOff size={12} aria-label="Muted" className="shrink-0" style={{ color: c.muted }} />}
+            </>
+          }
+          time={t.lastMessageAt ? listTime(t.lastMessageAt) : ""}
+          unread={unread ? count : 0}
+          preview={
+            typing ? (
+              <span className="italic" style={{ color: "rgb(var(--c-primary-deep-text))" }}>
+                typing…
+              </span>
+            ) : (
+              <>
+                {mine ? "You: " : groupSender ? `${groupSender}: ` : ""}
+                {t.lastMessagePreview ?? "No messages yet"}
+              </>
+            )
+          }
+          status={proStatus}
+          hideOnHover={!!actions}
+        />
+      </button>
+      {actions && (
+        <button
+          type="button"
+          data-row-more=""
+          aria-label={`More for chat with ${name}`}
+          onClick={(e) => onMenu(e.currentTarget)}
+          className="tap absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+          style={{ background: "rgb(var(--c-cream))", color: c.inkSoft }}
+        >
+          <MoreVertical size={18} aria-hidden />
+        </button>
+      )}
+    </div>
+  ) : null;
+  const rowBody = proBody ?? body;
+
   return (
-    <li ref={rowRef} style={{ borderBottom: `0.5px solid ${c.rowRule}` }}>
+    <li ref={rowRef} style={{ borderBottom: pro ? `1px solid ${PRO_RULE}` : `0.5px solid ${c.rowRule}` }}>
       {actions ? (
         <SwipeActions
           actions={tiles}
@@ -591,14 +686,124 @@ const ThreadRow: React.FC<{
           tapCloses
           onLongPress={(row) => onMenu(row)}
         >
-          {body}
+          {rowBody}
         </SwipeActions>
       ) : (
-        body
+        rowBody
       )}
     </li>
   );
 };
+
+/** Release 3 · MO22 v5: what the professional's rows add. */
+export interface ProRowOptions {
+  /** The quiet third line (a 6 dot and the word), or none. */
+  statusFor: (t: MessageThread) => { label: string; color: string } | null;
+  /** The initials avatar's tone (the frames vary it per person). */
+  toneFor?: (t: MessageThread) => "pr" | "teal" | "gold" | "sky";
+}
+
+/** gen/lib.js b06: the row divider, 6% ink. */
+const PRO_RULE = "rgb(var(--c-charcoal) / 0.06)";
+
+/**
+ * gen/r19.js row19, literal: 14 / 8 padding, 76 minimum, gap 12, 48 avatar;
+ * the text column 2 down; name 15 / 700 on 20 (wraps, overflow-wrap anywhere)
+ * and the time 12 on 20 (unread primary.deep 700, else text.soft 400), 12
+ * apart; 4 under, the preview 13 on 18 (unread ink 600, else text.soft 400)
+ * and the unread badge (min 20, 20 tall, 0 6, fill / onFill 11 / 800); the
+ * quiet line 4 under: 6 dot, gap 6, 11.5 on 16 text.faint.
+ */
+const ProRowBody: React.FC<{
+  avatar: React.ReactNode;
+  name: string;
+  marks?: React.ReactNode;
+  time: string;
+  unread?: number;
+  preview: React.ReactNode;
+  status: { label: string; color: string } | null;
+  hideOnHover?: boolean;
+}> = ({ avatar, name, marks, time, unread = 0, preview, status, hideOnHover }) => {
+  const hide = hideOnHover ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : "";
+  return (
+    <span data-pro-row="" className="flex items-start" style={{ gap: 12, padding: "14px 8px", minHeight: 76 }}>
+      {avatar}
+      <span className="flex-1 min-w-0 flex flex-col" style={{ paddingTop: 2 }}>
+        <span className="flex items-start justify-between" style={{ gap: 12 }}>
+          <span className="flex items-center min-w-0" style={{ gap: 6 }}>
+            <span data-row-name="" style={{ fontSize: textPx(15), fontWeight: 700, lineHeight: linePx(20), color: "rgb(var(--c-charcoal))", overflowWrap: "anywhere" }}>
+              {name}
+            </span>
+            {marks}
+          </span>
+          <span
+            data-row-time=""
+            className={`shrink-0 whitespace-nowrap${hide}`}
+            style={{ fontSize: textPx(12), lineHeight: linePx(20), color: unread ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--c-charcoal-soft))", fontWeight: unread ? 700 : 400 }}
+          >
+            {time}
+          </span>
+        </span>
+        <span className="flex items-start justify-between" style={{ gap: 12, marginTop: 4 }}>
+          <span
+            data-row-preview=""
+            className="min-w-0 line-clamp-2"
+            style={{ fontSize: textPx(13), lineHeight: linePx(18), color: unread ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-soft))", fontWeight: unread ? 600 : 400, overflowWrap: "anywhere" }}
+          >
+            {preview}
+          </span>
+          {unread > 0 && (
+            <span
+              data-row-badge=""
+              aria-label={`${unread} unread`}
+              className={`shrink-0 flex items-center justify-center rounded-full${hide}`}
+              style={{ minWidth: 20, height: 20, padding: "0 6px", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(11), fontWeight: 800 }}
+            >
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </span>
+        {status && (
+          <span data-row-status="" className="flex items-center" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: linePx(16), color: "rgb(var(--c-charcoal-faint))", marginTop: 4 }}>
+            <span aria-hidden className="rounded-full shrink-0" style={{ width: 6, height: 6, background: status.color }} />
+            {status.label}
+          </span>
+        )}
+      </span>
+    </span>
+  );
+};
+
+/** gen/ui.js avatar at 48: tone fill, initials 16 / 800 (33%). A photo when there is one. */
+const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky" }> = ({ thread: t, tone }) => {
+  if (t.participantAvatarUrl)
+    return (
+      <span className="w-12 h-12 rounded-full overflow-hidden flex shrink-0">
+        <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+      </span>
+    );
+  const bg = tone === "teal" ? "rgb(var(--c-teal-pale))" : tone === "gold" ? "rgb(var(--c-gold-pale))" : tone === "sky" ? "rgb(var(--c-sky-pale))" : "rgb(var(--c-primary-pale))";
+  const ink = tone === "teal" ? "rgb(var(--th-3c6b65))" : tone === "gold" ? "rgb(var(--c-team-gold-ink))" : tone === "sky" ? "rgb(var(--c-sky))" : "rgb(var(--c-primary-deep-text))";
+  const words = t.participantName.replace(/·.*$/, "").trim().split(/\s+/).filter(Boolean);
+  const initials = t.participantId || t.kind !== "peer" ? ((words[0]?.[0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase() : "";
+  return (
+    <span aria-hidden className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: bg, color: ink, fontSize: 16, fontWeight: 800 }}>
+      {initials || <AvatarPlaceholder size={48} />}
+    </span>
+  );
+};
+
+/** gen/r16.js gAv16 (group: #E4F0EE / teal pale, users 22 #2F5F58 / teal ink) and row19's broadcast tile (gold pale, megaphone 20 gold ink). */
+const ProTile: React.FC<{ kind: "group" | "broadcast" }> = ({ kind }) =>
+  kind === "group" ? (
+    <span data-type-tile="group" className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-th-e4f0ee dark:bg-teal-pale">
+      <Users size={22} strokeWidth={2} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
+    </span>
+  ) : (
+    <span data-type-tile="broadcast" className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgb(var(--c-gold-pale))" }}>
+      <Megaphone size={20} strokeWidth={2} style={{ color: "rgb(var(--c-team-gold-ink))" }} aria-hidden />
+    </span>
+  );
 
 /** #14a / #14b: the photo, the venue's logo, or a type tile; a person without a photo shows initials. */
 const Avatar: React.FC<{ thread: MessageThread; c: ListColors }> = ({ thread: t, c }) => {

@@ -28,6 +28,12 @@ export interface ConnectedProfessional {
   skills: string[];
   /** Computed by the view with the database's verified rule. */
   hasVerifiedLicence: boolean;
+  /**
+   * Release 3 (DB-2, Karim's answer 1): the professional's licence check is
+   * current. False shows "Licence not verified yet" on the client's
+   * Connected professionals row; null when the view could not say.
+   */
+  licenceVerified: boolean | null;
 }
 
 export type ConnectedProfessionalResult =
@@ -113,7 +119,7 @@ export async function fetchConnectedProfessional(
 ): Promise<ConnectedProfessionalResult> {
   const { data, error } = await supabase
     .from("connected_professional_summary")
-    .select("id, first_name, avatar_url, professional_subtype, bio, specialty, location, headline, skills, has_verified_licence")
+    .select("id, first_name, avatar_url, professional_subtype, bio, specialty, location, headline, skills, has_verified_licence, licence_verified")
     .eq("id", professionalId)
     .maybeSingle();
 
@@ -139,6 +145,7 @@ export async function fetchConnectedProfessional(
       headline: data.headline,
       skills: data.skills ?? [],
       hasVerifiedLicence: !!data.has_verified_licence,
+      licenceVerified: data.licence_verified ?? null,
     },
   };
 }
@@ -153,6 +160,8 @@ const SUBTYPE_LABEL: Record<Enums<"professional_subtype">, string> = {
   physiotherapist: "Physiotherapist",
   dietitian: "Dietitian",
   doctor: "Doctor",
+  nutritionist: "Nutritionist",
+  coach_instructor: "Coach or instructor",
   other: "Health professional",
 };
 

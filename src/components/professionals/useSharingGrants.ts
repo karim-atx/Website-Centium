@@ -107,14 +107,17 @@ export function useSharingGrants() {
     };
   }, [authUserId]);
 
-  const toggle = async (professionalId: string, category: AccessCategory, next: boolean) => {
+  // Resolves true when the write landed (Release 3: DataSharingSection then
+  // answers a pending access request for that category). Existing callers
+  // ignore it.
+  const toggle = async (professionalId: string, category: AccessCategory, next: boolean): Promise<boolean> => {
     // Allocated before the first early return, so "the handler ran" is
     // recorded even when it then declines to do anything.
     const probe = beginToggleAttempt();
 
     if (!authUserId) {
       logToggle("skipped", { attempt: probe.id, category, reason: "no session" });
-      return;
+      return false;
     }
     const key = `${professionalId}:${category}`;
     // Guarded here rather than by disabling the switch: a consent toggle that
@@ -129,7 +132,7 @@ export function useSharingGrants() {
         reason: "write already in flight",
         msSinceLastAttempt: probe.msSinceLastAttempt,
       });
-      return;
+      return false;
     }
     setSaving(key);
     setError(null);
@@ -193,7 +196,7 @@ export function useSharingGrants() {
     if (result.status === "error") {
       setGrants((g) => ({ ...g, [professionalId]: { ...g[professionalId], [category]: previous } }));
       setError(result.message);
-      return;
+      return false;
     }
     // The question has now been answered, so the notice retires for that
     // category. Done after the write rather than optimistically: a notice
@@ -207,6 +210,7 @@ export function useSharingGrants() {
     setSavedKey(key);
     if (savedTimer.current) window.clearTimeout(savedTimer.current);
     savedTimer.current = window.setTimeout(() => setSavedKey(null), 2000);
+    return true;
   };
 
   /**

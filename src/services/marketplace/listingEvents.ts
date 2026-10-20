@@ -31,7 +31,7 @@ export function recordListingEvent(e: ListingEvent): void {
   if (!gate.first(listingEventKey(e))) return;
   try {
     // Not in the generated types (B13 is newer than the last regeneration).
-    const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
+    const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
     void Promise.resolve(
       rpc("record_listing_event", {
         p_business_id: e.businessId,

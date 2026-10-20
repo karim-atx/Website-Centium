@@ -116,7 +116,7 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
         />
 
         <p className="text-[11.5px] text-charcoal-soft leading-relaxed">
-          This is the first licence on your CV. Add its name and issuer, and any other licences, in Profile › My CV.
+          This is the first licence on your CV. Add its name and issuer, and any other licences, in More › Edit public profile.
         </p>
       </div>
     </BottomSheet>

@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, SendHorizontal, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, PhoneOff, Pin, Search, Send, SendHorizontal, Share2, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
+import { ShareChatCard } from "../pro/messages/ShareChatCard";
 import { useApp } from "../../context/AppContext";
 import { ChatCard } from "./ChatCard";
 import { cardAllows } from "../../services/messaging/cards";
+import { addRecommendation, fetchAddedRecommendations } from "../../services/messaging/recommendationApi";
 import { fetchPlansFor, type Plan as HirePlan } from "../../services/hires";
 import { offerPlansInChat } from "../../services/hires/chat";
 import { useCall } from "../../context/CallContext";
@@ -186,8 +188,18 @@ export const ThreadView: React.FC<{
   focusMessageId?: string | null;
   /** MO1.7 O14: Chat info's "Delete conversation" (delete for me, B3). */
   onDeleteConversation?: () => void;
-}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation }) => {
+  /**
+   * Release 3 · MO22 v2 / MO27, professionals only (ignored for every other
+   * account): which Messages tab the chat is from. Clients keep calls (as
+   * thread_allows_calls says) and lose Offer plans; Enquiries have no calls,
+   * a notice saying so, and Offer plans opens `onOfferPlans` (the sheet);
+   * groups get "Share to the group" in the attach menu and draw shared
+   * programme and session cards. Unset: the chat is exactly as before.
+   */
+  pro?: ThreadViewPro;
+}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation, pro }) => {
   const { authUserId, user } = useApp();
+  const proView = user.accountType === "professional" && pro ? pro : null;
   const unread = useUnread();
   // Typing and online for this chat; the database decides who sees them.
   const live = useThreadLive();
@@ -675,6 +687,40 @@ export const ThreadView: React.FC<{
     await load();
   };
 
+  /**
+   * CU9 (Release 3, DB-7): a professional's recommendation card. The client
+   * reads which they have added (their own recommendation_adds rows) and adds
+   * one with add_recommendation. Not for the sender, who sees it as sent.
+   */
+  const recKey = messages
+    .filter((m) => m.recommendation && m.senderId !== authUserId)
+    .map((m) => m.id)
+    .join(",");
+  const [addedRecs, setAddedRecs] = useState<Set<string>>(() => new Set());
+  const [addingRec, setAddingRec] = useState<string | null>(null);
+  useEffect(() => {
+    if (!recKey || !authUserId) return;
+    let cancelled = false;
+    void fetchAddedRecommendations(authUserId, recKey.split(",")).then((s) => {
+      if (!cancelled) setAddedRecs(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recKey, authUserId]);
+  const addRec = async (messageId: string) => {
+    if (addingRec) return;
+    setAddingRec(messageId);
+    setError(null);
+    const r = await addRecommendation(messageId);
+    setAddingRec(null);
+    if (!r.ok) {
+      setError(r.message);
+      return;
+    }
+    setAddedRecs((prev) => new Set(prev).add(messageId));
+  };
+
   const idsKey = messages.map((m) => m.id).join(",");
   const refreshReactions = async () => {
     const ids = idsKey ? idsKey.split(",") : [];
@@ -1158,7 +1204,8 @@ export const ThreadView: React.FC<{
     }
     // A3 CARD MESSAGES (see cardAllows): no Copy, Forward or Edit; Delete for
     // everyone only for a plans offer, never for "Plan confirmed".
-    const allows = m.card ? cardAllows(m.card) : { copy: true, forward: true, edit: true, unsend: true };
+    // CU9: a recommendation card is not copied, forwarded or edited either; its sender may unsend it.
+    const allows = m.card ? cardAllows(m.card) : m.recommendation ? { copy: false, forward: false, edit: false, unsend: true } : { copy: true, forward: true, edit: true, unsend: true };
     const list: MessageAction[] = [
       { label: "Reply", onSelect: () => {
         setReplyTo(m);
@@ -1437,6 +1484,11 @@ export const ThreadView: React.FC<{
                   </span>
                 )
               )
+            ) : proView?.subtitle && !theyAreTyping ? (
+              // MO22 v2: "Online · Standard coaching" / "Enquiry", 12 text.soft.
+              <span data-pro-subtitle="" className="text-xs text-charcoal-soft truncate">
+                {theyAreOnline ? `Online · ${proView.subtitle}` : proView.subtitle}
+              </span>
             ) : (
               (theyAreTyping || theyAreOnline) &&
               (cv2 ? (
@@ -1459,12 +1511,14 @@ export const ThreadView: React.FC<{
             button as "Offer plans", which posts their plans card
             (post_plans_card); its refusals show in the error line above the
             composer. Not across a block. */}
-        {hireThread && !block.blocked && (viewerIsProfessional || (otherPlans?.length ?? 0) > 0) && (
+        {hireThread && !block.blocked && (viewerIsProfessional || (otherPlans?.length ?? 0) > 0) && (!proView || proView.kind === "enquiry") && (
           <button
             type="button"
             onClick={() =>
               viewerIsProfessional
-                ? void offerPlans()
+                ? proView?.onOfferPlans
+                  ? proView.onOfferPlans()
+                  : void offerPlans()
                 : navigate(`/app/professionals/${thread.participantId}?hire`)
             }
             disabled={postingPlans}
@@ -1485,7 +1539,7 @@ export const ThreadView: React.FC<{
             server-side. Not in a group, not with someone who left, and not
             across a block (a block stops calls both ways). */}
         {/* OP1-180 row 6: a business chat has no voice or video calls (HANDOVER §2.2). */}
-        {canCall && !cv2 && !isGroup && thread.participantId && !block.blocked && (
+        {canCall && !cv2 && !isGroup && thread.participantId && !block.blocked && (!proView || proView.kind === "client") && (
           <>
             <button
               type="button"
@@ -1518,6 +1572,15 @@ export const ThreadView: React.FC<{
           <Search size={17} strokeWidth={1.75} />
         </button>
       </div>
+
+      {/* MO22 v2 Enquiry chat: no calls until they hire you (r6b soft line:
+          r14 soft, pad 10 12, phone-off 13, 11.5 / 1.5 text.soft). */}
+      {proView?.kind === "enquiry" && (
+        <div data-enquiry-notice="" className="flex items-start gap-2 rounded-[14px] bg-cream-soft px-3 py-2.5 mb-2 text-[11.5px] leading-[1.5] text-charcoal-soft">
+          <PhoneOff size={13} strokeWidth={2} aria-hidden className="shrink-0 mt-[3px] text-charcoal-faint" />
+          <span>{`Voice and video calls open once ${thread.participantName.trim().split(/\s+/)[0] || "they"} hires you.`}</span>
+        </div>
+      )}
 
       {/* WHO THIS IS, stated rather than implied by a name in the header.
           A stranger calling themselves "Centium Support" is exactly the shape
@@ -1674,7 +1737,36 @@ export const ThreadView: React.FC<{
                   that cannot draw the card. An unsent or moderated message
                   shows as the ordinary bubble below, with its notice, never as
                   a card. */}
-              {m.card && !m.deletedAt && !removal ? (
+              {proView && m.shareCard && !m.deletedAt && !removal ? (
+                // MO27: a shared programme or session, drawn on the professional's side only.
+                <div
+                  ref={(el) => {
+                    bubbleRefs.current[m.id] = el;
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setActionsFor(m);
+                  }}
+                  className={`self-end w-[86%] rounded-[18px] ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
+                >
+                  <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
+                </div>
+              ) : !proView && m.shareCard && !m.deletedAt && !removal ? (
+                // CU24 (Release 3): a member sees the programme or session the
+                // host shared as the same read-only card, on the sender's side.
+                <div
+                  ref={(el) => {
+                    bubbleRefs.current[m.id] = el;
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setActionsFor(m);
+                  }}
+                  className={`${mine ? "self-end" : "self-start"} w-[86%] rounded-[18px] ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
+                >
+                  <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
+                </div>
+              ) : (m.card || m.recommendation) && !m.deletedAt && !removal ? (
                 <div
                   ref={(el) => {
                     bubbleRefs.current[m.id] = el;
@@ -1693,7 +1785,10 @@ export const ThreadView: React.FC<{
                       message itself (post_plans_card, confirm_hire_payment),
                       never as a reply, and a card is not forwardable. */}
                   <ChatCard
-                    card={m.card}
+                    card={(m.card ?? m.recommendation)!}
+                    added={addedRecs.has(m.id)}
+                    adding={addingRec === m.id}
+                    onAdd={m.recommendation && !mine ? () => void addRec(m.id) : undefined}
                     mine={mine}
                     senderName={isGroup ? nameOf(m.senderId) : thread.participantName}
                     createdAt={m.createdAt}
@@ -2259,9 +2354,12 @@ export const ThreadView: React.FC<{
             icon: <FileText size={15} strokeWidth={1.75} />,
             note: "PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB",
           },
+          // MO27: the professional's "Share to the group".
+          ...(proView?.onShare ? [{ value: "share" as const, label: "Share to the group", icon: <Share2 size={15} strokeWidth={1.75} /> }] : []),
         ]}
         onSelect={(v) => {
           setAttachAnchor(null);
+          if (v === "share") return proView?.onShare?.();
           (v === "photo" ? fileInputRef : docInputRef).current?.click();
         }}
       />
@@ -2462,3 +2560,14 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     </>
   );
 };
+
+/** Release 3 · what a professional's Messages tells the chat (ThreadView `pro`). */
+export interface ThreadViewPro {
+  kind: "client" | "enquiry" | "group" | "business";
+  /** The header's second line: the plan for a client ("Standard coaching"), "Enquiry" for an enquiry. */
+  subtitle?: string;
+  /** Enquiries: open the Offer plans sheet instead of posting every plan. */
+  onOfferPlans?: () => void;
+  /** Groups: open the "Share to the group" sheet. */
+  onShare?: () => void;
+}

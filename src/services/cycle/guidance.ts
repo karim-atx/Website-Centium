@@ -526,10 +526,7 @@ export const SHARING_LOAD_ERROR = "Couldn't load your professionals.";
 export const SHARE_PHASE_LABEL = "Cycle phase";
 export const SHARE_PHASE_DESCRIPTION = "Only the phase name, e.g. Luteal";
 export const SHARE_PREGNANCY_LABEL = "Pregnancy";
-export const SHARE_PREGNANCY_DESCRIPTION = "Only 'Pregnant' and the trimester";
-
-export const PHASE_NOT_SHARED = "Not sharing cycle phase.";
-export const PREGNANCY_NOT_SHARED = "Not sharing pregnancy status.";
+export const SHARE_PREGNANCY_DESCRIPTION = "Only 'Pregnant' and the week";
 
 /**
  * What the professional sees when the function returns `unavailable`.

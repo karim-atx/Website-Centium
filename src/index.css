@@ -1163,3 +1163,43 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
 .plate-slider::-moz-range-thumb {
   border: 1.5px solid rgb(var(--th-aea1dc));
 }
+
+/* Release 3 · Professional UI tokens (handoff-professional/design-tokens.json).
+   Only the board values the client tokens above don't already name; every
+   other board colour is an existing --c-* token. Each follows the colour
+   theme through its --th- variable, light and dark as the board gives them.
+   No client value changes. */
+:root {
+  --c-pro-card-border: rgba(36, 31, 27, 0.11);
+  --c-pro-ring-track: rgba(36, 31, 27, 0.08);
+  --c-pro-list-bg: rgb(var(--th-f7f7fc));
+  --c-pro-list-rule: rgb(var(--th-ebeaf6));
+  --c-pro-tab-idle: rgb(var(--th-f5f4fe));
+  --c-pro-tab-idle-ink: rgb(var(--th-6d50d3));
+  --c-pro-mint-hero: rgb(var(--th-ecf5f3));
+  --c-pro-mint-tile: rgb(var(--th-ebf5f2));
+  --c-pro-tile-icon: rgb(var(--th-4f8f8a));
+  --c-pro-tile-sub: rgb(var(--th-8a9796));
+  --c-pro-hero-title: rgb(var(--th-32544d));
+  --c-pro-hero-sub: rgb(var(--th-869595));
+  --c-pro-done-leaf: rgb(var(--th-6f9993));
+}
+.dark {
+  --c-pro-card-border: rgba(245, 243, 250, 0.08);
+  --c-pro-ring-track: rgba(245, 243, 250, 0.1);
+  --c-pro-list-bg: rgba(174, 161, 220, 0.1);
+  --c-pro-list-rule: rgba(174, 161, 220, 0.16);
+  --c-pro-tab-idle: rgb(var(--th-2b2c3a));
+  --c-pro-tab-idle-ink: rgb(var(--th-b7abde));
+  --c-pro-mint-hero: rgba(162, 200, 194, 0.12);
+  --c-pro-mint-tile: rgba(162, 200, 194, 0.12);
+  --c-pro-tile-icon: rgb(var(--th-4f8f8a));
+  --c-pro-tile-sub: rgb(var(--th-9cb0ad));
+  --c-pro-hero-title: rgb(var(--th-d5eae5));
+  --c-pro-hero-sub: rgb(var(--th-a5bdb9));
+  --c-pro-done-leaf: rgb(var(--th-7fb3a9));
+}
+html.high-contrast {
+  --c-pro-card-border: rgb(var(--c-charcoal) / 0.3);
+  --c-pro-ring-track: rgb(var(--c-charcoal) / 0.3);
+}

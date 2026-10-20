@@ -1,15 +1,20 @@
 import React from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import clsx from "clsx";
+import { MoreHorizontal } from "lucide-react";
 import {
   primaryNavItems,
-  professionalPrimaryNavItems,
   businessTabs,
   isBusinessTabActive,
+  proTabs,
+  isProTabActive,
   type BusinessNavKind,
   type BusinessGlyphKey,
 } from "./navItems";
 import { useBusinessNavKind } from "./useBusinessNavKind";
+import { useProSubtype } from "../../hooks/useProSubtype";
+import type { ProLane } from "../pro/subtypeLanes";
+import { CalendarNavGlyph, ClientsNavGlyph } from "../pro/ProNavGlyphs";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadDot } from "../messages/UnreadBadge";
@@ -70,32 +75,24 @@ const BUSINESS_GLYPHS: Record<Exclude<BusinessGlyphKey, "mark">, React.FC<Busine
   more: MoreNavGlyph,
 };
 
-// Professional bar: Calendar and More take the business bar's drawn glyphs,
-// Nutrition the client Food glyph; Clients and Training stay lucide.
-const PRO_GLYPHS: Record<string, React.FC<{ active: boolean; size?: number; color?: string; style?: React.CSSProperties }>> = {
-  "/app/professionals/calendar": ScheduleNavGlyph,
-  "/app/professionals/meal-plans": FoodNavGlyph,
-  "/app/more": MoreNavGlyph,
-};
-
-const PRO_OTHER_TABS = [
-  "/app/professionals/calendar",
-  "/app/professionals/templates",
-  "/app/professionals/meal-plans",
-  "/app/professionals/health-metrics",
-  "/app/professionals/messages",
-];
-
-/** Clients stays lit on a client's detail page; the other tabs on their own route. */
-function isProfessionalTabActive(to: string, pathname: string): boolean {
-  if (to === "/app/professionals") {
-    return (
-      pathname === to ||
-      (pathname.startsWith(to + "/") && !PRO_OTHER_TABS.some((p) => pathname === p || pathname.startsWith(p + "/")))
-    );
-  }
-  return pathname === to || pathname.startsWith(to + "/");
-}
+/**
+ * The centre Home disc (NAV-001 rows 5-6): 66 disc overflowing the bar, 2px
+ * accent ring when active, 1px accent/0.28 (dark 0.42) otherwise. Shared by
+ * the client, business and professional bars; each passes its own mark.
+ */
+const NavMarkDisc: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => (
+  <span
+    className={clsx(
+      "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+      "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#1C1F28] flex items-center justify-center",
+      active
+        ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
+        : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
+    )}
+  >
+    {children}
+  </span>
+);
 
 const BusinessBar: React.FC<{ kind: BusinessNavKind; pathname: string; unread: boolean; t: (s: string) => string }> = ({
   kind,
@@ -123,19 +120,10 @@ const BusinessBar: React.FC<{ kind: BusinessNavKind; pathname: string; unread: b
           >
             {tab.glyph === "more" && <UnreadDot show={unread} />}
             {tab.glyph === "mark" ? (
-              // NAV-001 rows 5-6: 66 disc overflowing the bar, 2px accent ring
-              // when active, 1px accent/0.28 (dark 0.42) otherwise; mark 54.
-              <span
-                className={clsx(
-                  "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                  "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#1C1F28] flex items-center justify-center",
-                  active
-                    ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
-                    : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
-                )}
-              >
+              // NAV-001 rows 5-6: the 66 disc; mark 54.
+              <NavMarkDisc active={active}>
                 <CentiumMark height={54} className={active ? "opacity-100" : "opacity-90"} style={NO_ICON_SCALE} />
-              </span>
+              </NavMarkDisc>
             ) : (
               <span className="flex flex-col items-center justify-center gap-[3px]">
                 {React.createElement(BUSINESS_GLYPHS[tab.glyph], {
@@ -153,12 +141,6 @@ const BusinessBar: React.FC<{ kind: BusinessNavKind; pathname: string; unread: b
     </div>
   </nav>
 );
-
-const gridColsForCount: Record<number, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-  5: "grid-cols-5",
-};
 
 // Iteration 6 "Team": Food and Workout use custom glyphs (fork and knife with
 // the mark's leaf, a figure lifting a barbell) instead of lucide-react icons.
@@ -183,8 +165,9 @@ const HEALTH_HEART_PATH =
   "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z";
 const HEALTH_ECG_PATH = "M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27";
 
-const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
+const HealthTabGlyph: React.FC<{ active: boolean; style?: React.CSSProperties }> = ({ active, style }) => (
   <svg
+    style={style}
     width={24}
     height={24}
     viewBox="0 0 24 24"
@@ -211,6 +194,58 @@ const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
   </svg>
 );
 
+/**
+ * Release 3 · the professional bar (HANDOVER d "Navbar per subtype", NV1):
+ * the client pill exactly (22 in from the column, 58 high, padX 4, five equal
+ * columns) with the Centium mark as Home in the centre. Clients, Calendar,
+ * Home, slot 4 by lane (Library and Meal plans reuse the client Workout and
+ * Food glyphs, Insights the client Health heart), More. Active glyphs fill
+ * with the accent and white inner lines; labels 10.5, 800 active / 600 idle.
+ */
+const ProBar: React.FC<{ lane: ProLane; pathname: string; unread: boolean; t: (s: string) => string }> = ({ lane, pathname, unread, t }) => (
+  <nav
+    data-bottom-nav
+    aria-label={t("Professional tabs")}
+    className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)]")}
+  >
+    <div className="grid grid-cols-5 items-center h-full px-1">
+      {proTabs(lane).map((tab) => {
+        const active = isProTabActive(tab, pathname);
+        const label = t(tab.label);
+        const color = active ? NAV_ACCENT : NAV_IDLE;
+        let glyph: React.ReactNode = null;
+        if (tab.glyph === "clients") glyph = <ClientsNavGlyph active={active} color={color} style={NO_ICON_SCALE} />;
+        else if (tab.glyph === "calendar") glyph = <CalendarNavGlyph active={active} color={color} style={NO_ICON_SCALE} />;
+        else if (tab.glyph === "workout") glyph = <WorkoutNavGlyph active={active} size={24} color={color} style={NO_ICON_SCALE} />;
+        else if (tab.glyph === "food") glyph = <FoodNavGlyph active={active} size={24} color={color} style={NO_ICON_SCALE} />;
+        else if (tab.glyph === "heart") glyph = <HealthTabGlyph active={active} style={NO_ICON_SCALE} />;
+        else if (tab.glyph === "more")
+          glyph = <MoreHorizontal size={24} strokeWidth={1.6} fill={active ? "currentColor" : "none"} style={{ ...NO_ICON_SCALE, color }} aria-hidden />;
+        return (
+          <Link
+            key={tab.label}
+            to={tab.to}
+            aria-current={active ? "page" : undefined}
+            className="tap relative flex items-center justify-center h-full"
+          >
+            {tab.glyph === "more" && <UnreadDot show={unread} />}
+            {tab.glyph === "mark" ? (
+              <NavMarkDisc active={active}>
+                <CentiumMark height={54} label={label} className={active ? "opacity-100" : "opacity-90"} style={NO_ICON_SCALE} />
+              </NavMarkDisc>
+            ) : (
+              <span className="flex flex-col items-center justify-center gap-[3px]">
+                {glyph}
+                <NavLabel active={active}>{label}</NavLabel>
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  </nav>
+);
+
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { user, t } = useApp();
@@ -218,25 +253,16 @@ export const BottomNav: React.FC = () => {
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const businessKind = useBusinessNavKind();
-  const items = isProfessional ? professionalPrimaryNavItems : primaryNavItems;
-  // V6 (QA 6.0): professionals now have their own richer sub-nav
-  // (Calendar/Templates/Messages get their own bottom-nav tab; Meal Plans
-  // and Health Metrics live under More instead, alongside Explore/Profile).
-  // The business list lives with the business tabs (navItems
-  // BUSINESS_MORE_PAGES).
+  const { lane } = useProSubtype();
+  const items = primaryNavItems;
+  // The client bar's More. The business list lives with the business tabs
+  // (navItems BUSINESS_MORE_PAGES), the professional one with proTabs
+  // (PRO_MORE_PAGES).
   const isMoreActive =
     location.pathname === "/app/more" ||
-    (isProfessional
-      ? [
-          "/app/marketplace",
-          "/app/profile",
-          "/app/subscription",
-          "/app/settings",
-          "/app/messages",
-          "/app/professionals/health-metrics",
-        ]
-      : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals", "/app/calendar", "/app/forum"]
-    ).some((p) => location.pathname.startsWith(p));
+    ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals", "/app/calendar", "/app/forum"].some((p) =>
+      location.pathname.startsWith(p)
+    );
 
   // v6: Health stays lit on its sub-pages (metric pages, Records, Checks,
   // Sources) and on Cycle and Contraception, which now live under Health.
@@ -254,39 +280,8 @@ export const BottomNav: React.FC = () => {
     return <BusinessBar kind={businessKind} pathname={location.pathname} unread={unread.total > 0} t={t} />;
   }
 
-  // The professional bar has no frame: kept (its five tabs) and restyled in
-  // the client bar's language (floating pill, 22 in, 24 / 1.6 glyphs, 10.5
-  // labels, the navbar inks).
-  if (isProfessional) {
-    return (
-      <nav data-bottom-nav aria-label={t("Professional tabs")} className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)]")}>
-        <div className={clsx("grid items-center h-full px-1", gridColsForCount[items.length] ?? "grid-cols-5")}>
-          {items.map((item) => {
-            const active = item.to === "/app/more" ? isMoreActive : isProfessionalTabActive(item.to, location.pathname);
-            const ProGlyph = PRO_GLYPHS[item.to];
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                aria-current={active ? "page" : undefined}
-                className="tap relative flex items-center justify-center h-full"
-              >
-                {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
-                <span className="flex flex-col items-center justify-center gap-[3px]">
-                  {ProGlyph ? (
-                    <ProGlyph active={active} size={24} color={active ? NAV_ACCENT : NAV_IDLE} style={NO_ICON_SCALE} />
-                  ) : (
-                    <Icon size={24} strokeWidth={active ? 2.2 : 1.6} style={{ ...NO_ICON_SCALE, color: active ? NAV_ACCENT : NAV_IDLE }} />
-                  )}
-                  <NavLabel active={active}>{t(item.label)}</NavLabel>
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    );
+  if (isProfessional && lane) {
+    return <ProBar lane={lane} pathname={location.pathname} unread={unread.total > 0} t={t} />;
   }
 
   // Client nav — Iteration 6 "Team": a floating pill (not a full-width bar),
@@ -334,20 +329,12 @@ export const BottomNav: React.FC = () => {
               {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
 
               {isHome ? (
-                <span
-                  className={clsx(
-                    "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                    "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#1C1F28] flex items-center justify-center",
-                    active
-                      ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
-                      : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
-                  )}
-                >
+                <NavMarkDisc active={active}>
                   {/* v6 (TK 4.1, X-24): the one vector mark, 54 tall, in the
                       theme's brand pair (#8F68F6 / #8AC4BA in Centium) in
                       light and dark alike. */}
                   <CentiumMark height={54} label={t(item.label)} className={active ? "opacity-100" : "opacity-90"} />
-                </span>
+                </NavMarkDisc>
               ) : (
                 <span className="flex flex-col items-center justify-center gap-[3px]">
                   {Glyph ? (

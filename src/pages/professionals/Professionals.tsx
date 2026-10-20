@@ -10,13 +10,13 @@ import { useApp } from "../../context/AppContext";
 import { fetchLinkedProfessionals } from "../../services/consent";
 import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
-import ProfessionalDashboard from "./ProfessionalDashboard";
 import { DirectoryCard } from "../../components/professionals/DirectoryCard";
 import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
 import { YourReviewsSection } from "../../components/professionals/YourReviewsSection";
 import { initials, typeColours } from "../../components/professionals/typeColour";
 import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
+import { LicencePendingTag } from "../../components/professionals/LicencePendingTag";
 import { CvView } from "../../components/cv/CvView";
 import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import {
@@ -183,12 +183,6 @@ export default function Professionals() {
     else setLinkedProfileOpen(true);
   };
 
-  // Professionals get an entirely different dashboard here (client roster,
-  // not a directory to browse) — separate UI per QA, not just a banner.
-  if (user.accountType === "professional") {
-    return <ProfessionalDashboard />;
-  }
-
   return (
     <div>
       {/* v6 MO1.2 #1 / S5: header, List · Map and the category rail in one
@@ -300,6 +294,8 @@ export default function Professionals() {
               <span className="text-[14px] font-semibold text-charcoal truncate">{linkedName}</span>
               {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={14} />}
             </span>
+            {/* Release 3 (Karim's answer 1): connected_professional_summary.licence_verified. */}
+            {linkedDetail?.licenceVerified === false && <LicencePendingTag className="mt-0.5" size={11} />}
           </span>
           <ChevronRight size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
         </button>
@@ -419,6 +415,7 @@ export default function Professionals() {
               <p className="text-[11.5px] font-medium text-charcoal-soft">
                 {[linkedDetail ? professionalRole(linkedDetail) : null, linkedDetail?.location].filter(Boolean).join(" · ")}
               </p>
+              {linkedDetail?.licenceVerified === false && <LicencePendingTag className="mt-0.5" />}
             </div>
           </div>
 

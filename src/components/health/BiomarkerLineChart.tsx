@@ -39,7 +39,13 @@ export const BiomarkerLineChart: React.FC<{
   onSelect?: (index: number | null) => void;
   /** Accessible summary. */
   label: string;
-}> = ({ points, low, high, width, height, variant = "small", selected = null, onSelect, label }) => {
+  /**
+   * The chart is a drawing, not an icon: keep it out of Larger text's 1.15
+   * icon scale (.larger-icons svg:not(.qa-shape) in index.css), so it stays
+   * inside its card and the tooltip lines up with the points. Omitted: as before.
+   */
+  noIconScale?: boolean;
+}> = ({ points, low, high, width, height, variant = "small", selected = null, onSelect, label, noIconScale = false }) => {
   const dark = useIsDark();
   const full = variant === "full";
   const ink = dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))";
@@ -98,7 +104,7 @@ export const BiomarkerLineChart: React.FC<{
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={label}
-      className="overflow-visible block"
+      className={noIconScale ? "overflow-visible block qa-shape" : "overflow-visible block"}
       onClick={(e) => {
         if (e.target === e.currentTarget) onSelect?.(null);
       }}

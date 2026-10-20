@@ -2,6 +2,7 @@ import React from "react";
 import { Check, CircleCheck, Receipt } from "lucide-react";
 import { CentiumMark } from "../icons/CentiumMark";
 import { cardDate, cardMoney, cardPriceLine, planButtonState, type MessageCard } from "../../services/messaging/cards";
+import type { RecommendationCard } from "../../services/messaging/recommendation";
 
 /**
  * The two A3 chat cards, drawn in place of their message's text bubble.
@@ -22,9 +23,15 @@ import { cardDate, cardMoney, cardPriceLine, planButtonState, type MessageCard }
  * popular flag in the backend) and "View receipt" (MO1.2.1.3.8 #13 — its
  * destination is unspecified on the board, and Centium moves no money, so
  * there is no receipt to open).
+ *
+ * Release 3 (CU9): a professional's recommendation (DB-7) is drawn here too,
+ * exactly as these cards: "{name}'s recommendation", one inner card, and on
+ * the client's side "Add to my week" (add_recommendation) turning into the
+ * Selected-style "Added to your week". The A3 cards are unchanged.
  */
 export const ChatCard: React.FC<{
-  card: MessageCard;
+  /** Release 3 (CU9): also a professional's recommendation (DB-7). */
+  card: MessageCard | RecommendationCard;
   /** The viewer posted it (the professional's own offer, or their own confirmation). */
   mine: boolean;
   /** Whose plans, for the header: the professional's first name, on the client's side. */
@@ -37,13 +44,26 @@ export const ChatCard: React.FC<{
   hiredPlanIds: ReadonlySet<string>;
   /** Client side: open the MO1.2.1.5.1 checkout for this plan. */
   onChoose: (planId: string) => void;
-}> = ({ card, mine, senderName, createdAt, meta, hiredPlanIds, onChoose }) => {
-  const title = card.kind === "plans_offer" ? (mine ? "Your plans" : `${senderName}'s plans`) : card.kind === "payment_reminder" ? "Payment reminder" : "Plan confirmed";
+  /** CU9, the client's side: this recommendation is already in their week (recommendation_adds). */
+  added?: boolean;
+  /** CU9: add_recommendation is in flight. */
+  adding?: boolean;
+  /** CU9, the client's side: "Add to my week". */
+  onAdd?: () => void;
+}> = ({ card, mine, senderName, createdAt, meta, hiredPlanIds, onChoose, added, adding, onAdd }) => {
+  const title =
+    card.kind === "plans_offer"
+      ? mine ? "Your plans" : `${senderName}'s plans`
+      : card.kind === "recommendation"
+        ? mine ? "Your recommendation" : `${senderName}'s recommendation`
+        : card.kind === "payment_reminder" ? "Payment reminder" : "Plan confirmed";
+  // CU9 (r26 recCard26): padded and spaced like the plans offer.
+  const roomy = card.kind === "plans_offer" || card.kind === "recommendation";
 
   return (
     <div
       className={`w-full rounded-[18px] border-[1.5px] border-primary-dark bg-[#FBFAFE] dark:bg-cream-card flex flex-col ${
-        card.kind === "plans_offer" ? "p-3 gap-2.5" : "px-3.5 py-3 gap-1.5"
+        roomy ? "p-3 gap-2.5" : "px-3.5 py-3 gap-1.5"
       }`}
     >
       <div className="flex items-center gap-[7px] min-h-[18px]">
@@ -57,7 +77,51 @@ export const ChatCard: React.FC<{
         <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint shrink-0">{meta}</span>
       </div>
 
-      {card.kind === "plans_offer" ? (
+      {card.kind === "recommendation" ? (
+        // CU9 (r26 recCard26): one inner card as a plan's (r14, 1px 10%,
+        // pad 12): the title 13.5 / 700 / 1.3 primary.deep, the lead line
+        // 12.5 / 700 charcoal 4 below, the points as the plan's features (gap
+        // 4, 8 below), then on the client's side the 33-high button 12 below:
+        // "Add to my week" as Choose, "Added to your week" as Selected.
+        // W9: the button's target is 44 high (5.5 above and below the drawn
+        // 33, taken back by the margins), so the card lays out as drawn.
+        <div className="rounded-[14px] border border-charcoal/10 bg-cream-card p-3 flex flex-col">
+          <p className="text-[13.5px] font-bold leading-[1.3] text-primary-deep-text break-words">{card.title}</p>
+          {card.lead && <p className="text-[12.5px] font-bold text-charcoal mt-1 break-words">{card.lead}</p>}
+          {card.points.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1">
+              {card.points.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-[11.5px] leading-[1.4] text-charcoal-soft break-words">
+                  <span aria-hidden className="w-[5px] h-[5px] rounded-full bg-th-9a8cd6 mt-[6px] shrink-0" />
+                  <span className="min-w-0">{f}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* The professional sees their own recommendation as sent: no button. */}
+          {!mine &&
+            onAdd &&
+            (added ? (
+              <span className="mt-3 h-[33px] w-full rounded-[10px] bg-primary-pale text-primary-deep-text text-[12.5px] font-bold flex items-center justify-center gap-1.5">
+                <CircleCheck size={15} strokeWidth={2} aria-hidden />
+                Added to your week
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={adding}
+                onClick={onAdd}
+                onPointerDown={(e) => e.stopPropagation()}
+                aria-label={`Add ${card.title} to my week`}
+                className="tap mt-[6.5px] -mb-[5.5px] h-11 w-full flex items-center disabled:opacity-60"
+              >
+                <span className="h-[33px] w-full rounded-[10px] text-[12.5px] font-bold bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center">
+                  Add to my week
+                </span>
+              </button>
+            ))}
+        </div>
+      ) : card.kind === "plans_offer" ? (
         <div className="flex flex-col gap-2">
           {card.plans.map((plan) => {
             const state = planButtonState(plan.planId, hiredPlanIds);

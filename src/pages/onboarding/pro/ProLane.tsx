@@ -225,7 +225,7 @@ export function ProLane<D extends DraftLike>({
           tags: pro.specialties,
           line: done.headline,
         }}
-        onPrimary={() => navigate("/app/professionals")}
+        onPrimary={() => navigate("/app/pro")}
       />
     );
   }

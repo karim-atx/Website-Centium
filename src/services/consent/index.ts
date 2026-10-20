@@ -46,6 +46,11 @@ export type AccessCategory = Enums<"access_category">;
  * the only writer — so every existing relationship starts with this switch
  * off and stays off until its owner turns it on.
  */
+/**
+ * Release 3 (DB-3) added `habits` and `allergies_dietary`; the client sharing
+ * screen surfaces them since CU8 (batch W7), so every category is surfaced.
+ * The alias is kept so callers that name it keep compiling.
+ */
 export type SurfacedAccessCategory = AccessCategory;
 
 export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: string; description: string }[] = [
@@ -59,8 +64,16 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
   // medical_history; "biomarkers" in particular now belongs to the former,
   // and naming it here would repeat the mislabelling at smaller scale.
   { category: "health_metrics", label: "Activity & vitals", description: "Steps, sleep, heart rate, water and calories burned" },
+  // Release 3 CU8 v4 (r25.js SHARE25): Habits joins Everyday tracking.
+  { category: "habits", label: "Habits", description: "Habit ticks and streaks" },
   { category: "lab_results", label: "Lab results", description: "Blood panels, markers and lab report documents" },
   { category: "medical_history", label: "Medical history", description: "Medications, surgeries, conditions and imaging" },
+  // Release 3 CU8 v4 (r25.js SHARE25): its own switch, after Medical history.
+  {
+    category: "allergies_dietary",
+    label: "Allergies and dietary needs",
+    description: "So plans and prescriptions avoid them",
+  },
   // Its own category rather than a corner of Activity & vitals, and the
   // migration that added it is explicit about why: folding these into the
   // vitals policy would have retroactively widened every existing grant, so
@@ -84,7 +97,7 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
     description: BP_SHARING_DESCRIPTION,
   },
   // TWO CATEGORIES, NOT ONE, and each shares exactly one word. Cycle phase is
-  // "Luteal"; pregnancy is "Pregnant" and a trimester. A single "cycle"
+  // "Luteal"; pregnancy is "Pregnant" and the week (Release 3, Karim answer 2). A single "cycle"
   // switch would have made telling a trainer which phase you are in
   // inseparable from telling them you are pregnant, which are not remotely
   // the same disclosure. The functions behind them return nothing else --
@@ -115,6 +128,8 @@ export const accessKeyFor: Record<
   | "bloodPressure"
   | "cyclePhase"
   | "pregnancy"
+  | "habits"
+  | "allergiesDietary"
 > = {
   food_diary: "foodDiary",
   workout_activity: "workoutActivity",
@@ -127,6 +142,8 @@ export const accessKeyFor: Record<
   blood_pressure: "bloodPressure",
   cycle_phase: "cyclePhase",
   pregnancy: "pregnancy",
+  habits: "habits",
+  allergies_dietary: "allergiesDietary",
 };
 
 export interface LinkedProfessional {
@@ -136,6 +153,12 @@ export interface LinkedProfessional {
   name: string;
   avatarUrl: string | null;
   joinedAt: string;
+  /**
+   * Release 3 (Karim answer 1): connected_professional_summary.licence_verified.
+   * false = show "Licence not verified yet"; undefined when the summary has no
+   * row for them (no professional_profiles row), which shows nothing.
+   */
+  licenceVerified?: boolean;
 }
 
 function describe(error: PostgrestError): string {
@@ -200,6 +223,17 @@ export async function fetchLinkedProfessionals(): Promise<LinkedProfessionalsRes
       .in("id", professionalIds);
 
     const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+    // Release 3: the licence line on the Connected professionals row. Best
+    // effort: a failed read leaves the row as it was (no line), never an error.
+    const { data: summaries } = await supabase
+      .from("connected_professional_summary")
+      .select("id, licence_verified")
+      .in("id", professionalIds);
+    const licenceById = new Map(
+      ((summaries ?? []) as { id: string | null; licence_verified: boolean | null }[])
+        .filter((r) => !!r.id && r.licence_verified !== null)
+        .map((r) => [r.id!, !!r.licence_verified])
+    );
 
     return {
       status: "ok",
@@ -211,6 +245,7 @@ export async function fetchLinkedProfessionals(): Promise<LinkedProfessionalsRes
           name: byId.get(r.professional_id!)?.first_name?.trim() || "Your professional",
           avatarUrl: byId.get(r.professional_id!)?.avatar_url ?? null,
           joinedAt: r.joined_at ?? "",
+          licenceVerified: licenceById.get(r.professional_id!),
         })),
     };
   } catch (e) {

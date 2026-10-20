@@ -1,0 +1,213 @@
+import React, { useId } from "react";
+import { AlignLeft, Calendar, Camera, CircleDot, GripVertical, Hash, ListChecks, Gauge, Plus, Ruler, ShieldAlert, Square, Circle, ToggleRight, Trash2, Type, X, type LucideIcon } from "lucide-react";
+import { textPx } from "../../../theme/textSize";
+import { Toggle } from "../../ui/Toggle";
+import { INK } from "../proInk";
+import type { GripProps } from "./useReorder";
+import { OPTIONS_MAX, PROMPT_MAX, SAFETY_LABEL, UNIT_MAX, isYesNo, typeLabel, uiTypeOf, type QuestionDraft, type UiType } from "./formModel";
+
+/** The add-a-question glyphs (gen/r18.js QT18). */
+export const TYPE_ICON: Record<UiType, LucideIcon> = {
+  short: Type,
+  long: AlignLeft,
+  single: CircleDot,
+  multi: ListChecks,
+  number: Hash,
+  scale: Gauge,
+  date: Calendar,
+  yesno: ToggleRight,
+  photo: Camera,
+  body: Ruler,
+};
+
+/**
+ * Release 3 · MO29 one question card (gen/r18.js qCard18): card fill and
+ * border, r16, pad 12 12 10, 8 apart; the head row (gap 8, 8 under it): the
+ * grip 14 text.tertiary, the type in caps 10.5 / 800 0.06em primary.deep
+ * with its 12 glyph, then "Required" 11.5 text.faint and the switch; the
+ * question 14 / 700 (8 under); then the answer as the client will see it:
+ * - short text: a 40 high r10 soft well, "Short answer" 13 text.tertiary;
+ * - choices: rows gap 6, a 15 circle / square in text.tertiary, 13 text;
+ * - number: a 90 × 40 r10 soft well and the unit 13 / 700 text.soft;
+ * - scale: the numbers in a grid (gap 3), 30 high r8 soft, 11.5 / 700, with
+ *   "Very low" and "Very high" 10.5 text.faint under it;
+ * - date: 40 high r10 soft, the calendar 14 and "Pick a date";
+ * - yes or no: two 36 high r10 soft halves, 13 / 700;
+ * - photo: 56 high r12, a 1.5 dashed 11% border, the camera 15 and "Add
+ *   photos or a file" 12.5 / 700.
+ * Here the question, the answers and the unit are editable in place. A
+ * safety-marked question (Weekly check-in: pain, injury, illness, symptoms)
+ * is locked on: it can't be removed or reworded, and says why.
+ */
+export const QuestionCard: React.FC<{
+  q: QuestionDraft;
+  index: number;
+  count: number;
+  onChange: (q: QuestionDraft) => void;
+  onRemove: () => void;
+  register: (el: HTMLElement | null) => void;
+  grip: GripProps;
+  problem: string | null;
+  /** Preview: the question as the client sees it, nothing editable. */
+  readOnly?: boolean;
+}> = ({ q, index, count, onChange, onRemove, register, grip, problem, readOnly }) => {
+  const id = useId();
+  const ui = uiTypeOf(q);
+  const Icon = TYPE_ICON[ui];
+  const locked = !!q.safetyTopic || !!readOnly;
+  const set = (patch: Partial<QuestionDraft>) => onChange({ ...q, ...patch });
+  const yesNo = isYesNo(q.options);
+
+  let body: React.ReactNode;
+  if (q.type === "text") {
+    body = <span className="block" style={{ height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", lineHeight: "40px", fontSize: textPx(13), color: INK.chT }}>Short answer</span>;
+  } else if ((q.type === "choice" || q.type === "multi") && yesNo) {
+    body = (
+      <div className="flex" style={{ gap: 6 }}>
+        {["Yes", "No"].map((x) => (
+          <span key={x} className="flex-1 flex items-center justify-center" style={{ height: 36, borderRadius: 10, background: INK.soft, fontSize: textPx(13), fontWeight: 700, color: INK.chS }}>
+            {x}
+          </span>
+        ))}
+      </div>
+    );
+  } else if (q.type === "choice" || q.type === "multi") {
+    const opts = q.options ?? [];
+    const Mark = q.type === "choice" ? Circle : Square;
+    body = (
+      <div className="flex flex-col" style={{ gap: 6 }}>
+        {opts.map((o, i) => (
+          <span key={i} className="flex items-center" style={{ gap: 8 }}>
+            <Mark size={15} strokeWidth={2} aria-hidden style={{ color: INK.chT, flexShrink: 0 }} />
+            <input
+              value={o}
+              disabled={locked}
+              maxLength={120}
+              onChange={(e) => set({ options: opts.map((x, j) => (j === i ? e.target.value : x)) })}
+              placeholder={`Answer ${i + 1}`}
+              aria-label={`Answer ${i + 1}`}
+              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
+              style={{ fontSize: textPx(13), color: INK.ch, height: 28 }}
+            />
+            {!locked && opts.length > 2 && (
+              <button type="button" onClick={() => set({ options: opts.filter((_, j) => j !== i) })} aria-label={`Remove answer ${i + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+                <X size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+              </button>
+            )}
+          </span>
+        ))}
+        {!locked && opts.length < OPTIONS_MAX && (
+          <button type="button" onClick={() => set({ options: [...opts, ""] })} className="tap self-start flex items-center relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']" style={{ gap: 4, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, marginTop: 2 }}>
+            <Plus size={12} strokeWidth={2.4} aria-hidden />
+            Add an answer
+          </button>
+        )}
+      </div>
+    );
+  } else if (q.type === "number") {
+    body = (
+      <span className="inline-flex items-center" style={{ gap: 8 }}>
+        <span style={{ width: 90, height: 40, borderRadius: 10, background: INK.soft }} />
+        <input
+          value={q.unit ?? ""}
+          disabled={locked}
+          maxLength={UNIT_MAX}
+          onChange={(e) => set({ unit: e.target.value })}
+          placeholder="Unit"
+          aria-label="Unit"
+          className="bg-transparent outline-none placeholder:text-charcoal-tertiary"
+          style={{ width: 90, fontSize: textPx(13), fontWeight: 700, color: INK.chS, height: 32 }}
+        />
+      </span>
+    );
+  } else if (q.type === "scale") {
+    const lo = q.scaleMin ?? 1;
+    const hi = q.scaleMax ?? 10;
+    const nums = Array.from({ length: Math.max(0, hi - lo + 1) }, (_, i) => lo + i);
+    body = (
+      <>
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${nums.length}, minmax(0, 1fr))`, gap: 3 }}>
+          {nums.map((n) => (
+            <span key={n} className="flex items-center justify-center" style={{ height: 30, borderRadius: 8, background: INK.soft, fontSize: textPx(11.5), fontWeight: 700, color: INK.chS }}>
+              {n}
+            </span>
+          ))}
+        </div>
+        <div className="flex justify-between" style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 4 }}>
+          <span>Very low</span>
+          <span>Very high</span>
+        </div>
+      </>
+    );
+  } else if (q.type === "date") {
+    body = (
+      <span className="inline-flex items-center" style={{ gap: 8, height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", fontSize: textPx(13), color: INK.chT }}>
+        <Calendar size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+        Pick a date
+      </span>
+    );
+  } else {
+    body = (
+      <span className="flex items-center justify-center" style={{ gap: 8, height: 56, borderRadius: 12, border: "1.5px dashed rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>
+        <Camera size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+        Add photos or a file
+      </span>
+    );
+  }
+
+  return (
+    <div ref={register} style={{ background: INK.card, border: `1px solid ${problem ? INK.hi : INK.bCard}`, borderRadius: 16, padding: "12px 12px 10px", marginBottom: 8 }}>
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
+        {!readOnly && <button type="button" aria-label={`Move question ${index + 1} of ${count}. Use the arrow keys.`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
+          <GripVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
+        </button>}
+        <span className="inline-flex items-center min-w-0 whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
+          <Icon size={12} strokeWidth={2.2} aria-hidden />
+          <span className="truncate">{typeLabel(q)}</span>
+        </span>
+        {readOnly ? (
+          q.required && <span className="ml-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
+        ) : (
+          <span className="ml-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
+            <span aria-hidden>Required</span>
+            <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={`Required: ${q.prompt || `question ${index + 1}`}`} disabled={locked} />
+          </span>
+        )}
+        {!locked && (
+          <button type="button" onClick={onRemove} aria-label={`Remove question ${index + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+            <Trash2 size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+          </button>
+        )}
+      </div>
+      {readOnly || q.safetyTopic ? (
+        <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4, overflowWrap: "anywhere" }}>{q.prompt}</p>
+      ) : (
+        <>
+          <label htmlFor={id} className="sr-only">{`Question ${index + 1}`}</label>
+          <textarea
+            id={id}
+            value={q.prompt}
+            rows={1}
+            maxLength={PROMPT_MAX}
+            onChange={(e) => set({ prompt: e.target.value })}
+            placeholder="Write your question"
+            className="block w-full bg-transparent outline-none resize-none placeholder:text-charcoal-tertiary [field-sizing:content]"
+            style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4 }}
+          />
+        </>
+      )}
+      {!readOnly && q.safetyTopic && (
+        <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chS, lineHeight: 1.45, marginBottom: 8 }}>
+          <ShieldAlert size={13} strokeWidth={2} aria-hidden style={{ color: INK.hi, flexShrink: 0, marginTop: 2 }} />
+          {`Safety question. Answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it stays on.`}
+        </p>
+      )}
+      {body}
+      {problem && (
+        <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+};

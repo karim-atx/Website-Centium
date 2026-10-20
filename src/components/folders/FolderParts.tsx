@@ -184,6 +184,10 @@ export const FolderHeader: React.FC<{
    * of being themed again. Off by default.
    */
   themed?: boolean;
+  /** Release 3 (CU1): the count line as given ("Week 3 of 8 · 3 routines") instead of "N routines". Unset = as before. */
+  countText?: string;
+  /** Release 3 (CU1): no drag grip (a coach's programme is not moved). Unset = as before. */
+  noGrip?: boolean;
 }> = ({
   folder,
   family: baseFamily,
@@ -202,6 +206,8 @@ export const FolderHeader: React.FC<{
   colorEditor,
   drawnInk = false,
   themed = false,
+  countText,
+  noGrip = false,
 }) => {
   const gripProps = grip;
   // Mobile v5.1 R3: the header shade for the current mode (dark: the hue at
@@ -256,7 +262,7 @@ export const FolderHeader: React.FC<{
                 )}
               </span>
               <span className="block text-[11.5px] mt-px" style={{ color: inkSoft }}>
-                {count} {count === 1 ? noun[0] : noun[1]}
+                {countText ?? `${count} ${count === 1 ? noun[0] : noun[1]}`}
               </span>
             </span>
           </button>
@@ -271,15 +277,17 @@ export const FolderHeader: React.FC<{
             </button>
             {colorEditor}
           </div>
-          <span
-            {...gripProps}
-            role="button"
-            aria-label={`Drag ${folder.name}`}
-            className="hit flex shrink-0"
-            style={{ color: ink, ...(gripProps?.style as React.CSSProperties | undefined) }}
-          >
-            <GripVertical size={17} />
-          </span>
+          {!noGrip && (
+            <span
+              {...gripProps}
+              role="button"
+              aria-label={`Drag ${folder.name}`}
+              className="hit flex shrink-0"
+              style={{ color: ink, ...(gripProps?.style as React.CSSProperties | undefined) }}
+            >
+              <GripVertical size={17} />
+            </span>
+          )}
         </>
       )}
     </div>

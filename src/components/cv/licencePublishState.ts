@@ -19,7 +19,7 @@ export const PUBLISH_STRINGS = {
   notPublicDesc: "Only you and our review team can see it. Clients don't see it on your profile.",
   unnamedDesc: "Add its name to show it on your profile.",
   expiredDesc: "It has expired, so clients don't see it. Turn on Show to clients after it expires to keep it on your profile.",
-  onboardingIntro: "Licences start hidden. Switch one on and clients see it on your profile. You can change this any time in My CV.",
+  onboardingIntro: "Licences start hidden. Switch one on and clients see it on your profile. You can change this any time in Edit public profile.",
   newLicence: "New licences start hidden from clients. Once it's saved, you choose whether to show it on your profile.",
 } as const;
 

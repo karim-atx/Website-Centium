@@ -1,22 +1,10 @@
 import { supabase } from "../../../lib/supabase/client";
-import { SESSION_SELECT, toWorkoutSession } from "../workout/log";
-import {
-  MEASUREMENT_TYPES,
-  isMeasurementType,
-  type MeasurementType,
-} from "../measurements/sites";
-import { getClientMeasurementGoals, type MeasurementGoal } from "../measurements";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
-  BloodMarker,
   ClientNutrition,
   ClientWorkoutActivity,
   ImagingRecord,
-  WorkoutSession,
-  LabReport,
 } from "../../types";
-import { groupPanelsByMarkerName, type PanelRow } from "../labs";
-import { fetchLabCatalogue } from "../labs/catalogue";
 import { localDayOf, todayLocal } from "../../utils/date";
 
 // A professional's read of their clients' own data.
@@ -191,57 +179,6 @@ export async function fetchClientWorkoutActivity(
 }
 
 // ---------------------------------------------------------------------------
-// A client's actual sessions
-// ---------------------------------------------------------------------------
-
-export type ClientSessionsResult =
-  | { ok: true; byClient: Record<string, WorkoutSession[]> }
-  | { ok: false; message: string };
-
-/**
- * The sessions a client logged against particular routines.
- *
- * WHAT THE PROFESSIONAL IS ALLOWED TO SEE, AND NOTHING ELSE. The filter is
- * RLS's, not this function's: workout_sessions' select policy is the owner OR
- * `has_client_access(user_id, 'workout_activity')`, and every table underneath
- * carries the matching rule through its parent. A client who has not shared
- * workout activity simply produces no rows — which is why the caller must
- * distinguish "not shared" from "nothing logged", exactly as the roster badge
- * does, rather than rendering an empty result as "no sessions".
- *
- * NARROWED BY ROUTINE because the question is about a template, not about the
- * client's whole training life. A professional who assigned one program has a
- * reason to see how that program went; the rest of somebody's log is not part
- * of that question, even where the grant would permit it.
- */
-export async function fetchClientSessionsForRoutines(
-  routineIds: string[],
-  limit = 40
-): Promise<ClientSessionsResult> {
-  if (routineIds.length === 0) return { ok: true, byClient: {} };
-
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .select(`user_id, ${SESSION_SELECT}`)
-    .in("routine_id", routineIds)
-    .order("started_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("[professional-client] Could not read client sessions:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-
-  const byClient: Record<string, WorkoutSession[]> = {};
-  for (const row of data ?? []) {
-    const userId = (row as { user_id: string }).user_id;
-    (byClient[userId] ??= []).push(toWorkoutSession(row));
-  }
-  return { ok: true, byClient };
-}
-
-
-// ---------------------------------------------------------------------------
 // Vitals averages and body measurements
 // ---------------------------------------------------------------------------
 
@@ -303,77 +240,6 @@ export async function fetchClientVitals(clientIds: string[]): Promise<ClientVita
       ...(sleep.length > 0 ? { sleepHours: Math.round(mean(sleep) * 10) / 10 } : {}),
       ...(steps.length > 0 ? { stepsAvg: Math.round(mean(steps)) } : {}),
     };
-  }
-  return { ok: true, byClient };
-}
-
-/** The latest reading per site, and how it moved since the one before it. */
-export type ClientMeasurements = Partial<
-  Record<MeasurementType, { value: number; change: number | null; goal: MeasurementGoal | null }>
->;
-
-export type ClientMeasurementsResult =
-  | { ok: true; byClient: Record<string, ClientMeasurements> }
-  | { ok: false; message: string };
-
-/**
- * Latest tape measurements per client, with the change since the previous one.
- *
- * GATED ON ITS OWN CATEGORY. `body_measurements` is deliberately not part of
- * the vitals policy: folding it in would have retroactively widened every
- * existing health_metrics grant, so somebody who ticked a box meaning "steps,
- * water, sleep" would have started sharing their waist without touching
- * anything. A professional holding vitals and weight and nothing else gets
- * zero rows from this query, which is the behaviour the verification checks.
- *
- * `change` is null on a first reading — there is nothing to have changed from,
- * and rendering that as +0.0 cm would claim a stability nobody measured.
- */
-export async function fetchClientMeasurements(
-  clientIds: string[]
-): Promise<ClientMeasurementsResult> {
-  if (clientIds.length === 0) return { ok: true, byClient: {} };
-
-  const { data, error } = await supabase
-    .from("health_metrics")
-    .select("user_id, metric_type, value, recorded_at")
-    .in("user_id", clientIds)
-    .in("metric_type", MEASUREMENT_TYPES)
-    // Newest first, so the first two rows seen for a (client, site) are the
-    // latest reading and the one it should be compared against.
-    .order("recorded_at", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("[professional-client] Could not read client measurements:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-
-  const seen: Record<string, Partial<Record<MeasurementType, number[]>>> = {};
-  for (const id of clientIds) seen[id] = {};
-  for (const row of data ?? []) {
-    const bucket = seen[row.user_id];
-    if (!bucket || !isMeasurementType(row.metric_type)) continue;
-    const list = (bucket[row.metric_type] ??= []);
-    if (list.length < 2) list.push(Number(row.value));
-  }
-
-  // WO16: each measurement's goal beside it. measurement_goals is readable
-  // under the same body_measurements consent as the readings, so the rows
-  // above and these come and go together.
-  const goals = await getClientMeasurementGoals(clientIds);
-
-  const byClient: Record<string, ClientMeasurements> = {};
-  for (const id of clientIds) {
-    const out: ClientMeasurements = {};
-    for (const [type, values] of Object.entries(seen[id]) as [MeasurementType, number[]][]) {
-      out[type] = {
-        value: values[0],
-        change: values.length > 1 ? Math.round((values[0] - values[1]) * 10) / 10 : null,
-        goal: goals[id]?.[type] ?? null,
-      };
-    }
-    byClient[id] = out;
   }
   return { ok: true, byClient };
 }
@@ -564,141 +430,6 @@ export async function fetchClientMedicalHistory(
       notifyEnabled: row.notify_enabled,
       ...(row.notes ? { notes: row.notes } : {}),
     });
-  }
-
-  return { ok: true, byClient };
-}
-
-export interface ClientLabs {
-  /** Markers grouped by name across every panel, newest reading first-class. */
-  markers: BloodMarker[];
-  /** yyyy-mm-dd of the most recent panel. */
-  latestPanelDate: string;
-  panelCount: number;
-  /**
-   * Results typed in on their own, with no panel (Database B2:
-   * blood_markers.blood_panel_id null, dated by result_date). Their markers
-   * are in `markers` like any other reading.
-   */
-  standaloneCount: number;
-  /** Panels carrying an uploaded report, newest first. */
-  reports: LabReport[];
-}
-
-export type ClientLabsResult =
-  | { ok: true; byClient: Record<string, ClientLabs | null> }
-  | { ok: false; message: string };
-
-/**
- * A client's blood work, for clients who have granted `lab_results`.
- *
- * ITS OWN CATEGORY, AND ITS OWN QUERY. lab_results is separate from both
- * health_metrics (vitals) and medical_history (medications, surgeries,
- * imaging) — a client can share any one without the others, so this list is
- * built independently and nothing here is inferred from another grant.
- *
- * Reuses groupPanelsByMarkerName rather than reimplementing the inversion:
- * the professional sees the same marker-with-history shape the client's own
- * Health tab shows, because it is the same data answered from the same
- * grouping. Panels are ordered oldest-first for that reason — the helper
- * depends on it.
- *
- * Same rules as every read above: one batched query for the roster, every
- * requested client present as `null` when they have no panels, and ok:false
- * rather than an empty map on failure, because "no blood work" and "could not
- * read blood work" are opposite claims about a person's health.
- */
-export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsResult> {
-  if (clientIds.length === 0) return { ok: true, byClient: {} };
-
-  const { data, error } = await supabase
-    .from("blood_panels")
-    .select("id, user_id, panel_date, source_image_url, blood_markers(id, name, marker_key, value, unit, range_low, range_high, status)")
-    .in("user_id", clientIds)
-    .order("panel_date", { ascending: true });
-
-  if (error) {
-    console.error("[professional-client] Could not read client labs:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-
-  // B2: a result can stand alone (no panel, dated by result_date). Read
-  // under the same lab_results grant; without this a client who only types
-  // single results looks to their professional as if they had none.
-  const standalone = await (supabase.from("blood_markers") as unknown as {
-    select: (c: string) => {
-      in: (
-        c: string,
-        v: string[]
-      ) => {
-        is: (
-          c: string,
-          v: null
-        ) => PromiseLike<{
-          data:
-            | { id: string; user_id: string; name: string; marker_key: string | null; value: number; unit: string; range_low: number | null; range_high: number | null; status: string; result_date: string | null }[]
-            | null;
-          error: { message: string } | null;
-        }>;
-      };
-    };
-  })
-    .select("id, user_id, name, marker_key, value, unit, range_low, range_high, status, result_date")
-    .in("user_id", clientIds)
-    .is("blood_panel_id", null);
-  if (standalone.error) {
-    console.error("[professional-client] Could not read client results:", standalone.error.message);
-    return { ok: false, message: describe(standalone.error as PostgrestError) };
-  }
-
-  const byClient: Record<string, ClientLabs | null> = {};
-  for (const id of clientIds) byClient[id] = null;
-  const catalogue = await fetchLabCatalogue();
-
-  // Panels arrive oldest-first across every client at once, so bucket them per
-  // client BEFORE grouping — the helper's chronological contract is per person.
-  const panelsFor: Record<string, PanelRow[]> = {};
-  const reportsFor: Record<string, LabReport[]> = {};
-  for (const row of data ?? []) {
-    if (!(row.user_id in byClient)) continue;
-    (panelsFor[row.user_id] ??= []).push({
-      panel_date: row.panel_date,
-      blood_markers: row.blood_markers ?? [],
-    });
-    if (row.source_image_url) {
-      (reportsFor[row.user_id] ??= []).push({
-        id: row.id,
-        date: row.panel_date,
-        filePath: row.source_image_url,
-      });
-    }
-  }
-
-  // Standalone results join as one dated group per day, so the grouping's
-  // oldest-first contract still holds once merged.
-  const singleFor: Record<string, Record<string, PanelRow["blood_markers"]>> = {};
-  for (const m of standalone.data ?? []) {
-    if (!(m.user_id in byClient) || !m.result_date) continue;
-    ((singleFor[m.user_id] ??= {})[m.result_date] ??= []).push(m as unknown as PanelRow["blood_markers"][number]);
-  }
-  for (const [id, days] of Object.entries(singleFor)) {
-    const list = (panelsFor[id] ??= []);
-    for (const [date, markers] of Object.entries(days)) list.push({ panel_date: date, blood_markers: markers });
-    list.sort((a, b) => a.panel_date.localeCompare(b.panel_date));
-  }
-
-  for (const [id, panels] of Object.entries(panelsFor)) {
-    if (panels.length === 0) continue;
-    const singles = Object.keys(singleFor[id] ?? {}).length;
-    byClient[id] = {
-      markers: groupPanelsByMarkerName(panels, catalogue),
-      latestPanelDate: panels[panels.length - 1].panel_date,
-      panelCount: panels.length - singles,
-      standaloneCount: Object.values(singleFor[id] ?? {}).reduce((n, ms) => n + ms.length, 0),
-      // Panels arrive oldest-first for the grouping's sake; reports read
-      // better newest-first, like every other record list.
-      reports: (reportsFor[id] ?? []).slice().reverse(),
-    };
   }
 
   return { ok: true, byClient };

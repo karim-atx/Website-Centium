@@ -27,6 +27,10 @@ import { useLabResults } from "../../components/health/records/useLabResults";
 import { useHealthMode, hairline, fieldFill, fmtDate, ConfirmPopup, PINNED_FILL, REPORT_NAME_DEFAULT, INK, INK_FAINT } from "../../components/health/records/kit";
 import { resultKey } from "../../services/labs/results";
 import { fetchLinkedProfessionals, fetchMyGrants } from "../../services/consent";
+import { ShareResultSheet } from "../../components/health/ShareResultSheet";
+import { getMyResultShares, getShareTargets, sharedWithLabel, sharesCovering, type ResultShare, type ShareTarget } from "../../services/result-shares";
+import { localIsoDay, shortDay } from "../../services/care-plan/logic";
+import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
@@ -137,6 +141,12 @@ export default function HealthRecords() {
 
   // Sharing line (HE1.9 #14): who holds lab_results, read from the grants.
   const [sharingNames, setSharingNames] = useState<string[] | null>(null);
+  // Release 3 (CU17-CU21): the connected professionals with their role line,
+  // the client's single-result shares, and who can see records at all.
+  const [shareTargets, setShareTargets] = useState<ShareTarget[]>([]);
+  const [resultShares, setResultShares] = useState<ResultShare[]>([]);
+  const [recordsGrantees, setRecordsGrantees] = useState<Set<string>>(new Set());
+  const [sharesTick, setSharesTick] = useState(0);
   useEffect(() => {
     if (!authUserId) return;
     let cancelled = false;
@@ -144,17 +154,61 @@ export default function HealthRecords() {
       if (cancelled) return;
       if (linked.status !== "ok" || grants.status !== "ok") return setSharingNames(null);
       setSharingNames(linked.professionals.filter((p) => grants.grants[p.professionalId]?.lab_results).map((p) => p.name));
+      setRecordsGrantees(
+        new Set(
+          linked.professionals
+            .filter((p) => grants.grants[p.professionalId]?.lab_results || grants.grants[p.professionalId]?.medical_history)
+            .map((p) => p.professionalId)
+        )
+      );
     });
     return () => {
       cancelled = true;
     };
   }, [authUserId]);
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void Promise.all([getShareTargets(), getMyResultShares()]).then(([tg, sh]) => {
+      if (cancelled) return;
+      if (tg.ok) setShareTargets(tg.targets);
+      if (sh.ok) setResultShares(sh.shares);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, sharesTick]);
+  // CU17: who can see these records (Lab results or Medical history on, or a
+  // result shared one at a time). Nobody: no banner, as before.
+  const recordsShared = (() => {
+    const ids = new Set([...recordsGrantees, ...resultShares.map((s) => s.professionalId)]);
+    const people = shareTargets.filter((p) => ids.has(p.professionalId));
+    const label = sharedWithLabel(people);
+    return label ? { label, onManage: () => navigate("/app/profile") } : null;
+  })();
+  const [shareResultFor, setShareResultFor] = useState<LabResult | null>(null);
+  const panelCountOf = (r: LabResult | null) => (r?.panelId ? labResults.results.filter((x) => x.panelId === r.panelId).length : 0);
+  /** CU18: "Shared with {line} since {date}" for a marker's latest result. */
+  const sharedLineFor = (latest: LabResult | undefined): string | null => {
+    if (!latest) return null;
+    const s = sharesCovering(resultShares, { resultId: latest.id, panelId: latest.panelId })
+      .slice()
+      .sort((a, b) => a.sharedAt.localeCompare(b.sharedAt))[0];
+    const p = s && shareTargets.find((x) => x.professionalId === s.professionalId);
+    return s && p ? `Shared with ${p.line} since ${shortDay(localIsoDay(s.sharedAt))}` : null;
+  };
 
   const resultsByKey = useMemo(() => {
     const map = new Map<string, typeof labResults.results>();
     for (const r of labResults.results) map.set(resultKey(r), [...(map.get(resultKey(r)) ?? []), r]);
     return map;
   }, [labResults.results]);
+  const latestOf = (key: string | null) => {
+    const list = key ? resultsByKey.get(key) : undefined;
+    return list?.[list.length - 1];
+  };
+  // Release 3 CU18: only offered when someone is connected (Health looks as before otherwise).
+  const canShareWithPro = shareTargets.length > 0;
   const latestDate = useMemo(
     () => bloodMarkers.reduce<string | null>((a, m) => m.history.reduce<string | null>((b, h) => (!b || h.date > b ? h.date : b), a), null),
     [bloodMarkers]
@@ -236,6 +290,24 @@ export default function HealthRecords() {
           setPopupKey(null);
           window.scrollTo({ top: 0 });
         }}
+        onShareWithProfessional={
+          canShareWithPro
+            ? () => {
+                const latest = latestOf(popupKey);
+                setPopupKey(null);
+                if (latest) setShareResultFor(latest);
+              }
+            : undefined
+        }
+        sharedLine={sharedLineFor(latestOf(popupKey))}
+      />
+      <ShareResultSheet
+        open={!!shareResultFor}
+        onClose={() => setShareResultFor(null)}
+        result={shareResultFor}
+        panelCount={panelCountOf(shareResultFor)}
+        onToast={setToast}
+        onChanged={() => setSharesTick((x) => x + 1)}
       />
       <ShareBiomarkerSheet open={!!shareMarkers} onClose={() => setShareMarkers(null)} marker={shareMarkers?.marker ?? null} markers={shareMarkers?.marker ? undefined : bloodMarkers} />
       <BiomarkerCaptureFlow open={!!scan} file={scan?.file ?? null} onClose={() => setScan(null)} onSaved={scanSaved} />
@@ -350,6 +422,14 @@ export default function HealthRecords() {
           onBack={() => setMarkerKey(null)}
           onShare={() => setShareMarkers({ marker })}
           onToast={setToast}
+          onShareWithProfessional={
+            canShareWithPro
+              ? () => {
+                  const latest = latestOf(markerKey);
+                  if (latest) setShareResultFor(latest);
+                }
+              : undefined
+          }
         />
         {overlays}
       </>
@@ -360,7 +440,7 @@ export default function HealthRecords() {
 
   return (
     <div style={{ paddingBottom: 176 }}>
-      <RecordsHeader title="Biomarkers & imaging" onBack={back} menu={menu}>
+      <RecordsHeader title="Biomarkers & imaging" onBack={back} menu={menu} shared={recordsShared}>
         <SegmentedTabs
           className="mt-3"
           items={TABS}
@@ -400,7 +480,7 @@ export default function HealthRecords() {
           isThreshold={lab.isThreshold}
           remarkFor={lab.remarkFor}
           matches={matches}
-          sharing={{ names: sharingNames }}
+          sharing={{ names: sharingNames, singleShares: resultShares.length }}
           onChangeSharing={() => navigate("/app/profile")}
           onOpen={(m) => setPopupKey(resultKey(m))}
           confirmation={confirmation}

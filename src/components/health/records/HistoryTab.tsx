@@ -63,9 +63,89 @@ export const HistoryTab: React.FC<{
   onAddCondition: () => void;
   onEditSurgery: (s: Surgery) => void;
   onEditMedication: (m: Medication) => void;
-}> = ({ loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication }) => {
-  const { comorbidities, setComorbidities, surgeries, removeSurgery, medications, updateMedication, removeMedication } = useApp();
+  /**
+   * Release 3 (W3): a client's history as a professional reads it (the
+   * Medical history switch), read only: the client's conditions as chips, the
+   * surgeries and medications as plain rows. Omitted (the default), the tab
+   * shows and edits the signed-in person's own history exactly as before.
+   */
+  records?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
+}> = ({ loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication, records }) => {
+  const app = useApp();
   const { dark, hc } = useHealthMode();
+  if (records) return <ReadOnlyHistory records={records} loading={loading} error={error} onRetry={onRetry} dark={dark} hc={hc} />;
+  return <OwnHistory app={app} dark={dark} hc={hc} loading={loading} error={error} onRetry={onRetry} onAddCondition={onAddCondition} onEditSurgery={onEditSurgery} onEditMedication={onEditMedication} />;
+};
+
+const ReadOnlyHistory: React.FC<{
+  records: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  dark: boolean;
+  hc: boolean;
+}> = ({ records, loading, error, onRetry, dark, hc }) => {
+  const { comorbidities, surgeries, medications } = records;
+  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message="Couldn't load the history." onRetry={onRetry} />;
+  const empty = (text: string) => <p style={{ margin: "0 0 9px", fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{text}</p>;
+  const chip: React.CSSProperties = { height: 30, padding: "0 12px", borderRadius: 9999, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f0edf9))", color: dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-5f5093))" };
+  return (
+    <div>
+      <SectionCaps style={{ marginTop: 0 }}>Conditions</SectionCaps>
+      {loading && !comorbidities.length ? (
+        <Skel w={120} h={30} r={15} />
+      ) : comorbidities.length === 0 ? (
+        empty("No conditions recorded.")
+      ) : (
+        <div className="flex flex-wrap" style={{ gap: 7 }}>
+          {comorbidities.map((c) => (
+            <span key={c} className="inline-flex items-center" style={chip}>
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+      <SectionCaps>Past surgeries</SectionCaps>
+      {surgeries.length === 0 ? (
+        empty("No surgeries recorded.")
+      ) : (
+        <ListCard>
+          {surgeries.map((s, i) => (
+            <div key={s.id} className="flex items-center" style={{ minHeight: 60, padding: "9px 14px", borderTop: i ? rowRule(dark, hc) : undefined }}>
+              <RowText title={s.name} meta={surgeryDate(s)} />
+            </div>
+          ))}
+        </ListCard>
+      )}
+      <SectionCaps>Medications</SectionCaps>
+      {medications.length === 0 ? (
+        empty("No medications recorded.")
+      ) : (
+        <ListCard>
+          {medications.map((m, i) => (
+            <div key={m.id} className="flex items-center" style={{ minHeight: 66, padding: "9px 14px", gap: 11, borderTop: i ? rowRule(dark, hc) : undefined }}>
+              <RowTile icon={Pill} />
+              <RowText title={`${m.name} · ${m.dose}`} meta={[routeLabel(m.route), m.times.length ? m.times.map(time12).join(", ") : null].filter(Boolean).join(" · ")} />
+            </div>
+          ))}
+        </ListCard>
+      )}
+    </div>
+  );
+};
+
+const OwnHistory: React.FC<{
+  app: ReturnType<typeof useApp>;
+  dark: boolean;
+  hc: boolean;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onAddCondition: () => void;
+  onEditSurgery: (s: Surgery) => void;
+  onEditMedication: (m: Medication) => void;
+}> = ({ app, dark, hc, loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication }) => {
+  const { comorbidities, setComorbidities, surgeries, removeSurgery, medications, updateMedication, removeMedication } = app;
   const [recordError, setRecordError] = useState<{ section: string; message: string } | null>(null);
 
   const run = async (section: string, action: () => Promise<{ ok: boolean; message?: string }>) => {

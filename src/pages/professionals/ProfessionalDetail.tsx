@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
-import { PinnedCta } from "../../components/ui/PinnedCta";
+import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { goldPill, initials, pinGround, typeColours } from "../../components/professionals/typeColour";
 import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
@@ -13,14 +13,28 @@ import { CvView } from "../../components/cv/CvView";
 import { VerifiedCheck } from "../../components/cv/CvBadges";
 import { HireSheet } from "../../components/hire/HireSheet";
 import { YourHireCard } from "../../components/hire/YourHireCard";
-import { fetchMyHires, liveHireWith, type MyHire } from "../../services/hires";
-import { fetchMyHireRequest, sendHireRequest, type HireRequestState } from "../../services/hire-request";
+import { fetchMyHires, hireDecline, liveHireWith, type MyHire } from "../../services/hires";
+import {
+  fetchDeclineReasonLabel,
+  fetchMyHireRequest,
+  sendHireRequest,
+  type HireRequest,
+  type HireRequestExtras,
+  type HireRequestState,
+} from "../../services/hire-request";
+import { declineIsFinal, declineText, previewInviteLink, professionalByHandle } from "../../services/public-pro";
+import { getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
+import { AccessRequestNotice } from "../../components/professionals/AccessRequestNotice";
+import { DataSharingSection } from "../../components/professionals/DataSharingSection";
+import { ProfileMoreSections } from "../../components/professionals/ProfileMoreSections";
+import { BottomSheet } from "../../components/ui/BottomSheet";
+import { BookingFlow } from "../public/BookingFlow";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/ReviewForms";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
-import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucide-react";
+import { ChevronLeft, Handshake, Link2, Lock, MessageCircle, Star, Wallet } from "lucide-react";
 import { textPx } from "../../theme/textSize";
 import { useBack } from "../../hooks/useBack";
 
@@ -40,8 +54,31 @@ import { useBack } from "../../hooks/useBack";
 // testimony, rendered identically to the real thing, about a real person.
 // The list reads professional_reviews now and shows what is there.
 
-export default function ProfessionalDetail() {
-  const { id } = useParams();
+/**
+ * Optional props (Release 3 W6, MO3 public profile preview): the page as a
+ * client sees it, for the professional themselves. Unset, the page is the
+ * client directory profile exactly as before.
+ */
+export interface ProfessionalDetailPreview {
+  /** Whose profile, in place of the route id. */
+  profileId: string;
+  /** Used when the directory has no row (not listed yet): the page still shows what a client would. */
+  fallbackListing: DirectoryListing | null;
+  /** Top right of the back row (MO3 "Preview as client", Share). */
+  headerRight?: ReactNode;
+  /** Under the back row (HireAvailabilityNotice, a toast). */
+  above?: ReactNode;
+  /** The pinned bar in place of Message and Hire (MO3 Hire and Book a session). */
+  pinned?: ReactNode;
+  /** Where the reviews pill goes (the directory reviews page needs a listing). */
+  reviewsHref?: string;
+}
+
+export default function ProfessionalDetail({ preview }: { preview?: ProfessionalDetailPreview } = {}) {
+  const params = useParams();
+  const id = preview?.profileId ?? params.id;
+  const isPreview = !!preview;
+  const fallbackListing = preview?.fallbackListing ?? null;
   const navigate = useNavigate();
   const back = useBack();
   const { authUserId } = useApp();
@@ -53,6 +90,12 @@ export default function ProfessionalDetail() {
   // which is the truthful answer for a profile that never was an account.
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [listingLoading, setListingLoading] = useState(true);
+  // Release 3 · W7 (J13, CU27): opened from an invite link (/i/{code} ›
+  // "See their profile"), ?invite=<code>. The "{first} invited you." line,
+  // and the profile even before the professional is listed: built from the
+  // invite's own anon readers (preview_invite_link, professional_by_handle).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const inviteCode = isPreview ? null : searchParams.get("invite");
 
   useEffect(() => {
     if (!id) {
@@ -63,13 +106,39 @@ export default function ProfessionalDetail() {
     void (async () => {
       const found = await fetchListing(id);
       if (cancelled) return;
-      setListing(found);
+      let invited: DirectoryListing | null = null;
+      if (!found && !fallbackListing && inviteCode) {
+        const inv = await previewInviteLink(inviteCode);
+        if (inv.ok && inv.data && inv.data.professionalId === id) {
+          const byHandle = inv.data.handle ? await professionalByHandle(inv.data.handle) : null;
+          const h = byHandle && byHandle.ok ? byHandle.data : null;
+          invited = {
+            profileId: id,
+            name: inv.data.firstName,
+            avatarUrl: inv.data.avatarUrl,
+            subtype: inv.data.subtype,
+            specialty: h?.specialty ?? null,
+            location: null,
+            bio: null,
+            monthlyRate: null,
+            consultationRate: null,
+            paymentModalities: [],
+            averageRating: null,
+            reviewCount: 0,
+            headline: h?.headline ?? null,
+            skills: [],
+            hasVerifiedLicence: inv.data.licenceVerified,
+          };
+        }
+        if (cancelled) return;
+      }
+      setListing(found ?? fallbackListing ?? invited);
       setListingLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, fallbackListing, inviteCode]);
 
   // One shape for the page. `isReal` used to gate what only a real account
   // could do, back when a seeded entry could reach this screen; every listing
@@ -119,7 +188,7 @@ export default function ProfessionalDetail() {
     realProfessionalId !== null && checked.id === realProfessionalId ? checked.active : null;
 
   useEffect(() => {
-    if (!realProfessionalId) return;
+    if (!realProfessionalId || isPreview) return;
     let cancelled = false;
     void isActiveClientOf(realProfessionalId).then((yes) => {
       if (!cancelled) setChecked({ id: realProfessionalId, active: yes });
@@ -127,7 +196,7 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId]);
+  }, [realProfessionalId, isPreview]);
 
   // The CV, from the public views (listed professionals are readable by
   // anyone; a connected client can always read their own professional's).
@@ -178,27 +247,44 @@ export default function ProfessionalDetail() {
   // THE FREE REQUEST (pending_client_requests), as before A3: kept for a
   // professional with no plans, where the hire sheet would otherwise offer
   // nothing but a message. Stamped with the professional like the state above.
-  const [requestState, setRequestState] = useState<{ id: string | null; state: HireRequestState }>({ id: null, state: "none" });
+  const [requestState, setRequestState] = useState<{ id: string | null; state: HireRequestState; request?: HireRequest | null }>({ id: null, state: "none" });
   const hireRequestState: HireRequestState =
     realProfessionalId !== null && requestState.id === realProfessionalId ? requestState.state : "none";
   const [requestSending, setRequestSending] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  // Release 3 · W7 (CU12): the professional's decline of the client's request,
+  // with its reason, shown where the client's own cancel note goes, once the
+  // professional's 5-minute undo has passed. A hire declined with
+  // decline_hire() reads its reason from my_hires() (no undo window); the
+  // newer of the two decides.
+  const [decline, setDecline] = useState<{ id: string; text: string; at: string | null } | null>(null);
   useEffect(() => {
-    if (!realProfessionalId || !authUserId) return;
+    if (!realProfessionalId || !authUserId || isPreview) return;
     let cancelled = false;
-    void fetchMyHireRequest(realProfessionalId).then((res) => {
+    void fetchMyHireRequest(realProfessionalId).then(async (res) => {
       if (cancelled || res.status !== "ok") return;
-      setRequestState({ id: realProfessionalId, state: res.state });
+      setRequestState({ id: realProfessionalId, state: res.state, request: res.request });
+      const r = res.request;
+      if (r && r.status === "rejected" && declineIsFinal(r.resolvedAt)) {
+        const label = !r.declineMessage?.trim() && r.declineReason ? await fetchDeclineReasonLabel(r.declineReason) : null;
+        const text = declineText(label, r.declineMessage ?? null);
+        if (!cancelled && text) setDecline({ id: realProfessionalId, text, at: r.resolvedAt });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, authUserId]);
-  const sendRequest = async () => {
+  }, [realProfessionalId, authUserId, isPreview]);
+  const requestDecline = decline && decline.id === realProfessionalId ? decline : null;
+  const hireDeclined = realProfessionalId !== null && hiresState.id === realProfessionalId ? hireDecline(hiresState.hires, realProfessionalId) : null;
+  const hireDeclineLine = hireDeclined ? declineText(hireDeclined.label, hireDeclined.message) : null;
+  const hireIsNewer = !!hireDeclineLine && (!requestDecline || new Date(hireDeclined?.at ?? 0).getTime() >= new Date(requestDecline.at ?? 0).getTime());
+  const declineLine = hireRequestState === "pending" ? null : hireIsNewer ? hireDeclineLine : requestDecline?.text ?? null;
+  const sendRequest = async (extras?: HireRequestExtras) => {
     if (!realProfessionalId || !authUserId || requestSending) return;
     setRequestSending(true);
     setRequestError(null);
-    const res = await sendHireRequest(realProfessionalId, authUserId);
+    const res = await sendHireRequest(realProfessionalId, authUserId, extras);
     setRequestSending(false);
     if (res.status === "ok" || res.status === "already_pending") {
       setRequestState({ id: realProfessionalId, state: "pending" });
@@ -217,7 +303,7 @@ export default function ProfessionalDetail() {
   };
 
   useEffect(() => {
-    if (!realProfessionalId || !authUserId) return;
+    if (!realProfessionalId || !authUserId || isPreview) return;
     let cancelled = false;
     void fetchMyHires().then((r) => {
       if (!cancelled && r.ok) setHiresState({ id: realProfessionalId, hires: r.hires });
@@ -225,14 +311,14 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, authUserId]);
+  }, [realProfessionalId, authUserId, isPreview]);
 
   // The hire sheet (MO1.2.1.5), and the ?hire=<planId> deep link from a chat
   // plans card's Hire: the sheet opens on that plan's checkout while it is
   // still offered, or on the plan list with a note. A bare ?hire (the chat
   // header's Hire) opens the plan list with no note. The parameter is dropped
   // when the sheet closes, so Back and a reload don't reopen it.
-  const [searchParams, setSearchParams] = useSearchParams();
+  // (searchParams is read above, with the invite link's ?invite.)
   const hireParam = searchParams.has("hire");
   const deepLinkPlan = searchParams.get("hire") || null;
   const [hireOpen, setHireOpen] = useState(false);
@@ -283,11 +369,36 @@ export default function ProfessionalDetail() {
   const {
     mine: myReview,
     myStatus,
+    others: otherReviews,
     error: reviewError,
     canReview,
     save: saveReview,
     withdraw: withdrawReview,
-  } = useProfessionalReviews(realProfessionalId);
+  } = useProfessionalReviews(preview ? null : realProfessionalId);
+
+  // Release 3 · W7 (CU11 "{first} asks to see {n} things"): this
+  // professional's pending data requests (access_requests; their default data
+  // requests land here when they accept), in the client-code card's place for
+  // a client. "Choose what to share" opens the same switches as Profile ›
+  // Connected professionals. Stamped with the professional like the state above.
+  const [asks, setAsks] = useState<{ id: string | null; list: AccessRequest[] }>({ id: null, list: [] });
+  const [sharingOpen, setSharingOpen] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
+  const loadAsks = async (forId: string) => {
+    const r = await getMyAccessRequests();
+    if (r.ok) setAsks({ id: forId, list: r.requests.filter((q) => q.professionalId === forId) });
+  };
+  useEffect(() => {
+    if (!realProfessionalId || isPreview || activeClient !== true) return;
+    let cancelled = false;
+    void getMyAccessRequests().then((r) => {
+      if (!cancelled && r.ok) setAsks({ id: realProfessionalId, list: r.requests.filter((q) => q.professionalId === realProfessionalId) });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId, isPreview, activeClient]);
+  const pendingAsks = asks.id === realProfessionalId ? asks.list : [];
 
   /**
    * Re-reads the listing so the headline average moves with the write.
@@ -373,7 +484,19 @@ export default function ProfessionalDetail() {
   const isOwnProfile = realProfessionalId !== null && realProfessionalId === authUserId;
 
   return (
-    <div className={showPinned ? "pb-[172px]" : ""}>
+    <div className={showPinned || preview?.pinned ? (preview?.pinned ? "pb-[228px]" : "pb-[172px]") : ""}>
+      {inviteCode && activeClient === false && (
+        // CU27 v2 (r27): above the profile, opened from an invite link. r16,
+        // primary.pale, padding 10 12, gap 10; Link 15 / 2 primary.deep;
+        // 12.5 / 1.45 text, the name in bold; 8 under.
+        <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-3 py-2.5 mb-2" role="note">
+          <Link2 size={15} strokeWidth={2} aria-hidden className="shrink-0 text-primary-deep-text" />
+          <p className="flex-1 text-charcoal leading-[1.45]" style={{ fontSize: textPx(12.5) }}>
+            <b>{first} invited you.</b> Hire a plan below or send a message first.
+          </p>
+        </div>
+      )}
+      <div className={preview?.headerRight ? "flex items-start justify-between gap-2" : undefined}>
       <button
         onClick={back}
         aria-label="Back"
@@ -384,6 +507,9 @@ export default function ProfessionalDetail() {
             at y 44; the avatar starts at y 70. */}
         <ChevronLeft size={18} />
       </button>
+      {preview?.headerRight}
+      </div>
+      {preview?.above}
 
       {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
           Avatar 96 (measured on the frame). */}
@@ -440,7 +566,7 @@ export default function ProfessionalDetail() {
             three reviews count toward an average. */}
         <button
           type="button"
-          onClick={() => navigate(`/app/professionals/${professional.id}/reviews`)}
+          onClick={() => navigate(preview?.reviewsHref ?? `/app/professionals/${professional.id}/reviews`)}
           // #13 / #14: 28 tall, 8 under the pills, padding 0 12, 11.5/17.3 700,
           // a 1.1px border (#D9A441, dark #E0B360), Star 13 6 to the label.
           className="tap mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11.5px] leading-[17.3px] font-bold"
@@ -472,6 +598,22 @@ export default function ProfessionalDetail() {
         </div>
       )}
 
+      {/* Release 3 · W7: the MO3 sections (Services, Where, Availability,
+          Reviews) and Book a session (Hire stays on the pinned row), for clients only: the
+          professional's own MO3 preview passes `preview` and is unchanged. */}
+      {!preview && isReal && activeClient !== null && (
+        <ProfileMoreSections
+          professionalId={professional.id}
+          firstName={first}
+          location={listing?.location ?? null}
+          reviews={otherReviews}
+          reviewCount={aggregateCount}
+          onSeeReviews={() => navigate(`/app/professionals/${professional.id}/reviews`)}
+          onBook={() => setBookOpen(true)}
+          isOwn={isOwnProfile}
+        />
+      )}
+
       {/* V5 (QA 5.0): rating/reviewing is restricted to professionals you've
           actually hired — for anyone else, this section doesn't appear.
           GATED ON THE DATABASE'S ANSWER, not on the connection check beside
@@ -481,7 +623,7 @@ export default function ProfessionalDetail() {
           together — which `isConnected` would have hidden. The card also shows
           for an existing review regardless, so a past client can still edit or
           remove what they wrote. */}
-      {(canReview === true || myReview) && (
+      {!preview && (canReview === true || myReview) && (
         <section className="mb-5 animate-fade-slide-up" aria-label="My review">
           {sectionLabel("My review")}
           <MyReviewCard
@@ -524,13 +666,35 @@ export default function ProfessionalDetail() {
           {cancelNote}
         </p>
       )}
+      {/* CU12 v2 (r26): the professional's decline with its reason, where the
+          client's own cancel note goes: padding 2 4, 12 / 1.5 text.soft, the
+          lead-in bold in the ink; 20 under. */}
+      {declineLine && !cancelNote && !liveHire && !isConnected && (
+        <p role="status" className="mb-5 text-charcoal-soft" style={{ padding: "2px 4px", fontSize: textPx(12), lineHeight: 1.5 }}>
+          <b className="text-charcoal">{first} couldn't take you on:</b> {declineLine}
+        </p>
+      )}
+
+      {/* CU11 v2: "{first} asks to see {n} things" (the professional's
+          default data requests), above the lock line, 20 under. */}
+      {isConnected && pendingAsks.length > 0 && (
+        <AccessRequestNotice
+          variant="summary"
+          requests={pendingAsks}
+          firstName={first}
+          onChoose={() => setSharingOpen(true)}
+          className="mb-5"
+        />
+      )}
 
       {isConnected && (
-        // The data-sharing toggles live on the Professionals page
-        // (DataSharingSection), where real consent hangs off real relationships.
+        // The data-sharing toggles live under Profile › Connected
+        // professionals (DataSharingSection), where real consent hangs off
+        // real relationships. CU11 safety fix (FINAL_PLAN section 5): the
+        // path named here is the real one.
         <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5">
-          <Lock size={12} strokeWidth={1.75} className="shrink-0" /> Manage what your professionals can see under Professionals › Data
-          sharing.
+          <Lock size={12} strokeWidth={1.75} className="shrink-0" /> Manage what your professionals can see under Profile › Connected
+          professionals.
         </p>
       )}
 
@@ -575,7 +739,8 @@ export default function ProfessionalDetail() {
           top of an existing relationship is ordinary (the contract). */}
       {/* Your own profile (user decision, 7 October 2026): no Hire — you
           cannot hire yourself — so Message stands alone. */}
-      {showPinned && isOwnProfile && <PinnedCta size="base" primary={{
+      {preview?.pinned && <PinnedSlot>{preview.pinned}</PinnedSlot>}
+      {!preview && showPinned && isOwnProfile && <PinnedCta size="base" primary={{
             label: "Message",
             icon: <MessageCircle size={15} />,
             loading: threadBusy,
@@ -584,7 +749,7 @@ export default function ProfessionalDetail() {
               ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
               : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
           }} />}
-      {showPinned && !isOwnProfile && (
+      {!preview && showPinned && !isOwnProfile && (
         <PinnedCta
           size="base"
           secondary={{
@@ -606,7 +771,7 @@ export default function ProfessionalDetail() {
         />
       )}
 
-      {isReal && (
+      {isReal && !preview && (
         <HireSheet
           open={hireSheetOpen}
           onClose={closeHire}
@@ -630,9 +795,30 @@ export default function ProfessionalDetail() {
           request={
             isConnected
               ? undefined
-              : { state: hireRequestState, busy: requestSending, error: requestError, onSend: () => void sendRequest() }
+              : { state: hireRequestState, busy: requestSending, error: requestError, onSend: (extras) => void sendRequest(extras) }
           }
         />
+      )}
+
+      {!preview && isReal && (
+        <>
+          {/* CU11 "Choose what to share": the same switches as Profile ›
+              Connected professionals, for this professional. */}
+          <BottomSheet
+            open={sharingOpen}
+            onClose={() => {
+              setSharingOpen(false);
+              void loadAsks(professional.id);
+            }}
+            title={professional.name}
+          >
+            {sharingOpen && <DataSharingSection professionalId={professional.id} />}
+          </BottomSheet>
+          {/* MO3 Book a session: the public booking page's flow, in a sheet. */}
+          <BottomSheet open={bookOpen} onClose={() => setBookOpen(false)} title="Book a session" size="tall">
+            {bookOpen && <BookingFlow professionalId={professional.id} firstName={first} signedIn={!!authUserId} />}
+          </BottomSheet>
+        </>
       )}
 
       <ReviewFormSheet

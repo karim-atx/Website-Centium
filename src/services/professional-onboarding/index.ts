@@ -189,9 +189,10 @@ export async function fetchCredentialRows(userId: string, registrationId?: strin
 }
 
 /** The licence's display name, as the Background step's frame lists it ("Physiotherapy licence PT-00000"). */
-export function registrationName(kind: "physio" | "diet", number: string): string {
+export function registrationName(kind: "physio" | "diet" | "doctor", number: string): string {
   const n = number.trim();
-  return (kind === "physio" ? "Physiotherapy licence" : "Dietitian registration") + (n ? ` ${n}` : "");
+  const name = kind === "physio" ? "Physiotherapy licence" : kind === "doctor" ? "Medical licence" : "Dietitian registration";
+  return name + (n ? ` ${n}` : "");
 }
 
 /**
@@ -202,7 +203,7 @@ export function registrationName(kind: "physio" | "diet", number: string): strin
  */
 export async function saveRegistration(
   userId: string,
-  kind: "physio" | "diet",
+  kind: "physio" | "diet" | "doctor",
   fields: { body: string; number: string },
   existing: Licence | null,
   file: File | null,

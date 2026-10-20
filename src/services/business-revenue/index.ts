@@ -55,7 +55,7 @@ export type Result<T> =
 
 type Res<T> = PromiseLike<{ data: T | null; error: PostgrestError | null }>;
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => Res<T>;
-const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
+const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
 type Sel = {
   eq: (c: string, v: string) => Res<Record<string, unknown>[]>;
