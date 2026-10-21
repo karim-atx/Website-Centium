@@ -43,6 +43,19 @@
 //   4. No DNS record changes needed — Workers routes run in front of
 //      whatever already serves atraxia.org's DNS/hosting.
 //
+// 2026-10 Atraxia redesign (design-handover/atraxia/WORKER_STEPS.md has the
+// exact manual deploy steps):
+//   - /assets/ (the site's shared CSS and JS) is proxied like /atraxia/.
+//   - The Contact page lives at /contact. /contact.html and /contact/ 301 to
+//     it, keeping the query string, like every other redirect here.
+//   - The Content-Security-Policy moved here from per-page meta tags (the
+//     pages no longer carry one). It allows the shared submit-contact
+//     function's origin and Cloudflare Turnstile's script and frame.
+//   - The posts list for /blog/<slug> is still read from blog-post.html
+//     itself, now from its inline <script type="application/json"
+//     id="atx-posts"> block (the old inline `var POSTS = [...]` is still
+//     understood, so deploy order does not matter).
+//
 // GH_PAGES_PATH must match the GitHub repo name exactly, since that's the
 // path segment GitHub Pages project sites are served under by default
 // (https://<user>.github.io/<repo>/). Update it here if the repo is ever
@@ -89,7 +102,66 @@ const HUB_ASSET_PATHS = new Set([
 // but the rest stay broken without this until this file is redeployed.
 // The blog's featured images live under /atraxia/blog/, which "/atraxia/"
 // already covers — no separate entry, so there's one rule per folder.
-const HUB_ASSET_PREFIXES = ["/atraxia/", "/icons/"];
+// "/assets/" holds the redesigned site's shared stylesheet and per-page
+// scripts (hub/assets/css, hub/assets/js). Without it every page on
+// atraxia.org loses its CSS and JS, so it must ship with the new pages.
+const HUB_ASSET_PREFIXES = ["/atraxia/", "/icons/", "/assets/"];
+
+// The Contact page. Served at the pretty path only; the file name and a
+// trailing slash redirect there (301, query string kept).
+const CONTACT_PATH = "/contact";
+const CONTACT_FILE = "/contact.html";
+
+function isContactAlias(pathname) {
+  return pathname === CONTACT_FILE || pathname === `${CONTACT_PATH}/`;
+}
+
+// ---------------------------------------------------------------------------
+// Content-Security-Policy. Moved here from the pages' meta tags, which are
+// gone: two policies intersect, so a stale meta tag would still block. The
+// redesigned pages have no inline scripts (every script is a same-origin
+// file; the posts list is a non-executed JSON block), so script-src is
+// 'self' plus Turnstile, without 'unsafe-inline'. Styles keep
+// 'unsafe-inline' for the one-line background rule at the top of each page's
+// <head> and style attributes set by script.
+//
+// connect-src: the shared submit-contact Supabase function's origin
+// (production project). frame-src and script-src: Cloudflare Turnstile.
+const SUPABASE_FUNCTIONS_ORIGIN = "https://mwnkhhyrheprugeornjl.supabase.co";
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
+function buildCsp(scriptSrc) {
+  return [
+    "default-src 'none'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "manifest-src 'self'",
+    `connect-src ${SUPABASE_FUNCTIONS_ORIGIN}`,
+    `frame-src ${TURNSTILE_ORIGIN}`,
+    "form-action 'none'",
+    "base-uri 'none'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+const CSP = buildCsp(`'self' ${TURNSTILE_ORIGIN}`);
+// hub/404.html is kept unchanged from before the redesign and still carries
+// its own inline scripts (legacy cleanup, star field) and its own meta CSP
+// with 'unsafe-inline'; the header policy for that one page must allow them
+// too, or the intersection blocks them.
+const CSP_404 = buildCsp(`'self' 'unsafe-inline'`);
+
+// Adds the policy to an HTML response (other types pass through untouched).
+function withCsp(response, policy = CSP) {
+  const type = response.headers.get("content-type") || "";
+  if (!type.includes("text/html")) return response;
+  const out = new Response(response.body, response);
+  out.headers.set("Content-Security-Policy", policy);
+  return out;
+}
 
 function isHubAsset(pathname) {
   return pathname === "/" || HUB_ASSET_PATHS.has(pathname) || HUB_ASSET_PREFIXES.some((p) => pathname.startsWith(p));
@@ -132,11 +204,19 @@ function isBlogPath(pathname) {
 // requested post's own tags into the HTML before it leaves the Worker. The
 // post data is read from the page's own inline POSTS array rather than kept
 // in a second copy here, so adding a post to blog-post.html is all it takes.
+// The redesigned page keeps the list as JSON in a non-executed
+// <script type="application/json" id="atx-posts"> block; the pre-redesign
+// page had `var POSTS = [...];` in an inline script. Both are read, so this
+// Worker works whichever page GitHub Pages is serving.
+const POSTS_JSON_BLOCK = /<script\s+type="application\/json"\s+id="atx-posts"\s*>([\s\S]*?)<\/script>/;
+const POSTS_LEGACY_VAR = /var POSTS = (\[[\s\S]*?\]);/;
+
 function findBlogPost(html, slug) {
-  const match = html.match(/var POSTS = (\[[\s\S]*?\]);/);
+  const match = html.match(POSTS_JSON_BLOCK) || html.match(POSTS_LEGACY_VAR);
   if (!match) return null;
   try {
-    return JSON.parse(match[1]).find((post) => post.slug === slug) || null;
+    const posts = JSON.parse(match[1]);
+    return (Array.isArray(posts) && posts.find((post) => post.slug === slug)) || null;
   } catch {
     return null;
   }
@@ -147,7 +227,7 @@ function escapeAttr(value) {
 }
 
 function injectBlogPostMeta(html, post) {
-  const title = escapeAttr(`${post.title} | Atraxia`);
+  const title = escapeAttr(`${post.title} · Atraxia`);
   const description = escapeAttr(post.excerpt);
   const pageUrl = escapeAttr(`https://${HUB_HOST}${BLOG_PREFIX}${post.slug}`);
   const imageUrl = escapeAttr(`https://${HUB_HOST}/${post.img.replace(/^\/+/, "")}`);
@@ -182,15 +262,16 @@ function injectBlogPostMeta(html, post) {
 async function renderBlogPost(slug, { notFoundIfUnknown }) {
   const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/blog-post.html`;
   const response = await fetch(originUrl);
-  if (!response.ok) return new Response(response.body, response);
+  if (!response.ok) return withCsp(new Response(response.body, response));
   const html = await response.text();
   const post = findBlogPost(html, slug);
   if (!post) {
-    return notFoundIfUnknown ? proxyHub404() : new Response(html, { status: response.status, headers: response.headers });
+    return notFoundIfUnknown ? proxyHub404() : withCsp(new Response(html, { status: response.status, headers: response.headers }));
   }
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("Content-Security-Policy", CSP);
   return new Response(injectBlogPostMeta(html, post), { status: 200, headers });
 }
 
@@ -211,6 +292,12 @@ async function routeBlog(url, request) {
     return Response.redirect(`https://${url.host}${pathname.slice(0, -1)}${search}`, 301);
   }
   const rest = pathname.slice(BLOG_PREFIX.length);
+  // The pages link to Contact as the relative "contact", which from
+  // /blog/<slug> resolves to /blog/contact. That is a page, not a post: it is
+  // checked before the slug test (a slug can't otherwise be told apart).
+  if (rest === "contact" || rest === "contact.html") {
+    return Response.redirect(`https://${url.host}${CONTACT_PATH}${search}`, 301);
+  }
   if (BLOG_SLUG.test(rest)) {
     return renderBlogPost(rest, { notFoundIfUnknown: true });
   }
@@ -227,8 +314,9 @@ async function proxy(originPath, search, request) {
   const originUrl = `https://${GH_PAGES_HOST}${originPath}${search}`;
   const originRequest = new Request(originUrl, request);
   const response = await fetch(originRequest);
-  // Pass the origin's response straight through, status included.
-  return new Response(response.body, response);
+  // Pass the origin's response straight through, status included; HTML
+  // gets the site's CSP (the kept 404 page its own variant).
+  return withCsp(new Response(response.body, response), originPath.endsWith("/404.html") ? CSP_404 : CSP);
 }
 
 // Atraxia's own branded 404 (hub/404.html, published to the GitHub Pages
@@ -238,7 +326,7 @@ async function proxy(originPath, search, request) {
 async function proxyHub404() {
   const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/404.html`;
   const response = await fetch(originUrl);
-  return new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers });
+  return withCsp(new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers }), CSP_404);
 }
 
 // THE INVARIANT THIS FILE EXISTS TO HOLD, and it is not stylistic.
@@ -283,6 +371,15 @@ export default {
 
     if (isBlogPath(url.pathname)) {
       return routeBlog(url, request);
+    }
+
+    // Contact: /contact serves contact.html; /contact.html and /contact/
+    // redirect to it with the query string kept.
+    if (url.pathname === CONTACT_PATH) {
+      return proxy(GH_PAGES_PATH + CONTACT_FILE, url.search, request);
+    }
+    if (isContactAlias(url.pathname)) {
+      return Response.redirect(`https://${url.host}${CONTACT_PATH}${url.search}`, 301);
     }
 
     // The pre-pretty-route post URL. Still linked from the listing's cards, so

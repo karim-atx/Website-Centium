@@ -12,3 +12,9 @@
 # heuristic -- no end-of-line conversion or diff/merge treatment, ever.
 *.png binary
 *.ico binary
+# Image and font types the Atraxia site (hub/) ships; same rule as above.
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.woff2 binary
