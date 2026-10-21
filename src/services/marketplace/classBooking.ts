@@ -81,10 +81,9 @@ export interface ClassBookingRules {
   waitlistCap: number;
 }
 
-/** "Sat 11 Oct" in the device's time, as the class page writes dates. */
+/** "Sat, Oct 11" in the device's time, as the class page writes dates. */
 function dayMonthOf(d: Date): string {
-  const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  return `${wd} ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
+  return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
 }
 
 /**

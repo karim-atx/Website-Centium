@@ -116,5 +116,5 @@ export function whenLabel(iso: string, now: Date): string {
   const y = new Date(now);
   y.setDate(y.getDate() - 1);
   if (t.toDateString() === y.toDateString()) return "Yesterday";
-  return `${t.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][t.getMonth()]}`;
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][t.getMonth()]} ${t.getDate()}`;
 }

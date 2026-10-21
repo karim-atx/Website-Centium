@@ -355,8 +355,8 @@ test("consoleMessage: the console's codes, then stage 4's, then the fallback", (
 
 test("paidLine: 'Paid {d Mon}' on the local day, only for a recorded payment", () => {
   const at = new Date(2026, 9, 3, 18, 30).toISOString();
-  assert.equal(paidLine({ paidAt: at, paymentStatus: "paid" }), "Paid 3 Oct");
-  assert.equal(paidLine({ paidAt: new Date(2026, 8, 27, 9).toISOString(), paymentStatus: "paid" }), "Paid 27 Sep");
+  assert.equal(paidLine({ paidAt: at, paymentStatus: "paid" }), "Paid Oct 3");
+  assert.equal(paidLine({ paidAt: new Date(2026, 8, 27, 9).toISOString(), paymentStatus: "paid" }), "Paid Sep 27");
   assert.equal(paidLine({ paidAt: null, paymentStatus: "paid" }), null);
   assert.equal(paidLine({ paidAt: at, paymentStatus: "refunded" }), null);
   assert.equal(paidLine({ paidAt: null, paymentStatus: "pending" }), null);

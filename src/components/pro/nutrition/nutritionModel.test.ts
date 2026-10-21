@@ -73,7 +73,7 @@ test("plan days: weekdays for a client's copy from its start, Day n for a templa
 });
 
 test("dates: day_date, ranges and how long ago", () => {
-  assert.equal(dayDate("2026-10-05"), "Mon 5 Oct");
+  assert.equal(dayDate("2026-10-05"), "Mon, Oct 5");
   assert.equal(dayRange("2026-10-05", "2026-10-07"), "Oct 5 to 7");
   assert.equal(dayRange("2026-09-30", "2026-10-02"), "Sep 30 to Oct 2");
   assert.equal(dayRange("2026-10-07", "2026-10-07"), "Oct 7");

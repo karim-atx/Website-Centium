@@ -30,7 +30,7 @@ const MON = [
 ];
 const dm = (iso: string) => {
   const d = dateOf(iso);
-  return `${d.getDate()} ${MON[d.getMonth()]}`;
+  return `${MON[d.getMonth()]} ${d.getDate()}`;
 };
 const dayOf = (ts: string) => isoOf(new Date(ts));
 

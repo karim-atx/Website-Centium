@@ -30,13 +30,13 @@ const LINE = "They can't message you, reply to you or see your posts in the foru
 const UNBLOCK_LINE = "They'll be able to message you, reply to you and see your posts in the forum again.";
 const EMPTY = "You haven't blocked anyone.";
 
-/** "Blocked 12 Sep", with the year when it isn't this year, in the profile's zone. */
+/** "Blocked Sep 12", with the year when it isn't this year, in the profile's zone. */
 function blockedOn(iso: string, zone: string | null): string {
   const d = new Date(iso);
   const tz = zone ?? undefined;
-  const year = (x: Date) => new Intl.DateTimeFormat("en-GB", { year: "numeric", timeZone: tz }).format(x);
+  const year = (x: Date) => new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: tz }).format(x);
   const sameYear = year(d) === year(new Date());
-  const text = new Intl.DateTimeFormat("en-GB", {
+  const text = new Intl.DateTimeFormat("en-US", {
     day: "numeric",
     month: "short",
     ...(sameYear ? {} : { year: "numeric" }),

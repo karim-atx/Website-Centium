@@ -126,16 +126,16 @@ export function isoWeekday(day: string): number {
   return ((at(day).getDay() + 6) % 7) + 1;
 }
 
-/** "Wed 7 Oct" */
+/** "Wed, Oct 7" */
 export function shortDay(day: string): string {
   const d = at(day);
-  return `${DAY_SHORT[isoWeekday(day) - 1]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[isoWeekday(day) - 1]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** "30 Nov" (the series toast's "until {D Mon}"). */
+/** "Nov 30" (the series toast's "until {Mon D}"). */
 export function dayMonth(day: string): string {
   const d = at(day);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "30/11/2026" (the Ends "On a date" field, AN3-045 row 4). */

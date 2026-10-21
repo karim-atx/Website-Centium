@@ -162,10 +162,10 @@ export function dayLabels(dayIndex: number, startsOn: string | null): { tab: str
   return { tab: DAY_SHORT[mondayIndex(d)], total: `${DAY_LONG[mondayIndex(d)]} total`, short: DAY_SHORT[mondayIndex(d)] };
 }
 
-/** "Mon 5 Oct" (FINAL_PLAN 3 {day_date}: weekday and date from one value). */
+/** "Mon, Oct 5" (FINAL_PLAN 3 {day_date}: weekday and date from one value). */
 export function dayDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
 }
 
 /** "Oct 5" and "Oct 5 to 7" / "Sep 30 to Oct 2" (NU5). */

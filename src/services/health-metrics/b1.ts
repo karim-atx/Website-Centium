@@ -362,7 +362,7 @@ export function whenText(iso: string, today: string): string {
   if (day === today) return `today at ${t}`;
   if (day === yest) return `yesterday at ${t}`;
   const dt = new Date(iso);
-  return `on ${dt.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]} at ${t}`;
+  return `on ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]} ${dt.getDate()} at ${t}`;
 }
 
 export interface WorkoutKcalSession {

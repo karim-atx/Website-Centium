@@ -11,7 +11,7 @@ export interface LegalSection {
 }
 
 /** The website's "Last updated" date (LEGAL_UPDATED_DATE on the legal page). */
-export const LEGAL_UPDATED = "6 September 2026";
+export const LEGAL_UPDATED = "September 6, 2026";
 
 /** The website's slug for a heading (Legal.tsx slugify, the handoff's legalSlug()). */
 export function legalSlug(heading: string): string {

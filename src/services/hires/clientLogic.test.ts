@@ -72,7 +72,7 @@ test("status: pending payment until confirmed, then active", () => {
   assert.equal(hireStatusLabel({ status: "active", paymentStatus: "paid" }), "Active");
   assert.equal(hireStatusLabel({ status: "cancelled", paymentStatus: "paid" }), "Cancelled");
   assert.equal(hireStatusLabel({ status: "expired", paymentStatus: "paid" }), "Ended");
-  assert.equal(hireUntilLabel("2026-11-07"), "Until 7 Nov 2026");
+  assert.equal(hireUntilLabel("2026-11-07"), "Until Nov 7, 2026");
   assert.equal(hireUntilLabel(null), null);
 });
 

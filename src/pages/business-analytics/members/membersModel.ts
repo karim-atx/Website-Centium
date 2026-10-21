@@ -270,7 +270,7 @@ export function planBars(plans: PlanFigure[]): { key: string; t: string; n: numb
 export type SeriesKey = "active" | "joined" | "ended" | "prev";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const dm = (iso: string) => `${Number(iso.slice(8, 10))} ${MON[Number(iso.slice(5, 7)) - 1]}`;
+const dm = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
 const sgn = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `${MINUS}${Math.abs(n)}` : "0");
 
 /** The series a legend tap may still hide (AN4-021 row 5): never the last of Active / Joined / Ended ("Previous period" does not count). */

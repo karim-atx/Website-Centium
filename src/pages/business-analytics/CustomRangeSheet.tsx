@@ -17,7 +17,7 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const weekdayDayMonth = (iso: string) => {
   const d = dateOf(iso);
-  return `${WD[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`;
+  return `${WD[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}`;
 };
 
 export function CustomRangeSheet({
@@ -160,7 +160,7 @@ export function CustomRangeSheet({
                 type="button"
                 disabled={disabled}
                 onClick={() => pick(iso)}
-                aria-label={`${d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}${isStart ? ", range start" : isEnd ? ", range end" : ""}`}
+                aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" })}${isStart ? ", range start" : isEnd ? ", range end" : ""}`}
                 aria-pressed={isStart || isEnd}
                 className={clsx(
                   "w-[36px] h-[36px] rounded-full text-[13px] tabular-nums disabled:opacity-30",

@@ -20,7 +20,7 @@ const WARNING_ID = "warning-signs";
 function showDay(day: string | null): string {
   if (!day) return "Not yet";
   const d = new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)));
-  return formatShortDate(d, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, undefined);
+  return formatShortDate(d, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /**

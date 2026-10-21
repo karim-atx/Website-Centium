@@ -92,7 +92,7 @@ test("preview lines follow the source templates", () => {
 });
 
 test("small helpers", () => {
-  assert.equal(shortDate("2026-09-02"), "2 Sep");
+  assert.equal(shortDate("2026-09-02"), "Sep 2");
   assert.equal(initials("Taylor"), "T");
   assert.equal(initials("Mary Ann"), "MA");
   assert.deepEqual([...sharedNames([{ name: "A" }, { name: "B" }, { name: "A" }])], ["A"]);

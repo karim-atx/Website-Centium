@@ -363,15 +363,15 @@ export const PopupButtons: React.FC<{
   );
 };
 
-/** "14 Sep 2026" (HE1.10.b.1 #9: day, short month, year). */
+/** "Sep 14, 2026" (HE1.10.b.1 #9: short month, day, year). */
 export function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })} ${d.getFullYear()}`;
+  return `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 }
-/** "21 June 2027" (HE1.10.b.1 #11). */
+/** "June 21, 2027" (HE1.10.b.1 #11). */
 export function longDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "long" })} ${d.getFullYear()}`;
+  return `${d.toLocaleDateString("en-US", { month: "long" })} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
 /**

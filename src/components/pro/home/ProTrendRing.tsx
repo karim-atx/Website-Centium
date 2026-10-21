@@ -219,7 +219,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
       const am = -G.span + ((m - 1) / n) * 2 * G.span + G.span / n;
       const major = MONTH_TICKS.includes(m);
       tick(`t${m}`, am, major ? G.rTm : G.rTo, major ? INK.chF : INK.chT, major ? 0.9 : 0.4, 1);
-      if (major) labels.push({ a: am, text: `${m} ${p.monthShort}` });
+      if (major) labels.push({ a: am, text: `${p.monthShort} ${m}` });
     }
   }
   labels.forEach((l, i) => {
@@ -674,5 +674,5 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 function dayTitle(iso: string | undefined): string {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }

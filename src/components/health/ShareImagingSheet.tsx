@@ -294,8 +294,8 @@ export const ShareImagingSheet: React.FC<{
   );
 };
 
-/** "12 Aug" from a timestamp. */
+/** "Aug 12" from a timestamp. */
 const fmtShort = (iso: string) => {
   const d = new Date(iso);
-  return `${d.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`;
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()}`;
 };

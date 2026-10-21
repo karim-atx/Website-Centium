@@ -228,12 +228,12 @@ export function dayItems(kind: OverviewKind, raw: OvRaw, today: string): ClockIt
   return out;
 }
 
-/** AN1-060: "Next: Tue 6 Oct · Morning Mobility 6:30 AM". */
+/** AN1-060: "Next: Tue, Oct 6 · Morning Mobility 6:30 AM". */
 export function emptyNextLine(raw: OvRaw, is24: boolean): string {
   const k = raw.nextClass;
   if (!k) return "";
   const d = dateOf(k.date);
-  return `Next: ${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]} · ${k.title} ${is24 ? k.start : f12(k.start)}`;
+  return `Next: ${DOW[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()} · ${k.title} ${is24 ? k.start : f12(k.start)}`;
 }
 
 // ---- More insights (AN1-034 #19) -----------------------------------------------------

@@ -31,7 +31,7 @@ export function listTime(iso: string, now = new Date()): string {
 
 /**
  * The business list's time (OP1-190 row 7, ClientChatV2 list): as listTime up
- * to a week, then the day first as drawn ("2 Oct"; "2 Oct 2025" in another
+ * to a week, then the month first ("Oct 2"; "Oct 2, 2025" in another
  * year), through the shared short-date formatter ("Sep", never "Sept").
  */
 export function bizListTime(iso: string, now = new Date()): string {

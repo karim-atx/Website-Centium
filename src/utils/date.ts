@@ -15,11 +15,12 @@
  * a missing timestamp reads as absent instead of broken.
  */
 /**
- * A short date with the handover's three-letter months: en-GB (and a browser
- * left on its own locale) writes September as "Sept", every frame says "Sep".
- * Use this for every `month: "short"` date that is not formatted en-US.
+ * A short date, month first everywhere in the app: "Oct 21", "Oct 21, 2026",
+ * "Wed, Oct 21". Defaults to en-US for that order; the "Sept" → "Sep" pass
+ * stays so any other locale passed in still gets the three-letter month every
+ * frame uses.
  */
-export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-GB"): string {
+export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-US"): string {
   return d.toLocaleDateString(locale, opts).replace(/\bSept\b/g, "Sep");
 }
 
@@ -144,4 +145,20 @@ export function shiftDate(date: string, days: number): string {
   const dt = new Date(Date.UTC(y, m - 1, d));
   dt.setUTCDate(dt.getUTCDate() + days);
   return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * A date the server sent with a refusal, as ISO-8601 in the error's DETAIL
+ * (supabase-js `error.details`), shown month first: "Oct 9", or "Oct 9, 2027"
+ * outside the current year. Null when details carries no ISO date, so the
+ * caller falls back to its own words. Calendar dates ("2026-10-09") are read
+ * as that day; timestamps in UTC, like formatDisplayDate.
+ */
+export function detailDate(details: string | null | undefined, now: Date = new Date()): string | null {
+  const m = /\b(\d{4})-(\d{2})-(\d{2})(?:[T ][\d:.]+(?:Z|[+-]\d{2}(?::?\d{2})?)?)?/.exec(details ?? "");
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (Number.isNaN(d.getTime())) return null;
+  const sameYear = d.getUTCFullYear() === now.getUTCFullYear();
+  return formatShortDate(d, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" });
 }

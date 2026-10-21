@@ -256,7 +256,7 @@ export function paidLine(m: Pick<VenueMember, "paidAt" | "paymentStatus">): stri
   if (!m.paidAt || m.paymentStatus !== "paid") return null;
   const d = new Date(m.paidAt);
   if (Number.isNaN(d.getTime())) return null;
-  return `Paid ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
+  return `Paid ${formatShortDate(d, { day: "numeric", month: "short" })}`;
 }
 
 /** total_count rides on every row; an empty page has none, so it is 0 then. */

@@ -31,11 +31,11 @@ test("analyticsRange: presets end today (This week is Monday to Sunday)", () => 
 });
 
 test("analyticsRange: the range line and the previous period", () => {
-  assert.equal(rangeLine(presetRange("4w", "2026-10-05"), "2026-10-05"), "8 Sep to 5 Oct, compared with the 4 weeks before");
+  assert.equal(rangeLine(presetRange("4w", "2026-10-05"), "2026-10-05"), "Sep 8 to Oct 5, compared with the 4 weeks before");
   const custom = { key: "custom" as const, from: "2026-09-14", to: "2026-09-27", compare: true };
   assert.deepEqual(previousOf(custom), { from: "2026-08-31", to: "2026-09-13" });
-  assert.equal(rangeLine(custom, "2026-10-05"), "14 Sep to 27 Sep, compared with 31 Aug to 13 Sep");
-  assert.equal(rangeLine({ ...custom, compare: false }, "2026-10-05"), "14 Sep to 27 Sep");
+  assert.equal(rangeLine(custom, "2026-10-05"), "Sep 14 to Sep 27, compared with Aug 31 to Sep 13");
+  assert.equal(rangeLine({ ...custom, compare: false }, "2026-10-05"), "Sep 14 to Sep 27");
 });
 
 test("Custom range: the second tap sets the end of the range", () => {

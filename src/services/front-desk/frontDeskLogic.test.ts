@@ -61,9 +61,9 @@ test("valid before B10 never says checked in (R2); with plan name (V6-159) the b
   const c = toPassCheck({ valid: true, pass_state: "valid", membership_id: "m", gym_id: "g", member_first_name: "Mina", member_is_minor: false, expires_on: "2026-10-27" });
   const v = scanResultView(c, { checkInsLive: false, sellsDayPass: false });
   assert.equal(v.title, "Mina's pass is valid");
-  assert.equal(v.body, "Valid until 27 Oct 2026");
+  assert.equal(v.body, "Valid until Oct 27, 2026");
   assert.equal(scanResultView(c, { checkInsLive: true, sellsDayPass: false }).title, "Mina is checked in");
-  assert.equal(scanResultView({ ...c, planName: "Monthly" }, { checkInsLive: true, sellsDayPass: false }).body, "Monthly · valid until 27 Oct 2026");
+  assert.equal(scanResultView({ ...c, planName: "Monthly" }, { checkInsLive: true, sellsDayPass: false }).body, "Monthly · valid until Oct 27, 2026");
 });
 
 test("payment due offers Mark as paid; expired offers a day pass only when sold; unknown names nobody", () => {
@@ -75,7 +75,7 @@ test("payment due offers Mark as paid; expired offers a day pass only when sold;
   const exp = toPassCheck({ ...base, pass_state: "expired" });
   assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: false }).secondaryLabel, "Done");
   assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: true }).secondaryLabel, "Sell a day pass");
-  assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: false }).body, "Lina's pass ended on 8 Oct 2026. They can renew in the app.");
+  assert.equal(scanResultView(exp, { checkInsLive: false, sellsDayPass: false }).body, "Lina's pass ended on Oct 8, 2026. They can renew in the app.");
   const unk = scanResultView(toPassCheck({ ...base, membership_id: null, gym_id: null, member_first_name: null, pass_state: "unknown" }), { checkInsLive: false, sellsDayPass: false });
   assert.equal(unk.title, "Pass not recognised");
   assert.equal(unk.minor, false);
@@ -96,8 +96,8 @@ test("renewals (MB-05): server rows map; to chase first, then ending, then renew
   assert.deepEqual(toChase(list).map((r) => r.membershipId), ["a", "b"]);
   assert.equal(renewalSub(list[0]), "Monthly · renews today");
   assert.equal(renewalSub(list[1]), "Monthly · renews in 6 days");
-  assert.equal(renewalSub(list[2]), "Monthly · ends 20 Oct 2026");
-  assert.equal(renewalSub(list[3]), "Monthly · renewed, next period from 20 Oct 2026");
+  assert.equal(renewalSub(list[2]), "Monthly · ends Oct 20, 2026");
+  assert.equal(renewalSub(list[3]), "Monthly · renewed, next period from Oct 20, 2026");
   // CN: a granted membership stays in the list, labelled: renewing it charges the plan price.
   const grant = toRenewalDue(row("g", 6, { granted: true }), "g");
   assert.equal(grant.granted, true);
@@ -112,7 +112,7 @@ test("renewals (MB-05): server rows map; to chase first, then ending, then renew
   assert.equal(renewalSub(unpriced), "Monthly · renews in 6 days · granted with a code, renewing charges the plan price");
   assert.equal(grant.renewalPrice, undefined);
   assert.deepEqual(toChase([grant]).map((r) => r.membershipId), ["g"]);
-  assert.equal(renewalSub(toRenewalDue(row("h", 6, { granted: true, already_renewed: true }), "g")), "Monthly · renewed, next period from 20 Oct 2026");
+  assert.equal(renewalSub(toRenewalDue(row("h", 6, { granted: true, already_renewed: true }), "g")), "Monthly · renewed, next period from Oct 20, 2026");
   assert.equal(toRenewalDue(row("x", 1, { member_label: null, plan_name: null }), "g").planName, "Membership");
 });
 

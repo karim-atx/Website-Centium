@@ -91,9 +91,9 @@ test("edit patch: a started promotion sends only its end date (ATX10)", () => {
 
 test("card: status chip, dates, stats, actions", () => {
   assert.equal(chipOfStatus("live"), "active");
-  assert.equal(promoDates(promo, "live", "New clients only"), "6 Oct to 19 Oct · new clients");
-  assert.equal(promoDates({ ...promo, audience: "everyone" }, "scheduled", "New clients only"), "From 6 Oct · everyone");
-  assert.equal(promoDates({ ...promo, endedAt: "2026-10-07T12:00:00" }, "ended", "New members only"), "6 Oct to 7 Oct · new members");
+  assert.equal(promoDates(promo, "live", "New clients only"), "Oct 6 to Oct 19 · new clients");
+  assert.equal(promoDates({ ...promo, audience: "everyone" }, "scheduled", "New clients only"), "From Oct 6 · everyone");
+  assert.equal(promoDates({ ...promo, endedAt: "2026-10-07T12:00:00" }, "ended", "New members only"), "Oct 6 to Oct 7 · new members");
   assert.equal(audienceWord("New customers only", "new"), "new customers");
   assert.equal(usesText("scheduled", { uses: 0, useLimit: null, people: 0, recorded: 0 }), "–");
   assert.equal(usesText("live", { uses: 1180, useLimit: null, people: 900, recorded: 0 }), "1,180");
@@ -116,8 +116,8 @@ test("offer row right text", () => {
 
 test("featured cards and the Featured line", () => {
   const base = { id: "f1", targetKind: "class" as const, targetId: "c1", area: "classes" as const, startsOn: "2026-10-06", endsOn: "2026-10-12", chargeStatus: "pending" as const, amount: 15 };
-  assert.deepEqual(placementCard({ ...base, status: "requested" }, "2026-10-01"), { view: "awaiting", chip: "awaiting", dates: "Starts 6 Oct once paid", line: null });
-  assert.equal(placementCard({ ...base, status: "live" }, "2026-10-06")?.dates, "6 Oct to 12 Oct · 7 days left");
+  assert.deepEqual(placementCard({ ...base, status: "requested" }, "2026-10-01"), { view: "awaiting", chip: "awaiting", dates: "Starts Oct 6 once paid", line: null });
+  assert.equal(placementCard({ ...base, status: "live" }, "2026-10-06")?.dates, "Oct 6 to Oct 12 · 7 days left");
   assert.equal(placementCard({ ...base, status: "payment_not_received" }, "2026-10-14")?.line, "Your start date passed without a payment.");
   assert.equal(placementCard({ ...base, status: "cancelled" }, "2026-10-14"), null);
   const t = () => "Strength Basics";

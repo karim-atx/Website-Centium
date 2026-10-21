@@ -127,11 +127,11 @@ export function currentMembership<T extends { gymId: string; status: string }>(r
   return rows.find((r) => r.gymId === gymId && r.status === "active") ?? null;
 }
 
-/** "1 Oct 2026" from a `date` column (no timezone shift). */
+/** "Oct 1, 2026" from a `date` column (no timezone shift). */
 export function dayMonthYear(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   const mon = formatShortDate(new Date(Date.UTC(y, m - 1, d)), { month: "short", timeZone: "UTC" });
-  return `${d} ${mon} ${y}`;
+  return `${mon} ${d}, ${y}`;
 }
 
 /** The pass's VALID line: "1 Oct 2026 to 1 Jan 2027", or from-only when open-ended. */

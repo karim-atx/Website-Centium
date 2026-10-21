@@ -260,7 +260,7 @@ describe("dates", () => {
     assert.equal(dueLine(new Date(2026, 9, 15, 20, 0).toISOString(), now), "Due today 8:00 PM");
     assert.equal(dueLine(new Date(2026, 9, 16, 14, 14).toISOString(), now), "Due tomorrow 2:14 PM");
     assert.equal(dueLine(new Date(2026, 9, 18, 18, 0).toISOString(), now), "Due Sunday 6:00 PM");
-    assert.equal(dueLine(new Date(2026, 9, 30, 18, 0).toISOString(), now), "Due 30 Oct 6:00 PM");
+    assert.equal(dueLine(new Date(2026, 9, 30, 18, 0).toISOString(), now), "Due Oct 30 6:00 PM");
     assert.equal(dueLine(new Date(2026, 9, 14, 18, 0).toISOString(), now), "Was due yesterday 6:00 PM");
     assert.equal(dueShort(new Date(2026, 9, 15, 20, 0).toISOString(), now), "due 8:00 PM");
     assert.equal(dueShort(new Date(2026, 9, 16, 20, 0).toISOString(), now), "due tomorrow 8:00 PM");
@@ -269,8 +269,8 @@ describe("dates", () => {
 
   it("finds the next check-in of a schedule", () => {
     const due = new Date(2026, 9, 18, 18, 0).toISOString();
-    assert.equal(longDate(nextOccurrence("weekly:7@18:00", due)!), "Sunday 25 Oct");
-    assert.equal(longDate(nextOccurrence("daily@08:00", due)!), "Monday 19 Oct");
+    assert.equal(longDate(nextOccurrence("weekly:7@18:00", due)!), "Sunday, Oct 25");
+    assert.equal(longDate(nextOccurrence("daily@08:00", due)!), "Monday, Oct 19");
     assert.equal(nextOccurrence(null, due), null);
     assert.equal(nextOccurrence("monthly", due), null);
   });

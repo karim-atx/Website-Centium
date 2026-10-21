@@ -187,7 +187,7 @@ export const LogDaySheet: React.FC<{
 
   const prettyDate = (() => {
     const d = new Date(`${date}T00:00:00`);
-    return `${d.toLocaleDateString("en-GB", { weekday: "long" })} ${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   })();
 
   const opt = (key: string, label: string, on: boolean, onClick: () => void, role: "radio" | "checkbox" = "radio") => (

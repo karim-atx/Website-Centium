@@ -24,7 +24,7 @@ export const ShareChatCard: React.FC<{ card: ShareCard; time: string }> = ({ car
     card.kind === "programme_share"
       ? [card.durationWeeks ? `${card.durationWeeks} ${card.durationWeeks === 1 ? "week" : "weeks"}` : null, card.exerciseCount ? `${card.exerciseCount} ${card.exerciseCount === 1 ? "exercise" : "exercises"}` : null]
       : [
-          card.startsAt ? `${new Date(card.startsAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
+          card.startsAt ? `${new Date(card.startsAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
           card.durationMin ? `${card.durationMin} min` : null,
           card.location,
         ];

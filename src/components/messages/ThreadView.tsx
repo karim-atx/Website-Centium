@@ -2388,7 +2388,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm font-semibold text-charcoal">{label}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
-                    ? `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`
+                    ? `${formatShortDate(new Date(at), { day: "numeric", month: "short" })}, ${clockTime(at)}`
                     : "–"}
                 </span>
               </div>
@@ -2534,7 +2534,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
     };
   }, [messageId]);
   const when = (at: string) =>
-    `${formatShortDate(new Date(at), { day: "numeric", month: "short" }, undefined)}, ${clockTime(at)}`;
+    `${formatShortDate(new Date(at), { day: "numeric", month: "short" })}, ${clockTime(at)}`;
   const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
   return (
     <>

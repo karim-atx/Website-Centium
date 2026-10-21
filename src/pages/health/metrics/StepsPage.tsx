@@ -268,7 +268,7 @@ export default function StepsPage() {
     foot = empty ? "No steps this month" : `${rows.length} of ${span} days logged · total ${n(total)}`;
     summary = empty
       ? `Steps in ${MONTH_LONG[m - 1]}. Nothing synced.`
-      : `Steps in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${Number(b!.date.slice(8))} ${MONTH_LONG[m - 1]}, ${n(b!.value)}.`;
+      : `Steps in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${MONTH_LONG[m - 1]} ${Number(b!.date.slice(8))}, ${n(b!.value)}.`;
     legend = [
       { label: "Steps a day", swatch: <LegendDot color={mc("steps", "main", 0.75)} /> },
       { label: "Goal", swatch: <LegendDash color={ink} /> },

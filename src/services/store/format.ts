@@ -18,14 +18,14 @@ export function moneyShort(n: number): string {
 
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-/** "Mon 6 Oct". */
+/** "Mon, Oct 6". */
 export function shortDate(d: Date): string {
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** "6 Oct". */
+/** "Oct 6". */
 export function dayMonth(d: Date): string {
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "today", "yesterday", else "Mon 6 Oct" (OP1-005 row 5, OURS). */

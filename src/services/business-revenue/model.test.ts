@@ -258,7 +258,7 @@ test("money owed: reminder and undo refusals in the app's words", () => {
 
 test("money owed: reminders sent reads none yet, or the count and the last day", () => {
   assert.equal(remindersLine(0, null), "None yet");
-  assert.equal(remindersLine(2, "2026-10-12T09:00:00"), "2, last 12 Oct");
+  assert.equal(remindersLine(2, "2026-10-12T09:00:00"), "2, last Oct 12");
   assert.equal(remindersLine(1, null), "1");
 });
 

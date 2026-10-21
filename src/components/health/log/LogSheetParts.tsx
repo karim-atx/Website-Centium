@@ -128,16 +128,14 @@ function dayFromIso(iso: string): Date {
   return new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
 }
 
-/** "Today" / "Yesterday" / "Sat 3 Oct" (HE1.6.1 #67 formats, date part). */
+/** "Today" / "Yesterday" / "Sat, Oct 3" (HE1.6.1 #67 formats, date part). */
 export function dayLabel(iso: string, today: string): string {
   if (iso === today) return "Today";
   const y = dayFromIso(today);
   y.setDate(y.getDate() - 1);
   if (iso === isoDay(y)) return "Yesterday";
   const d = dayFromIso(iso);
-  const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  const mo = formatShortDate(d, { month: "short" });
-  return `${wd} ${d.getDate()} ${mo}`;
+  return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
 }
 
 /** "Today · 8:12 AM" / "Yesterday · 9:40 PM" / "Sat 3 Oct · 7:30 AM" (HE1.6.1 #67, 12-hour per D-04). */

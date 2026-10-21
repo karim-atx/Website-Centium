@@ -9,7 +9,7 @@ import { isOffline } from "../network-error";
  * treated here as "already recorded".
  *
  * The version is the documents' "Last updated" date, as a YYYY-MM-DD string:
- * src/marketing/pages/Legal.tsx LEGAL_UPDATED_DATE ("6 September 2026"). Keep
+ * src/marketing/pages/Legal.tsx LEGAL_UPDATED_DATE ("September 6, 2026"). Keep
  * the two in step when the documents change.
  */
 

@@ -639,7 +639,7 @@ function SheetBody({
             {errLine(errors.name, `${uid}-name-err`)}
           </div>
 
-          {/* Date (AN3-010 row 13; V6-162 "Tue 6 Oct 2026") */}
+          {/* Date (AN3-010 row 13; V6-162 "Tue, Oct 6, 2026") */}
           <div ref={(el) => void (fieldRefs.current.date = el)} style={{ scrollMarginTop: 20 }}>
             {label("Date")}
             <button

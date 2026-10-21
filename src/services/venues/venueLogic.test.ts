@@ -62,9 +62,9 @@ test("currentMembership takes the active row for the venue", () => {
 });
 
 test("dates read as the pass draws them", () => {
-  assert.equal(dayMonthYear("2026-10-01"), "1 Oct 2026");
-  assert.equal(validRange("2026-10-01", "2027-01-01"), "1 Oct 2026 to 1 Jan 2027");
-  assert.equal(validRange("2026-10-01", null), "From 1 Oct 2026");
+  assert.equal(dayMonthYear("2026-10-01"), "Oct 1, 2026");
+  assert.equal(validRange("2026-10-01", "2027-01-01"), "Oct 1, 2026 to Jan 1, 2027");
+  assert.equal(validRange("2026-10-01", null), "From Oct 1, 2026");
   assert.equal(addDaysIso("2026-12-29", 6), "2027-01-04");
 });
 

@@ -93,7 +93,7 @@ function sourceLine(src: ConnectedSource): { text: string; danger: boolean } {
 }
 
 function dayMonth(d: Date): string {
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(d).replace("Sept", "Sep");
+  return new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short" }).format(d).replace("Sept", "Sep");
 }
 
 /** "Last synced today at 8:40 AM" / "yesterday at …" / "on 3 Oct at …". */

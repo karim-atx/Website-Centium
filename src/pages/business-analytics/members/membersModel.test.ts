@@ -75,8 +75,8 @@ test("growth chart: n weeks, step 286 / n, previous line only with history", () 
   assert.equal(p.bars[3].jo, 0.9);
   assert.equal(p.bars[2].eo, 0.35);
   // AN4-017 O2: the slider's valuetext.
-  assert.equal(p.valueText, "Week of 7 Sep: Active 13, Joined 1, Ended 0, Net change +1");
-  assert.equal(g.valueText, "Week of 5 Oct: Active 17, Joined 1, Ended 0, Net change +1");
+  assert.equal(p.valueText, "Week of Sep 7: Active 13, Joined 1, Ended 0, Net change +1");
+  assert.equal(g.valueText, "Week of Oct 5: Active 17, Joined 1, Ended 0, Net change +1");
   assert.deepEqual(p.tip?.rows.map((r) => r.l), ["Active", "Ended", "Net change"]);
 });
 
@@ -110,7 +110,7 @@ test("members early (AN4-024 / AN4-044, B8_B16_REVIEW #19): server flag, New, ea
   assert.equal(ch.ghost, "");
   assert.deepEqual(ch.ticks.map((t) => t.t), ["0", "5", "9"]);
   assert.equal(ch.tip?.none, true);
-  assert.equal(ch.valueText, "Week of 24 Aug: No members yet");
+  assert.equal(ch.valueText, "Week of Aug 24: No members yet");
   assert.equal(growthChart(cur, null, new Set(), 6, true, true).tip?.none, false);
 });
 
@@ -123,10 +123,10 @@ test("members: legend keeps one series on, joins by week, classes Plans row hidd
   const cur = [week("2026-09-07", 9, 9, 1), week("2026-09-14", 2, 1, 2), week("2026-09-21", 0, 0, 2), week("2026-09-28", 3, 0, 5), week("2026-10-05", 1, 2, 4)];
   const cols = joinsByWeek(cur, "2026-09-15", "2026-10-12");
   assert.deepEqual(cols.map((c) => [c.t, c.j, c.e, c.jh, c.eh]), [
-    ["14 Sep", "+2", "−1", 20, 10],
-    ["21 Sep", "", "", 0, 0],
-    ["28 Sep", "+3", "", 30, 0],
-    ["5 Oct", "+1", "−2", 10, 20],
+    ["Sep 14", "+2", "−1", 20, 10],
+    ["Sep 21", "", "", 0, 0],
+    ["Sep 28", "+3", "", 30, 0],
+    ["Oct 5", "+1", "−2", 10, 20],
   ]);
   assert.deepEqual(pagesOf("classes", { hidePlans: true }).map((p) => p.key), ["growth", "first90", "engagement", "atrisk"]);
   assert.equal(pagesOf("classes").length, 5);

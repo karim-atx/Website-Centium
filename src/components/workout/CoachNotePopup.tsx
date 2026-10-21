@@ -17,7 +17,7 @@ function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
   if (hours < 24) return `Updated ${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days <= 7) return `Updated ${days}d ago`;
-  return `Updated ${formatShortDate(new Date(iso), { month: "short", day: "numeric" }, undefined)}`;
+  return `Updated ${formatShortDate(new Date(iso), { month: "short", day: "numeric" })}`;
 }
 
 /**

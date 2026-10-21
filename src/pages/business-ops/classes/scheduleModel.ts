@@ -51,15 +51,15 @@ export function mondayOf(day: string): string {
   return addDays(day, -mondayIndex(at(day).getDay()));
 }
 
-/** "Wed 7 Oct" (the card / toast date, V6-164). */
+/** "Wed, Oct 7" (the card / toast date, V6-164). */
 export function shortDate(day: string): string {
   const d = at(day);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** "Tue 6 Oct 2026" (the Date field, V6-162). */
+/** "Tue, Oct 6, 2026" (the Date field, V6-162). */
 export function longDate(day: string): string {
-  return `${shortDate(day)} ${at(day).getFullYear()}`;
+  return `${shortDate(day)}, ${at(day).getFullYear()}`;
 }
 
 /** "Wednesday" */

@@ -44,7 +44,7 @@ function bookedOn(at: string, today: string): string {
   const d = new Date(at);
   if (Number.isNaN(d.getTime())) return "";
   const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return iso === today ? "today" : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return iso === today ? "today" : `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 export default function SessionPage() {

@@ -32,9 +32,9 @@ export function kindOf(type: string | null | undefined, hasClasses: boolean): Da
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-/** "Monday, 5 October" (DA1-015 #2). */
+/** "Monday, October 5" (DA1-015 #2). */
 export function dateKicker(now: Date): string {
-  return `${DAY_LONG[mondayIndex(now.getDay())]}, ${now.getDate()} ${MONTHS_LONG[now.getMonth()]}`;
+  return `${DAY_LONG[mondayIndex(now.getDay())]}, ${MONTHS_LONG[now.getMonth()]} ${now.getDate()}`;
 }
 
 /** DA1-015 #3: "Good evening" (COPY); morning and afternoon are OURS. */
@@ -46,10 +46,10 @@ export function greeting(now: Date): string {
 }
 
 const parseDay = (iso: string) => new Date(`${iso}T00:00:00`);
-/** "Sat 3 Oct". */
+/** "Sat, Oct 3". */
 export const shortDay = (iso: string) => {
   const d = parseDay(iso);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
 };
 /** "Today", "Yesterday", "Tomorrow" or "Sat 3 Oct". */
 export function dayLabel(iso: string, today: string): string {

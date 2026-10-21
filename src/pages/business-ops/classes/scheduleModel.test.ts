@@ -16,11 +16,11 @@ const S = (o: Partial<Session>): Session => ({
 });
 
 test("dates read Monday-first, card style", () => {
-  assert.equal(shortDate("2026-10-07"), "Wed 7 Oct");
-  assert.equal(longDate("2026-10-06"), "Tue 6 Oct 2026");
+  assert.equal(shortDate("2026-10-07"), "Wed, Oct 7");
+  assert.equal(longDate("2026-10-06"), "Tue, Oct 6, 2026");
   assert.equal(mondayOf("2026-10-14"), "2026-10-12");
-  assert.equal(dayHeading("2026-10-14", "2026-10-14"), "Today · Wed 14 Oct");
-  assert.equal(dayHeading("2026-10-15", "2026-10-14"), "Tomorrow · Thu 15 Oct");
+  assert.equal(dayHeading("2026-10-14", "2026-10-14"), "Today · Wed, Oct 14");
+  assert.equal(dayHeading("2026-10-15", "2026-10-14"), "Tomorrow · Thu, Oct 15");
   assert.equal(hourLabel(13), "1 PM");
 });
 

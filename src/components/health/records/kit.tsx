@@ -11,13 +11,13 @@ import { useHealthMode, hairline } from "../metric/MetricKit";
 
 export { useHealthMode, hairline };
 
-/** "14 Sep 2026" from yyyy-mm-dd (no time zone shift). */
+/** "Sep 14, 2026" from yyyy-mm-dd (no time zone shift). */
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "–";
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return "–";
   const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1];
-  return `${d} ${month} ${y}`;
+  return `${month} ${d}, ${y}`;
 }
 
 /** "30 to 100" / "under 3.0" / "above 30" / "–" (HE1.9 #22, no unit). */
