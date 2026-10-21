@@ -30,12 +30,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
+    <link rel="stylesheet" href="assets/css/landing.css" />
+    <noscript><style>.ld { display: none; }</style></noscript>
+    <link rel="preload" href="atraxia/atraxia-mark-hi.png" as="image" />
     <script src="assets/js/core.js"></script>
+    <script src="assets/js/galaxy.js" defer></script>
     <script src="assets/js/scene.js" defer></script>
     <script src="assets/js/landing.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
+    <div class="ld" id="ld">
+      <canvas aria-hidden="true"></canvas>
+      <img class="ld-word" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" />
+      <div class="ld-ring" role="progressbar" aria-label="Loading Atraxia" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle class="t" cx="20" cy="20" r="18"></circle><circle class="p" cx="20" cy="20" r="18" pathLength="1"></circle></svg></div>
+    </div>
+    <script src="assets/js/loader.js"></script>
     <header class="nav">
       <div class="wrap nav-top">
         <div class="lockup">
@@ -68,7 +78,44 @@
       </div>
     </header>
     <main id="main" tabindex="-1">
-      <!-- Landing chapters: the hero and loader arrive in batch 2; the journey chapters (#about, #portfolio, #founders, #values, #blog, #contact) in batch 3. -->
+      <div class="ix-pin" id="intro">
+        <header class="hero">
+          <div class="hs-stage" aria-hidden="true">
+            <div class="hs-void"></div>
+            <div class="ix-tint"></div>
+            <div class="ix-deep"></div>
+            <canvas class="gx-gl"></canvas>
+            <div class="gx-still"></div>
+            <div class="hs-scrim"></div>
+            <div class="hs-vignette"></div>
+          </div>
+          <div class="wrap">
+            <div class="hs-copy">
+              <div class="eyebrow"><span class="rule"></span><span class="label">LED BY CURIOSITY</span></div>
+              <h1 class="hero-h1" aria-label="Beyond the obvious. Toward what’s next."><span class="tx-line" aria-hidden="true"><span class="tx-l">Beyond the obvious.</span></span><span class="tx-line" aria-hidden="true"><span class="tx-l">Toward what’s next.</span></span></h1>
+              <p class="hero-lede">We explore ideas worth pursuing, rethink complex problems, and turn possibilities into solutions designed to move things forward.</p>
+              <div class="hero-actions">
+                <a class="btn btn--hero-cta" href="#portfolio"><span class="cta-label">See the portfolio</span></a>
+                <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
+              </div>
+            </div>
+          </div>
+          <div class="ix-cue" aria-hidden="true">
+            <span class="ix-cue-label">Scroll to explore</span>
+            <span class="ix-cue-track"><span class="ix-cue-dot"></span></span>
+          </div>
+        </header>
+        <div class="ix-hand" aria-hidden="true"></div>
+      </div>
+      <!-- The journey: batch 3 replaces these stand-in chapters (same ids) with the chapter markup. -->
+      <div class="jr" id="journey">
+        <section id="about" class="jr-sec jr-ph" aria-label="Our philosophy"></section>
+        <section id="portfolio" class="jr-sec jr-ph" aria-label="Our portfolio"></section>
+        <section id="founders" class="jr-sec jr-ph" aria-label="Leadership"></section>
+        <section id="values" class="jr-sec jr-ph" aria-label="What guides us"></section>
+        <section id="blog" class="jr-sec jr-ph" aria-label="Explorations"></section>
+        <section id="contact" class="jr-sec jr-ph" aria-label="Reach out"></section>
+      </div>
     </main>
     <footer class="site-footer">
       <div class="wrap footer-tabs-row">

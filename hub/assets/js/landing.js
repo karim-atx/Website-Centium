@@ -30,8 +30,8 @@
     window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
     window.dispatchEvent(new Event('scroll'));
     Atx.kick();
-    var tg = id && document.getElementById(id), hh = tg && tg.querySelector('h2, h1');
-    if (hh) { hh.setAttribute('tabindex', '-1'); try { hh.focus({ preventScroll: true }); } catch { /* ignore */ } }
+    var tg = id && document.getElementById(id), hh = tg && (tg.tagName === 'MAIN' ? tg : tg.querySelector('h2, h1'));
+    if (hh) { if (hh !== tg) hh.setAttribute('tabindex', '-1'); try { hh.focus({ preventScroll: true }); } catch { /* ignore */ } }
   }
   /* A jump fades the veil in, sets the position instantly with the target
      state rendered in the same frame, then fades the veil out. */
@@ -40,7 +40,8 @@
     var y = target(id);
     if (y === null) return false;
     if (push) { try { history.pushState({ atx: id }, '', id ? '#' + id : location.pathname + location.search); } catch { /* ignore */ } }
-    if (Atx.reduced() || !veil) { land(id, y); return true; }
+    /* the skip link's target (#main) lands at once: focus on main, no veil */
+    if (Atx.reduced() || !veil || id === 'main') { land(id, y); return true; }
     clearTimeout(busy);
     veil.classList.add('is-on');
     busy = setTimeout(function () { land(id, target(id) === null ? y : target(id)); setTimeout(function () { veil.classList.remove('is-on'); }, 40); }, 170);
