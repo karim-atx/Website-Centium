@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ShoppingBag } from "lucide-react";
@@ -31,6 +34,8 @@ export default function ProductPage() {
   const { user } = useApp();
   const { uid } = useCart();
   const live = useLive(() => loadProduct(productId), 0, productId);
+  // CP: a closed or paused store takes no new orders.
+  const bizStatus = useBusinessStatus(businessId);
   const [qty, setQty] = useState(1);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [added, setAdded] = useState(0);
@@ -57,7 +62,7 @@ export default function ProductPage() {
   const p = d.product;
   const out = p.stock !== null && p.stock <= 0;
   const max = Math.min(MAX_QTY, p.stock ?? MAX_QTY);
-  const canBuy = user.accountType === "customer" && p.price !== null && !out;
+  const canBuy = user.accountType === "customer" && p.price !== null && !out && takesNewActivity(bizStatus);
 
   const add = (replace: boolean) => {
     const r = addToCart(uid, businessId, p.id, qty, replace);
@@ -98,6 +103,7 @@ export default function ProductPage() {
           {p.description}
         </p>
       )}
+      <BusinessClosedNote status={bizStatus} what="orders" />
       {d.store && fulfilmentLine(d.store) && (
         <p className="text-[12px] font-medium text-charcoal-faint" style={{ marginTop: 12 }}>
           {fulfilmentLine(d.store)}

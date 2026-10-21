@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { isBusinessClosedError } from "../business-closure/logic";
 
 // v6 Batch 4 · the professional's side of B0 consent and B6 join requests.
 //
@@ -120,7 +121,10 @@ export async function requestToJoin(code: string): Promise<Done> {
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   if (error.code === "ATX02") return { ok: false, message: "Too many tries in a short time. Try again in an hour." };
-  if (`${error.message ?? ""}`.includes("ATXB9")) return { ok: false, message: "No business found for that ID." };
+  // A closed business reaches the insert and the trigger answers ATXAB; the
+  // function's own rule is one answer for every miss, paused included, so a
+  // closed one reads the same (CP).
+  if (`${error.message ?? ""}`.includes("ATXB9") || isBusinessClosedError(error)) return { ok: false, message: "No business found for that ID." };
   console.error("[employment] request_to_join_business failed:", error.code, error.message);
   return { ok: false, message: "Couldn't send your request. Try again." };
 }

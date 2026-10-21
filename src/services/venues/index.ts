@@ -3,6 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
 import { isOffline } from "../network-error";
+import { CLOSED_BUY_MEMBERSHIP, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import { readPassCache, writePassCache } from "./passCache";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
@@ -483,6 +484,7 @@ export async function purchaseGymMembership(gymId: string, planId: string): Prom
   const { data, error } = await rpc<string>("purchase_gym_membership", { p_gym_id: gymId, p_plan_id: planId, p_method: "cash" });
   if (error || !data) {
     console.error("[venues] Could not create the membership:", error?.message);
+    if (error && isBusinessClosedError(error)) return { ok: false, code: error.code, message: closureMessage(CLOSED_BUY_MEMBERSHIP, error.message) };
     return error ? fail(error, "Couldn't book that membership. Try again.") : { ok: false, message: "Couldn't book that membership. Try again." };
   }
   return { ok: true, value: data };

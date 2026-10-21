@@ -194,3 +194,12 @@ test("a booking past midnight (ATXAA) reads the same for the client and the desk
   assert.equal(bookErrorMessage("ATXAA", "server text", "f"), words);
   assert.equal(bookForErrorMessage("ATXAA", "server text", "f"), words);
 });
+
+test("a closed or paused business (ATXAB) in the client's and the desk's words", () => {
+  const closed = "This business is closed and is not taking new activity. Existing records are unaffected.";
+  const paused = "This business is paused and is not taking new activity. Existing records are unaffected.";
+  assert.equal(bookErrorMessage("ATXAB", closed, "f"), "This business has closed and isn't taking new bookings.");
+  assert.equal(bookErrorMessage("ATXAB", paused, "f"), "This business isn't taking bookings right now.");
+  assert.equal(bookForErrorMessage("ATXAB", closed, "f"), "This business is closed, so it can't take new appointments. Existing records are unaffected.");
+  assert.equal(bookForErrorMessage("ATXAB", paused, "f"), "This business is deactivated, so it can't take new appointments until it's reactivated.");
+});

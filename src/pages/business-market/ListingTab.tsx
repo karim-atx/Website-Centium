@@ -200,8 +200,8 @@ export function ListingTab() {
         emptyBusiness={isEmpty}
         listedSub={v.listed}
         listedEmptySub={v.listedEmpty}
-        hiddenSub={v.hiddenSub}
-        canSwitch={online && m.isOwner && !sw.busy}
+        hiddenSub={business.closedAt ? "Your business is closed, so it can't be listed." : v.hiddenSub}
+        canSwitch={online && m.isOwner && !sw.busy && !business.closedAt}
         onPreview={() => navigate(`${m.base}/preview`)}
         onSwitch={(on) => (on ? void sw.turnOn() : sw.requestOff())}
         emptyAddress="Add your address"

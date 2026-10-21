@@ -66,10 +66,13 @@ export interface BusinessFull {
   slug: string | null;
   active: boolean;
   deactivatedAt: string | null;
+  /** CP: closed for good (close_business), or null. Not deactivatedAt, which is the reversible pause. */
+  closedAt: string | null;
+  closureReason: string | null;
 }
 
 const BUSINESS_COLUMNS =
-  "id, profile_id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at";
+  "id, profile_id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at, closed_at, closure_reason";
 
 type BusinessRow = {
   id: string;
@@ -90,6 +93,8 @@ type BusinessRow = {
   slug: string | null;
   active: boolean;
   deactivated_at: string | null;
+  closed_at: string | null;
+  closure_reason: string | null;
 };
 
 const storagePublicUrl = (bucket: string, path: string): string => supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
@@ -120,6 +125,8 @@ const toBusiness = (r: BusinessRow): BusinessFull => ({
   slug: r.slug,
   active: r.active,
   deactivatedAt: r.deactivated_at,
+  closedAt: r.closed_at ?? null,
+  closureReason: r.closure_reason ?? null,
 });
 
 /**

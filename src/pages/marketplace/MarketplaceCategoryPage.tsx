@@ -1,3 +1,5 @@
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { closedLine } from "../../services/business-closure/logic";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -232,6 +234,8 @@ function BusinessPage({ businessId, source }: { businessId: string; source: stri
   const [error, setError] = useState<string | null>(null);
   // B14 RP-01: a business with no venue is reviewed here (write_business_review).
   const [venueLess, setVenueLess] = useState(false);
+  // CP: a closed or paused business is off Explore; say so where it can be told.
+  const bizStatus = useBusinessStatus(businessId);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,7 +282,7 @@ function BusinessPage({ businessId, source }: { businessId: string; source: stri
       <div>
         <PageHeader title="Explore" showBack />
         <p role={error ? "alert" : undefined} className={`text-[12px] font-semibold ${error ? "text-status-high" : "text-charcoal-faint"}`}>
-          {error ?? "This business isn't listed on Explore right now."}
+          {error ?? closedLine(bizStatus, "bookings") ?? "This business isn't listed on Explore right now."}
         </p>
       </div>
     );

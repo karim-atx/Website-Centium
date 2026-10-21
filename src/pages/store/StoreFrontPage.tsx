@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useNavigate, useParams } from "react-router-dom";
 import { CalendarPlus, MapPin, ShoppingBag, ShoppingCart, Truck } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -36,6 +39,9 @@ export default function StoreFrontPage() {
   const navigate = useNavigate();
   const { cart } = useCart();
   const live = useLive(() => loadFront(businessId), 0, businessId);
+  // CP: a closed or paused business sells and books nothing new.
+  const bizStatus = useBusinessStatus(businessId);
+  const takesNew = takesNewActivity(bizStatus);
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
   const inCart = cart && cart.businessId === businessId ? cartCount(cart) : 0;
@@ -52,7 +58,13 @@ export default function StoreFrontPage() {
     return (
       <div>
         <PageHeader title="Store" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this store." onRetry={live.reload} /> : <ClientEmpty icon={ShoppingBag} title="Store not found" line="It may not be listed on Explore right now." />}
+        {s.status === "error" ? (
+          <RetryLine text="Couldn't load this store." onRetry={live.reload} />
+        ) : !takesNew ? (
+          <BusinessClosedNote status={bizStatus} what="orders" />
+        ) : (
+          <ClientEmpty icon={ShoppingBag} title="Store not found" line="It may not be listed on Explore right now." />
+        )}
       </div>
     );
   }
@@ -61,6 +73,7 @@ export default function StoreFrontPage() {
   return (
     <div>
       <PageHeader title={store.name} subtitle={store.location ?? undefined} showBack sub />
+      <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
 
       {(store.pickup || store.delivery) && (
         <ClientCard label="How you get it">
@@ -68,7 +81,7 @@ export default function StoreFrontPage() {
         </ClientCard>
       )}
 
-      {store.offersAppointments && (
+      {store.offersAppointments && takesNew && (
         <div style={{ marginTop: 10 }}>
           <ClientCard>
             <ClientRow icon={CalendarPlus} title="Book an appointment" sub="See services and free times" onClick={() => navigate(`/app/appointments/book/${store.id}`)} />
@@ -95,8 +108,8 @@ export default function StoreFrontPage() {
         )}
       </Section>
 
-      {inCart > 0 && <PinnedCta primary={{ label: `View cart · ${inCart}`, icon: <ShoppingCart size={15} />, onClick: () => navigate("/app/store/cart") }} />}
-      {inCart > 0 && <div aria-hidden style={{ height: 60 }} />}
+      {inCart > 0 && takesNew && <PinnedCta primary={{ label: `View cart · ${inCart}`, icon: <ShoppingCart size={15} />, onClick: () => navigate("/app/store/cart") }} />}
+      {inCart > 0 && takesNew && <div aria-hidden style={{ height: 60 }} />}
     </div>
   );
 }

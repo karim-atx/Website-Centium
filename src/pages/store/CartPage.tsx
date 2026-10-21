@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useNavigate } from "react-router-dom";
 import { ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -40,6 +43,8 @@ export default function CartPage() {
   const { uid, cart } = useCart();
   const key = cart ? `${cart.businessId}:${cart.lines.map((l) => l.offeringId + "x" + l.qty).join(",")}` : "none";
   const live = useLive(cart ? () => loadCart(cart) : null, 0, key);
+  // CP: a closed or paused store takes no new orders; the cart stays on this device.
+  const bizStatus = useBusinessStatus(cart?.businessId);
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
 
@@ -57,6 +62,7 @@ export default function CartPage() {
   return (
     <div>
       <PageHeader title="Your cart" subtitle={d?.store?.name} showBack sub />
+      <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
       {s.status === "loading" ? (
         <SkeletonCards label="Loading your cart" />
       ) : s.status !== "ok" || !d ? (
@@ -100,7 +106,7 @@ export default function CartPage() {
             Delivery, if you choose it, is added at checkout.
           </p>
           <div aria-hidden style={{ height: 60 }} />
-          <PinnedCta primary={{ label: "Checkout", onClick: () => navigate("/app/store/checkout"), disabled: d.lines.length === 0 }} />
+          <PinnedCta primary={{ label: "Checkout", onClick: () => navigate("/app/store/checkout"), disabled: d.lines.length === 0 || !takesNewActivity(bizStatus) }} />
         </>
       )}
     </div>

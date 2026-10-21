@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import clsx from "clsx";
@@ -45,6 +48,9 @@ export default function BookAppointmentPage() {
     businessId
   );
   const booking = useAppointmentBooking(businessId, authUserId ?? null);
+  // CP: a closed or paused business takes no new bookings.
+  const bizStatus = useBusinessStatus(businessId);
+  const takesNew = takesNewActivity(bizStatus);
   const [service, setService] = useState<Service | null>(null);
   const [date, setDate] = useState(isoDate(new Date()));
   const [slots, setSlots] = useState<Slot[] | null | "error">(null);
@@ -93,7 +99,13 @@ export default function BookAppointmentPage() {
     return (
       <div>
         <PageHeader title="Book an appointment" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this place's services." onRetry={live.reload} /> : <ClientEmpty icon={CalendarPlus} title="Not found" line="This place may not be on Explore right now." />}
+        {s.status === "error" ? (
+          <RetryLine text="Couldn't load this place's services." onRetry={live.reload} />
+        ) : !takesNew ? (
+          <BusinessClosedNote status={bizStatus} />
+        ) : (
+          <ClientEmpty icon={CalendarPlus} title="Not found" line="This place may not be on Explore right now." />
+        )}
       </div>
     );
   }
@@ -146,6 +158,7 @@ export default function BookAppointmentPage() {
   return (
     <div>
       <PageHeader title="Book an appointment" subtitle={d.store.name} showBack sub />
+      <BusinessClosedNote status={bizStatus} className="mb-3" />
 
       {d.pending || d.services.length === 0 ? (
         <>
@@ -255,7 +268,7 @@ export default function BookAppointmentPage() {
               {error}
             </p>
           )}
-          {user.accountType === "customer" && (
+          {user.accountType === "customer" && takesNew && (
             <>
               <div aria-hidden style={{ height: 60 }} />
               <PinnedCta primary={{ label: picked ? `Book ${clock12(picked.startsAt)}` : "Book", onClick: () => void book(), disabled: !service || !picked || !online, loading: booking.busy && !booking.terms }} />

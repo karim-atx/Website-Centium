@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Banknote, Info, MapPin, ShieldCheck, ShoppingCart, Truck, Wallet } from "lucide-react";
@@ -29,6 +32,9 @@ export default function CheckoutPage() {
   const { uid, cart } = useCart();
   const key = cart ? `${cart.businessId}:${cart.lines.map((l) => l.offeringId + "x" + l.qty).join(",")}` : "none";
   const live = useLive(cart ? () => loadCart(cart) : null, 0, key);
+  // CP: a closed or paused store takes no new orders.
+  const bizStatus = useBusinessStatus(cart?.businessId);
+  const takesNew = takesNewActivity(bizStatus);
   const [shipped, setShipped] = useState<boolean | null | undefined>(undefined);
   const [method, setMethod] = useState<Fulfilment | null>(null);
   const [address, setAddress] = useState("");
@@ -66,7 +72,7 @@ export default function CheckoutPage() {
     return (
       <div>
         <PageHeader title="Checkout" showBack sub />
-        <RetryLine text="Couldn't load checkout." onRetry={live.reload} />
+        {takesNew ? <RetryLine text="Couldn't load checkout." onRetry={live.reload} /> : <BusinessClosedNote status={bizStatus} what="orders" />}
       </div>
     );
   }
@@ -75,7 +81,7 @@ export default function CheckoutPage() {
   const fee = method === "delivery" ? deliveryFeeFor(store, subtotal) : 0;
   const total = subtotal + fee;
   const addressOk = method !== "delivery" || address.trim().length >= 6;
-  const ready = shipped === true && !!method && addressOk && d.lines.length > 0 && online;
+  const ready = shipped === true && !!method && addressOk && d.lines.length > 0 && online && takesNew;
 
   const submit = async () => {
     if (!method) return;
@@ -100,6 +106,7 @@ export default function CheckoutPage() {
   return (
     <div>
       <PageHeader title="Checkout" subtitle={store.name} showBack sub />
+      <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
 
       <Section label="How you get it" first>
         <ClientCard>
