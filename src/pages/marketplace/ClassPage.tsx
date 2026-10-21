@@ -74,12 +74,10 @@ import { formatShortDate } from "../../utils/date";
 // isn't readable by the client, so the waitlist block can't say one is
 // waiting; confirming one is book_class(), reached from Book on this page.
 
-/** "Sat 11 Oct" (Foundations copy rule 4). */
+/** "Sat, Oct 11" (Foundations copy rule 4). */
 function dayMonth(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  const wd = d.toLocaleDateString("en-GB", { weekday: "short" });
-  const mon = formatShortDate(d, { month: "short" });
-  return `${wd} ${d.getDate()} ${mon}`;
+  return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
 }
 
 const spotsText = (n: number) => (n <= 0 ? "Full" : `${n} ${n === 1 ? "spot" : "spots"}`);

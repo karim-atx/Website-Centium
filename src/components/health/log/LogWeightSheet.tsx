@@ -133,7 +133,7 @@ export const LogWeightSheet: React.FC<{
             <strong className="text-charcoal" style={{ fontWeight: 700 }}>
               {last.toFixed(1)} kg
             </strong>{" "}
-            on {formatShortDate(fromIso(lastDay), { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}
+            on {formatShortDate(fromIso(lastDay), { weekday: "short", day: "numeric", month: "short" })}
           </p>
         )}
 

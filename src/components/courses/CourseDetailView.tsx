@@ -545,7 +545,7 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
       {certificate ? (
         <>
           <span className="text-[13px] leading-[1.5]" style={{ color: fv("muted") }}>
-            Earned {formatShortDate(new Date(certificate.issuedAt), { day: "numeric", month: "short", year: "numeric" }, undefined)} ·{" "}
+            Earned {formatShortDate(new Date(certificate.issuedAt), { day: "numeric", month: "short", year: "numeric" })} ·{" "}
             {certificate.serial}
           </span>
 

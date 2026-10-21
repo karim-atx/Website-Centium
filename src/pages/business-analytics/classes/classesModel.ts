@@ -57,15 +57,15 @@ export interface RawData {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const at = (iso: string) => new Date(`${iso}T00:00:00`);
 export const dayCol = (iso: string) => mondayIndex(at(iso).getDay());
-/** "Wed 7 Oct" */
+/** "Wed, Oct 7" */
 export const dayDate = (iso: string) => {
   const d = at(iso);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 };
-/** "8 Sep" */
+/** "Sep 8" */
 export const dayMonth = (iso: string) => {
   const d = at(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 };
 export const daysBetween = (a: string, b: string) => Math.round((at(b).getTime() - at(a).getTime()) / 86400000);
 export const rangeDayCount = (r: { from: string; to: string }) => daysBetween(r.from, r.to) + 1;

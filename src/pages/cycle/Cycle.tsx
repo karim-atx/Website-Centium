@@ -61,27 +61,27 @@ const todayISO = () => {
 };
 
 const monthShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
-/** "4 to 10 Oct" or "28 Sep to 2 Oct": a range, always (the database gives one). */
+/** "Oct 4 to 10" or "Sep 28 to Oct 2": a range, always (the database gives one). */
 function shortRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
-  if (from === to) return `${f.getDate()} ${monthShort(f)}`;
-  if (f.getMonth() === t.getMonth()) return `${f.getDate()} to ${t.getDate()} ${monthShort(t)}`;
-  return `${f.getDate()} ${monthShort(f)} to ${t.getDate()} ${monthShort(t)}`;
+  if (from === to) return `${monthShort(f)} ${f.getDate()}`;
+  if (f.getMonth() === t.getMonth()) return `${monthShort(f)} ${f.getDate()} to ${t.getDate()}`;
+  return `${monthShort(f)} ${f.getDate()} to ${monthShort(t)} ${t.getDate()}`;
 }
 /** The same range with full month names, for the screen-reader sentence. */
 function longRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
-  const m = (d: Date) => d.toLocaleDateString("en-GB", { month: "long" });
-  if (from === to) return `${f.getDate()} ${m(f)}`;
-  if (f.getMonth() === t.getMonth()) return `${f.getDate()} to ${t.getDate()} ${m(t)}`;
-  return `${f.getDate()} ${m(f)} to ${t.getDate()} ${m(t)}`;
+  const m = (d: Date) => d.toLocaleDateString("en-US", { month: "long" });
+  if (from === to) return `${m(f)} ${f.getDate()}`;
+  if (f.getMonth() === t.getMonth()) return `${m(f)} ${f.getDate()} to ${t.getDate()}`;
+  return `${m(f)} ${f.getDate()} to ${m(t)} ${t.getDate()}`;
 }
-/** "Thu 15 Oct". */
+/** "Thu, Oct 15". */
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${monthShort(d)}`;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 };
 
 export default function Cycle() {
@@ -537,7 +537,7 @@ export default function Cycle() {
     : offsetDays === 0
       ? `Today · Day ${selectedDay}`
       : `Day ${selectedDay} · ${relative}`;
-  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-GB", {
+  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",

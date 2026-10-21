@@ -228,14 +228,14 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
 const dayDiff = (a: Date, b: Date) => Math.round((startOfDay(a) - startOfDay(b)) / 86400000);
 export const weekdayName = (d: Date) => DAY_LONG[mondayIndex(d.getDay())];
 
-/** "today", "tomorrow", "yesterday", a weekday within the week either side, else "25 Oct". */
+/** "today", "tomorrow", "yesterday", a weekday within the week either side, else "Oct 25". */
 export function dayWord(at: Date, now: Date): string {
   const diff = dayDiff(at, now);
   if (diff === 0) return "today";
   if (diff === 1) return "tomorrow";
   if (diff === -1) return "yesterday";
   if (Math.abs(diff) < 7) return weekdayName(at);
-  return `${at.getDate()} ${MONTH_SHORT[at.getMonth()]}`;
+  return `${MONTH_SHORT[at.getMonth()]} ${at.getDate()}`;
 }
 
 /** CU5 "Due today 8:00 PM"; "Due tomorrow 2:14 PM"; once past, "Was due Friday 2:14 PM". */
@@ -258,8 +258,8 @@ export function dueShort(dueAt: string | null, now: Date): string {
 export const minutesFor = (questionCount: number) => Math.max(1, Math.round(questionCount / 4));
 export const minutesText = (n: number) => (n === 1 ? "1 minute" : `${n} minutes`);
 
-/** "Sunday 25 Oct" (CU6 "Next check-in: Sunday 25 Oct"). */
-export const longDate = (d: Date) => `${weekdayName(d)} ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+/** "Sunday, Oct 25" (CU6 "Next check-in: Sunday, Oct 25"). */
+export const longDate = (d: Date) => `${weekdayName(d)}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 
 /** The next check-in of a schedule (daily@HH:MM / weekly:<1-7>@HH:MM) after this one, or null. */
 export function nextOccurrence(schedule: string | null, dueAt: string | null): Date | null {

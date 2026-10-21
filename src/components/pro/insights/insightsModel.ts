@@ -130,8 +130,8 @@ export const monthShort = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
 export const dayLabel = (iso: string) => `${monthShort(iso)} ${Number(iso.slice(8, 10))}`;
 /** "Oct 8, 2026" */
 export const dateLong = (iso: string) => `${dayLabel(iso)}, ${iso.slice(0, 4)}`;
-/** "Thu 8 Oct" (the tooltip caps line). */
-export const tipDay = (iso: string) => `${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][weekdayIndex(iso)]} ${Number(iso.slice(8, 10))} ${monthShort(iso)}`;
+/** "Thu, Oct 8" (the tooltip caps line). */
+export const tipDay = (iso: string) => `${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][weekdayIndex(iso)]}, ${monthShort(iso)} ${Number(iso.slice(8, 10))}`;
 
 /** The x label for a bucket: weekday letter (W), day (M), week start (3M), month (Y). */
 export function bucketLabel(range: ChartRange, b: Bucket): string {

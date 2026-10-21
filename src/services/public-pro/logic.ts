@@ -84,12 +84,12 @@ export function slotLabel(s: Slot): string {
   return rangeClock12(s.startsAt, s.endsAt);
 }
 
-/** "Mon 19 Oct" for a local day key. */
+/** "Mon, Oct 19" for a local day key. */
 export function dayLabel(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  const month = date.toLocaleDateString("en-GB", { month: "short" });
-  return `${WEEKDAY_SHORT[(date.getDay() + 6) % 7]} ${d} ${month}`;
+  const month = date.toLocaleDateString("en-US", { month: "short" });
+  return `${WEEKDAY_SHORT[(date.getDay() + 6) % 7]}, ${month} ${d}`;
 }
 
 /** What an invite link lets the visitor do. */

@@ -133,15 +133,15 @@ export const dayOf = (ts: string) => isoOf(new Date(ts));
 
 export const dMon = (iso: string) => {
   const d = dateOf(iso);
-  return `${d.getDate()} ${MON[d.getMonth()]}`;
+  return `${MON[d.getMonth()]} ${d.getDate()}`;
 };
 export const ddd = (iso: string) => DOW[dateOf(iso).getDay()];
-/** "Mon 21 Sep" */
-export const dddDMon = (iso: string) => `${ddd(iso)} ${dMon(iso)}`;
-/** "Saturday 1 November" */
+/** "Mon, Sep 21" */
+export const dddDMon = (iso: string) => `${ddd(iso)}, ${dMon(iso)}`;
+/** "Saturday, November 1" */
 export const longDay = (iso: string) => {
   const d = dateOf(iso);
-  return `${DAY[d.getDay()]} ${d.getDate()} ${MONTH[d.getMonth()]}`;
+  return `${DAY[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}`;
 };
 /** "March 2025" */
 export const monthYear = (iso: string) => {
@@ -149,11 +149,11 @@ export const monthYear = (iso: string) => {
   return `${MONTH[d.getMonth()]} ${d.getFullYear()}`;
 };
 
-/** "6 to 12 Oct", "27 Oct to 2 Nov" */
+/** "Oct 6 to 12", "Oct 27 to Nov 2" */
 export function spanLabel(from: string, to: string): string {
   const a = dateOf(from);
   const b = dateOf(to);
-  return `${a.getDate()}${a.getMonth() !== b.getMonth() ? " " + MON[a.getMonth()] : ""} to ${b.getDate()} ${MON[b.getMonth()]}`;
+  return `${MON[a.getMonth()]} ${a.getDate()} to ${a.getMonth() !== b.getMonth() ? MON[b.getMonth()] + " " : ""}${b.getDate()}`;
 }
 
 const inRange = (day: string, from: string, to: string) =>

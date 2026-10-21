@@ -230,7 +230,7 @@ export default function CaloriesPage() {
       : `${rows.length} of ${span} days logged${monthWorkouts.length ? ` · workouts ${monthWorkouts.length} ${monthWorkouts.length === 1 ? "session" : "sessions"}, ${n(mw)} kcal` : ""}`;
     summary = empty
       ? `Calories burned in ${MONTH_LONG[m - 1]}. Nothing synced.`
-      : `Calories burned in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${Number(b!.date.slice(8))} ${MONTH_LONG[m - 1]}, ${n(b!.value)}.`;
+      : `Calories burned in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${MONTH_LONG[m - 1]} ${Number(b!.date.slice(8))}, ${n(b!.value)}.`;
     legend = [
       { label: "Burned a day", swatch: <LegendDot color={mc("calories", "main", 0.75)} /> },
       { label: "Goal", swatch: <LegendDash color={ink} /> },

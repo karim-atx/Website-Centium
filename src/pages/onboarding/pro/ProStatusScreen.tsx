@@ -84,7 +84,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   const submittedRow = {
     title: "Submitted",
     desc: submittedAt
-      ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" }, undefined)}, ${time12(hhmm(submittedAt))}`
+      ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" })}, ${time12(hhmm(submittedAt))}`
       : "Sent for review",
     value: submittedAt && isToday(submittedAt) ? "Today" : "",
     state: "done" as const,

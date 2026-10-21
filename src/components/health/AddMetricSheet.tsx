@@ -112,12 +112,12 @@ const CheckCircleGlyph: React.FC = () => (
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** "Today · 7:05 AM", or "Thu 1 Oct · 7:12 AM" for another day (12-hour rule). */
+/** "Today · 7:05 AM", or "Thu, Oct 1 · 7:12 AM" for another day (12-hour rule). */
 function readingTime(recordedAt: string, isToday: boolean): string {
   const d = new Date(recordedAt);
   const clock = clock12(d);
   if (isToday) return `Today · ${clock}`;
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${clock}`;
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()} · ${clock}`;
 }
 
 /** The local day's [start, end) as ISO instants. */

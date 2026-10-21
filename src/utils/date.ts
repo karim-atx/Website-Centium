@@ -15,11 +15,12 @@
  * a missing timestamp reads as absent instead of broken.
  */
 /**
- * A short date with the handover's three-letter months: en-GB (and a browser
- * left on its own locale) writes September as "Sept", every frame says "Sep".
- * Use this for every `month: "short"` date that is not formatted en-US.
+ * A short date, month first everywhere in the app: "Oct 21", "Oct 21, 2026",
+ * "Wed, Oct 21". Defaults to en-US for that order; the "Sept" → "Sep" pass
+ * stays so any other locale passed in still gets the three-letter month every
+ * frame uses.
  */
-export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-GB"): string {
+export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-US"): string {
   return d.toLocaleDateString(locale, opts).replace(/\bSept\b/g, "Sep");
 }
 

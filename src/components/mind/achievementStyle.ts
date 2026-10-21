@@ -194,7 +194,7 @@ export const keyInk = (key: string, dark: boolean): string => {
   return pair ? pair[dark ? 1 : 0] : "rgb(var(--c-charcoal-faint))";
 };
 
-/** MO1.1.3.1 S3: "Earned 2 Oct"; the year only when it is not this year. */
+/** MO1.1.3.1 S3: "Earned Oct 2"; the year only when it is not this year. */
 export function formatEarnedAt(iso: string, now = new Date()): string {
   const d = new Date(iso);
   return formatShortDate(d, {

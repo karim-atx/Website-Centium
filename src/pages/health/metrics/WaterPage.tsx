@@ -251,7 +251,7 @@ export default function WaterPage() {
     const best = rows.reduce<{ date: string; value: number } | null>((b, r) => (!b || r.value > b.value ? r : b), null);
     summary = empty
       ? `Water in ${MONTH_LONG[m - 1]}. Nothing logged.`
-      : `Water in ${MONTH_LONG[m - 1]}. Average ${((mean ?? 0) / 1000).toFixed(1)} litres a day. Goal reached on ${atGoal} of ${span} days. Best day ${Number(best!.date.slice(8))} ${MONTH_LONG[m - 1]}, ${(best!.value / 1000).toFixed(1)} litres.`;
+      : `Water in ${MONTH_LONG[m - 1]}. Average ${((mean ?? 0) / 1000).toFixed(1)} litres a day. Goal reached on ${atGoal} of ${span} days. Best day ${MONTH_LONG[m - 1]} ${Number(best!.date.slice(8))}, ${(best!.value / 1000).toFixed(1)} litres.`;
     legend = [
       { label: "At goal", swatch: <LegendDot color={mc("water", "main")} /> },
       {

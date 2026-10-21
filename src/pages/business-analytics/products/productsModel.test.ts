@@ -97,7 +97,7 @@ test("products: detail series is 8 Monday weeks and the lead is numbers only", (
     TODAY,
   );
   assert.equal(s.labels.length, 8);
-  assert.equal(s.labels[7], "Week of 12 Oct");
+  assert.equal(s.labels[7], "Week of Oct 12");
   assert.equal(s.units[7], 3);
   assert.equal(detailLead(true, s), "Selling steadily, about 1 a week.");
   assert.equal(detailLead(false, s), "Hidden from Explore, so no new sales.");
@@ -182,11 +182,11 @@ test("discount views: ends soon, unused, scheduled, ended, days-left words", asy
   assert.equal(sch.elapsed, 0);
   assert.equal(sch.marker, false);
   const ended = discountView({ ...base, status: "ended", startsOn: "2026-07-01", endsOn: "2026-12-31", endedAt: "2026-09-30T12:00:00", uses: 18, useLimit: 20 }, TODAY, "2026-09-29", "2026-06-29");
-  assert.equal(ended.daysLeft, "Ended 30 Sep");
+  assert.equal(ended.daysLeft, "Ended Sep 30");
   assert.equal(ended.elapsed, 100);
   assert.equal(ended.useTone, "ended");
   assert.equal(ended.use, "18 of 20 used");
-  assert.equal(discountLead({ ...base, status: "ended", startsOn: "2026-07-01", endsOn: "2026-12-31", endedAt: "2026-09-30T12:00:00", uses: 18, useLimit: 20 }, ended, TODAY, "x"), "It ended on 30 Sep. Duplicate it to run it again.");
+  assert.equal(discountLead({ ...base, status: "ended", startsOn: "2026-07-01", endsOn: "2026-12-31", endedAt: "2026-09-30T12:00:00", uses: 18, useLimit: 20 }, ended, TODAY, "x"), "It ended on Sep 30. Duplicate it to run it again.");
   assert.equal(discountLead({ ...base, status: "live", startsOn: "2026-09-16", endsOn: "2026-10-21", uses: 20 }, soon, TODAY, "x"), "It ends in 7 days and is used about 5 times a week.");
   const order = sortDiscounts([
     { id: "e", f: { status: "ended" as const, startsOn: "2026-07-01", endsOn: "2026-09-30", endedAt: null } },

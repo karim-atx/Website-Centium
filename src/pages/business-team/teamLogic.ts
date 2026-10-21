@@ -296,16 +296,16 @@ export function teamBoxes(
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** "Mon 5 Oct" for a yyyy-mm-dd date. */
+/** "Mon, Oct 5" for a yyyy-mm-dd date. */
 export function dayDate(d: string): string {
   const dt = new Date(`${d}T00:00:00`);
-  return `${DAY_SHORT[weekdayColumn(dt)]} ${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
+  return `${DAY_SHORT[weekdayColumn(dt)]}, ${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
 }
 
-/** "12 Mar 2026" for an instant. */
+/** "Mar 12, 2026" for an instant. */
 export function longDate(iso: string): string {
   const dt = new Date(iso);
-  return `${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`;
+  return `${MONTHS[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
 }
 
 /** "Today" / "Tue 6 Oct". */

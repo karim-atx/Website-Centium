@@ -347,5 +347,5 @@ const upperFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
-  return `${d.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`;
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()}`;
 }

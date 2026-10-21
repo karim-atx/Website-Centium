@@ -150,10 +150,10 @@ export const addDays = (iso: string, n: number): string => {
   d.setDate(d.getDate() + n);
   return isoOf(d);
 };
-/** "6 Oct" */
+/** "Oct 6" */
 export const dayMonth = (iso: string): string => {
   const d = dateOf(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 };
 /** Inclusive day count from a to b. */
 export const daysBetween = (a: string, b: string): number => Math.round((dateOf(b).getTime() - dateOf(a).getTime()) / 86_400_000) + 1;

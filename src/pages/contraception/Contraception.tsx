@@ -53,15 +53,15 @@ const PILL_CHOICES: readonly EventKind[] = ["pill_taken", "pill_late", "pill_mis
 const METHOD_ICON = (m: Method): LucideIcon =>
   isPill(m) ? Pill : m === "ring" ? CircleDot : m === "patch" ? Square : m === "injection" ? Syringe : isDevice(m) ? Shield : Pill;
 
-/** "25 Sep 2026". */
+/** "Sep 25, 2026". */
 const shortDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })} ${d.getFullYear()}`;
+  return `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 };
-/** "Mon 5 Oct". */
+/** "Mon, Oct 5". */
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 };
 
 export default function Contraception() {

@@ -166,7 +166,7 @@ test("reputation: weeks start on Monday, the chart is 12 weeks, 3 replies in a w
     TODAY,
   );
   assert.equal(ws.labels.length, 12);
-  assert.equal(ws.labels[11], "Week of 12 Oct");
+  assert.equal(ws.labels[11], "Week of Oct 12");
   assert.equal(ws.count[11], 3);
   assert.equal(ws.early, true);
   assert.deepEqual(ws.markers, [{ i: 11, t: "Replied to 3", kind: "reply" }]);
@@ -195,7 +195,7 @@ test("reputation: filters, lines, flag line and reply-time tone", () => {
   );
   assert.equal(
     flagLine("2026-10-08T09:00:00Z"),
-    "You reported this to Centium on 8 Oct. We're reviewing it.",
+    "You reported this to Centium on Oct 8. We're reviewing it.",
   );
   assert.equal(
     flagLine(null),

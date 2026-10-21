@@ -96,7 +96,7 @@ export function RangeCalendar({
               type="button"
               aria-disabled={past}
               aria-pressed={edge || inR}
-              aria-label={`${i + 1} ${MONTHS[month.m]}`}
+              aria-label={`${MONTHS[month.m]} ${i + 1}`}
               onClick={() => !past && pick(iso)}
               style={{
                 aspectRatio: "1",

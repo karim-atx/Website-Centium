@@ -20,10 +20,10 @@ import {
 test("weekdays are ISO (Monday 1, Sunday 7) and labels are Monday-first copy", () => {
   assert.equal(isoWeekday("2026-10-12"), 1);
   assert.equal(isoWeekday("2026-10-18"), 7);
-  assert.equal(dayDate("2026-10-08"), "Thu 8 Oct");
-  assert.equal(fieldDate("2026-10-08"), "Thu 8 Oct 2026");
-  assert.equal(dateRange("2026-10-05", "2026-10-11"), "5 Oct to 11 Oct, 2026");
-  assert.equal(dateRange("2026-12-28", "2027-01-03"), "28 Dec, 2026 to 3 Jan, 2027");
+  assert.equal(dayDate("2026-10-08"), "Thu, Oct 8");
+  assert.equal(fieldDate("2026-10-08"), "Thu, Oct 8, 2026");
+  assert.equal(dateRange("2026-10-05", "2026-10-11"), "Oct 5 to Oct 11, 2026");
+  assert.equal(dateRange("2026-12-28", "2027-01-03"), "Dec 28, 2026 to Jan 3, 2027");
 });
 
 test("working windows read only pro-wide rows; off bands fill the rest of the timeline", () => {

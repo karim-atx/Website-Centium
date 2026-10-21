@@ -123,12 +123,12 @@ const todayIso = () => {
 /** "Thu, Oct 1, 2026" (MO1.4.2.2.1 Start date). */
 const longDate = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
-/** "Mon 12 Oct" (OURS-gym-classes-tab #2), "Today", "Tomorrow". */
+/** "Mon, Oct 12" (OURS-gym-classes-tab #2), "Today", "Tomorrow". */
 const dayLabel = (iso: string, today: string) => {
   if (iso === today) return "Today";
   if (iso === addDaysIso(today, 1)) return "Tomorrow";
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${formatShortDate(d, { month: "short" })}`;
+  return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
 };
 
 /** "HH:MM" now, for dropping a class that has already started today (book_class() refuses it, ATX86). */

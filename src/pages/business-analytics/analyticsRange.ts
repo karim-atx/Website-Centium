@@ -70,11 +70,11 @@ export function businessRange(r: AnalyticsRange, timeZone: string | null, now: D
   return { ...presetRange(r.key, todayIn(timeZone, now)), compare: r.compare };
 }
 
-/** "8 Sep", or "8 Sep 2025" when the year differs from `today`'s. */
+/** "Sep 8", or "Sep 8, 2025" when the year differs from `today`'s. */
 export function dayMonth(iso: string, today: string = isoOf(new Date())): string {
   const d = dateOf(iso);
   const mon = MON[d.getMonth()];
-  return d.getFullYear() === dateOf(today).getFullYear() ? `${d.getDate()} ${mon}` : `${d.getDate()} ${mon} ${d.getFullYear()}`;
+  return d.getFullYear() === dateOf(today).getFullYear() ? `${mon} ${d.getDate()}` : `${mon} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
 /** The previous period: the same number of days immediately before. */

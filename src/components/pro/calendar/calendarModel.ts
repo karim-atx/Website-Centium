@@ -21,15 +21,15 @@ export function isoWeekday(iso: string): number {
   return js === 0 ? 7 : js;
 }
 
-/** "Thu 8 Oct" (COPY {day_date}: weekday and date from one value). */
+/** "Thu, Oct 8" (COPY {day_date}: weekday and date from one value). */
 export function dayDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-/** "Thu 8 Oct 2026" (CA5 / CA14 Date field). */
+/** "Thu, Oct 8, 2026" (CA5 / CA14 Date field). */
 export function fieldDate(iso: string): string {
-  return `${dayDate(iso)} ${iso.slice(0, 4)}`;
+  return `${dayDate(iso)}, ${iso.slice(0, 4)}`;
 }
 
 /** "Thursday, October 8" (S011, the Day navigator and the Month eyebrow). */
@@ -37,11 +37,11 @@ export function longDay(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-/** "5 Oct to 11 Oct, 2026" (COPY {date_range}, FINAL_PLAN section 3 item 5). */
+/** "Oct 5 to Oct 11, 2026" (COPY {date_range}, FINAL_PLAN section 3 item 5). */
 export function dateRange(fromIso: string, toIso: string): string {
   const f = new Date(`${fromIso}T00:00:00`);
   const t = new Date(`${toIso}T00:00:00`);
-  const dm = (d: Date) => `${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
+  const dm = (d: Date) => `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
   const fromPart = f.getFullYear() === t.getFullYear() ? dm(f) : `${dm(f)}, ${f.getFullYear()}`;
   return `${fromPart} to ${dm(t)}, ${t.getFullYear()}`;
 }

@@ -70,19 +70,19 @@ export function daysOf(p: Period): string[] {
   return out;
 }
 
-/** "Mon 5 Oct". */
+/** "Mon, Oct 5". */
 export function dayLabel(day: string): string {
   const { y, m, d } = parts(day);
-  return `${DOW_SHORT[new Date(y, m - 1, d).getDay()]} ${d} ${MONTH_SHORT[m - 1]}`;
+  return `${DOW_SHORT[new Date(y, m - 1, d).getDay()]}, ${MONTH_SHORT[m - 1]} ${d}`;
 }
 
-/** "5 Oct". */
+/** "Oct 5". */
 export const shortDate = (day: string) => {
   const { m, d } = parts(day);
-  return `${d} ${MONTH_SHORT[m - 1]}`;
+  return `${MONTH_SHORT[m - 1]} ${d}`;
 };
 
-/** "Today", "Yesterday", or "Sun 4 Oct". */
+/** "Today", "Yesterday", or "Sun, Oct 4". */
 export function relativeDayTitle(day: string, today: string): string {
   if (day === today) return "Today";
   if (day === shiftDate(today, -1)) return "Yesterday";
@@ -90,15 +90,15 @@ export function relativeDayTitle(day: string, today: string): string {
 }
 
 /**
- * The chart card's period label: Day "Mon 5 Oct", Week "5 to 11 Oct" (or
- * "28 Sep to 4 Oct" across a month), Month "October 2026", Year "2026".
+ * The chart card's period label: Day "Mon, Oct 5", Week "Oct 5 to 11" (or
+ * "Sep 28 to Oct 4" across a month), Month "October 2026", Year "2026".
  */
 export function periodLabel(p: Period): string {
   const s = parts(p.start);
   const e = parts(p.end);
   if (p.range === "day") return dayLabel(p.start);
   if (p.range === "week")
-    return s.m === e.m ? `${s.d} to ${e.d} ${MONTH_SHORT[e.m - 1]}` : `${s.d} ${MONTH_SHORT[s.m - 1]} to ${e.d} ${MONTH_SHORT[e.m - 1]}`;
+    return s.m === e.m ? `${MONTH_SHORT[s.m - 1]} ${s.d} to ${e.d}` : `${MONTH_SHORT[s.m - 1]} ${s.d} to ${MONTH_SHORT[e.m - 1]} ${e.d}`;
   if (p.range === "month") return `${MONTH_LONG[s.m - 1]} ${s.y}`;
   return String(s.y);
 }

@@ -5,8 +5,8 @@ const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** "Sat" */
 export const weekday = (iso: string): string => SHORT[new Date(`${iso}T00:00:00`).getDay()];
 
-/** "Sat 17 Oct" */
-export const dayDate = (iso: string): string => `${weekday(iso)} ${dayMonth(iso)}`;
+/** "Sat, Oct 17" */
+export const dayDate = (iso: string): string => `${weekday(iso)}, ${dayMonth(iso)}`;
 
 /** "$3,470" / "$60" (no cents when whole). */
 export const money = (n: number): string =>

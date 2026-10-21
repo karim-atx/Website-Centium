@@ -38,7 +38,7 @@ describe("business dashboard model", () => {
 
   it("writes the header in the drawn formats", () => {
     const d = new Date(2026, 9, 5, 18, 30);
-    assert.equal(dateKicker(d), "Monday, 5 October");
+    assert.equal(dateKicker(d), "Monday, October 5");
     assert.equal(greeting(d), "Good evening");
     assert.equal(greeting(new Date(2026, 9, 5, 9)), "Good morning");
     assert.equal(shortHour("18:00"), "6p");

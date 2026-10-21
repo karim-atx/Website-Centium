@@ -13,7 +13,7 @@ import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, textPx
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const shortDate = (iso: string) => {
   const [, m, d] = iso.split("-").map(Number);
-  return `${d} ${MONTHS[m - 1]}`;
+  return `${MONTHS[m - 1]} ${d}`;
 };
 const kg = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 

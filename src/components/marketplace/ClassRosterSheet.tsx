@@ -46,19 +46,19 @@ export interface RosterSession {
   maxCapacity?: number | null;
 }
 
-/** "Mon 12 Oct" from an ISO date (no time zone shift). */
+/** "Mon, Oct 12" from an ISO date (no time zone shift). */
 export function weekdayDayMonth(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   const wd = WD[dt.getUTCDay()];
   const mon = MON[dt.getUTCMonth()];
-  return `${wd} ${d} ${mon}`;
+  return `${wd}, ${mon} ${d}`;
 }
 
-/** "2 Oct" from a timestamp, on this device's calendar. */
+/** "Oct 2" from a timestamp, on this device's calendar. */
 const dayMonth = (ts: string) => {
   const dt = new Date(ts);
-  return `${dt.getDate()} ${MON[dt.getMonth()]}`;
+  return `${MON[dt.getMonth()]} ${dt.getDate()}`;
 };
 
 export function ClassRosterSheet({

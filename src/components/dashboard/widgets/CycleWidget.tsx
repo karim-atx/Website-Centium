@@ -41,14 +41,14 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 const DAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-/** "Wed 21 Oct" (Monday-first weekday table, no comma). */
+/** "Wed, Oct 21" (Monday-first weekday table). */
 const shortDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[weekdayColumn(d)]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${DAY_SHORT[weekdayColumn(d)]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 };
 const longDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAYS_LONG[weekdayColumn(d)]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
+  return `${DAYS_LONG[weekdayColumn(d)]}, ${MONTHS_LONG[d.getMonth()]} ${d.getDate()}`;
 };
 
 // The header glyph: the calendar-flower icon at the table's own size (12 on

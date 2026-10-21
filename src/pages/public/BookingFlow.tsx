@@ -190,7 +190,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
     </div>
   );
 
-  const weekTitle = `${days[0].getDate()} ${days[0].toLocaleDateString("en-GB", { month: "short" })} to ${days[6].getDate()} ${days[6].toLocaleDateString("en-GB", { month: "short" })}`;
+  const weekTitle = `${days[0].toLocaleDateString("en-US", { month: "short" })} ${days[0].getDate()} to ${days[6].toLocaleDateString("en-US", { month: "short" })} ${days[6].getDate()}`;
 
   return (
     <div className="flex flex-col">

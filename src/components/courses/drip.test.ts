@@ -23,21 +23,21 @@ test("the next week to open is the lowest locked position", () => {
 });
 
 test("the opening day keeps its UTC date", () => {
-  assert.deepEqual(openingDay("2026-10-15T00:00:00+00:00"), { weekday: "Thursday", date: "15 Oct" });
+  assert.deepEqual(openingDay("2026-10-15T00:00:00+00:00"), { weekday: "Thursday", date: "Oct 15" });
 });
 
 test("CU25 course page line: the weekday within a week, the date further out", () => {
   const now = new Date("2026-10-12T09:00:00Z");
   assert.equal(courseDripLine("Alex", 2, "2026-10-15T00:00:00+00:00", now), "Alex opens a week at a time. Week 2 opens Thursday.");
-  assert.equal(courseDripLine("Alex", 3, "2026-10-22T00:00:00+00:00", now), "Alex opens a week at a time. Week 3 opens Thursday 22 Oct.");
+  assert.equal(courseDripLine("Alex", 3, "2026-10-22T00:00:00+00:00", now), "Alex opens a week at a time. Week 3 opens Thursday, Oct 22.");
 });
 
 test("CU25 lesson line", () => {
-  assert.equal(lessonDripLine("Alex", 2, "2026-10-15T00:00:00+00:00"), "Week 2 opens Thursday 15 Oct. Alex opens a week at a time.");
+  assert.equal(lessonDripLine("Alex", 2, "2026-10-15T00:00:00+00:00"), "Week 2 opens Thursday, Oct 15. Alex opens a week at a time.");
 });
 
 test("a fallback author name starts the sentence capitalised", () => {
-  assert.equal(lessonDripLine("the professional", 2, "2026-10-15T00:00:00+00:00"), "Week 2 opens Thursday 15 Oct. The professional opens a week at a time.");
+  assert.equal(lessonDripLine("the professional", 2, "2026-10-15T00:00:00+00:00"), "Week 2 opens Thursday, Oct 15. The professional opens a week at a time.");
 });
 
 test("CU25 total: the schedule's lesson_count over every module, locked weeks included", () => {

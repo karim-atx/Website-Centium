@@ -319,12 +319,12 @@ export function previewLines(x: PreviewInput): [string, string] {
   return [`${x.price} ${choicePhrase(x.period)}${limit}`, extra.join(" · ")];
 }
 
-/** "2 Sep" from an ISO date (the plan page's member rows). */
+/** "Sep 2" from an ISO date (the plan page's member rows). */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(d.getTime())) return "";
-  return `${d.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`;
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()}`;
 }
 
 /** Two-letter initials from a first name ("Taylor" → "T"; "Mary Ann" → "MA"). */

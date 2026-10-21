@@ -46,7 +46,7 @@ test("bookingWindowLine names the day before the window opens, the rule after", 
   const now = new Date("2026-10-15T09:00:00Z");
   assert.equal(bookingWindowLine({ bookingWindowDays: 14 }, "2026-10-20T09:00:00Z", now), "Bookings open 14 days ahead.");
   const far = bookingWindowLine({ bookingWindowDays: 14 }, "2026-11-12T12:00:00Z", now);
-  assert.match(far, /^Bookings open \w{3} 29 Oct\.$/);
+  assert.match(far, /^Bookings open \w{3}, Oct 29\.$/);
   assert.equal(bookingWindowLine({ bookingWindowDays: 1 }, null, now), "Bookings open 1 day ahead.");
 });
 

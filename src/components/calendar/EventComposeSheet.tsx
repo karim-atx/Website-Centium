@@ -58,8 +58,9 @@ const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 const FIELD = "w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
 const LABEL = "text-xs font-semibold text-charcoal-soft mb-1.5 block";
 
-/** The DD/MM/YYYY MO1.6.4 draws ("01/10/2026"). */
-const dateLabel = (isoDate: string) => new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-GB");
+/** MO1.6.4's date. The frame drew it numeric (DD/MM/YYYY); dates read "Oct 1, 2026" everywhere (Karim, 21 Oct). */
+const dateLabel = (isoDate: string) =>
+  new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).replace(/Sept/g, "Sep");
 
 /**
  * A Starts / Ends field with its wheel opening under it. Exported for the

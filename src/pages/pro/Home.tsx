@@ -632,7 +632,7 @@ export default function Home() {
 
 function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
 }
 
 function initialsOfName(name: string): string {

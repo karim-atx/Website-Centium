@@ -45,12 +45,12 @@ export function nextLocked(rows: DripRow[]): DripRow | null {
   return [...rows].sort((a, b) => a.position - b.position).find((r) => !r.isOpen && r.opensAt) ?? null;
 }
 
-/** "Thursday" and "15 Oct" for an opening day, in UTC (see above). */
+/** "Thursday" and "Oct 15" for an opening day, in UTC (see above). */
 export function openingDay(opensAt: string): { weekday: string; date: string } {
   const d = new Date(opensAt);
   return {
-    weekday: d.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" }),
-    date: d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+    weekday: d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }),
+    date: d.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" }),
   };
 }
 
@@ -67,16 +67,16 @@ function daysUntil(opensAt: string, now: Date): number {
 /**
  * Course page (CU25 "enrolled, progress and drip"):
  * "Alex opens a week at a time. Week 2 opens Thursday." Within the coming
- * week the weekday alone; further out, the date too ("Thursday 22 Oct").
+ * week the weekday alone; further out, the date too ("Thursday, Oct 22").
  */
 export function courseDripLine(author: string, week: number, opensAt: string, now = new Date()): string {
   const { weekday, date } = openingDay(opensAt);
-  const when = daysUntil(opensAt, now) <= 6 ? weekday : `${weekday} ${date}`;
+  const when = daysUntil(opensAt, now) <= 6 ? weekday : `${weekday}, ${date}`;
   return `${lead(author)} opens a week at a time. Week ${week} opens ${when}.`;
 }
 
-/** Lesson (CU25 "next week opens Thursday"): "Week 2 opens Thursday 15 Oct. Alex opens a week at a time." */
+/** Lesson (CU25 "next week opens Thursday"): "Week 2 opens Thursday, Oct 15. Alex opens a week at a time." */
 export function lessonDripLine(author: string, week: number, opensAt: string): string {
   const { weekday, date } = openingDay(opensAt);
-  return `Week ${week} opens ${weekday} ${date}. ${lead(author)} opens a week at a time.`;
+  return `Week ${week} opens ${weekday}, ${date}. ${lead(author)} opens a week at a time.`;
 }
