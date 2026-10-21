@@ -198,14 +198,20 @@ export function PersonPage({ data }: { data: TeamData }) {
 
   const doReinvite = async () => {
     if (!businessId || reinviting) return;
-    // A revived invite holds a seat again, and accepting checks for a free
-    // one; offer more seats first, as inviting someone new does.
+    // A revived invite holds a seat again. The function checks for a free
+    // one (ATXC0, 251ab70); this first check offers more seats without the
+    // round trip, as inviting someone new does.
     if (personUsesSeat(person) && seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity).free <= 0) return setFull(true);
     setReinviting(true);
     // No new note: the server keeps the one they were first sent.
     const r = await reinviteTeamMember(businessId, id, null);
     setReinviting(false);
     if (!r.ok) {
+      // The server found no free seat (the counts moved): the same Seats full sheet.
+      if (r.noSeats) {
+        data.reload();
+        return setFull(true);
+      }
       showToast(r.message, true);
       if (r.refresh) data.reload();
       return;

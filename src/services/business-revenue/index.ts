@@ -115,7 +115,8 @@ export interface RevenueData {
 // a sale). The record carries `granted`, and the model leaves it out of every
 // money figure (dated / undatedPaid / transactions / recurringMonthly), never
 // marks it paid-undated, and keeps it in activeMembers() (a grant is still a
-// member) and in renewals(), where the screens label it: renewing one charges
+// member) and in renewals(), where the screens label it and count it at
+// venue_renewals_due.renewal_price (251ab70): renewing one charges
 // the plan price. The recorded figures come from business_payments, which
 // skips grants too.
 async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {

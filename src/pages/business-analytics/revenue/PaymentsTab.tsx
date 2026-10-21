@@ -6,6 +6,7 @@ import {
   dddDMon,
   money,
   paidCount,
+  renewalAmountText,
   renewals as renewalsOf,
   renewalWeeks,
   spanLabel,
@@ -27,7 +28,7 @@ import {
 } from "./kit";
 import { useRevenue } from "./revenueContext";
 import { owedChip, owedSub, REVENUE_BASE, WHISH_LIVE } from "./payModel";
-import { GRANTED_RENEWAL } from "../../../services/front-desk/frontDeskLogic";
+import { grantedRenewal } from "../../../services/front-desk/frontDeskLogic";
 import { FailedHalf } from "./FailedPages";
 import { useMoneyOwed } from "./useMoneyOwed";
 import { useCanRemind, useSendReminder } from "./OwedPages";
@@ -85,7 +86,7 @@ export const PaymentsTab: React.FC = () => {
   const wkMax = Math.max(1, ...weeks.map((w) => w.total));
   const sel = week !== null ? weeks[week] : null;
   const renN = ren.length;
-  const renT = sum(ren.map((r) => r.rec.amount ?? 0));
+  const renT = sum(ren.map((r) => r.amount ?? 0));
   const thisWeek = weeks[0];
   const openOwed = (o: OwedItem) =>
     navigate(`${REVENUE_BASE}/payments/owed/${encodeURIComponent(o.key)}`);
@@ -473,14 +474,14 @@ export const PaymentsTab: React.FC = () => {
                         style={{ color: v("faint") }}
                       >
                         {r.rec.item} · {dddDMon(r.on)}
-                        {r.rec.granted ? ` · ${GRANTED_RENEWAL}` : ""}
+                        {r.rec.granted ? ` · ${grantedRenewal(r.amount, money)}` : ""}
                       </span>
                     </span>
                     <span
                       className="text-[12.5px] font-extrabold rv-num"
                       style={{ color: v("ink") }}
                     >
-                      {r.rec.granted ? "Plan price" : money(r.rec.amount ?? 0)}
+                      {renewalAmountText(r)}
                     </span>
                   </div>
                 ))}

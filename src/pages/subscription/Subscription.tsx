@@ -4,7 +4,7 @@ import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { useBillingPeriod, usePeriodPrices } from "../../hooks/useCentiumBilling";
-import { NOT_AVAILABLE, noPriceText, periodPriceText, periodSuffix, renewalAfterSwitch, renewalDayText, switchConfirm, switchedText } from "../../services/centium-billing/period";
+import { missingPriceText, NOT_AVAILABLE, noPriceText, periodPriceText, periodSaving, periodSuffix, renewalAfterSwitch, renewalDayText, switchConfirm, switchedText } from "../../services/centium-billing/period";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import {
@@ -216,13 +216,14 @@ function BusinessSubscription() {
   // business without a plan it stays the comparison it was.
   //
   // EVERY PRICE IS subscription_price_for. NULL reads "Not available" and that
-  // period can't be chosen. No saving, no "months free", no monthly x 12: the
-  // Base tier's yearly price is undecided, so nothing here compares the two.
+  // period can't be chosen. The saving badge and the per-month restatement
+  // (b93cb12: Base 29.00 a month or 289.99 a year) are computed from those
+  // same two answers, and only when both exist and yearly is cheaper.
   const own = useBillingPeriod(authUserId ?? null, true);
   const ownSub = own.sub;
   const list = usePeriodPrices([base?.rowId, seat?.rowId]);
-  // Monthly while the Base tier's yearly price is undecided (lead, Batch 2).
-  const [viewPeriod, setViewPeriod] = useState<BillingPeriod>("monthly");
+  // Yearly first, as the other plan screens, now that the price is settled.
+  const [viewPeriod, setViewPeriod] = useState<BillingPeriod>("yearly");
   const [ask, setAsk] = useState<{ to: BillingPeriod; price: number; at: Date } | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: "done" | "error"; text: string } | null>(null);
@@ -230,6 +231,12 @@ function BusinessSubscription() {
   const chooses = !!ownSub && !!own.prices;
   const period: BillingPeriod = ownSub ? ownSub.period : viewPeriod;
   const priceOf = (rowId: string | undefined, p: BillingPeriod): number | null | undefined => (rowId ? list.prices?.get(rowId)?.[p] : undefined);
+  const pricesOf = (rowId: string | undefined) => (rowId ? (list.prices?.get(rowId) ?? null) : null);
+  // The toggle's badge: the owner's own saving (plan and blocks held), else the
+  // best among the rows shown. None when either period has no price.
+  const bestSaving = chooses
+    ? (periodSaving(own.prices)?.percent ?? null)
+    : bestSavingAmong([base, seat].map((t) => pricesOf(t?.rowId)).filter((p) => p !== null).map((p) => ({ monthlyPrice: p.monthly ?? 0, yearlyPrice: p.yearly })));
   const rowPrice = (rowId: string | undefined): string | undefined => {
     const v = priceOf(rowId, period);
     if (v === undefined) return undefined;
@@ -306,7 +313,7 @@ function BusinessSubscription() {
               <p className="text-[11px] text-primary-dark/70 mt-1">
                 {[
                   `Billed ${ownSub.period}`,
-                  ownTotal === null ? "price not available" : `${formatPrice(ownTotal)}${periodSuffix(ownSub.period)} in total`,
+                  ownTotal === null ? missingPriceText(ownSub.period) : `${formatPrice(ownTotal)}${periodSuffix(ownSub.period)} in total`,
                   ownSub.renewsAt ? `renews ${renewalDayText(ownSub.renewsAt)}` : null,
                 ]
                   .filter(Boolean)
@@ -324,6 +331,7 @@ function BusinessSubscription() {
         period={period}
         onChange={pick}
         label={chooses ? "How you're billed" : undefined}
+        bestSaving={bestSaving}
         notes={
           chooses && ownSub && own.prices
             ? { monthly: periodPriceText(own.prices.monthly, "monthly", formatPrice), yearly: periodPriceText(own.prices.yearly, "yearly", formatPrice) }
@@ -361,7 +369,7 @@ function BusinessSubscription() {
             isCurrent={plan?.active === true}
             detail="The business account itself"
             priceText={rowPrice(base.rowId)}
-            compare={false}
+            periodPrices={pricesOf(base.rowId)}
           />
         )}
         {seat && (
@@ -371,7 +379,7 @@ function BusinessSubscription() {
             isCurrent={false}
             detail={`${perBlock} professional${perBlock === 1 ? "" : "s"} per block`}
             priceText={rowPrice(seat.rowId)}
-            compare={false}
+            periodPrices={pricesOf(seat.rowId)}
           />
         )}
       </div>

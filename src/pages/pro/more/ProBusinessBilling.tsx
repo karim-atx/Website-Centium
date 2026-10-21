@@ -4,10 +4,13 @@ import { useApp } from "../../../context/AppContext";
 import { useBillingPeriod } from "../../../hooks/useCentiumBilling";
 import { useSubscriptionTiers } from "../../../hooks/useSubscriptionTiers";
 import {
+  missingPriceText,
   noPriceText,
   periodName,
   periodOptions,
   periodPriceText,
+  periodSaving,
+  perMonthText,
   perPeriod,
   renewalAfterSwitch,
   renewalDayText,
@@ -15,7 +18,7 @@ import {
   switchedText,
   type SubscriptionPeriod,
 } from "../../../services/centium-billing/period";
-import { formatPrice } from "../../../services/subscription-tiers/pricing";
+import { formatPrice, savingLabel } from "../../../services/subscription-tiers/pricing";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton } from "../../../components/pro/states";
@@ -34,8 +37,9 @@ import { textPx } from "../../../theme/textSize";
 // its holder has; a professional on a professional plan, or seated on
 // someone else's business, sees nothing. Every price is subscription_price_for
 // with the seat blocks held; NULL reads "Not available" and can't be chosen;
-// nothing compares the two periods; the same confirm comes first, and
-// nothing is charged.
+// the yearly option names its saving and restates its price a month only when
+// both periods are priced and yearly is cheaper (periodSaving, b93cb12); the
+// same confirm comes first, and nothing is charged.
 
 export function ProBusinessBilling() {
   const { authUserId } = useApp();
@@ -63,6 +67,9 @@ export function ProBusinessBilling() {
   const prices = own.prices;
   const total = prices ? prices[sub.period] : undefined;
   const options = prices ? periodOptions(sub.period, prices) : [];
+  // What yearly saves on the plan and blocks held (b93cb12); null unless both
+  // periods are priced and yearly is cheaper.
+  const saving = periodSaving(prices);
   const blocks = sub.seatBlocks;
   const confirm = ask ? switchConfirm({ to: ask.to, price: ask.price, seatBlocks: blocks, renewal: ask.at, money: formatPrice }) : null;
 
@@ -85,7 +92,7 @@ export function ProBusinessBilling() {
         {[
           blocks > 0 ? `${planName} + ${blocks} seat block${blocks === 1 ? "" : "s"}` : planName,
           `Billed ${sub.period}`,
-          total === undefined ? null : total === null ? "price not available" : `${formatPrice(total)} ${perPeriod(sub.period)} in total`,
+          total === undefined ? null : total === null ? missingPriceText(sub.period) : `${formatPrice(total)} ${perPeriod(sub.period)} in total`,
           sub.renewsAt ? `renews ${renewalDayText(sub.renewsAt)}` : null,
         ]
           .filter(Boolean)
@@ -126,9 +133,20 @@ export function ProBusinessBilling() {
                 color: INK.ch,
               }}
             >
-              <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{periodName(o.period)}</span>
-              <span style={{ fontSize: textPx(12), fontWeight: 700, color: o.price === null ? INK.chF : INK.chS, textAlign: "right" }}>
-                {periodPriceText(o.price, o.period, formatPrice)}
+              <span className="flex items-center flex-wrap" style={{ gap: 6 }}>
+                <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{periodName(o.period)}</span>
+                {o.period === "yearly" && saving && (
+                  // The tier cards' own saving badge (ProSubscription TierCard).
+                  <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 9999, padding: "2px 7px", background: INK.goodBg, color: INK.good }}>
+                    {savingLabel(saving)}
+                  </span>
+                )}
+              </span>
+              <span className="flex flex-col items-end" style={{ textAlign: "right" }}>
+                <span style={{ fontSize: textPx(12), fontWeight: 700, color: o.price === null ? INK.chF : INK.chS }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
+                {o.period === "yearly" && o.price !== null && saving && (
+                  <span style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF }}>{perMonthText(o.price, formatPrice)}</span>
+                )}
               </span>
             </button>
           ))}

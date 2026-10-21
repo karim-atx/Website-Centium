@@ -16,6 +16,8 @@ export interface InviteRefusal {
   message: string;
   /** The row changed under us (gone, accepted, withdrawn): read the team again. */
   refresh: boolean;
+  /** No free seat (ATXC0): the screen offers more seats. */
+  noSeats?: boolean;
 }
 
 const text = (e: PgError) => `${e?.message ?? ""}`.toLowerCase();
@@ -63,10 +65,18 @@ export function revokeRefusal(e: PgError): InviteRefusal {
   return { message: "Couldn't withdraw the invite. Try again.", refresh: false };
 }
 
-/** reinvite_revoked_team_member refusals (a still-live invite is not one: it answers its window). */
+/**
+ * reinvite_revoked_team_member refusals (a still-live invite is not one: it
+ * answers its window). Since 251ab70 it checks seats as invite_employee does:
+ * a seat-using role in a full business raises 23514 with "ATXC0: no free
+ * seats (N of M used) ...". The screen checks first; this is the server's
+ * word when the counts moved in between.
+ */
 export function reinviteRefusal(e: PgError): InviteRefusal {
   const c = common(e, "Couldn't invite them again. Check your connection and try again.");
   if (c) return c;
+  if (text(e).includes("atxc0") || e?.code === "ATXC0" || e?.code === "23514")
+    return { message: "All seats are in use. Add a seat block or free a seat, then invite them again.", refresh: true, noSeats: true };
   if (e?.code === "ATX02") return { message: `You've sent a lot of invites in the last hour. ${retryIn(e)}`, refresh: false };
   if (e?.code === "ATXA3") {
     const t = text(e);

@@ -51,6 +51,12 @@ test("invite again: every refusal reinvite_revoked_team_member raises has its ow
   assert.deepEqual(reinviteRefusal({ code: "ATXA3", message: "that person already works here" }), { message: "They already accepted, so they're on your team now.", refresh: true });
   assert.equal(reinviteRefusal({ code: "ATXAB", message: "This business is closed and is not taking new activity." }).message, "Your business is closed, so its invites can't be changed.");
   assert.deepEqual(reinviteRefusal({ code: "XX000", message: "boom" }), { message: "Couldn't invite them again. Try again.", refresh: false });
+  // 251ab70: the seat check, as raised (23514, "ATXC0: ..." in the message).
+  assert.deepEqual(reinviteRefusal({ code: "23514", message: "ATXC0: no free seats (5 of 5 used) -- buy a seat block or remove somebody first" }), {
+    message: "All seats are in use. Add a seat block or free a seat, then invite them again.",
+    refresh: true,
+    noSeats: true,
+  });
 });
 
 test("accept: ATXA3's three meanings are worded apart, nothing else is claimed", () => {
@@ -85,6 +91,7 @@ test("no copy carries an em dash, curly quotes or the server's double hyphen", (
     revokeRefusal({ code: "ATXAB" }),
     reinviteRefusal({ code: "ATXA3", message: "no previous invitation for that person -- invite them instead" }),
     reinviteRefusal({ code: "ATX02" }),
+    reinviteRefusal({ code: "23514", message: "ATXC0: no free seats (5 of 5 used) -- buy a seat block or remove somebody first" }),
   ].map((r) => r.message);
   for (const m of all) assert.ok(!/—|--|‘|’/.test(m), m);
 });

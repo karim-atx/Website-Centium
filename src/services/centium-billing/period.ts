@@ -1,6 +1,7 @@
 // Batch 2 · CS: a business chooses monthly or yearly (Database 20261204000000,
-// HANDOVER_API "Yearly or monthly for a business"). Pure shapes and wording,
-// no runtime imports (the node test project reads this file).
+// HANDOVER_API "Yearly or monthly for a business"). Pure shapes and wording;
+// the only import is the pure pricing arithmetic (the node test project reads
+// this file).
 //
 //   subscription_states.billing_period          'monthly' | 'yearly', default monthly
 //   subscription_price_for(tier, period, blocks) numeric, NULL when the tier has
@@ -10,12 +11,15 @@
 //                                                42501 / ATXAD
 //
 // NULL IS "NOT AVAILABLE", NEVER FREE. A period without a price is not offered.
-// NOTHING HERE COMPARES THE TWO PERIODS: the business Base tier's yearly price
-// is undecided, so no saving, no "months free", no monthly x 12. Each period
-// shows exactly what subscription_price_for returns.
+// THE SAVING (Database b93cb12: Base is 29.00 a month or 289.99 a year, a seat
+// block 59.99 or 599.99) is computed from the two prices subscription_price_for
+// returns, by the same rule as every other plan (yearlySaving: rounded down,
+// none unless yearly is actually cheaper). NULL on either side is no saving.
 //
 // NO MONEY MOVES THROUGH CENTIUM. Switching records the choice; it charges
 // nothing.
+
+import { monthlyEquivalent, yearlySaving, type YearlySaving } from "../subscription-tiers/pricing";
 
 export type SubscriptionPeriod = "monthly" | "yearly";
 
@@ -41,10 +45,32 @@ export const periodSuffix = (p: SubscriptionPeriod): string => (p === "monthly" 
 
 export const NOT_AVAILABLE = "Not available";
 
+/**
+ * "Yearly price: Not available", where a sentence would otherwise carry the
+ * price (business_plan_summary's plan_price or seat_block_price is NULL, or
+ * subscription_price_for is). Never "$0", never another period's figure.
+ */
+export const missingPriceText = (p: SubscriptionPeriod): string => `${periodName(p)} price: ${NOT_AVAILABLE}`;
+
 /** "$29.00 a month", or "Not available" for a NULL price. Never "$0". */
 export function periodPriceText(amount: number | null, period: SubscriptionPeriod, money: (n: number) => string): string {
   return amount === null ? NOT_AVAILABLE : `${money(amount)} ${perPeriod(period)}`;
 }
+
+/**
+ * What paying yearly saves against twelve monthlies, from the two prices
+ * subscription_price_for (or business_plan_summary) gave. Null unless both
+ * exist and yearly is actually cheaper: a NULL on either side is no saving.
+ */
+export function periodSaving(prices: Partial<Record<SubscriptionPeriod, number | null>> | null | undefined): YearlySaving | null {
+  const monthly = prices?.monthly;
+  const yearly = prices?.yearly;
+  if (monthly == null || yearly == null) return null;
+  return yearlySaving(monthly, yearly);
+}
+
+/** "$24.17 a month, billed yearly": a yearly price restated, so the two compare. */
+export const perMonthText = (yearly: number, money: (n: number) => string): string => `${money(monthlyEquivalent(yearly))} a month, billed yearly`;
 
 /**
  * One period as a choice: offered only with a price. The current period is

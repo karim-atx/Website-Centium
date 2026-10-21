@@ -11,13 +11,15 @@ import {
   longDay,
   money,
   monthYear,
+  renewalAmountOf,
+  renewalAmountText,
   renewals as renewalsOf,
   renewalWeeks,
   spanLabel,
   sum,
   today as todayIso,
 } from "../../../services/business-revenue";
-import { GRANTED_RENEWAL } from "../../../services/front-desk/frontDeskLogic";
+import { grantedRenewal } from "../../../services/front-desk/frontDeskLogic";
 import { startMemberThread } from "../../../services/messaging";
 import { Toast } from "../../../components/ui/Toast";
 import { ErrorLine, OfflineLine, PayHeader, Skel, v, whoOf } from "./kit";
@@ -36,7 +38,9 @@ import { useRevenue } from "./revenueContext";
 // Renewals by week (AN14-062 to -067, -070 to -072: PaySeeAllV2 kind
 // "renewals") and the plan detail (AN14-068). A renewal is an active
 // membership whose period ends in the next 30 days (gym_memberships.
-// expires_on), at its agreed price. Weeks are Monday to Sunday (user rule).
+// expires_on), at what renewing charges (venue_renewals_due.renewal_price, the
+// plan's price, so a granted membership counts at its plan price; the agreed
+// price on a stack without it). Weeks are Monday to Sunday (user rule).
 // The detail shows the member's last paid payments (business_payments, B8)
 // and "Message member" (start_member_thread, B7). Not yet: bookings or
 // visits this month (B9 / B10).
@@ -69,7 +73,7 @@ export const RenewalsPage: React.FC = () => {
     .filter((g) => (week === "all" || String(g.i) === week) && g.rows.length);
   const n = sum(groups.map((g) => g.rows.length));
   const total = sum(
-    groups.map((g) => sum(g.rows.map((r) => r.rec.amount ?? 0))),
+    groups.map((g) => sum(g.rows.map((r) => r.amount ?? 0))),
   );
   const empty = ren.length === 0;
   const busiest = busiestDay(ren);
@@ -172,7 +176,7 @@ export const RenewalsPage: React.FC = () => {
                 <PayGroupHead
                   id={`rv-week-${g.i}`}
                   h={`${g.label} · ${spanLabel(g.from, g.to)}`}
-                  s={`${g.rows.length} · ${money(sum(g.rows.map((r) => r.rec.amount ?? 0)))}`}
+                  s={`${g.rows.length} · ${money(sum(g.rows.map((r) => r.amount ?? 0)))}`}
                 />
                 <PayList
                   rows={g.rows.map((r) => ({
@@ -182,9 +186,9 @@ export const RenewalsPage: React.FC = () => {
                     dot: dotOf(r.rec.item),
                     // CN: a granted membership stays listed, labelled: it was
                     // never paid for, and renewing it charges the plan price.
-                    sub: `${r.rec.item} · renews ${dddDMon(r.on)}${r.rec.granted ? ` · ${GRANTED_RENEWAL}` : ""}`,
+                    sub: `${r.rec.item} · renews ${dddDMon(r.on)}${r.rec.granted ? ` · ${grantedRenewal(r.amount, money)}` : ""}`,
                     s2: r.rec.granted ? "Granted" : r.rec.method === "whish" ? "Whish" : "Cash",
-                    amt: r.rec.granted ? "Plan price" : money(r.rec.amount ?? 0),
+                    amt: renewalAmountText(r),
                     onClick: () =>
                       navigate(
                         `${REVENUE_BASE}/payments/renewals/${encodeURIComponent(r.rec.key)}`,
@@ -207,8 +211,8 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   const rec =
     data?.records.find((r) => r.key === recKey) ?? null;
   // B7 venue_renewals_due names the member (null on a guest or an older database).
-  const personId =
-    (rec && data?.renewalsDue.find((d) => d.membershipId === rec.id)?.personId) ?? null;
+  const due = rec ? data?.renewalsDue.find((d) => d.membershipId === rec.id) : undefined;
+  const personId = due?.personId ?? null;
   const paid = usePaidHistory(businessId, personId, 3);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -242,6 +246,9 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
     );
   if (!rec || !rec.expiresOn) return <Navigate to={back} replace />;
   const name = whoOf(rec);
+  // 251ab70: what renewing charges (renewal_price), a grant included.
+  const amount = renewalAmountOf(rec, due);
+  const amt = renewalAmountText({ rec, amount });
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader crumb="Renewals" title={name} onBack={() => navigate(back)} />
@@ -253,7 +260,7 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
             ? `${rec.item} · member since ${monthYear(rec.startedOn).replace(/^(\w{3})\w*/, "$1")}`
             : rec.item
         }
-        amt={rec.granted ? "Plan price" : money(rec.amount ?? 0)}
+        amt={amt}
         chip={{
           t: `Renews ${dddDMon(rec.expiresOn)}`,
           bg: v("teal-pale"),
@@ -264,10 +271,10 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
           ...(rec.granted
             ? [
                 { l: "How they got it", v: "Granted with a code" },
-                { l: "Renewing", v: "Charges the plan price" },
+                { l: "Renewing", v: amount !== null ? `Charges ${amt}` : "Charges the plan price" },
               ]
             : [
-                { l: "Price", v: money(rec.amount ?? 0) },
+                { l: "Price", v: amt },
                 { l: "Payment method", v: rec.method === "whish" ? "Whish" : "Cash" },
               ]),
           { l: "Current period ends", v: dddDMon(rec.expiresOn) },

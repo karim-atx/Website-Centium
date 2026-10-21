@@ -60,7 +60,8 @@ export interface PaymentRecord {
   /**
    * CN: a membership granted by a member code (venue_members.granted). Never
    * revenue: left out of every money figure, kept in member counts and in
-   * renewals (labelled; renewing one charges the plan price).
+   * renewals (labelled, and expected at venue_renewals_due.renewal_price:
+   * renewing one charges the plan price).
    */
   granted?: boolean;
 }
@@ -642,7 +643,27 @@ export interface RenewalRow {
   rec: PaymentRecord;
   /** The day the membership's period ends (gym_memberships.expires_on). */
   on: string;
+  /**
+   * What renewing is expected to bring in: venue_renewals_due.renewal_price
+   * (the plan's price now, so a grant counts at its plan price, 251ab70).
+   * Without that column (an older stack, or no server list) it is the agreed
+   * price, and a grant's is unknown (null). Null when the plan has no price.
+   */
+  amount: number | null;
 }
+
+/**
+ * What renewing `rec` is expected to bring in (RenewalRow.amount), from its
+ * venue_renewals_due row when that carries renewal_price.
+ */
+export function renewalAmountOf(rec: PaymentRecord, due?: { renewalPrice?: number | null }): number | null {
+  if (due && due.renewalPrice !== undefined) return due.renewalPrice;
+  return rec.granted ? null : rec.amount;
+}
+
+/** A renewal's amount: the price, "Plan price" for a grant whose price isn't known, else "Not available". */
+export const renewalAmountText = (r: { rec: PaymentRecord; amount: number | null }): string =>
+  r.amount !== null ? money(r.amount) : r.rec.granted ? "Plan price" : "Not available";
 
 export interface RenewalWeek {
   label: string;
@@ -657,15 +678,18 @@ export interface RenewalWeek {
  * B7 MB-05: `due` is venue_renewals_due(gym, 30), the server's list. When it
  * is given only its memberships count, and one ending at the period end
  * (cancel_at_period_end) is left out: it will not renew. A grant (CN) stays
- * in, labelled by the screens: renewing it charges the plan price.
+ * in, labelled by the screens, and is expected at its renewal_price: renewing
+ * it charges the plan price.
  */
 export function renewals(
   records: PaymentRecord[],
   today: string,
-  due: { membershipId: string; cancelAtPeriodEnd: boolean }[] | null = null,
+  due: { membershipId: string; cancelAtPeriodEnd: boolean; renewalPrice?: number | null }[] | null = null,
 ): RenewalRow[] {
   const end = addDays(today, 29);
   const ids = due ? new Set(due.filter((d) => !d.cancelAtPeriodEnd).map((d) => d.membershipId)) : null;
+  const byId = new Map((due ?? []).map((d) => [d.membershipId, d]));
+  const amountOf = (rec: PaymentRecord) => renewalAmountOf(rec, byId.get(rec.id));
   return records
     .filter(
       (r) =>
@@ -677,7 +701,7 @@ export function renewals(
         r.expiresOn <= end &&
         r.amount !== null,
     )
-    .map((rec) => ({ rec, on: rec.expiresOn as string }))
+    .map((rec) => ({ rec, on: rec.expiresOn as string, amount: amountOf(rec) }))
     .sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
 }
 
@@ -704,7 +728,7 @@ export function renewalWeeks(rows: RenewalRow[], today: string): RenewalWeek[] {
       from: mon,
       to: sunday,
       rows: list,
-      total: sum(list.map((r) => r.rec.amount ?? 0)),
+      total: sum(list.map((r) => r.amount ?? 0)),
     });
   }
   return weeks;

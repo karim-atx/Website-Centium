@@ -2,6 +2,8 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   NOT_AVAILABLE,
+  perMonthText,
+  periodSaving,
   noPriceText,
   periodOptions,
   periodPriceText,
@@ -106,4 +108,20 @@ test("after a switch, the new period and renewal", () => {
   const now = new Date(2026, 9, 21);
   assert.equal(switchedText("yearly", new Date(2027, 9, 21).toISOString(), now), "You're now billed yearly. Your next renewal is Oct 21, 2027.");
   assert.equal(switchedText("monthly", null, now), "You're now billed monthly.");
+});
+
+test("b93cb12: the yearly saving, from subscription_price_for's two answers", () => {
+  const money = (n: number) => `$${n.toFixed(2)}`;
+  // Base: 29.00 a month or 289.99 a year (12 x 29 = 348, saves 58.01, 16.6% down to 16).
+  assert.deepEqual(periodSaving({ monthly: 29, yearly: 289.99 }), { amount: 58.01, percent: 16 });
+  // A seat block alone, and Base with 2 blocks (subscription_price_for(Base, period, 2)).
+  assert.deepEqual(periodSaving({ monthly: 59.99, yearly: 599.99 }), { amount: 119.89, percent: 16 });
+  assert.deepEqual(periodSaving({ monthly: 148.98, yearly: 1489.97 }), { amount: 297.79, percent: 16 });
+  // NULL on either side, or a yearly that isn't cheaper (the old 799.99), is no saving.
+  assert.equal(periodSaving({ monthly: 29, yearly: null }), null);
+  assert.equal(periodSaving({ monthly: null, yearly: 289.99 }), null);
+  assert.equal(periodSaving({ monthly: 29, yearly: 799.99 }), null);
+  assert.equal(periodSaving({ monthly: 29, yearly: 348 }), null);
+  assert.equal(periodSaving(null), null);
+  assert.equal(perMonthText(289.99, money), "$24.17 a month, billed yearly");
 });

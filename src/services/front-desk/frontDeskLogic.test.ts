@@ -102,6 +102,15 @@ test("renewals (MB-05): server rows map; to chase first, then ending, then renew
   const grant = toRenewalDue(row("g", 6, { granted: true }), "g");
   assert.equal(grant.granted, true);
   assert.equal(renewalSub(grant), "Monthly · renews in 6 days · granted with a code, renewing charges the plan price");
+  // 251ab70: renewal_price names the amount; NULL keeps "the plan price", never $0.
+  const priced = toRenewalDue(row("p", 6, { granted: true, renewal_price: "29.00" }), "g");
+  assert.equal(priced.renewalPrice, 29);
+  assert.equal(renewalSub(priced), "Monthly · renews in 6 days · granted with a code, renewing charges $29");
+  assert.equal(toRenewalDue(row("q", 6, { granted: true, renewal_price: "17.50" }), "g").renewalPrice, 17.5);
+  const unpriced = toRenewalDue(row("n", 6, { granted: true, renewal_price: null }), "g");
+  assert.equal(unpriced.renewalPrice, null);
+  assert.equal(renewalSub(unpriced), "Monthly · renews in 6 days · granted with a code, renewing charges the plan price");
+  assert.equal(grant.renewalPrice, undefined);
   assert.deepEqual(toChase([grant]).map((r) => r.membershipId), ["g"]);
   assert.equal(renewalSub(toRenewalDue(row("h", 6, { granted: true, already_renewed: true }), "g")), "Monthly · renewed, next period from 20 Oct 2026");
   assert.equal(toRenewalDue(row("x", 1, { member_label: null, plan_name: null }), "g").planName, "Membership");

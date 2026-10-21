@@ -15,6 +15,10 @@ import {
   periodName,
   periodOptions,
   periodPriceText,
+  missingPriceText,
+  NOT_AVAILABLE,
+  periodSaving,
+  perMonthText,
   perPeriod,
   renewalAfterSwitch,
   renewalDayText,
@@ -28,6 +32,7 @@ import { fetchPaymentSettings, type PaymentSettings } from "../../services/busin
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
+import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
@@ -167,6 +172,9 @@ export function SubscriptionPage() {
   const [periodNote, setPeriodNote] = useState<{ tone: "done" | "error"; text: string } | null>(null);
   const ownSub = period.sub;
   const ownTotal = ownSub && period.prices ? period.prices[ownSub.period] : null;
+  // What yearly saves on the owner's plan and blocks (b93cb12); null unless
+  // both periods are priced and yearly is cheaper.
+  const saving = periodSaving(period.prices);
 
   useEffect(() => {
     if (!authUserId || live) return;
@@ -212,9 +220,12 @@ export function SubscriptionPage() {
   // period (with the seat blocks they hold); staff, business_plan_summary's
   // total for its period. NULL is "not available", never $0.
   const priceLine = (): string | null => {
-    if (isOwner && ownSub) return ownTotal !== null ? `${money(ownTotal)} ${perPeriod(ownSub.period)}` : `${periodName(ownSub.period)} price not available`;
+    if (isOwner && ownSub) return ownTotal !== null ? `${money(ownTotal)} ${perPeriod(ownSub.period)}` : missingPriceText(ownSub.period);
     if (isOwner && !period.ready) return null;
-    if (s) return s.total !== null ? `${money(s.total)} ${perPeriod(s.period)}` : `${periodName(s.period)} price not available`;
+    // Staff: the summary's plan_price (and seat_block_price with blocks held)
+    // for its period. NULL (251ab70: no fallback to the monthly figure) reads
+    // "Not available".
+    if (s) return s.total !== null ? `${money(s.total)} ${perPeriod(s.period)}` : missingPriceText(s.period);
     return `${money(plan?.monthlyTotal ?? 0)} a month`;
   };
   const confirm = periodAsk ? switchConfirm({ to: periodAsk.to, price: periodAsk.price, seatBlocks: ownSub?.seatBlocks ?? 0, renewal: periodAsk.at, money }) : null;
@@ -248,7 +259,11 @@ export function SubscriptionPage() {
                   ? `Your first month, ${money(planCharge.amount)}, is awaiting payment.`
                   : planPrice !== null
                     ? `The Business plan is ${money(planPrice)} ${perPeriod(s ? s.period : "monthly")}.`
-                    : undefined
+                    : s
+                      ? // business_plan_summary's plan_price is NULL (251ab70: no
+                        // fallback to another period's price): said, never $0.
+                        `The Business plan's ${s.period} price: ${NOT_AVAILABLE}.`
+                      : undefined
               }
               actions={planCharge ? [] : [{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
@@ -267,9 +282,17 @@ export function SubscriptionPage() {
                         key={o.period}
                         radio={{ selected: o.current }}
                         title={periodName(o.period)}
-                        desc={o.reason ?? periodPriceText(o.price, o.period, money)}
-                        value={o.price === null ? "Not available" : undefined}
-                        valueTone="faint"
+                        // The yearly row restates its price a month and names the
+                        // saving, only when both periods are priced and yearly is
+                        // cheaper (periodSaving).
+                        desc={
+                          o.reason ??
+                          (o.period === "yearly" && o.price !== null && saving
+                            ? `${periodPriceText(o.price, o.period, money)} · ${perMonthText(o.price, money)}`
+                            : periodPriceText(o.price, o.period, money))
+                        }
+                        value={o.price === null ? "Not available" : o.period === "yearly" && saving ? savingLabel(saving) : undefined}
+                        valueTone={o.price === null ? "faint" : "good"}
                         disabled={!o.current && !o.selectable}
                         dim={!o.current && !o.selectable}
                         onClick={o.selectable && o.price !== null ? () => setPeriodAsk({ to: o.period, price: o.price as number, at: renewalAfterSwitch(new Date(), o.period) }) : undefined}

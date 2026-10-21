@@ -265,7 +265,7 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
   return { ok: false, reason: "failed", message: "Invite didn't send. Check your connection and try again. Nothing was sent." };
 }
 
-export type InviteWrite = { ok: true; at: string | null } | { ok: false; message: string; refresh: boolean };
+export type InviteWrite = { ok: true; at: string | null } | { ok: false; message: string; refresh: boolean; noSeats?: boolean };
 
 /**
  * resend_team_invite(business, professional) (Batch 2 CO): extends a pending

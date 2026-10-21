@@ -93,13 +93,17 @@ export const PlanRow: React.FC<{
    */
   priceText?: string;
   /**
-   * False drops the yearly-vs-monthly comparison (the saving badge and the
-   * per-month restatement). The business screen passes false: its Base
-   * yearly price is undecided. Default true: unchanged.
+   * Batch 2 · CS: the two prices the saving badge and the per-month
+   * restatement are computed from (the business screen passes
+   * subscription_price_for's answers). Null while they load or failed: no
+   * comparison. A NULL price on either side: no saving. Unset: the tier's own
+   * columns, unchanged.
    */
-  compare?: boolean;
-}> = ({ tier, period, isCurrent, detail, priceText, compare = true }) => {
-  const saving = compare ? yearlySaving(tier.monthlyPrice, tier.yearlyPrice) : null;
+  periodPrices?: { monthly: number | null; yearly: number | null } | null;
+}> = ({ tier, period, isCurrent, detail, priceText, periodPrices }) => {
+  const monthly = periodPrices === undefined ? tier.monthlyPrice : (periodPrices?.monthly ?? null);
+  const yearly = periodPrices === undefined ? tier.yearlyPrice : (periodPrices?.yearly ?? null);
+  const saving = monthly != null && yearly != null ? yearlySaving(monthly, yearly) : null;
   const limit = detail ?? limitLabel(tier);
   return (
     <div
@@ -130,9 +134,9 @@ export const PlanRow: React.FC<{
         {/* A yearly price and a monthly one are not comparable numbers until
             one of them is restated, so the yearly view says what it works out
             to per month. */}
-        {compare && period === "yearly" && tier.yearlyPrice != null && tier.monthlyPrice > 0 && (
+        {period === "yearly" && yearly != null && monthly != null && monthly > 0 && (
           <p className="text-[11px] text-charcoal-faint">
-            {formatPrice(monthlyEquivalent(tier.yearlyPrice))}/mo, billed yearly
+            {formatPrice(monthlyEquivalent(yearly))}/mo, billed yearly
           </p>
         )}
       </div>

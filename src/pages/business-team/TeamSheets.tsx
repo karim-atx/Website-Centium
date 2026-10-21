@@ -4,7 +4,7 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import type { BizKind } from "../../components/business-more/kind";
 import { fetchSeatBlockPrice, inviteEmployee, roleUsesSeat, type BusinessRole } from "../../services/business-team/team";
-import { fetchPlanSummary, periodName, perPeriod, type SubscriptionPeriod } from "../../services/centium-billing";
+import { fetchPlanSummary, missingPriceText, perPeriod, type SubscriptionPeriod } from "../../services/centium-billing";
 import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import { roleOptions, type SeatCounts } from "./teamLogic";
 import { isOfflineNow } from "./parts";
@@ -314,7 +314,7 @@ export function SeatsFullSheet({
   const note = !price
     ? `Each seat block adds ${per} seats.${tail}`
     : price.amount === null
-      ? `Each seat block adds ${per} seats. ${periodName(price.period)} price not available.${tail}`
+      ? `Each seat block adds ${per} seats. ${missingPriceText(price.period)}.${tail}`
       : `Each seat block is $${price.amount.toFixed(2)} ${perPeriod(price.period)} and adds ${per} seats.${tail}`;
 
   return (
