@@ -1,11 +1,11 @@
 /* Atraxia website: landing page only. Never loaded by Contact, Blog or Legal.
 
-   Batch 1 holds the landing's page-level mechanics: near-instant nav jumps
-   behind a dark veil (NA1 v4, Round 13), hash links on first load, Back and
-   Forward between jumps, and footer pointer isolation. The hero galaxy and
-   loader (batch 2) and the journey chapters (batch 3, built on scene.js) join
-   this file's page. Chapters register a precise jump target through
-   Atx.jumpTarget (the reference used the journey's pinned positions). */
+   The landing's page-level mechanics: near-instant nav jumps behind a dark
+   veil (NA1 v4, Round 13), hash links on first load, Back and Forward between
+   jumps, and footer pointer isolation. The pinned chapters (journey.js)
+   register their jump targets through Atx.jumpTarget (the Round 13 PIN map:
+   Philosophy and Leadership and What guides us at 100%, Portfolio at 62%);
+   the chapter dock on phones (JN1) jumps through window.__atxJump. */
 (function () {
   'use strict';
   var Atx = window.Atx;

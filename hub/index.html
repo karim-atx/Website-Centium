@@ -36,6 +36,7 @@
     <script src="assets/js/core.js"></script>
     <script src="assets/js/galaxy.js" defer></script>
     <script src="assets/js/scene.js" defer></script>
+    <script src="assets/js/journey.js" defer></script>
     <script src="assets/js/landing.js" defer></script>
   </head>
   <body>
@@ -107,15 +108,180 @@
         </header>
         <div class="ix-hand" aria-hidden="true"></div>
       </div>
-      <!-- The journey: batch 3 replaces these stand-in chapters (same ids) with the chapter markup. -->
+      <!-- The journey (batch 3): one shared WebGL field behind the chapters
+           (journey.js on scene.js). Reveals are scrubbed from scroll position:
+           data-r="a b kind" is the reveal window on the chapter's progress,
+           data-rm the phone window, data-pre follows the TR2 handoff, data-self
+           follows the element's own position, data-self-m does so on phones. -->
       <div class="jr" id="journey">
-        <section id="about" class="jr-sec jr-ph" aria-label="Our philosophy"></section>
-        <section id="portfolio" class="jr-sec jr-ph" aria-label="Our portfolio"></section>
-        <section id="founders" class="jr-sec jr-ph" aria-label="Leadership"></section>
-        <section id="values" class="jr-sec jr-ph" aria-label="What guides us"></section>
-        <section id="blog" class="jr-sec jr-ph" aria-label="Explorations"></section>
-        <section id="contact" class="jr-sec jr-ph" aria-label="Reach out"></section>
+        <div class="jr-sky" aria-hidden="true"><canvas class="jr-gl"></canvas><div class="jr-still-art"></div></div>
+
+        <section id="about" class="jr-sec jr-about" data-jr="about">
+          <div class="jr-stage">
+            <div class="jr-vis" aria-hidden="true"></div>
+            <div class="wrap jr-col">
+              <div class="jr-eyebrow" data-r="-0.62 -0.42 track" data-rm="-0.66 -0.48" data-pre><span class="rule"></span><span class="label">OUR PHILOSOPHY</span></div>
+              <h2 class="jr-h2 ab-h2" data-r="-0.55 -0.2 mask" data-rm="-0.6 -0.3" data-pre><span class="ml"><span class="ln">Understand first.</span></span><span class="ml"><span class="ln">Build better.</span></span></h2>
+              <div class="ab-prose">
+                <p data-r="0.3 0.5 rise" data-rm="0.24 0.42">We don't create solutions for problems that don't exist. We study real needs, understand the complexity behind them, and build thoughtful products that make the answer feel obvious.</p>
+                <p data-r="0.42 0.62 rise" data-rm="0.34 0.52">From functionality to experience, every detail is designed with the user in mind.</p>
+              </div>
+              <div class="ab-stats" data-r="0.6 0.74 rise" data-rm="0.5 0.64">
+                <div class="ab-stat">
+                  <svg class="ab-orb ab-orb--one" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="21" class="o-ring"/><circle cx="32" cy="32" r="2.4" class="o-core"/><g class="o-spin"><circle cx="53" cy="32" r="3.2" class="o-dot"/></g></svg>
+                  <strong class="ab-num" data-r="0.66 0.86 count" data-rm="0.56 0.78" data-count="1"><span class="dgw" aria-hidden="true"><span class="dg"><span>0</span><span>1</span></span></span><span class="pf-sr">1</span></strong>
+                  <span class="ab-lab">CORE MISSION</span>
+                </div>
+                <div class="ab-stat">
+                  <svg class="ab-orb ab-orb--two" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="13" class="o-ring"/><g class="o-spin"><circle cx="19" cy="32" r="3.2" class="o-dot"/><circle cx="45" cy="32" r="3.2" class="o-dot o-dot--b"/></g></svg>
+                  <strong class="ab-num" data-r="0.7 0.9 count" data-rm="0.6 0.82" data-count="2"><span class="dgw" aria-hidden="true"><span class="dg"><span>0</span><span>1</span><span>2</span></span></span><span class="pf-sr">2</span></strong>
+                  <span class="ab-lab">FOUNDERS</span>
+                </div>
+                <div class="ab-stat">
+                  <svg class="ab-orb ab-orb--inf" viewBox="0 0 64 64" aria-hidden="true" focusable="false" data-r="0.72 0.94 draw" data-rm="0.62 0.86"><path data-draw pathLength="1" class="o-ring o-inf" d="M32 32 C26 22 12 22 12 32 C12 42 26 42 32 32 C38 22 52 22 52 32 C52 42 38 42 32 32 Z"/><circle r="3.2" class="o-dot o-ride"/></svg>
+                  <strong class="ab-num ab-inf" data-r="0.78 0.94 rise" data-rm="0.68 0.86">∞</strong>
+                  <span class="ab-lab">VENTURES AHEAD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="portfolio" class="jr-sec jr-pf" data-jr="portfolio">
+          <div class="jr-stage">
+            <div class="jr-vis" aria-hidden="true"></div>
+            <div class="wrap jr-col pf-head">
+              <div class="jr-eyebrow" data-r="0 0.12 track"><span class="rule"></span><span class="label">OUR PORTFOLIO</span></div>
+              <h2 class="jr-h2" data-r="0.02 0.2 mask"><span class="ml"><span class="ln">Discover what’s taking shape.</span></span></h2>
+              <p class="jr-lede" data-r="0.1 0.26 rise">Our portfolio is only the beginning, a growing collection of ideas, each explored, refined, and built around a real opportunity to make a difference.</p>
+            </div>
+            <div class="pf-track jr-swipe" data-swipe="portfolio" role="group" aria-label="Ventures">
+              <article class="pf-card" id="pf-card-centium" role="dialog" aria-label="Centium" aria-hidden="true">
+                <button class="pf-x" type="button" aria-label="Close Centium card"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+                <div class="pf-card-top"><span class="pf-logo"><img src="atraxia/centium-mark.png" alt="" width="240" height="240" loading="lazy" decoding="async" /></span><span class="pf-name">Centium</span></div>
+                <h3>Health, accompanied</h3>
+                <p>Your nutrition, training, and health; never managed alone.</p>
+                <a class="pf-cta" href="https://centium.atraxia.org">Visit Centium <span aria-hidden="true">→</span></a>
+              </article>
+              <div class="pf-proto" id="pf-card-soon" role="dialog" aria-label="Coming soon" aria-hidden="true">
+                <button class="pf-x" type="button" aria-label="Close Coming soon card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+                <span class="pf-proto-name">Coming soon</span>
+                <span class="pf-proto-text">The next venture in the Atraxia portfolio is already in the works.</span>
+              </div>
+            </div>
+            <button class="pf-hit pf-hit--c is-off" type="button" tabindex="-1" aria-hidden="true" aria-expanded="false" aria-controls="pf-card-centium"><span class="pf-hit-ring" aria-hidden="true"></span><span class="pf-hit-tip" aria-hidden="true">Click to explore</span><span class="pf-sr">Centium, open venture card</span></button>
+            <button class="pf-hit pf-hit--p is-off" type="button" tabindex="-1" aria-hidden="true" aria-expanded="false" aria-controls="pf-card-soon"><span class="pf-hit-ring" aria-hidden="true"></span><span class="pf-hit-tip" aria-hidden="true">Click to explore</span><span class="pf-sr">Next venture, open card</span></button>
+            <div class="pf-hint" aria-hidden="true">Tap a world to explore</div>
+          </div>
+        </section>
+
+        <section id="founders" class="jr-sec jr-fd" data-jr="founders">
+          <div class="jr-stage">
+            <div class="wrap fd-wrap">
+              <div class="fd-head">
+                <div class="jr-eyebrow" data-r="0 0.12 track" data-self-m data-rm="0.05 0.4"><span class="rule"></span><span class="label">LEADERSHIP</span></div>
+                <h2 class="jr-h2" data-r="0.02 0.2 mask" data-self-m data-rm="0.1 0.5"><span class="ml"><span class="ln">Founders</span></span></h2>
+                <p class="jr-lede" data-r="0.1 0.28 rise" data-self-m data-rm="0.2 0.6">Abdallah Diab and Dr. Karim El Khaldi are driven by curiosity and a shared passion for building companies and solutions that matter, from healthcare and fitness to technology and beyond.</p>
+              </div>
+              <div class="fd-grid jr-swipe" data-swipe="founders" role="group" aria-label="Founders">
+                <figure class="fd-person">
+                  <div class="fd-photo"><img src="atraxia/founder-abdallah-v8.jpg" alt="Abdallah Diab, Co-founder of Atraxia" width="720" height="828" loading="lazy" decoding="async" /><span class="fd-light" aria-hidden="true"></span></div>
+                  <figcaption>
+                    <h3 data-r="0.56 0.7 rise" data-self-m data-rm="0.3 0.7">Abdallah Diab</h3>
+                    <div class="fd-role" data-r="0.6 0.74 track" data-self-m data-rm="0.35 0.75">Co-founder | Operations Manager</div>
+                    <blockquote class="fd-quote" data-r="0.64 0.8 rise" data-self-m data-rm="0.45 0.85"><p>“Necessity is the mother of invention”</p><cite>Plato</cite></blockquote>
+                    <p class="fd-statement" data-r="0.72 0.9 rise" data-self-m data-rm="0.55 0.95">A firm believer in simplifying complexity, removing obstacles, and bringing clarity to chaos. I strive to create organized, intuitive solutions that feel effortless to understand from the very first interaction.</p>
+                  </figcaption>
+                </figure>
+                <figure class="fd-person">
+                  <div class="fd-photo"><img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim El Khaldi, Co-founder of Atraxia" width="720" height="828" loading="lazy" decoding="async" /><span class="fd-light" aria-hidden="true"></span></div>
+                  <figcaption>
+                    <h3 data-r="0.6 0.74 rise" data-self-m data-rm="0.3 0.7">Dr. Karim El Khaldi</h3>
+                    <div class="fd-role" data-r="0.64 0.78 track" data-self-m data-rm="0.35 0.75">Co-founder | MD | MPH</div>
+                    <blockquote class="fd-quote" data-r="0.68 0.84 rise" data-self-m data-rm="0.45 0.85"><p>“The mind is that which is roused and directed by itself.”</p><cite>Marcus Aurelius</cite></blockquote>
+                    <p class="fd-statement" data-r="0.76 0.94 rise" data-self-m data-rm="0.55 0.95">I believe the lessons of medicine are simple: be rigorous, stay passionate, and create solutions where none yet exist.</p>
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="values" class="jr-sec jr-vl" data-jr="values">
+          <div class="jr-stage">
+            <div class="wrap vl-wrap">
+              <div class="vl-head">
+                <div class="jr-eyebrow" data-r="0 0.1 track" data-self-m data-rm="0.05 0.4"><span class="rule"></span><span class="label">WHAT GUIDES US</span></div>
+                <h2 class="jr-h2" data-r="0.02 0.16 mask" data-self-m data-rm="0.1 0.5"><span class="ml"><span class="ln">Three principles,</span></span><span class="ml"><span class="ln"><span class="vl-one" data-r="0.86 0.97 glow" data-self-m data-rm="0.6 1">one way of thinking.</span></span></span></h2>
+                <p class="jr-lede" data-r="0.06 0.2 rise" data-self-m data-rm="0.2 0.6">Curiosity may drive us forward, but these values keep us grounded in how we think, build, and serve.</p>
+              </div>
+              <div class="vl-vis jr-vis" aria-hidden="true">
+                <span class="vl-star vl-star--1"></span><span class="vl-star vl-star--2"></span><span class="vl-star vl-star--3"></span>
+              </div>
+              <div class="vl-list jr-swipe" data-swipe="values" role="group" aria-label="Values">
+                <div class="vl-item vl-item--1" data-r="0.12 0.3 rise" data-self-m data-rm="0.1 0.55">
+                  <svg class="vl-glyph" viewBox="0 0 48 48" aria-hidden="true" focusable="false" data-r="0.12 0.32 draw" data-self-m data-rm="0.1 0.6"><path data-draw pathLength="1" d="M24 5 L24 43 M7 24 L41 24 M24 5 L33 24 L24 43 L15 24 Z"/><circle cx="24" cy="5" r="2.4"/><circle cx="41" cy="24" r="1.8"/><circle cx="24" cy="43" r="1.8"/><circle cx="7" cy="24" r="1.8"/><circle cx="24" cy="24" r="3"/></svg>
+                  <div><h3>Principled</h3><p>We only put our name behind what we genuinely believe in. Commercial opportunity will never outweigh our principles or the value we aim to create.</p></div>
+                </div>
+                <div class="vl-item vl-item--2" data-r="0.34 0.52 rise" data-self-m data-rm="0.1 0.55">
+                  <svg class="vl-glyph" viewBox="0 0 48 48" aria-hidden="true" focusable="false" data-r="0.34 0.54 draw" data-self-m data-rm="0.1 0.6"><path data-draw pathLength="1" d="M8 30 C8 18 22 18 24 30 C26 42 40 42 40 30 C40 18 26 18 24 30 C22 42 8 42 8 30 Z M15 12 L24 30 L33 12"/><circle cx="15" cy="12" r="2.4"/><circle cx="33" cy="12" r="2.4"/><circle cx="24" cy="30" r="3"/></svg>
+                  <div><h3>Client-Centric</h3><p>Our clients sit at the heart of every decision. We listen, understand, and build around their needs, creating value without compromising what we stand for.</p></div>
+                </div>
+                <div class="vl-item vl-item--3" data-r="0.56 0.74 rise" data-self-m data-rm="0.1 0.55">
+                  <svg class="vl-glyph" viewBox="0 0 48 48" aria-hidden="true" focusable="false" data-r="0.56 0.76 draw" data-self-m data-rm="0.1 0.6"><path data-draw pathLength="1" d="M6 32 C14 32 18 16 26 16 L42 16"/><circle cx="6" cy="32" r="1.8"/><circle cx="26" cy="16" r="1.8"/><circle cx="42" cy="16" r="3"/></svg>
+                  <div><h3>Simplicity</h3><p>Our job is to make things easier. We absorb the complexity, remove the unnecessary, and turn difficult problems into experiences that feel simple.</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Explorations: the three latest posts. The Blog keeps its posts in the
+             inline #atx-posts block in blog-post.html; the landing cannot read
+             that page without a fetch, so these cards duplicate the minimal
+             teaser fields (slug, title, excerpt, image, date). When a post is
+             added or edited there, update these three cards too. -->
+        <section id="blog" class="jr-sec jr-ex" data-jr="blog">
+          <div class="jr-stage">
+            <div class="jr-vis" aria-hidden="true"></div>
+            <div class="wrap ex-wrap">
+              <div class="ex-head">
+                <div class="jr-eyebrow" data-r="0.05 0.35 track" data-self><span class="rule"></span><span class="label">EXPLORATIONS</span></div>
+                <h2 class="jr-h2" data-r="0.1 0.45 mask" data-self><span class="ml"><span class="ln">Thoughts on what’s next</span></span></h2>
+                <p class="jr-lede" data-r="0.2 0.55 rise" data-self>A space for the thinking behind our work, what we’re learning, what we’re questioning, and what we’re discovering along the way.</p>
+              </div>
+              <div class="ex-cards jr-swipe" data-swipe="blog" role="group" aria-label="Latest posts">
+                <a class="ex-card" href="blog-post.html?slug=the-plan-comes-second" data-r="0.1 0.6 rise" data-self>
+                  <span class="ex-thumb"><img src="atraxia/blog/plan-comes-second.jpg?v=3" alt="" width="1280" height="800" loading="lazy" decoding="async" /></span>
+                  <span class="ex-body"><time datetime="2026-09-29">29 September 2026</time><strong>The Plan Comes Second</strong><span class="ex-ex">We start from a question we can’t stop asking, and only then work out the plan.</span></span>
+                </a>
+                <a class="ex-card" href="blog-post.html?slug=what-client-centric-actually-costs" data-r="0.18 0.68 rise" data-self>
+                  <span class="ex-thumb"><img src="atraxia/blog/client-centric.jpg?v=4" alt="" width="1280" height="800" loading="lazy" decoding="async" /></span>
+                  <span class="ex-body"><time datetime="2026-09-15">15 September 2026</time><strong>What “Client-Centric” Actually Costs</strong><span class="ex-ex">Putting the client first sometimes means building what they need instead of what they asked for.</span></span>
+                </a>
+                <a class="ex-card" href="blog-post.html?slug=why-we-dont-ship-the-obvious-answer" data-r="0.26 0.76 rise" data-self>
+                  <span class="ex-thumb"><img src="atraxia/blog/obvious-answer.jpg?v=3" alt="" width="1280" height="800" loading="lazy" decoding="async" /></span>
+                  <span class="ex-body"><time datetime="2026-09-01">1 September 2026</time><strong>Why We Don’t Ship the Obvious Answer</strong><span class="ex-ex">The first idea is only the one that came to mind first, so we treat it as a starting point.</span></span>
+                </a>
+              </div>
+              <a class="ex-more" href="blog.html" data-r="0.1 0.55 rise" data-self data-ref=".ex-cards">Read our thinking <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </section>
       </div>
+
+      <section id="contact" class="cxt">
+        <div class="wrap">
+          <div class="cxt-card">
+            <div class="cxt-copy">
+              <span class="cxt-eyebrow">REACH OUT</span>
+              <h2>Contact Atraxia</h2>
+              <p>Questions about the company, partnerships, press, or our ventures and what's on the horizon.</p>
+            </div>
+            <a class="btn btn--primary cxt-btn" href="contact">Contact us <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </section>
     </main>
     <footer class="site-footer">
       <div class="wrap footer-tabs-row">
@@ -151,5 +317,27 @@
         </div>
       </div>
     </footer>
+    <!-- JN1: journey navigation on phones and narrow screens (≤760px) -->
+    <div class="jn">
+      <div class="jn-progress" aria-hidden="true"><span></span></div>
+      <div class="jn-dock">
+        <button class="jn-skip" type="button" hidden>Skip intro <span aria-hidden="true">↓</span></button>
+        <button class="jn-pill" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="jn-sheet"><span class="jn-ring" aria-hidden="true"></span><span class="jn-label">Atraxia</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="jn-top" type="button" aria-label="Back to top" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="jn-sheet" id="jn-sheet" role="dialog" aria-modal="true" aria-label="Chapters" hidden>
+        <div class="jn-scrim"></div>
+        <div class="jn-panel">
+          <span class="jn-h">CHAPTERS</span>
+          <button type="button" data-go="hero"><span>01</span>Atraxia</button>
+          <button type="button" data-go="about"><span>02</span>Our philosophy</button>
+          <button type="button" data-go="portfolio"><span>03</span>Our portfolio</button>
+          <button type="button" data-go="founders"><span>04</span>Leadership</button>
+          <button type="button" data-go="values"><span>05</span>What guides us</button>
+          <button type="button" data-go="blog"><span>06</span>Explorations</button>
+          <button type="button" data-go="contact"><span>07</span>Reach out</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

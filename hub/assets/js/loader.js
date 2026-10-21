@@ -77,7 +77,7 @@
 
   /* real loading: document parsed and loaded, the hero intro and the journey
      scene running, the first 14 images, the fonts, and the mark image. A page
-     without a journey canvas (before batch 3 lands it) counts that part done. */
+     without a journey canvas counts that part done; journey.js sets Atx.journey. */
   function journeyUp() { return !!Atx.journey || !document.querySelector('.jr-gl'); }
   var rl = 0;
   function real() {
