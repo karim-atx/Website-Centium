@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Toggle } from "../../components/ui/Toggle";
-import { dateOf, dayMonth, daysBetween, isoOf, previousOf, type AnalyticsRange } from "./analyticsRange";
+import { dateOf, dayMonth, daysBetween, isoOf, pickRangeDay, previousOf, type AnalyticsRange } from "./analyticsRange";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -66,15 +66,14 @@ export function CustomRangeSheet({
     return [...Array<null>(lead).fill(null), ...Array.from({ length: days }, (_, i) => isoOf(new Date(month.getFullYear(), month.getMonth(), i + 1)))];
   }, [month]);
 
+  // pickRangeDay is the rule (tested in analyticsRange.test.ts). The old
+  // inline version also restarted whenever To was empty, which it always is
+  // after the first tap, so the end of a range could never be chosen.
   const pick = (iso: string) => {
-    if (end === "from" || !to || iso < from) {
-      setFrom(iso);
-      setTo(null);
-      setEnd("to");
-      return;
-    }
-    setTo(iso);
-    setEnd("from");
+    const next = pickRangeDay({ from, to, end }, iso);
+    setFrom(next.from);
+    setTo(next.to);
+    setEnd(next.end);
   };
 
   const count = to ? daysBetween(from, to) + 1 : 1;

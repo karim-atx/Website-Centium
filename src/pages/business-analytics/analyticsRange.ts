@@ -101,3 +101,20 @@ export function rangeWords(r: AnalyticsRange, today: string = isoOf(new Date()))
   if (r.key === "12w") return "the last 12 weeks";
   return `${dayMonth(r.from, today)} to ${dayMonth(r.to, today)}`;
 }
+
+/** The Custom sheet's selection: the two ends and which one the next tap sets. */
+export interface RangePick {
+  from: string;
+  to: string | null;
+  end: "from" | "to";
+}
+
+/**
+ * One tap on a day of the Custom sheet's grid. Setting From clears To and
+ * moves to To; on To, a day on or after From ends the range (and the next
+ * tap starts over at From), and a day before From restarts with it as From.
+ */
+export function pickRangeDay(s: RangePick, iso: string): RangePick {
+  if (s.end === "from" || iso < s.from) return { from: iso, to: null, end: "to" };
+  return { from: s.from, to: iso, end: "from" };
+}
