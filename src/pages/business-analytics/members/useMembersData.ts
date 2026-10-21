@@ -32,13 +32,16 @@ export interface MembersData {
   plansLoading: boolean;
   venues: ReturnType<typeof useMyVenues>["venues"];
   venuesLoading: boolean;
+  /** my_venues() failed: the gym count is unknown, so it is never read as zero (CN). */
+  venuesError: string | null;
+  reloadVenues: () => void;
   setCodes: (f: (c: MemberCode[]) => MemberCode[]) => void;
 }
 
 export function useMembersData(): MembersData {
   const { business, loading: bizLoading } = useBusiness();
   const { plans, loading: plansLoading } = useMembershipPlans();
-  const { venues, loading: venuesLoading } = useMyVenues();
+  const { venues, loading: venuesLoading, error: venuesError, reload: reloadVenues } = useMyVenues();
   const businessId = business?.id ?? null;
   const [members, setMembers] = useState<Membership[] | null>(null);
   const [memberTotal, setMemberTotal] = useState(0);
@@ -87,7 +90,7 @@ export function useMembersData(): MembersData {
     });
   }, [businessId, loadingMore, loaded, memberTotal]);
   const setCodes = useCallback((f: (c: MemberCode[]) => MemberCode[]) => setCodesState((c) => f(c ?? [])), []);
-  return { businessId, members, memberTotal, loadMoreMembers, loadingMore, codes, error, loading: businessId ? loading : bizLoading, reload, plans, plansLoading, venues, venuesLoading, setCodes };
+  return { businessId, members, memberTotal, loadMoreMembers, loadingMore, codes, error, loading: businessId ? loading : bizLoading, reload, plans, plansLoading, venues, venuesLoading, venuesError, reloadVenues, setCodes };
 }
 
 /** Roster page size (list_business_members p_limit). */

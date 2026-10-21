@@ -94,6 +94,43 @@ export function initials(name: string): string {
 
 export const isAccepted = (p: TeamPerson) => !!p.acceptedAt;
 
+// ---------------------------------------------------------------------------
+// Batch 2 CO: an invitation's window (expires_at, revoked_at). Unknown (the
+// soft read failed) shows nothing, never a guess.
+
+/** "Oct 14" (the app's short date), with the year when it isn't this year: "Jan 3, 2027". */
+export function shortDay(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
+}
+
+export type InviteState = "pending" | "expired" | "withdrawn" | "unknown";
+
+/** Where an unaccepted invitation stands; "unknown" when its window wasn't read. Accepted people are "unknown" too. */
+export function inviteState(p: Pick<TeamPerson, "acceptedAt" | "invite">, now: Date = new Date()): InviteState {
+  if (p.acceptedAt || !p.invite) return "unknown";
+  if (p.invite.revokedAt) return "withdrawn";
+  // team_invite_is_acceptable: no expires_at is NOT acceptable (never "forever").
+  if (!p.invite.expiresAt) return "expired";
+  const t = Date.parse(p.invite.expiresAt);
+  if (Number.isNaN(t)) return "unknown";
+  return t > now.getTime() ? "pending" : "expired";
+}
+
+/** "Expires Oct 30" / "Expired Oct 14" / "Withdrawn Oct 20"; null when unknown (or no date to give). */
+export function inviteWhen(p: Pick<TeamPerson, "acceptedAt" | "invite">, now: Date = new Date()): string | null {
+  const s = inviteState(p, now);
+  const w = p.invite;
+  if (!w || s === "unknown") return null;
+  if (s === "withdrawn") return w.revokedAt ? `Withdrawn ${shortDay(w.revokedAt, now)}` : "Withdrawn";
+  if (!w.expiresAt) return "Expired";
+  return `${s === "pending" ? "Expires" : "Expired"} ${shortDay(w.expiresAt, now)}`;
+}
+
+/** The short word under an invited seat: "Expired" once lapsed, else "Invited". */
+export const invitedWord = (p: TeamPerson, now: Date = new Date()) => (inviteState(p, now) === "expired" ? "Expired" : "Invited");
+
 export interface SeatCounts {
   used: number;
   invited: number;
@@ -102,21 +139,38 @@ export interface SeatCounts {
 }
 
 /** used = accepted (B0: only they hold a seat); free = total − used − invited (source 637). */
-/** People whose role uses a seat (instructor, trainer; B6 follow-up, Q-09). */
-export const seatHolders = (people: TeamPerson[]) => people.filter((p) => personUsesSeat(p));
-/** People whose role needs no seat (front desk, manager, staff, shop assistant). */
-export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !personUsesSeat(p));
+/**
+ * Batch 2 CO: a withdrawn invitation (revoked_at, when the window read works)
+ * is shown as a "Withdrawn {date}" row with no actions, and is not on the
+ * team: it holds no seat and isn't an open invite.
+ */
+export const isWithdrawn = (p: Pick<TeamPerson, "acceptedAt" | "invite">) => !p.acceptedAt && !!p.invite?.revokedAt;
+/** Everyone except withdrawn invitations. */
+export const onTeam = (people: TeamPerson[]) => people.filter((p) => !isWithdrawn(p));
+/** Withdrawn invitations, most recent first. */
+export const withdrawnPeople = (people: TeamPerson[]) =>
+  people.filter(isWithdrawn).sort((a, b) => (b.invite?.revokedAt ?? "").localeCompare(a.invite?.revokedAt ?? ""));
+
+/** People whose role uses a seat (instructor, trainer; B6 follow-up, Q-09). Never a withdrawn invitation. */
+export const seatHolders = (people: TeamPerson[]) => people.filter((p) => personUsesSeat(p) && !isWithdrawn(p));
+/** People whose role needs no seat (front desk, manager, staff, shop assistant). Never a withdrawn invitation. */
+export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !personUsesSeat(p) && !isWithdrawn(p));
 
 /**
  * used = accepted seat-using roles; invited = unaccepted seat-using roles (B0:
  * an invitation holds no seat, it's reported apart); free = total − used −
  * invited (source 637). The database's my_business_seat_capacity counts the
  * same way; the screen prefers its numbers when they're loaded.
+ *
+ * Batch 2 CO: except that seats_invited still counts a WITHDRAWN invitation
+ * (it reads accepted_at only), which seatHolders leaves out once the window
+ * read works; the lower of the two is the live count.
  */
 export function seatCounts(people: TeamPerson[], capacity: number, server?: { used: number; invited: number } | null): SeatCounts {
   const holders = seatHolders(people);
   const used = server?.used ?? holders.filter(isAccepted).length;
-  const invited = server?.invited ?? holders.length - holders.filter(isAccepted).length;
+  const listed = holders.length - holders.filter(isAccepted).length;
+  const invited = server ? Math.min(server.invited, listed) : listed;
   return { used, invited, total: capacity, free: Math.max(0, capacity - used - invited) };
 }
 
@@ -336,3 +390,6 @@ export function profileLink(kind: "website" | "instagram" | "x", raw: string): {
   const ok = /^[A-Za-z0-9._]{1,30}$/.test(handle);
   return { text: `@${handle}`, href: ok ? (kind === "instagram" ? `https://www.instagram.com/${handle}/` : `https://x.com/${handle}`) : null };
 }
+
+/** "expires Oct 30" from "Expires Oct 30" (only the first letter). */
+export const lowerFirst = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);

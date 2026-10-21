@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AtSign, Award, Briefcase, CalendarClock, CalendarDays, Dumbbell, FileBadge, Globe, MessageCircle, Quote, Repeat2, TriangleAlert, UserMinus, UserX } from "lucide-react";
+import { AtSign, Award, Briefcase, CalendarClock, CalendarDays, Dumbbell, FileBadge, Globe, MessageCircle, Quote, Repeat2, Send, TriangleAlert, UserMinus, UserX } from "lucide-react";
 import { InstagramGlyph } from "../../components/business-more/InstagramGlyph";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { PopupMenu } from "../../components/ui/PopupMenu";
@@ -10,7 +10,7 @@ import { isEnded, shortDate } from "../business-ops/classes/scheduleModel";
 import { time12 } from "../../utils/time12";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { removeTeamMember } from "../../services/business-team";
-import { fetchBooked, fetchCredentials, fetchPublicDetails, type Credential, type PublicDetails } from "../../services/business-team/team";
+import { fetchBooked, fetchCredentials, fetchPublicDetails, resendTeamInvite, revokeTeamInvite, type Credential, type PublicDetails } from "../../services/business-team/team";
 import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchReviewsFor } from "../../services/professional-reviews";
 import { MIN_REVIEWS_FOR_AVERAGE } from "../../services/professional-reviews/rules";
@@ -20,7 +20,7 @@ import { AvailabilityCard } from "./AvailabilityCard";
 import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
 import { Avatar, BackRow, DCard, LinkRow, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
-import { jobRow, profileLink, specialtySub } from "./teamLogic";
+import { inviteState, inviteWhen, isWithdrawn, jobRow, profileLink, shortDay, specialtySub } from "./teamLogic";
 import { ROLE_LABEL, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
@@ -48,6 +48,7 @@ export function PersonPage({ data }: { data: TeamData }) {
   const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [creds, setCreds] = useState<Credential[] | null>(null);
   const [credError, setCredError] = useState(false);
   const [rating, setRating] = useState<string | null>(null);
@@ -131,7 +132,14 @@ export function PersonPage({ data }: { data: TeamData }) {
 
   const name = person.name;
   const first = firstWord(name);
-  const acts = accepted
+  // Batch 2 CO: the invite's window, when the soft read returned it.
+  const expired = !accepted && inviteState(person) === "expired";
+  // A withdrawn invitation is a record, not an invite: no actions at all.
+  const withdrawn = isWithdrawn(person);
+  const when = accepted ? null : inviteWhen(person);
+  const acts = withdrawn
+    ? []
+    : accepted
     ? [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
         { t: "Schedule", i: <CalendarDays size={17} strokeWidth={2.1} />, on: () => navigate("/app/business/classes"), dis: false, red: false },
@@ -149,21 +157,76 @@ export function PersonPage({ data }: { data: TeamData }) {
       ]
     : [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
-        // B7: business_employees writes stay the owner's.
-        ...(readOnly ? [] : [{ t: "Cancel invite", i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline, red: true }]),
+        // B7: business_employees writes stay the owner's. Batch 2 CO: Resend
+        // (resend_team_invite) and Withdraw (revoke_team_invite) replace the
+        // old Cancel invite, which deleted the pending row.
+        ...(readOnly
+          ? []
+          : [
+              { t: resending ? "Resending…" : "Resend", i: <Send size={17} strokeWidth={2.1} />, on: () => void doResend(), dis: offline || resending, red: false },
+              { t: "Withdraw", i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline || resending, red: true },
+            ]),
       ];
+
+  const doResend = async () => {
+    if (!businessId || resending) return;
+    setResending(true);
+    const r = await resendTeamInvite(businessId, id);
+    setResending(false);
+    if (!r.ok) {
+      showToast(r.message, true);
+      if (r.refresh) data.reload();
+      return;
+    }
+    // The new window is the function's answer; the rest of the row is unchanged.
+    if (r.at) {
+      const prev = person.invite;
+      data.setPeople(
+        (people ?? []).map((p) =>
+          p.professionalId === id
+            ? { ...p, invite: { expiresAt: r.at, revokedAt: null, sentAt: new Date().toISOString(), resentCount: (prev?.resentCount ?? 0) + 1 } }
+            : p
+        )
+      );
+    }
+    showToast(r.at ? `Invite resent. It now expires ${shortDay(r.at)}.` : "Invite resent.");
+  };
 
   const doRemove = async () => {
     if (!businessId) return;
     setBusy(true);
     setRemoveError(null);
-    const r = await removeTeamMember(businessId, id);
-    setBusy(false);
-    if (!r.ok) return setRemoveError(r.message ?? "Couldn't remove them. Try again.");
+    let revokedAt: string | null = null;
+    if (accepted) {
+      const r = await removeTeamMember(businessId, id);
+      setBusy(false);
+      if (!r.ok) return setRemoveError(r.message ?? "Couldn't remove them. Try again.");
+    } else {
+      const r = await revokeTeamInvite(businessId, id);
+      if (r.ok) revokedAt = r.at;
+      setBusy(false);
+      if (!r.ok) {
+        if (!r.refresh) return setRemoveError(r.message);
+        // The invite changed under us (accepted, or gone): close and read again.
+        setConfirm(false);
+        showToast(r.message, true);
+        data.reload();
+        return;
+      }
+    }
     setConfirm(false);
-    data.setPeople((people ?? []).filter((p) => p.professionalId !== id));
+    // Batch 2 CO: a withdrawn invite stays listed as "Withdrawn {date}" (the row is kept).
+    data.setPeople(
+      accepted
+        ? (people ?? []).filter((p) => p.professionalId !== id)
+        : (people ?? []).map((p) =>
+            p.professionalId === id
+              ? { ...p, invite: { expiresAt: p.invite?.expiresAt ?? null, sentAt: p.invite?.sentAt ?? null, resentCount: p.invite?.resentCount ?? 0, revokedAt: revokedAt ?? new Date().toISOString() } }
+              : p
+          )
+    );
     navigate("/app/business/employees", {
-      state: { toast: accepted ? `${name} was removed from your team.` : `${name}'s invite was cancelled.` },
+      state: { toast: accepted ? `${name} was removed from your team.` : `${name}'s invite was withdrawn.` },
     });
   };
 
@@ -183,31 +246,33 @@ export function PersonPage({ data }: { data: TeamData }) {
         <div className="tm-dhead-b">
           <p className="tm-dname">
             <b>{name}</b>
-            <span className={accepted ? "tm-pill" : "tm-pill inv"}>{accepted ? "Active" : "Invited"}</span>
+            <span className={accepted ? "tm-pill" : expired || withdrawn ? "tm-pill exp" : "tm-pill inv"}>{accepted ? "Active" : withdrawn ? "Withdrawn" : expired ? "Expired" : "Invited"}</span>
           </p>
           <p className="tm-ds1">
             {(accepted ? `${roleAndProfession(person)} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`) + (personUsesSeat(person) ? "" : " · no seat needed")}
           </p>
           <p className="tm-ds2">
-            {accepted ? `${weekCount} session${weekCount === 1 ? "" : "s"} this week` + (rating ? ` · ${rating}` : "") : "Hasn't accepted yet"}
+            {accepted ? `${weekCount} session${weekCount === 1 ? "" : "s"} this week` + (rating ? ` · ${rating}` : "") : withdrawn ? (when ?? "Withdrawn") : "Hasn't accepted yet" + (when ? ` · ${when}` : "")}
           </p>
         </div>
       </div>
 
-      <div className="tm-acts" style={{ gridTemplateColumns: `repeat(${acts.length}, minmax(0, 1fr))` }}>
+      {acts.length > 0 && <div className="tm-acts" style={{ gridTemplateColumns: `repeat(${acts.length}, minmax(0, 1fr))` }}>
         {acts.map((a) => (
           <button key={a.t} type="button" className={a.red ? "tm-act red tap" : "tm-act tap"} disabled={a.dis} onClick={(e) => a.on(e.currentTarget)} aria-haspopup={a.t === "Cover" && toCover.length > 1 ? "menu" : undefined}>
             {a.i}
             {a.t}
           </button>
         ))}
-      </div>
+      </div>}
       {chatError && <Notice message={chatError} />}
+      {expired && !readOnly && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{`This invite has expired, so ${first} can't accept it. Resend it to give them another 14 days.`}</p>}
+      {withdrawn && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{`This invite was withdrawn, so ${first} can't accept it. They can't be invited again yet.`}</p>}
 
       <RoleCard
         person={person}
         kind={kind}
-        disabled={offline || readOnly}
+        disabled={offline || readOnly || withdrawn}
         onSaved={data.reload}
         onToast={showToast}
         onNoSeats={() => setFull(true)}
@@ -305,7 +370,7 @@ export function PersonPage({ data }: { data: TeamData }) {
         />
       )}
 
-      <PermissionsCard key={person.permissions.join()} person={person} disabled={offline || readOnly} onSaved={data.reload} onToast={showToast} readOnly={readOnly} />
+      <PermissionsCard key={person.permissions.join()} person={person} disabled={offline || readOnly || withdrawn} onSaved={data.reload} onToast={showToast} readOnly={readOnly || withdrawn} />
 
       {accepted && !readOnly && (
         <button type="button" className="tm-danger tap" disabled={offline} onClick={() => setConfirm(true)}>
@@ -323,10 +388,10 @@ export function PersonPage({ data }: { data: TeamData }) {
         initialFocus="cancel"
         scrimBlur
         icon={accepted ? <UserMinus size={20} strokeWidth={2.2} /> : <UserX size={20} strokeWidth={2.2} />}
-        title={accepted ? `Remove ${name} from your team?` : `Cancel ${name}'s invite?`}
+        title={accepted ? `Remove ${name} from your team?` : `Withdraw ${name}'s invite?`}
         subtitle={removeBody}
         extra={removeError ? <p className="tm-sh-err" role="alert" style={{ color: "rgb(var(--c-status-high))" }}>{removeError}</p> : undefined}
-        confirmLabel={busy ? (accepted ? "Removing…" : "Cancelling…") : accepted ? "Remove" : "Cancel invite"}
+        confirmLabel={busy ? (accepted ? "Removing…" : "Withdrawing…") : accepted ? "Remove" : "Withdraw invite"}
         cancelLabel="Keep it"
         busy={busy}
         onCancel={() => {

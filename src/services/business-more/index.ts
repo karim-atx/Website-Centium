@@ -638,10 +638,32 @@ export interface TeamRow {
   invitedAt: string;
 }
 
+/** Professionals whose invitation was withdrawn (revoked_at), or null when that can't be read. */
+async function withdrawnInvitees(businessId: string): Promise<Set<string> | null> {
+  const loose = db as unknown as {
+    from: (t: string) => {
+      select: (c: string) => { eq: (k: string, v: string) => { is: (k: string, v: null) => PromiseLike<{ data: unknown; error: unknown }> } };
+    };
+  };
+  try {
+    const { data, error } = await loose.from("business_employees").select("professional_id, revoked_at").eq("business_id", businessId).is("accepted_at", null);
+    if (error || !Array.isArray(data)) return null;
+    return new Set((data as { professional_id: string; revoked_at: string | null }[]).filter((r) => r.revoked_at).map((r) => r.professional_id));
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTeamRows(businessId: string): Promise<Result<TeamRow[]>> {
   const rows = await db.from("business_employees").select("professional_id, accepted_at, created_at").eq("business_id", businessId);
   if (rows.error) return fail(rows.error, "Couldn't load your team.");
-  const list = (rows.data ?? []) as { professional_id: string; accepted_at: string | null; created_at: string }[];
+  const all = (rows.data ?? []) as { professional_id: string; accepted_at: string | null; created_at: string }[];
+  // Batch 2 CO: a withdrawn invitation isn't on the team. revoked_at is read
+  // apart and softly (not SELECT-granted to authenticated yet; naming it in the
+  // select above would fail the whole read with 42501), so until it's readable
+  // nothing changes here.
+  const withdrawn = all.some((r) => !r.accepted_at) ? await withdrawnInvitees(businessId) : null;
+  const list = withdrawn ? all.filter((r) => r.accepted_at || !withdrawn.has(r.professional_id)) : all;
   if (list.length === 0) return { ok: true, value: [] };
   const names = await db.from("public_profile_summary").select("id, first_name").in("id", list.map((r) => r.professional_id));
   const nameById = new Map<string, string>(((names.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || "Unnamed professional"]));

@@ -677,6 +677,10 @@ html.reduce-motion .tm-seat:active {
   background: var(--tm-good-bg);
   color: var(--tm-good);
 }
+.tm-pill.exp {
+  background: var(--tm-high-bg);
+  color: var(--tm-high);
+}
 .tm-pill.inv {
   background: var(--tm-pale);
   color: var(--tm-pdark);

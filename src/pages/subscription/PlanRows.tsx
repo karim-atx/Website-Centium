@@ -26,25 +26,40 @@ import {
 // A control that appeared to change a plan would write localStorage and leave
 // the database enforcing the old cap — which is what the professional screen
 // was cured of in 9c724ce, and what the other two still did until now.
+// (Batch 2 · CS: the business screen's toggle is the owner's real choice of
+// monthly or yearly, written by set_subscription_billing_period; the plan
+// rows stay read-only.)
 
 export const BillingToggle: React.FC<{
   period: BillingPeriod;
   onChange: (period: BillingPeriod) => void;
   /** The best saving among the plans shown, so the toggle can advertise it. */
   bestSaving?: number | null;
-}> = ({ period, onChange, bestSaving }) => (
-  <div className="flex gap-2 mb-5">
+  /**
+   * Batch 2 · CS (business owner): a line under each label (that period's
+   * price), and periods that can't be chosen. Unset: unchanged.
+   */
+  notes?: Partial<Record<BillingPeriod, string>>;
+  disabled?: Partial<Record<BillingPeriod, boolean>>;
+  /** The group's accessible name when the toggle is a real choice. */
+  label?: string;
+}> = ({ period, onChange, bestSaving, notes, disabled, label }) => (
+  <div className="flex gap-2 mb-5" role={label ? "group" : undefined} aria-label={label}>
     {(["monthly", "yearly"] as BillingPeriod[]).map((p) => (
       <button
         key={p}
+        type="button"
         onClick={() => onChange(p)}
         aria-pressed={period === p}
+        disabled={disabled?.[p]}
         className={clsx(
-          "tap flex-1 rounded-xl py-2.5 text-xs font-bold transition-colors flex items-center justify-center gap-1.5",
+          "tap flex-1 min-h-[44px] rounded-xl py-2.5 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed",
+          notes && "flex-col !gap-0.5",
           period === p ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-faint"
         )}
       >
         {p === "monthly" ? "Monthly" : "Yearly"}
+        {notes?.[p] && <span className="text-[11px] font-semibold opacity-90">{notes[p]}</span>}
         {/* COMPUTED, NOT WRITTEN. This badge read "−15%" on the marketing
             picker and "SAVE 30%" in the app, beside prices that produced
             neither. */}
@@ -72,8 +87,19 @@ export const PlanRow: React.FC<{
   isCurrent: boolean;
   /** Overrides the derived limit line — the business rows say their own thing. */
   detail?: string;
-}> = ({ tier, period, isCurrent, detail }) => {
-  const saving = yearlySaving(tier.monthlyPrice, tier.yearlyPrice);
+  /**
+   * Batch 2 · CS: the price as subscription_price_for answered it ("$29/mo",
+   * "Not available"), instead of priceLabel from the tier columns.
+   */
+  priceText?: string;
+  /**
+   * False drops the yearly-vs-monthly comparison (the saving badge and the
+   * per-month restatement). The business screen passes false: its Base
+   * yearly price is undecided. Default true: unchanged.
+   */
+  compare?: boolean;
+}> = ({ tier, period, isCurrent, detail, priceText, compare = true }) => {
+  const saving = compare ? yearlySaving(tier.monthlyPrice, tier.yearlyPrice) : null;
   const limit = detail ?? limitLabel(tier);
   return (
     <div
@@ -97,14 +123,14 @@ export const PlanRow: React.FC<{
           )}
         </div>
         <p className="text-xs text-charcoal-faint">
-          {[limit, priceLabel(tier.monthlyPrice, tier.yearlyPrice, period)]
+          {[limit, priceText ?? priceLabel(tier.monthlyPrice, tier.yearlyPrice, period)]
             .filter(Boolean)
             .join(" · ")}
         </p>
         {/* A yearly price and a monthly one are not comparable numbers until
             one of them is restated, so the yearly view says what it works out
             to per month. */}
-        {period === "yearly" && tier.yearlyPrice != null && tier.monthlyPrice > 0 && (
+        {compare && period === "yearly" && tier.yearlyPrice != null && tier.monthlyPrice > 0 && (
           <p className="text-[11px] text-charcoal-faint">
             {formatPrice(monthlyEquivalent(tier.yearlyPrice))}/mo, billed yearly
           </p>

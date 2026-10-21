@@ -4,10 +4,15 @@ import { fetchPromotions, promoStartMarkers, type Promotion } from "../../../ser
 import { promoText } from "../../business-market/promoModel";
 import {
   ScrubChart,
+  ScrubMarkerChip,
   type ScrubCfg,
+  type ScrubMarker,
   type ScrubMode,
   type ScrubTipRow,
 } from "../../../components/charts/ScrubChart";
+import { PRICE_HISTORY_STARTS } from "../../../services/business-revenue/priceMarkers";
+import { priceBuckets, priceSinceLine, tagRows } from "../../../services/business-revenue/priceMarkerLogic";
+import { usePriceMarkers } from "./usePriceMarkers";
 import {
   businessRange,
   daysBetween,
@@ -111,8 +116,8 @@ export const OverviewTab: React.FC = () => {
   }, [store, businessId, range, salesKey]);
   const topProducts = top && top.key === salesKey ? top.value : null;
   // AN14-001 row 7d: discount markers on the chart from promotions.starts_on
-  // (B13, any insider reads them). The plan-price markers have no reader yet
-  // (B8 keeps no plan price-change log).
+  // (B13, any insider reads them), and price markers from plan_price_markers
+  // (CQ, Batch 2) below.
   const [promos, setPromos] = useState<Promotion[] | null>(null);
   useEffect(() => {
     if (!businessId) return;
@@ -126,6 +131,14 @@ export const OverviewTab: React.FC = () => {
   }, [businessId]);
   const rec = useRecordedRevenue(range, data?.records ?? null, { plans: false });
   const f = rec.figures;
+  // CQ: plan price changes over exactly the days the chart draws (the
+  // business's days, as plan_price_markers dates them).
+  const fDays = f?.series.days ?? [];
+  const price = usePriceMarkers(
+    businessId,
+    fDays[0] ?? null,
+    fDays[fDays.length - 1] ?? null,
+  );
 
   const m = useMemo(() => {
     if (!f) return null;
@@ -350,10 +363,40 @@ export const OverviewTab: React.FC = () => {
   }
   // Markers sit on the bucket holding the start: a day, or a store's week.
   const buckets = store ? [...new Set(days.map(mondayOf))] : days;
-  const markers =
+  const promoMarkers =
     promos && days.length
       ? promoStartMarkers(promos, buckets, days[days.length - 1], (p) => promoText(kind, p.type, p.value).chip, today)
       : [];
+  // CQ: one price tag per bucket (the step, or a count when several changed
+  // there), dropped a row when it would sit on another tag (tagRows); every
+  // change is a row in that bucket's tooltip.
+  const priceBk =
+    price.changes && days.length
+      ? priceBuckets(price.changes, buckets, days[days.length - 1])
+      : [];
+  const priceRows = tagRows(
+    promoMarkers.map((p) => p.i),
+    priceBk.map((b) => b.i),
+    buckets.length,
+  );
+  const markers: ScrubMarker[] = [
+    // fit: a promotion tag near either edge stays inside the plot too.
+    ...promoMarkers.map((p) => ({ ...p, fit: true })),
+    ...priceBk.map((b, k) => ({
+      i: b.i,
+      t: b.t,
+      kind: "price" as const,
+      fit: true,
+      row: priceRows[k],
+    })),
+  ];
+  if (priceBk.length)
+    for (const md of modes) {
+      if (!md.tips) continue;
+      const tipsOf = md.tips.map((r) => [...r]);
+      for (const b of priceBk) (tipsOf[b.i] ??= []).push(...b.rows);
+      md.tips = tipsOf;
+    }
   const cfg: ScrubCfg = {
     vh: 140,
     labels,
@@ -532,6 +575,15 @@ export const OverviewTab: React.FC = () => {
           early={m.chartEarly && !empty}
           empty={chartEmpty}
         />
+        {!chartEmpty && days.length > 0 && (!store || priceBk.length > 0) && (
+          <PriceLine
+            from={days[0]}
+            today={today}
+            failed={store ? null : price.failed}
+            loaded={!!price.changes}
+            onRetry={price.reload}
+          />
+        )}
         {summary.length > 0 && (
           <div
             className="grid grid-cols-3 mt-[12px] pt-[12px]"
@@ -579,6 +631,54 @@ export const OverviewTab: React.FC = () => {
         <TopProducts rows={topProducts} />
       )}
     </div>
+  );
+};
+
+/**
+ * CQ: what the price tags mean and since when. History starts at
+ * PRICE_HISTORY_STARTS with no backfill, so the line names that day (and says
+ * earlier changes weren't recorded when the window reaches back before it)
+ * rather than letting an empty stretch read as "no price changed". A failed
+ * read leaves the chart as it is and says so here, with Retry.
+ */
+const PriceLine: React.FC<{
+  from: string;
+  today: string;
+  failed: null | "offline" | "error";
+  loaded: boolean;
+  onRetry: () => void;
+}> = ({ from, today, failed, loaded, onRetry }) => {
+  if (failed)
+    return (
+      <div className="flex items-center justify-between gap-[12px] mt-[4px]">
+        <p
+          role="alert"
+          className="text-[11.5px] leading-[16px] font-semibold"
+          style={{ color: "#C0392B" }}
+        >
+          {failed === "offline"
+            ? "You're offline. Price changes show when you're back online."
+            : "Couldn't load price changes."}
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="tap min-h-[44px] px-[6px] text-[12.5px] font-extrabold shrink-0"
+          style={{ color: v("pdark") }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  if (!loaded) return null;
+  return (
+    <p
+      className="text-[11px] leading-[18px] mt-[8px]"
+      style={{ color: v("faint"), textWrap: "pretty" } as React.CSSProperties}
+    >
+      <ScrubMarkerChip kind="price">Price change</ScrubMarkerChip>{" "}
+      {priceSinceLine(from, PRICE_HISTORY_STARTS, today)}
+    </p>
   );
 };
 

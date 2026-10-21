@@ -11,6 +11,8 @@ import { useBack } from "../../../hooks/useBack";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { invalidateConsoleAccess } from "../../../services/business-console";
 import { acceptEmployment, removeMyEmployment } from "../../../services/business-team/employment";
+import type { AcceptRefusalKind } from "../../../services/business-team/inviteRefusals";
+import { invitationState } from "../../../components/pro/businesses/invitationLogic";
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
 import { range12, time12 } from "../../../utils/time12";
@@ -41,6 +43,8 @@ export default function BusinessDetail() {
   const [declining, setDeclining] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  /** Batch 2 CO: an accept the server refused as withdrawn or expired (my_business_employments can't say so). */
+  const [refused, setRefused] = useState<AcceptRefusalKind | null>(null);
 
   const e = data?.employments.find((x) => x.businessId === id) ?? null;
   const ownSeat = access.seats.find((s) => s.businessId === id && s.isOwner) ?? null;
@@ -80,11 +84,26 @@ export default function BusinessDetail() {
     invalidateConsoleAccess();
     navigate("/app/more/businesses", { replace: true });
   };
+  /** An expired or withdrawn invitation: nothing to decline, so no confirm; the same own-row delete. */
+  const removeDead = async () => {
+    setBusy(true);
+    const r = await removeMyEmployment(id);
+    setBusy(false);
+    if (!r.ok) return setToast(r.message);
+    navigate("/app/more/businesses", { replace: true });
+  };
   const accept = async () => {
     setBusy(true);
     const r = await acceptEmployment(id);
     setBusy(false);
-    if (!r.ok) return setToast(r.message);
+    if (!r.ok) {
+      setToast(r.message);
+      // Batch 2 CO: as on the Businesses page, stop offering Accept and read again.
+      const kind = r.refused;
+      if (kind === "withdrawn" || kind === "expired") setRefused(kind);
+      if (kind !== undefined) reload();
+      return;
+    }
     setToast(`You joined ${name}.`);
     invalidateConsoleAccess();
     reload();
@@ -99,7 +118,14 @@ export default function BusinessDetail() {
       ) : !data ? (
         <ListSkeleton rows={3} />
       ) : e && !e.acceptedAt ? (
-        <InvitationCard e={e} busy={busy} onAccept={() => void accept()} onDecline={() => setDeclining(true)} />
+        <InvitationCard
+          e={e}
+          busy={busy}
+          state={invitationState(e.invite, refused)}
+          onAccept={() => void accept()}
+          onDecline={() => setDeclining(true)}
+          onRemove={() => void removeDead()}
+        />
       ) : (
         <>
           {/* bizDetail13 cover: 110, r18, 1px 10% border, the soft stripes (or the cover photo); 12 below. */}

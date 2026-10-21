@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Clock3, Copy, IdCard, Plus, Share2, User, UserPlus, Users } from "lucide-react";
+import { Clock3, Copy, IdCard, Plus, Share2, User, UserPlus, UserX, Users } from "lucide-react";
 import { BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { copyText, shareOrCopy } from "../../components/business-more/share";
@@ -13,7 +13,7 @@ import "../business-analytics/shell/analytics.css";
 import "../business-analytics/team/an5.css";
 import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
-import { ROLE_LABEL, roleAndProfession } from "../business-team/teamLogic";
+import { ROLE_LABEL, inviteState, inviteWhen, isWithdrawn, lowerFirst, roleAndProfession, shortDay, withdrawnPeople } from "../business-team/teamLogic";
 import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
@@ -94,7 +94,7 @@ export function RolesPage() {
             <BizRow
               key={r.professionalId}
               title={r.name}
-              desc={(r.acceptedAt ? roleAndProfession(r) : "Invited, hasn't accepted yet") + (personUsesSeat(r) ? " · uses a seat" : "")}
+              desc={isWithdrawn(r) ? inviteWhen(r) ?? "Withdrawn" : (r.acceptedAt ? roleAndProfession(r) : "Invited, hasn't accepted yet" + (inviteWhen(r) ? ` · ${inviteWhen(r)}` : "")) + (personUsesSeat(r) ? " · uses a seat" : "")}
               value={ROLE_LABEL[r.role]}
               dim={!r.acceptedAt}
               onClick={() => navigate(`/app/business/employees/${r.professionalId}`)}
@@ -128,8 +128,10 @@ export function SeatsPage() {
   const per = (live ? s.seatsPerBlock : null) ?? plan?.seatAddon?.seatsPerUnit ?? capacity?.seatsPerUnit ?? 5;
   // Seats count instructors and trainers only (B6 follow-up, Q-09).
   const accepted = rows?.filter((r) => r.acceptedAt && personUsesSeat(r)) ?? [];
-  const invited = rows?.filter((r) => !r.acceptedAt && personUsesSeat(r)) ?? [];
-  const noSeat = rows?.filter((r) => !personUsesSeat(r)) ?? [];
+  // Batch 2 CO: a withdrawn invitation holds nothing; it's listed apart, with no actions.
+  const invited = rows?.filter((r) => !r.acceptedAt && personUsesSeat(r) && !isWithdrawn(r)) ?? [];
+  const noSeat = rows?.filter((r) => !personUsesSeat(r) && !isWithdrawn(r)) ?? [];
+  const withdrawn = rows ? withdrawnPeople(rows) : [];
   const total = live ? s.capacity : (capacity?.capacity ?? 0);
   const blocks = live ? s.seatBlocks : (capacity?.seatBlocks ?? 0);
   const included = Math.max(0, total - blocks * per);
@@ -190,14 +192,21 @@ export function SeatsPage() {
           {invited.length > 0 && (
             <BizSection label="Invited" footer="An invitation uses a seat only once it's accepted.">
               {invited.map((m) => (
-                <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={`Invited ${fmt(m.invitedAt)}`} value="Pending" onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={`Invited ${shortDay(m.invitedAt)}` + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? "Expired" : "Pending"} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}
           {noSeat.length > 0 && (
             <BizSection label="No seat needed" footer="Front desk, managers, staff and shop assistants don't use a seat.">
               {noSeat.map((m) => (
-                <BizRow key={m.professionalId} icon={User} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited`} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={User} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited` + (inviteWhen(m) ? ` · ${lowerFirst(inviteWhen(m)!)}` : "")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+              ))}
+            </BizSection>
+          )}
+          {withdrawn.length > 0 && (
+            <BizSection label="Withdrawn" footer="Someone whose invite was withdrawn can't be invited again yet.">
+              {withdrawn.map((m) => (
+                <BizRow key={m.professionalId} icon={UserX} title={m.name} desc={inviteWhen(m) ?? "Withdrawn"} dim onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}

@@ -9,7 +9,8 @@ import { MemberTag } from "../../../components/marketplace/MemberTag";
 import { useOpsToast } from "../../../components/marketplace/VenueKit";
 import { copyText, shareOrCopy } from "../../../components/business-more/share";
 import { useOnline } from "../../../hooks/useOnline";
-import { createMemberCode, endMembership, maskedMemberLabel, type MemberCode, type Membership } from "../../../services/business-members";
+import { createBlock, createMemberCode, endMembership, grantsLine, gymArg, KIND_WORD, maskedMemberLabel, type MemberCode, type Membership } from "../../../services/business-members";
+import { KIND_LABEL } from "../../business-ops/plans/planModel";
 import { AnAvatar, AnCard, AnCountLine, AnHeaderRow, AnLead, AnListRow, AnNoneRow, AnNumberBoxes, AnRowButton, AnSeeAll, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
 import { liveCodes, type MembersData } from "./useMembersData";
@@ -30,16 +31,24 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 // half is offered while active or pending. Codes need business_can(members)
 // (the owner, or staff with Members, ATX09); the plan must be the business's
 // (ATX25); creating is rate-limited (ATX02).
+//
+// CN (Batch 2): a code may grant a plan, a membership or a pass. Only active
+// plans are offered (redeeming refuses any other status). The gym picker
+// shows only for a business with several gyms, and p_gym_id is sent only
+// then; one gym is resolved by the server, and none is said up front. Each
+// code names what it grants. A granted membership is never revenue (price
+// 0.00, no ledger row).
 
 const BASE = "/app/business/analytics/members";
 
+// The app's "Oct 14" convention.
 const dMMM = (iso: string) => {
   const d = new Date(iso);
-  return `${d.getDate()} ${MON[d.getMonth()]}`;
+  return `${MON[d.getMonth()]} ${d.getDate()}`;
 };
 const dMMMyyyy = (iso: string) => {
   const d = new Date(iso);
-  return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+  return `${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 };
 
 const STATUS: Record<Membership["status"], { label: string; tone: "member" | "pending" | "muted" }> = {
@@ -57,13 +66,6 @@ const memberFact = (m: Membership) =>
       : m.respondedAt
         ? `Since ${dMMMyyyy(m.respondedAt)}`
         : `Invited ${dMMMyyyy(m.invitedAt)}`;
-
-function createError(code: string | undefined, message: string): string {
-  if (code === "ATX09") return "You need Members access to create member codes. Ask the owner.";
-  if (code === "ATX25") return "That plan belongs to another business. Choose another plan.";
-  if (code === "ATX02") return "You've created a lot of codes in the last hour. Try again later.";
-  return message || "Couldn't create a code. Try again.";
-}
 
 export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: MembersVocab }) {
   const navigate = useNavigate();
@@ -85,7 +87,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const memberCountLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
   const redeemed = codes.filter((c) => c.redeemed).length;
   const pct = codes.length > 0 ? Math.round((redeemed / codes.length) * 100) : null;
-  const planName = (id: string | null) => (id ? (data.plans.find((p) => p.id === id)?.name ?? "Plan") : "No plan");
+  const gyms = businessGyms(data);
 
   const copy = async (code: string) => {
     if (await copyText(code)) {
@@ -116,7 +118,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       mono
       avatar={<AnAvatar icon={Ticket} tone="caution" />}
       name={c.code}
-      fact={`Expires ${dMMM(c.expiresAt)} · ${planName(c.membershipPlanId)}`}
+      fact={`Expires ${dMMM(c.expiresAt)} · ${grantsLine(c, data.plans, gyms)}`}
       trailing={
         <AnRowButton
           icon={copied === c.code ? Check : Copy}
@@ -313,6 +315,17 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   );
 }
 
+
+/** The business's own gyms: my_venues() lists every venue the caller is an insider of, across businesses. */
+function businessGyms(data: MembersData) {
+  return data.businessId ? data.venues.filter((v) => v.businessId === data.businessId) : [];
+}
+
+const FIELD =
+  "tap w-full h-[44px] rounded-[14px] bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] flex items-center justify-between gap-2 text-left text-[13px] leading-[18px] text-charcoal disabled:opacity-60";
+const FIELD_LABEL = "text-[11px] leading-[14px] font-bold text-charcoal-faint mb-[6px]";
+const HINT = "text-[11px] leading-[15px] text-charcoal-faint";
+
 function CreateCodeSheet({
   open,
   onClose,
@@ -330,12 +343,15 @@ function CreateCodeSheet({
 }) {
   const online = useOnline();
   const [planId, setPlanId] = useState<string>("");
+  const [gymId, setGymId] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<MemberCode | null>(null);
   const [copied, setCopied] = useState(false);
   const [menu, setMenu] = useState(false);
   const [fieldEl, setFieldEl] = useState<HTMLButtonElement | null>(null);
+  const [gymMenu, setGymMenu] = useState(false);
+  const [gymEl, setGymEl] = useState<HTMLButtonElement | null>(null);
   const canShare = typeof (navigator as Navigator & { share?: unknown }).share === "function";
 
   const [wasOpen, setWasOpen] = useState(open);
@@ -343,34 +359,60 @@ function CreateCodeSheet({
     setWasOpen(open);
     if (open) {
       setPlanId("");
+      setGymId("");
       setError(null);
       setCreated(null);
       setCopied(false);
     }
   }
 
+  // Only plans that can be granted: redeeming refuses any plan that is not active.
+  const offered = data.plans.filter((p) => p.dbStatus === "active");
+  const plan = offered.find((p) => p.id === planId);
+  const gyms = businessGyms(data);
+  const gym = gyms.find((g) => g.gymId === gymId);
+  const block = createBlock({
+    planId: plan ? plan.id : null,
+    gymId: gym ? gym.gymId : null,
+    gymCount: gyms.length,
+    gymsLoading: data.venuesLoading,
+    gymsError: !!data.venuesError,
+  });
+
   const create = async () => {
-    if (!data.businessId || creating) return;
+    if (!data.businessId || creating || block) return;
     setCreating(true);
     setError(null);
-    const r = await createMemberCode(data.businessId, planId || null);
+    const p = plan ? plan.id : null;
+    const r = await createMemberCode(data.businessId, p, gymArg(p, gym ? gym.gymId : null, gyms.length));
     setCreating(false);
     if (!r.ok) {
-      setError(createError(r.code, r.message));
+      setError(r.message);
       return;
     }
     setCreated(r.code);
     onCreated(r.code);
   };
 
-  const plan = data.plans.find((p) => p.id === planId);
+  // What a created code grants, in words (the server resolved a single gym itself).
+  const createdPlan = created?.membershipPlanId ? data.plans.find((p) => p.id === created.membershipPlanId) : undefined;
+  const createdGym = created?.gymId ? gyms.find((g) => g.gymId === created.gymId) : undefined;
+  const createdGrant = created?.membershipPlanId
+    ? `${createdPlan ? `${createdPlan.name} (${KIND_LABEL[createdPlan.kind]})` : "A plan"}${createdGym ? ` at ${createdGym.name}` : ""}`
+    : null;
+
   const footer = (
     <div>
-      {error && <p className="text-[12px] leading-[17px] text-status-high mb-[8px]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[12px] leading-[17px] text-status-high mb-[8px]">
+          {error}
+        </p>
+      )}
+      {!created && !online && <p className="text-[12px] leading-[17px] text-charcoal-faint mb-[8px]">You're offline. Connect to create a code.</p>}
       <button
         type="button"
         onClick={() => (created ? onClose() : void create())}
-        disabled={!created && (creating || !online || !data.businessId)}
+        disabled={!created && (creating || !online || !data.businessId || block !== null)}
         className="tap w-full h-[50px] rounded-[16px] bg-primary-fill text-on-primary-fill text-[14px] font-extrabold disabled:opacity-60"
       >
         {created ? "Done" : creating ? "Creating…" : "Create code"}
@@ -384,6 +426,9 @@ function CreateCodeSheet({
         <div className="text-center py-[8px]">
           <p className="text-[24px] font-extrabold tabular-nums tracking-[0.12em] text-charcoal">{created.code}</p>
           <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[4px]">Expires {dMMMyyyy(created.expiresAt)}.</p>
+          <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[2px]">
+            {createdGrant ? `Comes with ${createdGrant}.` : "A member code only. It doesn't come with a membership or pass."}
+          </p>
           <div className="flex justify-center gap-[10px] mt-[16px]">
             <AnRowButton
               icon={copied ? Check : Copy}
@@ -404,7 +449,7 @@ function CreateCodeSheet({
                 onClick={() =>
                   void shareOrCopy({
                     title: "Centium member code",
-                    text: `Your Centium member code is ${created.code}. Redeem it from your Centium profile before ${dMMMyyyy(created.expiresAt)}.`,
+                    text: `Your Centium member code is ${created.code}.${createdGrant ? ` It comes with ${createdGrant}.` : ""} Redeem it from your Centium profile before ${dMMMyyyy(created.expiresAt)}.`,
                     copy: created.code,
                   })
                 }
@@ -417,37 +462,113 @@ function CreateCodeSheet({
           <p className="text-[13px] leading-[19px] text-charcoal-soft">
             Give the code to the {vocab.one === "client" ? "client" : "person"} at the desk. They redeem it in their own Centium app and become a member straight away.
           </p>
-          {data.plans.length > 0 && (
+          {data.plansLoading && offered.length === 0 ? (
             <div>
-              <p className="text-[11px] leading-[14px] font-bold text-charcoal-faint mb-[6px]">Membership plan (optional)</p>
-              <button
-                ref={setFieldEl}
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={menu}
-                onClick={() => setMenu((m) => !m)}
-                className="tap w-full h-[44px] rounded-[14px] bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] flex items-center justify-between gap-2 text-left text-[13px] leading-[18px] text-charcoal"
-                style={{ padding: "0 12px" }}
-              >
-                <span className="truncate">{plan ? `${plan.name} · ${plan.price}` : "No plan"}</span>
-                <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
+              <p className={FIELD_LABEL}>What the code comes with</p>
+              <button type="button" disabled className={FIELD} style={{ padding: "0 12px" }}>
+                <span className="truncate text-charcoal-faint">Loading plans…</span>
               </button>
-              <PopupMenu
-                open={menu}
-                onClose={() => setMenu(false)}
-                anchor={fieldEl}
-                matchWidth={fieldEl}
-                variant="field"
-                options={[{ value: "", label: "No plan" }, ...data.plans.map((p) => ({ value: p.id, label: `${p.name} · ${p.price}` }))]}
-                selected={planId}
-                onSelect={(v) => {
-                  setPlanId(v);
-                  setMenu(false);
-                }}
-              />
             </div>
+          ) : (
+            offered.length > 0 && (
+              <div>
+                <p className={FIELD_LABEL}>What the code comes with</p>
+                <button
+                  ref={setFieldEl}
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={menu}
+                  onClick={() => setMenu((m) => !m)}
+                  className={FIELD}
+                  style={{ padding: "0 12px" }}
+                >
+                  <span className="truncate">{plan ? `${plan.name} · ${KIND_LABEL[plan.kind]} · ${plan.price}` : "No plan (member code only)"}</span>
+                  <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
+                </button>
+                <PopupMenu
+                  open={menu}
+                  onClose={() => setMenu(false)}
+                  anchor={fieldEl}
+                  matchWidth={fieldEl}
+                  variant="field"
+                  options={[
+                    { value: "", label: "No plan (member code only)" },
+                    ...offered.map((p) => ({ value: p.id, label: `${p.name} · ${KIND_LABEL[p.kind]} · ${p.price}` })),
+                  ]}
+                  selected={planId}
+                  onSelect={(v) => {
+                    setPlanId(v);
+                    setError(null);
+                    setMenu(false);
+                  }}
+                />
+              </div>
+            )
           )}
-          <p className="text-[11px] leading-[15px] text-charcoal-faint">The code works for 7 days.</p>
+
+          {plan && (
+            <>
+              <p className={HINT}>
+                When they redeem the code they get this {KIND_WORD[plan.kind]} at no charge. It isn't counted as revenue.
+              </p>
+              {block === "gyms-loading" && <p className={HINT}>Loading your gyms…</p>}
+              {block === "gyms-error" && (
+                <div className="flex items-center justify-between gap-[10px]">
+                  <p className="text-[12px] leading-[17px] text-status-high">Couldn't load your gyms.</p>
+                  <button
+                    type="button"
+                    onClick={data.reloadVenues}
+                    disabled={!online}
+                    className="tap min-h-[44px] px-[14px] rounded-[12px] text-[13px] font-bold text-primary-dark disabled:opacity-60"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+              {block === "no-gym" && (
+                <p className="text-[12px] leading-[17px] text-status-high">
+                  A membership or pass needs a gym, and your business has none yet. Add a gym first, or choose No plan.
+                </p>
+              )}
+              {!block && gyms.length === 1 && (
+                <p className={HINT}>
+                  The {KIND_WORD[plan.kind]} is for {gyms[0].name}.
+                </p>
+              )}
+              {gyms.length > 1 && !data.venuesError && (
+                <div>
+                  <p className={FIELD_LABEL}>Which gym is it for?</p>
+                  <button
+                    ref={setGymEl}
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={gymMenu}
+                    onClick={() => setGymMenu((m) => !m)}
+                    className={FIELD}
+                    style={{ padding: "0 12px" }}
+                  >
+                    <span className={gym ? "truncate" : "truncate text-charcoal-faint"}>{gym ? gym.name : `Choose one of your ${gyms.length} gyms`}</span>
+                    <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
+                  </button>
+                  <PopupMenu
+                    open={gymMenu}
+                    onClose={() => setGymMenu(false)}
+                    anchor={gymEl}
+                    matchWidth={gymEl}
+                    variant="field"
+                    options={gyms.map((g) => ({ value: g.gymId, label: g.name }))}
+                    selected={gymId}
+                    onSelect={(v) => {
+                      setGymId(v);
+                      setError(null);
+                      setGymMenu(false);
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
+          <p className={HINT}>The code works for 7 days.</p>
         </div>
       )}
     </BottomSheet>

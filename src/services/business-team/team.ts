@@ -35,8 +35,10 @@ const fail = <T>(error: { code?: string; message?: string } | null | undefined, 
   message: isOffline(error) ? OFFLINE_MESSAGE : fallback,
 });
 
-import type { BusinessRole, ClassSession, TeamPerson } from "./types";
-export type { BusinessRole, ClassSession, TeamPerson } from "./types";
+import type { BusinessRole, ClassSession, InviteWindow, TeamPerson } from "./types";
+export type { BusinessRole, ClassSession, InviteWindow, TeamPerson } from "./types";
+import { resendRefusal, revokeRefusal } from "./inviteRefusals";
+import { rpc } from "../pro/rpc";
 
 export { roleUsesSeat } from "./seats";
 
@@ -114,7 +116,49 @@ async function payRatesFor(businessId: string): Promise<Map<string, number | nul
   return out;
 }
 
-/** Everyone on the business's team, accepted and invited, earliest first. */
+/**
+ * Batch 2 CO: each unaccepted row's window (expires_at, revoked_at, sent_at,
+ * resent_count; migration 20261201000000), by employment id.
+ *
+ * A SEPARATE READ THAT FAILS SOFTLY, never part of fetchTeam's select: the new
+ * columns are not SELECT-granted to authenticated yet, and a column grant is
+ * checked at plan time, so naming one would fail the whole team read with
+ * 42501. On any error this answers null and the screens show no expiry and no
+ * withdrawn state (never a guessed one).
+ */
+async function inviteWindowsFor(businessId: string): Promise<Map<string, InviteWindow> | null> {
+  const loose = db as unknown as {
+    from: (t: string) => {
+      select: (c: string) => {
+        eq: (k: string, v: string) => { is: (k: string, v: null) => PromiseLike<{ data: unknown; error: unknown }> };
+      };
+    };
+  };
+  try {
+    const { data, error } = await loose
+      .from("business_employees")
+      .select("id, expires_at, revoked_at, resent_count, sent_at")
+      .eq("business_id", businessId)
+      .is("accepted_at", null);
+    if (error || !Array.isArray(data)) return null;
+    return new Map(
+      (data as { id: string; expires_at: string | null; revoked_at: string | null; resent_count: number | null; sent_at: string | null }[]).map((r) => [
+        r.id,
+        { expiresAt: r.expires_at ?? null, revokedAt: r.revoked_at ?? null, sentAt: r.sent_at ?? null, resentCount: Number(r.resent_count ?? 0) },
+      ])
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Everyone on the business's team, accepted and invited, earliest first.
+ * A withdrawn invitation (revoked_at set, when the window read works) stays in
+ * the list with its window, so the screens show it as "Withdrawn {date}" with
+ * no actions (teamLogic isWithdrawn / onTeam): the person can't be invited
+ * again yet, and the owner should see why. It holds no seat.
+ */
 export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]>> {
   const rows = await db
     .from("business_employees")
@@ -123,14 +167,16 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
     .order("created_at", { ascending: true });
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
   const list = (rows.data ?? []) as EmployeeRow[];
-  const [names, about, pay] = await Promise.all([
+  const [names, about, pay, windows] = await Promise.all([
     namesFor(list.map((r) => r.professional_id)),
     professionsFor(businessId),
     payRatesFor(businessId),
+    list.some((r) => !r.accepted_at) ? inviteWindowsFor(businessId) : Promise.resolve(null),
   ]);
   return {
     ok: true,
     value: list.map((r) => ({
+      invite: r.accepted_at ? null : (windows?.get(r.id) ?? null),
       employmentId: r.id,
       professionalId: r.professional_id,
       name: names.get(r.professional_id)?.name ?? "Unnamed",
@@ -226,6 +272,35 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
   if (error.code === "ATX02") return { ok: false, reason: "rate_limited", message: "Too many invites in a short time. Try again in an hour." };
   console.error("[business-team] invite_employee failed:", error.code, error.message);
   return { ok: false, reason: "failed", message: "Invite didn't send. Check your connection and try again. Nothing was sent." };
+}
+
+export type InviteWrite = { ok: true; at: string | null } | { ok: false; message: string; refresh: boolean };
+
+/**
+ * resend_team_invite(business, professional) (Batch 2 CO): extends a pending
+ * invitation 14 days from now, an already-lapsed one too, and answers the new
+ * expires_at. Needs business_can(members); 10 resends an hour (ATX02).
+ */
+export async function resendTeamInvite(businessId: string, professionalId: string): Promise<InviteWrite> {
+  const { data, error } = await rpc("resend_team_invite", { p_business_id: businessId, p_professional_id: professionalId });
+  if (!error) return { ok: true, at: typeof data === "string" ? data : null };
+  const r = resendRefusal(error);
+  if (!r.refresh) console.error("[business-team] resend_team_invite failed:", error.code, error.message);
+  return { ok: false, ...r };
+}
+
+/**
+ * revoke_team_invite(business, professional) (Batch 2 CO): marks a pending
+ * invitation withdrawn (the row stays) and answers revoked_at; a second call
+ * answers the first time. Refused on an accepted one (Remove from team is
+ * that act). Replaces deleting a pending row from the console.
+ */
+export async function revokeTeamInvite(businessId: string, professionalId: string): Promise<InviteWrite> {
+  const { data, error } = await rpc("revoke_team_invite", { p_business_id: businessId, p_professional_id: professionalId });
+  if (!error) return { ok: true, at: typeof data === "string" ? data : null };
+  const r = revokeRefusal(error);
+  if (!r.refresh) console.error("[business-team] revoke_team_invite failed:", error.code, error.message);
+  return { ok: false, ...r };
 }
 
 export interface JoinRequest {

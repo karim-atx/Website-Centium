@@ -11,14 +11,19 @@ import { MembershipStatusBadge } from "../marketplace/MembershipStatusBadge";
 import {
   endMembership,
   fetchMyMemberships,
+  newMemberships,
+  OFFLINE_LINE,
+  redeemedLine,
   redeemMemberCode,
   respondToMembership,
   type Membership,
 } from "../../services/business-members";
+import { useOnline } from "../../hooks/useOnline";
 import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
 import { endMyGymMembership, fetchGymBusinessIds, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
 import { NameSharingCard } from "./NameSharingCard";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
@@ -43,6 +48,13 @@ import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash
 // board's empty card); once there is one, "Join another gym or studio"
 // reveals it.
 //
+// CN (Batch 2): a code may also grant a membership or pass. There is no
+// preview function, so nothing is promised before redeeming; afterwards
+// my_gym_memberships is re-read and the new row is named (plan and gym). The
+// server grants nothing when the code has no plan or the person already holds
+// an active membership at that gym, and then we say only that they joined.
+// A refused code is not used up: it stays in the box to correct or retry.
+//
 // GYM MEMBERSHIPS BOUGHT ON EXPLORE (backend stage 4b, MO1.4.2.2.1 note:
 // "membership appears in Profile") are listed first, from
 // my_gym_memberships(), in the same row with the venue's tag (Member, or the
@@ -59,6 +71,7 @@ const dateLabel = (iso: string) =>
 
 export const MembershipsCard: React.FC = () => {
   const { authUserId, profileReady } = useApp();
+  const online = useOnline();
   const navigate = useNavigate();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [gymMemberships, setGymMemberships] = useState<GymMembership[]>([]);
@@ -108,7 +121,9 @@ export const MembershipsCard: React.FC = () => {
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  const [redeemNote, setRedeemNote] = useState<string | null>(null);
+  /** A refusal (kept beside the code box) or the success line (shown above the list). */
+  const [redeemNote, setRedeemNote] = useState<{ text: string; ok: boolean } | null>(null);
+  const [tick, setTick] = useState(0);
   const [joinOpen, setJoinOpen] = useState(false);
 
   const load = async () => {
@@ -130,9 +145,11 @@ export const MembershipsCard: React.FC = () => {
       if (cancelled) return;
       setLoaded(true);
       if (gyms.ok) setGymMemberships(gyms.value);
-      else setError(gyms.message);
-      if (!result.ok) {
-        setError(result.message);
+      if (!result.ok || !gyms.ok) {
+        // Short, beside its Try again (lead, Batch 2); offline keeps its own line.
+        const msg = !result.ok ? result.message : gyms.ok ? null : gyms.message;
+        setError(msg === OFFLINE_MESSAGE ? msg : "Couldn't load your memberships.");
+        if (result.ok) setMemberships(result.memberships);
         return;
       }
       setError(null);
@@ -141,7 +158,7 @@ export const MembershipsCard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady]);
+  }, [authUserId, profileReady, tick]);
 
   const answer = async (id: string, accept: boolean) => {
     setBusyId(id);
@@ -188,24 +205,37 @@ export const MembershipsCard: React.FC = () => {
   };
 
   const redeem = async () => {
-    if (!code.trim() || redeeming) return;
+    if (!code.trim() || redeeming || !authUserId) return;
+    // Refusals keep the code in the box: a refused code is not used up.
+    if (!online) return setRedeemNote({ text: OFFLINE_LINE, ok: false });
     setRedeeming(true);
+    setRedeemNote(null);
+    const before = gymMemberships;
     const result = await redeemMemberCode(code);
-    setRedeeming(false);
-    setRedeemNote(result.message);
-    if (!result.ok) return;
+    if (!result.ok) {
+      setRedeeming(false);
+      setRedeemNote({ text: result.message, ok: false });
+      return;
+    }
     setCode("");
-    await load();
+    // What came with the code: whatever my_gym_memberships now holds that it did not.
+    const [mine, gyms] = await Promise.all([fetchMyMemberships(authUserId), fetchMyGymMemberships()]);
+    setRedeeming(false);
+    if (mine.ok) setMemberships(mine.memberships);
+    if (gyms.ok) setGymMemberships(gyms.value);
+    const business = mine.ok ? (mine.memberships.find((m) => m.businessId === result.businessId)?.businessName ?? null) : null;
+    const granted = gyms.ok ? newMemberships(before, gyms.value) : [];
+    setRedeemNote({ text: redeemedLine(granted, business, !gyms.ok || !!gyms.value.some((g) => g.cachedAt)), ok: true });
   };
 
-  const codeBox = (
+  const codeBox = (helper: string) => (
     <>
       <div className="flex items-center gap-2">
         <input
           value={code}
           onChange={(e) => {
             setCode(e.target.value.toUpperCase());
-            setRedeemNote(null);
+            if (redeemNote && !redeemNote.ok) setRedeemNote(null);
           }}
           placeholder="Member code"
           aria-label="Member code"
@@ -217,7 +247,13 @@ export const MembershipsCard: React.FC = () => {
           {redeeming ? "…" : "Join"}
         </Button>
       </div>
-      {redeemNote && <p className="mt-2 text-xs font-semibold text-charcoal-soft">{redeemNote}</p>}
+      {redeemNote && !redeemNote.ok ? (
+        <p role="alert" className="mt-2 text-xs font-semibold text-status-high">
+          {redeemNote.text}
+        </p>
+      ) : (
+        <p className="mt-2.5 text-xs text-charcoal-faint">{helper}</p>
+      )}
     </>
   );
 
@@ -321,7 +357,28 @@ export const MembershipsCard: React.FC = () => {
         Memberships
       </p>
 
-      {error && <p className="mb-2 text-xs font-semibold text-status-high">{error}</p>}
+      {error && (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p role="alert" className="text-xs font-semibold text-status-high">
+            {error}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setTick((t) => t + 1);
+            }}
+            className="tap min-h-11 px-3 shrink-0 rounded-xl text-xs font-bold text-primary-dark"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {redeemNote?.ok && (
+        <p role="status" className="mb-2 rounded-[14px] bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-charcoal">
+          {redeemNote.text}
+        </p>
+      )}
 
       {!loaded ? (
         // MO1.5 States, Loading: a skeleton block where the card sits
@@ -334,12 +391,7 @@ export const MembershipsCard: React.FC = () => {
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
         // under the field.
         <Card padded={false} className="!rounded-[18px] p-3.5">
-          {codeBox}
-          {!redeemNote && (
-            <p className="mt-2.5 text-xs text-charcoal-faint">
-              Got a code from a gym or studio? Enter it here to become a member.
-            </p>
-          )}
+          {codeBox("Got a code from a gym or studio? Enter it here to become a member. A membership or pass that comes with the code shows up here too.")}
         </Card>
       ) : (
         // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
@@ -396,7 +448,7 @@ export const MembershipsCard: React.FC = () => {
           ))}
 
           {joinOpen ? (
-            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox}</Card>
+            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox("A membership or pass that comes with the code shows up here too.")}</Card>
           ) : (
             <button
               type="button"

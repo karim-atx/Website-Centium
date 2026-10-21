@@ -14,6 +14,8 @@ import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { invalidateConsoleAccess } from "../../../services/business-console";
 import { acceptEmployment, removeMyEmployment, type MyEmployment } from "../../../services/business-team/employment";
 import { withdrawJoinRequest } from "../../../services/pro/businesses";
+import type { AcceptRefusalKind } from "../../../services/business-team/inviteRefusals";
+import { invitationState } from "../../../components/pro/businesses/invitationLogic";
 import { fmtDay } from "../../../components/pro/client/clientFormat";
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
@@ -43,6 +45,7 @@ export default function Businesses() {
   const [busy, setBusy] = useState<string | null>(null);
   const [decline, setDecline] = useState<MyEmployment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [refused, setRefused] = useState<Record<string, AcceptRefusalKind>>({});
 
   if (user.accountType !== "professional") return null;
 
@@ -58,7 +61,15 @@ export default function Businesses() {
     setBusy(e.businessId);
     const r = await acceptEmployment(e.businessId);
     setBusy(null);
-    if (!r.ok) return setToast(r.message);
+    if (!r.ok) {
+      setToast(r.message);
+      // Batch 2 CO: withdrawn or expired stops offering Accept (my_business_employments
+      // can't say so itself); gone drops out on the reload.
+      const kind = r.refused;
+      if (kind === "withdrawn" || kind === "expired") setRefused((m) => ({ ...m, [e.businessId]: kind }));
+      if (kind !== undefined) reload();
+      return;
+    }
     setToast(`You joined ${e.businessName}.`);
     invalidateConsoleAccess();
     reload();
@@ -71,6 +82,15 @@ export default function Businesses() {
     if (!r.ok) return setToast(r.message);
     setToast(`You declined ${e.businessName}'s invitation.`);
     invalidateConsoleAccess();
+    reload();
+  };
+  /** An expired or withdrawn invitation: nothing to decline, so no confirm; the same own-row delete. */
+  const removeDead = async (e: MyEmployment) => {
+    setBusy(e.businessId);
+    const r = await removeMyEmployment(e.businessId);
+    setBusy(null);
+    if (!r.ok) return setToast(r.message);
+    setToast("Invitation removed.");
     reload();
   };
   const withdraw = async (id: string) => {
@@ -129,7 +149,15 @@ export default function Businesses() {
             <section aria-label="Invitations">
               <SectionHead label="Invitations" />
               {invites.map((e) => (
-                <InvitationCard key={e.businessId} e={e} busy={busy === e.businessId} onAccept={() => void accept(e)} onDecline={() => setDecline(e)} />
+                <InvitationCard
+                  key={e.businessId}
+                  e={e}
+                  busy={busy === e.businessId}
+                  state={invitationState(e.invite, refused[e.businessId])}
+                  onAccept={() => void accept(e)}
+                  onDecline={() => setDecline(e)}
+                  onRemove={() => void removeDead(e)}
+                />
               ))}
             </section>
           )}

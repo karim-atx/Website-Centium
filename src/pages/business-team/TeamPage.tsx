@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, Check, ChevronRight, Copy, Inbox, MessageCircle, Plus, Share2, UserPlus } from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Copy, Inbox, MessageCircle, Plus, Share2, UserPlus, UserX } from "lucide-react";
 import { copyText, shareOrCopy } from "../../components/business-more/share";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { fetchBooked, type ClassSession, type TeamPerson } from "../../services/business-team/team";
-import { Avatar, Notice, TeamCta, TeamScope, isOfflineNow, useTeamToast } from "./parts";
+import { Avatar, Notice, Row, TeamCta, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { InviteSheet, SeatsFullSheet } from "./TeamSheets";
 import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import {
   teamTitle,
   firstWord,
+  inviteWhen,
+  lowerFirst,
+  invitedWord,
   isAccepted,
   previewLine,
   roleShort,
@@ -17,6 +20,9 @@ import {
   seatBlocks,
   seatCounts,
   noSeatPeople,
+  onTeam,
+  withdrawnPeople,
+  ROLE_LABEL,
   seatHint,
   seatLine,
   teamBoxes,
@@ -65,10 +71,13 @@ export function TeamPage({ data }: { data: TeamData }) {
   const total = capacity?.capacity ?? 0;
   const per = capacity?.seatsPerUnit ?? PER_BLOCK;
   const server = capacity ? { used: capacity.used, invited: capacity.invited } : null;
-  const counts = seatCounts(people ?? [], total, server);
-  const noSeat = useMemo(() => noSeatPeople(people ?? []), [people]);
-  const blocks = useMemo(() => seatBlocks(people ?? [], total, per), [people, total, per]);
-  const boxes = useMemo(() => teamBoxes(kind, people ?? [], sessions, total, today, Date.now(), server), [kind, people, sessions, total, today, capacity]);
+  // Batch 2 CO: withdrawn invitations are listed apart (no actions) and count for nothing.
+  const live = useMemo(() => onTeam(people ?? []), [people]);
+  const withdrawn = useMemo(() => withdrawnPeople(people ?? []), [people]);
+  const counts = seatCounts(live, total, server);
+  const noSeat = useMemo(() => noSeatPeople(live), [live]);
+  const blocks = useMemo(() => seatBlocks(live, total, per), [live, total, per]);
+  const boxes = useMemo(() => teamBoxes(kind, live, sessions, total, today, Date.now(), server), [kind, live, sessions, total, today, capacity]);
   const waiting = requests?.length ?? 0;
   const selPerson = (people ?? []).find((p) => p.professionalId === selected && isAccepted(p)) ?? null;
   const ready = !!people && !!capacity;
@@ -234,6 +243,24 @@ export function TeamPage({ data }: { data: TeamData }) {
             </ul>
           </div>
         )}
+        {ready && withdrawn.length > 0 && (
+          <div>
+            <p className="tm-block-l">Withdrawn invites</p>
+            <div aria-label="Withdrawn invites">
+              {withdrawn.map((p) => (
+                <Row
+                  key={p.professionalId}
+                  icon={<UserX size={16} strokeWidth={2.1} />}
+                  title={p.name}
+                  sub={[inviteWhen(p), ROLE_LABEL[p.role]].filter(Boolean).join(" · ")}
+                />
+              ))}
+            </div>
+            <p className="tm-note" role="note" style={{ borderTop: "none", padding: "6px 2px 0" }}>
+              Someone whose invite was withdrawn can't be invited again yet.
+            </p>
+          </div>
+        )}
         {!ready && !error && (
           <>
             <p className="tm-block-l">&nbsp;</p>
@@ -311,17 +338,19 @@ export function TeamPage({ data }: { data: TeamData }) {
 
 function SeatButton({ person, selected, onClick }: { person: TeamPerson; selected: boolean; onClick: () => void }) {
   const inv = !isAccepted(person);
+  // Batch 2 CO: "Expires Oct 30" / "Expired Oct 14" when the window was read.
+  const when = inv ? inviteWhen(person) : null;
   return (
     <button
       type="button"
       className={selected ? "tm-seat sel tap" : "tm-seat tap"}
-      aria-label={`${person.name}, ${inv ? "invited" : roleShort(person.role)}`}
+      aria-label={`${person.name}, ${inv ? `invited${when ? `, ${lowerFirst(when)}` : ""}` : roleShort(person.role)}`}
       aria-pressed={inv ? undefined : selected}
       onClick={onClick}
     >
       <Avatar name={person.name} url={inv ? null : person.avatarUrl} className={inv ? "tm-av invited" : "tm-av"} />
       <span className="tm-seat-n">{firstWord(person.name)}</span>
-      <span className={inv ? "tm-seat-s p" : "tm-seat-s"}>{inv ? "Invited" : roleShort(person.role)}</span>
+      <span className={inv ? "tm-seat-s p" : "tm-seat-s"}>{inv ? invitedWord(person) : roleShort(person.role)}</span>
     </button>
   );
 }

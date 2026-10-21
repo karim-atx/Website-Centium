@@ -3,6 +3,9 @@ import { useApp } from "../../context/AppContext";
 import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
+import { useBillingPeriod, usePeriodPrices } from "../../hooks/useCentiumBilling";
+import { NOT_AVAILABLE, noPriceText, periodPriceText, periodSuffix, renewalAfterSwitch, renewalDayText, switchConfirm, switchedText } from "../../services/centium-billing/period";
+import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import {
   formatPrice,
@@ -26,6 +29,7 @@ import {
   Users,
   Flame,
   Sparkles,
+  CalendarRange,
 } from "lucide-react";
 
 // The subscription screen, for client and business accounts (professionals:
@@ -42,6 +46,11 @@ import {
 // 9c724ce cured the professional screen of it. This does the same to the
 // client and business ones, which were still doing it — the client one while
 // showing $5.99 and $49.99 against a database that says $9.99 and $99.99.
+//
+// ONE EXCEPTION, AND IT IS A REAL WRITE (Batch 2 · CS): a business that holds
+// the plan chooses monthly or yearly through set_subscription_billing_period,
+// which the database owns. The tier itself is still changed by the Centium
+// team, not here.
 
 const features = [
   { icon: Mic, label: "AI food logging" },
@@ -94,6 +103,8 @@ const UpgradeFooter: React.FC<{ show?: boolean }> = ({ show = true }) => (
     <p className="text-[11px] text-charcoal-faint text-center mt-4">{NO_PAYMENTS_NOTE}</p>
   </>
 );
+
+const otherPeriod = (p: BillingPeriod): BillingPeriod => (p === "monthly" ? "yearly" : "monthly");
 
 /** The best saving on offer, for the toggle's badge. Null when none qualifies. */
 function bestSavingAmong(tiers: { monthlyPrice: number; yearlyPrice: number | null }[]): number | null {
@@ -180,6 +191,7 @@ function ClientSubscription() {
 
 function BusinessSubscription() {
   const back = useBack();
+  const { authUserId } = useApp();
   const { team: businessEmployees } = useBusinessTeam();
   const { tiers, loading, error } = useSubscriptionTiers("business");
   const { plan, loading: planLoading, error: planError } = useBusinessPlan();
@@ -190,12 +202,65 @@ function BusinessSubscription() {
   // is why this reads that list rather than the business one.
   const { tiers: professionalTiers } = useSubscriptionTiers("professional");
   const seatPlan = professionalTiers.find((t) => t.isBusinessSeatPlan) ?? null;
-  const [period, setPeriod] = useState<BillingPeriod>("yearly");
 
   const base = tiers.find((t) => !t.isAddon) ?? null;
   const seat = tiers.find((t) => t.isAddon) ?? null;
   const perBlock = seat?.seatsPerUnit ?? 0;
   const seatsUsed = businessEmployees.length;
+
+  // Batch 2 · CS: MONTHLY OR YEARLY IS A REAL CHOICE for the business that
+  // holds the plan. This screen is the business account's own, so its own
+  // subscription is the business's; useBillingPeriod still checks the row is a
+  // business base plan before offering anything. For the owner the toggle is
+  // the choice (set_subscription_billing_period, confirmed first); for a
+  // business without a plan it stays the comparison it was.
+  //
+  // EVERY PRICE IS subscription_price_for. NULL reads "Not available" and that
+  // period can't be chosen. No saving, no "months free", no monthly x 12: the
+  // Base tier's yearly price is undecided, so nothing here compares the two.
+  const own = useBillingPeriod(authUserId ?? null, true);
+  const ownSub = own.sub;
+  const list = usePeriodPrices([base?.rowId, seat?.rowId]);
+  // Monthly while the Base tier's yearly price is undecided (lead, Batch 2).
+  const [viewPeriod, setViewPeriod] = useState<BillingPeriod>("monthly");
+  const [ask, setAsk] = useState<{ to: BillingPeriod; price: number; at: Date } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ tone: "done" | "error"; text: string } | null>(null);
+
+  const chooses = !!ownSub && !!own.prices;
+  const period: BillingPeriod = ownSub ? ownSub.period : viewPeriod;
+  const priceOf = (rowId: string | undefined, p: BillingPeriod): number | null | undefined => (rowId ? list.prices?.get(rowId)?.[p] : undefined);
+  const rowPrice = (rowId: string | undefined): string | undefined => {
+    const v = priceOf(rowId, period);
+    if (v === undefined) return undefined;
+    return v === null ? NOT_AVAILABLE : `${formatPrice(v)}${periodSuffix(period)}`;
+  };
+  const ownTotal = ownSub && own.prices ? own.prices[ownSub.period] : undefined;
+
+  const pick = (p: BillingPeriod) => {
+    setNote(null);
+    if (!chooses || !ownSub || !own.prices) return setViewPeriod(p);
+    if (p === ownSub.period) return;
+    const price = own.prices[p];
+    if (price === null) return;
+    setAsk({ to: p, price, at: renewalAfterSwitch(new Date(), p) });
+  };
+  const confirm = ask ? switchConfirm({ to: ask.to, price: ask.price, seatBlocks: ownSub?.seatBlocks ?? 0, renewal: ask.at, money: formatPrice }) : null;
+  const doSwitch = async () => {
+    if (!ask || busy) return;
+    setBusy(true);
+    const r = await own.choose(ask.to);
+    setBusy(false);
+    setAsk(null);
+    setNote(r.ok ? { tone: "done", text: switchedText(r.value.period, r.value.renewsAt) } : { tone: "error", text: r.message });
+    own.reload();
+  };
+
+  // The combined sentence, at the period shown when both prices exist for it,
+  // otherwise at the monthly ones the function returns.
+  const sentencePeriod: BillingPeriod = priceOf(base?.rowId, period) != null && priceOf(seat?.rowId, period) != null ? period : "monthly";
+  const sentenceBase = priceOf(base?.rowId, sentencePeriod);
+  const sentenceSeat = priceOf(seat?.rowId, sentencePeriod);
 
   return (
     <div>
@@ -235,9 +300,17 @@ function BusinessSubscription() {
             <p className="text-xs text-primary-dark/80 mt-0.5">
               {seatsUsed} of {plan.totalSeats} seat{plan.totalSeats === 1 ? "" : "s"} used
             </p>
-            {plan.seatBlocks > 0 && (
+            {/* What it costs, at the period it is billed: the plan plus its
+                seat blocks from subscription_price_for. */}
+            {ownSub && ownTotal !== undefined && (
               <p className="text-[11px] text-primary-dark/70 mt-1">
-                {formatPrice(plan.monthlyTotal)}/mo in total
+                {[
+                  `Billed ${ownSub.period}`,
+                  ownTotal === null ? "price not available" : `${formatPrice(ownTotal)}${periodSuffix(ownSub.period)} in total`,
+                  ownSub.renewsAt ? `renews ${renewalDayText(ownSub.renewsAt)}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             )}
           </>
@@ -246,9 +319,33 @@ function BusinessSubscription() {
         )}
       </div>
 
-      <BillingToggle period={period} onChange={setPeriod} bestSaving={bestSavingAmong(tiers)} />
+      {own.error && <RetryLine message={own.error} onRetry={own.reload} />}
+      <BillingToggle
+        period={period}
+        onChange={pick}
+        label={chooses ? "How you're billed" : undefined}
+        notes={
+          chooses && ownSub && own.prices
+            ? { monthly: periodPriceText(own.prices.monthly, "monthly", formatPrice), yearly: periodPriceText(own.prices.yearly, "yearly", formatPrice) }
+            : undefined
+        }
+        disabled={chooses && own.prices ? { monthly: own.prices.monthly === null, yearly: own.prices.yearly === null } : undefined}
+      />
+      {chooses && ownSub && own.prices && (
+        <p className="text-[11px] text-charcoal-faint -mt-3 mb-4 text-center">
+          {own.prices[otherPeriod(ownSub.period)] === null
+            ? noPriceText(otherPeriod(ownSub.period))
+            : "Seat blocks follow your plan's billing. Switching charges nothing now."}
+        </p>
+      )}
+      {note && (
+        <p role={note.tone === "error" ? "alert" : "status"} className={`text-xs font-semibold mb-4 text-center ${note.tone === "error" ? "text-status-high" : "text-primary-dark"}`}>
+          {note.text}
+        </p>
+      )}
 
       {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
+      {list.error && <RetryLine message={list.error} onRetry={list.reload} />}
 
       <div className="space-y-2.5 mb-4">
         {loading && <PlanSkeleton rows={2} />}
@@ -263,6 +360,8 @@ function BusinessSubscription() {
             // to sell it one.
             isCurrent={plan?.active === true}
             detail="The business account itself"
+            priceText={rowPrice(base.rowId)}
+            compare={false}
           />
         )}
         {seat && (
@@ -271,6 +370,8 @@ function BusinessSubscription() {
             period={period}
             isCurrent={false}
             detail={`${perBlock} professional${perBlock === 1 ? "" : "s"} per block`}
+            priceText={rowPrice(seat.rowId)}
+            compare={false}
           />
         )}
       </div>
@@ -278,11 +379,11 @@ function BusinessSubscription() {
       {/* HOW THE TWO COMBINE, said in words. A base price and an add-on price
           in a list do not explain that one is bought repeatedly, or that a
           seat is worth a named plan to the professional sitting in it. */}
-      {base && seat && (
+      {base && seat && sentenceBase != null && sentenceSeat != null && (
         <div className="rounded-2xl bg-cream-soft px-4 py-3.5 mb-6">
           <p className="text-xs text-charcoal-soft leading-relaxed">
-            {formatPrice(base.monthlyPrice)}/mo covers the business account. Each seat block is{" "}
-            {formatPrice(seat.monthlyPrice)}/mo and seats {perBlock} professional
+            {formatPrice(sentenceBase)}{periodSuffix(sentencePeriod)} covers the business account. Each seat block is{" "}
+            {formatPrice(sentenceSeat)}{periodSuffix(sentencePeriod)} and seats {perBlock} professional
             {perBlock === 1 ? "" : "s"}. Buy as many blocks as you need. Every seated professional
             gets the {seatPlan?.name ?? "seat"} plan for as long as they're on your team.
           </p>
@@ -290,9 +391,34 @@ function BusinessSubscription() {
       )}
 
       <UpgradeFooter />
+
+      <ConfirmCard
+        open={!!ask}
+        layout="stacked"
+        frame="kit"
+        tone="primary"
+        icon={<CalendarRange size={20} strokeWidth={2.2} />}
+        title={confirm?.title ?? ""}
+        subtitle={confirm?.body}
+        confirmLabel={confirm?.action}
+        cancelLabel="Keep my billing"
+        busy={busy}
+        onCancel={() => setAsk(null)}
+        onConfirm={() => void doSwitch()}
+      />
     </div>
   );
 }
+
+/** A failed read, said with its own Retry (44px). */
+const RetryLine: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
+  <div role="alert" className="flex items-center justify-between gap-3 mb-4">
+    <p className="text-xs font-semibold text-status-high">{message}</p>
+    <button type="button" onClick={onRetry} className="tap shrink-0 min-h-[44px] px-2 text-xs font-bold text-primary-dark">
+      Retry
+    </button>
+  </div>
+);
 
 export default function Subscription() {
   const { user } = useApp();

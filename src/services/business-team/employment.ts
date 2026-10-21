@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { isBusinessClosedError } from "../business-closure/logic";
+import { acceptRefusal, type AcceptRefusalKind } from "./inviteRefusals";
 
 // v6 Batch 4 · the professional's side of B0 consent and B6 join requests.
 //
@@ -27,6 +28,35 @@ export interface MyEmployment {
   /** The role they're invited as, and the owner's note (invite_message, B6 follow-up). */
   role: string | null;
   message: string | null;
+  /**
+   * Batch 2 CO: the invitation's window (expires_at, revoked_at) from a
+   * separate read of my own rows that fails softly. Null or absent = not
+   * known: no expiry or withdrawn state is shown rather than guessed.
+   */
+  invite?: { expiresAt: string | null; revokedAt: string | null } | null;
+}
+
+/**
+ * My own unaccepted rows' windows (business_employees_select_professional),
+ * by business. NEVER part of the role/invite_message select above: the new
+ * columns are not SELECT-granted to authenticated yet, and naming one fails
+ * the whole statement with 42501. Any error answers null.
+ */
+async function myInviteWindows(me: string): Promise<Map<string, { expiresAt: string | null; revokedAt: string | null }> | null> {
+  const loose = db as unknown as {
+    from: (t: string) => {
+      select: (c: string) => { eq: (k: string, v: string) => { is: (k: string, v: null) => PromiseLike<{ data: unknown; error: unknown }> } };
+    };
+  };
+  try {
+    const { data, error } = await loose.from("business_employees").select("business_id, expires_at, revoked_at").eq("professional_id", me).is("accepted_at", null);
+    if (error || !Array.isArray(data)) return null;
+    return new Map(
+      (data as { business_id: string; expires_at: string | null; revoked_at: string | null }[]).map((r) => [r.business_id, { expiresAt: r.expires_at ?? null, revokedAt: r.revoked_at ?? null }])
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmployment[] } | { ok: false; message: string }> {
@@ -38,9 +68,13 @@ export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmploym
   // (business_employees_select_professional); my_business_employments() doesn't
   // return them. A failed read only loses the note, not the invitation.
   const { data: auth } = await supabase.auth.getUser();
-  const own = auth.user?.id
-    ? await db.from("business_employees").select("business_id, role, invite_message").eq("professional_id", auth.user.id)
-    : { data: [] };
+  const rows = (data ?? []) as { accepted_at: string | null }[];
+  const [own, windows] = auth.user?.id
+    ? await Promise.all([
+        db.from("business_employees").select("business_id, role, invite_message").eq("professional_id", auth.user.id),
+        rows.some((r) => !r.accepted_at) ? myInviteWindows(auth.user.id) : Promise.resolve(null),
+      ])
+    : [{ data: [] }, null];
   const extra = new Map(
     ((own.data ?? []) as { business_id: string; role: string | null; invite_message: string | null }[]).map((r) => [r.business_id, r])
   );
@@ -53,15 +87,22 @@ export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmploym
       invitedAt: r.invited_at,
       role: extra.get(r.business_id)?.role ?? null,
       message: extra.get(r.business_id)?.invite_message ?? null,
+      invite: r.accepted_at ? null : (windows?.get(r.business_id) ?? null),
     })),
   };
 }
 
-export async function acceptEmployment(businessId: string): Promise<Done> {
+/**
+ * accept_business_employment(business). Batch 2 CO: ATXA3 now means no
+ * invitation, withdrawn or expired, each worded apart (inviteRefusals), and
+ * `refused` says which so the screen can stop offering Accept.
+ */
+export async function acceptEmployment(businessId: string): Promise<Done & { refused?: AcceptRefusalKind | null }> {
   const { error } = await db.rpc("accept_business_employment", { p_business_id: businessId });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATXA3") return { ok: false, message: "This invitation was withdrawn." };
+  const refusal = acceptRefusal(error);
+  if (refusal) return { ok: false, message: refusal.message, refused: refusal.kind };
   // B6 follow-up: the seat cap now also holds on acceptance.
   if (`${error.message ?? ""}`.includes("ATXC0") || error.code === "23514") {
     return { ok: false, message: "This business has no free seat right now. Ask them to add one." };

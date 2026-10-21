@@ -108,6 +108,14 @@ export interface RevenueData {
   renewalsDue: RenewalDue[];
 }
 
+// CN (Batch 2): a membership granted by a member code arrives here as an
+// ordinary row (price 0.00, cash, paid). gym_memberships.granted_by_code_id is
+// the documented not-revenue flag, but venue_members() does not return it and
+// authenticated cannot read the table, so these rows cannot be told apart from
+// a $0 sale. The recorded figures come from business_payments, which skips
+// grants, so no total counts them. These records still put them in
+// activeMembers() (Overview "Per active member"), renewals() (at $0) and,
+// only while the B8 readers are missing, transactions() and undatedPaid().
 async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
   const out: PaymentRecord[] = [];
   for (let offset = 0; offset < 5000; offset += 200) {
