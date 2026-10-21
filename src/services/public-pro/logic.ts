@@ -4,6 +4,7 @@
 
 import { rangeClock12 } from "../../utils/time12";
 import type { ReviewRow } from "../professional-reviews/types";
+import { PAST_MIDNIGHT_CODE, PAST_MIDNIGHT_MESSAGE } from "../booking/pastMidnight";
 
 /** The error codes the booking readers and request raise (HANDOVER_API Release 3). */
 export const NOT_TAKING_BOOKINGS = "This professional isn't taking bookings from you.";
@@ -15,6 +16,7 @@ export function describeBookingError(code: string | undefined, offline = false):
   if (code === "ATXG5") return NOT_TAKING_BOOKINGS;
   if (code === "ATXG6") return SLOT_TAKEN;
   if (code === "ATXF4") return "That session type isn't available any more.";
+  if (code === PAST_MIDNIGHT_CODE) return PAST_MIDNIGHT_MESSAGE;
   if (code === "ATX02") return "You've sent several booking requests in the last hour. Try again later.";
   if (code === "ATX01" || code === "PGRST301") return "Sign in to book this session.";
   return "Couldn't book this session. Try again.";

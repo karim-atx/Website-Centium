@@ -128,3 +128,11 @@ test("public reviews: every reviewer is 'A client', removed reviews and empty re
   assert.equal(rows[1].reply, null);
   assert.equal(PUBLIC_REVIEWS_PAGE, 10);
 });
+
+test("a professional booking past midnight (ATXAA) is worded, not the server's text", () => {
+  assert.equal(
+    describeBookingError("ATXAA"),
+    "A session cannot run past midnight. Choose a start time that lets it finish on the same day, or book it as two sessions."
+  );
+  assert.equal(describeBookingError("ATXAA", true), "You're offline. Try again when you're connected.");
+});

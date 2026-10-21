@@ -188,3 +188,9 @@ test("bookErrorMessage words the B12 refusals", () => {
   assert.equal(refreshesTimes("ATXF3"), true);
   assert.equal(refreshesTimes("ATXE4"), false);
 });
+
+test("a booking past midnight (ATXAA) reads the same for the client and the desk", () => {
+  const words = "A session cannot run past midnight. Choose a start time that lets it finish on the same day, or book it as two sessions.";
+  assert.equal(bookErrorMessage("ATXAA", "server text", "f"), words);
+  assert.equal(bookForErrorMessage("ATXAA", "server text", "f"), words);
+});

@@ -25,6 +25,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { PAST_MIDNIGHT_ACCEPT_MESSAGE, PAST_MIDNIGHT_CODE } from "../booking/pastMidnight";
 import { siteHref, siteText } from "../../config/site";
 import type { Read, Write } from "./clients";
 import type { EventAlert } from "../../components/calendar/eventAlert";
@@ -378,6 +379,8 @@ function bookingError(error: { code?: string } | null, fallback: string): Write 
   if (error?.code === "ATXG6") return { ok: false, message: "That time is no longer free." };
   if (error?.code === "ATX10") return { ok: false, message: "This booking has already been answered." };
   if (error?.code === "ATX08") return { ok: false, message: "This booking no longer exists." };
+  // accept_booking_request's backstop: a request from before the midnight rule (ATXAA).
+  if (error?.code === PAST_MIDNIGHT_CODE) return { ok: false, message: PAST_MIDNIGHT_ACCEPT_MESSAGE };
   return { ok: false, message: fallback };
 }
 
