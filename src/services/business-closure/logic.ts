@@ -10,6 +10,7 @@
 //     business_member_codes, business_join_requests, desk_sales,
 //     store_orders, gym_memberships;
 //   'existing' (refused only closed): gym_check_ins (a member walking in),
+//     gym_memberships renewals (renewed_from_id set; a purchase stays 'new'),
 //     business_employees (staff invites: a paused business may still hire).
 // The words below are that message, worded for each screen; the check-in and
 // staff-invite words exist for the closed state only. Reviews are not gated.
@@ -74,11 +75,7 @@ export const CLOSED_REDEEM_CODE: ClosureWords = {
 // The console's side: 'new' activity, refused paused or closed.
 export const CLOSED_ADD_APPOINTMENT = consoleWords("take new appointments");
 export const CLOSED_SELL_DAY_PASS = consoleWords("sell day passes");
-// Karim, 21 Oct: renewing an existing member at the desk is ALLOWED while
-// paused. Until the database stops refusing it (renew_gym_membership inserts
-// into gym_memberships, gated 'new'), a paused refusal reads the paused
-// words, which are true; once fixed, only the closed words can appear.
-export const CLOSED_RENEW_MEMBERSHIP = consoleWords("renew memberships");
+
 export const CLOSED_INVITE_MEMBER = consoleWords("invite members");
 export const CLOSED_MEMBER_CODE = consoleWords("create member codes");
 
@@ -89,6 +86,10 @@ const closedOnly = (doing: string): ClosureWords => {
   const w = consoleWords(doing);
   return { closed: w.closed, paused: w.closed };
 };
+// Renewing an existing member is not new business (Karim, 21 Oct; Database
+// db4c105 tells a renewal from a purchase by renewed_from_id): allowed while
+// paused, refused only when closed.
+export const CLOSED_RENEW_MEMBERSHIP = closedOnly("renew memberships");
 export const CLOSED_CHECK_IN = closedOnly("check people in");
 export const CLOSED_INVITE_STAFF = closedOnly("invite staff");
 export const CLOSED_APPROVE_JOIN = closedOnly("take on new staff");

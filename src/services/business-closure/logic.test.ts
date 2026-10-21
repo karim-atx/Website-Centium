@@ -105,3 +105,8 @@ test("the close confirm and reason", () => {
   assert.equal(closureReason("  Moving abroad "), "Moving abroad");
   assert.equal(closureReason("x".repeat(600))?.length, 500);
 });
+
+test("renewing an existing member is refused only when closed (allowed while paused)", () => {
+  assert.equal(CLOSED_RENEW_MEMBERSHIP.paused, CLOSED_RENEW_MEMBERSHIP.closed);
+  assert.match(CLOSED_RENEW_MEMBERSHIP.closed, /^This business is closed, so it can't renew memberships\./);
+});
