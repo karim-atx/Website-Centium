@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { businessRange, mondayOf, presetRange, previousOf, rangeLine, todayIn } from "./analyticsRange.ts";
+import { businessRange, mondayOf, pickRangeDay, presetRange, previousOf, rangeLine, todayIn, type RangePick } from "./analyticsRange.ts";
 
 test("analyticsRange: business-local days for the store readers", () => {
   // 22:30 UTC on 14 Oct is already 15 Oct in Beirut (UTC+3), still 14 Oct in New York.
@@ -36,4 +36,26 @@ test("analyticsRange: the range line and the previous period", () => {
   assert.deepEqual(previousOf(custom), { from: "2026-08-31", to: "2026-09-13" });
   assert.equal(rangeLine(custom, "2026-10-05"), "14 Sep to 27 Sep, compared with 31 Aug to 13 Sep");
   assert.equal(rangeLine({ ...custom, compare: false }, "2026-10-05"), "14 Sep to 27 Sep");
+});
+
+test("Custom range: the second tap sets the end of the range", () => {
+  let s: RangePick = { from: "2026-10-01", to: "2026-10-07", end: "from" };
+  s = pickRangeDay(s, "2026-10-10");
+  assert.deepEqual(s, { from: "2026-10-10", to: null, end: "to" });
+  s = pickRangeDay(s, "2026-10-14");
+  assert.deepEqual(s, { from: "2026-10-10", to: "2026-10-14", end: "from" });
+  // The next tap starts a new range.
+  s = pickRangeDay(s, "2026-10-02");
+  assert.deepEqual(s, { from: "2026-10-02", to: null, end: "to" });
+});
+
+test("Custom range: a day before From restarts, the same day makes a one-day range", () => {
+  const started: RangePick = { from: "2026-10-10", to: null, end: "to" };
+  assert.deepEqual(pickRangeDay(started, "2026-10-05"), { from: "2026-10-05", to: null, end: "to" });
+  assert.deepEqual(pickRangeDay(started, "2026-10-10"), { from: "2026-10-10", to: "2026-10-10", end: "from" });
+});
+
+test("Custom range: choosing the To box first moves only the end", () => {
+  const onTo: RangePick = { from: "2026-10-01", to: "2026-10-07", end: "to" };
+  assert.deepEqual(pickRangeDay(onTo, "2026-10-20"), { from: "2026-10-01", to: "2026-10-20", end: "from" });
 });
