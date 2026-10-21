@@ -7,9 +7,14 @@ import {
   describeRedeemRefusal,
   grantsLine,
   gymArg,
+  describePreviewError,
+  grantNoun,
   newMemberships,
   OFFLINE_LINE,
+  PREVIEW_UNUSABLE,
+  previewLines,
   redeemedLine,
+  redeemOutcome,
 } from "./codeLogic.ts";
 
 const noDashes = (s: string) => {
@@ -66,6 +71,56 @@ test("redeem: raised errors (rate limit, session, offline, unknown)", () => {
   assert.equal(describeRedeemError({ message: "authentication required" }, false), "Your session expired. Sign in again.");
   assert.equal(describeRedeemError({ message: "Failed to fetch" }, true), OFFLINE_LINE);
   assert.equal(describeRedeemError({ code: "XX000", message: "boom" }, false), "Couldn't redeem that code. Try again.");
+  // ATXAB from the business_members trigger: paused and closed worded apart, neither says the code was spent.
+  assert.equal(
+    describeRedeemError({ code: "ATXAB", message: "This business is paused and is not taking new activity. Existing records are unaffected." }, false),
+    "This business is paused and isn't taking new members right now. Try again later.",
+  );
+  assert.equal(
+    describeRedeemError({ code: "ATXAB", message: "This business is closed and is not taking new activity. Existing records are unaffected." }, false),
+    "This business has closed, so it isn't taking new members.",
+  );
+});
+
+test("redeem: the server's success sentence says what happened", () => {
+  assert.equal(redeemOutcome("You are now a member, and your membership is ready."), "granted");
+  assert.equal(redeemOutcome("You are now a member. You already have an active membership at this gym, so no new one was added."), "already-held");
+  assert.equal(redeemOutcome("You are now a member."), "joined");
+  assert.equal(redeemOutcome(null), "joined");
+});
+
+test("preview: what the code grants, until when, and the age line only above 16", () => {
+  const now = new Date(2026, 9, 21, 12);
+  const base = {
+    businessName: "Flex Fitness",
+    gymName: "Flex Gym",
+    planName: "Monthly",
+    planType: "membership" as const,
+    grantsMembership: true,
+    minEntryAge: 16,
+    expiresAt: new Date(2026, 9, 28, 9).toISOString(),
+  };
+  assert.deepEqual(previewLines(base, now), ["Comes with Monthly (Membership) at Flex Gym, at no charge.", "Use it by Oct 28."]);
+  assert.deepEqual(previewLines({ ...base, planName: "10 classes", planType: "class_pack", minEntryAge: 18 }, now), [
+    "Comes with 10 classes (Class pack) at Flex Gym, at no charge.",
+    "Use it by Oct 28.",
+    "This gym admits members aged 18 and over.",
+  ]);
+  assert.deepEqual(previewLines({ ...base, gymName: null, planName: null, planType: null, grantsMembership: false, minEntryAge: null }, now), [
+    "A member code only. It doesn't come with a membership or pass.",
+    "Use it by Oct 28.",
+  ]);
+  // 16 and below can never refuse (the platform floor), so it isn't said.
+  assert.equal(previewLines({ ...base, minEntryAge: 12 }, now).length, 2);
+  assert.equal(PREVIEW_UNUSABLE, "This code can't be used. Check it, or ask the business for a new one.");
+  for (const l of [...previewLines(base, now), PREVIEW_UNUSABLE]) noDashes(l);
+});
+
+test("preview: raised errors", () => {
+  assert.equal(describePreviewError({ code: "ATX02", message: "Too many preview_business_member_code attempts. Please try again in 4 minute(s)." }, false), "Too many checks. Wait 4 minutes and try again.");
+  assert.equal(describePreviewError({ code: "42501", message: "authentication required" }, false), "Your session expired. Sign in again.");
+  assert.equal(describePreviewError({ message: "Failed to fetch" }, true), OFFLINE_LINE);
+  assert.equal(describePreviewError({ code: "XX000", message: "boom" }, false), "Couldn't check that code. Try again.");
 });
 
 const plans = [
@@ -99,13 +154,21 @@ test("createBlock and gymArg: the gym is asked for and sent only with several gy
 });
 
 test("after a redemption: name what appeared, never imply a pass that did not", () => {
-  const before = [{ id: "a", gymName: "Flex Gym", planName: "Day pass" }];
-  const after = [...before, { id: "b", gymName: "Flex Studio", planName: "Monthly" }];
+  const before = [{ id: "a", gymName: "Flex Gym", planName: "Day pass", planType: "day_pass" as const }];
+  const after = [...before, { id: "b", gymName: "Flex Studio", planName: "Monthly", planType: "membership" as const }];
   const granted = newMemberships(before, after);
   assert.deepEqual(granted.map((g) => g.id), ["b"]);
-  assert.equal(redeemedLine(granted, "Flex Fitness"), "You've joined Flex Fitness. Your Monthly at Flex Studio is now in your memberships.");
-  assert.equal(redeemedLine([], "Flex Fitness"), "You've joined Flex Fitness.");
-  assert.equal(redeemedLine([], null), "You've joined the business.");
-  assert.equal(redeemedLine([], "Flex Fitness", true), "You've joined Flex Fitness. Reload to see any membership or pass that came with the code.");
-  assert.equal(redeemedLine(newMemberships([], after), "Flex Fitness"), "You've joined Flex Fitness. 2 new memberships are now in your memberships.");
+  assert.equal(redeemedLine(granted, "Flex Fitness", "granted"), "You've joined Flex Fitness. Your membership at Flex Studio (Monthly) is now in your memberships.");
+  assert.equal(redeemedLine(before, "Flex Fitness", "granted"), "You've joined Flex Fitness. Your pass at Flex Gym (Day pass) is now in your memberships.");
+  assert.equal(redeemedLine([], "Flex Fitness", "joined"), "You've joined Flex Fitness.");
+  assert.equal(redeemedLine([], null, "joined"), "You've joined the business.");
+  // The server said nothing was added: never named as a new membership, even if the list changed.
+  assert.equal(
+    redeemedLine(granted, "Flex Fitness", "already-held"),
+    "You've joined Flex Fitness. You already have an active membership at this gym, so no new one was added.",
+  );
+  assert.equal(redeemedLine([], "Flex Fitness", "granted", true), "You've joined Flex Fitness. What came with the code is ready. Reload to see it in your memberships.");
+  assert.equal(redeemedLine(newMemberships([], after), "Flex Fitness", "granted"), "You've joined Flex Fitness. 2 new memberships or passes are now in your memberships.");
+  assert.equal(grantNoun("class_pack"), "pass");
+  assert.equal(grantNoun(null), "membership");
 });

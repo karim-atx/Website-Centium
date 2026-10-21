@@ -10,7 +10,6 @@ import {
   type ScrubMode,
   type ScrubTipRow,
 } from "../../../components/charts/ScrubChart";
-import { PRICE_HISTORY_STARTS } from "../../../services/business-revenue/priceMarkers";
 import { priceBuckets, priceSinceLine, tagRows } from "../../../services/business-revenue/priceMarkerLogic";
 import { usePriceMarkers } from "./usePriceMarkers";
 import {
@@ -581,6 +580,7 @@ export const OverviewTab: React.FC = () => {
             today={today}
             failed={store ? null : price.failed}
             loaded={!!price.changes}
+            since={price.since}
             onRetry={price.reload}
           />
         )}
@@ -636,18 +636,21 @@ export const OverviewTab: React.FC = () => {
 
 /**
  * CQ: what the price tags mean and since when. History starts at
- * PRICE_HISTORY_STARTS with no backfill, so the line names that day (and says
- * earlier changes weren't recorded when the window reaches back before it)
- * rather than letting an empty stretch read as "no price changed". A failed
- * read leaves the chart as it is and says so here, with Retry.
+ * plan_price_tracking_since() with no backfill, so the line names that day
+ * (and says earlier changes weren't recorded when the window reaches back
+ * before it) rather than letting an empty stretch read as "no price changed".
+ * No date (nothing recorded yet, or the since read failed) leaves the line
+ * out. A failed markers read leaves the chart as it is and says so here,
+ * with Retry.
  */
 const PriceLine: React.FC<{
   from: string;
   today: string;
   failed: null | "offline" | "error";
   loaded: boolean;
+  since: string | null;
   onRetry: () => void;
-}> = ({ from, today, failed, loaded, onRetry }) => {
+}> = ({ from, today, failed, loaded, since, onRetry }) => {
   if (failed)
     return (
       <div className="flex items-center justify-between gap-[12px] mt-[4px]">
@@ -670,14 +673,14 @@ const PriceLine: React.FC<{
         </button>
       </div>
     );
-  if (!loaded) return null;
+  if (!loaded || !since) return null;
   return (
     <p
       className="text-[11px] leading-[18px] mt-[8px]"
       style={{ color: v("faint"), textWrap: "pretty" } as React.CSSProperties}
     >
       <ScrubMarkerChip kind="price">Price change</ScrubMarkerChip>{" "}
-      {priceSinceLine(from, PRICE_HISTORY_STARTS, today)}
+      {priceSinceLine(from, since, today)}
     </p>
   );
 };

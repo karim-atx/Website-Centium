@@ -17,6 +17,7 @@ import {
   sum,
   today as todayIso,
 } from "../../../services/business-revenue";
+import { GRANTED_RENEWAL } from "../../../services/front-desk/frontDeskLogic";
 import { startMemberThread } from "../../../services/messaging";
 import { Toast } from "../../../components/ui/Toast";
 import { ErrorLine, OfflineLine, PayHeader, Skel, v, whoOf } from "./kit";
@@ -179,9 +180,11 @@ export const RenewalsPage: React.FC = () => {
                     who: r.rec.who,
                     title: whoOf(r.rec),
                     dot: dotOf(r.rec.item),
-                    sub: `${r.rec.item} · renews ${dddDMon(r.on)}`,
-                    s2: r.rec.method === "whish" ? "Whish" : "Cash",
-                    amt: money(r.rec.amount ?? 0),
+                    // CN: a granted membership stays listed, labelled: it was
+                    // never paid for, and renewing it charges the plan price.
+                    sub: `${r.rec.item} · renews ${dddDMon(r.on)}${r.rec.granted ? ` · ${GRANTED_RENEWAL}` : ""}`,
+                    s2: r.rec.granted ? "Granted" : r.rec.method === "whish" ? "Whish" : "Cash",
+                    amt: r.rec.granted ? "Plan price" : money(r.rec.amount ?? 0),
                     onClick: () =>
                       navigate(
                         `${REVENUE_BASE}/payments/renewals/${encodeURIComponent(r.rec.key)}`,
@@ -250,7 +253,7 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
             ? `${rec.item} · member since ${monthYear(rec.startedOn).replace(/^(\w{3})\w*/, "$1")}`
             : rec.item
         }
-        amt={money(rec.amount ?? 0)}
+        amt={rec.granted ? "Plan price" : money(rec.amount ?? 0)}
         chip={{
           t: `Renews ${dddDMon(rec.expiresOn)}`,
           bg: v("teal-pale"),
@@ -258,8 +261,15 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         }}
         facts={[
           { l: "Plan", v: rec.item },
-          { l: "Price", v: money(rec.amount ?? 0) },
-          { l: "Payment method", v: rec.method === "whish" ? "Whish" : "Cash" },
+          ...(rec.granted
+            ? [
+                { l: "How they got it", v: "Granted with a code" },
+                { l: "Renewing", v: "Charges the plan price" },
+              ]
+            : [
+                { l: "Price", v: money(rec.amount ?? 0) },
+                { l: "Payment method", v: rec.method === "whish" ? "Whish" : "Cash" },
+              ]),
           { l: "Current period ends", v: dddDMon(rec.expiresOn) },
         ]}
         histTitle="Last payments"

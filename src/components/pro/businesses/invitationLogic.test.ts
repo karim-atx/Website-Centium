@@ -21,6 +21,10 @@ test("Batch 2 CO: the invitee's card state, from the window or a refused accept"
   assert.equal(invitationState(null, "withdrawn", now), "withdrawn");
   assert.equal(invitationState({ expiresAt: in9, revokedAt: null }, "expired", now), "expired");
   assert.equal(invitationState(null, "gone", now), "open");
+  // The server's `acceptable` (my_business_employments) decides over the dates.
+  assert.equal(invitationState({ expiresAt: ago7, revokedAt: null, acceptable: true }, null, now), "open");
+  assert.equal(invitationState({ expiresAt: in9, revokedAt: null, acceptable: false }, null, now), "expired");
+  assert.equal(invitationState({ expiresAt: in9, revokedAt: ago7, acceptable: false }, null, now), "withdrawn");
 });
 
 test("Batch 2 CO: the line on an invitation that can't be accepted", () => {

@@ -31,9 +31,9 @@ export interface TeamPerson {
   usesSeat: boolean | null;
   /**
    * Batch 2 CO: the invitation's window (expires_at, revoked_at, sent_at,
-   * resent_count), from a separate read that fails softly. Null or absent =
-   * not known (the read failed, or they accepted): no expiry and no withdrawn
-   * state is shown rather than guessed.
+   * resent_count), read with the team. Null or absent = not known (the read
+   * fell back to the columns without them, or they accepted): no expiry and
+   * no withdrawn state is shown rather than guessed.
    */
   invite?: InviteWindow | null;
 }

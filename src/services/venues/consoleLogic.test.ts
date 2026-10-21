@@ -151,6 +151,7 @@ test("toVenueMember: carries the server's label (Q-05), a minor flag and the bus
   const m = toVenueMember(memberRow({ member_is_minor: true }));
   assert.deepEqual(Object.keys(m).sort(), [
     "expiresOn",
+    "granted",
     "isMinor",
     "joinedAt",
     "label",
@@ -172,6 +173,9 @@ test("toVenueMember: carries the server's label (Q-05), a minor flag and the bus
   assert.equal(toVenueMember(memberRow({ member_label: null })).label, "Member");
   assert.equal(m.memberNumber, null);
   assert.equal(toVenueMember(memberRow({ member_number: 42, person_id: "p" })).memberNumber, 42);
+  // CN: granted by a member code (venue_members.granted); absent on an older stack reads as not granted.
+  assert.equal(m.granted, false);
+  assert.equal(toVenueMember(memberRow({ granted: true })).granted, true);
 });
 
 test("isMaskedLabel: the server's masked labels get the person glyph, a shared name its initial", () => {

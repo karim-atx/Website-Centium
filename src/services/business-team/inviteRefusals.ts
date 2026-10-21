@@ -1,7 +1,8 @@
 import { isOffline } from "../network-error";
 
 // Batch 2 CO (migration 20261201000000): the words for every refusal of
-// resend_team_invite, revoke_team_invite and accept_business_employment.
+// resend_team_invite, revoke_team_invite, reinvite_revoked_team_member and
+// accept_business_employment.
 // Pure (no Supabase) so the node tests can pin each documented error.
 //
 // ATXA3 carries several meanings per function, told apart by the message
@@ -60,6 +61,19 @@ export function revokeRefusal(e: PgError): InviteRefusal {
     if (t.includes("no such invitation")) return { message: "This invite isn't there any more. They may have declined it.", refresh: true };
   }
   return { message: "Couldn't withdraw the invite. Try again.", refresh: false };
+}
+
+/** reinvite_revoked_team_member refusals (a still-live invite is not one: it answers its window). */
+export function reinviteRefusal(e: PgError): InviteRefusal {
+  const c = common(e, "Couldn't invite them again. Check your connection and try again.");
+  if (c) return c;
+  if (e?.code === "ATX02") return { message: `You've sent a lot of invites in the last hour. ${retryIn(e)}`, refresh: false };
+  if (e?.code === "ATXA3") {
+    const t = text(e);
+    if (t.includes("already works here")) return { message: "They already accepted, so they're on your team now.", refresh: true };
+    if (t.includes("no previous invitation")) return { message: "This invite isn't there any more. Add them again to send a new one.", refresh: true };
+  }
+  return { message: "Couldn't invite them again. Try again.", refresh: false };
 }
 
 /** Why an invitation can't be accepted: gone, withdrawn or expired (accept_business_employment ATXA3). */

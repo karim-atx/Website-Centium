@@ -204,7 +204,7 @@ export function SeatsPage() {
             </BizSection>
           )}
           {withdrawn.length > 0 && (
-            <BizSection label="Withdrawn" footer="Someone whose invite was withdrawn can't be invited again yet.">
+            <BizSection label="Withdrawn" footer={billing.isOwner ? "Open one to invite them again." : undefined}>
               {withdrawn.map((m) => (
                 <BizRow key={m.professionalId} icon={UserX} title={m.name} desc={inviteWhen(m) ?? "Withdrawn"} dim onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
@@ -217,7 +217,7 @@ export function SeatsPage() {
           <SeatsSheet
             open={sheet}
             mode="add"
-            seats={{ capacity: total, planActive, blocks, perBlock: per, blockPrice }}
+            seats={{ capacity: total, planActive, blocks, perBlock: per, blockPrice, period: live ? s.period : "monthly" }}
             used={accepted.length}
             pending={invited.length}
             billing={billing}

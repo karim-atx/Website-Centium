@@ -71,7 +71,7 @@ export function TeamPage({ data }: { data: TeamData }) {
   const total = capacity?.capacity ?? 0;
   const per = capacity?.seatsPerUnit ?? PER_BLOCK;
   const server = capacity ? { used: capacity.used, invited: capacity.invited } : null;
-  // Batch 2 CO: withdrawn invitations are listed apart (no actions) and count for nothing.
+  // Batch 2 CO: withdrawn invitations are listed apart (each opens its Person page) and count for nothing.
   const live = useMemo(() => onTeam(people ?? []), [people]);
   const withdrawn = useMemo(() => withdrawnPeople(people ?? []), [people]);
   const counts = seatCounts(live, total, server);
@@ -248,17 +248,27 @@ export function TeamPage({ data }: { data: TeamData }) {
             <p className="tm-block-l">Withdrawn invites</p>
             <div aria-label="Withdrawn invites">
               {withdrawn.map((p) => (
-                <Row
+                <button
                   key={p.professionalId}
-                  icon={<UserX size={16} strokeWidth={2.1} />}
-                  title={p.name}
-                  sub={[inviteWhen(p), ROLE_LABEL[p.role]].filter(Boolean).join(" · ")}
-                />
+                  type="button"
+                  className="tap"
+                  onClick={() => navigate(`/app/business/employees/${p.professionalId}`)}
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", font: "inherit" }}
+                >
+                  <Row
+                    icon={<UserX size={16} strokeWidth={2.1} />}
+                    title={p.name}
+                    sub={[inviteWhen(p), ROLE_LABEL[p.role]].filter(Boolean).join(" · ")}
+                    trailing={<ChevronRight size={16} strokeWidth={2.1} aria-hidden />}
+                  />
+                </button>
               ))}
             </div>
-            <p className="tm-note" role="note" style={{ borderTop: "none", padding: "6px 2px 0" }}>
-              Someone whose invite was withdrawn can't be invited again yet.
-            </p>
+            {!readOnly && (
+              <p className="tm-note" role="note" style={{ borderTop: "none", padding: "6px 2px 0" }}>
+                Open one to invite them again.
+              </p>
+            )}
           </div>
         )}
         {!ready && !error && (
@@ -316,6 +326,7 @@ export function TeamPage({ data }: { data: TeamData }) {
         open={fullOpen}
         onClose={() => setFullOpen(false)}
         counts={counts}
+        businessId={businessId}
         onInviteNoSeat={() => {
           setFullOpen(false);
           setInviteOpen(true);

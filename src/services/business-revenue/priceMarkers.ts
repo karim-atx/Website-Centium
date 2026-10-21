@@ -5,18 +5,26 @@
 
 import { rpc } from "../pro/rpc";
 import { isOffline } from "../network-error";
-import { toPriceChange, type PriceChange, type PriceMarkerRow } from "./priceMarkerLogic";
+import { sinceDay, toPriceChange, type PriceChange, type PriceMarkerRow } from "./priceMarkerLogic";
+
+export type PriceSinceResult = { ok: true; value: string | null } | { ok: false };
 
 /**
- * The first day plan price changes were recorded. History starts when
- * migration 20261202000000 shipped, with NO backfill (the old prices were
- * overwritten), and no reader returns that day, so it lives here.
- *
- * MUST EQUAL THE DAY THE MIGRATION WAS APPLIED IN PRODUCTION. 2026-10-21 is
- * the day it reached the shared local stack; change this when production
- * gets it, or the chart will claim history it doesn't have.
+ * plan_price_tracking_since() → timestamptz: when this database began
+ * recording plan price changes (no backfill: the old prices were
+ * overwritten). NULL means nothing is recorded yet, so no "since" date is
+ * shown at all. Answered as the device's day, the clock the chart's `today`
+ * uses.
  */
-export const PRICE_HISTORY_STARTS = "2026-10-21";
+export async function fetchPriceTrackingSince(): Promise<PriceSinceResult> {
+  try {
+    const { data, error } = await rpc("plan_price_tracking_since");
+    if (error) return { ok: false };
+    return { ok: true, value: sinceDay(data as string | null) };
+  } catch {
+    return { ok: false };
+  }
+}
 
 export type PriceMarkersResult =
   | { ok: true; value: PriceChange[] }

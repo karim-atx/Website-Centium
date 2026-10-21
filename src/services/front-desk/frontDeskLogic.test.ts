@@ -98,6 +98,12 @@ test("renewals (MB-05): server rows map; to chase first, then ending, then renew
   assert.equal(renewalSub(list[1]), "Monthly · renews in 6 days");
   assert.equal(renewalSub(list[2]), "Monthly · ends 20 Oct 2026");
   assert.equal(renewalSub(list[3]), "Monthly · renewed, next period from 20 Oct 2026");
+  // CN: a granted membership stays in the list, labelled: renewing it charges the plan price.
+  const grant = toRenewalDue(row("g", 6, { granted: true }), "g");
+  assert.equal(grant.granted, true);
+  assert.equal(renewalSub(grant), "Monthly · renews in 6 days · granted with a code, renewing charges the plan price");
+  assert.deepEqual(toChase([grant]).map((r) => r.membershipId), ["g"]);
+  assert.equal(renewalSub(toRenewalDue(row("h", 6, { granted: true, already_renewed: true }), "g")), "Monthly · renewed, next period from 20 Oct 2026");
   assert.equal(toRenewalDue(row("x", 1, { member_label: null, plan_name: null }), "g").planName, "Membership");
 });
 

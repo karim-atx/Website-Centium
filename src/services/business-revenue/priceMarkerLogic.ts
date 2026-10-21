@@ -1,7 +1,7 @@
 // CQ (Batch 2): plan price changes as markers on the Revenue chart. Pure
 // logic only (no Supabase client), so the node tests can import it. The
-// reader is priceMarkers.ts; the start of the history is its
-// PRICE_HISTORY_STARTS constant, passed in here.
+// reader is priceMarkers.ts; the start of the history is
+// plan_price_tracking_since(), read there and passed in here as a day.
 
 import { formatPrice } from "../../utils/price";
 
@@ -115,6 +115,18 @@ export function monDay(iso: string, today: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   const base = `${MON[m - 1]} ${d}`;
   return today.slice(0, 4) === String(y) ? base : `${base}, ${y}`;
+}
+
+/**
+ * plan_price_tracking_since()'s timestamptz as the device's day
+ * ("2026-10-21"); null when the server has no date (nothing recorded yet).
+ */
+export function sinceDay(ts: string | null | undefined): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /**

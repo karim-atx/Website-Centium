@@ -1,24 +1,31 @@
 // Batch 2 CO · the invitee's side of a team invitation's window. Pure (no
 // Supabase) for the node tests.
 //
-// What's known comes from two places: the soft read of my own rows
-// (MyEmployment.invite: expires_at, revoked_at; null when it failed) and an
-// accept that the server refused (ATXA3 withdrawn / expired), which this
-// screen remembers because my_business_employments() can't say either.
+// What's known comes from two places: my_business_employments()
+// (MyEmployment.invite: expires_at, revoked_at and the server's own
+// `acceptable`; null when the reader doesn't return them) and an accept that
+// the server refused (ATXA3 withdrawn / expired), which this screen remembers
+// until the list is read again.
 
 import type { AcceptRefusalKind } from "../../../services/business-team/inviteRefusals";
 import { shortDay } from "../../../pages/business-team/teamLogic";
 
 export type InvitationState = "open" | "expired" | "withdrawn";
 
-type Window = { expiresAt: string | null; revokedAt: string | null } | null | undefined;
+type Window = { expiresAt: string | null; revokedAt: string | null; acceptable?: boolean | null } | null | undefined;
 
-/** Open unless a refusal or the window read says otherwise; an unknown window stays open (never guessed). */
+/**
+ * Open unless a refusal or the window says otherwise; an unknown window stays
+ * open (never guessed). `acceptable` is team_invite_is_acceptable, so it
+ * decides over the dates: not acceptable and not withdrawn is expired.
+ */
 export function invitationState(invite: Window, refused: AcceptRefusalKind | null | undefined, now: Date = new Date()): InvitationState {
   if (refused === "withdrawn") return "withdrawn";
   if (refused === "expired") return "expired";
   if (!invite) return "open";
   if (invite.revokedAt) return "withdrawn";
+  if (invite.acceptable === true) return "open";
+  if (invite.acceptable === false) return "expired";
   // team_invite_is_acceptable: no expires_at is not acceptable.
   if (!invite.expiresAt) return "expired";
   const t = Date.parse(invite.expiresAt);

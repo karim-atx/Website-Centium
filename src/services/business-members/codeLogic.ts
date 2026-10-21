@@ -1,11 +1,12 @@
 import type { PlanKind } from "../membership-plans/types";
 import { KIND_LABEL } from "../../pages/business-ops/plans/planModel";
+import { shortDay } from "../../pages/business-team/teamLogic";
 
 // CN (Batch 2, migration 20261203000000): a member code can grant a
 // membership or pass. The pure part, free of Supabase so node tests can
 // import it: the words for every refusal of create_business_member_code and
-// redeem_business_member_code, what a code grants, and which membership
-// appeared after a redemption.
+// redeem_business_member_code and preview_business_member_code, what a code
+// grants, and which membership or pass appeared after a redemption.
 //
 // SERVER COPY IS NEVER SHOWN. Both functions answer in sentences meant for a
 // log ("-- say which one the membership is for"), so each one is matched and
@@ -81,13 +82,86 @@ export function describeRedeemRefusal(serverMessage: string | null | undefined):
   return "Couldn't redeem that code. Try again.";
 }
 
-/** redeem_business_member_code raised instead of answering (rate limit, session, network). */
+/**
+ * redeem_business_member_code raised instead of answering (rate limit,
+ * session, network, or ATXAB: the business_members trigger refuses a paused
+ * or closed business, worded apart). Nothing was written, so the code is
+ * never described as spent.
+ */
 export function describeRedeemError(error: Err, offline: boolean): string {
   if (offline) return OFFLINE_LINE;
   if (error.code === "ATX02") return `Too many tries. Wait ${waitPhrase(error.message).replace(/^in /, "")} and try again.`;
+  if (error.code === "ATXAB" || /ATXAB/.test(error.message ?? "")) {
+    if (/paused/i.test(error.message ?? "")) return "This business is paused and isn't taking new members right now. Try again later.";
+    return "This business has closed, so it isn't taking new members.";
+  }
   if (/jwt|not authenticated|authentication required/i.test(error.message ?? "")) return SESSION_LINE;
   return "Couldn't redeem that code. Try again.";
 }
+
+/** What a successful redemption did, from the server's success sentence (20261203000000). */
+export type RedeemOutcome = "granted" | "already-held" | "joined";
+
+/**
+ * The three success sentences: a membership granted ("...your membership is
+ * ready."), one NOT granted because the person already holds an active one
+ * at that gym ("...so no new one was added."), and a plain member code
+ * ("You are now a member."). Anything else reads as joined, which promises
+ * nothing.
+ */
+export function redeemOutcome(serverMessage: string | null | undefined): RedeemOutcome {
+  const m = (serverMessage ?? "").trim();
+  if (/no new one was added/i.test(m)) return "already-held";
+  if (/membership is ready/i.test(m)) return "granted";
+  return "joined";
+}
+
+/** preview_business_member_code raised (rate limit 20 per 15 minutes, session, network). */
+export function describePreviewError(error: Err, offline: boolean): string {
+  if (offline) return OFFLINE_LINE;
+  if (error.code === "ATX02") return `Too many checks. Wait ${waitPhrase(error.message).replace(/^in /, "")} and try again.`;
+  if (error.code === "42501" || /jwt|not authenticated|authentication required/i.test(error.message ?? "")) return SESSION_LINE;
+  return "Couldn't check that code. Try again.";
+}
+
+/** No row from preview_business_member_code. Unknown, used, lapsed and a closed business look the same on purpose. */
+export const PREVIEW_UNUSABLE = "This code can't be used. Check it, or ask the business for a new one.";
+
+/** preview_business_member_code(p_code) row, narrowed. */
+export interface CodePreview {
+  businessName: string;
+  gymName: string | null;
+  planName: string | null;
+  planType: PlanKind | null;
+  grantsMembership: boolean;
+  minEntryAge: number | null;
+  expiresAt: string;
+}
+
+/**
+ * The gym's own minimum age is only worth saying above the platform floor
+ * of 16: a gym set to 16 or below can never refuse on age.
+ */
+export const PLATFORM_MIN_AGE = 16;
+
+/** The lines under the business's name in the preview, in order. */
+export function previewLines(p: CodePreview, now: Date = new Date()): string[] {
+  const lines: string[] = [];
+  if (p.grantsMembership && p.planName && p.planType) {
+    lines.push(`Comes with ${p.planName} (${KIND_LABEL[p.planType]})${p.gymName ? ` at ${p.gymName}` : ""}, at no charge.`);
+  } else {
+    lines.push("A member code only. It doesn't come with a membership or pass.");
+  }
+  const until = shortDay(p.expiresAt, now);
+  if (until) lines.push(`Use it by ${until}.`);
+  if (p.gymName && p.minEntryAge != null && p.minEntryAge > PLATFORM_MIN_AGE) {
+    lines.push(`This gym admits members aged ${p.minEntryAge} and over.`);
+  }
+  return lines;
+}
+
+/** "pass" for every plan type but a membership (my_gym_memberships.plan_type). */
+export const grantNoun = (kind: PlanKind | null | undefined) => (kind && kind !== "membership" ? "pass" : "membership");
 
 export interface GrantPlan {
   id: string;
@@ -148,6 +222,8 @@ export interface HeldMembership {
   id: string;
   gymName: string;
   planName: string;
+  /** my_gym_memberships.plan_type; absent on an older reader or the offline copy. */
+  planType?: PlanKind | null;
 }
 
 /**
@@ -161,17 +237,19 @@ export function newMemberships<T extends { id: string }>(before: T[], after: T[]
 }
 
 /**
- * The line shown after a successful redemption. Never implies a pass that did
- * not appear. `unknown`: the memberships could not be re-read, so whether
- * anything came with the code is not known yet.
+ * The line shown after a successful redemption, from what the server said
+ * happened (redeemOutcome) and what appeared in my_gym_memberships. Never
+ * implies a pass that did not appear. `unknown`: the memberships could not be
+ * re-read, so which one came with the code isn't known yet.
  */
-export function redeemedLine(granted: HeldMembership[], businessName: string | null, unknown = false): string {
+export function redeemedLine(granted: HeldMembership[], businessName: string | null, outcome: RedeemOutcome, unknown = false): string {
   const joined = businessName ? `You've joined ${businessName}.` : "You've joined the business.";
-  if (unknown) return `${joined} Reload to see any membership or pass that came with the code.`;
+  if (outcome === "already-held") return `${joined} You already have an active membership at this gym, so no new one was added.`;
+  if (outcome === "joined") return joined;
+  if (unknown || granted.length === 0) return `${joined} What came with the code is ready. Reload to see it in your memberships.`;
   if (granted.length === 1) {
     const g = granted[0];
-    return `${joined} Your ${g.planName} at ${g.gymName} is now in your memberships.`;
+    return `${joined} Your ${grantNoun(g.planType)} at ${g.gymName} (${g.planName}) is now in your memberships.`;
   }
-  if (granted.length > 1) return `${joined} ${granted.length} new memberships are now in your memberships.`;
-  return joined;
+  return `${joined} ${granted.length} new memberships or passes are now in your memberships.`;
 }

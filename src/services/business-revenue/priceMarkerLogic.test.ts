@@ -6,6 +6,7 @@ import {
   priceBuckets,
   priceSinceLine,
   priceStep,
+  sinceDay,
   toPriceChange,
   type PriceMarkerRow,
 } from "./priceMarkerLogic.ts";
@@ -85,6 +86,15 @@ test("the since line always names the start, and says earlier changes weren't re
     priceSinceLine("2026-07-01", "2026-10-21", "2026-10-30"),
     "Plan price changes are marked since Oct 21. Earlier changes weren't recorded.",
   );
+});
+
+test("the since date comes from the server's timestamp; no date means no line", () => {
+  // A local-time timestamp so the test reads the same day in any timezone.
+  assert.equal(sinceDay(new Date(2026, 9, 21, 11, 45).toISOString()), "2026-10-21");
+  assert.equal(sinceDay(null), null);
+  assert.equal(sinceDay(undefined), null);
+  assert.equal(sinceDay(""), null);
+  assert.equal(sinceDay("not a date"), null);
 });
 
 test("price tags take a free row: a promotion's bucket and near neighbours push them down", async () => {

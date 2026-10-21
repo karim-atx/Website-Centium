@@ -27,6 +27,7 @@ import {
 } from "./kit";
 import { useRevenue } from "./revenueContext";
 import { owedChip, owedSub, REVENUE_BASE, WHISH_LIVE } from "./payModel";
+import { GRANTED_RENEWAL } from "../../../services/front-desk/frontDeskLogic";
 import { FailedHalf } from "./FailedPages";
 import { useMoneyOwed } from "./useMoneyOwed";
 import { useCanRemind, useSendReminder } from "./OwedPages";
@@ -472,13 +473,14 @@ export const PaymentsTab: React.FC = () => {
                         style={{ color: v("faint") }}
                       >
                         {r.rec.item} · {dddDMon(r.on)}
+                        {r.rec.granted ? ` · ${GRANTED_RENEWAL}` : ""}
                       </span>
                     </span>
                     <span
                       className="text-[12.5px] font-extrabold rv-num"
                       style={{ color: v("ink") }}
                     >
-                      {money(r.rec.amount ?? 0)}
+                      {r.rec.granted ? "Plan price" : money(r.rec.amount ?? 0)}
                     </span>
                   </div>
                 ))}

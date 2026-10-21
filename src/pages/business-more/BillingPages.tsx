@@ -157,8 +157,9 @@ export function SubscriptionPage() {
   const live = billing.available;
   // Batch 2 · CS: monthly or yearly. set_subscription_billing_period changes
   // the CALLER's own subscription, so only the owner reads or switches it;
-  // staff keep business_plan_summary's monthly figures (it has no period).
-  // The console seat says who owns the business, with or without RV-06.
+  // staff read business_plan_summary, whose prices are for its billing_period
+  // ("$X a year" on a yearly plan). The console seat says who owns the
+  // business, with or without RV-06.
   const isOwner = billing.isOwner;
   const period = useBillingPeriod(authUserId ?? null, isOwner);
   const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
@@ -209,11 +210,11 @@ export function SubscriptionPage() {
 
   // The hero's price: the owner's from subscription_price_for at their own
   // period (with the seat blocks they hold); staff, business_plan_summary's
-  // monthly total as before. NULL is "not available", never $0.
+  // total for its period. NULL is "not available", never $0.
   const priceLine = (): string | null => {
     if (isOwner && ownSub) return ownTotal !== null ? `${money(ownTotal)} ${perPeriod(ownSub.period)}` : `${periodName(ownSub.period)} price not available`;
     if (isOwner && !period.ready) return null;
-    if (s) return s.monthlyTotal !== null ? `${money(s.monthlyTotal)} a month` : null;
+    if (s) return s.total !== null ? `${money(s.total)} ${perPeriod(s.period)}` : `${periodName(s.period)} price not available`;
     return `${money(plan?.monthlyTotal ?? 0)} a month`;
   };
   const confirm = periodAsk ? switchConfirm({ to: periodAsk.to, price: periodAsk.price, seatBlocks: ownSub?.seatBlocks ?? 0, renewal: periodAsk.at, money }) : null;
@@ -246,7 +247,7 @@ export function SubscriptionPage() {
                 planCharge
                   ? `Your first month, ${money(planCharge.amount)}, is awaiting payment.`
                   : planPrice !== null
-                    ? `The Business plan is ${money(planPrice)} a month.`
+                    ? `The Business plan is ${money(planPrice)} ${perPeriod(s ? s.period : "monthly")}.`
                     : undefined
               }
               actions={planCharge ? [] : [{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}

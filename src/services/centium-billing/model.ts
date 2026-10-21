@@ -13,6 +13,8 @@
 // (business_plan_summary reads subscription_tiers; a charge carries its own
 // amount).
 
+import type { SubscriptionPeriod } from "./period";
+
 export type CentiumProduct = "business_plan" | "seat_block" | "featured_week";
 export type CentiumChargeStatus = "pending" | "paid" | "failed" | "waived" | "cancelled" | "payment_not_received";
 export type CentiumChargeMethod = "whish" | "cash" | "transfer" | "manual";
@@ -30,6 +32,8 @@ export interface PlanSummaryRow {
   seat_capacity: number | null;
   pending_charges: number | null;
   pending_amount: number | string | null;
+  /** Batch 2 (20261204000000): the period plan_price and seat_block_price are for. Absent on an older stack. */
+  billing_period?: string | null;
 }
 
 export interface PlanSummary {
@@ -37,20 +41,26 @@ export interface PlanSummary {
   /** The plan is active: the only state that holds seats. */
   active: boolean;
   renewsAt: string | null;
+  /** How the business is billed (billing_period); monthly on a stack without it. */
+  period: SubscriptionPeriod;
+  /** The plan's price for `period`; null when there is none ("Not available"). */
   planPrice: number | null;
   includedSeats: number;
   seatBlocks: number;
   /** Seats per block, from the seat-block tier; null when that tier is missing. */
   seatsPerBlock: number | null;
-  /** The seat block's monthly price; null when that tier is missing. */
+  /** The seat block's price for `period`; null when there is none ("Not available"). */
   seatBlockPrice: number | null;
   /** business_seat_capacity(): included + blocks × per block, 0 without an active plan. */
   capacity: number;
   /** Charges to Centium still pending or failed, and what they add up to. */
   pendingCharges: number;
   pendingAmount: number;
-  /** The plan plus the blocks held, a month (null without a plan price). */
-  monthlyTotal: number | null;
+  /**
+   * The plan plus the blocks held, for `period`. Null without a plan price,
+   * or with blocks held and no block price: never a total that leaves part out.
+   */
+  total: number | null;
 }
 
 const num = (v: number | string | null | undefined): number | null => {
@@ -69,6 +79,7 @@ export function toPlanSummary(r: PlanSummaryRow): PlanSummary {
     planName: r.plan_name?.trim() || "Business",
     active: r.plan_status === "active",
     renewsAt: r.renews_at,
+    period: r.billing_period === "yearly" ? "yearly" : "monthly",
     planPrice,
     includedSeats: r.included_seats ?? 0,
     seatBlocks,
@@ -77,7 +88,7 @@ export function toPlanSummary(r: PlanSummaryRow): PlanSummary {
     capacity: r.seat_capacity ?? 0,
     pendingCharges: r.pending_charges ?? 0,
     pendingAmount: num(r.pending_amount) ?? 0,
-    monthlyTotal: planPrice === null ? null : cents(planPrice + seatBlocks * (seatBlockPrice ?? 0)),
+    total: planPrice === null || (seatBlocks > 0 && seatBlockPrice === null) ? null : cents(planPrice + seatBlocks * (seatBlockPrice ?? 0)),
   };
 }
 
@@ -85,13 +96,17 @@ export function toPlanSummary(r: PlanSummaryRow): PlanSummary {
  * The seat facts the Team screens draw (AN5 SeatInfo, OP1 capacity) from the
  * summary. `fallbackPer` covers a missing seat-block tier, as before.
  */
-export function seatFacts(s: PlanSummary, fallbackPer: number): { capacity: number; planActive: boolean; blocks: number; perBlock: number; blockPrice: number | null } {
+export function seatFacts(
+  s: PlanSummary,
+  fallbackPer: number
+): { capacity: number; planActive: boolean; blocks: number; perBlock: number; blockPrice: number | null; period: SubscriptionPeriod } {
   return {
     capacity: s.capacity,
     planActive: s.active,
     blocks: s.seatBlocks,
     perBlock: s.seatsPerBlock ?? fallbackPer,
     blockPrice: s.seatBlockPrice,
+    period: s.period,
   };
 }
 
@@ -204,16 +219,26 @@ export function chargeTone(c: CentiumCharge): "due" | "settled" | "void" {
   return "void";
 }
 
-/** Why buy_seat_blocks / cancel_seat_block_purchase refused, for the sheet. */
+/**
+ * Why buy_seat_blocks / cancel_seat_block_purchase refused, for the sheet.
+ * ATXD6 carries three messages (20261204000000): no active plan, seat blocks
+ * not on sale, and no seat-block price for the plan's period.
+ */
 export function seatPurchaseRefusal(
   code: string | undefined,
-  action: "buy" | "cancel" = "buy"
-): { kind: "already_pending" | "no_plan" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
+  action: "buy" | "cancel" = "buy",
+  serverMessage?: string
+): { kind: "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
   switch (code) {
     case "ATXD7":
       return { kind: "already_pending", message: "A seat order is already waiting for payment." };
-    case "ATXD6":
+    case "ATXD6": {
+      const m = (serverMessage ?? "").toLowerCase();
+      const period = /no (monthly|yearly) price/.exec(m);
+      if (period) return { kind: "no_price", message: `Seat blocks aren't available on ${period[1]} billing yet.` };
+      if (m.includes("not on sale")) return { kind: "not_on_sale", message: "Seat blocks aren't on sale right now." };
       return { kind: "no_plan", message: "Seats need an active Business plan." };
+    }
     case "ATX03":
       return { kind: "not_owner", message: action === "buy" ? "Only the business owner can buy seats." : "Only the business owner can cancel this order." };
     case "22023":

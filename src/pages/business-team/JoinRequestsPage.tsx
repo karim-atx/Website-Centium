@@ -179,7 +179,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
         onCancel={() => setDeny(null)}
         onConfirm={() => deny && void answer(deny, false)}
       />
-      <SeatsFullSheet open={!!full} onClose={() => setFull(null)} counts={counts} approveName={full?.name ?? null} />
+      <SeatsFullSheet open={!!full} onClose={() => setFull(null)} businessId={data.businessId} counts={counts} approveName={full?.name ?? null} />
       {toast}
     </TeamScope>
   );

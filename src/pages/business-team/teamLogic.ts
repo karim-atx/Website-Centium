@@ -96,7 +96,7 @@ export const isAccepted = (p: TeamPerson) => !!p.acceptedAt;
 
 // ---------------------------------------------------------------------------
 // Batch 2 CO: an invitation's window (expires_at, revoked_at). Unknown (the
-// soft read failed) shows nothing, never a guess.
+// team read fell back to the columns without it) shows nothing, never a guess.
 
 /** "Oct 14" (the app's short date), with the year when it isn't this year: "Jan 3, 2027". */
 export function shortDay(iso: string, now: Date = new Date()): string {
@@ -140,9 +140,9 @@ export interface SeatCounts {
 
 /** used = accepted (B0: only they hold a seat); free = total − used − invited (source 637). */
 /**
- * Batch 2 CO: a withdrawn invitation (revoked_at, when the window read works)
- * is shown as a "Withdrawn {date}" row with no actions, and is not on the
- * team: it holds no seat and isn't an open invite.
+ * Batch 2 CO: a withdrawn invitation (revoked_at) is shown as a "Withdrawn
+ * {date}" row (the owner can invite them again from the Person page), and is
+ * not on the team: it holds no seat and isn't an open invite.
  */
 export const isWithdrawn = (p: Pick<TeamPerson, "acceptedAt" | "invite">) => !p.acceptedAt && !!p.invite?.revokedAt;
 /** Everyone except withdrawn invitations. */
@@ -162,15 +162,21 @@ export const noSeatPeople = (people: TeamPerson[]) => people.filter((p) => !pers
  * invited (source 637). The database's my_business_seat_capacity counts the
  * same way; the screen prefers its numbers when they're loaded.
  *
- * Batch 2 CO: except that seats_invited still counts a WITHDRAWN invitation
- * (it reads accepted_at only), which seatHolders leaves out once the window
- * read works; the lower of the two is the live count.
+ * Batch 2 CO: seats_invited counts only invitations that can still be
+ * accepted (team_invite_is_acceptable), so a withdrawn or expired one holds no
+ * seat. Without the server's numbers the list counts the same way: an expired
+ * invite is left out once its window is known (a withdrawn one never reaches
+ * seatHolders).
  */
-export function seatCounts(people: TeamPerson[], capacity: number, server?: { used: number; invited: number } | null): SeatCounts {
+export function seatCounts(
+  people: TeamPerson[],
+  capacity: number,
+  server?: { used: number; invited: number } | null,
+  now: Date = new Date(),
+): SeatCounts {
   const holders = seatHolders(people);
   const used = server?.used ?? holders.filter(isAccepted).length;
-  const listed = holders.length - holders.filter(isAccepted).length;
-  const invited = server ? Math.min(server.invited, listed) : listed;
+  const invited = server?.invited ?? holders.filter((p) => !isAccepted(p) && inviteState(p, now) !== "expired").length;
   return { used, invited, total: capacity, free: Math.max(0, capacity - used - invited) };
 }
 

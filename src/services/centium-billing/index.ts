@@ -11,7 +11,8 @@ export * from "./period";
 // purchase. Signatures checked on the local stack:
 //   business_plan_summary(p_business_id) → one row       gate members OR revenue
 //   centium_billing_history(p_business_id, p_limit, p_offset) → rows + total_count   gate revenue
-//   buy_seat_blocks(p_business_id, p_blocks) → uuid       owner only; ATXD6 / ATXD7 / 22023
+//   buy_seat_blocks(p_business_id, p_blocks) → uuid       owner only; ATXD6 / ATXD7 / 22023;
+//                                                         charges the plan's period price (20261204000000)
 //   cancel_seat_block_purchase(p_charge_id)               owner only; 22023 / ATXD8 / ATX08
 // Not in the production-generated types yet, so calls go through one loose
 // handle. Admin functions (admin_*) belong to the admin console, not here.
@@ -65,7 +66,7 @@ export async function buySeatBlocks(businessId: string, blocks: number): Promise
     const { data, error } = await rpc<string>("buy_seat_blocks", { p_business_id: businessId, p_blocks: blocks });
     if (error) {
       if (isOffline(error)) return { ok: false, code: error.code, kind: "failed", message: OFFLINE_MESSAGE };
-      const r = seatPurchaseRefusal(error.code, "buy");
+      const r = seatPurchaseRefusal(error.code, "buy", error.message);
       return { ok: false, code: error.code, ...r };
     }
     return { ok: true, value: String(data) };

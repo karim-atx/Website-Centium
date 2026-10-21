@@ -197,6 +197,8 @@ export interface VenueMember {
   /** The same derived state my_gym_memberships() shows the member. */
   passState: PassState;
   joinedAt: string;
+  /** CN (20261203000000): granted by a member code, not bought. Labelled, never a sale. */
+  granted?: boolean;
 }
 
 export type VenueMemberRow = {
@@ -216,8 +218,13 @@ export type VenueMemberRow = {
   expires_on: string | null;
   pass_state: PassState;
   joined_at: string;
+  /** CN: appended by 20261203000000. Absent on an older stack. */
+  granted?: boolean | null;
   total_count: number | string | null;
 };
+
+/** CN: how a membership granted by a member code is labelled where memberships are listed. */
+export const GRANTED_LABEL = "Granted with a code";
 
 export function toVenueMember(r: VenueMemberRow): VenueMember {
   return {
@@ -237,6 +244,7 @@ export function toVenueMember(r: VenueMemberRow): VenueMember {
     expiresOn: r.expires_on,
     passState: r.pass_state,
     joinedAt: r.joined_at,
+    granted: r.granted === true,
   };
 }
 

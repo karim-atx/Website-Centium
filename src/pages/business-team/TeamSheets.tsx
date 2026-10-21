@@ -4,6 +4,7 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import type { BizKind } from "../../components/business-more/kind";
 import { fetchSeatBlockPrice, inviteEmployee, roleUsesSeat, type BusinessRole } from "../../services/business-team/team";
+import { fetchPlanSummary, periodName, perPeriod, type SubscriptionPeriod } from "../../services/centium-billing";
 import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import { roleOptions, type SeatCounts } from "./teamLogic";
 import { isOfflineNow } from "./parts";
@@ -252,7 +253,10 @@ export function InviteSheet({
 
 /**
  * All seats in use (OP1-070 invite context, OP1-127 approve context). The
- * price is read from subscription_tiers (V6-40). "Add seats" opens the AN5
+ * price is the seat block's for the plan's billing period
+ * (business_plan_summary, Batch 2), or, without that reader, the monthly one
+ * from subscription_tiers (V6-40). A period with no price says so, never $0.
+ * "Add seats" opens the AN5
  * 057-060 Add seats flow (OP1-070 row 5, OP1-127 row 8), which places a B8
  * RV-06 seat order (buy_seat_blocks, owner only) or, on a database without
  * RV-06, keeps the email request.
@@ -264,10 +268,13 @@ export function SeatsFullSheet({
   approveName,
   onInviteNoSeat,
   onChanged,
+  businessId,
 }: {
   open: boolean;
   onClose: () => void;
   counts: SeatCounts;
+  /** Batch 2: the business, so the seat price is read for its billing period. */
+  businessId?: string | null;
   /** Invite a role that needs no seat (front desk, manager) from a full business. */
   onInviteNoSeat?: () => void;
   /** Set when the sheet opened from approving a join request (OP1-127). */
@@ -275,31 +282,40 @@ export function SeatsFullSheet({
   /** A seat order was placed or cancelled in the Add seats flow. */
   onChanged?: () => void;
 }) {
-  const [price, setPrice] = useState<{ monthly: number; seatsPerUnit: number } | null | undefined>(undefined);
+  const [price, setPrice] = useState<{ amount: number | null; period: SubscriptionPeriod; seatsPerUnit: number } | null | undefined>(undefined);
   const [priceError, setPriceError] = useState(false);
   const [buying, setBuying] = useState(false);
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    void fetchSeatBlockPrice().then((r) => {
+    void (async () => {
+      const s = businessId ? await fetchPlanSummary(businessId) : null;
+      if (cancelled) return;
+      if (s?.ok) {
+        setPrice({ amount: s.value.seatBlockPrice, period: s.value.period, seatsPerUnit: s.value.seatsPerBlock ?? 5 });
+        setPriceError(false);
+        return;
+      }
+      const r = await fetchSeatBlockPrice();
       if (cancelled) return;
       if (r.ok) {
-        setPrice(r.value);
+        setPrice(r.value ? { amount: r.value.monthly, period: "monthly", seatsPerUnit: r.value.seatsPerUnit } : null);
         setPriceError(false);
       } else setPriceError(true);
-    });
+    })();
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, businessId]);
 
   const per = price?.seatsPerUnit ?? 5;
-  const priceText = price ? `$${price.monthly.toFixed(2)}` : null;
   const zero = counts.total === 0;
   const tail = approveName ? ` ${approveName} can join once a seat is free.` : " Send the invite again once a seat is free.";
-  const note = priceText
-    ? `Each seat block is ${priceText} a month and adds ${per} seats.${tail}`
-    : `Each seat block adds ${per} seats.${tail}`;
+  const note = !price
+    ? `Each seat block adds ${per} seats.${tail}`
+    : price.amount === null
+      ? `Each seat block adds ${per} seats. ${periodName(price.period)} price not available.${tail}`
+      : `Each seat block is $${price.amount.toFixed(2)} ${perPeriod(price.period)} and adds ${per} seats.${tail}`;
 
   return (
     <>
@@ -323,7 +339,7 @@ export function SeatsFullSheet({
         <SeatPurchaseSheet
           used={counts.used}
           pending={counts.invited}
-          fallback={{ capacity: counts.total, planActive: counts.total > 0, blocks: 0, perBlock: per, blockPrice: price?.monthly ?? null }}
+          fallback={{ capacity: counts.total, planActive: counts.total > 0, blocks: 0, perBlock: per, blockPrice: price?.amount ?? null, period: price?.period ?? "monthly" }}
           onClose={() => {
             setBuying(false);
             onClose();

@@ -13,9 +13,13 @@ import {
   fetchMyMemberships,
   newMemberships,
   OFFLINE_LINE,
+  PREVIEW_UNUSABLE,
+  previewLines,
+  previewMemberCode,
   redeemedLine,
   redeemMemberCode,
   respondToMembership,
+  type CodePreview,
   type Membership,
 } from "../../services/business-members";
 import { useOnline } from "../../hooks/useOnline";
@@ -25,6 +29,7 @@ import { endMyGymMembership, fetchGymBusinessIds, fetchMembershipTerms, fetchMyG
 import { NameSharingCard } from "./NameSharingCard";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
+import { GRANTED_LABEL } from "../../services/venues/consoleLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 
 // The member's side of a business membership: answer an invitation, redeem a
@@ -48,12 +53,16 @@ import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash
 // board's empty card); once there is one, "Join another gym or studio"
 // reveals it.
 //
-// CN (Batch 2): a code may also grant a membership or pass. There is no
-// preview function, so nothing is promised before redeeming; afterwards
-// my_gym_memberships is re-read and the new row is named (plan and gym). The
-// server grants nothing when the code has no plan or the person already holds
-// an active membership at that gym, and then we say only that they joined.
-// A refused code is not used up: it stays in the box to correct or retry.
+// CN (Batch 2): a code may also grant a membership or pass. "Check code"
+// reads preview_business_member_code first and shows the business, what the
+// code comes with (plan and type, at which gym), until when it works, and the
+// gym's minimum age when it's above the platform's 16; Join appears there. No
+// row means the code can't be used, and we don't guess why. After joining,
+// the server's sentence says what happened (granted, already held at that
+// gym, or a plain member code) and my_gym_memberships is re-read to name the
+// new membership or pass (plan_type says which). A refused code is not used
+// up: it stays in the box to correct or retry. A granted row is labelled
+// "Granted with a code".
 //
 // GYM MEMBERSHIPS BOUGHT ON EXPLORE (backend stage 4b, MO1.4.2.2.1 note:
 // "membership appears in Profile") are listed first, from
@@ -121,6 +130,10 @@ export const MembershipsCard: React.FC = () => {
 
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [checking, setChecking] = useState(false);
+  /** The last preview, for the code it was read for (null value: the code can't be used). */
+  const [preview, setPreview] = useState<{ code: string; value: CodePreview | null } | null>(null);
+  const current = preview && preview.code === code.trim() ? preview : null;
   /** A refusal (kept beside the code box) or the success line (shown above the list). */
   const [redeemNote, setRedeemNote] = useState<{ text: string; ok: boolean } | null>(null);
   const [tick, setTick] = useState(0);
@@ -204,6 +217,18 @@ export const MembershipsCard: React.FC = () => {
     if (gyms.ok) setGymMemberships(gyms.value);
   };
 
+  const check = async () => {
+    if (!code.trim() || checking || redeeming) return;
+    if (!online) return setRedeemNote({ text: OFFLINE_LINE, ok: false });
+    setChecking(true);
+    setRedeemNote(null);
+    const asked = code.trim();
+    const r = await previewMemberCode(asked);
+    setChecking(false);
+    if (!r.ok) return setRedeemNote({ text: r.message, ok: false });
+    setPreview({ code: asked, value: r.value });
+  };
+
   const redeem = async () => {
     if (!code.trim() || redeeming || !authUserId) return;
     // Refusals keep the code in the box: a refused code is not used up.
@@ -211,6 +236,8 @@ export const MembershipsCard: React.FC = () => {
     setRedeeming(true);
     setRedeemNote(null);
     const before = gymMemberships;
+    // The previewed business, in case the membership list can't be re-read.
+    const previewed = current?.value?.businessName ?? null;
     const result = await redeemMemberCode(code);
     if (!result.ok) {
       setRedeeming(false);
@@ -218,14 +245,16 @@ export const MembershipsCard: React.FC = () => {
       return;
     }
     setCode("");
+    setPreview(null);
     // What came with the code: whatever my_gym_memberships now holds that it did not.
     const [mine, gyms] = await Promise.all([fetchMyMemberships(authUserId), fetchMyGymMemberships()]);
     setRedeeming(false);
     if (mine.ok) setMemberships(mine.memberships);
     if (gyms.ok) setGymMemberships(gyms.value);
-    const business = mine.ok ? (mine.memberships.find((m) => m.businessId === result.businessId)?.businessName ?? null) : null;
+    const listed = mine.ok ? mine.memberships.find((m) => m.businessId === result.businessId)?.businessName : undefined;
+    const business = listed || previewed;
     const granted = gyms.ok ? newMemberships(before, gyms.value) : [];
-    setRedeemNote({ text: redeemedLine(granted, business, !gyms.ok || !!gyms.value.some((g) => g.cachedAt)), ok: true });
+    setRedeemNote({ text: redeemedLine(granted, business, result.outcome, !gyms.ok || !!gyms.value.some((g) => g.cachedAt)), ok: true });
   };
 
   const codeBox = (helper: string) => (
@@ -243,16 +272,33 @@ export const MembershipsCard: React.FC = () => {
           // height 44, radius 12, padding 0 14, value 14/600.
           className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
-        <Button onClick={() => void redeem()} disabled={!code.trim() || redeeming}>
-          {redeeming ? "…" : "Join"}
+        <Button className="shrink-0" variant={current?.value ? "outline" : "primary"} onClick={() => void check()} disabled={!code.trim() || checking || redeeming}>
+          {checking ? "Checking…" : "Check code"}
         </Button>
       </div>
+      {current?.value && (
+        <div className="mt-2.5 rounded-[14px] bg-cream-soft px-3.5 py-3" role="status">
+          <p className="text-[14px] font-bold text-charcoal break-words">{current.value.businessName}</p>
+          {previewLines(current.value).map((l) => (
+            <p key={l} className="mt-1 text-xs text-charcoal-soft break-words">
+              {l}
+            </p>
+          ))}
+          <Button className="mt-3" fullWidth onClick={() => void redeem()} disabled={redeeming}>
+            {redeeming ? "Joining…" : "Join"}
+          </Button>
+        </div>
+      )}
       {redeemNote && !redeemNote.ok ? (
         <p role="alert" className="mt-2 text-xs font-semibold text-status-high">
           {redeemNote.text}
         </p>
+      ) : current && !current.value ? (
+        <p role="alert" className="mt-2 text-xs font-semibold text-status-high">
+          {PREVIEW_UNUSABLE}
+        </p>
       ) : (
-        <p className="mt-2.5 text-xs text-charcoal-faint">{helper}</p>
+        !current && <p className="mt-2.5 text-xs text-charcoal-faint">{helper}</p>
       )}
     </>
   );
@@ -328,6 +374,7 @@ export const MembershipsCard: React.FC = () => {
           <span className="block text-xs text-charcoal-faint truncate">
             {m.planName} · {validRange(m.startedOn, m.expiresOn)}
           </span>
+          {m.granted && <span className="block text-[11.5px] font-semibold text-charcoal-soft truncate">{GRANTED_LABEL}</span>}
           {lines && <span className="block text-[11.5px] text-charcoal-faint truncate">{lines.join(" · ")}</span>}
         </span>
         <MemberTag label={tag.label} tone={tag.tone} />
@@ -391,7 +438,7 @@ export const MembershipsCard: React.FC = () => {
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
         // under the field.
         <Card padded={false} className="!rounded-[18px] p-3.5">
-          {codeBox("Got a code from a gym or studio? Enter it here to become a member. A membership or pass that comes with the code shows up here too.")}
+          {codeBox("Got a code from a gym or studio? Enter it and check what it comes with before you join.")}
         </Card>
       ) : (
         // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
@@ -448,7 +495,7 @@ export const MembershipsCard: React.FC = () => {
           ))}
 
           {joinOpen ? (
-            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox("A membership or pass that comes with the code shows up here too.")}</Card>
+            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox("Check what the code comes with before you join.")}</Card>
           ) : (
             <button
               type="button"

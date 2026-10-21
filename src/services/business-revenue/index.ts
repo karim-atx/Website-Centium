@@ -92,6 +92,8 @@ interface MemberRow {
   started_on: string | null;
   expires_on: string | null;
   joined_at: string;
+  /** CN (20261203000000): granted by a member code. Absent on an older stack. */
+  granted?: boolean | null;
   total_count: number | string;
 }
 
@@ -108,14 +110,14 @@ export interface RevenueData {
   renewalsDue: RenewalDue[];
 }
 
-// CN (Batch 2): a membership granted by a member code arrives here as an
-// ordinary row (price 0.00, cash, paid). gym_memberships.granted_by_code_id is
-// the documented not-revenue flag, but venue_members() does not return it and
-// authenticated cannot read the table, so these rows cannot be told apart from
-// a $0 sale. The recorded figures come from business_payments, which skips
-// grants, so no total counts them. These records still put them in
-// activeMembers() (Overview "Per active member"), renewals() (at $0) and,
-// only while the B8 readers are missing, transactions() and undatedPaid().
+// CN (Batch 2): a membership granted by a member code arrives with
+// venue_members' `granted` set (price 0.00, cash, paid on the row, but never
+// a sale). The record carries `granted`, and the model leaves it out of every
+// money figure (dated / undatedPaid / transactions / recurringMonthly), never
+// marks it paid-undated, and keeps it in activeMembers() (a grant is still a
+// member) and in renewals(), where the screens label it: renewing one charges
+// the plan price. The recorded figures come from business_payments, which
+// skips grants too.
 async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
   const out: PaymentRecord[] = [];
   for (let offset = 0; offset < 5000; offset += 200) {
@@ -128,7 +130,8 @@ async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
     if (error) return fail(error, LOAD_FAIL);
     const rows = data ?? [];
     for (const m of rows) {
-      const paid = m.payment_status === "paid";
+      const granted = m.granted === true;
+      const paid = m.payment_status === "paid" && !granted;
       out.push({
         key: `membership:${m.membership_id}`,
         kind: "membership",
@@ -147,6 +150,7 @@ async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
         membershipStatus: m.status,
         startedOn: m.started_on,
         expiresOn: m.expires_on,
+        granted,
       });
     }
     const total = Number(rows[0]?.total_count ?? 0);

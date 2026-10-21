@@ -62,7 +62,7 @@ export async function loadTeam(businessId: string): Promise<Res<TeamData>> {
         blockPrice: price.ok && price.value ? price.value.monthly : null,
       };
     }
-    // Batch 2 CO: a withdrawn invitation (revoked_at, once readable) is not on the team.
+    // Batch 2 CO: a withdrawn invitation (revoked_at) is not on the team.
     const ordered = team.value.filter((p) => p.acceptedAt || !p.invite?.revokedAt).sort((a, b) => {
       if (!!a.acceptedAt !== !!b.acceptedAt) return a.acceptedAt ? -1 : 1;
       return (a.acceptedAt ?? a.invitedAt).localeCompare(b.acceptedAt ?? b.invitedAt);

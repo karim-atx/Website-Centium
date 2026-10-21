@@ -455,3 +455,22 @@ test("refunds: what is left, the amount field, and refusals with the server's fi
   assert.equal(dayIn("2026-10-05T22:30:00Z", "Asia/Beirut"), "2026-10-06");
   assert.equal(dayIn("2026-10-05T22:30:00Z", "UTC"), "2026-10-05");
 });
+
+test("CN: a membership granted by a member code is never revenue, but is still a member and still renews", async () => {
+  const { activeMembers } = await import("./model.ts");
+  const p = { from: "2026-10-01", to: "2026-10-31" };
+  const today = "2026-10-21";
+  const sold = rec({ key: "membership:a", id: "a", kind: "membership", amount: 40, paidUndated: true, membershipStatus: "active", startedOn: "2026-10-05", expiresOn: "2026-11-04", createdAt: "2026-10-05T09:00:00" });
+  const grant = rec({ key: "membership:g", id: "g", kind: "membership", amount: 0, paidUndated: false, granted: true, membershipStatus: "active", startedOn: "2026-10-10", expiresOn: "2026-11-09", createdAt: "2026-10-10T09:00:00" });
+  // Even dated, a grant is no payment.
+  const datedGrant = { ...grant, key: "membership:h", id: "h", paidAt: "2026-10-10T09:00:00" };
+  const records = [sold, grant, datedGrant];
+  assert.deepEqual(undatedPaid(records), { n: 1, amount: 40 });
+  assert.deepEqual(transactions(records, p).map((t) => t.rec.id), ["a"]);
+  assert.equal(collected(records, p), 0);
+  assert.equal(recurringMonthly(records, today), 40);
+  assert.equal(figuresFromRecords(records, p, { from: "2026-09-01", to: "2026-09-30" }).anyPaid, true);
+  assert.equal(figuresFromRecords([grant], p, { from: "2026-09-01", to: "2026-09-30" }).anyPaid, false);
+  assert.equal(activeMembers(records, today), 3);
+  assert.deepEqual(renewals([sold, grant], today).map((r) => r.rec.id), ["a", "g"]);
+});

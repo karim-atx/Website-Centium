@@ -792,6 +792,8 @@ export type RenewalDueRow = {
   cancel_at_period_end: boolean | null;
   payment_status: "pending" | "paid" | "refunded" | null;
   already_renewed: boolean | null;
+  /** CN (20261203000000): granted by a member code. Absent on an older stack. */
+  granted?: boolean | null;
   total_count: number | string | null;
 };
 
@@ -811,7 +813,15 @@ export interface RenewalDue {
   cancelAtPeriodEnd: boolean;
   paymentStatus: "pending" | "paid" | "refunded" | null;
   alreadyRenewed: boolean;
+  /**
+   * CN: granted by a member code. Kept in the list (Karim) and labelled:
+   * renewing it charges the plan price, it is not another free period.
+   */
+  granted?: boolean;
 }
+
+/** CN: the label on a granted membership that is due to renew. */
+export const GRANTED_RENEWAL = "granted with a code, renewing charges the plan price";
 
 export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
   const n = Number(r.days_left);
@@ -828,6 +838,7 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
     cancelAtPeriodEnd: r.cancel_at_period_end === true,
     paymentStatus: r.payment_status,
     alreadyRenewed: r.already_renewed === true,
+    granted: r.granted === true,
   };
 }
 
@@ -845,9 +856,10 @@ export function renewalSub(r: RenewalDue): string {
   const plan = r.planName;
   if (r.alreadyRenewed) return `${plan} · renewed, next period from ${dayMonthYear(r.expiresOn)}`;
   if (r.cancelAtPeriodEnd) return `${plan} · ends ${dayMonthYear(r.expiresOn)}`;
-  if (r.daysLeft <= 0) return `${plan} · renews today`;
-  if (r.daysLeft === 1) return `${plan} · renews tomorrow`;
-  return `${plan} · renews in ${r.daysLeft} days`;
+  const grant = r.granted ? ` · ${GRANTED_RENEWAL}` : "";
+  if (r.daysLeft <= 0) return `${plan} · renews today${grant}`;
+  if (r.daysLeft === 1) return `${plan} · renews tomorrow${grant}`;
+  return `${plan} · renews in ${r.daysLeft} days${grant}`;
 }
 
 export type RenewalStatsRow = {

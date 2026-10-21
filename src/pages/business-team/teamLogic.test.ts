@@ -105,8 +105,8 @@ test("seats count instructors and trainers only (B6 follow-up, role_uses_seat)",
   assert.equal(seatBlocks(people, 5, 5)[0].filter((s) => s.kind === "person").length, 2);
   // The server's numbers win when loaded.
   assert.deepEqual(seatCounts(people, 5, { used: 2, invited: 0 }), { used: 2, invited: 0, total: 5, free: 3 });
-  // Batch 2 CO: the server still counts a withdrawn invitation the list left out; the live count is the lower.
-  assert.deepEqual(seatCounts(people.slice(0, 3), 5, { used: 1, invited: 1 }), { used: 1, invited: 0, total: 5, free: 4 });
+  // Batch 2 CO: seats_invited counts live invitations only, so the server's number is taken as it is.
+  assert.deepEqual(seatCounts(people.slice(0, 3), 5, { used: 1, invited: 1 }), { used: 1, invited: 1, total: 5, free: 3 });
   // Active team counts everybody accepted, seat or not.
   assert.equal(teamBoxes("gym", people, [], 5, "2026-10-14", Date.parse("2026-10-14T12:00:00Z")).boxes[0].value, "2");
 });
@@ -155,7 +155,7 @@ test("Batch 2 CO: an invitation's window reads as pending, expired or withdrawn,
   const in9 = new Date(2026, 9, 30, 9, 0).toISOString();
   const ago7 = new Date(2026, 9, 14, 9, 0).toISOString();
   const revoked = new Date(2026, 9, 20, 9, 0).toISOString();
-  // Unknown (the soft read failed): no state, no line, the plain word.
+  // Unknown (the window wasn't read): no state, no line, the plain word.
   assert.equal(inviteState(p, now), "unknown");
   assert.equal(inviteWhen(p, now), null);
   assert.equal(invitedWord(p, now), "Invited");
@@ -200,6 +200,10 @@ test("a withdrawn invitation is listed apart and counts for nothing (Batch 2 CO)
   assert.deepEqual(withdrawnPeople(people).map((p) => p.professionalId), ["d", "c"]);
   assert.deepEqual(seatHolders(people).map((p) => p.professionalId), ["a", "b", "e"]);
   assert.deepEqual(noSeatPeople(people).map((p) => p.professionalId), []);
-  assert.deepEqual(seatCounts(people, 5), { used: 1, invited: 2, total: 5, free: 2 });
-  assert.equal(inviteWhen(gone1, new Date("2026-10-21T12:00:00Z")), "Withdrawn Oct 20");
+  const now = new Date("2026-10-21T12:00:00Z");
+  assert.deepEqual(seatCounts(people, 5, null, now), { used: 1, invited: 2, total: 5, free: 2 });
+  // An expired invitation is still on the board but holds no seat (seats_invited agrees).
+  const lapsed = { ...person("f", "Omar", false), invite: { ...win(null), expiresAt: "2026-10-14T00:00:00Z" } };
+  assert.deepEqual(seatCounts([...people, lapsed], 5, null, now), { used: 1, invited: 2, total: 5, free: 2 });
+  assert.equal(inviteWhen(gone1, now), "Withdrawn Oct 20");
 });

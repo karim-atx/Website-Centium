@@ -1,7 +1,16 @@
 import { supabase } from "../../../lib/supabase/client";
 import { CLOSED_INVITE_MEMBER, CLOSED_MEMBER_CODE, CLOSED_REDEEM_CODE, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import { isOffline } from "../network-error";
-import { describeCreateRefusal, describeRedeemError, describeRedeemRefusal } from "./codeLogic";
+import {
+  describeCreateRefusal,
+  describePreviewError,
+  describeRedeemError,
+  describeRedeemRefusal,
+  redeemOutcome,
+  type CodePreview,
+  type RedeemOutcome,
+} from "./codeLogic";
+import type { PlanKind } from "../membership-plans/types";
 
 export * from "./codeLogic";
 
@@ -452,12 +461,14 @@ export async function fetchMyMemberCodes(
  * shown). Only the structural failures (no session, rate limit 5 per 15
  * minutes, network) raise. A refused code is NOT used up.
  *
- * NO PREVIEW EXISTS: a client cannot read a code before redeeming it, so the
- * caller learns what was granted by re-reading my_gym_memberships after.
+ * On success the server's sentence says what happened (redeemOutcome): a
+ * membership granted, none granted because one is already held at that gym,
+ * or a plain member code. The caller names what was granted by re-reading
+ * my_gym_memberships after.
  */
 export async function redeemMemberCode(
   code: string
-): Promise<{ ok: true; businessId: string | null } | { ok: false; message: string }> {
+): Promise<{ ok: true; businessId: string | null; outcome: RedeemOutcome } | { ok: false; message: string }> {
   const trimmed = code.trim();
   if (!trimmed) return { ok: false, message: "Enter the code first." };
 
@@ -469,7 +480,58 @@ export async function redeemMemberCode(
   }
   const result = data as { success: boolean; message: string; membership: { business_id?: string } | null } | null;
   if (!result?.success) return { ok: false, message: describeRedeemRefusal(result?.message) };
-  return { ok: true, businessId: result.membership?.business_id ?? null };
+  return { ok: true, businessId: result.membership?.business_id ?? null, outcome: redeemOutcome(result.message) };
+}
+
+/** preview_business_member_code(p_code) row (20261203000000). */
+interface PreviewRow {
+  code: string;
+  business_id: string;
+  business_name: string | null;
+  gym_id: string | null;
+  gym_name: string | null;
+  plan_id: string | null;
+  plan_name: string | null;
+  plan_type: PlanKind | null;
+  grants_membership: boolean | null;
+  min_entry_age: number | null;
+  expires_at: string;
+}
+
+/**
+ * What a member code grants, before redeeming it. `value: null` = no row:
+ * the code can't be used, and the server deliberately doesn't say why
+ * (unknown, used, lapsed and a closed or paused business look the same).
+ * Rate limited 20 per 15 minutes (ATX02). Reads only.
+ */
+export async function previewMemberCode(
+  code: string
+): Promise<{ ok: true; value: CodePreview | null } | { ok: false; message: string }> {
+  const trimmed = code.trim();
+  if (!trimmed) return { ok: false, message: "Enter the code first." };
+  try {
+    const { data, error } = await rpc().rpc("preview_business_member_code", { p_code: trimmed });
+    if (error) {
+      console.error("[members] Could not preview a code:", error.code, error.message);
+      return { ok: false, message: describePreviewError(error, isOffline(error)) };
+    }
+    const row = (Array.isArray(data) ? data[0] : data) as PreviewRow | null | undefined;
+    if (!row) return { ok: true, value: null };
+    return {
+      ok: true,
+      value: {
+        businessName: row.business_name?.trim() || "A business",
+        gymName: row.gym_name ?? null,
+        planName: row.plan_name ?? null,
+        planType: row.plan_type ?? null,
+        grantsMembership: row.grants_membership === true,
+        minEntryAge: row.min_entry_age == null ? null : Number(row.min_entry_age),
+        expiresAt: row.expires_at,
+      },
+    };
+  } catch (e) {
+    return { ok: false, message: describePreviewError({ message: String(e) }, isOffline(e)) };
+  }
 }
 
 /** Accepts or declines an invitation. Only the invited person may call this. */

@@ -63,8 +63,8 @@ export default function Businesses() {
     setBusy(null);
     if (!r.ok) {
       setToast(r.message);
-      // Batch 2 CO: withdrawn or expired stops offering Accept (my_business_employments
-      // can't say so itself); gone drops out on the reload.
+      // Batch 2 CO: withdrawn or expired stops offering Accept at once, before the
+      // reload brings my_business_employments' own answer; gone drops out on the reload.
       const kind = r.refused;
       if (kind === "withdrawn" || kind === "expired") setRefused((m) => ({ ...m, [e.businessId]: kind }));
       if (kind !== undefined) reload();

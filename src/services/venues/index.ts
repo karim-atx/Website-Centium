@@ -5,6 +5,7 @@ import type { HoursRow } from "./hours";
 import { isOffline } from "../network-error";
 import { CLOSED_BUY_MEMBERSHIP, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import { readPassCache, writePassCache } from "./passCache";
+import type { PlanKind } from "../membership-plans/types";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -97,6 +98,13 @@ export interface GymMembership {
   cachedAt?: string;
   /** Set to end when the period runs out (end_gym_membership at period end): "Ends {date}". */
   cancelAtPeriodEnd: boolean;
+  /**
+   * CN (20261203000000): granted by a member code, not bought. Absent on an
+   * older reader or a device copy saved before it, which reads as not granted.
+   */
+  granted?: boolean;
+  /** CN: the plan's type, so a pass isn't called a membership. Null when not returned. */
+  planType?: PlanKind | null;
 }
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
@@ -140,6 +148,9 @@ type MembershipRow = {
   access_bluetooth: boolean;
   /** 20261121020000: appended last. Null-safe for an older stack. */
   cancel_at_period_end?: boolean | null;
+  /** CN (20261203000000): appended last. Null-safe for an older stack. */
+  granted?: boolean | null;
+  plan_type?: PlanKind | null;
 };
 
 const VENUE_COLUMNS =
@@ -378,6 +389,8 @@ export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> 
     passState: r.pass_state,
     access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
     cancelAtPeriodEnd: r.cancel_at_period_end === true,
+    granted: r.granted === true,
+    planType: r.plan_type ?? null,
   }));
   if (uid) writePassCache(uid, value.filter((m) => m.status === "active"));
   return { ok: true, value };

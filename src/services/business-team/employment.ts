@@ -29,34 +29,24 @@ export interface MyEmployment {
   role: string | null;
   message: string | null;
   /**
-   * Batch 2 CO: the invitation's window (expires_at, revoked_at) from a
-   * separate read of my own rows that fails softly. Null or absent = not
-   * known: no expiry or withdrawn state is shown rather than guessed.
+   * Batch 2 CO: the invitation's window from my_business_employments()
+   * (expires_at, revoked_at and `acceptable`, the server's one rule,
+   * team_invite_is_acceptable). Null on an accepted row, or on a database
+   * whose reader doesn't return them yet: no expiry or withdrawn state is
+   * shown rather than guessed.
    */
-  invite?: { expiresAt: string | null; revokedAt: string | null } | null;
+  invite?: { expiresAt: string | null; revokedAt: string | null; acceptable: boolean | null } | null;
 }
 
-/**
- * My own unaccepted rows' windows (business_employees_select_professional),
- * by business. NEVER part of the role/invite_message select above: the new
- * columns are not SELECT-granted to authenticated yet, and naming one fails
- * the whole statement with 42501. Any error answers null.
- */
-async function myInviteWindows(me: string): Promise<Map<string, { expiresAt: string | null; revokedAt: string | null }> | null> {
-  const loose = db as unknown as {
-    from: (t: string) => {
-      select: (c: string) => { eq: (k: string, v: string) => { is: (k: string, v: null) => PromiseLike<{ data: unknown; error: unknown }> } };
-    };
-  };
-  try {
-    const { data, error } = await loose.from("business_employees").select("business_id, expires_at, revoked_at").eq("professional_id", me).is("accepted_at", null);
-    if (error || !Array.isArray(data)) return null;
-    return new Map(
-      (data as { business_id: string; expires_at: string | null; revoked_at: string | null }[]).map((r) => [r.business_id, { expiresAt: r.expires_at ?? null, revokedAt: r.revoked_at ?? null }])
-    );
-  } catch {
-    return null;
-  }
+/** my_business_employments() row (migration 20261201000000 added the window and `acceptable`). */
+interface EmploymentRow {
+  business_id: string;
+  business_name: string | null;
+  accepted_at: string | null;
+  invited_at: string;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+  acceptable?: boolean | null;
 }
 
 export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmployment[] } | { ok: false; message: string }> {
@@ -68,26 +58,27 @@ export async function fetchMyEmployments(): Promise<{ ok: true; value: MyEmploym
   // (business_employees_select_professional); my_business_employments() doesn't
   // return them. A failed read only loses the note, not the invitation.
   const { data: auth } = await supabase.auth.getUser();
-  const rows = (data ?? []) as { accepted_at: string | null }[];
-  const [own, windows] = auth.user?.id
-    ? await Promise.all([
-        db.from("business_employees").select("business_id, role, invite_message").eq("professional_id", auth.user.id),
-        rows.some((r) => !r.accepted_at) ? myInviteWindows(auth.user.id) : Promise.resolve(null),
-      ])
-    : [{ data: [] }, null];
+  const rows = (data ?? []) as EmploymentRow[];
+  const own = auth.user?.id
+    ? await db.from("business_employees").select("business_id, role, invite_message").eq("professional_id", auth.user.id)
+    : { data: [] };
   const extra = new Map(
     ((own.data ?? []) as { business_id: string; role: string | null; invite_message: string | null }[]).map((r) => [r.business_id, r])
   );
   return {
     ok: true,
-    value: ((data ?? []) as { business_id: string; business_name: string | null; accepted_at: string | null; invited_at: string }[]).map((r) => ({
+    value: rows.map((r) => ({
       businessId: r.business_id,
       businessName: r.business_name?.trim() || "A business",
       acceptedAt: r.accepted_at,
       invitedAt: r.invited_at,
       role: extra.get(r.business_id)?.role ?? null,
       message: extra.get(r.business_id)?.invite_message ?? null,
-      invite: r.accepted_at ? null : (windows?.get(r.business_id) ?? null),
+      // `acceptable` absent = an older reader: the window is unknown, not open.
+      invite:
+        r.accepted_at || typeof r.acceptable !== "boolean"
+          ? null
+          : { expiresAt: r.expires_at ?? null, revokedAt: r.revoked_at ?? null, acceptable: r.acceptable },
     })),
   };
 }

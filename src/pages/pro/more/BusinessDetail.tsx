@@ -43,7 +43,7 @@ export default function BusinessDetail() {
   const [declining, setDeclining] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  /** Batch 2 CO: an accept the server refused as withdrawn or expired (my_business_employments can't say so). */
+  /** Batch 2 CO: an accept the server refused as withdrawn or expired, kept until the list is read again. */
   const [refused, setRefused] = useState<AcceptRefusalKind | null>(null);
 
   const e = data?.employments.find((x) => x.businessId === id) ?? null;

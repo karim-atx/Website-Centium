@@ -10,7 +10,7 @@ import { isEnded, shortDate } from "../business-ops/classes/scheduleModel";
 import { time12 } from "../../utils/time12";
 import { useOpenThread } from "../../components/messages/useOpenThread";
 import { removeTeamMember } from "../../services/business-team";
-import { fetchBooked, fetchCredentials, fetchPublicDetails, resendTeamInvite, revokeTeamInvite, type Credential, type PublicDetails } from "../../services/business-team/team";
+import { fetchBooked, fetchCredentials, fetchPublicDetails, reinviteTeamMember, resendTeamInvite, revokeTeamInvite, type Credential, type PublicDetails } from "../../services/business-team/team";
 import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchReviewsFor } from "../../services/professional-reviews";
 import { MIN_REVIEWS_FOR_AVERAGE } from "../../services/professional-reviews/rules";
@@ -49,6 +49,7 @@ export function PersonPage({ data }: { data: TeamData }) {
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [reinviting, setReinviting] = useState(false);
   const [creds, setCreds] = useState<Credential[] | null>(null);
   const [credError, setCredError] = useState(false);
   const [rating, setRating] = useState<string | null>(null);
@@ -132,13 +133,16 @@ export function PersonPage({ data }: { data: TeamData }) {
 
   const name = person.name;
   const first = firstWord(name);
-  // Batch 2 CO: the invite's window, when the soft read returned it.
+  // Batch 2 CO: the invite's window (expires_at, revoked_at), when the read returned it.
   const expired = !accepted && inviteState(person) === "expired";
-  // A withdrawn invitation is a record, not an invite: no actions at all.
+  // A withdrawn invitation can't be resent or withdrawn; the owner can invite
+  // them again (reinvite_revoked_team_member), which opens a new window.
   const withdrawn = isWithdrawn(person);
   const when = accepted ? null : inviteWhen(person);
   const acts = withdrawn
-    ? []
+    ? readOnly
+      ? []
+      : [{ t: reinviting ? "Sending…" : "Invite again", i: <Send size={17} strokeWidth={2.1} />, on: () => void doReinvite(), dis: offline || reinviting, red: false }]
     : accepted
     ? [
         { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
@@ -190,6 +194,31 @@ export function PersonPage({ data }: { data: TeamData }) {
       );
     }
     showToast(r.at ? `Invite resent. It now expires ${shortDay(r.at)}.` : "Invite resent.");
+  };
+
+  const doReinvite = async () => {
+    if (!businessId || reinviting) return;
+    // A revived invite holds a seat again, and accepting checks for a free
+    // one; offer more seats first, as inviting someone new does.
+    if (personUsesSeat(person) && seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity).free <= 0) return setFull(true);
+    setReinviting(true);
+    // No new note: the server keeps the one they were first sent.
+    const r = await reinviteTeamMember(businessId, id, null);
+    setReinviting(false);
+    if (!r.ok) {
+      showToast(r.message, true);
+      if (r.refresh) data.reload();
+      return;
+    }
+    const prev = person.invite;
+    data.setPeople(
+      (people ?? []).map((p) =>
+        p.professionalId === id
+          ? { ...p, invite: { expiresAt: r.at ?? prev?.expiresAt ?? null, revokedAt: null, sentAt: new Date().toISOString(), resentCount: (prev?.resentCount ?? 0) + 1 } }
+          : p
+      )
+    );
+    showToast(r.at ? `Invite sent again. It expires ${shortDay(r.at)}.` : "Invite sent again.");
   };
 
   const doRemove = async () => {
@@ -267,7 +296,7 @@ export function PersonPage({ data }: { data: TeamData }) {
       </div>}
       {chatError && <Notice message={chatError} />}
       {expired && !readOnly && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{`This invite has expired, so ${first} can't accept it. Resend it to give them another 14 days.`}</p>}
-      {withdrawn && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{`This invite was withdrawn, so ${first} can't accept it. They can't be invited again yet.`}</p>}
+      {withdrawn && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{readOnly ? `This invite was withdrawn, so ${first} can't accept it.` : `This invite was withdrawn, so ${first} can't accept it. Invite them again to give them another 14 days.`}</p>}
 
       <RoleCard
         person={person}
@@ -418,7 +447,7 @@ export function PersonPage({ data }: { data: TeamData }) {
         }}
       />
       {sessionActions.elements}
-      <SeatsFullSheet open={full} onClose={() => setFull(false)} counts={seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity)} />
+      <SeatsFullSheet open={full} onClose={() => setFull(false)} businessId={businessId} counts={seatCounts(people ?? [], data.capacity?.capacity ?? 0, data.capacity)} />
       {toast}
     </TeamScope>
   );
