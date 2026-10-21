@@ -30,6 +30,14 @@ import {
 // monthly or yearly, written by set_subscription_billing_period; the plan
 // rows stay read-only.)
 
+/**
+ * The yearly saving badge ("Save 16%", "−16%"), on the toggle and on each plan
+ * row, for every account type. Teal ink on the pale teal wash: 5.3:1 in light
+ * and 8:1 in dark, on its own ground, so it reads the same on the selected
+ * lavender pill and off it. White on teal-fill, the old style, was 1.8:1.
+ */
+const SAVING_BADGE = "bg-teal-pale text-teal-text font-bold";
+
 export const BillingToggle: React.FC<{
   period: BillingPeriod;
   onChange: (period: BillingPeriod) => void;
@@ -66,10 +74,10 @@ export const BillingToggle: React.FC<{
         {p === "yearly" && bestSaving != null && (
           <span
             className={clsx(
-              "text-[10px] font-bold rounded-full px-1.5 py-0.5",
-              // On the selected pill: white/20 in light mode (the board's); dark
-              // mode inverts (its ink on primary-fill read 3.15:1 through white/20).
-              period === "yearly" ? "bg-on-primary-fill/20 text-on-primary-fill dark:bg-on-primary-fill dark:text-primary-fill" : "bg-teal-fill text-on-primary-fill"
+              // SAVING_BADGE: its own ground, so it reads the same on the
+              // selected pill and off it (4.5:1 in both themes).
+              "text-[10px] rounded-full px-1.5 py-0.5",
+              SAVING_BADGE
             )}
           >
             −{bestSaving}%
@@ -121,7 +129,7 @@ export const PlanRow: React.FC<{
             </span>
           )}
           {period === "yearly" && saving && (
-            <span className="text-[10px] font-bold text-on-primary-fill bg-teal-fill rounded-full px-2 py-0.5">
+            <span className={clsx("text-[10px] rounded-full px-2 py-0.5", SAVING_BADGE)}>
               {savingLabel(saving)}
             </span>
           )}

@@ -281,7 +281,7 @@ const HERO_MASK =
 // visitor exercises, so it isn't in scope for "port behaviour, not just
 // appearance" the way the doc/subsection navigation is — flagged in the
 // implementation report rather than ported as client-side localStorage logic.
-const LEGAL_UPDATED_DATE = "6 September 2026";
+const LEGAL_UPDATED_DATE = "September 6, 2026";
 
 const Bullets: React.FC<{ items: string[]; color: string }> = ({ items, color }) => (
   <ul className="flex flex-col gap-3 mt-3.5 list-none p-0">

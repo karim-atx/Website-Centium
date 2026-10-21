@@ -459,7 +459,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                             <div data-eco-shed="7" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                               <div style={{ minWidth: 0 }}>
                                 <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>Clients</div>
-                                <div style={{ fontSize: 11, color: "#6B6358" }}>3 active · Thu 4 Sep</div>
+                                <div style={{ fontSize: 11, color: "#6B6358" }}>3 active · Thu, Sep 4</div>
                               </div>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, flexShrink: 0 }}>
                                 <span style={{ padding: "4px 9px", borderRadius: 999, background: "#5C48A8", color: "#fff", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>All</span>
