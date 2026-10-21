@@ -69,3 +69,14 @@ test("level, what to bring, distance and role", () => {
   assert.equal(instructorRole("personal trainer", "Personal Trainer"), "personal trainer");
   assert.equal(instructorRole(" ", null), null);
 });
+
+test("a closed or paused business refuses class bookings and waitlists (ATXAB)", () => {
+  assert.equal(
+    classErrorMessage("ATXAB", "This business is closed and is not taking new activity. Existing records are unaffected.", "f"),
+    "This business has closed and isn't taking class bookings."
+  );
+  assert.equal(
+    classErrorMessage("ATXAB", "This business is paused and is not taking new activity. Existing records are unaffected.", "f"),
+    "This business isn't taking class bookings right now."
+  );
+});

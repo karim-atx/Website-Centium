@@ -1,5 +1,6 @@
 import { formatShortDate } from "../../utils/date";
 import { stage4Message } from "../venues/venueLogic";
+import { BUSINESS_CLOSED_CODE, CLOSED_BOOK_CLASS, closureMessage } from "../business-closure/logic";
 
 // B9 (Database docs/HANDOVER_API.md "B9 · Classes and schedule"), the
 // member's side, as pure functions so node:test can hold them: the venue
@@ -65,6 +66,8 @@ export function classErrorMessage(code: string | undefined, serverMessage: strin
       return "The waitlist for this class is full.";
     case "ATXF6":
       return "No spots left on Centium for this class.";
+    case BUSINESS_CLOSED_CODE:
+      return closureMessage(CLOSED_BOOK_CLASS, serverMessage);
     default:
       return stage4Message(code, serverMessage, fallback);
   }

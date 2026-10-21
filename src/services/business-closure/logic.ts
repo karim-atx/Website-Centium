@@ -55,6 +55,13 @@ export const CLOSED_BUY_MEMBERSHIP: ClosureWords = {
   closed: "This business has closed and isn't selling memberships.",
   paused: "This business isn't selling memberships right now.",
 };
+// Class bookings and waitlists (gated through their class since Database
+// 91991e0; a closed or paused business is also unlisted, so this shows only
+// when the owner has re-listed a paused one).
+export const CLOSED_BOOK_CLASS: ClosureWords = {
+  closed: "This business has closed and isn't taking class bookings.",
+  paused: "This business isn't taking class bookings right now.",
+};
 export const CLOSED_PLACE_ORDER: ClosureWords = {
   closed: "This store has closed and isn't taking new orders.",
   paused: "This store isn't taking orders right now.",
@@ -67,6 +74,10 @@ export const CLOSED_REDEEM_CODE: ClosureWords = {
 // The console's side: 'new' activity, refused paused or closed.
 export const CLOSED_ADD_APPOINTMENT = consoleWords("take new appointments");
 export const CLOSED_SELL_DAY_PASS = consoleWords("sell day passes");
+// Karim, 21 Oct: renewing an existing member at the desk is ALLOWED while
+// paused. Until the database stops refusing it (renew_gym_membership inserts
+// into gym_memberships, gated 'new'), a paused refusal reads the paused
+// words, which are true; once fixed, only the closed words can appear.
 export const CLOSED_RENEW_MEMBERSHIP = consoleWords("renew memberships");
 export const CLOSED_INVITE_MEMBER = consoleWords("invite members");
 export const CLOSED_MEMBER_CODE = consoleWords("create member codes");

@@ -397,7 +397,7 @@ export function DeactivatePage() {
         body={
           paused
             ? "New bookings and sales open again. Your listing stays hidden until you turn Show on Explore back on."
-            : "Your listing is hidden, and new bookings, sales, code redemptions and join requests stop. Members still check in and keep their memberships, and you can still invite staff. You can reactivate at any time."
+            : "Your listing is hidden, and new bookings, sales, code redemptions and join requests stop. Members still check in and keep and renew their memberships, and you can still invite staff. You can reactivate at any time."
         }
         action={paused ? "Reactivate" : "Deactivate"}
         cancel="Cancel"
@@ -426,7 +426,7 @@ export function DeactivatePage() {
 }
 
 /** What pausing does since CP: new business stops, existing members and hiring carry on. */
-const PAUSE_DESC = "Hide your listing and stop new bookings, sales, code redemptions and join requests. Members still check in and keep their memberships, and you can still invite staff.";
+const PAUSE_DESC = "Hide your listing and stop new bookings, sales, code redemptions and join requests. Members still check in and keep and renew their memberships, and you can still invite staff.";
 
 // ---------------------------------------------------------------------------
 // Business terms and waivers (Settings › General)
