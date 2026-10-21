@@ -14,6 +14,7 @@ import { LEAF_D } from "../../../components/pro/home/ringGeometry";
 import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { textPx } from "../../../theme/textSize";
+import { ProBusinessBilling } from "./ProBusinessBilling";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
@@ -250,6 +251,9 @@ export default function ProSubscription() {
           <p style={{ fontSize: textPx(13), color: INK.prDeep }}>Your plan couldn't be identified.</p>
         )}
       </div>
+
+      {/* Batch 2 · CS (Karim): a professional who holds a business plan chooses its billing here. */}
+      <ProBusinessBilling />
 
       <div className="flex" role="radiogroup" aria-label="Billing period" style={{ gap: 8, marginBottom: 14 }}>
         {(["monthly", "yearly"] as const).map((p) => {

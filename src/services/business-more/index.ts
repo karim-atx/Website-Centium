@@ -639,9 +639,15 @@ export interface TeamRow {
 }
 
 export async function fetchTeamRows(businessId: string): Promise<Result<TeamRow[]>> {
-  const rows = await db.from("business_employees").select("professional_id, accepted_at, created_at").eq("business_id", businessId);
+  const read = (cols: string) => db.from("business_employees").select(cols).eq("business_id", businessId);
+  // Batch 2 CO: a withdrawn invitation isn't on the team (revoked_at,
+  // SELECT-granted by 20261201000000). If naming it is refused (a database
+  // without the grant fails the whole statement), read again without it.
+  let rows = await read("professional_id, accepted_at, created_at, revoked_at");
+  if (rows.error && !isOffline(rows.error)) rows = await read("professional_id, accepted_at, created_at");
   if (rows.error) return fail(rows.error, "Couldn't load your team.");
-  const list = (rows.data ?? []) as { professional_id: string; accepted_at: string | null; created_at: string }[];
+  const all = (rows.data ?? []) as unknown as { professional_id: string; accepted_at: string | null; created_at: string; revoked_at?: string | null }[];
+  const list = all.filter((r) => r.accepted_at || !r.revoked_at);
   if (list.length === 0) return { ok: true, value: [] };
   const names = await db.from("public_profile_summary").select("id, first_name").in("id", list.map((r) => r.professional_id));
   const nameById = new Map<string, string>(((names.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || "Unnamed professional"]));

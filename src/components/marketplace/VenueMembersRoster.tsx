@@ -6,7 +6,7 @@ import { initials } from "../professionals/typeColour";
 import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/console";
 import { offerPromotionUsed } from "../../components/promotions/promotionUsed";
 
-import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
+import { GRANTED_LABEL, MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
@@ -35,8 +35,11 @@ function passPill(m: VenueMember): { tone: PillTone; label: string } {
 }
 
 // "Paid {d Mon}" from venue_members.paid_at (20261120080000); a fact about the
-// row, never a sum (Revenue sums B8's payment ledger, not these rows).
-const memberFact = (m: VenueMember) => [m.planName, money(m.priceAgreed), methodLabel(m.paymentMethod), paidLine(m)].filter(Boolean).join(" · ");
+// row, never a sum (Revenue sums B8's payment ledger, not these rows). CN: a
+// membership granted by a member code was never sold, so it shows the label
+// instead of a $0 cash payment.
+const memberFact = (m: VenueMember) =>
+  (m.granted ? [m.planName, GRANTED_LABEL] : [m.planName, money(m.priceAgreed), methodLabel(m.paymentMethod), paidLine(m)]).filter(Boolean).join(" · ");
 const memberDates = (m: VenueMember) => (m.expiresOn ? `${dayMonthYear(m.startedOn)} to ${dayMonthYear(m.expiresOn)}` : `From ${dayMonthYear(m.startedOn)}`);
 
 type Filter = "all" | MembershipStatus;

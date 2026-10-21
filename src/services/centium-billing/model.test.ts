@@ -55,21 +55,29 @@ test("plan summary: numbers from the database, the monthly total, active only wh
   assert.equal(s.seatBlockPrice, 59.99);
   assert.equal(s.capacity, 15);
   assert.equal(s.pendingAmount, 59.99);
-  // 29 + 2 × 59.99, to the cent.
-  assert.equal(s.monthlyTotal, 148.98);
+  // 29 + 2 × 59.99, to the cent; a stack without billing_period is monthly.
+  assert.equal(s.total, 148.98);
+  assert.equal(s.period, "monthly");
 
   const none = toPlanSummary(summaryRow({ plan_status: null, seat_blocks: 0, seat_capacity: 0, renews_at: null }));
   assert.equal(none.active, false);
   assert.equal(none.capacity, 0);
-  assert.equal(none.monthlyTotal, 29);
+  assert.equal(none.total, 29);
   assert.equal(toPlanSummary(summaryRow({ plan_status: "cancelled" })).active, false);
-  assert.equal(toPlanSummary(summaryRow({ plan_price: null })).monthlyTotal, null);
+  assert.equal(toPlanSummary(summaryRow({ plan_price: null })).total, null);
+  // Batch 2: the summary's prices are for its period; a missing block price never makes a partial total.
+  const yearly = toPlanSummary(summaryRow({ billing_period: "yearly", plan_price: "799.99", seat_block_price: "599.99" }));
+  assert.equal(yearly.period, "yearly");
+  assert.equal(yearly.total, 1999.97);
+  assert.equal(toPlanSummary(summaryRow({ billing_period: "yearly", seat_block_price: null })).total, null);
+  assert.equal(toPlanSummary(summaryRow({ billing_period: "yearly", seat_blocks: 0, seat_block_price: null })).total, 29);
   assert.equal(toPlanSummary(summaryRow({ plan_name: " " })).planName, "Business");
 });
 
 test("seat facts for the Team screens: capacity and block price from the summary", () => {
   const f = seatFacts(toPlanSummary(summaryRow()), 5);
-  assert.deepEqual(f, { capacity: 15, planActive: true, blocks: 2, perBlock: 5, blockPrice: 59.99 });
+  assert.deepEqual(f, { capacity: 15, planActive: true, blocks: 2, perBlock: 5, blockPrice: 59.99, period: "monthly" });
+  assert.equal(seatFacts(toPlanSummary(summaryRow({ billing_period: "yearly" })), 5).period, "yearly");
   // A missing seat-block tier falls back to the caller's block size.
   assert.equal(seatFacts(toPlanSummary(summaryRow({ seats_per_block: null })), 4).perBlock, 4);
 });
@@ -109,6 +117,9 @@ test("billing history wording: titles and statuses never name a member's payment
 test("seat purchase refusals and the missing-function rule", () => {
   assert.equal(seatPurchaseRefusal("ATXD7").kind, "already_pending");
   assert.equal(seatPurchaseRefusal("ATXD6").kind, "no_plan");
+  assert.equal(seatPurchaseRefusal("ATXD6", "buy", "seat blocks need an active business plan").message, "Seats need an active Business plan.");
+  assert.deepEqual(seatPurchaseRefusal("ATXD6", "buy", "seat blocks have no yearly price yet"), { kind: "no_price", message: "Seat blocks aren't available on yearly billing yet." });
+  assert.deepEqual(seatPurchaseRefusal("ATXD6", "buy", "seat blocks are not on sale"), { kind: "not_on_sale", message: "Seat blocks aren't on sale right now." });
   assert.equal(seatPurchaseRefusal("ATX03", "cancel").message, "Only the business owner can cancel this order.");
   assert.equal(seatPurchaseRefusal("XX000", "cancel").message, "Couldn't cancel the order. Try again.");
   assert.equal(seatPurchaseRefusal(undefined).kind, "failed");

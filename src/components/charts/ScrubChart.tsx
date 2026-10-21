@@ -47,6 +47,18 @@ export interface ScrubMarker {
   i: number;
   t: string;
   kind: "discount" | "price" | "reply" | "drop" | "rise";
+  /**
+   * Optional tag row (CQ): 1 drops the tag one row (20px) below the top, for
+   * a second kind on a bucket that already has a tag. Unset keeps the
+   * source's single row.
+   */
+  row?: number;
+  /**
+   * Optional (CQ): keep the tag inside the plot. Near either edge it sits
+   * beside its line instead of centred on it. Unset keeps the source's
+   * centred tag.
+   */
+  fit?: boolean;
 }
 
 export interface ScrubChartConfig {
@@ -108,6 +120,36 @@ const MK: Record<
     light: ["#3F9165", "#E3F3E9", "#2F7A50"],
     dark: ["#7FC79C", "#192A20", "#7FC79C"],
   },
+};
+
+/**
+ * A marker's tag outside the plot (CQ): the same pill, icon and colours as
+ * the chart's tags, for a caption that names what the tags mean.
+ */
+export const ScrubMarkerChip: React.FC<{
+  kind: ScrubMarker["kind"];
+  children: React.ReactNode;
+}> = ({ kind, children }) => {
+  const dark = useIsDark();
+  const k = MK[kind];
+  const [, bg, ink] = dark ? k.dark : k.light;
+  const Icon = k.icon;
+  return (
+    <span
+      className="sc-tag"
+      style={{
+        position: "static",
+        transform: "none",
+        display: "inline-flex",
+        verticalAlign: "middle",
+        background: bg,
+        color: ink,
+      }}
+    >
+      <Icon size={10} strokeWidth={2.6} aria-hidden />
+      {children}
+    </span>
+  );
 };
 
 const finite = (a: (number | null | undefined)[]) =>
@@ -408,6 +450,12 @@ export const ScrubChart: React.FC<{
           className="sc-tag"
           style={{
             left: `calc(30px + ${(((X(m.i) - 30) / 290) * 100).toFixed(1)}% * 0.96)`,
+            ...(m.row ? { top: -2 + m.row * 20 } : {}),
+            ...(m.fit
+              ? {
+                  transform: `translateX(${(X(m.i) - 30) / 290 > 0.8 ? "-100%" : (X(m.i) - 30) / 290 < 0.15 ? "0%" : "-50%"})`,
+                }
+              : {}),
             background: bg,
             color: ink,
           }}

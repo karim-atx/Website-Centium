@@ -12,7 +12,7 @@ import {
   type TeamPerson,
 } from "../../services/business-team/team";
 import { shiftDate, todayLocal } from "../../utils/date";
-import { isAccepted, seatHolders, weekRange } from "./teamLogic";
+import { inviteState, isAccepted, seatHolders, weekRange } from "./teamLogic";
 import { fetchPlanSummary, type PlanSummary } from "../../services/centium-billing";
 
 // One load for the Team screens: the team (accepted and invited), seat
@@ -137,7 +137,8 @@ export function useTeamData(): TeamData {
 function staffSeats(people: TeamPerson[], summary: PlanSummary | null): SeatCapacity {
   const holders = seatHolders(people);
   const used = holders.filter(isAccepted).length;
-  const invited = holders.length - used;
+  // Batch 2 CO: as seats_invited counts, an expired invite holds no seat.
+  const invited = holders.filter((p) => !isAccepted(p) && inviteState(p) !== "expired").length;
   if (summary) return { capacity: summary.capacity, seatBlocks: summary.seatBlocks, seatsPerUnit: summary.seatsPerBlock, used, invited };
   return { capacity: used + invited, seatBlocks: 0, seatsPerUnit: null, used, invited };
 }

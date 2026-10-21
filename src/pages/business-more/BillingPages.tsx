@@ -1,15 +1,38 @@
 import { useEffect, useState } from "react";
+import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
-import { Armchair, CalendarClock, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
+import { Armchair, CalendarClock, CalendarRange, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
 import { BizConfirm, BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton, SoonChip, LIST_BG } from "../../components/business-more/kit";
 import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
-import { useCentiumBilling } from "../../hooks/useCentiumBilling";
-import { blocksText, chargeStatusText, chargeTitle, chargeTone, pendingPlanCharge, type CentiumCharge } from "../../services/centium-billing";
+import { useBillingPeriod, useCentiumBilling } from "../../hooks/useCentiumBilling";
+import {
+  blocksText,
+  chargeStatusText,
+  chargeTitle,
+  chargeTone,
+  pendingPlanCharge,
+  periodName,
+  periodOptions,
+  periodPriceText,
+  missingPriceText,
+  NOT_AVAILABLE,
+  periodSaving,
+  perMonthText,
+  perPeriod,
+  renewalAfterSwitch,
+  renewalDayText,
+  switchConfirm,
+  switchedText,
+  type CentiumCharge,
+  type SubscriptionPeriod,
+} from "../../services/centium-billing";
 import { fetchPlanRenewal } from "../../services/business-more";
 import { fetchPaymentSettings, type PaymentSettings } from "../../services/business-revenue";
 import { useBusiness } from "../../components/business-more/useBusiness";
+import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
+import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
@@ -137,6 +160,21 @@ export function SubscriptionPage() {
   const [orderBusy, setOrderBusy] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const live = billing.available;
+  // Batch 2 · CS: monthly or yearly. set_subscription_billing_period changes
+  // the CALLER's own subscription, so only the owner reads or switches it;
+  // staff read business_plan_summary, whose prices are for its billing_period
+  // ("$X a year" on a yearly plan). The console seat says who owns the
+  // business, with or without RV-06.
+  const isOwner = billing.isOwner;
+  const period = useBillingPeriod(authUserId ?? null, isOwner);
+  const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
+  const [periodBusy, setPeriodBusy] = useState(false);
+  const [periodNote, setPeriodNote] = useState<{ tone: "done" | "error"; text: string } | null>(null);
+  const ownSub = period.sub;
+  const ownTotal = ownSub && period.prices ? period.prices[ownSub.period] : null;
+  // What yearly saves on the owner's plan and blocks (b93cb12); null unless
+  // both periods are priced and yearly is cheaper.
+  const saving = periodSaving(period.prices);
 
   useEffect(() => {
     if (!authUserId || live) return;
@@ -146,7 +184,7 @@ export function SubscriptionPage() {
   const s = live ? billing.summary : null;
   const plan = live ? null : legacy.plan;
   const active = s ? s.active : !!plan?.active;
-  const renewsAt = s ? s.renewsAt : renews;
+  const renewsAt = ownSub?.renewsAt ?? (s ? s.renewsAt : renews);
   const blocks = s ? s.seatBlocks : (plan?.seatBlocks ?? 0);
   const planPrice = s ? s.planPrice : (plan?.base?.monthlyPrice ?? null);
   const planCharge = live && billing.history ? pendingPlanCharge(billing.history) : null;
@@ -165,6 +203,33 @@ export function SubscriptionPage() {
     billing.reload();
   };
 
+  const switchPeriod = async () => {
+    if (!periodAsk || periodBusy) return;
+    setPeriodBusy(true);
+    setPeriodNote(null);
+    const r = await period.choose(periodAsk.to);
+    setPeriodBusy(false);
+    setPeriodAsk(null);
+    setPeriodNote(r.ok ? { tone: "done", text: switchedText(r.value.period, r.value.renewsAt) } : { tone: "error", text: r.message });
+    // The new row is already on screen; the rest re-reads behind it.
+    period.reload();
+    billing.reload();
+  };
+
+  // The hero's price: the owner's from subscription_price_for at their own
+  // period (with the seat blocks they hold); staff, business_plan_summary's
+  // total for its period. NULL is "not available", never $0.
+  const priceLine = (): string | null => {
+    if (isOwner && ownSub) return ownTotal !== null ? `${money(ownTotal)} ${perPeriod(ownSub.period)}` : missingPriceText(ownSub.period);
+    if (isOwner && !period.ready) return null;
+    // Staff: the summary's plan_price (and seat_block_price with blocks held)
+    // for its period. NULL (251ab70: no fallback to the monthly figure) reads
+    // "Not available".
+    if (s) return s.total !== null ? `${money(s.total)} ${perPeriod(s.period)}` : missingPriceText(s.period);
+    return `${money(plan?.monthlyTotal ?? 0)} a month`;
+  };
+  const confirm = periodAsk ? switchConfirm({ to: periodAsk.to, price: periodAsk.price, seatBlocks: ownSub?.seatBlocks ?? 0, renewal: periodAsk.at, money }) : null;
+
   return (
     <BizPage title="Centium subscription">
       {error && <LoadError message="Couldn't load your plan." onRetry={live ? billing.reload : () => window.location.reload()} />}
@@ -177,8 +242,8 @@ export function SubscriptionPage() {
               label="Your plan"
               value={s ? s.planName : (plan?.base?.name ?? "Business")}
               sub={[
-                s ? (s.monthlyTotal !== null ? `${money(s.monthlyTotal)} a month` : null) : `${money(plan?.monthlyTotal ?? 0)} a month`,
-                renewsAt ? `renews ${fmt(renewsAt)}` : null,
+                priceLine(),
+                renewsAt ? `renews ${renewalDayText(renewsAt)}` : null,
                 `${blocks} seat block${blocks === 1 ? "" : "s"} (${s ? s.capacity : plan?.totalSeats} seats)`,
               ]
                 .filter(Boolean)
@@ -193,11 +258,59 @@ export function SubscriptionPage() {
                 planCharge
                   ? `Your first month, ${money(planCharge.amount)}, is awaiting payment.`
                   : planPrice !== null
-                    ? `The Business plan is ${money(planPrice)} a month.`
-                    : undefined
+                    ? `The Business plan is ${money(planPrice)} ${perPeriod(s ? s.period : "monthly")}.`
+                    : s
+                      ? // business_plan_summary's plan_price is NULL (251ab70: no
+                        // fallback to another period's price): said, never $0.
+                        `The Business plan's ${s.period} price: ${NOT_AVAILABLE}.`
+                      : undefined
               }
               actions={planCharge ? [] : [{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
+          )}
+          {active && isOwner && (
+            <>
+              {period.error ? (
+                <LoadError message={period.error} onRetry={period.reload} />
+              ) : !period.ready ? (
+                <RowsSkeleton rows={2} label="Loading how you're billed" />
+              ) : ownSub && period.prices ? (
+                <BizSection label="Billing" footer="Seat blocks follow your plan's billing. Switching charges nothing now, and your next renewal moves to a month or a year from the day you switch.">
+                  <div role="radiogroup" aria-label="How you're billed">
+                    {periodOptions(ownSub.period, period.prices).map((o) => (
+                      <BizRow
+                        key={o.period}
+                        radio={{ selected: o.current }}
+                        title={periodName(o.period)}
+                        // The yearly row restates its price a month and names the
+                        // saving, only when both periods are priced and yearly is
+                        // cheaper (periodSaving).
+                        desc={
+                          o.reason ??
+                          (o.period === "yearly" && o.price !== null && saving
+                            ? `${periodPriceText(o.price, o.period, money)} · ${perMonthText(o.price, money)}`
+                            : periodPriceText(o.price, o.period, money))
+                        }
+                        value={o.price === null ? "Not available" : o.period === "yearly" && saving ? savingLabel(saving) : undefined}
+                        valueTone={o.price === null ? "faint" : "good"}
+                        disabled={!o.current && !o.selectable}
+                        dim={!o.current && !o.selectable}
+                        onClick={o.selectable && o.price !== null ? () => setPeriodAsk({ to: o.period, price: o.price as number, at: renewalAfterSwitch(new Date(), o.period) }) : undefined}
+                      />
+                    ))}
+                  </div>
+                </BizSection>
+              ) : null}
+              {periodNote && (
+                <p
+                  role={periodNote.tone === "error" ? "alert" : "status"}
+                  className={clsx("text-[12px] font-semibold leading-[18px]", periodNote.tone === "error" ? "text-status-high" : "text-charcoal-soft")}
+                  style={{ margin: "0 4px 14px", textWrap: "pretty" } as React.CSSProperties}
+                >
+                  {periodNote.text}
+                </p>
+              )}
+            </>
           )}
           {s && s.pendingCharges > 0 && billing.canSeeBilling && (
             <BizNote>
@@ -247,7 +360,7 @@ export function SubscriptionPage() {
         open={cancelAsk}
         icon={Trash2}
         title="Cancel Centium Business?"
-        body={`Your plan stays active until ${renewsAt ? fmt(renewsAt) : "the end of the period"}. Seats above the free plan stop working then.`}
+        body={`Your plan stays active until ${renewsAt ? renewalDayText(renewsAt) : "the end of the period"}. Seats above the free plan stop working then.`}
         action="Cancel plan"
         cancel="Keep my plan"
         onCancel={() => setCancelAsk(false)}
@@ -266,6 +379,21 @@ export function SubscriptionPage() {
         busy={orderBusy}
         onCancel={() => setOrderAsk(null)}
         onAction={() => void cancelOrder()}
+      />
+      {/* Not destructive, so the primary treatment rather than BizConfirm's red. */}
+      <ConfirmCard
+        open={!!periodAsk}
+        layout="stacked"
+        frame="kit"
+        tone="primary"
+        icon={<CalendarRange size={20} strokeWidth={2.2} />}
+        title={confirm?.title ?? ""}
+        subtitle={confirm?.body}
+        confirmLabel={confirm?.action}
+        cancelLabel="Keep my billing"
+        busy={periodBusy}
+        onCancel={() => setPeriodAsk(null)}
+        onConfirm={() => void switchPeriod()}
       />
     </BizPage>
   );

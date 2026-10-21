@@ -455,3 +455,44 @@ test("refunds: what is left, the amount field, and refusals with the server's fi
   assert.equal(dayIn("2026-10-05T22:30:00Z", "Asia/Beirut"), "2026-10-06");
   assert.equal(dayIn("2026-10-05T22:30:00Z", "UTC"), "2026-10-05");
 });
+
+test("CN: a membership granted by a member code is never revenue, but is still a member and still renews", async () => {
+  const { activeMembers } = await import("./model.ts");
+  const p = { from: "2026-10-01", to: "2026-10-31" };
+  const today = "2026-10-21";
+  const sold = rec({ key: "membership:a", id: "a", kind: "membership", amount: 40, paidUndated: true, membershipStatus: "active", startedOn: "2026-10-05", expiresOn: "2026-11-04", createdAt: "2026-10-05T09:00:00" });
+  const grant = rec({ key: "membership:g", id: "g", kind: "membership", amount: 0, paidUndated: false, granted: true, membershipStatus: "active", startedOn: "2026-10-10", expiresOn: "2026-11-09", createdAt: "2026-10-10T09:00:00" });
+  // Even dated, a grant is no payment.
+  const datedGrant = { ...grant, key: "membership:h", id: "h", paidAt: "2026-10-10T09:00:00" };
+  const records = [sold, grant, datedGrant];
+  assert.deepEqual(undatedPaid(records), { n: 1, amount: 40 });
+  assert.deepEqual(transactions(records, p).map((t) => t.rec.id), ["a"]);
+  assert.equal(collected(records, p), 0);
+  assert.equal(recurringMonthly(records, today), 40);
+  assert.equal(figuresFromRecords(records, p, { from: "2026-09-01", to: "2026-09-30" }).anyPaid, true);
+  assert.equal(figuresFromRecords([grant], p, { from: "2026-09-01", to: "2026-09-30" }).anyPaid, false);
+  assert.equal(activeMembers(records, today), 3);
+  assert.deepEqual(renewals([sold, grant], today).map((r) => r.rec.id), ["a", "g"]);
+  // Without renewal_price a grant's renewal amount is unknown (never $0).
+  assert.deepEqual(renewals([sold, grant], today).map((r) => r.amount), [40, null]);
+});
+
+test("251ab70: renewals are expected at venue_renewals_due.renewal_price, a grant at its plan price", async () => {
+  const { renewalAmountText } = await import("./model.ts");
+  const today = "2026-10-21";
+  const sold = rec({ key: "membership:a", id: "a", kind: "membership", amount: 40, membershipStatus: "active", expiresOn: "2026-10-24" });
+  const grant = rec({ key: "membership:g", id: "g", kind: "membership", amount: 0, granted: true, membershipStatus: "active", expiresOn: "2026-10-25" });
+  const noPrice = rec({ key: "membership:n", id: "n", kind: "membership", amount: 20, membershipStatus: "active", expiresOn: "2026-10-26" });
+  const due = [
+    { membershipId: "a", cancelAtPeriodEnd: false, renewalPrice: 45 },
+    { membershipId: "g", cancelAtPeriodEnd: false, renewalPrice: 29 },
+    { membershipId: "n", cancelAtPeriodEnd: false, renewalPrice: null },
+  ];
+  const r = renewals([sold, grant, noPrice], today, due);
+  assert.deepEqual(r.map((x) => x.amount), [45, 29, null]);
+  assert.deepEqual(r.map(renewalAmountText), ["$45", "$29", "Not available"]);
+  assert.equal(renewalWeeks(r, today)[0].total, 74);
+  // An older stack (no renewal_price): the agreed price, and "Plan price" for a grant.
+  const old = renewals([sold, grant], today, due.slice(0, 2).map(({ membershipId, cancelAtPeriodEnd }) => ({ membershipId, cancelAtPeriodEnd })));
+  assert.deepEqual(old.map(renewalAmountText), ["$40", "Plan price"]);
+});

@@ -57,6 +57,13 @@ export interface PaymentRecord {
   membershipStatus: string | null;
   startedOn: string | null;
   expiresOn: string | null;
+  /**
+   * CN: a membership granted by a member code (venue_members.granted). Never
+   * revenue: left out of every money figure, kept in member counts and in
+   * renewals (labelled, and expected at venue_renewals_due.renewal_price:
+   * renewing one charges the plan price).
+   */
+  granted?: boolean;
 }
 
 export interface PlanLite {
@@ -152,9 +159,9 @@ export function spanLabel(from: string, to: string): string {
 const inRange = (day: string, from: string, to: string) =>
   day >= from && day <= to;
 
-/** Paid with a known date. */
+/** Paid with a known date. A grant (CN) is never a payment. */
 export const dated = (r: PaymentRecord) =>
-  r.status === "paid" && !!r.paidAt && r.amount !== null;
+  r.status === "paid" && !!r.paidAt && r.amount !== null && !r.granted;
 
 // ---------- Overview ----------
 
@@ -269,7 +276,7 @@ export function undatedPaid(records: PaymentRecord[]): {
   n: number;
   amount: number;
 } {
-  const u = records.filter((r) => r.paidUndated && r.amount !== null);
+  const u = records.filter((r) => r.paidUndated && r.amount !== null && !r.granted);
   return { n: u.length, amount: sum(u.map((r) => r.amount as number)) };
 }
 
@@ -297,7 +304,8 @@ export function recurringMonthly(
       r.kind !== "membership" ||
       r.status !== "paid" ||
       r.membershipStatus !== "active" ||
-      r.amount === null
+      r.amount === null ||
+      r.granted
     )
       continue;
     if (!r.startedOn || !r.expiresOn || r.expiresOn < today) continue;
@@ -308,7 +316,7 @@ export function recurringMonthly(
   return s;
 }
 
-/** Active memberships today (not cancelled, not expired; an upcoming renewal, MB-05, is not in force yet). */
+/** Active memberships today (not cancelled, not expired; an upcoming renewal, MB-05, is not in force yet). Grants count: a grant is still a member. */
 export function activeMembers(records: PaymentRecord[], today: string): number {
   return records.filter(
     (r) =>
@@ -635,7 +643,27 @@ export interface RenewalRow {
   rec: PaymentRecord;
   /** The day the membership's period ends (gym_memberships.expires_on). */
   on: string;
+  /**
+   * What renewing is expected to bring in: venue_renewals_due.renewal_price
+   * (the plan's price now, so a grant counts at its plan price, 251ab70).
+   * Without that column (an older stack, or no server list) it is the agreed
+   * price, and a grant's is unknown (null). Null when the plan has no price.
+   */
+  amount: number | null;
 }
+
+/**
+ * What renewing `rec` is expected to bring in (RenewalRow.amount), from its
+ * venue_renewals_due row when that carries renewal_price.
+ */
+export function renewalAmountOf(rec: PaymentRecord, due?: { renewalPrice?: number | null }): number | null {
+  if (due && due.renewalPrice !== undefined) return due.renewalPrice;
+  return rec.granted ? null : rec.amount;
+}
+
+/** A renewal's amount: the price, "Plan price" for a grant whose price isn't known, else "Not available". */
+export const renewalAmountText = (r: { rec: PaymentRecord; amount: number | null }): string =>
+  r.amount !== null ? money(r.amount) : r.rec.granted ? "Plan price" : "Not available";
 
 export interface RenewalWeek {
   label: string;
@@ -649,15 +677,19 @@ export interface RenewalWeek {
  * Active memberships whose period ends in the next 30 days (today + 29).
  * B7 MB-05: `due` is venue_renewals_due(gym, 30), the server's list. When it
  * is given only its memberships count, and one ending at the period end
- * (cancel_at_period_end) is left out: it will not renew.
+ * (cancel_at_period_end) is left out: it will not renew. A grant (CN) stays
+ * in, labelled by the screens, and is expected at its renewal_price: renewing
+ * it charges the plan price.
  */
 export function renewals(
   records: PaymentRecord[],
   today: string,
-  due: { membershipId: string; cancelAtPeriodEnd: boolean }[] | null = null,
+  due: { membershipId: string; cancelAtPeriodEnd: boolean; renewalPrice?: number | null }[] | null = null,
 ): RenewalRow[] {
   const end = addDays(today, 29);
   const ids = due ? new Set(due.filter((d) => !d.cancelAtPeriodEnd).map((d) => d.membershipId)) : null;
+  const byId = new Map((due ?? []).map((d) => [d.membershipId, d]));
+  const amountOf = (rec: PaymentRecord) => renewalAmountOf(rec, byId.get(rec.id));
   return records
     .filter(
       (r) =>
@@ -669,7 +701,7 @@ export function renewals(
         r.expiresOn <= end &&
         r.amount !== null,
     )
-    .map((rec) => ({ rec, on: rec.expiresOn as string }))
+    .map((rec) => ({ rec, on: rec.expiresOn as string, amount: amountOf(rec) }))
     .sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
 }
 
@@ -696,7 +728,7 @@ export function renewalWeeks(rows: RenewalRow[], today: string): RenewalWeek[] {
       from: mon,
       to: sunday,
       rows: list,
-      total: sum(list.map((r) => r.rec.amount ?? 0)),
+      total: sum(list.map((r) => r.amount ?? 0)),
     });
   }
   return weeks;
@@ -807,10 +839,10 @@ export function txStatus(r: PaymentRecord): TxStatus {
       : "Owed";
 }
 
-/** Every record with an agreed price whose day falls in the period, newest first. */
+/** Every record with an agreed price whose day falls in the period, newest first. A grant (CN) is not a transaction. */
 export function transactions(records: PaymentRecord[], p: Period): TxRow[] {
   return records
-    .filter((r) => r.amount !== null)
+    .filter((r) => r.amount !== null && !r.granted)
     .map((rec) => ({
       rec,
       status: txStatus(rec),
@@ -1040,7 +1072,7 @@ export function figuresFromRecords(records: PaymentRecord[], p: Period, prev: Pe
     series,
     prevSeries,
     first: firstPaidDay(records),
-    anyPaid: records.some((r) => r.status === "paid" && r.amount !== null),
+    anyPaid: records.some((r) => r.status === "paid" && r.amount !== null && !r.granted),
     undated: undatedPaid(records),
     bookings: {
       n: paidCount(records, p, "class"),

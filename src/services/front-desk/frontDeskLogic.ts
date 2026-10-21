@@ -792,6 +792,14 @@ export type RenewalDueRow = {
   cancel_at_period_end: boolean | null;
   payment_status: "pending" | "paid" | "refunded" | null;
   already_renewed: boolean | null;
+  /** CN (20261203000000): granted by a member code. Absent on an older stack. */
+  granted?: boolean | null;
+  /**
+   * Batch 2 (251ab70): what renewing would charge, the plan's price now (not
+   * price_agreed, which is 0.00 on a grant). NULL without a plan price; absent
+   * on an older stack.
+   */
+  renewal_price?: number | string | null;
   total_count: number | string | null;
 };
 
@@ -811,6 +819,34 @@ export interface RenewalDue {
   cancelAtPeriodEnd: boolean;
   paymentStatus: "pending" | "paid" | "refunded" | null;
   alreadyRenewed: boolean;
+  /**
+   * CN: granted by a member code. Kept in the list (Karim) and labelled:
+   * renewing it charges the plan price, it is not another free period.
+   */
+  granted?: boolean;
+  /**
+   * venue_renewals_due.renewal_price: what renewing charges (the plan's price,
+   * for a grant too). Null when the plan has no price; undefined on a stack
+   * without the column, where the screens fall back as before.
+   */
+  renewalPrice?: number | null;
+}
+
+/**
+ * CN: the label on a granted membership that is due to renew. With
+ * renewal_price it names the amount; without one it says "the plan price",
+ * never $0.
+ */
+export function grantedRenewal(price: number | null | undefined, fmt: (n: number) => string = deskMoney): string {
+  return `granted with a code, renewing charges ${price != null ? fmt(price) : "the plan price"}`;
+}
+
+/** renewal_price: undefined when the column is absent, null when it is NULL. */
+function renewalPriceOf(v: number | string | null | undefined): number | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
@@ -828,6 +864,8 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
     cancelAtPeriodEnd: r.cancel_at_period_end === true,
     paymentStatus: r.payment_status,
     alreadyRenewed: r.already_renewed === true,
+    granted: r.granted === true,
+    renewalPrice: renewalPriceOf(r.renewal_price),
   };
 }
 
@@ -845,9 +883,10 @@ export function renewalSub(r: RenewalDue): string {
   const plan = r.planName;
   if (r.alreadyRenewed) return `${plan} · renewed, next period from ${dayMonthYear(r.expiresOn)}`;
   if (r.cancelAtPeriodEnd) return `${plan} · ends ${dayMonthYear(r.expiresOn)}`;
-  if (r.daysLeft <= 0) return `${plan} · renews today`;
-  if (r.daysLeft === 1) return `${plan} · renews tomorrow`;
-  return `${plan} · renews in ${r.daysLeft} days`;
+  const grant = r.granted ? ` · ${grantedRenewal(r.renewalPrice)}` : "";
+  if (r.daysLeft <= 0) return `${plan} · renews today${grant}`;
+  if (r.daysLeft === 1) return `${plan} · renews tomorrow${grant}`;
+  return `${plan} · renews in ${r.daysLeft} days${grant}`;
 }
 
 export type RenewalStatsRow = {

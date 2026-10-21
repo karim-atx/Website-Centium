@@ -29,6 +29,21 @@ export interface TeamPerson {
   closestGroup: string | null;
   /** The server's seat answer (role_uses_seat); null when the reader didn't return the person. */
   usesSeat: boolean | null;
+  /**
+   * Batch 2 CO: the invitation's window (expires_at, revoked_at, sent_at,
+   * resent_count), read with the team. Null or absent = not known (the read
+   * fell back to the columns without them, or they accepted): no expiry and
+   * no withdrawn state is shown rather than guessed.
+   */
+  invite?: InviteWindow | null;
+}
+
+/** A team invitation's window (business_employees, migration 20261201000000). */
+export interface InviteWindow {
+  expiresAt: string | null;
+  revokedAt: string | null;
+  sentAt: string | null;
+  resentCount: number;
 }
 
 export interface ClassSession {

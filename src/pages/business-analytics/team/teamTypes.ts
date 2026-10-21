@@ -3,6 +3,8 @@
 // (tsconfig.test.json has no DOM lib). teamData.ts re-exports them and checks
 // BusinessRole against the Team service's own union.
 
+import type { SubscriptionPeriod } from "../../../services/centium-billing/period";
+
 /** business_employees.role (Database B6). Kept equal to services/business-team/team.ts BusinessRole (checked in teamData.ts). */
 export type BusinessRole = "instructor" | "trainer" | "front_desk" | "manager" | "staff" | "shop_assistant";
 
@@ -25,8 +27,10 @@ export interface SeatInfo {
   planActive: boolean;
   blocks: number;
   perBlock: number;
-  /** Seat block monthly price from subscription_tiers (never hard-coded); null when unset. */
+  /** Seat block price for `period` (never hard-coded); null when there is none ("Not available"). */
   blockPrice: number | null;
+  /** Batch 2: the plan's billing period the block price is for; monthly when not known. */
+  period?: SubscriptionPeriod;
 }
 
 export interface TeamData {

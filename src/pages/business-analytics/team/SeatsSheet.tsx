@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Armchair, Banknote, Check, Clock3, CreditCard, Mail, Minus, Plus } from "lucide-react";
 import { upgradeMailto } from "../../../services/subscription-tiers/upgrade";
-import { MAX_BLOCKS_PER_PURCHASE, type CentiumCharge } from "../../../services/centium-billing";
+import { MAX_BLOCKS_PER_PURCHASE, NOT_AVAILABLE, perPeriod, type CentiumCharge } from "../../../services/centium-billing";
 import type { CentiumBilling } from "../../../hooks/useCentiumBilling";
 import { formatShortDate } from "../../../utils/date";
 import { Buttons, ErrLine, LeadRow, RowsCard, Sheet } from "./parts";
-import { money, perMonth } from "./fmt";
+import { money } from "./fmt";
 import type { SeatInfo } from "./teamData";
 
 // AN5-022 (no free seats), AN5-057 (choose blocks), AN5-058 (confirm),
@@ -85,6 +85,11 @@ export function SeatsSheet({
   if (!seats) return null;
   const per = seats.perBlock || 5;
   const price = seats.blockPrice;
+  // Batch 2: the block price is for the plan's billing period (buy_seat_blocks
+  // charges that period's price); NULL is "Not available", never $0.
+  const period = seats.period ?? "monthly";
+  const each = (amount: number) => `${money(amount)} ${perPeriod(period)}`;
+  const priceRow = { l: "Price per block", v: price !== null ? each(price) : NOT_AVAILABLE };
   const total = seats.capacity + n * per;
   const have = seats.blocks > 0 ? `${blocksWord(seats.blocks)} · ${seats.capacity} seats` : `${seats.capacity} seats`;
   const amountOf = (k: number) => (price !== null ? Math.round(k * price * 100) / 100 : null);
@@ -141,7 +146,7 @@ export function SeatsSheet({
         <RowsCard
           rows={[
             { l: "Seats", v: pending > 0 ? `${used} used · ${pending} pending` : `${used} used` },
-            ...(price !== null ? [{ l: "Price per block", v: perMonth(price) }] : []),
+            ...(live || price !== null ? [priceRow] : []),
           ]}
         />
         <Buttons alt={{ label: "Not now", onClick: onClose }} primary={{ label: "Add seats", onClick: toAdd }} marginTop={16} />
@@ -190,9 +195,11 @@ export function SeatsSheet({
             ...(price !== null
               ? [
                   { l: "Today", v: money(amountOf(n) ?? 0) },
-                  { l: "Then", v: `+${perMonth(amountOf(n) ?? 0)}` },
+                  { l: "Then", v: `+${each(amountOf(n) ?? 0)}` },
                 ]
-              : []),
+              : live
+                ? [priceRow]
+                : []),
             { l: "New total", v: `${total} seats`, bold: true },
           ]}
         />
@@ -294,7 +301,7 @@ export function SeatsSheet({
       </div>
       <RowsCard
         rows={[
-          ...(price !== null ? [{ l: "Price per block", v: perMonth(price) }] : []),
+          ...(live || price !== null ? [priceRow] : []),
           { l: "You have", v: have },
           { l: "New total", v: `${total} seats`, bold: true },
         ]}

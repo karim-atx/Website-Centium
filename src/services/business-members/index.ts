@@ -1,5 +1,18 @@
 import { supabase } from "../../../lib/supabase/client";
 import { CLOSED_INVITE_MEMBER, CLOSED_MEMBER_CODE, CLOSED_REDEEM_CODE, closureMessage, isBusinessClosedError } from "../business-closure/logic";
+import { isOffline } from "../network-error";
+import {
+  describeCreateRefusal,
+  describePreviewError,
+  describeRedeemError,
+  describeRedeemRefusal,
+  redeemOutcome,
+  type CodePreview,
+  type RedeemOutcome,
+} from "./codeLogic";
+import type { PlanKind } from "../membership-plans/types";
+
+export * from "./codeLogic";
 
 // Business memberships: the walk-in relationship business_members holds.
 //
@@ -22,7 +35,7 @@ import { CLOSED_INVITE_MEMBER, CLOSED_MEMBER_CODE, CLOSED_REDEEM_CODE, closureMe
 //   business_invite_member(business, member, plan) needs the person's account
 //   uuid. It creates a PENDING row the invitee must answer.
 //
-//   create_business_member_code(business, plan, validity) mints a redeemable
+//   create_business_member_code(business, plan, validity, gym) mints a redeemable
 //   code. redeem_business_member_code(code) creates the membership ALREADY
 //   ACCEPTED — redeeming is the consent, so there is nothing left to answer.
 //
@@ -79,6 +92,8 @@ export interface MemberCode {
   id: string;
   code: string;
   membershipPlanId: string | null;
+  /** CN: the gym a granted membership belongs to (null for a code with no plan). */
+  gymId: string | null;
   redeemed: boolean;
   expiresAt: string;
   createdAt: string;
@@ -152,6 +167,7 @@ type CodesTable = {
               id: string;
               code: string;
               membership_plan_id: string | null;
+              gym_id: string | null;
               redeemed: boolean;
               expires_at: string;
               created_at: string;
@@ -359,28 +375,37 @@ export async function inviteMember(
   return { ok: true };
 }
 
-/** Mints a code for a walk-in to redeem. */
+/**
+ * Mints a code for a walk-in to redeem. With a plan the code also grants that
+ * membership or pass when redeemed (CN), and must know its gym: p_gym_id is
+ * sent only when the caller names one (a business with several gyms); a
+ * single gym is resolved by the server, and none raises ATXAC.
+ */
 export async function createMemberCode(
   businessId: string,
-  membershipPlanId: string | null
+  membershipPlanId: string | null,
+  gymId: string | null = null
 ): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string; code?: string }> {
-  const { data, error } = await rpc().rpc("create_business_member_code", {
+  const args: Record<string, unknown> = {
     p_business_id: businessId,
     p_membership_plan_id: membershipPlanId,
     // Left at the function's own default rather than restated here, so the
     // validity window lives in one place.
     p_valid_for: null,
-  });
+  };
+  if (gymId) args.p_gym_id = gymId;
+  const { data, error } = await rpc().rpc("create_business_member_code", args);
 
   if (error || !data) {
     console.error("[members] Could not create a member code:", error?.message);
     if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_MEMBER_CODE, error?.message), code: error?.code };
-    return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again."), code: error?.code };
+    return { ok: false, message: describeCreateRefusal(error ?? {}, !!error && isOffline(error)), code: error?.code };
   }
   const row = data as {
     id: string;
     code: string;
     membership_plan_id: string | null;
+    gym_id: string | null;
     redeemed: boolean;
     expires_at: string;
     created_at: string;
@@ -391,6 +416,7 @@ export async function createMemberCode(
       id: row.id,
       code: row.code,
       membershipPlanId: row.membership_plan_id,
+      gymId: row.gym_id ?? null,
       redeemed: row.redeemed,
       expiresAt: row.expires_at,
       createdAt: row.created_at,
@@ -403,7 +429,7 @@ export async function fetchMyMemberCodes(
   businessId: string
 ): Promise<{ ok: true; codes: MemberCode[] } | { ok: false; message: string }> {
   const { data, error } = await codesTable()
-    .select("id, code, membership_plan_id, redeemed, expires_at, created_at")
+    .select("id, code, membership_plan_id, gym_id, redeemed, expires_at, created_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
 
@@ -417,6 +443,7 @@ export async function fetchMyMemberCodes(
       id: c.id,
       code: c.code,
       membershipPlanId: c.membership_plan_id,
+      gymId: c.gym_id ?? null,
       redeemed: c.redeemed,
       expiresAt: c.expires_at,
       createdAt: c.created_at,
@@ -427,14 +454,21 @@ export async function fetchMyMemberCodes(
 /**
  * Redeems a member code.
  *
- * THE RESULT IS A ROW, NOT AN EXCEPTION, for the ordinary refusals — a wrong,
- * used or expired code comes back as `success: false` with its own sentence,
- * the same shape redeem_client_code uses. Only the structural failures (no
- * session, rate limit) raise, and describe() handles those.
+ * THE RESULT IS A ROW, NOT AN EXCEPTION, for the ordinary refusals: a wrong,
+ * used or expired code, the person's own business, an existing membership,
+ * the gym's minimum age, an archived plan (CN) come back as `success: false`
+ * with a sentence, which describeRedeemRefusal rewords (server copy is never
+ * shown). Only the structural failures (no session, rate limit 5 per 15
+ * minutes, network) raise. A refused code is NOT used up.
+ *
+ * On success the server's sentence says what happened (redeemOutcome): a
+ * membership granted, none granted because one is already held at that gym,
+ * or a plain member code. The caller names what was granted by re-reading
+ * my_gym_memberships after.
  */
 export async function redeemMemberCode(
   code: string
-): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
+): Promise<{ ok: true; businessId: string | null; outcome: RedeemOutcome } | { ok: false; message: string }> {
   const trimmed = code.trim();
   if (!trimmed) return { ok: false, message: "Enter the code first." };
 
@@ -442,13 +476,62 @@ export async function redeemMemberCode(
   if (error) {
     console.error("[members] Could not redeem:", error.message);
     if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_REDEEM_CODE, error.message) };
-    return { ok: false, message: describe(error, "Couldn't redeem that code. Try again.") };
+    return { ok: false, message: describeRedeemError(error, isOffline(error)) };
   }
-  const result = data as { success: boolean; message: string } | null;
-  if (!result?.success) {
-    return { ok: false, message: result?.message ?? "Couldn't redeem that code." };
+  const result = data as { success: boolean; message: string; membership: { business_id?: string } | null } | null;
+  if (!result?.success) return { ok: false, message: describeRedeemRefusal(result?.message) };
+  return { ok: true, businessId: result.membership?.business_id ?? null, outcome: redeemOutcome(result.message) };
+}
+
+/** preview_business_member_code(p_code) row (20261203000000). */
+interface PreviewRow {
+  code: string;
+  business_id: string;
+  business_name: string | null;
+  gym_id: string | null;
+  gym_name: string | null;
+  plan_id: string | null;
+  plan_name: string | null;
+  plan_type: PlanKind | null;
+  grants_membership: boolean | null;
+  min_entry_age: number | null;
+  expires_at: string;
+}
+
+/**
+ * What a member code grants, before redeeming it. `value: null` = no row:
+ * the code can't be used, and the server deliberately doesn't say why
+ * (unknown, used, lapsed and a closed or paused business look the same).
+ * Rate limited 20 per 15 minutes (ATX02). Reads only.
+ */
+export async function previewMemberCode(
+  code: string
+): Promise<{ ok: true; value: CodePreview | null } | { ok: false; message: string }> {
+  const trimmed = code.trim();
+  if (!trimmed) return { ok: false, message: "Enter the code first." };
+  try {
+    const { data, error } = await rpc().rpc("preview_business_member_code", { p_code: trimmed });
+    if (error) {
+      console.error("[members] Could not preview a code:", error.code, error.message);
+      return { ok: false, message: describePreviewError(error, isOffline(error)) };
+    }
+    const row = (Array.isArray(data) ? data[0] : data) as PreviewRow | null | undefined;
+    if (!row) return { ok: true, value: null };
+    return {
+      ok: true,
+      value: {
+        businessName: row.business_name?.trim() || "A business",
+        gymName: row.gym_name ?? null,
+        planName: row.plan_name ?? null,
+        planType: row.plan_type ?? null,
+        grantsMembership: row.grants_membership === true,
+        minEntryAge: row.min_entry_age == null ? null : Number(row.min_entry_age),
+        expiresAt: row.expires_at,
+      },
+    };
+  } catch (e) {
+    return { ok: false, message: describePreviewError({ message: String(e) }, isOffline(e)) };
   }
-  return { ok: true, message: result.message };
 }
 
 /** Accepts or declines an invitation. Only the invited person may call this. */

@@ -13,6 +13,7 @@ import { linePx, textPx } from "../../../theme/textSize";
 import { initialsOf } from "../client/clientFormat";
 import { INK } from "../proInk";
 import { classWhen, monthYear, ROLE_NAME, typeLine } from "./useBusinesses";
+import { deadInvitationLine, invitationExpiry, invitationState, type InvitationState } from "./invitationLogic";
 
 /**
  * Release 3 · MO9 v3 / MO13 building blocks, literal from gen/r13.js
@@ -158,8 +159,24 @@ export const ConsoleLinks: React.FC<{ businessId: string; businessName: string; 
   );
 };
 
-/** Kept from the old Your businesses page: an invitation with Accept / Decline (business_employees, accepted_at null). */
-export const InvitationCard: React.FC<{ e: MyEmployment; busy: boolean; onAccept: () => void; onDecline: () => void }> = ({ e, busy, onAccept, onDecline }) => (
+/**
+ * Kept from the old Your businesses page: an invitation with Accept / Decline
+ * (business_employees, accepted_at null). Batch 2 CO: its expiry when known,
+ * and once expired or withdrawn no Accept, the reason, and Remove (the same
+ * own-row delete as Decline).
+ */
+export const InvitationCard: React.FC<{
+  e: MyEmployment;
+  busy: boolean;
+  onAccept: () => void;
+  onDecline: () => void;
+  state?: InvitationState;
+  onRemove?: () => void;
+}> = ({ e, busy, onAccept, onDecline, state: given, onRemove }) => {
+  const state = given ?? invitationState(e.invite, null);
+  const expiry = invitationExpiry(e.invite, state);
+  const dead = deadInvitationLine(state, e.businessName);
+  return (
   <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 16px", marginBottom: 10 }}>
     <div className="flex items-center" style={{ gap: 12 }}>
       <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 44, height: 44, background: INK.prPale }}>
@@ -170,6 +187,9 @@ export const InvitationCard: React.FC<{ e: MyEmployment; busy: boolean; onAccept
         <p style={{ fontSize: textPx(12), color: INK.chF }}>
           {`Invited ${new Date(e.invitedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` + (e.role && ROLE_NAME[e.role] ? ` · as ${ROLE_NAME[e.role]}` : "")}
         </p>
+        {expiry && (
+          <p style={{ fontSize: textPx(12), fontWeight: state === "open" ? 500 : 700, color: state === "open" ? INK.chS : INK.hi }}>{expiry}</p>
+        )}
       </div>
     </div>
     {e.message && (
@@ -178,15 +198,29 @@ export const InvitationCard: React.FC<{ e: MyEmployment; busy: boolean; onAccept
         {e.message}
       </blockquote>
     )}
-    <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: INK.chS, marginTop: 12 }}>
-      {`Accepting lets ${e.businessName} schedule you and see your licences. While you're on a team, your public listing in the directory is turned off. You can leave at any time.`}
-    </p>
-    <div className="grid grid-cols-2" style={{ gap: 8, marginTop: 12 }}>
-      <CtaButton size="base" variant="outline" label="Decline" icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} />
-      <CtaButton size="base" label={busy ? "Accepting…" : "Accept"} icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} />
-    </div>
+    {dead ? (
+      <>
+        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: INK.hi, marginTop: 12 }}>
+          {dead}
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <CtaButton size="base" variant="outline" label={busy ? "Removing…" : "Remove"} icon={<X size={15} aria-hidden />} disabled={busy} onClick={onRemove ?? onDecline} />
+        </div>
+      </>
+    ) : (
+      <>
+        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: INK.chS, marginTop: 12 }}>
+          {`Accepting lets ${e.businessName} schedule you and see your licences. While you're on a team, your public listing in the directory is turned off. You can leave at any time.`}
+        </p>
+        <div className="grid grid-cols-2" style={{ gap: 8, marginTop: 12 }}>
+          <CtaButton size="base" variant="outline" label="Decline" icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} />
+          <CtaButton size="base" label={busy ? "Accepting…" : "Accept"} icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} />
+        </div>
+      </>
+    )}
   </div>
-);
+  );
+};
 
 /**
  * MO9 "Join a business" (r13 field + r17 hint): 40 tall, r12, soft fill, 1px

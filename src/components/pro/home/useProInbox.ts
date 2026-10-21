@@ -4,6 +4,7 @@ import { supabase } from "../../../../lib/supabase/client";
 import { clearAllNotifications, dismissNotification, fetchNotifications, markRead, subscribeNotifications, type ProNotification } from "../../../services/pro/notifications";
 import { fetchHireInbox, type HireRequestRow } from "../../../services/hire-inbox";
 import { fetchMyEmployments, type MyEmployment } from "../../../services/business-team/employment";
+import { invitationState } from "../businesses/invitationLogic";
 import { fetchPendingHires, type PendingHire } from "../../../services/hires/pro";
 import { fetchRecentDeclines, fetchRequestDetails, undoRequestDecline, type RecentDecline } from "../../../services/pro/requests";
 import { nextUndoClose, requestPlanLine, undoOpen } from "./requestModel";
@@ -100,7 +101,8 @@ export function useProInbox(): ProInbox {
               })
             : prev.requests,
         declined: d,
-        invitations: e.ok ? e.value.filter((x) => !x.acceptedAt) : prev.invitations,
+        // Batch 2 CO: an invitation known to be withdrawn or expired is nothing to answer here.
+        invitations: e.ok ? e.value.filter((x) => !x.acceptedAt && invitationState(x.invite, null) === "open") : prev.invitations,
         hires: h.ok ? h.hires : prev.hires,
         extraNames,
       }));
