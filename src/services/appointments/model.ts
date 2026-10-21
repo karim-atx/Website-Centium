@@ -1,4 +1,5 @@
 import { stage4Message } from "../venues/venueLogic";
+import { PAST_MIDNIGHT_CODE, PAST_MIDNIGHT_MESSAGE } from "../booking/pastMidnight";
 import { num, str, type Row } from "../store/mapping";
 
 // B12 · Appointments (Database docs/HANDOVER_API.md "B12 · Appointments",
@@ -251,6 +252,8 @@ export function bookErrorMessage(code: string | undefined, serverMessage: string
       return "Accept this place's terms before booking.";
     case "ATX76":
       return "That person doesn't work here any more. Pick another time.";
+    case PAST_MIDNIGHT_CODE:
+      return PAST_MIDNIGHT_MESSAGE;
     default:
       return stage4Message(code, serverMessage, fallback);
   }
@@ -272,6 +275,8 @@ export function bookForErrorMessage(code: string | undefined, serverMessage: str
       return "That service isn't available. Check it's shown for booking.";
     case "ATX76":
       return "That person isn't on your team any more. Pick another.";
+    case PAST_MIDNIGHT_CODE:
+      return PAST_MIDNIGHT_MESSAGE;
     default:
       return stage4Message(code, serverMessage, fallback);
   }
