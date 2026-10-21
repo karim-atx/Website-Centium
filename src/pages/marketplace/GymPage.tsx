@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { closedLine, takesNewActivity } from "../../services/business-closure/logic";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -174,6 +177,9 @@ export function GymPage({ gymId }: { gymId: string }) {
   // B9: Book a class asks for the venue's terms first (ATXE4), as the class
   // page does (useClassBooking, ClassTermsSheet).
   const booking = useClassBooking({ classId, businessId: gym?.businessId ?? null, userId: authUserId });
+  // CP: a closed or paused business sells and books nothing new; a member keeps their pass.
+  const bizStatus = useBusinessStatus(gym?.businessId);
+  const takesNew = takesNewActivity(bizStatus);
   // #14 PB-O-50: the distance, on the device, once it has shared its position.
   const here = useKnownPosition();
   const settleBooking = (r: BookOutcome, id: string) => {
@@ -479,14 +485,16 @@ export function GymPage({ gymId }: { gymId: string }) {
   const cta =
     tab === "about" || tab === "classes"
       ? mine
-        ? mine.passValid
+        ? mine.passValid && takesNew
           ? { label: "Book a class", icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => void openBook(), className: ctaClass }
           : passCta
-        : { label: "View memberships", icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => selectTab("memberships"), className: ctaClass }
+        : takesNew
+        ? { label: "View memberships", icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => selectTab("memberships"), className: ctaClass }
+        : null
       : tab === "memberships"
       ? mine
         ? passCta
-        : plan && buyable
+        : plan && buyable && takesNew
         ? {
             label: `Book membership · ${priceOf(plan)}`,
             icon: <BadgeCheck size={16} strokeWidth={1.75} aria-hidden />,
@@ -589,6 +597,7 @@ export function GymPage({ gymId }: { gymId: string }) {
           {msgError}
         </p>
       )}
+      <BusinessClosedNote status={bizStatus} />
       {/* O-OFF: what was loaded stays; writes are off until the connection is back. */}
       {!online && (
         <p role="status" className="mt-2 mb-0 text-[12px] leading-[18px] font-semibold text-charcoal-soft">
@@ -732,6 +741,8 @@ export function GymPage({ gymId }: { gymId: string }) {
               </span>
               {tag && <MemberTag label={tag.label} tone={tag.tone} />}
             </div>
+          ) : !takesNew ? (
+            <Empty icon={<BadgeCheck size={26} strokeWidth={1.75} />} title="No new memberships" line={closedLine(bizStatus, "bookings") ?? ""} />
           ) : !buyable ? (
             <Empty icon={<BadgeCheck size={26} strokeWidth={1.75} />} title="No memberships yet" line="This gym doesn't sell memberships on Centium yet." />
           ) : plans.length === 0 ? (

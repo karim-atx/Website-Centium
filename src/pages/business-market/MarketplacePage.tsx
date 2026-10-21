@@ -112,6 +112,8 @@ export function HiddenBanner() {
   const online = useOnline();
   const sw = useListingSwitch();
   if (!business || business.active) return null;
+  // CP: a closed business can't be listed again (close_business set active = false).
+  const closed = !!business.closedAt;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 16, background: c.soft, border: `1px solid ${c.border}`, padding: "12px 14px", marginBottom: 16 }}>
       <span style={{ width: 32, height: 32, borderRadius: 999, background: c.card, color: c.faint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -119,11 +121,11 @@ export function HiddenBanner() {
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", fontSize: px(13), fontWeight: 800, color: c.ink, lineHeight: lh(19.5) }}>Hidden from Explore</span>
-        <span style={{ display: "block", fontSize: px(11.5), color: c.inkSoft, lineHeight: lh(16) }}>{v.bannerBody}</span>
+        <span style={{ display: "block", fontSize: px(11.5), color: c.inkSoft, lineHeight: lh(16) }}>{closed ? "Your business is closed, so it can't be listed." : v.bannerBody}</span>
         {/* B7: Show on Explore is a business_profiles write, the owner's alone. */}
-        {!m.isOwner && <span style={{ display: "block", fontSize: px(11), color: c.faint, lineHeight: lh(15), marginTop: 2 }}>Only the owner can turn it on.</span>}
+        {!m.isOwner && !closed && <span style={{ display: "block", fontSize: px(11), color: c.faint, lineHeight: lh(15), marginTop: 2 }}>Only the owner can turn it on.</span>}
       </span>
-      {m.isOwner && (
+      {m.isOwner && !closed && (
       <button
         type="button"
         onClick={() => void sw.turnOn()}

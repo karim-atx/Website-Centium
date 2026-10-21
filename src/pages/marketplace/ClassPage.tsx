@@ -1,3 +1,6 @@
+import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { useBusinessStatus } from "../../hooks/useBusinessStatus";
+import { takesNewActivity } from "../../services/business-closure/logic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Activity, CalendarCheck, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, Clock, Store, Wallet } from "lucide-react";
@@ -205,6 +208,8 @@ export function ClassPage({ classId }: { classId: string }) {
   // (the sheet replaces the popup), then books; "Agree and book" records the
   // acceptances and books.
   const booking = useClassBooking({ classId: c?.classId ?? null, businessId: c?.businessId ?? null, userId: authUserId ?? null });
+  // CP: a closed or paused business takes no new bookings or waitlist places; a booking already made stays.
+  const bizStatus = useBusinessStatus(c?.businessId);
   const settle = async (r: BookOutcome) => {
     if (r.kind === "terms") {
       setPopup(null);
@@ -564,6 +569,10 @@ export function ClassPage({ classId }: { classId: string }) {
           >
             Leave waitlist
           </button>
+        </PinnedSlot>
+      ) : !takesNewActivity(bizStatus) ? (
+        <PinnedSlot>
+          <BusinessClosedNote status={bizStatus} className="" />
         </PinnedSlot>
       ) : full ? (
         // MO1.4.4.4 (K5): "Other times" (up to three chips) and an outline

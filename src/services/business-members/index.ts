@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { CLOSED_INVITE_MEMBER, CLOSED_MEMBER_CODE, CLOSED_REDEEM_CODE, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 
 // Business memberships: the walk-in relationship business_members holds.
 //
@@ -352,6 +353,7 @@ export async function inviteMember(
   });
   if (error) {
     console.error("[members] Could not invite:", error.message);
+    if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_INVITE_MEMBER, error.message) };
     return { ok: false, message: describe(error, "Couldn't send that invitation. Try again.") };
   }
   return { ok: true };
@@ -372,6 +374,7 @@ export async function createMemberCode(
 
   if (error || !data) {
     console.error("[members] Could not create a member code:", error?.message);
+    if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_MEMBER_CODE, error?.message), code: error?.code };
     return { ok: false, message: describe(error ?? {}, "Couldn't create a code. Try again."), code: error?.code };
   }
   const row = data as {
@@ -438,6 +441,7 @@ export async function redeemMemberCode(
   const { data, error } = await rpc().rpc("redeem_business_member_code", { p_code: trimmed });
   if (error) {
     console.error("[members] Could not redeem:", error.message);
+    if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_REDEEM_CODE, error.message) };
     return { ok: false, message: describe(error, "Couldn't redeem that code. Try again.") };
   }
   const result = data as { success: boolean; message: string } | null;

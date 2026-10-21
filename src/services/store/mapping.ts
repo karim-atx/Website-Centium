@@ -1,3 +1,4 @@
+import { BUSINESS_CLOSED_CODE, CLOSED_PLACE_ORDER, closureMessage } from "../business-closure/logic";
 import type {
   Fulfilment,
   OrderItem,
@@ -218,6 +219,8 @@ export function storeErrorText(e: StoreErr, fallback: string): string {
     return "Some of this is out of stock. Lower the quantity and try again.";
   }
   if (code === "ATXE9") return "This store isn't taking orders right now.";
+  // CP: only place_order inserts a store_orders row, so ATXAB here is the client's order.
+  if (code === BUSINESS_CLOSED_CODE) return closureMessage(CLOSED_PLACE_ORDER, msg);
   if (code === "ATXF0") {
     if (/pickup/i.test(msg)) return "This store doesn't offer pickup. Choose delivery.";
     if (/delivery/i.test(msg)) return "This store doesn't offer delivery. Choose pickup.";

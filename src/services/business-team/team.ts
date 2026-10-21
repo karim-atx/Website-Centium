@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { CLOSED_APPROVE_JOIN, CLOSED_INVITE_STAFF, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import type { PublicDetails } from "./types";
 
 export type { PublicDetails } from "./types";
@@ -220,6 +221,7 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
   if (isOffline(error)) return { ok: false, reason: "failed", message: "Invite didn't send. Check your connection and try again. Nothing was sent." };
   if (text.includes("ATXC0") || error.code === "23514") return { ok: false, reason: "no_seats", message: "All seats are in use." };
   if (text.includes("ATXB9") && error.code === "22023") return { ok: false, reason: "not_found", message: "No professional found with that ID or email." };
+  if (isBusinessClosedError(error)) return { ok: false, reason: "not_allowed", message: closureMessage(CLOSED_INVITE_STAFF, error.message) };
   if (error.code === "42501") return { ok: false, reason: "not_allowed", message: "You can't invite people to this business." };
   if (error.code === "ATX02") return { ok: false, reason: "rate_limited", message: "Too many invites in a short time. Try again in an hour." };
   console.error("[business-team] invite_employee failed:", error.code, error.message);
@@ -266,6 +268,7 @@ export async function respondJoinRequest(requestId: string, approve: boolean, na
   const text = `${error.message ?? ""}`;
   if (text.includes("ATXC0")) return { ok: false, reason: "no_seats", message: "All seats are in use." };
   if (text.includes("already") || text.includes("no such request")) return { ok: false, reason: "gone", message: "That request was already answered." };
+  if (isBusinessClosedError(error)) return { ok: false, reason: "failed", message: closureMessage(CLOSED_APPROVE_JOIN, text) };
   console.error("[business-team] respond_join_request failed:", error.code, error.message);
   return { ok: false, reason: "failed", message: approve ? `Couldn't approve ${name}. Try again.` : "Couldn't deny the request. Try again." };
 }

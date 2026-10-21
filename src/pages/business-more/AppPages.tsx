@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BellRing, EyeOff, Eye, FileCheck, FileText, KeyRound, Laptop, LifeBuoy, LogOut, RotateCcw, Smartphone, Trash2 } from "lucide-react";
+import { BellRing, DoorClosed, EyeOff, Eye, FileCheck, FileText, KeyRound, Laptop, LifeBuoy, LogOut, RotateCcw, Smartphone, Trash2 } from "lucide-react";
 import { BizButton, BizConfirm, BizLabel, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { useBusiness } from "../../components/business-more/useBusiness";
@@ -9,6 +9,8 @@ import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet"
 import { getMfaStatus } from "../../services/mfa";
 import { getRecoveryStatus } from "../../services/recoveryCodes";
 import { PAUSE_OWNER_ONLY, setBusinessPaused, signOutOtherSessions } from "../../services/business-more";
+import { CLOSE_OWNER_ONLY } from "../../services/business-closure";
+import { CloseBusinessSheet } from "./CloseBusinessSheet";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { formatShortDate } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
@@ -296,8 +298,12 @@ export function SecurityPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Deactivate or delete (V6-35: Deactivate + the reversible 30-day deletion;
-// no typed-DELETE immediate deletion)
+// Deactivate, close or delete (V6-35: Deactivate + the reversible 30-day
+// deletion; no typed-DELETE immediate deletion). CP (Database 20261130000000):
+// Close is the third, permanent state, owner only. Pausing (deactivate) stops
+// NEW business (bookings, sales, code redemptions, join requests) while
+// members still check in and staff can still be invited; closing stops
+// everything. Neither deletes anything.
 
 const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
@@ -307,8 +313,10 @@ export function DeactivatePage() {
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const paused = !!business?.deactivatedAt;
-  // B15: set_business_paused is the owner's only. Staff see the state, not the control.
+  const closed = !!business?.closedAt;
+  // B15: set_business_paused is the owner's only, and so is close_business. Staff see the state, not the control.
   const access = useConsoleAccess();
   const owner = access.isOwner || (!access.isStaff && !!business);
 
@@ -330,33 +338,55 @@ export function DeactivatePage() {
   return (
     <BizPage title="Deactivate or delete" sub="Choose what happens to your business on Centium.">
       {error && <LoadError onRetry={reload} />}
-      <BizSection label="Deactivate">
-        {paused ? (
+      {closed ? (
+        <BizSection label="Closed" footer={business!.closureReason ? `Reason: ${business!.closureReason}` : undefined}>
           <BizRow
-            icon={Eye}
-            title="Reactivate business"
-            desc={owner ? `Deactivated ${fmtDate(business!.deactivatedAt!)}. Bookings resume; turn Show on Explore back on to be listed.` : `Deactivated ${fmtDate(business!.deactivatedAt!)}. ${PAUSE_OWNER_ONLY}`}
-            value={owner ? "Reactivate" : undefined}
-            onClick={() => setAsk(true)}
-            disabled={!business || !owner}
+            icon={DoorClosed}
+            title="Business closed"
+            desc={`Closed ${fmtDate(business!.closedAt!)}. Nothing was deleted: members keep their records, receipts, bookings and reviews. It takes no new bookings, sales, memberships, check-ins, staff invites or join requests, and it isn't on Explore.`}
           />
-        ) : (
-          <BizRow
-            icon={EyeOff}
-            title="Deactivate business"
-            desc={owner ? "Hide your listing and pause bookings. Your data stays." : PAUSE_OWNER_ONLY}
-            value={owner ? "Deactivate" : undefined}
-            onClick={() => setAsk(true)}
-            disabled={!business || !owner}
-          />
-        )}
-      </BizSection>
+        </BizSection>
+      ) : (
+        <>
+          <BizSection label="Deactivate">
+            {paused ? (
+              <BizRow
+                icon={Eye}
+                title="Reactivate business"
+                desc={owner ? `Deactivated ${fmtDate(business!.deactivatedAt!)}. New bookings and sales resume; turn Show on Explore back on to be listed.` : `Deactivated ${fmtDate(business!.deactivatedAt!)}. ${PAUSE_OWNER_ONLY}`}
+                value={owner ? "Reactivate" : undefined}
+                onClick={() => setAsk(true)}
+                disabled={!business || !owner}
+              />
+            ) : (
+              <BizRow
+                icon={EyeOff}
+                title="Deactivate business"
+                desc={owner ? PAUSE_DESC : PAUSE_OWNER_ONLY}
+                value={owner ? "Deactivate" : undefined}
+                onClick={() => setAsk(true)}
+                disabled={!business || !owner}
+              />
+            )}
+          </BizSection>
+          <BizSection label="Close">
+            <BizRow
+              icon={DoorClosed}
+              danger={owner}
+              title="Close business"
+              desc={owner ? "For good: no new activity of any kind, and no reopening. Nothing is deleted." : CLOSE_OWNER_ONLY}
+              onClick={() => setCloseOpen(true)}
+              disabled={!business || !owner}
+            />
+          </BizSection>
+        </>
+      )}
       <BizSection label="Delete">
         <BizRow
           icon={Trash2}
           danger
           title="Delete business account"
-          desc="Removes the business, its listing and team access. Members keep their personal accounts."
+          desc="Deletes your account after 30 days. Your business closes then; nothing in it is deleted, and members keep their records."
           onClick={() => setDeleteOpen(true)}
         />
       </BizSection>
@@ -364,18 +394,39 @@ export function DeactivatePage() {
         open={ask}
         icon={paused ? Eye : EyeOff}
         title={paused ? `Reactivate ${business?.name ?? "your business"}?` : `Deactivate ${business?.name ?? "your business"}?`}
-        body={paused ? "Bookings open again. Your listing stays hidden until you turn Show on Explore back on." : "Your listing is hidden and new bookings pause. You can reactivate at any time."}
+        body={
+          paused
+            ? "New bookings and sales open again. Your listing stays hidden until you turn Show on Explore back on."
+            : "Your listing is hidden, and new bookings, sales, code redemptions and join requests stop. Members still check in and keep and renew their memberships, and you can still invite staff. You can reactivate at any time."
+        }
         action={paused ? "Reactivate" : "Deactivate"}
         cancel="Cancel"
         busy={busy}
         onAction={() => void apply()}
         onCancel={() => setAsk(false)}
       />
+      {business && owner && !closed && (
+        <CloseBusinessSheet
+          open={closeOpen}
+          businessId={business.id}
+          businessName={business.name}
+          onClose={() => setCloseOpen(false)}
+          onClosed={(closedAt, reason) => {
+            // close_business also takes the listing off Explore (active = false).
+            setBusiness({ ...business, closedAt, closureReason: reason, active: false });
+            setCloseOpen(false);
+            showToast("Your business is closed.");
+          }}
+        />
+      )}
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} business />
       {toast}
     </BizPage>
   );
 }
+
+/** What pausing does since CP: new business stops, existing members and hiring carry on. */
+const PAUSE_DESC = "Hide your listing and stop new bookings, sales, code redemptions and join requests. Members still check in and keep and renew their memberships, and you can still invite staff.";
 
 // ---------------------------------------------------------------------------
 // Business terms and waivers (Settings › General)

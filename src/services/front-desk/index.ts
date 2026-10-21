@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { CLOSED_CHECK_IN, CLOSED_RENEW_MEMBERSHIP, CLOSED_SELL_DAY_PASS, closureMessage, isBusinessClosedError, type ClosureWords } from "../business-closure/logic";
 import { fetchHoursTable, fetchMyVenues, fetchVenueMembers } from "../venues/console";
 import { consoleMessage } from "../venues/consoleLogic";
 import { commitmentLines } from "../venues/venueLogic";
@@ -201,6 +202,7 @@ export async function renewMembership(membershipId: string): Promise<Result<stri
   const { data, error } = await rpc<string>("renew_gym_membership", { p_membership_id: membershipId });
   if (error || !data) {
     if (error) console.error("[front desk] Could not renew:", error.message);
+    if (error && isBusinessClosedError(error)) return { ok: false, code: error.code, message: closureMessage(CLOSED_RENEW_MEMBERSHIP, error.message) };
     return { ok: false, code: error?.code, message: error && isOffline(error) ? OFFLINE_MESSAGE : membershipActionMessage(error?.code, "renew") };
   }
   return { ok: true, value: data };
@@ -235,9 +237,11 @@ export type Desk<T> = Result<T> | { ok: false; missing: true; code?: string; mes
 
 const isMissing = (e: PostgrestError) => e.code === "PGRST202" || e.code === "42883";
 
-function deskFail<T>(error: PostgrestError, what: string, fallback: string): Desk<T> {
+function deskFail<T>(error: PostgrestError, what: string, fallback: string, closure?: ClosureWords): Desk<T> {
   if (isMissing(error)) return { ok: false, missing: true, code: error.code, message: fallback };
   console.error(`[front desk] Could not ${what}:`, error.message);
+  // CP: the closed or paused business's refusal (ATXAB), in this action's words.
+  if (closure && isBusinessClosedError(error)) return { ok: false, code: error.code, message: closureMessage(closure, error.message) };
   return {
     ok: false,
     code: error.code,
@@ -252,7 +256,7 @@ const first = <T>(data: T[] | T | null): T | null => (Array.isArray(data) ? data
 /** check_in_with_pass(gym, token, method): scans a pass; decides and records (denials too). */
 export async function checkInWithPass(gymId: string, token: string, method: CheckInMethod = "qr"): Promise<Desk<CheckIn>> {
   const { data, error } = await rpc<CheckInRow[]>("check_in_with_pass", { p_gym_id: gymId, p_token: token, p_method: method });
-  if (error) return deskFail(error, "check a pass in", "Couldn't check this pass.");
+  if (error) return deskFail(error, "check a pass in", "Couldn't check this pass.", CLOSED_CHECK_IN);
   const c = toCheckIn(first(data));
   return c ? { ok: true, value: c } : { ok: false, message: "Couldn't check this pass." };
 }
@@ -260,7 +264,7 @@ export async function checkInWithPass(gymId: string, token: string, method: Chec
 /** check_in_member(gym, membership, method): the check-in from desk_find_member. */
 export async function checkInMember(gymId: string, membershipId: string, method: CheckInMethod = "manual"): Promise<Desk<CheckIn>> {
   const { data, error } = await rpc<CheckInRow[]>("check_in_member", { p_gym_id: gymId, p_membership_id: membershipId, p_method: method });
-  if (error) return deskFail(error, "check a member in", "Couldn't check them in. Try again.");
+  if (error) return deskFail(error, "check a member in", "Couldn't check them in. Try again.", CLOSED_CHECK_IN);
   const c = toCheckIn(first(data));
   return c ? { ok: true, value: c } : { ok: false, message: "Couldn't check them in. Try again." };
 }
@@ -281,7 +285,7 @@ export async function checkInGuest(gymId: string, hostMembershipId: string, labe
   });
   if (error) {
     if (error.code === "22023") return { ok: false, code: error.code, message: `Write the guest's name, up to ${GUEST_LABEL_MAX} characters.` };
-    return deskFail(error, "check a guest in", "Couldn't check the guest in. Try again.");
+    return deskFail(error, "check a guest in", "Couldn't check the guest in. Try again.", CLOSED_CHECK_IN);
   }
   const row = first(data);
   if (!row) return { ok: false, message: "Couldn't check the guest in. Try again." };
@@ -315,7 +319,7 @@ export async function sellDayPass(
         code: error.code,
         message: "personId" in buyer ? "This person isn't one of your members. Sell to them as a guest by name." : `Write the guest's name, up to ${GUEST_LABEL_MAX} characters.`,
       };
-    return deskFail(error, "sell a day pass", "Couldn't sell the day pass. Try again.");
+    return deskFail(error, "sell a day pass", "Couldn't sell the day pass. Try again.", CLOSED_SELL_DAY_PASS);
   }
   return data ? { ok: true, value: data } : { ok: false, message: "Couldn't sell the day pass. Try again." };
 }

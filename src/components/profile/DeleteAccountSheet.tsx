@@ -37,9 +37,9 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
     return (
       <BottomSheet open={open} onClose={onClose} title="Delete business account" chrome="market" tone="business" headerHeight={58}>
         <p className="text-[12.5px] leading-[18px] text-charcoal-soft" style={{ marginBottom: 12 }}>
-          Your business will be scheduled for deletion in 30 days. After that its listing, classes, plans, team access and reports are
-          permanently removed. Members keep their personal accounts. You can change your mind at any point in those 30 days: sign back in
-          and choose Cancel deletion.
+          Your account will be scheduled for deletion in 30 days. When it's deleted, your business closes: it leaves Explore and takes no
+          new bookings or sales. Nothing in the business is deleted, and members keep their records, receipts, bookings and reviews. You
+          can change your mind at any point in those 30 days: sign back in and choose Cancel deletion.
         </p>
         {deleteError && (
           <p role="alert" className="text-[12px] font-bold text-status-high" style={{ marginBottom: 6 }}>
@@ -53,7 +53,7 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
           className="tap w-full flex items-center justify-center bg-status-high text-white dark:text-[#0D0B1A] text-[15px] font-extrabold disabled:opacity-60"
           style={{ marginTop: 6, minHeight: 52, borderRadius: 16 }}
         >
-          {deleting ? "Scheduling…" : "Schedule my business for deletion"}
+          {deleting ? "Scheduling…" : "Schedule my account for deletion"}
         </button>
         <button
           type="button"

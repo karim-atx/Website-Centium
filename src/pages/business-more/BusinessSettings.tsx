@@ -214,7 +214,7 @@ export default function BusinessSettings() {
           <div style={{ padding: "12px 15px 12px 14px" }}>
             <CycleTrackingRow />
           </div>
-          <BizRow icon={EyeOff} title="Deactivate or delete" desc="Pause your business, or delete it" onClick={() => navigate("/app/business/more/deactivate")} />
+          <BizRow icon={EyeOff} title="Deactivate or delete" desc="Pause, close or delete your business" onClick={() => navigate("/app/business/more/deactivate")} />
         </BizCard>
       </SettingsRowVariant.Provider>
 
