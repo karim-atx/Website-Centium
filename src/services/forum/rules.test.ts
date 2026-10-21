@@ -12,6 +12,7 @@ import {
   type ForumCategory,
 } from "./rules.ts";
 import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes.ts";
+import { detailDate } from "../../utils/date.ts";
 
 const cats: ForumCategory[] = [
   { key: "general", name: "General", sensitivity: "general", sortOrder: 50 },
@@ -107,4 +108,14 @@ test("an encoder's own Exif and comments are stripped from a canvas JPEG; the co
   assert.deepEqual([...out], [0xff, 0xd8, ...jfif, ...icc, ...dqt, ...sos]);
   assert.equal(jpegCarriesMetadata(out), false);
   assert.equal(stripEncoderSegments(new Uint8Array([0x89, 0x50, 0x4e, 0x47])), null);
+});
+
+test("ATX57 reads the end of the pause from details, month first", () => {
+  const until = describeForumError({ code: "ATX57", message: "your access to the community forum is paused until 2026-10-09", details: "2026-10-09" }, "post")!;
+  assert.equal(until, `Your access to the community forum is paused until ${detailDate("2026-10-09")}.`);
+  // An older server put a formatted date in the message; that still reads.
+  assert.equal(
+    describeForumError({ code: "ATX57", message: "your access to the community forum is paused until Friday 09 Oct" }, "post"),
+    "Your access to the community forum is paused until Friday 09 Oct."
+  );
 });

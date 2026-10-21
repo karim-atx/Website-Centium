@@ -146,3 +146,19 @@ export function shiftDate(date: string, days: number): string {
   dt.setUTCDate(dt.getUTCDate() + days);
   return dt.toISOString().slice(0, 10);
 }
+
+/**
+ * A date the server sent with a refusal, as ISO-8601 in the error's DETAIL
+ * (supabase-js `error.details`), shown month first: "Oct 9", or "Oct 9, 2027"
+ * outside the current year. Null when details carries no ISO date, so the
+ * caller falls back to its own words. Calendar dates ("2026-10-09") are read
+ * as that day; timestamps in UTC, like formatDisplayDate.
+ */
+export function detailDate(details: string | null | undefined, now: Date = new Date()): string | null {
+  const m = /\b(\d{4})-(\d{2})-(\d{2})(?:[T ][\d:.]+(?:Z|[+-]\d{2}(?::?\d{2})?)?)?/.exec(details ?? "");
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (Number.isNaN(d.getTime())) return null;
+  const sameYear = d.getUTCFullYear() === now.getUTCFullYear();
+  return formatShortDate(d, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" });
+}

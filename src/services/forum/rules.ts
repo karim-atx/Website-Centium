@@ -3,7 +3,7 @@
 // words for each refusal the database can raise (Database 630f2cd, 27141fa,
 // df67bd8). Kept free of the Supabase client so it can be tested directly.
 
-import { ageFromDateOfBirth } from "../../utils/date";
+import { ageFromDateOfBirth, detailDate } from "../../utils/date";
 
 /** Design screen 1, and the brief's wording for an under-18 who opens the link. */
 export const ADULTS_ONLY_TEXT = "The community is for adults. You can join the forum from age 18.";
@@ -120,12 +120,13 @@ export type ForumAction =
  * The words for a database refusal. Null when the code is not one of the
  * forum's own, so the caller falls back to its generic sentence.
  *
- * ATX57 carries the date in the server's message ("... paused until Friday 09
- * Oct"), which is the only place the member can learn it: forum_suspensions
- * has no client policy.
+ * ATX57 carries the date the pause ends, the only place the member can learn
+ * it (forum_suspensions has no client policy). The server sends it as
+ * ISO-8601 in DETAIL, shown month first ("Oct 9"); an older server put it in
+ * the message ("... paused until Friday 09 Oct"), which is still read.
  */
 export function describeForumError(
-  error: { code?: string; message?: string },
+  error: { code?: string; message?: string; details?: string | null },
   action: ForumAction
 ): string | null {
   const message = error.message ?? "";
@@ -135,7 +136,7 @@ export function describeForumError(
     case "ATX56":
       return NICKNAME_PROBLEM_TEXT.reserved;
     case "ATX57": {
-      const until = /paused until (.+)$/i.exec(message)?.[1]?.trim();
+      const until = detailDate(error.details) ?? /paused until (.+)$/i.exec(message)?.[1]?.trim();
       return until
         ? `Your access to the community forum is paused until ${until}.`
         : "Your access to the community forum is paused for now.";

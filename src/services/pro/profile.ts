@@ -22,6 +22,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { detailDate } from "../../utils/date";
 import type { Read, Write } from "./clients";
 import type { ProfessionalSubtype } from "../../types";
 import { validatePlanDraft, type PlanBilling, type PlanDraft } from "../hires/proLogic";
@@ -149,13 +150,18 @@ export const saveRates = (me: string, monthly: number | null, consultation: numb
 // ---------------------------------------------------------------------------
 
 export const HANDLE_30_DAYS = "You can change your handle once every 30 days.";
+/** ATXG2 with the next allowed day (ISO in DETAIL): "You can change your handle again on Oct 9." */
+export const handleAgainOn = (day: string) => `You can change your handle once every 30 days. You can change it again on ${day}.`;
 
 /** The backend's answer, said honestly (handles share one namespace with business slugs). */
-export function describeHandleError(error: { code?: string; message?: string } | null, offline = false): string {
+export function describeHandleError(error: { code?: string; message?: string; details?: string | null } | null, offline = false): string {
   if (offline) return OFFLINE_MESSAGE;
   const code = error?.code ?? "";
   const msg = error?.message ?? "";
-  if (code === "ATXG2") return HANDLE_30_DAYS;
+  if (code === "ATXG2") {
+    const day = detailDate(error?.details) ?? detailDate(msg);
+    return day ? handleAgainOn(day) : HANDLE_30_DAYS;
+  }
   if (code === "22023") return "Use 3 to 30 lowercase letters, numbers and single dots, not only numbers.";
   // ATXB6: the one namespace handles share with business slugs (checked with psql: "flexfitness").
   if (code === "23505" || code === "ATXB6") return /reserved/i.test(msg) ? "That handle is reserved. Try another." : "That handle is taken by another account or business. Try another.";
