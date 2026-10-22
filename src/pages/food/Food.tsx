@@ -36,6 +36,10 @@ import MealPrepPanel, { MealPrepSubTabs, type SubTab } from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { useClientShare } from "../../components/share/client/useClientShare";
+import { ShareEntryButton } from "../../components/share/client/ShareEntryButton";
+import { foodCard } from "../../components/share/client/clientCardModel";
+import { foodFacts } from "../../components/share/client/clientShareData";
 
 /**
  * Dark mode: the meal cards follow the dark tokens. These are the colours
@@ -86,6 +90,21 @@ const SAVE_FAILED = "Couldn't save. Try again.";
 // The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
 const HERO_PLACEHOLDER_HEIGHT = 101;
 
+// Market + Share 3.0 C-SH.1 e8Food: the Diary's share button (the food-day
+// card; unavailable in recovery mode, D-28).
+function DiaryShareButton({ share, date }: { share: ReturnType<typeof useClientShare>; date: string }) {
+  const { foodLog, nutritionGoal } = useApp();
+  const facts = foodFacts(foodLog, date, nutritionGoal.targetCalories);
+  return (
+    <ShareEntryButton
+      label="Share your food day"
+      disabledHint={facts ? null : "Nothing to share yet. Log food for this day first."}
+      onPress={() => facts && share.open(foodCard(facts))}
+      style={{ margin: "-8px -8px -8px 0" }}
+    />
+  );
+}
+
 export default function Food() {
   const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, diaryLoading, retryDiary, authUserId, addFoodEntryRecord, accessibility } =
     useApp();
@@ -107,6 +126,7 @@ export default function Food() {
   // account's recovery setting too, not only the totals card.
   const hideNumbers = recoverySensitive || recoveryModePending;
   const navigate = useNavigate();
+  const share = useClientShare();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
@@ -374,7 +394,14 @@ export default function Food() {
           the 56 track, 16 at the bottom. Dark track and idle tabs #303141
           with #B8B3C7 (the drawn #6D50D3* is 2.2:1; V6-92). */}
       <FixedHeader paddingBottom={16}>
-        <h1 className="m-0 mb-[11px] text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
+        {tab === "diary" && !share.locks.foodDayLocked && !hideNumbers ? (
+          <div className="flex items-center justify-between mb-[11px]">
+            <h1 className="m-0 text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
+            <DiaryShareButton share={share} date={selectedDate} />
+          </div>
+        ) : (
+          <h1 className="m-0 mb-[11px] text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
+        )}
         <SegmentedTabs
           items={foodTabs}
           activeKey={tab}
@@ -389,6 +416,7 @@ export default function Food() {
           </div>
         )}
       </FixedHeader>
+      {share.sheet}
 
       {tab === "diary" && firstLoad && (
         // FO1 O1: skeletons #F5F5F6 / #242730, pulse 1.2 s (static under

@@ -14,6 +14,9 @@ import { useOps } from "./opsTheme";
 import { BackRow, Bone, ErrorCard, FiguresCard, OpsCard, Tag } from "./parts";
 import { useSessionActions } from "./SessionActions";
 import { useSchedule } from "./useSchedule";
+import { BizShareButton } from "../../../components/share/business/BizShareButton";
+import { classData } from "../../../components/share/business/bizCardModel";
+import { fetchClassCreatedAt } from "../../../services/share-links";
 import { addDays, dayHeading, dayWords, initialOf, isEnded, shortDate, todayIso } from "./scheduleModel";
 
 // The session page (OP1-083; OpsTabsV4 view=session). Route
@@ -187,7 +190,26 @@ export default function SessionPage() {
 
   return (
     <div style={{ marginTop: -2 }}>
-      <BackRow c={c} label={backLabel} onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"))} />
+      <div className="flex items-start justify-between">
+        <BackRow c={c} label={backLabel} onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"))} />
+        {/* Market + Share 3.0 B-SH.1: share this class (Class spotlight card); not a cancelled or ended one. */}
+        {!cancelled && !ended && (
+          <BizShareButton
+            label={`Share ${session.title}`}
+            style={{ marginTop: -6, marginRight: -5 }}
+            emptyHint={row.listedOnExplore === false ? "This class isn't on Explore, so it can't be shared." : null}
+            getData={async () => ({
+              t: "class",
+              d: classData(session, {
+                about: row.about ?? null,
+                repeat: series ? repeatLine(series, series.startTime) : null,
+                createdAt: await fetchClassCreatedAt(session.id, session.seriesId ?? null),
+                now,
+              }),
+            })}
+          />
+        )}
+      </div>
 
       <div className="flex items-center" style={{ gap: 14 }}>
         <span className="shrink-0 flex items-center justify-center" style={{ width: 60, height: 60, borderRadius: 16, background: c.pale, color: c.pDark }}>

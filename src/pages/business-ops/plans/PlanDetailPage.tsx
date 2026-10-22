@@ -11,6 +11,8 @@ import { ActionTile, MEMBERSHIPS_HOME, PlanActions } from "./MembershipsTab";
 import { PlanSheet } from "./PlanSheet";
 import { PlansToast, usePlansCtx } from "./PlansContext";
 import { Bar, BORDER, DIVIDER, ErrorCard, FiguresCard, StatusPill } from "./ui";
+import { BizShareButton } from "../../../components/share/business/BizShareButton";
+import { planData } from "../../../components/share/business/bizCardModel";
 
 // v6 Batch 4 · the plan page (OP1-037 Monthly, OP1-039 paused; OpsTabsV4
 // template 222-326 isDetail, logic 492-498). Reached from "Members and
@@ -127,7 +129,16 @@ export default function PlanDetailPage() {
       <button type="button" onClick={goBack} aria-label="Back" className="tap flex items-center justify-center text-charcoal rtl:-scale-x-100" style={{ width: 44, height: 44 }}>
         <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
       </button>
-      <p className="text-[13px] font-bold text-charcoal-faint">Memberships</p>
+      <p className="flex-1 text-[13px] font-bold text-charcoal-faint">Memberships</p>
+      {/* Market + Share 3.0 B-SH.1: share this plan (Membership plan card); only a plan on sale on Explore. */}
+      {plan && plan.dbStatus !== "archived" && (
+        <BizShareButton
+          label={`Share ${plan.name}`}
+          style={{ marginRight: -5 }}
+          emptyHint={plan.status !== "active" ? "Only a plan on sale on Explore can be shared." : null}
+          getData={() => ({ t: "plan", d: planData(plan) })}
+        />
+      )}
     </div>
   );
 

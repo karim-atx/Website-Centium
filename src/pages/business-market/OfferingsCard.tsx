@@ -5,6 +5,9 @@ import { marketplaceCategories } from "../../data/mockProfessionals";
 import type { OfferingCategory } from "../../services/business-offerings";
 import { useMarket } from "./MarketContext";
 import { lh, MCard, MFieldLabel, MLabel, MPopup, MPrimary, MSaveError, MSheet, px, useMarketToast } from "./kit";
+import { BizShareButton } from "../../components/share/business/BizShareButton";
+import { productData } from "../../components/share/business/bizCardModel";
+import { fetchOfferingImage } from "../../services/share-links";
 
 // MA1-001 K1 (KEEP-RESTYLE): business_offerings rows stay reachable for
 // Classes and Gym, which have no Products tab. The earlier Marketplace tab's
@@ -42,6 +45,11 @@ export function OfferingsCard() {
                 <span style={{ display: "block", fontSize: px(13), fontWeight: 800, color: c.ink, lineHeight: lh(19.5) }}>{o.title}</span>
                 <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>{[label(o.category), o.price].filter(Boolean).join(" · ")}</span>
               </span>
+              {/* Market + Share 3.0 B-SH.1: share this item (Product spotlight card). */}
+              <BizShareButton
+                label={`Share ${o.title}`}
+                getData={async () => ({ t: "product", d: productData(o, await fetchOfferingImage(o.id)) })}
+              />
               <button
                 type="button"
                 aria-label={`Remove ${o.title}`}

@@ -6,20 +6,42 @@ import { CtaButton } from "../ui/PinnedCta";
 import { Toggle } from "../ui/Toggle";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
-import { ShareCard } from "./ShareCard";
+import { useApp } from "../../context/AppContext";
+import { SHARE_TOKENS } from "../../theme/marketTokens";
+import { ShareCard, ShareLayer } from "./ShareCard";
+import { OverlayEditor } from "./OverlayEditor";
+import { EDITOR_W, editorHeight } from "./overlayModel";
+import { LAYER, type LayerPlacement } from "./shareLayerModel";
 import { EditorLabel, StyleChip } from "./shareKit";
-import { FORMATS, FORMAT_LABEL, STYLES, STYLE_LABEL, cardLink, clientShownAs, type CardPro, type CardSpec, type ShareFormat, type ShareStyle, type Visibility } from "./shareCardModel";
+import {
+  EDITOR_STYLES,
+  EDITOR_STYLE_LABEL,
+  FORMATS,
+  FORMAT_LABEL,
+  cardLink,
+  cardStyleOf,
+  clientShownAs,
+  usesOverlay,
+  type CardPro,
+  type CardSpec,
+  type EditorStyle,
+  type ShareFormat,
+  type Visibility,
+} from "./shareCardModel";
 
 /** What the editor hands on to the share options. */
 export interface EditorResult {
   format: ShareFormat;
-  style: ShareStyle;
+  /** "Y" is P-SH.3's Your photo (recorded as style "photo", D-29). */
+  style: EditorStyle;
   hide: number[];
   qr: boolean;
   /** The client as shown (wins only). */
   client: string | undefined;
   visibility: Visibility | null;
   photoUrl: string | null;
+  /** Your photo: where the layer and the photo crop sit (null otherwise). */
+  placement: LayerPlacement | null;
 }
 
 /** A win's consent: the client's name and the most they allowed. */
@@ -50,6 +72,18 @@ const VIS_LABEL: Record<Visibility, string> = { name: "Name", initials: "Initial
  *   without their name); "Link": QR code and link to your profile;
  * - pinned Share (share-2).
  * A photo stays on the device: it is drawn into the image, never uploaded.
+ *
+ * Market + Share 3.0 · P-SH.3 (additive; every element above is unchanged):
+ * - a fifth style chip "Your photo" (EDITOR_STYLES; no ADDED badge, D-52).
+ *   On Story, Post or Square it replaces the card preview with the shared
+ *   OverlayEditor (chrome "client", anchor "corner", the 100-wide ShareLayer:
+ *   the card's content, the QR on its white tile); it uses the same Take a
+ *   photo / Choose from library inputs, and until a photo is chosen the frame
+ *   shows the layer in its default corner with Share off. Recorded as style
+ *   "photo" (D-29); the Sticker has no Your photo and draws as the repo's;
+ * - on the Sticker, "Check on a light background": the preview well on the
+ *   light checker with the sticker bare on it (preview only; the copied and
+ *   saved sticker stay transparent).
  */
 export const ShareEditorSheet: React.FC<{
   open: boolean;
@@ -63,11 +97,16 @@ export const ShareEditorSheet: React.FC<{
   /** The stat switches' lines (one per spec.stats entry): title and value. */
   statRows?: { title: string; sub: string }[];
   initialFormat?: ShareFormat;
-  initialStyle?: ShareStyle;
+  initialStyle?: EditorStyle;
   onShare: (r: EditorResult) => void;
 }> = ({ open, onClose, spec, pro, win, winLabel, statRows, initialFormat = "story", initialStyle = "B", onShare }) => {
+  const { authUserId } = useApp();
   const [format, setFormat] = useState<ShareFormat>(initialFormat);
-  const [style, setStyle] = useState<ShareStyle>(initialStyle);
+  const [style, setStyle] = useState<EditorStyle>(initialStyle);
+  // P-SH.3 ADDED: where the Your photo layer and crop sit (OverlayEditor), and
+  // the sticker's "Check on a light background" (preview only).
+  const [placement, setPlacement] = useState<LayerPlacement | null>(null);
+  const [lightCheck, setLightCheck] = useState(false);
   const [hide, setHide] = useState<number[]>([]);
   const [qr, setQr] = useState(true);
   const [visibility, setVisibility] = useState<Visibility>(() => (win ? win.allowed : "none"));
@@ -92,7 +131,9 @@ export const ShareEditorSheet: React.FC<{
 
   const shownAs = win ? clientShownAs(win.fullName, visibility) : undefined;
   const W = format === "story" || format === "sticker" ? 150 : format === "post" ? 196 : 212;
-  const needsPhoto = style === "P" && format !== "sticker" && !photoUrl;
+  const overlay = usesOverlay(style, format);
+  const needsPhoto = (style === "P" || style === "Y") && format !== "sticker" && !photoUrl;
+  const stickerLight = format === "sticker" && lightCheck;
   const rows = statRows ?? spec.stats.map((s) => ({ title: s.label, sub: s.value }));
 
   const trow = (title: string, sub: string | undefined, right: React.ReactNode, key: string) => (
@@ -117,20 +158,53 @@ export const ShareEditorSheet: React.FC<{
       onClose={onClose}
       title={win ? "Share this win" : "Share this card"}
       size="tall"
-      footer={<CtaButton label="Share" icon={<Share2 size={15} strokeWidth={2} aria-hidden />} disabled={needsPhoto} onClick={() => onShare({ format, style, hide, qr, client: shownAs, visibility: win ? visibility : null, photoUrl })} />}
+      footer={
+        <CtaButton
+          label="Share"
+          icon={<Share2 size={15} strokeWidth={2} aria-hidden />}
+          disabled={needsPhoto || (overlay && !placement)}
+          onClick={() => onShare({ format, style, hide, qr, client: shownAs, visibility: win ? visibility : null, photoUrl, placement: overlay ? placement : null })}
+        />
+      }
     >
       <SegmentedTabs items={FORMATS.map((f) => ({ key: f, label: FORMAT_LABEL[f] }))} activeKey={format} onChange={(k) => setFormat(k as ShareFormat)} className="mb-3" />
-      <div className="flex justify-center" style={{ borderRadius: 20, background: INK.soft, padding: 14, marginBottom: 14 }}>
-        <ShareCard spec={spec} pro={pro} format={format} style={style} width={W} client={shownAs} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
-      </div>
+      {overlay && photoUrl ? (
+        // P-SH.3 ADDED: Your photo replaces the card preview with the overlay editor (the yp* frames).
+        <div style={{ marginBottom: 14 }}>
+          <OverlayEditor
+            format={format}
+            photoUrl={photoUrl}
+            layer={<ShareLayer spec={spec} pro={pro} client={shownAs} qr={qr} hide={hide} />}
+            layerWidth={LAYER.width}
+            anchor="corner"
+            chrome="client"
+            hintKey={authUserId ? `centium.overlayHint.${authUserId}` : null}
+            layerLabel="Your card"
+            onChange={setPlacement}
+          />
+        </div>
+      ) : overlay ? (
+        // Your photo before a photo is chosen: the editor's frame with the layer in its default corner; Share waits for the photo.
+        <div className="flex justify-center" style={{ borderRadius: 20, background: INK.soft, padding: 10, marginBottom: 14 }}>
+          <div style={{ position: "relative", width: EDITOR_W, height: editorHeight(format), flex: "none", borderRadius: 10, overflow: "hidden", background: "#2A2B31", boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}>
+            <div style={{ position: "absolute", left: SHARE_TOKENS.safeMargin, bottom: SHARE_TOKENS.safeMargin, width: LAYER.width, color: "#FFFFFF", textShadow: `0 ${LAYER.shadow.y}px ${LAYER.shadow.blur}px ${LAYER.shadow.color}` }}>
+              <ShareLayer spec={spec} pro={pro} client={shownAs} qr={qr} hide={hide} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-center" style={{ borderRadius: 20, background: stickerLight ? SHARE_TOKENS.checkerLight : INK.soft, padding: 14, marginBottom: 14 }}>
+          <ShareCard spec={spec} pro={pro} format={format} style={cardStyleOf(style)} width={W} client={shownAs} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} bare={stickerLight} />
+        </div>
+      )}
 
       <EditorLabel first>Style</EditorLabel>
       <div role="radiogroup" aria-label="Style" className="flex flex-wrap" style={{ gap: 6 }}>
-        {STYLES.map((k) => (
-          <StyleChip key={k} on={k === style} label={STYLE_LABEL[k]} onClick={() => setStyle(k)} />
+        {EDITOR_STYLES.map((k) => (
+          <StyleChip key={k} on={k === style} label={EDITOR_STYLE_LABEL[k]} onClick={() => setStyle(k)} />
         ))}
       </div>
-      {style === "P" && format !== "sticker" && (
+      {(style === "P" || style === "Y") && format !== "sticker" && (
         <>
           <EditorLabel>Background photo</EditorLabel>
           <div className="grid grid-cols-2" style={{ gap: 8 }}>
@@ -156,7 +230,13 @@ export const ShareEditorSheet: React.FC<{
         </>
       )}
       {format === "sticker" && (
-        <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF, marginTop: 10 }}>The sticker has no background. Copy it, then paste it onto your own photo or video in Instagram.</p>
+        <>
+          <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF, marginTop: 10 }}>The sticker has no background. Copy it, then paste it onto your own photo or video in Instagram.</p>
+          {/* P-SH.3 ADDED (stLight): the preview well on the light checker; the copied / saved sticker stays transparent. */}
+          <div style={{ marginTop: 8 }}>
+            {trow("Check on a light background", "Preview only. The copied sticker stays transparent.", <Toggle checked={lightCheck} onChange={setLightCheck} label="Check on a light background" />, "light")}
+          </div>
+        </>
       )}
 
       {(win || rows.length > 0) && (

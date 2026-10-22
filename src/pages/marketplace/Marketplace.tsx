@@ -7,7 +7,8 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { ChevronLeft, Gift } from "lucide-react";
 import { rewardForUser, type EarnedReward } from "../../services/rewards";
 import { tierProgress } from "../../services/achievements";
-import { TIER_ICON, colourSet, tierHex } from "../../components/mind/achievementStyle";
+import { colourSet, tierHex, tierIcon } from "../../components/mind/achievementStyle";
+import { tierRank } from "../../theme/marketTokens";
 import { contrastRatio, liftTo, mixHex } from "../../data/folderColors";
 import BusinessDashboard from "./BusinessDashboard";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -128,7 +129,7 @@ function PointsCard() {
     <>
     {pointsSummary ? (
       (() => {
-        const card = tierCard(pointsSummary.tierName, dark, !!accessibility.highContrast);
+        const card = tierCard(tierRank(pointTiers, pointsSummary.tierName), dark, !!accessibility.highContrast);
         return (
           <button
             type="button"
@@ -185,9 +186,9 @@ function PointsCard() {
                 <span className="flex gap-[5px] shrink-0" aria-hidden>
                   {pointTiers.map((t) => {
                     const current = t.name === pointsSummary.tierName;
-                    const th = tierHex(t.name);
+                    const th = tierHex(tierRank(pointTiers, t.name));
                     const own = colourSet(th, true);
-                    const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
+                    const Icon = tierIcon(tierRank(pointTiers, t.name));
                     return (
                       <span
                         key={t.name}
@@ -233,8 +234,8 @@ function darkenTo(hue: string, bg: string, ratio = 4.5): string {
  * dark #262932, #D9A57F at the same alphas). Other tiers (not drawn, OURS)
  * follow the recipe from their own colour.
  */
-function tierCard(name: string, dark: boolean, highContrast = false) {
-  const hex = tierHex(name);
+function tierCard(rank: number, dark: boolean, highContrast = false) {
+  const hex = tierHex(rank);
   if (!dark) {
     const fill = colourSet(hex, false).fill;
     // High contrast: the drawn ink (Bronze #9C6B4A on #FBF7F4 is 4.27:1) is
@@ -242,7 +243,7 @@ function tierCard(name: string, dark: boolean, highContrast = false) {
     const ink = highContrast ? darkenTo(hex, fill) : hex;
     return { fill, border: `${hex}3D`, ink, pill: `${hex}1F`, track: `${hex}24`, solid: hex };
   }
-  const ink = name === "Bronze" ? "#D9A57F" : liftTo(hex, "#262932");
+  const ink = rank === 1 ? "#D9A57F" : liftTo(hex, "#262932");
   return { fill: "#262932", border: `${ink}3D`, ink, pill: `${ink}1F`, track: `${ink}24`, solid: ink };
 }
 /**

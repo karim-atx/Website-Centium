@@ -84,6 +84,8 @@ export interface MetricPageProps {
   onSourceTag?: () => void;
   /** Pinned CTA (manual metrics and Steps). */
   cta?: { label: string; icon?: React.ReactNode; onClick: () => void; disabled?: boolean };
+  /** Market + Share 3.0 C-SH.1: a control right of the title, before ⋮ (the share button). Optional; none by default. */
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -95,7 +97,7 @@ export interface MetricPageProps {
  * #F5F4FE ink #5B5349 (dark #303141 / #B8B3C7), active #A79AD5 white (dark
  * #A991FE / #0D0B1A). Content gets 176 bottom padding when a CTA is pinned.
  */
-export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, onRangeChange, menu, sourceTag, onSourceTag, cta, children }) => {
+export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, onRangeChange, menu, sourceTag, onSourceTag, cta, headerAction, children }) => {
   const back = useBack();
   const { dark } = useHealthMode();
   const [menuBtn, setMenuBtn] = useState<HTMLButtonElement | null>(null);
@@ -132,6 +134,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
               <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 700 }}>{sourceTag}</span>
             </button>
           )}
+          {headerAction}
           {menu && menu.length > 0 && (
             <button
               ref={setMenuBtn}

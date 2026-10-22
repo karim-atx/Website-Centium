@@ -11,6 +11,8 @@ import { DayPassesTab } from "./DayPassesTab";
 import { PerformanceTab } from "./PerformanceTab";
 import { PromotionsTab } from "./PromotionsTab";
 import { useListingSwitch } from "./useListingSwitch";
+import { BizShareButton } from "../../components/share/business/BizShareButton";
+import { fetchRatingLine } from "../../components/share/business/useBizBrand";
 
 // MA1 · Marketplace (BizMarketV7 `isMain`, source lines 25-249): title,
 // subtitle per type, the four tabs (Listing · Open spots / Day passes ·
@@ -81,7 +83,11 @@ function MarketplaceBody() {
 
   return (
     <div data-market style={{ color: c.ink, marginTop: -4 }}>
-      <h1 style={{ fontSize: px(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: lh(34), color: c.ink }}>Marketplace</h1>
+      <div className="flex items-start justify-between" style={{ gap: 8 }}>
+        <h1 style={{ fontSize: px(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: lh(34), color: c.ink }}>Marketplace</h1>
+        {/* Market + Share 3.0 B-SH.1 / B-SH.4: share the business's profile card (Find us on Centium); the Overview figures never go on it. */}
+        <BizShareButton label="Share your profile: Find us on Centium" style={{ margin: "-5px -5px -5px 0" }} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
+      </div>
       <p style={{ fontSize: px(13), fontWeight: 500, color: c.faint, marginTop: 4, lineHeight: lh(19) }}>{v.subtitle}</p>
       <SegmentedTabs
         items={items}

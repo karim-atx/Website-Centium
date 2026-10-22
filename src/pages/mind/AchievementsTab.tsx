@@ -10,7 +10,8 @@ import { useOnline } from "../../hooks/useOnline";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { AchievementDetailSheet } from "../../components/mind/AchievementDetailSheet";
 import { AchievementTile } from "../../components/mind/AchievementIcon";
-import { TIER_ICON, keyInk, tierCardColours, tierHex } from "../../components/mind/achievementStyle";
+import { keyInk, tierCardColours, tierHex, tierIcon } from "../../components/mind/achievementStyle";
+import { tierRank } from "../../theme/marketTokens";
 import {
   toBadges,
   categoriesPresent,
@@ -264,7 +265,7 @@ export default function AchievementsTab() {
     );
   }
 
-  const tier = pointsSummary ? tierCardColours(tierHex(pointsSummary.tierName), dark) : null;
+  const tier = pointsSummary ? tierCardColours(tierHex(tierRank(pointTiers, pointsSummary.tierName)), dark) : null;
 
   return (
     <div className="animate-fade-slide-up">
@@ -352,8 +353,8 @@ export default function AchievementsTab() {
             {pointTiers.map((t) => {
               const reached = tierReached(t, pointsSummary);
               const current = t.name === pointsSummary.tierName;
-              const own = tierCardColours(tierHex(t.name), dark);
-              const Icon = TIER_ICON[t.name] ?? TIER_ICON.Bronze;
+              const own = tierCardColours(tierHex(tierRank(pointTiers, t.name)), dark);
+              const Icon = tierIcon(tierRank(pointTiers, t.name));
               return (
                 <div key={t.name} className="relative flex-1 flex flex-col items-center">
                   <span

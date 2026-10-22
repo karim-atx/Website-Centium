@@ -6,6 +6,10 @@ import { mondayFirstWeek } from "../../utils/week";
 import { localDayOf } from "../../utils/date";
 import { currentDayStreak, subGoalsMet } from "../../services/streaks/dayStreak";
 import { StreakLeaf } from "../icons/StreakLeaf";
+import { useClientShare } from "../share/client/useClientShare";
+import { ShareEntryButton } from "../share/client/ShareEntryButton";
+import { streakCard } from "../share/client/clientCardModel";
+import { streakFacts } from "../share/client/clientShareData";
 
 const WEEKDAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -39,6 +43,8 @@ export const StreaksBar: React.FC = () => {
     setUser,
   } = useApp();
   const navigate = useNavigate();
+  // Market + Share 3.0 C-SH.1 e4Streak: the share button on the Streaks card (absent in recovery mode, D-28).
+  const share = useClientShare();
 
   const week = mondayFirstWeek(today);
   // The sub-goal arithmetic and the backwards walk below both live in
@@ -112,10 +118,11 @@ export const StreaksBar: React.FC = () => {
   }, [displayStage, wasFull, streakUnbroken, today, user.plantFullSince, setUser]);
 
   return (
-    // A plain div, not a button: it holds its own nested button (the plant
+    <>
+    {/* A plain div, not a button: it holds its own nested button (the plant
     // head's species-cycle tap target), and a <button> inside a <button>
     // is invalid HTML — React warns and some browsers mis-handle the
-    // nested click entirely.
+    // nested click entirely. */}
     <div
       onClick={() => navigate("/app/mind")}
       role="button"
@@ -152,7 +159,18 @@ export const StreaksBar: React.FC = () => {
               </p>
               <p className="mt-[5px] text-[10.5px] text-white/[0.66] dark:text-white">{todayState?.met ?? 0} of 4 goals done today</p>
             </div>
-            <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">This week</span>
+            <span className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">This week</span>
+              {!share.locks.streakHidden && (
+                <ShareEntryButton
+                  label="Share your streak"
+                  fill="#FFFFFF"
+                  disabledHint={dayStreak > 0 ? null : "Nothing to share yet. Start a streak first."}
+                  onPress={() => share.open(((f) => (f ? streakCard(f) : null))(streakFacts(sources, today)))}
+                  style={{ margin: "-9px -9px -9px -5px" }}
+                />
+              )}
+            </span>
           </div>
 
           <div className="flex items-start gap-px mt-[11px] pt-[11px] border-t border-white/[0.24]">
@@ -191,5 +209,8 @@ export const StreaksBar: React.FC = () => {
         </div>
       </div>
     </div>
+    {/* Outside the board: the board's tap (open Mind) must not catch taps inside the sheet's portal. */}
+    {share.sheet}
+    </>
   );
 };

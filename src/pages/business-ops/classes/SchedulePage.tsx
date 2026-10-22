@@ -11,6 +11,8 @@ import { PLANS_ROUTE } from "../plans";
 import { useOps, type OpsColors } from "./opsTheme";
 import { BackRow, Bone, ErrorCard, FiguresCard, FixedCta, OpsCard, Tag } from "./parts";
 import { WeekGrid } from "./WeekGrid";
+import { BizShareButton } from "../../../components/share/business/BizShareButton";
+import { weekSchedule } from "../../../components/share/business/bizCardModel";
 import { takeParkedDraft, useSessionActions } from "./SessionActions";
 import { useSchedule } from "./useSchedule";
 import {
@@ -110,6 +112,8 @@ export default function SchedulePage() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([day, list]) => ({ day, list: sortDay(list, newIds) }));
   }, [week, newIds]);
   const shownDays = seeAll ? days : days.slice(0, 2);
+  // B-SH.1: the Monday-to-Sunday week on the share card (cancelled sessions left out).
+  const shareWeek = useMemo(() => weekSchedule(api.sessions, today), [api.sessions, today]);
   // AN3-055 rows 1-3: one card per repeating series, next session and the count to come.
   const series = useMemo(() => seriesCards(api.sessions, api.series, now), [api.sessions, api.series, now]);
   const later = useMemo(() => api.sessions.filter((s) => s.date > addDays(today, 6)).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0], [api.sessions, today]);
@@ -147,7 +151,18 @@ export default function SchedulePage() {
   return (
     <div style={{ marginTop: -2, paddingBottom: 64 }}>
       {!classesType && api.kind !== "unknown" && <BackRow c={c} label="Front desk" to="/app/business/operations" />}
-      <h1 style={{ margin: 0, fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), color: c.ink }}>{title}</h1>
+      <div className="flex items-start justify-between" style={{ gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), color: c.ink }}>{title}</h1>
+        {/* Market + Share 3.0 B-SH.1: share this week's timetable (Weekly schedule card). */}
+        {!firstLoad && !api.error && !noBusiness && (
+          <BizShareButton
+            label="Share this week's schedule"
+            style={{ margin: "-5px -5px -5px 0" }}
+            emptyHint={shareWeek.count === 0 ? "Nothing to share yet. Add a class to share your schedule." : null}
+            getData={() => ({ t: "schedule", d: shareWeek })}
+          />
+        )}
+      </div>
       <p style={{ margin: "4px 0 0", fontSize: textPx(13), fontWeight: 500, color: c.faint }}>Your schedule for the next 7 days</p>
       {offline && api.loadedAt !== null && (
         <p style={{ margin: "4px 0 0", fontSize: textPx(11.5), color: c.faint }}>Offline. Showing your schedule from {loadedTime}.</p>

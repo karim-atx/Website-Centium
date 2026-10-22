@@ -36,6 +36,10 @@ import { MEASUREMENT_SITES, type MeasurementType } from "../../services/measurem
 import { AddMeasurementsSheet } from "../../components/workout/AddMeasurementsSheet";
 import { MeasurementHistorySheet } from "../../components/workout/MeasurementHistorySheet";
 import { textPx } from "../../theme/textSize";
+import { useClientShare } from "../../components/share/client/useClientShare";
+import { ShareEntryButton } from "../../components/share/client/ShareEntryButton";
+import { prCard } from "../../components/share/client/clientCardModel";
+import { isNewPr, prFacts } from "../../components/share/client/clientShareData";
 
 // Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
 // the scrubbed point's stats), One-rep maxes (the six highest; All opens
@@ -267,6 +271,8 @@ export default function MetricsTab() {
   const stats = hero.length ? pointStats(hero[heroSel].sessions) : null;
   const heroTicks = volumeTicks(Math.max(0, ...hero.map((p) => p.volumeKg)));
   const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, today), "highest"), [workoutSessions, today]);
+  // Market + Share 3.0 C-SH.1 e3PR: a new one-rep max gets the share icon.
+  const share = useClientShare();
   const frequency = useMemo(() => trainingFrequency(workoutSessions, today), [workoutSessions, today]);
   const freqMax = Math.max(3, ...frequency.weeks);
   const dominant = topGroup && dominantShare > 0.45 ? topGroup[0] : null;
@@ -372,14 +378,16 @@ export default function MetricsTab() {
       >
         {lifts.length > 0 && (
           <div className="grid grid-cols-3" style={{ gap: "6px 7px", marginTop: 11 }}>
-            {lifts.slice(0, 6).map((lift) => (
+            {lifts.slice(0, 6).map((lift) => {
+              const fresh = isNewPr(lift.best.date, today);
+              return (
+              <span key={lift.key} className="relative min-w-0 flex">
               <button
-                key={lift.key}
                 onClick={() => setLiftDetail(lift)}
-                className="tap text-left min-w-0"
-                style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55 }}
+                className="tap text-left min-w-0 flex-1"
+                style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55, boxShadow: fresh ? `0 0 0 1.5px ${dark ? "#A991FE" : "#AEA1DC"}` : undefined }}
               >
-                <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500 }}>
+                <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500, paddingRight: fresh ? 26 : 0 }}>
                   {lift.name}
                 </span>
                 <span className="block" style={{ color: c("teal"), fontSize: textPx(15), fontWeight: 800, marginTop: 2 }}>
@@ -387,7 +395,18 @@ export default function MetricsTab() {
                   <span style={{ color: c("tealUnit"), fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
                 </span>
               </button>
-            ))}
+              {fresh && (
+                <ShareEntryButton
+                  size={28}
+                  ring={false}
+                  label={`Share your ${lift.name} personal best`}
+                  onPress={() => share.open(prCard(prFacts(lift, today)))}
+                  style={{ position: "absolute", right: 0, top: 0 }}
+                />
+              )}
+              </span>
+              );
+            })}
           </div>
         )}
       </MetricCard>
@@ -549,6 +568,7 @@ export default function MetricsTab() {
         )}
       </MetricCard>
 
+      {share.sheet}
       <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} />
       <LiftDetailSheet key={liftDetail?.key} lift={liftDetail} onClose={() => setLiftDetail(null)} />
 

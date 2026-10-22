@@ -6,6 +6,12 @@ import { Check, Lock } from "lucide-react";
 import { LEVEL_LABEL, type Badge } from "../../services/achievements";
 import { AchievementTile } from "./AchievementIcon";
 import { formatEarnedAt, keyInk } from "./achievementStyle";
+import { useClientShare } from "../share/client/useClientShare";
+import { ShareGlyph } from "../share/client/ShareEntryButton";
+import { achievementCard } from "../share/client/clientCardModel";
+import { marketPalette } from "../../theme/marketTokens";
+import { textPx } from "../../theme/textSize";
+import { localDayOf } from "../../utils/date";
 
 // One badge, every rung of it. v6 MO1.1.3.1: a centred popup over the page
 // (tap outside, Escape or a swipe down closes; no ×, K1 / S1 / S2), on the
@@ -29,13 +35,24 @@ export const AchievementDetailSheet: React.FC<{
 }> = ({ open, onClose, badge, nextLabel }) => {
   const dark = useIsDark();
   const hc = !!useApp().accessibility.highContrast;
+  // Market + Share 3.0 C-SH.1 e6Achievement: Share an earned achievement.
+  const share = useClientShare();
   if (!badge) return null;
 
   const current = badge.rungs[0].currentValue;
   const earned = badge.earned !== null;
   const art = badge.display;
 
+  const top = badge.earned;
+  const shareTop = () =>
+    top &&
+    share.open(
+      achievementCard({ title: top.title, level: top.level ? LEVEL_LABEL[top.level] : null, threshold: top.threshold, points: top.points, earnedAt: top.earnedAt ? localDayOf(top.earnedAt) : localDayOf(new Date()) }),
+    );
+  const m = marketPalette(dark);
+
   return (
+    <>
     <CentredPopup
       open={open}
       onClose={onClose}
@@ -145,7 +162,21 @@ export const AchievementDetailSheet: React.FC<{
             );
           })}
         </div>
+        {top && (
+          // The popup's Share (Client Sharing line 235): 48 tall, r14, #AEA1DC, 14 / 700, a 14 glyph 7 from the word.
+          <button
+            type="button"
+            onClick={shareTop}
+            className="tap w-full flex items-center justify-center"
+            style={{ marginTop: 18, height: 48, borderRadius: 14, background: m.fill, color: dark ? m.onfill : "#FFFFFF", gap: 7, fontSize: textPx(14), fontWeight: 700 }}
+          >
+            <ShareGlyph size={14} color="currentColor" />
+            Share
+          </button>
+        )}
       </div>
     </CentredPopup>
+    {share.sheet}
+    </>
   );
 };

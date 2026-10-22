@@ -7,6 +7,7 @@ import {
   PHOTO_SCRIM,
   PHOTO_STRIPES,
   STICKER_CHECKER,
+  cardFont,
   cardHeight,
   cardLink,
   cardQrValue,
@@ -17,7 +18,8 @@ import {
   type ShareFormat,
   type ShareStyle,
 } from "./shareCardModel";
-import { cardFont } from "./drawShareCard";
+import { LAYER, LAYER_LINK_ROOM, profileInitials, type LayerPlacement } from "./shareLayerModel";
+import { photoRect } from "./overlayModel";
 
 // Text width in the card font, for fitting the profile link (fitLinkSize). The
 // export measures the same way, so the preview and the PNG agree.
@@ -59,6 +61,12 @@ export interface ShareCardProps {
   photoUrl?: string | null;
   /** Sticker drawn on the transparency checker (the editor) instead of over a photo. */
   onChecker?: boolean;
+  /**
+   * P-SH.3 ADDED "Check on a light background": the sticker with no
+   * background and no shadow, so the editor's light checker shows through
+   * (stLight: the card's bg transparent, sh none). Preview only.
+   */
+  bare?: boolean;
   /** No shadow (thumbnails). */
   flat?: boolean;
   className?: string;
@@ -78,7 +86,7 @@ const Leaf: React.FC<{ h: number; col: string; op: number }> = ({ h, col, op }) 
   </svg>
 );
 
-export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, style, width: W, client = "A client", qr = true, hide, photoUrl, onChecker, flat, className }) => {
+export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, style, width: W, client = "A client", qr = true, hide, photoUrl, onChecker, bare, flat, className }) => {
   // Re-measure the link once Manrope has loaded (the first render may measure the fallback face).
   const [, setFontsReady] = useState(false);
   useEffect(() => {
@@ -103,7 +111,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
   const numCol = stk ? "#FFFFFF" : P.num;
   const line = stk ? "rgba(255,255,255,0.4)" : P.line;
   const photoBg = photoUrl ? `${PHOTO_SCRIM}, url("${photoUrl}") center / cover no-repeat` : `${PHOTO_SCRIM}, ${PHOTO_STRIPES}`;
-  const bg = stk ? (onChecker ? STICKER_CHECKER : photoBg) : style === "P" ? photoBg : P.bg;
+  const bg = stk ? (bare ? "transparent" : onChecker ? STICKER_CHECKER : photoBg) : style === "P" ? photoBg : P.bg;
   const stats = c.stats.filter((_, i) => !(hide && hide.includes(i))).slice(0, 3);
   const pad = (sq ? 6.5 : 7) * u;
   const center = stk ? ("center" as const) : undefined;
@@ -276,7 +284,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         background: bg,
         fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
         WebkitFontSmoothing: "antialiased",
-        boxShadow: flat ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)",
+        boxShadow: flat || (stk && bare) ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)",
         textAlign: "left",
       }}
     >
@@ -314,6 +322,217 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
           {foot}
         </div>
       )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Market + Share 3.0 · P-SH.3 ADDED "Your photo": the card's content as the
+// overlay editor's transparent layer (Professional Sharing Screens.dc.html
+// lines 141 to 147). Values come from drawShareCard's LAYER so this DOM layer
+// and the export's layoutShareLayer() are one design; the white text and the
+// 0 1px 8px rgba(0,0,0,0.42) text shadow come from the OverlayEditor's
+// "client" chrome. A picture of the card, so sizes are px (not textPx): it
+// looks the same with Larger text, as the exported image does.
+// ---------------------------------------------------------------------------
+
+export interface ShareLayerProps {
+  spec: CardSpec;
+  pro: CardPro;
+  client?: string;
+  qr?: boolean;
+  hide?: number[];
+}
+
+type LT = { size: number; weight: number; lh?: number; ls?: number };
+const lt = (s: LT, extra?: React.CSSProperties): React.CSSProperties => ({
+  display: "block",
+  fontSize: s.size,
+  fontWeight: s.weight,
+  lineHeight: s.lh ?? "normal",
+  letterSpacing: s.ls ? `${s.ls}em` : undefined,
+  ...extra,
+});
+
+export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "A client", qr = true, hide }) => {
+  // Re-measure the link once Manrope has loaded.
+  const [, setFontsReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) setFontsReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const L = LAYER;
+  const stats = c.stats.filter((_, i) => !(hide && hide.includes(i))).slice(0, 3);
+  const showLink = qr && !!pro.handle;
+  const link = pro.handle ? cardLink(pro.handle) : "";
+  const linkSize = showLink ? fitLinkSize(L.link.size, measureText(link, cardFont(L.link.weight, L.link.size)), LAYER_LINK_ROOM) : L.link.size;
+  const subOp = { opacity: L.sub };
+
+  let hero: React.ReactNode = null;
+  if (c.hero === "num") {
+    hero = (
+      <>
+        <div style={{ display: "flex", alignItems: "baseline", gap: L.big.gap, marginTop: L.big.mt }}>
+          <span style={lt(L.big)}>{c.big}</span>
+          {c.unit ? <span style={lt(L.unit)}>{c.unit}</span> : null}
+        </div>
+        <div style={lt(L.subject, { marginTop: L.subject.mt })}>{c.subject}</div>
+        {c.line ? <div style={lt(L.line, { marginTop: L.line.mt, ...subOp })}>{fillClient(c.line, client)}</div> : null}
+      </>
+    );
+  } else if (c.hero === "quote") {
+    hero = (
+      <>
+        {c.stars ? (
+          <div style={{ display: "flex", gap: L.stars.gap, marginTop: L.stars.mt }}>
+            {Array.from({ length: c.stars }, (_, i) => (
+              <Star key={i} s={L.stars.size} col={L.stars.color} />
+            ))}
+          </div>
+        ) : null}
+        <div style={lt(L.quote, { marginTop: c.stars ? L.quote.mt : L.stars.mt })}>{`"${c.quote ?? ""}"`}</div>
+        {c.by ? <div style={lt(L.by, { marginTop: L.by.mt, ...subOp })}>{c.by}</div> : null}
+      </>
+    );
+  } else if (c.hero === "title") {
+    hero = (
+      <>
+        <div style={lt(L.title, { marginTop: L.title.mt })}>{c.title}</div>
+        {c.meta ? <div style={lt(L.meta, { marginTop: L.meta.mt, ...subOp })}>{fillClient(c.meta, client)}</div> : null}
+      </>
+    );
+  } else if (c.hero === "profile") {
+    const a = L.avatar;
+    hero = (
+      <>
+        <span
+          style={{
+            width: a.size,
+            height: a.size,
+            marginTop: a.mt,
+            borderRadius: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: a.fill,
+            border: `${a.border}px solid ${a.ring}`,
+            fontSize: a.text,
+            fontWeight: 800,
+            lineHeight: "normal",
+            textShadow: "none",
+          }}
+        >
+          {profileInitials(pro.name)}
+        </span>
+        <div style={lt(L.pname, { marginTop: L.pname.mt })}>{pro.name}</div>
+        {c.head ? <div style={lt(L.head, { marginTop: L.head.mt })}>{c.head}</div> : null}
+        {c.role ? <div style={lt(L.role, { marginTop: L.role.mt, ...subOp })}>{c.role}</div> : null}
+      </>
+    );
+  }
+
+  return (
+    <div style={{ width: L.width, fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif", WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "left", color: "#FFFFFF" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: L.mark.gap }}>
+        <CentiumMark height={L.mark.h} framing="png" label="Centium" style={{ width: L.mark.w, filter: `drop-shadow(0 ${L.mark.drop.y}px ${L.mark.drop.blur}px ${L.mark.drop.color})` }} />
+        <div style={{ minWidth: 0 }}>
+          <span style={lt(L.name, { whiteSpace: "nowrap" })}>{pro.name}</span>
+          {pro.handle ? <span style={lt(L.handle, { whiteSpace: "nowrap", ...subOp })}>{`@${pro.handle} on Centium`}</span> : null}
+        </div>
+      </div>
+      <div style={lt(L.eyebrow, { marginTop: L.eyebrow.mt, textTransform: "uppercase" })}>{c.eyebrow}</div>
+      {hero}
+      {c.extra === "leaves" ? (
+        <div style={{ display: "flex", gap: L.leaves.gap, marginTop: L.leaves.mt }}>
+          {Array.from({ length: 7 }, (_, i) => (
+            <Leaf key={i} h={L.leaves.h} col={L.leaves.color} op={1} />
+          ))}
+        </div>
+      ) : null}
+      {c.extra === "slots" && c.slots?.length ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: L.slots.gap, marginTop: L.slots.mt }}>
+          {c.slots.map((x) => (
+            <span
+              key={x}
+              style={{ borderRadius: 9999, padding: `${L.slots.padY}px ${L.slots.padX}px`, fontSize: L.slots.size, fontWeight: L.slots.weight, lineHeight: "normal", background: L.slots.fill, border: `1px solid ${L.slots.border}`, whiteSpace: "nowrap" }}
+            >
+              {x}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {stats.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))`, gap: L.stats.gap, marginTop: L.stats.mt, paddingTop: L.stats.padTop, borderTop: `1px solid ${L.stats.rule}` }}>
+          {stats.map((s) => (
+            <div key={`${s.key}-${s.value}`} style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: L.stats.starGap, whiteSpace: "nowrap", fontSize: L.stats.val.size, fontWeight: L.stats.val.weight, lineHeight: L.stats.val.lh, letterSpacing: `${L.stats.val.ls}em` }}>
+                {s.key === "rating" ? <Star s={L.stats.star} col={L.stars.color} /> : null}
+                {s.value}
+              </div>
+              <div style={lt(L.stats.lab, { marginTop: L.stats.lab.mt, ...subOp })}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {showLink ? (
+        <div style={{ display: "flex", alignItems: "center", gap: L.qr.gap, marginTop: L.qr.mt, maxWidth: L.width }}>
+          <span style={{ flex: "none", display: "flex", background: "#FFFFFF", borderRadius: L.qr.radius, padding: L.qr.pad, boxShadow: `0 ${L.qr.drop.y}px ${L.qr.drop.blur}px ${L.qr.drop.color}` }}>
+            <ShareQr value={cardQrValue(pro.handle!)} size={L.qr.size} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <span style={lt({ ...L.link, size: linkSize }, { whiteSpace: "nowrap" })}>{link}</span>
+            <span style={lt(L.scan, subOp)}>Scan to see my profile</span>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+/**
+ * The composed Your photo card at any width (the share options' preview):
+ * the editor's 220-wide frame, the photo with its crop and the layer at its
+ * transform, scaled down as a whole, so it shows what the export draws.
+ */
+export const ShareLayerComposite: React.FC<ShareLayerProps & { photoUrl: string; placement: LayerPlacement; width: number }> = ({ photoUrl, placement, width, ...layer }) => {
+  const { frame, crop, transform: t } = placement;
+  const k = width / frame.w;
+  const [img, setImg] = useState<{ w: number; h: number } | null>(null);
+  const r = img ? photoRect(img, frame, crop) : null;
+  return (
+    <div
+      role="img"
+      aria-label={`${layer.spec.eyebrow} card`}
+      style={{ position: "relative", flex: "none", width, height: Math.round(frame.h * k), overflow: "hidden", borderRadius: 10, background: "#2A2B31", boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}
+    >
+      <div style={{ position: "absolute", left: 0, top: 0, width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0" }}>
+        <img
+          src={photoUrl}
+          alt=""
+          draggable={false}
+          onLoad={(e) => setImg({ w: e.currentTarget.naturalWidth || 1, h: e.currentTarget.naturalHeight || 1 })}
+          style={r ? { position: "absolute", left: r.x, top: r.y, width: r.w, height: r.h, maxWidth: "none" } : { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0 }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: t.x,
+            top: t.y,
+            width: LAYER.width,
+            transform: `translate(-50%,-50%) scale(${t.scale}) rotate(${t.rotation}deg)`,
+            transformOrigin: "50% 50%",
+            color: "#FFFFFF",
+            textShadow: `0 ${LAYER.shadow.y}px ${LAYER.shadow.blur}px ${LAYER.shadow.color}`,
+          }}
+        >
+          <ShareLayer {...layer} />
+        </div>
+      </div>
     </div>
   );
 };

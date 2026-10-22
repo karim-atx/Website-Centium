@@ -879,6 +879,19 @@ html.reduce-motion .rm-fade-in {
     opacity: 1;
   }
 }
+/* Market + Share 3.0: the ConfirmationStrip's entrance (the screen files'
+   cmSlideUp: 420ms cubic-bezier(0.22,1,0.36,1), translateY 18 to 0, opacity
+   0 to 1). Reduce motion cuts it to its end state (the rules above). */
+@keyframes cmSlideUp {
+  from {
+    transform: translateY(18px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 /* Skeleton pulse (Part B motion.skeletonPulse, X-32): 1.2 s, static under
    Reduce motion. Use `animate-skeleton-pulse` (tailwind.config.js). */
 html.reduce-motion .animate-skeleton-pulse {

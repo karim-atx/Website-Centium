@@ -45,6 +45,9 @@ import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove"
 import { HourlyBars } from "../../../components/health/metric/HourlyBars";
 import { activityByDay, sourceName, useActivityDaily, useActivityHourly } from "../../../services/health-metrics/b1";
 import { hourLabel12 } from "../../../utils/time12";
+import { useClientShare } from "../../../components/share/client/useClientShare";
+import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
+import { stepsCard } from "../../../components/share/client/clientCardModel";
 
 // HE1.2 Steps (Week), HE1.2.s, HE1.2.e, HE1.2.1, HE1.2.d, HE1.2.m, HE1.2.y.
 //
@@ -103,6 +106,19 @@ export default function StepsPage() {
   // HA-12 (B1 hidden_synced_readings): Delete on a synced day ("Remove from Centium?").
   const syncedRemove = useSyncedRemove("steps", stepAnchor("month", today, -1), today, setToast);
   const goal = stepsGoal;
+  // Market + Share 3.0 C-SH.1 e7Steps: today's steps, shareable once the goal is reached.
+  const share = useClientShare();
+  const stepsToday = byDay[today] ?? null;
+  const shareButton = (
+    <ShareEntryButton
+      label="Share your steps"
+      disabledHint={stepsToday === null ? "Nothing to share yet. Sync your steps first." : stepsToday < goalOn(today) ? "Nothing to share yet. Reach your step goal first." : null}
+      onPress={() =>
+        stepsToday !== null &&
+        share.open(stepsCard({ date: today, steps: stepsToday, goal: goalOn(today), distanceM: activity[today]?.distanceM ?? null, activeMin: activity[today]?.activeMinutes ?? null }))
+      }
+    />
+  );
   const p = periodOf(range, anchor);
   const current = isCurrentPeriod(p, today);
   const rows = valuesIn(byDay, p);
@@ -120,6 +136,7 @@ export default function StepsPage() {
   ];
   const sheets = (
     <>
+      {share.sheet}
       <StepsGoalSheet
         open={goalOpen}
         goal={goal}
@@ -159,6 +176,7 @@ export default function StepsPage() {
         range={range}
         onRangeChange={setRange}
         menu={menu}
+        headerAction={shareButton}
         cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
         {metricsError ? <ErrorCard onRetry={retryMetrics} /> : <SyncedNoDevice metric="steps" icon={Footprints} bodyName="Steps" footName="steps" range={range} today={today} />}
@@ -316,6 +334,7 @@ export default function StepsPage() {
       range={range}
       onRangeChange={setRange}
       menu={menu}
+      headerAction={shareButton}
       cta={{ label: "Set step goal", icon: <Target size={16} />, onClick: () => setGoalOpen(true) }}
     >
       <StepsHero
