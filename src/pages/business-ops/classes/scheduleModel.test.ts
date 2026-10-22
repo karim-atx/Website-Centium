@@ -91,3 +91,60 @@ test("series cards: one per series, next session and the count still to come (AN
   assert.equal(cards[1].typeLine, "Yoga · Repeats every 2 weeks on Thu");
   assert.equal(cards[1].whenLine, "Next: 2026-10-08 · 11:30 AM–12:45 PM · weekly");
 });
+
+test("B-MA.6: strip, caps, card words and the Bookings / cancel lines", async () => {
+  const m = await import("./scheduleModel");
+  assert.equal(m.dayCaps("2026-10-16"), "Friday, October 16");
+  assert.equal(m.weekOf("2026-10-12"), "Week of Oct 12");
+  const strip = m.weekStrip([S({ date: "2026-10-16" }), S({ date: "2026-10-16" }), S({ date: "2026-10-16", cancelled: true }), S({ date: "2026-10-12" })], "2026-10-12");
+  assert.deepEqual(strip.map((d) => `${d.w} ${d.n} ${d.count}`), ["MON 12 1", "TUE 13 0", "WED 14 0", "THU 15 0", "FRI 16 2", "SAT 17 0", "SUN 18 0"]);
+  assert.equal(m.classesCount(1), "1 class");
+  assert.equal(m.classesCount(6), "6 classes");
+  assert.equal(m.fillText({ booked: 16, maxCapacity: 16 }), "Full");
+  assert.equal(m.fillText({ booked: 9, maxCapacity: 18 }), "9 of 18");
+  assert.equal(m.fillPct({ booked: 9, maxCapacity: 18 }), 50);
+  assert.equal(m.fillPct({ booked: 3, maxCapacity: 0 }), 0);
+  assert.equal(m.durationText("18:30", "19:15"), "45 min");
+  assert.equal(m.durationText("07:00", "08:00"), "60 min");
+  assert.deepEqual(m.durationOptions(50).slice(0, 7), [15, 20, 30, 45, 50, 60, 75]);
+  assert.equal(m.everyText([5]), "Every Friday");
+  assert.equal(m.everyText([3, 1]), "Every Mon and Wed");
+  assert.equal(m.everyText([5], 2), "Every 2 weeks on Friday");
+  assert.equal(m.everyText([1, 2, 3, 4, 5, 6, 7]), "Every day");
+  assert.equal(m.repeatsLine({ weekdays: [5], intervalWeeks: 1 }), "Repeats every Friday");
+  assert.equal(m.repeatsLine(null), "One-time class");
+  assert.equal(m.whenText("2026-10-16", "18:30"), "Fri, Oct 16, 6:30 PM");
+  assert.equal(m.cancelText("2026-10-16", "18:30", 14), "Fri, Oct 16, 6:30 PM. The 14 bookings for this session will be cancelled.");
+  assert.equal(m.cancelText("2026-10-16", "18:30", 1), "Fri, Oct 16, 6:30 PM. The 1 booking for this session will be cancelled.");
+  assert.equal(m.notifyText(14, "members"), "Notify the 14 booked members");
+  assert.equal(m.notifyText(1, "clients"), "Notify the 1 booked client");
+  assert.equal(m.cancelExtras(2, 1), "2 on the waitlist are told too. 1 paid booking stays paid. Record any refund in Revenue.");
+  assert.equal(m.payMethodText("cash", 15), "Cash");
+  assert.equal(m.payMethodText("membership", null), "Membership");
+  assert.equal(m.payMethodText("whish", 15), "");
+  assert.equal(m.payMethodText(null, 0), "Free");
+  assert.equal(m.payMethodText("class_pack", 0), "Class pack");
+});
+
+test("B-MA.6: the Centium line and the card flag", async () => {
+  const m = await import("./scheduleModel");
+  const base = { capacity: 20, booked: 14, centiumSpots: null, listed: true, listingActive: true, fromCentium: 0, ended: false, cancelled: false };
+  assert.deepEqual(m.centiumLine(base), { text: "6 open on Centium", tone: "teal", open: 6 });
+  assert.deepEqual(m.centiumLine({ ...base, centiumSpots: 4, fromCentium: 1 }), { text: "3 open on Centium", tone: "teal", open: 3 });
+  assert.deepEqual(m.centiumLine({ ...base, centiumSpots: 4, fromCentium: null }), { text: "On Explore", tone: "teal", open: 0 });
+  assert.deepEqual(m.centiumLine({ ...base, listed: false }), { text: "Members only", tone: "faint", open: 0 });
+  assert.deepEqual(m.centiumLine({ ...base, listingActive: false }), { text: "Listing is off", tone: "faint", open: 0 });
+  assert.equal(m.centiumLine({ ...base, ended: true }), null);
+  const now = new Date("2026-10-14T01:00:00");
+  assert.equal(m.cardFlag(S({ cancelled: true }), null, now)?.label, "Cancelled");
+  assert.equal(m.cardFlag(S({}), "noinst", now)?.label, "No instructor");
+  assert.equal(m.cardFlag(S({ booked: 17 }), null, now)?.label, "Almost full");
+  assert.equal(m.cardFlag(S({ booked: 20 }), null, now), null);
+});
+
+test("B-MA.6: price words", async () => {
+  const m = await import("./scheduleModel");
+  assert.equal(m.priceText("$12"), "$12");
+  assert.equal(m.priceText("$0"), "Free");
+  assert.equal(m.priceText(""), "Free");
+});

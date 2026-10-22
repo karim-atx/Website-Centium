@@ -79,20 +79,23 @@ export function marketCategoryFor(businessType: string | null | undefined): Offe
 
 export interface ProductDraft {
   name: string;
-  price: number;
+  /** null = no price shown (Market + Share 3.0 W3: a gym or class business's showcase item may have none, as the old Offerings form allowed). */
+  price: number | null;
   description: string;
   /** B11 fields, sent only when `stockShipped`. stock null = not tracked. */
   stock: number | null;
   visible: boolean;
   categoryId: string | null;
   imageUrl: string | null;
+  /** The Explore category a new item is listed under (W3: a gym or class business picks it, as the old Offerings form did); unset = by business type. */
+  category?: OfferingCategory;
 }
 
 export async function createProduct(businessId: string, businessType: string | null, d: ProductDraft, stockShipped: boolean): Promise<Write<Product>> {
   const payload: Row = {
     business_id: businessId,
     title: d.name.trim(),
-    category: marketCategoryFor(businessType),
+    category: d.category ?? marketCategoryFor(businessType),
     price: d.price,
     description: d.description.trim() || null,
   };

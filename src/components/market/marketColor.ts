@@ -16,6 +16,36 @@ export function liftInk(hex: string): string {
   return `rgb(${ch((n >> 16) & 255)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
 }
 
+/** WCAG relative luminance of a #RRGGBB colour. */
+export function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+}
+
+/** Contrast ratio of white text on a #RRGGBB fill. */
+export const whiteContrast = (hex: string): number => 1.05 / (luminance(hex) + 0.05);
+
+/**
+ * The fill darkened (mixed toward black in 1% steps) just enough for white
+ * text to reach `ratio` (W2 lead decision: the SegmentedTicketStrip's DARK
+ * active fill must reach 4.5:1 under white; the light fill stays as drawn).
+ * A fill that already reaches it comes back unchanged, as #RRGGBB.
+ */
+export function darkenForWhite(hex: string, ratio = 4.5): string {
+  const n = parseInt(hex.slice(1), 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const out = (k: number) => "#" + rgb.map((v) => Math.round(v * (1 - k)).toString(16).padStart(2, "0")).join("").toUpperCase();
+  for (let i = 0; i <= 100; i++) {
+    const h = out(i / 100);
+    if (whiteContrast(h) >= ratio) return h;
+  }
+  return "#000000";
+}
+
 // ---------------------------------------------------------------------------
 // TicketStub tones (Client Explore Screens `STUB`, Professional Marketplace
 // Screens `STEP`).

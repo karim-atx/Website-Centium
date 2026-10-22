@@ -1,135 +1,262 @@
-import React from "react";
-import clsx from "clsx";
-import {
-  CalendarRange,
-  DoorOpen,
-  GraduationCap,
-  Repeat,
-  Sparkles,
-  Sun,
-  Ticket,
-  type LucideIcon,
-} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { EllipsisVertical, UserRound } from "lucide-react";
+import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
+import { FOCUS_CSS } from "../../../components/market/usePress";
 import { useIsDark } from "../../../hooks/useIsDark";
-import type { PlanStatus } from "../../../services/membership-plans";
-import { STATUS_LABEL, type PlanIconKey } from "./planModel";
+import { linePx, textPx } from "../../../theme/textSize";
+import { marketPalette, type MarketPalette } from "../../../theme/marketTokens";
+import type { MembershipPlanRow } from "../../../services/membership-plans";
+import { isMaskedLabel } from "../../../services/venues/consoleLogic";
+import { cardMeta, initials, memberLine, statusChip, type CardFigures, type ChipTone } from "./planModel";
+import type { PlanAction } from "./PlansContext";
 
-// v6 Batch 4 · Plans: the OpsTabsV4 pieces the plan list, page and sheet
-// share. Colours are the source's L / D palette (OpsTabsV4 logic 183-184)
-// through the app's tokens wherever a token holds the same value, so the five
-// colour themes, dark, Larger text and High contrast apply:
-//   ink / inkSoft / faint / tert = charcoal / -soft / -faint / -tertiary
-//   card cream-card · soft and input cream-soft · page cream
-//   border rgba(36,31,27,0.11) / rgba(245,243,250,0.08) = charcoal/[0.11] / [0.08]
-//   divider rgba(36,31,27,0.06) / rgba(245,243,250,0.06) = charcoal/[0.06]
-//   primary / fill / onFill / pale / pDark = primary / primary-fill /
-//   on-primary-fill / primary-pale / primary-dark
-//   good / goodBg, high / highBg = status-good(-bg), status-high(-bg)
-//   caution #B07D16 / #E0B360 = caution-strong; cautionBg #F6E9C9 / #332B1A
-//   (no token: literal, see useTones); teal ring #6F9993 / #A2C8C2 (literal).
+// Market + Share 3.0 · W3 · B-MA.5 pieces (Business Marketplace Screens lines
+// 315–335, `bizPlans`, `members`; B-MA.5.1 `editList` menu, lines 360–367),
+// literal values, light = the board, dark = its [data-cm="dark"] palette
+// through marketPalette:
+// - plan card: radius 20, --card, 1px --border (1.5px --fill while its strip
+//   shows), padding 14 16; row 1 (gap 10) name 14 / 800 (flex 1), price
+//   14 / 800, kebab 32 × 32 radius 10 (margin -6 -8 -6 0, --ink2, the 18 / 2.2
+//   ellipsis; --pale while its menu is open) on a 44 target; row 2 11.5
+//   --faint (margin-top 2) "{duration} · {included}"; row 3 (margin-top 10,
+//   gap 8) the status chip 10.5 / 800 radius 999 padding 2 8 and the members
+//   line 11.5 --faint. The whole card opens the plan page.
+// - the menu: the app PopupMenu (its default card is the drawn one: 168
+//   wide, padding 8, rows radius 8 padding 9 10 12.5 / 500 on #FAFAFB with a
+//   1px #E5E6EB border, Delete in rgb(192,57,43)).
+// - member rows: padding 11 16, gap 12, 0.5px --div between; avatar 34
+//   --tealbg / --tealink 12 / 800; name 13.5 / 700; plan 11.5 --faint;
+//   "Until {date}" 11.5 --faint.
 
-export const ICONS: Record<PlanIconKey, LucideIcon> = {
-  repeat: Repeat,
-  "calendar-range": CalendarRange,
-  sun: Sun,
-  ticket: Ticket,
-  sparkles: Sparkles,
-  "door-open": DoorOpen,
-  "graduation-cap": GraduationCap,
-};
-
-export const BORDER = "border-charcoal/[0.11] dark:border-charcoal/[0.08]";
-export const DIVIDER = "border-charcoal/[0.06]";
-
-/** The literal OpsTabsV4 values no token holds. */
-export function useTones() {
-  const dark = useIsDark();
-  return {
-    dark,
-    cautionBg: dark ? "#332B1A" : "#F6E9C9",
-    caution: "rgb(var(--c-caution-strong))",
-    cautionBd: dark ? "rgba(224,179,96,0.45)" : "rgba(217,164,65,0.55)",
-    teal: dark ? "#A2C8C2" : "#6F9993",
-    ctaShadow: dark ? "0 10px 24px rgba(0,0,0,0.5)" : "0 10px 24px rgb(var(--th-5f5093) / 0.35)",
-  };
+export function usePlanColors(): MarketPalette {
+  return marketPalette(useIsDark());
 }
 
-/** Status pill (logic 403): row 10/800 pad 2 7, page 10.5/800 pad 2 8. */
-export const StatusPill: React.FC<{ status: Exclude<PlanStatus, "archived">; size?: "row" | "page" }> = ({ status, size = "row" }) => {
-  const t = useTones();
-  const tone =
-    status === "active"
-      ? { background: "rgb(var(--c-status-good-bg))", color: "rgb(var(--c-status-good))" }
-      : status === "paused"
-        ? { background: t.cautionBg, color: t.caution }
-        : { background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-faint))" };
+export function chipColors(m: MarketPalette, tone: ChipTone): { bg: string; ink: string } {
+  return tone === "good" ? { bg: m.goodbg, ink: m.good } : tone === "warn" ? { bg: m.cautionbg, ink: m.caution } : { bg: m.soft, ink: m.faint };
+}
+
+/** The status chip: 10.5 / 800, radius 999, padding 2 8. */
+export const StatusChip: React.FC<{ plan: Pick<MembershipPlanRow, "status"> }> = ({ plan }) => {
+  const m = usePlanColors();
+  const s = statusChip(plan.status);
+  const c = chipColors(m, s.tone);
   return (
-    <span
-      // Line boxes as measured: row pill 17 tall (OP1-022 row 14), page pill 15 (OP1-037 row 4).
-      className={clsx("whitespace-nowrap shrink-0 rounded-full font-extrabold", size === "page" ? "text-[10.5px] leading-[11px]" : "text-[10px] leading-[13px]")}
-      style={{ padding: size === "page" ? "2px 8px" : "2px 7px", ...tone }}
-    >
-      {STATUS_LABEL[status]}
+    <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: c.bg, color: c.ink, whiteSpace: "nowrap", lineHeight: "normal" }}>
+      {s.label}
     </span>
   );
 };
 
+/** The plan menu's options: the drawn Edit plan · Pause plan · Delete plan, with the kept live actions between Pause and Delete. */
+export function menuOptions(plan: MembershipPlanRow, offline: boolean): PopupMenuOption<PlanAction>[] {
+  if (plan.dbStatus === "archived") {
+    return [
+      { value: "restore", label: "Restore plan", disabled: offline },
+      { value: "duplicate", label: "Duplicate plan", disabled: offline },
+      { value: "delete", label: "Delete plan", destructive: true, disabled: offline },
+    ];
+  }
+  const paused = plan.dbStatus === "paused";
+  return [
+    { value: "edit", label: "Edit plan" },
+    { value: paused ? "resume" : "pause", label: paused ? "Resume plan" : "Pause plan", disabled: offline },
+    { value: plan.visibleOnExplore ? "hide" : "show", label: plan.visibleOnExplore ? "Hide from Explore" : "Show on Explore", disabled: offline },
+    { value: "duplicate", label: "Duplicate plan", disabled: offline },
+    { value: "archive", label: "Archive plan", disabled: offline },
+    { value: "delete", label: "Delete plan", destructive: true, disabled: offline },
+  ];
+}
+
 /**
- * "Soon" tag (OP1-167 row 5): 10/800, pill r999, pad 2 7, soft / faint
- * (#F5F5F6 / #8C8378 · #242730 / #B8B3C7), the plan list's Hidden pill.
+ * The kebab and its PopupMenu. Keyboard: the menu takes focus on its first
+ * row, Escape closes it and focus returns to the kebab.
  */
-export const SoonTag: React.FC = () => (
-  <span className="whitespace-nowrap rounded-full bg-cream-soft text-charcoal-faint text-[10px] font-extrabold" style={{ padding: "2px 7px" }}>
-    Soon
-  </span>
-);
-
-/** Figures card (OP1-022 rows 5-9, OP1-037 rows 8-9): two cells and a line. */
-export const FiguresCard: React.FC<{
-  cells: { label: string; value: string; delta?: string }[];
-  line?: string;
-  className?: string;
-  style?: React.CSSProperties;
-}> = ({ cells, line, className, style }) => (
-  <div className={clsx("bg-cream-card border overflow-hidden", BORDER, className)} style={{ borderRadius: 22, ...style }}>
-    <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)" }}>
-      {cells.map((c, i) => (
-        <div key={c.label} className={clsx("min-w-0", i > 0 && clsx("border-l", DIVIDER))} style={{ padding: "14px 14px 12px" }}>
-          <p className="text-[11.5px] font-bold text-charcoal-faint whitespace-nowrap">{c.label}</p>
-          <p className="flex items-baseline whitespace-nowrap" style={{ gap: 6, marginTop: 4 }}>
-            <span
-              className={clsx("text-[30px] font-extrabold leading-[34px] tabular-nums", c.value === "–" ? "text-charcoal-tertiary" : "text-charcoal")}
-              style={{ letterSpacing: "-0.03em" }}
-            >
-              {c.value}
-            </span>
-            {c.delta && <span className="text-[12px] font-extrabold text-status-good">{c.delta}</span>}
-          </p>
-        </div>
-      ))}
-    </div>
-    {line && (
-      <p className={clsx("text-[12px] leading-[17px] text-charcoal-soft border-t", DIVIDER)} style={{ padding: "10px 14px 12px", textWrap: "pretty" } as React.CSSProperties}>
-        {line}
-      </p>
-    )}
-  </div>
-);
-
-/** Grey loading block (OURS: soft #F5F5F6 / #242730, the skeleton pulse). */
-export const Bar: React.FC<{ w: number | string; h: number; r?: number; className?: string; style?: React.CSSProperties }> = ({ w, h, r = 6, className, style }) => (
-  <span aria-hidden className={clsx("block bg-cream-soft animate-skeleton-pulse", className)} style={{ width: w, height: h, borderRadius: r, ...style }} />
-);
-
-/** OURS inline error / offline card (OP1-022 O2, OP1-037 O2). */
-export const ErrorCard: React.FC<{ title: string; body?: string; onRetry?: () => void; className?: string }> = ({ title, body, onRetry, className }) => (
-  <div role="alert" className={clsx("bg-cream-card border", BORDER, className)} style={{ borderRadius: 20, padding: 14 }}>
-    <p className="text-[13px] font-extrabold text-charcoal">{title}</p>
-    {body && <p className="text-[12px] leading-[17px] text-charcoal-soft" style={{ marginTop: 2 }}>{body}</p>}
-    {onRetry && (
-      <button type="button" onClick={onRetry} className="tap text-[12.5px] font-extrabold text-primary-dark" style={{ minHeight: 44 }}>
-        Retry
+export const PlanMenuButton: React.FC<{ plan: MembershipPlanRow; offline: boolean; onAction: (a: PlanAction) => void; style?: React.CSSProperties }> = ({ plan, offline, onAction, style }) => {
+  const m = usePlanColors();
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const open = !!anchor;
+  const btn = useRef<HTMLButtonElement | null>(null);
+  const setOpen = (v: boolean) => setAnchor(v ? btn.current : null);
+  useEffect(() => {
+    if (!open) return;
+    const t = window.setTimeout(() => (document.querySelector('[role="menu"] button:not(:disabled)') as HTMLElement | null)?.focus(), 30);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+        btn.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [open]);
+  return (
+    <>
+      <button
+        ref={btn}
+        type="button"
+        aria-label={`Plan options: ${plan.name}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="tap market-focus"
+        style={{
+          width: 32,
+          height: 32,
+          margin: "-6px -8px -6px 0",
+          borderRadius: 10,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: open ? m.pale : "transparent",
+          color: m.ink2,
+          border: 0,
+          padding: 0,
+          flexShrink: 0,
+          cursor: "pointer",
+          position: "relative",
+          zIndex: 1,
+          ...style,
+        }}
+      >
+        <EllipsisVertical size={18} strokeWidth={2.2} aria-hidden />
       </button>
-    )}
-  </div>
-);
+      <PopupMenu
+        open={open}
+        anchor={anchor}
+        onClose={() => {
+          setOpen(false);
+          btn.current?.focus();
+        }}
+        // The drawn rows are 37 tall: 12.5 on its normal 17 line + 9 / 9 padding + the 1px border.
+        rowLineHeight={17}
+        options={menuOptions(plan, offline)}
+        onSelect={(a) => onAction(a)}
+      />
+    </>
+  );
+};
+
+/** One B-MA.5 plan card. */
+export const PlanCard: React.FC<{
+  plan: MembershipPlanRow;
+  figures: CardFigures;
+  highlighted: boolean;
+  offline: boolean;
+  onOpen: () => void;
+  onAction: (a: PlanAction) => void;
+}> = ({ plan, figures, highlighted, offline, onOpen, onAction }) => {
+  const m = usePlanColors();
+  const line = memberLine(plan, figures);
+  const meta = cardMeta(plan);
+  const archived = plan.dbStatus === "archived";
+  return (
+    <div
+      data-plan-card={plan.id}
+      tabIndex={-1}
+      className="market-focus"
+      style={{
+        position: "relative",
+        borderRadius: 20,
+        background: m.card,
+        border: highlighted ? `1.5px solid ${m.fill}` : `1px solid ${m.border}`,
+        padding: "14px 16px",
+        color: m.ink,
+        lineHeight: "normal",
+        opacity: archived ? 0.6 : 1,
+      }}
+    >
+      {/* The whole card opens the plan page (role button on the board); the kebab sits above this button. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${plan.name}, ${plan.price}${meta ? `, ${meta}` : ""}, ${statusChip(plan.status).label}${line ? `, ${line}` : ""}. Open plan`}
+        className="market-focus"
+        style={{ position: "absolute", inset: 0, width: "100%", borderRadius: 19, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "none", position: "relative" }}>
+        <div aria-hidden style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, overflowWrap: "anywhere" }}>
+          {plan.name}
+        </div>
+        <span aria-hidden style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap" }}>
+          {plan.price}
+        </span>
+        <PlanMenuButton plan={plan} offline={offline} onAction={onAction} style={{ pointerEvents: "auto" }} />
+      </div>
+      {meta ? (
+        <div aria-hidden style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 2, pointerEvents: "none", position: "relative" }}>
+          {meta}
+        </div>
+      ) : null}
+      <div aria-hidden style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, pointerEvents: "none", position: "relative", flexWrap: "wrap" }}>
+        <StatusChip plan={plan} />
+        {line ? <span style={{ fontSize: textPx(11.5), color: m.faint }}>{line}</span> : null}
+      </div>
+    </div>
+  );
+};
+
+/** The member rows card (radius 24) with the board's rows. */
+export const MemberRows: React.FC<{
+  rows: { id: string; label: string; plan: string; until: string; minor: boolean }[];
+  footer?: React.ReactNode;
+}> = ({ rows, footer }) => {
+  const m = usePlanColors();
+  return (
+    <div style={{ borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden", color: m.ink, lineHeight: "normal" }}>
+      {rows.map((r, i) => {
+        const masked = isMaskedLabel(r.label);
+        return (
+          <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderTop: i ? `0.5px solid ${m.div}` : "0" }}>
+            <span
+              aria-hidden
+              style={{ width: 34, height: 34, borderRadius: 999, background: m.tealbg, color: m.tealink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(12), fontWeight: 800, flexShrink: 0 }}
+            >
+              {masked ? <UserRound size={15} aria-hidden /> : initials(r.label)}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: textPx(13.5), fontWeight: 700 }}>
+                {r.label}
+                {r.minor ? <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: m.faint }}> · Under 18</span> : null}
+              </div>
+              <div style={{ fontSize: textPx(11.5), color: m.faint }}>{r.plan}</div>
+            </div>
+            {r.until ? <span style={{ fontSize: textPx(11.5), color: m.faint, whiteSpace: "nowrap" }}>{r.until}</span> : null}
+          </div>
+        );
+      })}
+      {footer}
+    </div>
+  );
+};
+
+/** A quiet line inside a members card (no members yet, couldn't load). */
+export const MemberNote: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const m = usePlanColors();
+  return <p style={{ margin: 0, padding: "14px 16px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{children}</p>;
+};
+
+/** "See all {n}" at the foot of a members card (OURS): 12.5 / 800 --pdark, 44 tall. */
+export const SeeAllRow: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => {
+  const m = usePlanColors();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="tap market-focus"
+      style={{ width: "100%", minHeight: 44, borderTop: `0.5px solid ${m.div}`, borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", color: m.pdark, fontSize: textPx(12.5), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
+    >
+      {label}
+    </button>
+  );
+};
+
+/** The focus ring CSS, once per screen. */
+export const PlanFocusCss: React.FC = () => <style>{FOCUS_CSS}</style>;

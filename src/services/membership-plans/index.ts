@@ -42,6 +42,10 @@ export interface PlanDraft {
   noticeDays?: number | null;
   allowedClassTypes?: string[] | null;
   convertsToPlanId?: string | null;
+  /** Market + Share 3.0 B-MA.5 "What's included" lines (membership_plans.includes); null clears them. */
+  includes?: string[] | null;
+  /** Market + Share 3.0 B-MA.5 Active toggle: active or paused (never archived from the sheet). */
+  status?: PlanDbStatus;
 }
 
 export type PlansResult =
@@ -178,6 +182,10 @@ function toRow(draft: PlanDraft): { ok: true; row: Record<string, unknown> } | {
     row.allowed_class_types = draft.allowedClassTypes && draft.allowedClassTypes.length ? draft.allowedClassTypes.map((x) => x.trim()) : null;
   }
   if (draft.convertsToPlanId !== undefined) row.converts_to_plan_id = draft.convertsToPlanId;
+  if (draft.includes !== undefined) {
+    row.includes = draft.includes && draft.includes.length ? draft.includes.map((x) => x.trim()) : null;
+  }
+  if (draft.status !== undefined) row.status = draft.status;
   return { ok: true, row };
 }
 

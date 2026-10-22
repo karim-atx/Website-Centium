@@ -39,7 +39,7 @@ import {
 //   a 1px #7D6BB5 guide, a 4 white dot with a 2px #7D6BB5 ring and the
 //   tooltip (top −22, 110 wide, centred and kept inside; #241F1B, #FFFFFF
 //   11 / 700, radius 8, padding 3 8) "{date} · {value}".
-// - bar: the plot 110 tall, margin-top 24, bars along the bottom (gap 10 /
+// - bar: the plot 110 tall + its 1px base (content-box, 111 as rendered; W3), margin-top 24, bars along the bottom (gap 10 /
 //   6 / 3 / 1 by count), border-bottom 1px --div and lines at 0 and 55;
 //   bars #AEA1DC radius 3 3 0 0, value / max × 96 (at least 2); tapping one
 //   highlights it #7D6BB5 and shows its tooltip. The whole plot hit-tests
@@ -94,6 +94,17 @@ export interface ChartCardProps {
   showAxis?: boolean;
   /** B-MA.7: the question row expands to the full-screen chart. */
   onExpand?: () => void;
+  /**
+   * Replaces the "vs previous {unit}" line (W3, additive): a string shows it
+   * instead, null hides it (a figure with nothing to compare against).
+   */
+  note?: string | null;
+  /**
+   * Point markers (W3, additive; the kept B13 promotion starts on the
+   * listing charts): a 6 px --teal dot under the point or bar, and the
+   * tooltip adds " · {label}" there.
+   */
+  markers?: readonly { index: number; label: string }[];
   className?: string;
   style?: React.CSSProperties;
 }
@@ -181,6 +192,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   rateSeries = [],
   showAxis,
   onExpand,
+  note,
+  markers = [],
   className,
   style,
 }) => {
@@ -193,7 +206,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   const tone = deltaTone(delta);
   const [ax0, ax1, ax2] = axisLabels(labels);
   const has = i !== undefined && i >= 0 && i < n;
-  const tip = has ? `${labels[i!] ?? ""} · ${formatValue(series[i!])}` : "";
+  const mark = has ? markers.find((k) => k.index === i) : undefined;
+  const tip = has ? `${labels[i!] ?? ""} · ${formatValue(series[i!])}${mark ? ` · ${mark.label}` : ""}` : "";
   const axis = showAxis ?? kind !== "funnel";
 
   const head = onExpand ? (
@@ -243,6 +257,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({
           <path d={g.line} fill="none" stroke="#AEA1DC" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           <line x1={gx.toFixed(1)} x2={gx.toFixed(1)} y1={0} y2={120} stroke={c.scrub} strokeWidth={1} opacity={has ? 1 : 0} />
           <circle cx={gx.toFixed(1)} cy={gy.toFixed(1)} r={4} fill="#FFFFFF" stroke={c.scrub} strokeWidth={2} opacity={has ? 1 : 0} />
+          {markers.filter((k) => k.index >= 0 && k.index < n).map((k) => (
+            <circle key={k.index} data-marker cx={g.px(k.index).toFixed(1)} cy={117} r={3} fill={m.teal} />
+          ))}
         </svg>
         <Tooltip left={tooltipLeft(gx, w)} top={-22} width={110} text={tip} shown={has} />
       </div>
@@ -262,12 +279,15 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         onPointerDown={(e) => fromPointer(e, barIndexAt)}
         onKeyDown={sliderKeys(i, n, setI)}
         className="market-focus"
-        style={{ position: "relative", height: 110, marginTop: 24, display: "flex", alignItems: "flex-end", gap: barGap(n), borderBottom: `1px solid ${m.div}`, cursor: "pointer", touchAction: "manipulation" }}
+        style={{ position: "relative", height: 110, boxSizing: "content-box", marginTop: 24, display: "flex", alignItems: "flex-end", gap: barGap(n), borderBottom: `1px solid ${m.div}`, cursor: "pointer", touchAction: "manipulation" }}
       >
         <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, borderTop: `1px solid ${m.div}` }} />
         <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 55, borderTop: `1px solid ${m.div}` }} />
         {hs.map((h, j) => (
           <div key={j} aria-hidden style={{ position: "relative", flex: 1, minWidth: 0, height: h, background: j === i ? c.scrub : "#AEA1DC", borderRadius: "3px 3px 0 0" }} />
+        ))}
+        {markers.filter((k) => k.index >= 0 && k.index < n).map((k) => (
+          <span key={k.index} data-marker aria-hidden style={{ position: "absolute", bottom: -4, left: barCentre(k.index, w, n) - 3, width: 6, height: 6, borderRadius: 999, background: m.teal }} />
         ))}
         <Tooltip left={tooltipLeft(has ? barCentre(i!, w, n) : 0, w)} top={-22} width={110} text={tip} shown={has} />
       </div>
@@ -289,7 +309,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
           <span style={{ fontSize: textPx(26), lineHeight: linePx(32), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{total}</span>
         )}
         {delta ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
-        <span style={{ fontSize: textPx(11), color: m.faint }}>vs previous {unit}</span>
+        {note === null ? null : <span style={{ fontSize: textPx(11), color: m.faint }}>{note ?? `vs previous ${unit}`}</span>}
       </div>
       {plot}
       {axis ? (
@@ -389,9 +409,11 @@ export interface ExpandedChartProps {
   formatValue?: (v: number) => string;
   compare: boolean;
   onCompareChange: (on: boolean) => void;
+  /** As ChartCard's `note` (W3, additive): replaces "vs previous {unit}"; null hides it. */
+  note?: string | null;
 }
 
-export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, delta, unit, range, labels, series, prev, bars, formatValue = (v) => Math.round(v).toLocaleString("en-US"), compare, onCompareChange }) => {
+export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, delta, unit, range, labels, series, prev, bars, formatValue = (v) => Math.round(v).toLocaleString("en-US"), compare, onCompareChange, note }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const c = chartInk(dark);
@@ -417,7 +439,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
         <span style={{ fontSize: textPx(34), lineHeight: linePx(40), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{total}</span>
         {delta ? <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
-        <span style={{ fontSize: textPx(11.5), color: m.faint }}>vs previous {unit}</span>
+        {note === null ? null : <span style={{ fontSize: textPx(11.5), color: m.faint }}>{note ?? `vs previous ${unit}`}</span>}
       </div>
       <button
         type="button"

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarX, Repeat, Trash2 } from "lucide-react";
+import { Repeat, Trash2 } from "lucide-react";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { Toast } from "../../../components/ui/Toast";
 import { time12 } from "../../../utils/time12";
@@ -10,13 +10,14 @@ import { fetchClassRoster } from "../../../services/venues/console";
 import { splitRoster } from "../../../services/venues/consoleLogic";
 import { uploadClassCover } from "../../../services/business-classes/schedule";
 import { sendMessage, startThread } from "../../../services/messaging";
-import { cancelBody, cancelledToast, dayMonth, repeatsSentence, seriesToast, toldTail } from "../../../services/business-classes/scheduleRules";
+import { cancelledToast, dayMonth, repeatsSentence, seriesToast, toldTail } from "../../../services/business-classes/scheduleRules";
 import { ClassSheet } from "./ClassSheet";
 import { blankForm, carryOf, formOf, type ClassForm } from "./classForm";
 import { SubstituteSheet } from "./SubstituteSheet";
 import { MessageMembersSheet } from "./MessageMembersSheet";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
-import { useOps } from "./opsTheme";
+import { CancelClassDialog } from "./CancelClassDialog";
+import { useIsDark } from "../../../hooks/useIsDark";
 import { dayWords, shortDate, todayIso, type Session } from "./scheduleModel";
 import type { ScheduleApi } from "./useSchedule";
 
@@ -48,7 +49,7 @@ type SheetState = { mode: "create" | "edit"; scope: "this" | "future"; initial: 
 
 export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: string) => void; onDeleted?: (s: Session) => void } = {}) {
   const navigate = useNavigate();
-  const c = useOps();
+  const dark = useIsDark();
   const { authUserId } = useApp();
   const today = todayIso();
   const [sheet, setSheet] = useState<SheetState | null>(null);
@@ -73,7 +74,8 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
 
   const show = useCallback((message: string, action?: ToastState["action"]) => setToast({ message, action, key: Date.now() }), []);
 
-  const openCreate = useCallback((initial?: ClassForm) => setSheet({ mode: "create", scope: "this", initial: initial ?? blankForm(todayIso()) }), []);
+  /** A new class; `date` (a strip day) fills the Date field when there is no draft. */
+  const openCreate = useCallback((initial?: ClassForm, date?: string) => setSheet({ mode: "create", scope: "this", initial: initial ?? blankForm(date ?? todayIso()) }), []);
   const openEditScope = useCallback(
     (id: string, scope: "this" | "future") => {
       const row = api.classes.find((x) => x.id === id);
@@ -260,44 +262,19 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         onClose={() => setMsgFor(null)}
         onSent={(m) => show(m)}
       />
-      {/* OP1-086 / OURS-AN3 C: Cancel session. */}
-      <ConfirmCard
+      {/* B-MA.6 classCancel (OP1-086 / OURS-AN3 C, B9 cancel_class_session). */}
+      <CancelClassDialog
         open={!!cancelFor}
-        layout="stacked"
-        tone="destructive"
-        icon={<CalendarX size={20} strokeWidth={2.2} />}
-        title={cancelFor ? `Cancel ${cancelFor.title} ${dayWords(cancelFor.date, today)} at ${time12(cancelFor.startTime)}?` : ""}
-        subtitle={cancelFor ? cancelBody(cancelFor.booked, cancelCounts.waitlist, cancelCounts.paid, people) : undefined}
-        extra={
-          <div style={{ marginTop: 14, textAlign: "left" }}>
-            <label htmlFor="cancel-reason" className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: c.inkSoft, marginBottom: 6 }}>
-              Reason (optional)
-            </label>
-            <input
-              id="cancel-reason"
-              value={cancelReason}
-              maxLength={300}
-              disabled={cancelBusy}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Only your team sees this"
-              className="w-full focus:outline-none"
-              style={{ height: 44, borderRadius: 12, background: c.soft, border: `1px solid ${c.inputBd}`, padding: "0 12px", fontSize: textPx(14), color: c.ink }}
-            />
-            {(cancelError || offline) && (
-              <p role="alert" style={{ margin: "8px 0 0", fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600, color: c.dark ? "#F2A497" : "#9B2C1E", textAlign: "center" }}>
-                {offline ? "You're offline. Connect to cancel this session." : cancelError}
-              </p>
-            )}
-          </div>
-        }
-        confirmLabel={cancelBusy ? "Cancelling…" : cancelError ? "Try again" : "Cancel session"}
-        confirmDisabled={offline}
-        cancelLabel="Keep session"
-        cancelVariant="outlined"
-        initialFocus="cancel"
+        session={cancelFor}
+        people={people}
+        waitlist={cancelCounts.waitlist}
+        paid={cancelCounts.paid}
+        reason={cancelReason}
+        onReason={setCancelReason}
         busy={cancelBusy}
-        confirmStyle={{ background: "#C0392B", color: "#FFFFFF", opacity: cancelBusy ? 0.7 : undefined }}
-        onCancel={() => !cancelBusy && setCancelFor(null)}
+        error={cancelError}
+        offline={offline}
+        onKeep={() => !cancelBusy && setCancelFor(null)}
         onConfirm={async () => {
           if (!cancelFor || cancelBusy) return;
           setCancelBusy(true);
@@ -323,7 +300,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         subtitle={`Later sessions nobody has booked are removed. Booked ones stay, so you can cancel them and the ${people} are told.`}
         extra={
           endError ? (
-            <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600, color: c.dark ? "#F2A497" : "#9B2C1E" }}>
+            <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>
               {endError}
             </p>
           ) : undefined

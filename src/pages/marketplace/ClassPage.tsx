@@ -37,6 +37,7 @@ import {
   BookingDone,
   ClassTicketSummary,
   PurchaseSheet,
+  confirmLabel,
 } from "./PurchaseSheet";
 import {
   cancelClassBooking,
@@ -1257,7 +1258,7 @@ export function ClassPage({ classId }: { classId: string }) {
           />
         }
         cashHint={free ? null : "Pay at the front desk before class"}
-        ctaLabel={free ? "Confirm booking" : `Confirm and pay ${priceText}`}
+        ctaLabel={free ? "Confirm booking" : confirmLabel(priceText)}
         busy={booking.busy}
         disabled={!online}
         error={sheetError}

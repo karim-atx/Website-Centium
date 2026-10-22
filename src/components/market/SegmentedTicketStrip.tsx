@@ -3,7 +3,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx, linePx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { SEGMENT_STEPS, marketPalette } from "../../theme/marketTokens";
-import { hexAlpha } from "./marketColor";
+import { darkenForWhite, hexAlpha } from "./marketColor";
 
 // Market + Share 3.0 · SegmentedTicketStrip (HANDOVER §5: items 2–4, active,
 // step colours 1–4; tokens.json segmentSteps, divider 1.5px dashed
@@ -105,6 +105,9 @@ export function SegmentedTicketStrip<K extends string>({
         const [tint, ink] = SEGMENT_STEPS[(it.step ?? ((i % 4) + 1)) - 1];
         const idleBg = dark ? hexAlpha(ink, 0.16) : tint;
         const idleInk = dark ? m.ink : "#17142A";
+        // Dark: the step ink darkened just enough for the white label to reach
+        // 4.5:1 (W2 lead decision); light keeps the drawn ink.
+        const activeBg = dark ? darkenForWhite(ink) : ink;
         const Icon = it.icon;
         return (
           <button
@@ -128,7 +131,7 @@ export function SegmentedTicketStrip<K extends string>({
               borderLeft: i ? (dark ? DIVIDER_DARK : DIVIDER) : 0,
               font: "inherit",
               cursor: "pointer",
-              background: on ? ink : idleBg,
+              background: on ? activeBg : idleBg,
               color: on ? "#FFFFFF" : idleInk,
               ...(tile
                 ? { height: 78, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }

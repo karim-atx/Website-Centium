@@ -154,7 +154,7 @@ export interface PurchaseSheetProps {
   summary: React.ReactNode;
   /** The Cash row's line ("Pay at the front desk on your first visit" / "… before class"); null hides the payment box (a free class). */
   cashHint: string | null;
-  /** "Confirm and pay $45" (or "Confirm booking" when free). */
+  /** confirmLabel("$45") = "Confirm · $45", or "Confirm booking" when free. */
   ctaLabel: string;
   busy?: boolean;
   disabled?: boolean;
@@ -165,7 +165,14 @@ export interface PurchaseSheetProps {
   onConfirm: () => void;
 }
 
-export const PurchaseSheet: React.FC<PurchaseSheetProps> = ({ open, onClose, title, summary, cashHint, ctaLabel, busy, disabled, error, note, onConfirm }) => {
+/**
+ * The CTA of a paid plan or class: "Confirm · $45" (W2 lead decision, in place
+ * of the board's "Confirm and pay $X": the app charges nothing; the member
+ * pays cash at the venue).
+ */
+export const confirmLabel = (price: string): string => `Confirm · ${price}`;
+
+export const PurchaseSheet: React.FC<PurchaseSheetProps> =({ open, onClose, title, summary, cashHint, ctaLabel, busy, disabled, error, note, onConfirm }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const press = usePress();

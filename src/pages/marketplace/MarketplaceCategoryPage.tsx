@@ -8,21 +8,13 @@ import {
 } from "../../services/business-offerings";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { MapPin, Building2, SlidersHorizontal, Check, type LucideIcon } from "lucide-react";
+import { MapPin, Building2, type LucideIcon } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
 import { ClassPage } from "./ClassPage";
 import { GymPage } from "./GymPage";
 import { ShowcasePage } from "./rewards/ShowcasePage";
-
-type FilterMode = "rating" | "proximity" | "discount";
-const filterOptions: { value: FilterMode; label: string }[] = [
-  { value: "rating", label: "Rating" },
-  { value: "proximity", label: "Proximity" },
-  { value: "discount", label: "Discounts" },
-];
 
 // V4: tapping a category on Explore now lands here — a listing of the
 // matching services, each showing rating + location, instead of one flat
@@ -49,8 +41,6 @@ function CategoryListing({ category }: { category: string | undefined }) {
   // NO LOCATION IS ASKED FOR HERE. This page used to prompt for location as
   // soon as it opened and then throw the answer away (nothing on it ranks by
   // distance). A location prompt belongs to a user action that uses it.
-  const [filter, setFilter] = useState<FilterMode>("rating");
-  const [filterOpen, setFilterOpen] = useState(false);
   // THREE DEAD CONTROLS LIVED HERE. `activeGym` and `activeStore` had setters
   // nothing ever called — the fabricated lists that used to open those sheets
   // were removed earlier, and the sheets stayed mounted permanently closed. The
@@ -93,39 +83,11 @@ function CategoryListing({ category }: { category: string | undefined }) {
 
   return (
     <div>
-      <PageHeader title={meta?.label ?? "Explore"} subtitle="Ranked by rating" showBack />
-
-      {/* V9 (QA 9.0): "this filter logo instead of the separate tabs that
-          shows you what the filters are when pressed" — one icon button
-          opening a picker, replacing the always-visible Rating/Proximity/
-          Discounts chip row. */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => setFilterOpen(true)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-pale rounded-full px-3.5 py-1.5"
-        >
-          <SlidersHorizontal size={13} />
-          {filterOptions.find((f) => f.value === filter)?.label}
-        </button>
-      </div>
-
-      <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter by">
-        <div className="space-y-2 animate-fade-slide-up">
-          {filterOptions.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => {
-                setFilter(f.value);
-                setFilterOpen(false);
-              }}
-              className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
-            >
-              <span className="text-sm font-semibold text-charcoal">{f.label}</span>
-              {filter === f.value && <Check size={16} className="text-primary" />}
-            </button>
-          ))}
-        </div>
-      </BottomSheet>
+      {/* Market + Share 3.0 W3 (D-45): the "Filter by" sheet (Rating /
+          Proximity / Discounts) is gone. It set a value nothing read, so it
+          sorted nothing; "Ranked by rating" went with it, as nothing on this
+          page is ranked. */}
+      <PageHeader title={meta?.label ?? "Explore"} showBack />
 
       <div className="space-y-2.5">
         {/* THE THREE FABRICATED LISTS THAT LIVED HERE ARE GONE: rankedGyms,

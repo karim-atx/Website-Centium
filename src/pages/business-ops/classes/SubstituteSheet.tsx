@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
@@ -6,11 +6,13 @@ import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { fetchInstructorAvailability, type Instructor } from "../../../services/business-classes";
 import { instructorsFreeFor, type FreeInstructor } from "../../../services/business-classes/schedule";
-import { useOps } from "./opsTheme";
+import { fieldStyle, useMarketColours } from "./parts";
+import { FOCUS_CSS } from "../../../components/market/usePress";
 import { Avatar } from "./ClassSheet";
 import { overlaps, running, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
 
-// Request a substitute (OP1-089 … 093). Assigning names someone else on THIS
+// Request a substitute (OP1-089 … 093; kept, PLAN §3.4, in the B-MA.6
+// MasterBottomSheet chrome: --sgrey boxes, the pinned 50 CTA). Assigning names someone else on THIS
 // session only, through assign_class_instructor() (B9 CL-04): the server
 // re-checks that the person is on the team and free in ANY business (ATXD9),
 // and tells the booked members ("New instructor", never naming anyone).
@@ -50,7 +52,7 @@ export function SubstituteSheet({
   /** The note is trimmed; empty when none was written. */
   onAssign: (professionalId: string, note: string) => Promise<{ ok: true } | { ok: false; message: string; busy?: boolean }>;
 }) {
-  const c = useOps();
+  const m = useMarketColours();
   const [pick, setPick] = useState<string>("");
   const [note, setNote] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -131,7 +133,7 @@ export function SubstituteSheet({
     label: r.f.firstName,
     note: r.sub,
     disabled: !r.free,
-    icon: <Avatar c={c} name={r.f.firstName} size={28} />,
+    icon: <Avatar m={m} name={r.f.firstName} size={28} />,
   }));
 
   // OP1-090 O2: everyone busy → one line under the heading instead of the rows.
@@ -157,11 +159,9 @@ export function SubstituteSheet({
     }
   };
 
-  const fieldLabel = (t: string) => (
-    <p className="whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: c.inkSoft }}>
-      {t}
-    </p>
-  );
+  const box: React.CSSProperties = { background: m.sgrey, borderRadius: 14, padding: "12px 14px" };
+  const boxLabel: React.CSSProperties = { margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel };
+  const off = !pick || busy;
 
   return (
     <>
@@ -169,115 +169,95 @@ export function SubstituteSheet({
         open={open}
         onClose={() => !busy && onClose()}
         title="Request a substitute"
-        tone="business"
-        headerHeight={62}
         animateExit
-        bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}
+        footerRule
+        footer={
+          <>
+            <style>{FOCUS_CSS}</style>
+            {error && (
+              <p role="alert" style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 700, lineHeight: linePx(16), color: m.high }}>
+                {error}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => void assign()}
+              disabled={off}
+              aria-disabled={off || undefined}
+              className="market-focus w-full flex items-center justify-center"
+              style={{ height: 50, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 700, border: 0, opacity: off ? 0.4 : 1 }}
+            >
+              {busy ? "Assigning…" : chosen ? `Assign ${chosen}` : "Assign"}
+            </button>
+          </>
+        }
       >
-        <div className="flex items-center" style={{ gap: 12, background: c.soft, borderRadius: 16, padding: "12px 14px", marginBottom: 14 }}>
-          <span aria-hidden className="self-stretch" style={{ width: 4, borderRadius: 999, background: c.primary }} />
-          <div className="flex-1 min-w-0">
-            <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 800, color: c.ink }}>
+        <div className="flex flex-col" style={{ gap: 10, lineHeight: "normal" }}>
+          <div style={box}>
+            <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 800, color: m.ink }}>
               {session.title} · {dayWord} {time12(session.startTime)}
             </p>
-            <p style={{ margin: 0, fontSize: textPx(12), color: c.inkSoft }}>
+            <p style={{ margin: "2px 0 0", fontSize: textPx(12), color: m.ink2 }}>
               {session.professionalId ? nameOf(session.professionalId) : "No instructor yet"} · {session.booked} booked
             </p>
           </div>
-        </div>
 
-        <div ref={setGroupEl} style={{ marginBottom: 14 }}>
-          {fieldLabel("Who covers it?")}
-          {loadFailed ? (
-            <p style={{ margin: 0, minHeight: 48, display: "flex", alignItems: "center", gap: 10, fontSize: textPx(12.5), fontWeight: 600, color: c.high }}>
-              Couldn't check who's free.
-              <button type="button" onClick={() => setTick((t) => t + 1)} className="tap" style={{ minHeight: 44, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}>
-                Retry
+          <div ref={setGroupEl} style={box}>
+            <p style={boxLabel}>Who covers it?</p>
+            {loadFailed ? (
+              <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", gap: 10, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
+                Couldn't check who's free.
+                <button type="button" onClick={() => setTick((t) => t + 1)} className="market-focus hit" style={{ minHeight: 32, fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, background: "transparent", border: 0 }}>
+                  Retry
+                </button>
+              </p>
+            ) : !free ? (
+              <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
+            ) : rows.length === 0 && teamSize === 0 ? (
+              <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>Nobody else is on your team yet. Invite an instructor in Team and access.</p>
+            ) : (
+              <button
+                ref={setPickerEl}
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(true)}
+                className="market-focus"
+                style={fieldStyle(m, { active: menuOpen })}
+              >
+                <span className="flex-1 min-w-0 truncate" style={{ color: chosen ? m.ink : m.faint }}>
+                  {chosen || "Choose an instructor"}
+                </span>
+                <ChevronDown size={14} style={{ color: m.faint }} aria-hidden />
               </button>
+            )}
+          </div>
+
+          {/* OP1-089 row 4 / OP1-092 row 2: the note to the substitute. */}
+          <div style={box}>
+            <label htmlFor="sub-note" className="block" style={boxLabel}>
+              Note for them (optional)
+            </label>
+            <style>{`.sub-note::placeholder { color: ${m.faint}; opacity: 1; }`}</style>
+            <textarea
+              id="sub-note"
+              value={note}
+              maxLength={1000}
+              disabled={busy}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Anything they should know"
+              className="sub-note market-focus w-full block resize-none"
+              style={{ ...fieldStyle(m), display: "block", minHeight: 84, outline: "none", caretColor: m.pdark }}
+            />
+          </div>
+
+          {/* OP1-072 row 6: the booked are told (assign_class_instructor p_tell_members). */}
+          {session.booked > 0 && (
+            <p style={{ margin: "0 4px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
+              Booked {people} get a message with the new instructor.
             </p>
-          ) : !free ? (
-            <p style={{ margin: 0, minHeight: 48, display: "flex", alignItems: "center", fontSize: textPx(14), fontWeight: 700, color: c.faint }}>Finding who's free…</p>
-          ) : rows.length === 0 && teamSize === 0 ? (
-            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>Nobody else is on your team yet. Invite an instructor in Team and access.</p>
-          ) : (
-            <button
-              ref={setPickerEl}
-              type="button"
-              aria-haspopup="listbox"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen(true)}
-              className="tap w-full flex items-center text-left"
-              style={{
-                minHeight: 48,
-                borderRadius: 14,
-                background: c.input,
-                border: `1px solid ${c.border}`,
-                padding: "0 14px",
-                gap: 8,
-                fontSize: textPx(14),
-                lineHeight: linePx(20),
-                boxShadow: menuOpen ? `0 0 0 2px ${c.primary}` : "none",
-              }}
-            >
-              <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700, color: chosen ? c.ink : c.faint }}>
-                {chosen || "Choose an instructor"}
-              </span>
-              <ChevronDown size={16} style={{ color: c.faint }} />
-            </button>
           )}
         </div>
-
-        {/* OP1-089 row 4 / OP1-092 row 2 (OpsTabsV4 l.614 F(): h 84, align top, padding 12 14; label 12/700 inkSoft mb 6; value 14/600/20 ink; placeholder faint 500). */}
-        <div style={{ marginBottom: 14 }}>
-          <label htmlFor="sub-note" className="block whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: c.inkSoft }}>
-            Note for them (optional)
-          </label>
-          <style>{`.sub-note::placeholder { color: ${c.faint}; font-weight: 500; opacity: 1; }`}</style>
-          <textarea
-            id="sub-note"
-            value={note}
-            maxLength={1000}
-            disabled={busy}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Anything they should know"
-            className="sub-note w-full block resize-none focus:outline-none"
-            style={{
-              minHeight: 84,
-              borderRadius: 14,
-              background: c.input,
-              border: `1px solid ${c.border}`,
-              padding: "12px 14px",
-              fontSize: textPx(14),
-              lineHeight: linePx(20),
-              fontWeight: 600,
-              color: c.ink,
-              caretColor: c.pDark,
-            }}
-          />
-        </div>
-
-        {/* OP1-072 row 6: the booked are told (assign_class_instructor p_tell_members). */}
-        {session.booked > 0 && (
-          <p style={{ margin: "0 0 14px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
-            Booked {people} get a message with the new instructor.
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={() => void assign()}
-          disabled={!pick || busy}
-          aria-disabled={!pick || busy || undefined}
-          className="tap w-full flex items-center justify-center"
-          style={{ minHeight: 52, borderRadius: 16, background: c.fill, color: c.onFill, fontSize: textPx(14.5), fontWeight: 800, opacity: !pick || busy ? 0.45 : 1 }}
-        >
-          {busy ? "Assigning…" : chosen ? `Assign ${chosen}` : "Assign"}
-        </button>
-        {error && (
-          <p role="alert" style={{ margin: "8px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: c.high }}>
-            {error}
-          </p>
-        )}
       </BottomSheet>
       <PopupMenu
         open={menuOpen && !!free}
@@ -294,7 +274,7 @@ export function SubstituteSheet({
         heading={`Free at ${time12(session.startTime)}`}
         emptyNote={
           nobodyFree ? (
-            <p style={{ margin: "0 4px 4px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
+            <p style={{ margin: "0 4px 4px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
               Nobody is free at {time12(session.startTime)}. Message your team or cancel the session.
             </p>
           ) : undefined

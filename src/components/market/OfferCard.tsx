@@ -49,6 +49,12 @@ export interface ClientOfferCardProps extends Common {
   /** The owner tile's initials ("OA"). */
   ownerInitials: string;
   ownerLogoUrl?: string | null;
+  /**
+   * W3 (optional): the owner tile as the professional board draws it (P-MA.3
+   * Preview, Professional Marketplace line 305): radius 999 on #EEEAF8
+   * (--pale in dark). Unset keeps the business tile (radius 12, --pale).
+   */
+  ownerRound?: boolean;
   /** The client's points balance. */
   balance: number;
 }
@@ -58,6 +64,15 @@ export interface ManagerOfferCardProps extends Common {
   status: OfferStatus;
   /** "Ends Dec 31, 2026 · 30 redeemed", built by the screen. */
   meta: string;
+  /**
+   * W3 (optional): a control after the status chip (the Offers Manager's row
+   * menu). With it the card is a plain box and `onPress` moves to a stretched
+   * button under the content (no button inside a button); the control sits
+   * above it.
+   */
+  trailing?: React.ReactNode;
+  /** The stretched button's accessible name (with `trailing`). */
+  pressLabel?: string;
 }
 
 export type OfferCardProps = ClientOfferCardProps | ManagerOfferCardProps;
@@ -73,6 +88,36 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
 
   if (props.variant === "manager") {
     const [chipBg, chipInk] = statusChip(props.status, m);
+    if (props.trailing) {
+      // The stretched-button layout: the box carries the press scale, the
+      // button (inset 0) takes taps and focus, the trailing control floats above.
+      return (
+        <>
+          {pressable ? <style>{FOCUS_CSS}</style> : null}
+          <div className={props.className} style={{ position: "relative", display: "block", lineHeight: "normal", borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: "14px 16px", color: m.ink, ...(pressable ? press.style : null), ...props.style }}>
+            {pressable ? (
+              <button
+                type="button"
+                onClick={props.onPress}
+                {...press.handlers}
+                aria-label={props.pressLabel ?? `${props.headline}, ${STATUS_LABEL[props.status]}. ${props.meta}`}
+                className="market-focus"
+                style={{ position: "absolute", inset: 0, borderRadius: 20, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}
+              />
+            ) : null}
+            <span style={{ display: "flex", alignItems: "flex-start", gap: 10, pointerEvents: "none" }}>
+              <span aria-hidden={pressable || undefined} style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(20) }}>{props.headline}</span>
+              <span aria-hidden={pressable || undefined} style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{STATUS_LABEL[props.status]}</span>
+              <span style={{ position: "relative", pointerEvents: "auto", flexShrink: 0 }}>{props.trailing}</span>
+            </span>
+            <span aria-hidden={pressable || undefined} style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(11.5), color: m.faint, pointerEvents: "none" }}>
+              <span style={{ minWidth: 0 }}>{props.meta}</span>
+              <PointsFigure value={props.cost} mark="leaf" size={14} />
+            </span>
+          </div>
+        </>
+      );
+    }
     return (
       <>
         {pressable ? <style>{FOCUS_CSS}</style> : null}
@@ -102,9 +147,9 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
         style={{ position: "relative", lineHeight: "normal", overflow: "hidden", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "12px 14px 14px 12px", display: "flex", gap: 12, color: m.ink, ...reset, ...p.style }}
       >
         {p.ownerLogoUrl ? (
-          <img src={p.ownerLogoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "cover", flexShrink: 0, display: "block" }} />
+          <img src={p.ownerLogoUrl} alt="" style={{ width: 44, height: 44, borderRadius: p.ownerRound ? 999 : 12, objectFit: "cover", flexShrink: 0, display: "block" }} />
         ) : (
-          <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(13), fontWeight: 800, color: m.accent, flexShrink: 0 }}>
+          <span aria-hidden style={{ width: 44, height: 44, borderRadius: p.ownerRound ? 999 : 12, background: p.ownerRound && !dark ? "#EEEAF8" : m.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(13), fontWeight: 800, color: m.accent, flexShrink: 0 }}>
             {p.ownerInitials}
           </span>
         )}

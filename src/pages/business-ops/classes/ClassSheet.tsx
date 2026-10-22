@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, ImagePlus, Minus, Plus, Repeat, RotateCw, WifiOff, X } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, ImagePlus, Minus, Plus, RotateCw, WifiOff, X } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
-import { Toggle } from "../../../components/ui/Toggle";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
@@ -26,6 +25,8 @@ import type { SeriesRow } from "../../../services/business-classes/schedule";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
+import type { MarketPalette } from "../../../theme/marketTokens";
+import { FOCUS_CSS } from "../../../components/market/usePress";
 import {
   CAPACITY_MAX,
   CAPACITY_MIN,
@@ -37,40 +38,48 @@ import {
   type ClassField,
   type Instructor,
 } from "../../../services/business-classes";
-import { useOps, type OpsColors } from "./opsTheme";
+import { BoardSwitch, FieldBox, fieldStyle, useMarketColours } from "./parts";
 import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
-import { conflictsFor, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, shortDate, type SessionLite } from "./scheduleModel";
+import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, shortDate, type SessionLite } from "./scheduleModel";
 
-// The New Class / Edit class sheet (OP1-146 … 155, AN3-010 … 070, OURS-AN3
-// edit). ClassFlowsV6 is the base (lead, V6-164 notes): the field values,
-// errors, banner, spinner, conflict and discard dialogs are its markup. The
-// Cancel / Save row is pinned (HANDOVER §2.2, OP1-147 "Footer").
+// Market + Share 3.0 · B-MA.6 Add or edit a class (Business Marketplace
+// Screens `classEdit`, markup lines 409–427, script `classFields`; HANDOVER
+// §4 "Bottom sheets"). The MasterBottomSheet (the app's BottomSheet defaults:
+// band #F0EEFD, 1px #7248F8, radius 32, 53 title bar 20 / 800, 26 close ring;
+// body --sbody radius 22 padding 20; pinned footer padding 8 20 34 under a 1px
+// --srule) with the fields grid: two columns, gap 10, of --sgrey boxes
+// (radius 14, padding 12 14; label 13 / 500 --slabel 8 above a --sfield field
+// radius 10 padding 11 13, 14 / 19): Name (span 2), Type, Instructor, Date,
+// Time, Duration, Capacity, Price, Repeat; CTA "Save class" (50, radius 16,
+// --fill, 15 / 700 --onfill).
 //
-// B9 (CL-01): Repeat is live on a new class (AN3-041 … 048: menu, "On" day
-// chips Monday first per X-13, Ends never / on a date / after N, summary and
-// "Next:" box); one save_class_series call makes every class 12 weeks ahead.
-// Editing "This and all future sessions" (OP1-085) shows the series' rule
-// read-only and keeps the date (the split point); "Only this session" hides
-// Repeat (OURS-AN3 A3). A booked class can now change date and time: members
-// are told (move_class_session / edit_class), so the old lock is gone and the
-// A5 line says so. The instructor clash is refused by the server in any
-// business (ATXD9), so the AN3-066 dialog no longer offers "Save anyway".
-// B9 (EX-01): the class page's cover, About, Level and What to bring (OURS
-// layout: no business frame draws them). The payment type is the
-// single-method mode (AN3-028): cash is always on; Whish is "Soon".
+// Instructor: the board's "Instructor · from Team" and its Team picker are
+// Release 2 (W4, B-MA.8). Until then the field is "Instructor" and keeps the
+// live choice of the business's accepted employees (business_employees,
+// D-11), with "No one yet" and the "Add an employee" route when the team is
+// empty.
+//
+// KEPT live (PLAN §3.4), in the sheet's chrome, as span-2 boxes under the
+// drawn grid: the Repeat editor (Daily / Weekly / Every 2 weeks / Custom every
+// N weeks, the "On" days Monday first, Ends never / on a date / after N, the
+// summary and "Next:"), "only this / all future" scope (the series' rule read
+// only; the date locked), the field-error banner and per-field errors, the
+// moved-class line, the capacity hints and floor, Show on Explore and the
+// spots open on Centium (B13 MK-04, the old Spots tab), notes for the
+// instructor, and the class page's cover photo, about, level and what to
+// bring (B9 EX-01). The instructor clash (ATXD9: the server refuses any
+// clash) keeps "Change time / Choose someone else", and closing an edited
+// sheet asks first. Time + Duration are the live start / end: the end follows
+// the start, keeping the length.
 
-/** The Run by menu value of "No one yet" (clears the choice). */
+/** The Instructor menu value of "No one yet" (clears the choice). */
 const NO_ONE = "__none";
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 const FIELD_ORDER: ClassField[] = ["name", "date", "times", "capacity", "price"];
 const FIELD_WORD: Record<ClassField, string> = { name: "name", date: "date", times: "times", capacity: "capacity", price: "price" };
 
-/**
- * How much bigger the sheet's 14 px field text is drawn than its spec: the
- * Larger text boost (+2 px) times any browser / system text scaling of the
- * root font (16 px at 1x).
- */
+/** How much bigger the sheet's 14 px field text is drawn than its spec (Larger text boost × root scaling). */
 function textScale(): number {
   if (typeof window === "undefined") return 1;
   const root = getComputedStyle(document.documentElement);
@@ -97,7 +106,7 @@ export interface ClassSheetProps {
   onUploadCover?: (file: File) => Promise<{ ok: true; url: string } | { ok: false; message: string }>;
   /** The session being edited. */
   editing?: BusinessClassRow | null;
-  /** Booked count of the session being edited (capacity floor, date/time lock). */
+  /** Booked count of the session being edited (capacity floor). */
   bookedCount?: number;
   initial: ClassForm;
   today: string;
@@ -110,7 +119,7 @@ export interface ClassSheetProps {
   onClose: () => void;
   /** `rule` is the repeat a new class asks for (null: one class). */
   onSave: (draft: ClassDraft, rule: RepeatRule | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
-  /** Run by's "Add an employee": leave for Team with the draft kept. */
+  /** Instructor's "Add an employee": leave for Team with the draft kept. */
   onAddEmployee: (form: ClassForm) => void;
 }
 
@@ -123,9 +132,7 @@ export function ClassSheet(props: ClassSheetProps) {
     setPrevOpen(open);
     if (open) setEpoch((e) => e + 1);
   }
-  return (
-    <SheetBody key={epoch} {...props} open={open} mode={mode} initial={initial} onClose={onClose} />
-  );
+  return <SheetBody key={epoch} {...props} open={open} mode={mode} initial={initial} onClose={onClose} />;
 }
 
 function SheetBody({
@@ -146,7 +153,7 @@ function SheetBody({
   onSave,
   onAddEmployee,
 }: ClassSheetProps) {
-  const c = useOps();
+  const m = useMarketColours();
   const reduced = useReducedMotion();
   const uid = useId();
   const [form, setForm] = useState<ClassForm>(initial);
@@ -155,10 +162,11 @@ function SheetBody({
   const [banner, setBanner] = useState<Banner>(null);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [openWheel, setOpenWheel] = useState<"start" | "end" | null>(null);
+  const [wheelOpen, setWheelOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
+  const [durOpen, setDurOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string } | null>(null);
   const [repeatOpen, setRepeatOpen] = useState(false);
@@ -171,12 +179,13 @@ function SheetBody({
   const [repeatEl, setRepeatEl] = useState<HTMLButtonElement | null>(null);
   const [repeatGroupEl, setRepeatGroupEl] = useState<HTMLDivElement | null>(null);
   const [levelEl, setLevelEl] = useState<HTMLButtonElement | null>(null);
+  const [durEl, setDurEl] = useState<HTMLButtonElement | null>(null);
   const coverInput = useRef<HTMLInputElement | null>(null);
   const countRef = useRef<HTMLInputElement | null>(null);
   const [capFocus, setCapFocus] = useState<"focus" | "typing" | null>(null);
   const [lastValidCap, setLastValidCap] = useState(initial.capacity);
-  // OP1-147 A1: above 1.3x text the type / name row stacks to one column.
-  const [stackTypeRow] = useState(() => textScale() > 1.3);
+  // OP1-147 A1: above 1.3x text the two-column grid stacks to one column.
+  const [stack] = useState(() => textScale() > 1.3);
   // The client id for this sheet's insert: a Retry re-sends the same one (AN3-068 S1).
   const clientId = useMemo(() => (mode === "create" ? crypto.randomUUID() : undefined), [mode]);
 
@@ -195,6 +204,7 @@ function SheetBody({
   const moved = mode === "edit" && (form.date !== initial.date || form.startTime !== initial.startTime || form.endTime !== initial.endTime);
   const capFloor = mode === "edit" ? Math.max(CAPACITY_MIN, bookedCount) : CAPACITY_MIN;
 
+  const capOf = (f: ClassForm) => (/^\d+$/.test(f.capacity.trim()) ? Number(f.capacity.trim()) : NaN);
   const draftOf = (f: ClassForm): ClassDraft => ({
     id: clientId,
     title: f.title,
@@ -202,7 +212,7 @@ function SheetBody({
     date: f.date,
     startTime: f.startTime,
     endTime: f.endTime,
-    maxCapacity: /^\d+$/.test(f.capacity.trim()) ? Number(f.capacity.trim()) : NaN,
+    maxCapacity: capOf(f),
     professionalId: f.professionalId || undefined,
     notes: f.notes.trim() || undefined,
     price: normalisePrice(f.price) ?? "x",
@@ -212,7 +222,7 @@ function SheetBody({
     whatToBring: bringList(f.bring),
     coverUrl: f.coverUrl || null,
     // B13 MK-04: never above the capacity (business_classes_centium_spots_ok).
-    centiumSpots: f.centiumSpots === null ? null : Math.max(0, Math.min(f.centiumSpots, /^d+$/.test(f.capacity.trim()) ? Number(f.capacity.trim()) : f.centiumSpots)),
+    centiumSpots: f.centiumSpots === null ? null : Math.max(0, Math.min(f.centiumSpots, Number.isFinite(capOf(f)) ? capOf(f) : f.centiumSpots)),
     listedOnExplore: f.listedOnExplore,
   });
 
@@ -293,7 +303,7 @@ function SheetBody({
 
   const save = async () => {
     if (saving) return;
-    setOpenWheel(null);
+    setWheelOpen(false);
     const e = validate(form);
     setChecked(true);
     if (Object.keys(e).length) {
@@ -318,7 +328,6 @@ function SheetBody({
     const rule = mode === "create" ? ruleOf(form) : null;
     const dates = rule ? seriesDates({ ...rule, untilOn: rule.untilOn ?? addDays(form.date, SERIES_CHECK_DAYS) }, 200, SERIES_CHECK_DAYS) : [form.date];
     const pid = form.professionalId || null;
-    // A series edit carries its new times to later dates; checking this date is the drawn rule.
     let hits: SessionLite[] = [];
     let clashDates = 0;
     for (const d of dates) {
@@ -347,7 +356,7 @@ function SheetBody({
         value: i.professionalId,
         label: i.firstName,
         note: n === 0 ? "No classes this week" : n === 1 ? "1 class this week" : `${n} classes this week`,
-        icon: <Avatar c={c} name={i.firstName} size={24} />,
+        icon: <Avatar m={m} name={i.firstName} size={24} />,
       };
     }),
     // V6-164: instructor optional. The app's unassign is kept as a last row.
@@ -391,23 +400,23 @@ function SheetBody({
     else setCoverErr(r.message);
   };
 
+  const length = Math.max(5, minutesOf(form.endTime) - minutesOf(form.startTime));
   const setStart = (hhmm: string) => {
     // Ends follows, keeping the class length (EventComposeSheet rule, OP1-149 S2).
-    const len = Math.max(5, minutesOf(form.endTime) - minutesOf(form.startTime));
-    update({ startTime: hhmm, endTime: fromMinutes(minutesOf(hhmm) + len) });
+    update({ startTime: hhmm, endTime: fromMinutes(minutesOf(hhmm) + length) });
   };
 
   const capNum = /^\d+$/.test(form.capacity.trim()) ? Number(form.capacity.trim()) : null;
   const capInvalid = !!errors.capacity || (capFocus === "typing" && form.capacity.trim() !== "" && (capNum === null || capNum < capFloor || capNum > CAPACITY_MAX));
   const capHelp = (() => {
-    if (errors.capacity) return { text: errors.capacity, ink: c.high };
+    if (errors.capacity) return null; // the error line shows instead
     if (!capFocus) return null;
-    if (form.capacity.trim() !== "" && capNum === null) return { text: "Enter a whole number from 1 to 200.", ink: c.high };
-    if (capNum !== null && capNum > CAPACITY_MAX) return { text: "Enter a whole number from 1 to 200.", ink: c.high };
-    if (mode === "edit" && capNum !== null && capNum < bookedCount) return { text: `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.`, ink: c.high };
-    if (capNum === CAPACITY_MIN) return { text: "Minimum is 1 spot.", ink: c.faint };
-    if (capNum === CAPACITY_MAX) return { text: "Maximum is 200 spots per class.", ink: c.faint };
-    return { text: capFocus === "typing" ? "1 to 200 spots." : "Type a number or use − and +.", ink: c.faint };
+    if (form.capacity.trim() !== "" && capNum === null) return { text: "Enter a whole number from 1 to 200.", ink: m.high };
+    if (capNum !== null && capNum > CAPACITY_MAX) return { text: "Enter a whole number from 1 to 200.", ink: m.high };
+    if (mode === "edit" && capNum !== null && capNum < bookedCount) return { text: `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.`, ink: m.high };
+    if (capNum === CAPACITY_MIN) return { text: "Minimum is 1 spot.", ink: m.faint };
+    if (capNum === CAPACITY_MAX) return { text: "Maximum is 200 spots per class.", ink: m.faint };
+    return { text: capFocus === "typing" ? "1 to 200 spots." : "Type a number or use − and +.", ink: m.faint };
   })();
   // B13 MK-04: the Centium spots stepper runs 0 to the capacity, then "All free spots" (null).
   const exploreCap = capNum ?? (Number(lastValidCap) || 0);
@@ -454,97 +463,29 @@ function SheetBody({
     stepCap(d);
   };
 
-  const fieldBox = (err: boolean, extra?: React.CSSProperties): React.CSSProperties => ({
-    height: 40,
-    borderRadius: 12,
-    background: c.soft,
-    border: `${err && c.hc ? 2 : 1}px solid ${err ? c.high : c.inputBd}`,
-    padding: "0 12px",
-    fontSize: textPx(14),
-    color: c.ink,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    width: "100%",
-    ...extra,
-  });
-  const label = (text: string, htmlFor?: string) => (
-    <label htmlFor={htmlFor} className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: c.inkSoft, marginBottom: 6 }}>
-      {text}
-    </label>
-  );
-  const errLine = (text: string | undefined, id: string) =>
-    text ? (
-      <span id={id} className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.high }}>
-        {text}
-      </span>
-    ) : null;
+  const parts = toParts(form.startTime);
+  const setTime = (p: Partial<TimeParts>) => setStart(fromParts({ ...parts, ...p }));
 
-  const timeField = (which: "start" | "end") => {
-    const value = which === "start" ? form.startTime : form.endTime;
-    const isOpen = openWheel === which;
-    const parts = toParts(value);
-    const set = (p: Partial<TimeParts>) => {
-      const next = fromParts({ ...parts, ...p });
-      if (which === "start") setStart(next);
-      else update({ endTime: next });
-    };
-    const lbl = which === "start" ? "Starts" : "Ends";
-    return (
-      <div className="relative min-w-0">
-        {label(lbl)}
-        <button
-          ref={which === "start" ? startRef : undefined}
-          type="button"
-          onClick={() => setOpenWheel(isOpen ? null : which)}
-          aria-expanded={isOpen}
-          aria-label={`${lbl}, ${time12(value)}`}
-          aria-invalid={!!errors.times || undefined}
-          aria-describedby={errors.times ? `${uid}-times` : undefined}
-          className="tap text-left disabled:opacity-60"
-          style={fieldBox(!!errors.times, isOpen ? { border: `1px solid ${c.pDark}`, boxShadow: c.focusRing } : undefined)}
-        >
-          <span className="tabular-nums">{time12(value)}</span>
-          <Clock size={16} strokeWidth={1.75} style={{ color: c.faint }} className="shrink-0" />
-        </button>
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-[5]" onClick={() => setOpenWheel(null)} aria-hidden />
-            <div
-              className="absolute left-0 right-0 z-[6]"
-              style={{ top: "calc(100% + 6px)", borderRadius: 16, background: c.card, border: `1px solid ${c.menuBd}`, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 6 }}
-            >
-              <WheelPicker
-                band="business"
-                columns={[
-                  { label: "Hours", value: parts.hour, options: HOURS.map((h) => ({ value: h, label: String(h) })), onChange: (v) => set({ hour: Number(v) }) },
-                  {
-                    label: "Minutes",
-                    value: parts.minute,
-                    options: minuteOptions(parts.minute).map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
-                    onChange: (v) => set({ minute: Number(v) }),
-                  },
-                  { label: "AM or PM", value: parts.meridiem, options: MERIDIEMS.map((m) => ({ value: m, label: m })), onChange: (v) => set({ meridiem: v as Meridiem }) },
-                ]}
-              />
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
+  const runName = form.professionalId ? nameOf(form.professionalId) : "";
+  const saveLabel = saving ? "Saving…" : failed ? "Retry" : "Save class";
+  const ctaOff = blankUntouched || editUnchanged;
+  const repeatText =
+    mode === "create"
+      ? rp.kind === "none"
+        ? REPEAT_LABEL.none
+        : rp.kind === "daily"
+          ? "Daily"
+          : everyText(rp.weekdays.length ? rp.weekdays : [isoWeekday(form.date)], rp.kind === "biweekly" ? 2 : rp.kind === "custom" ? rp.interval : 1)
+      : scope === "future" && series
+        ? everyText(series.weekdays, series.intervalWeeks)
+        : series
+          ? "Only this session"
+          : REPEAT_LABEL.none;
 
-  const saveLabel = saving ? "Saving…" : failed ? "Retry" : mode === "edit" ? "Save changes" : "Save class";
   const footer = (
     <div>
       {banner && (
-        <div
-          role="alert"
-          className="flex items-start"
-          style={{ gap: 10, borderRadius: 14, padding: "12px 14px", background: c.bannerBg, color: c.bannerInk, marginBottom: 12, animation: "class-banner-in .18s ease both" }}
-        >
-          <style>{`@keyframes class-banner-in { from { opacity: 0 } to { opacity: 1 } }`}</style>
+        <div role="alert" className="flex items-start" style={{ gap: 10, borderRadius: 14, padding: "12px 14px", background: m.highbg, color: m.high, marginBottom: 10 }}>
           {banner.kind === "fields" || banner.kind === "permission" ? (
             <AlertCircle size={16} strokeWidth={2.2} className="shrink-0" style={{ marginTop: 1 }} aria-hidden />
           ) : (
@@ -553,441 +494,450 @@ function SheetBody({
           <span style={{ fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600 }}>{banner.text}</span>
         </div>
       )}
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)", gap: 10 }}>
-        <button
-          type="button"
-          onClick={requestClose}
-          aria-disabled={saving || undefined}
-          className="tap"
-          style={{ height: 52, borderRadius: 16, border: `1px solid ${c.hc ? c.faint : c.border}`, background: "transparent", fontSize: textPx(14), fontWeight: 700, color: c.inkSoft }}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={blankUntouched || editUnchanged}
-          aria-busy={saving || undefined}
-          aria-disabled={saving || undefined}
-          aria-label={saving ? "Saving class" : failed ? "Retry saving the class" : undefined}
-          className="tap relative flex items-center justify-center overflow-hidden"
-          style={{ height: 52, borderRadius: 16, color: c.onFill, fontSize: textPx(14), fontWeight: 700, gap: 8, background: "transparent" }}
-        >
-          {/* The fill carries the 0.4 / 0.7 opacity; the label stays full (AN3-051 O6). */}
-          <span aria-hidden className="absolute inset-0" style={{ background: c.fill, opacity: blankUntouched || editUnchanged ? 0.4 : saving ? 0.7 : 1, borderRadius: 16 }} />
-          {saving && <Spinner reduced={reduced} />}
-          {failed && !saving && <RotateCw size={15} strokeWidth={2.4} className="relative" aria-hidden />}
-          <span className="relative">{saveLabel}</span>
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={ctaOff}
+        aria-busy={saving || undefined}
+        aria-disabled={saving || undefined}
+        aria-label={saving ? "Saving class" : failed ? "Retry saving the class" : undefined}
+        className="market-focus relative w-full flex items-center justify-center"
+        style={{ height: 50, borderRadius: 16, color: m.onfill, fontSize: textPx(15), fontWeight: 700, gap: 8, background: m.fill, border: 0, opacity: ctaOff ? 0.4 : saving ? 0.7 : 1 }}
+      >
+        {saving && <Spinner reduced={reduced} />}
+        {failed && !saving && <RotateCw size={15} strokeWidth={2.4} aria-hidden />}
+        <span>{saveLabel}</span>
+      </button>
     </div>
   );
 
-  const runName = form.professionalId ? nameOf(form.professionalId) : "";
+  const fieldCss = `.cs-field:focus-within{border-color:${m.fill}!important}.cs-field input::placeholder,.cs-field textarea::placeholder,.cs-in::placeholder{color:${m.faint};opacity:1}`;
+  const inputStyle: React.CSSProperties = { flex: 1, minWidth: 0, background: "transparent", border: 0, outline: "none", padding: 0, fontSize: textPx(14), lineHeight: linePx(19), color: m.ink, caretColor: m.pdark };
+  const chevron = <ChevronDown size={14} style={{ color: m.faint }} className="shrink-0" aria-hidden />;
+  const valueText = (text: string, placeholder?: boolean) => (
+    <span className="truncate" style={{ color: placeholder ? m.faint : m.ink }}>
+      {text}
+    </span>
+  );
 
   return (
     <>
-      <BottomSheet
-        open={open}
-        onClose={requestClose}
-        title={mode === "edit" ? "Edit class" : "New Class"}
-        tone="business"
-        maxHeightPct={90}
-        animateExit
-        closeOnScrim={false}
-        footer={footer}
-        footerBottom={30}
-        bodyPadding={{ top: 20, right: 20, bottom: 8, left: 20 }}
-      >
-        <div ref={setBodyEl} role="form" aria-label={mode === "edit" ? "Edit class" : "New Class"} className="flex flex-col" style={{ gap: 16, pointerEvents: saving ? "none" : undefined }}>
-          {/* Type + name (AN3-010 rows 10-12) */}
-          <div ref={(el) => void (fieldRefs.current.name = el)} style={{ scrollMarginTop: 20 }}>
-            <div className="grid" style={{ gridTemplateColumns: stackTypeRow ? "minmax(0,1fr)" : "118px minmax(0,1fr)", gap: 10 }}>
-              <div className="min-w-0">
-                {label("Class type")}
-                <button
-                  ref={setTypeEl}
-                  type="button"
-                  aria-haspopup="menu"
-                  aria-expanded={typeOpen}
-                  aria-label={form.classType ? `Class type, ${form.classType}` : "Class type, not chosen"}
-                  onClick={() => setTypeOpen(true)}
-                  className="tap text-left"
-                  style={fieldBox(false)}
-                >
-                  <span className="truncate" style={{ color: form.classType ? c.ink : c.faint }}>
-                    {form.classType || "Type"}
-                  </span>
-                  <ChevronDown size={14} style={{ color: c.faint }} className="shrink-0" />
-                </button>
-              </div>
-              <div className="min-w-0">
-                {label("Class name", `${uid}-name`)}
-                <input
-                  id={`${uid}-name`}
-                  value={form.title}
-                  maxLength={60}
-                  onChange={(e) => update({ title: e.target.value })}
-                  placeholder="e.g. Morning HIIT"
-                  aria-invalid={!!errors.name || undefined}
-                  aria-describedby={errors.name ? `${uid}-name-err` : undefined}
-                  className="class-sheet-input min-w-0 text-ellipsis focus:outline-none"
-                  style={{ ...fieldBox(!!errors.name), caretColor: c.pDark }}
-                />
-              </div>
+      <BottomSheet open={open} onClose={requestClose} title={mode === "edit" ? "Edit class" : "Add class"} footer={footer} footerRule animateExit closeOnScrim={false} maxHeightPct={90}>
+        <style>{FOCUS_CSS + fieldCss}</style>
+        <div
+          ref={setBodyEl}
+          role="form"
+          aria-label={mode === "edit" ? "Edit class" : "Add class"}
+          className="grid"
+          style={{ gridTemplateColumns: stack ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)", gap: 10, pointerEvents: saving ? "none" : undefined, lineHeight: "normal" }}
+        >
+          {/* classFields, in order: Name (span 2), Type, Instructor, Date, Time, Duration, Capacity, Price, Repeat. */}
+          <FieldBox m={m} label="Name" htmlFor={`${uid}-name`} span={stack ? 1 : 2} error={errors.name} errorId={`${uid}-name-err`} boxRef={(el) => void (fieldRefs.current.name = el)}>
+            <div className="cs-field" style={fieldStyle(m, { error: !!errors.name })}>
+              <input
+                id={`${uid}-name`}
+                value={form.title}
+                maxLength={60}
+                onChange={(e) => update({ title: e.target.value })}
+                placeholder="e.g. Morning HIIT"
+                aria-invalid={!!errors.name || undefined}
+                aria-describedby={errors.name ? `${uid}-name-err` : undefined}
+                style={inputStyle}
+              />
             </div>
-            {errLine(errors.name, `${uid}-name-err`)}
-          </div>
+          </FieldBox>
 
-          {/* Date (AN3-010 row 13; V6-162 "Tue, Oct 6, 2026") */}
-          <div ref={(el) => void (fieldRefs.current.date = el)} style={{ scrollMarginTop: 20 }}>
-            {label("Date")}
+          <FieldBox m={m} label="Type">
+            <button
+              ref={setTypeEl}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={typeOpen}
+              aria-label={form.classType ? `Type, ${form.classType}` : "Type, not chosen"}
+              onClick={() => setTypeOpen(true)}
+              className="market-focus"
+              style={fieldStyle(m, { active: typeOpen })}
+            >
+              {valueText(form.classType || "Choose", !form.classType)}
+              {chevron}
+            </button>
+          </FieldBox>
+
+          <FieldBox m={m} label="Instructor" boxRef={setRunGroupEl}>
+            <button
+              ref={setRunEl}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={runOpen}
+              aria-label={runName ? `Instructor, ${runName}` : "Instructor, not chosen"}
+              onClick={() => setRunOpen(true)}
+              className="market-focus"
+              style={fieldStyle(m, { active: runOpen })}
+            >
+              <span className="flex items-center min-w-0" style={{ gap: 8 }}>
+                {runName && <Avatar m={m} name={runName} size={22} />}
+                {valueText(!instructorsLoaded ? "Loading…" : runName || (instructors.length === 0 ? "No team yet" : "No one yet"), !runName)}
+              </span>
+              {chevron}
+            </button>
+            {runOpen && instructorsLoaded && instructors.length === 0 && (
+              <div role="dialog" aria-label="Instructor" style={{ marginTop: 8, background: m.card, borderRadius: 10, padding: "10px 12px" }}>
+                <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>No employees yet</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: m.faint }}>Classes need someone to run them. Add a professional by business ID.</p>
+                <div className="flex items-center" style={{ gap: 10, marginTop: 6 }}>
+                  <button type="button" onClick={() => onAddEmployee(form)} className="market-focus hit inline-flex items-center" style={{ gap: 4, fontSize: textPx(12), fontWeight: 800, color: m.pdark, minHeight: 32, background: "transparent", border: 0 }}>
+                    Add an employee
+                    <ChevronRight size={13} aria-hidden />
+                  </button>
+                  <button type="button" onClick={() => setRunOpen(false)} className="market-focus hit" style={{ fontSize: textPx(12), fontWeight: 700, color: m.ink2, minHeight: 32, background: "transparent", border: 0 }}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </FieldBox>
+
+          <FieldBox
+            m={m}
+            label="Date"
+            error={errors.date}
+            errorId={`${uid}-date`}
+            hint={dateLocked ? "The change starts from this date. Earlier sessions keep their details." : undefined}
+            boxRef={(el) => void (fieldRefs.current.date = el)}
+          >
             <button
               type="button"
               disabled={dateLocked}
               onClick={() => setDateOpen(true)}
               aria-label={`Date, ${longDate(form.date)}`}
               aria-invalid={!!errors.date || undefined}
-              className="tap text-left disabled:opacity-60"
-              style={fieldBox(!!errors.date)}
+              className="market-focus disabled:opacity-60"
+              style={fieldStyle(m, { error: !!errors.date })}
             >
-              <span className="tabular-nums truncate">{longDate(form.date)}</span>
-              <CalendarIcon size={16} strokeWidth={1.75} style={{ color: c.faint }} className="shrink-0" />
+              {valueText(longDate(form.date))}
+              <CalendarIcon size={15} strokeWidth={1.75} style={{ color: m.faint }} className="shrink-0" aria-hidden />
             </button>
-            {errLine(errors.date, `${uid}-date`)}
-            {dateLocked && (
-              <p style={{ margin: "6px 0 0", fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
-                The change starts from this date. Earlier sessions keep their details.
-              </p>
-            )}
-          </div>
+          </FieldBox>
 
-          {/* Starts / Ends */}
-          <div ref={(el) => void (fieldRefs.current.times = el)} style={{ scrollMarginTop: 20 }}>
-            <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-              {timeField("start")}
-              {timeField("end")}
+          <FieldBox m={m} label="Time" boxRef={(el) => void (fieldRefs.current.times = el)}>
+            <button
+              ref={startRef}
+              type="button"
+              onClick={() => setWheelOpen((o) => !o)}
+              aria-expanded={wheelOpen}
+              aria-label={`Time, ${time12(form.startTime)}`}
+              className="market-focus"
+              style={fieldStyle(m, { active: wheelOpen })}
+            >
+              <span className="tabular-nums truncate">{time12(form.startTime)}</span>
+              <Clock size={15} strokeWidth={1.75} style={{ color: m.faint }} className="shrink-0" aria-hidden />
+            </button>
+          </FieldBox>
+
+          {wheelOpen && (
+            <div style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: 6 }}>
+              <WheelPicker
+                band="business"
+                columns={[
+                  { label: "Hours", value: parts.hour, options: HOURS.map((h) => ({ value: h, label: String(h) })), onChange: (v) => setTime({ hour: Number(v) }) },
+                  { label: "Minutes", value: parts.minute, options: minuteOptions(parts.minute).map((x) => ({ value: x, label: String(x).padStart(2, "0") })), onChange: (v) => setTime({ minute: Number(v) }) },
+                  { label: "AM or PM", value: parts.meridiem, options: MERIDIEMS.map((x) => ({ value: x, label: x })), onChange: (v) => setTime({ meridiem: v as Meridiem }) },
+                ]}
+              />
+              <button type="button" onClick={() => setWheelOpen(false)} className="market-focus w-full" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 800, color: m.pdark, background: "transparent", border: 0 }}>
+                Done
+              </button>
             </div>
-            {errLine(errors.times, `${uid}-times`)}
-            {/* OURS-AN3 A5: a booked class moved, its people are told. */}
-            {moved && bookedCount > 0 && (
-              <p style={{ margin: "8px 0 0", borderRadius: 12, background: c.soft, padding: "10px 12px", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft }}>
-                {bookedCount} booked {bookedCount === 1 ? people.slice(0, -1) : people} {bookedCount === 1 ? "gets" : "get"} a message about the change.
-              </p>
-            )}
-          </div>
+          )}
 
-          {/* Repeat (AN3-041 … 048, B9 CL-01): new classes; a series edit shows its rule. */}
-          {mode === "create" && (
-            <div ref={setRepeatGroupEl} style={{ scrollMarginTop: 20 }}>
-              {label("Repeat")}
+          <FieldBox m={m} label="Duration" error={errors.times} errorId={`${uid}-times`}>
+            <button
+              ref={setDurEl}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={durOpen}
+              aria-label={`Duration, ${durationMinutes(form.startTime, form.endTime)} minutes, ends ${time12(form.endTime)}`}
+              aria-invalid={!!errors.times || undefined}
+              onClick={() => setDurOpen(true)}
+              className="market-focus"
+              style={fieldStyle(m, { error: !!errors.times, active: durOpen })}
+            >
+              {valueText(`${durationMinutes(form.startTime, form.endTime)} min`)}
+              {chevron}
+            </button>
+          </FieldBox>
+
+          <FieldBox
+            m={m}
+            label="Capacity"
+            htmlFor={`${uid}-cap`}
+            error={errors.capacity}
+            errorId={`${uid}-cap-help`}
+            hint={capHelp ? <span style={{ color: capHelp.ink }}>{capHelp.text}</span> : undefined}
+            boxRef={(el) => void (fieldRefs.current.capacity = el)}
+          >
+            <div className="cs-field" style={{ ...fieldStyle(m, { error: capInvalid }), padding: 0, gap: 0 }}>
+              <button
+                type="button"
+                aria-label="Fewer spots"
+                disabled={capNum !== null && capNum <= capFloor}
+                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={() => startRepeat(-1)}
+                onClick={() => stepClick(-1)}
+                className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
+                style={{ width: 36, height: 39, color: m.pdark, background: "transparent", border: 0 }}
+              >
+                <Minus size={15} strokeWidth={2.4} aria-hidden />
+              </button>
+              <input
+                id={`${uid}-cap`}
+                role="spinbutton"
+                inputMode="numeric"
+                aria-valuemin={capFloor}
+                aria-valuemax={CAPACITY_MAX}
+                aria-valuenow={capNum ?? undefined}
+                aria-invalid={capInvalid || undefined}
+                aria-describedby={capHelp || errors.capacity ? `${uid}-cap-help` : undefined}
+                value={form.capacity}
+                onFocus={() => setCapFocus("focus")}
+                onBlur={() => {
+                  setCapFocus(null);
+                  if (form.capacity.trim() === "") update({ capacity: lastValidCap });
+                  else if (capNum !== null && capNum >= capFloor && capNum <= CAPACITY_MAX) setLastValidCap(String(capNum));
+                }}
+                onChange={(e) => {
+                  setCapFocus("typing");
+                  update({ capacity: e.target.value.slice(0, 4) });
+                }}
+                className="tabular-nums"
+                style={{ ...inputStyle, textAlign: "center", fontWeight: 400 }}
+              />
+              <button
+                type="button"
+                aria-label="More spots"
+                disabled={capNum !== null && capNum >= CAPACITY_MAX}
+                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={() => startRepeat(1)}
+                onClick={() => stepClick(1)}
+                className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
+                style={{ width: 36, height: 39, color: m.pdark, background: "transparent", border: 0 }}
+              >
+                <Plus size={15} strokeWidth={2.4} aria-hidden />
+              </button>
+            </div>
+          </FieldBox>
+
+          <FieldBox m={m} label="Price" htmlFor={`${uid}-price`} error={errors.price} errorId={`${uid}-price-err`} boxRef={(el) => void (fieldRefs.current.price = el)}>
+            <div className="cs-field" style={{ ...fieldStyle(m, { error: !!errors.price }), justifyContent: "flex-start", gap: 2 }}>
+              <span aria-hidden style={{ color: m.ink }}>$</span>
+              <input
+                id={`${uid}-price`}
+                inputMode="decimal"
+                value={form.price}
+                onChange={(e) => update({ price: e.target.value.slice(0, 10) })}
+                placeholder="0"
+                aria-invalid={!!errors.price || undefined}
+                aria-describedby={errors.price ? `${uid}-price-err` : undefined}
+                aria-label="Price in dollars, paid in cash at the venue"
+                className="tabular-nums"
+                style={inputStyle}
+              />
+            </div>
+          </FieldBox>
+
+          <FieldBox m={m} label="Repeat" boxRef={setRepeatGroupEl} error={repeatErr} errorId={`${uid}-repeat`}>
+            {mode === "create" ? (
               <button
                 ref={setRepeatEl}
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={repeatOpen}
-                aria-label={`Repeat, ${REPEAT_LABEL[rp.kind]}`}
+                aria-label={`Repeat, ${repeatText}`}
                 onClick={() => setRepeatOpen(true)}
-                className="tap text-left"
-                style={fieldBox(false, {
-                  justifyContent: "flex-start",
-                  border: `1px solid ${repeatOpen || rp.kind !== "none" ? c.pDark : c.inputBd}`,
-                  boxShadow: repeatOpen ? c.focusRing : "none",
-                })}
+                className="market-focus"
+                style={fieldStyle(m, { active: repeatOpen })}
               >
-                <Repeat size={15} strokeWidth={1.9} style={{ color: c.faint }} className="shrink-0" aria-hidden />
-                <span className="flex-1 min-w-0 truncate">{REPEAT_LABEL[rp.kind]}</span>
-                <ChevronDown size={16} style={{ color: c.faint }} className="shrink-0" />
+                {valueText(repeatText)}
+                {chevron}
               </button>
-              {rp.kind !== "none" && rule && (
-                <div className="flex flex-col" style={{ marginTop: 10, borderRadius: 16, border: `1px solid ${c.inputBd}`, padding: 12, gap: 12 }}>
-                  {rp.kind === "custom" && (
-                    <div className="flex items-center" style={{ gap: 8, fontSize: textPx(12.5), fontWeight: 600, color: c.ink }}>
-                      <span>Every</span>
-                      <span className="inline-flex items-center" style={{ height: 34, borderRadius: 10, background: c.soft, border: `1px solid ${c.inputBd}` }}>
-                        <button type="button" aria-label="Fewer weeks" disabled={rp.interval <= 1} onClick={() => update({ repeat: { ...rp, interval: rp.interval - 1 } })} className="tap h-full flex items-center justify-center disabled:opacity-30" style={{ width: 34, color: c.pDark }}>
-                          <Minus size={14} strokeWidth={2.4} />
-                        </button>
-                        <span aria-live="polite" className="tabular-nums text-center" style={{ minWidth: 20, fontWeight: 800 }}>
-                          {rp.interval}
-                        </span>
-                        <button type="button" aria-label="More weeks" disabled={rp.interval >= 4} onClick={() => update({ repeat: { ...rp, interval: rp.interval + 1 } })} className="tap h-full flex items-center justify-center disabled:opacity-30" style={{ width: 34, color: c.pDark }}>
-                          <Plus size={14} strokeWidth={2.4} />
-                        </button>
-                      </span>
-                      <span>{rp.interval === 1 ? "week" : "weeks"}</span>
-                    </div>
-                  )}
-                  {rp.kind !== "daily" && (
-                    <div>
-                      <p style={{ margin: "0 0 6px", fontSize: textPx(11), fontWeight: 700, color: c.faint }}>On</p>
-                      <div role="group" aria-label="Repeat on" className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4 }}>
-                        {DAY_LETTERS.map((t, i) => {
-                          const w = i + 1;
-                          const on = rp.weekdays.includes(w);
-                          return (
-                            <button
-                              key={w}
-                              type="button"
-                              role="checkbox"
-                              aria-checked={on}
-                              aria-label={DAY_LONG[i]}
-                              onClick={() => toggleDay(w)}
-                              className="tap flex items-center justify-center"
-                              style={{
-                                aspectRatio: "1",
-                                maxHeight: 40,
-                                minHeight: 34,
-                                borderRadius: 10,
-                                fontSize: textPx(12.5),
-                                fontWeight: on ? 800 : 600,
-                                background: on ? (c.dark ? "#A991FE" : "#AB9ED7") : c.soft,
-                                // AN3-043 row 4: white on #AB9ED7 · #A991FE (ClassFlowsV6 `ink`), both modes.
-                                color: on ? "#FFFFFF" : c.inkSoft,
-                                border: `1px solid ${on ? (c.dark ? "#A991FE" : "#AB9ED7") : c.dark ? "#393C44" : c.inputBd}`,
-                              }}
-                            >
-                              {t}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <div role="radiogroup" aria-label="Ends">
-                    <p style={{ margin: "0 0 4px", fontSize: textPx(11), fontWeight: 700, color: c.faint }}>Ends</p>
-                    {(
-                      [
-                        ["never", "Never"],
-                        ["date", "On a date"],
-                        ["count", "After"],
-                      ] as const
-                    ).map(([k, t], i) => {
-                      const on = rp.ends === k;
+            ) : (
+              <div role="group" aria-label={`Repeat, ${repeatText}${scope === "future" && series ? `. ${repeatSummary(series, series.startTime)}` : ""}`} style={{ ...fieldStyle(m), color: m.ink2 }}>
+                <span className="truncate">{repeatText}</span>
+              </div>
+            )}
+          </FieldBox>
+
+          {/* The kept Repeat editor (AN3-041 … 048, B9 CL-01): new classes only. */}
+          {mode === "create" && rp.kind !== "none" && rule && (
+            <div className="flex flex-col" style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px", gap: 12 }}>
+              {rp.kind === "custom" && (
+                <div className="flex items-center" style={{ gap: 8, fontSize: textPx(13), fontWeight: 600, color: m.ink }}>
+                  <span>Every</span>
+                  <span className="inline-flex items-center" style={{ height: 36, borderRadius: 10, background: m.card }}>
+                    <button type="button" aria-label="Fewer weeks" disabled={rp.interval <= 1} onClick={() => update({ repeat: { ...rp, interval: rp.interval - 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
+                      <Minus size={14} strokeWidth={2.4} aria-hidden />
+                    </button>
+                    <span aria-live="polite" className="tabular-nums text-center" style={{ minWidth: 20, fontWeight: 800 }}>
+                      {rp.interval}
+                    </span>
+                    <button type="button" aria-label="More weeks" disabled={rp.interval >= 4} onClick={() => update({ repeat: { ...rp, interval: rp.interval + 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
+                      <Plus size={14} strokeWidth={2.4} aria-hidden />
+                    </button>
+                  </span>
+                  <span>{rp.interval === 1 ? "week" : "weeks"}</span>
+                </div>
+              )}
+              {rp.kind !== "daily" && (
+                <div>
+                  <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>On</p>
+                  <div role="group" aria-label="Repeat on" className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4 }}>
+                    {DAY_LETTERS.map((t, i) => {
+                      const w = i + 1;
+                      const on = rp.weekdays.includes(w);
                       return (
-                        <div key={k} className="flex items-center" style={{ gap: 10, minHeight: 44, borderTop: i ? `1px solid ${c.inputBd}` : "none" }}>
-                          <button
-                            type="button"
-                            role="radio"
-                            aria-checked={on}
-                            onClick={() => {
-                              update({ repeat: { ...rp, ends: k, until: k === "date" && !rp.until ? addDays(form.date || today, 56) : rp.until } });
-                              if (k === "date") setUntilOpen(true);
-                              if (k === "count") window.setTimeout(() => countRef.current?.focus(), 30);
-                            }}
-                            className="tap flex flex-1 items-center text-left"
-                            style={{ gap: 10, minHeight: 44 }}
-                          >
-                            <span className="shrink-0 flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${on ? c.pDark : c.tert}` }}>
-                              <span style={{ width: 8, height: 8, borderRadius: 999, background: on ? c.pDark : "transparent" }} />
-                            </span>
-                            <span style={{ fontSize: textPx(13), fontWeight: on ? 700 : 500, color: c.ink }}>{t}</span>
-                          </button>
-                          {k === "date" && (
-                            <button
-                              type="button"
-                              aria-label={rp.until ? `Last date, ${longDate(rp.until)}` : "Choose the last date"}
-                              onClick={() => {
-                                update({ repeat: { ...rp, ends: "date", until: rp.until || addDays(form.date || today, 56) } });
-                                setUntilOpen(true);
-                              }}
-                              className="tap inline-flex items-center tabular-nums whitespace-nowrap"
-                              style={{ height: 34, padding: "0 10px", borderRadius: 10, background: c.soft, border: `1px solid ${on ? c.pDark : c.inputBd}`, fontSize: textPx(12.5), fontWeight: 700, color: c.ink }}
-                            >
-                              {rp.until ? slashDate(rp.until) : "Choose"}
-                            </button>
-                          )}
-                          {k === "count" && (
-                            <span className="inline-flex items-center whitespace-nowrap" style={{ height: 34, padding: "0 10px", borderRadius: 10, background: c.soft, border: `1px solid ${on ? c.pDark : c.inputBd}`, gap: 4, fontSize: textPx(12.5), fontWeight: 700, color: c.ink }}>
-                              <input
-                                ref={countRef}
-                                inputMode="numeric"
-                                aria-label="Number of sessions"
-                                value={rp.count}
-                                onFocus={() => rp.ends !== "count" && update({ repeat: { ...rp, ends: "count" } })}
-                                onChange={(e) => update({ repeat: { ...rp, ends: "count", count: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
-                                className="class-sheet-input bg-transparent text-right tabular-nums focus:outline-none"
-                                style={{ width: 30, border: 0, fontWeight: 700, color: c.ink, fontSize: textPx(12.5) }}
-                              />
-                              sessions
-                            </span>
-                          )}
-                        </div>
+                        <button
+                          key={w}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={on}
+                          aria-label={DAY_LONG[i]}
+                          onClick={() => toggleDay(w)}
+                          className="market-focus hit flex items-center justify-center"
+                          style={{ aspectRatio: "1", maxHeight: 40, minHeight: 34, borderRadius: 10, fontSize: textPx(12.5), fontWeight: on ? 800 : 600, background: on ? m.segactive : m.card, color: on ? m.onfill : m.ink2, border: 0 }}
+                        >
+                          {t}
+                        </button>
                       );
                     })}
                   </div>
-                  <div style={{ borderRadius: 12, background: c.dark ? "rgba(169,145,254,0.10)" : "#F7F6FD", padding: "10px 12px" }}>
-                    <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: c.ink }}>{repeatSummary(rule, form.startTime)}</p>
-                    {nextLine(rule) && (
-                      <p style={{ margin: "3px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: c.inkSoft }}>Next: {nextLine(rule)}</p>
-                    )}
-                  </div>
                 </div>
               )}
-              {errLine(repeatErr ?? undefined, `${uid}-repeat`)}
+              <div role="radiogroup" aria-label="Ends">
+                <p style={{ margin: "0 0 2px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>Ends</p>
+                {(
+                  [
+                    ["never", "Never"],
+                    ["date", "On a date"],
+                    ["count", "After"],
+                  ] as const
+                ).map(([k, t], i) => {
+                  const on = rp.ends === k;
+                  return (
+                    <div key={k} className="flex items-center" style={{ gap: 10, minHeight: 44, borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => {
+                          update({ repeat: { ...rp, ends: k, until: k === "date" && !rp.until ? addDays(form.date || today, 56) : rp.until } });
+                          if (k === "date") setUntilOpen(true);
+                          if (k === "count") window.setTimeout(() => countRef.current?.focus(), 30);
+                        }}
+                        className="market-focus flex flex-1 items-center text-left"
+                        style={{ gap: 10, minHeight: 44, background: "transparent", border: 0 }}
+                      >
+                        <span className="shrink-0 flex items-center justify-center" style={{ width: 20, height: 20, borderRadius: 999, border: `${on ? 6 : 1.5}px solid ${on ? m.segactive : m.border}`, background: m.card, boxSizing: "border-box" }} />
+                        <span style={{ fontSize: textPx(13.5), fontWeight: on ? 700 : 500, color: m.ink }}>{t}</span>
+                      </button>
+                      {k === "date" && (
+                        <button
+                          type="button"
+                          aria-label={rp.until ? `Last date, ${longDate(rp.until)}` : "Choose the last date"}
+                          onClick={() => {
+                            update({ repeat: { ...rp, ends: "date", until: rp.until || addDays(form.date || today, 56) } });
+                            setUntilOpen(true);
+                          }}
+                          className="market-focus inline-flex items-center tabular-nums whitespace-nowrap"
+                          style={{ height: 36, padding: "0 10px", borderRadius: 10, background: m.card, border: `1px solid ${on ? m.fill : "transparent"}`, fontSize: textPx(12.5), fontWeight: 700, color: m.ink }}
+                        >
+                          {rp.until ? slashDate(rp.until) : "Choose"}
+                        </button>
+                      )}
+                      {k === "count" && (
+                        <span className="cs-field inline-flex items-center whitespace-nowrap" style={{ height: 36, padding: "0 10px", borderRadius: 10, background: m.card, border: `1px solid ${on ? m.fill : "transparent"}`, gap: 4, fontSize: textPx(12.5), fontWeight: 700, color: m.ink }}>
+                          <input
+                            ref={countRef}
+                            inputMode="numeric"
+                            aria-label="Number of sessions"
+                            value={rp.count}
+                            onFocus={() => rp.ends !== "count" && update({ repeat: { ...rp, ends: "count" } })}
+                            onChange={(e) => update({ repeat: { ...rp, ends: "count", count: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
+                            className="tabular-nums"
+                            style={{ width: 30, border: 0, background: "transparent", outline: "none", textAlign: "right", fontWeight: 700, color: m.ink, fontSize: textPx(12.5) }}
+                          />
+                          sessions
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ borderRadius: 10, background: m.card, padding: "10px 12px" }}>
+                <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{repeatSummary(rule, form.startTime)}</p>
+                {nextLine(rule) && <p style={{ margin: "3px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: m.ink2 }}>Next: {nextLine(rule)}</p>}
+              </div>
             </div>
           )}
           {mode === "edit" && scope === "future" && series && (
-            <div>
-              {label("Repeat")}
-              <div role="group" aria-label={`Repeat, ${repeatSummary(series, series.startTime)}`} style={fieldBox(false, { justifyContent: "flex-start", height: "auto", minHeight: 40, padding: "9px 12px" })}>
-                <Repeat size={15} strokeWidth={1.9} style={{ color: c.faint }} className="shrink-0" aria-hidden />
-                <span className="flex-1 min-w-0" style={{ lineHeight: linePx(20) }}>{repeatSummary(series, series.startTime)}</span>
-              </div>
-            </div>
+            <p style={{ gridColumn: stack ? "span 1" : "span 2", margin: 0, padding: "0 4px", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
+              {repeatSummary(series, series.startTime)}. The change applies to this session and every later one.
+            </p>
           )}
 
-          {/* Capacity + price */}
-          <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-            <div className="min-w-0" ref={(el) => void (fieldRefs.current.capacity = el)} style={{ scrollMarginTop: 20 }}>
-              {label("Max capacity", `${uid}-cap`)}
-              <div
-                className="grid items-center"
-                style={{
-                  gridTemplateColumns: "40px minmax(0,1fr) 40px",
-                  height: 40,
-                  borderRadius: 12,
-                  background: c.soft,
-                  border: `${capFocus || capInvalid ? 1.5 : 1}px solid ${capInvalid ? c.high : capFocus ? c.pDark : c.inputBd}`,
-                  boxShadow: capInvalid && capFocus ? "0 0 0 3px rgba(192,57,43,0.14)" : capFocus ? c.focusRing : "none",
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label="Fewer spots"
-                  disabled={capNum !== null && capNum <= capFloor}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onPointerDown={() => startRepeat(-1)}
-                  onClick={() => stepClick(-1)}
-                  className="tap h-full flex items-center justify-center disabled:opacity-30"
-                  style={{ color: c.pDark }}
-                >
-                  <Minus size={15} strokeWidth={2.4} />
-                </button>
-                <input
-                  id={`${uid}-cap`}
-                  role="spinbutton"
-                  inputMode="numeric"
-                  aria-label="Max capacity"
-                  aria-valuemin={capFloor}
-                  aria-valuemax={CAPACITY_MAX}
-                  aria-valuenow={capNum ?? undefined}
-                  aria-invalid={capInvalid || undefined}
-                  aria-describedby={capHelp ? `${uid}-cap-help` : undefined}
-                  value={form.capacity}
-                  onFocus={() => setCapFocus("focus")}
-                  onBlur={() => {
-                    setCapFocus(null);
-                    if (form.capacity.trim() === "") update({ capacity: lastValidCap });
-                    else if (capNum !== null && capNum >= capFloor && capNum <= CAPACITY_MAX) setLastValidCap(String(capNum));
-                  }}
-                  onChange={(e) => {
-                    setCapFocus("typing");
-                    update({ capacity: e.target.value.slice(0, 4) });
-                  }}
-                  className="class-sheet-input w-full min-w-0 bg-transparent text-center tabular-nums focus:outline-none"
-                  style={{ fontSize: textPx(14), fontWeight: 700, color: c.ink, caretColor: c.pDark, border: 0 }}
-                />
-                <button
-                  type="button"
-                  aria-label="More spots"
-                  disabled={capNum !== null && capNum >= CAPACITY_MAX}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onPointerDown={() => startRepeat(1)}
-                  onClick={() => stepClick(1)}
-                  className="tap h-full flex items-center justify-center disabled:opacity-30"
-                  style={{ color: c.pDark }}
-                >
-                  <Plus size={15} strokeWidth={2.4} />
-                </button>
-              </div>
-              {capHelp && (
-                <span id={`${uid}-cap-help`} className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: capHelp.ink }}>
-                  {capHelp.text}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0" ref={(el) => void (fieldRefs.current.price = el)} style={{ scrollMarginTop: 20 }}>
-              {label("Price", `${uid}-price`)}
-              <div style={fieldBox(!!errors.price, { justifyContent: "flex-start" })}>
-                <span aria-hidden style={{ fontSize: textPx(14), fontWeight: 700, color: c.faint }}>
-                  $
-                </span>
-                <input
-                  id={`${uid}-price`}
-                  inputMode="decimal"
-                  value={form.price}
-                  onChange={(e) => update({ price: e.target.value.slice(0, 10) })}
-                  placeholder="0"
-                  aria-invalid={!!errors.price || undefined}
-                  aria-describedby={errors.price ? `${uid}-price-err` : undefined}
-                  className="class-sheet-input flex-1 min-w-0 bg-transparent tabular-nums focus:outline-none"
-                  style={{ fontSize: textPx(14), color: c.ink, caretColor: c.pDark, border: 0 }}
-                />
-              </div>
-              {errLine(errors.price, `${uid}-price-err`)}
-            </div>
-          </div>
+          {/* OURS-AN3 A5: a booked class moved, its people are told. */}
+          {moved && bookedCount > 0 && (
+            <p style={{ gridColumn: stack ? "span 1" : "span 2", margin: 0, borderRadius: 14, background: m.sgrey, padding: "10px 14px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
+              {bookedCount} booked {bookedCount === 1 ? people.slice(0, -1) : people} {bookedCount === 1 ? "gets" : "get"} a message about the change.
+            </p>
+          )}
 
-          {/* Run by (AN3-022 / 024) */}
-          <div ref={setRunGroupEl} className="relative">
-            {label("Run by")}
-            <button
-              ref={setRunEl}
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={runOpen}
-              aria-label={runName ? `Run by, ${runName}` : "Run by, not chosen"}
-              onClick={() => setRunOpen(true)}
-              className="tap text-left"
-              style={fieldBox(false)}
-            >
-              <span className="flex items-center min-w-0" style={{ gap: 8 }}>
-                {runName && <Avatar c={c} name={runName} size={24} />}
-                <span className="truncate" style={{ color: runName ? c.ink : c.faint }}>
-                  {!instructorsLoaded ? "Loading your team…" : runName || (instructors.length === 0 ? "No employees yet" : "Choose who runs it")}
-                </span>
-              </span>
-              <ChevronDown size={14} style={{ color: c.faint }} className="shrink-0" />
-            </button>
-            {runOpen && instructorsLoaded && instructors.length === 0 && (
-              <>
-                <div className="fixed inset-0 z-[5]" onClick={() => setRunOpen(false)} aria-hidden />
-                <div
-                  role="dialog"
-                  aria-label="Run by"
-                  className="absolute left-0 right-0 z-[6]"
-                  style={{ bottom: "calc(100% + 6px)", background: c.card, border: `1px solid ${c.menuBd}`, borderRadius: 14, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 8 }}
-                >
-                  <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint }}>Run by</p>
-                  <div style={{ padding: "6px 6px 4px" }}>
-                    <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: c.ink }}>No employees yet</p>
-                    <p style={{ margin: "2px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: c.faint }}>Classes need someone to run them. Add a professional by business ID.</p>
-                    <button
-                      type="button"
-                      onClick={() => onAddEmployee(form)}
-                      className="tap inline-flex items-center"
-                      style={{ marginTop: 10, gap: 4, fontSize: textPx(12), fontWeight: 800, color: c.pDark, minHeight: 32 }}
-                    >
-                      Add an employee
-                      <ChevronRight size={13} />
-                    </button>
-                  </div>
+          {/* B13 MK-04 (the old Spots tab): Show on Explore and the spots open on Centium. */}
+          <div data-class-explore="" style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+            <div className="flex items-center" style={{ gap: 12 }}>
+              <div className="flex-1 min-w-0">
+                <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, color: m.ink }}>Show on Explore</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>
+                  {form.listedOnExplore ? "New clients can find and book this class on Centium." : "Members only. It's off Explore, and members can still book it."}
+                </p>
+              </div>
+              <BoardSwitch m={m} checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={`Show ${form.title.trim() || "this class"} on Explore`} />
+            </div>
+            {form.listedOnExplore && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>Spots on Centium</p>
+                <div style={{ ...fieldStyle(m), padding: 0, gap: 0 }}>
+                  <button
+                    type="button"
+                    aria-label="Fewer spots on Centium"
+                    disabled={exploreSpots === 0}
+                    onClick={() => update({ centiumSpots: exploreSpots === null ? exploreCap : Math.max(0, exploreSpots - 1) })}
+                    className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
+                    style={{ width: 40, height: 39, color: m.pdark, background: "transparent", border: 0 }}
+                  >
+                    <Minus size={15} strokeWidth={2.4} aria-hidden />
+                  </button>
+                  <span role="status" aria-label={exploreSpots === null ? "All free spots open on Centium" : `${exploreSpots} spots open on Centium`} className="flex-1 text-center tabular-nums" style={{ fontSize: textPx(14), color: m.ink }}>
+                    {exploreSpots === null ? "All free spots" : exploreSpots}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="More spots on Centium"
+                    disabled={exploreSpots === null}
+                    onClick={() => update({ centiumSpots: exploreSpots !== null && exploreSpots < exploreCap ? exploreSpots + 1 : null })}
+                    className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
+                    style={{ width: 40, height: 39, color: m.pdark, background: "transparent", border: 0 }}
+                  >
+                    <Plus size={15} strokeWidth={2.4} aria-hidden />
+                  </button>
                 </div>
-              </>
+                <p style={{ margin: "6px 0 0", fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: m.faint }}>
+                  All the places people from Centium can take, including ones already booked. Members can always book any free spot.
+                </p>
+              </div>
             )}
           </div>
 
-          {/* Payment type: single mode (AN3-028) */}
-          <div>
-            {label("Payment type")}
-            <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, lineHeight: linePx(20), color: c.ink }}>Cash</p>
-            <p style={{ margin: "2px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: c.faint }}>The only payment method turned on in your settings.</p>
-          </div>
-
-          {/* Notes: the live field, kept (AN3-010 K1) */}
-          <div>
-            {label("Notes for the instructor (optional)", `${uid}-notes`)}
+          <FieldBox m={m} label="Notes for the instructor (optional)" htmlFor={`${uid}-notes`} span={stack ? 1 : 2}>
             <textarea
               id={`${uid}-notes`}
               value={form.notes}
@@ -995,174 +945,95 @@ function SheetBody({
               onChange={(e) => update({ notes: e.target.value })}
               placeholder="Anything they should know before the class"
               rows={3}
-              className="class-sheet-input block w-full resize-none focus:outline-none"
-              style={{
-                minHeight: 76,
-                borderRadius: 12,
-                background: c.soft,
-                border: `1px solid ${c.inputBd}`,
-                padding: "10px 12px",
-                fontSize: textPx(14),
-                lineHeight: linePx(20),
-                color: c.ink,
-                caretColor: c.pDark,
-              }}
+              className="cs-in block w-full resize-none market-focus"
+              style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
             />
-          </div>
-
-          {/* B13 MK-04: Show on Explore and the Centium spots. No class-sheet frame
-              draws them: the words are MA1-003 row 7i / MA1-040's (OURS layout). */}
-          <div className="flex flex-col" style={{ gap: 14, borderTop: `1px solid ${c.divider}`, paddingTop: 16 }} data-class-explore="">
-            <div className="flex items-start" style={{ gap: 12 }}>
-              <div className="flex-1 min-w-0">
-                <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink }}>Show on Explore</p>
-                <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>
-                  {form.listedOnExplore ? "New clients can find and book this class on Centium." : "Members only. It's off Explore, and members can still book it."}
-                </p>
-              </div>
-              <Toggle size="business" checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={`Show ${form.title.trim() || "this class"} on Explore`} />
-            </div>
-            {form.listedOnExplore && (
-              <div>
-                {label("Spots open on Centium")}
-                <div className="grid items-center" style={{ gridTemplateColumns: "40px minmax(0,1fr) 40px", height: 40, borderRadius: 12, background: c.soft, border: `1px solid ${c.inputBd}` }}>
-                  <button
-                    type="button"
-                    aria-label="Fewer"
-                    disabled={exploreSpots === 0}
-                    onClick={() => update({ centiumSpots: exploreSpots === null ? exploreCap : Math.max(0, exploreSpots - 1) })}
-                    className="tap h-full flex items-center justify-center disabled:opacity-30"
-                    style={{ color: c.pDark }}
-                  >
-                    <Minus size={15} strokeWidth={2.4} />
-                  </button>
-                  <span role="status" aria-label={exploreSpots === null ? "All free spots open on Centium" : `${exploreSpots} spots open on Centium`} className="text-center tabular-nums" style={{ fontSize: textPx(14), fontWeight: 700, color: c.ink }}>
-                    {exploreSpots === null ? "All free spots" : exploreSpots}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="More"
-                    disabled={exploreSpots === null}
-                    onClick={() => update({ centiumSpots: exploreSpots !== null && exploreSpots < exploreCap ? exploreSpots + 1 : null })}
-                    className="tap h-full flex items-center justify-center disabled:opacity-30"
-                    style={{ color: c.pDark }}
-                  >
-                    <Plus size={15} strokeWidth={2.4} />
-                  </button>
-                </div>
-                <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
-                  All the places people from Centium can take, including ones already booked. Members can always book any free spot.
-                </span>
-              </div>
-            )}
-          </div>
+          </FieldBox>
 
           {/* B9 EX-01: what the class page shows (OURS layout and strings; no business frame). */}
-          <div className="flex flex-col" style={{ gap: 16, borderTop: `1px solid ${c.divider}`, paddingTop: 16 }}>
-            <div>
-              <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink }}>On the class page</p>
-              <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>Optional. {people === "clients" ? "Clients" : "Members"} see these on Explore.</p>
-            </div>
-            <div>
-              {label("Cover photo")}
-              <input
-                ref={coverInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  void pickCover(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-              {form.coverUrl ? (
-                <div className="relative overflow-hidden" style={{ borderRadius: 14, border: `1px solid ${c.inputBd}`, aspectRatio: "16 / 9", background: c.soft }}>
-                  <img src={form.coverUrl} alt="Class cover" className="w-full h-full object-cover" />
-                  <div className="absolute flex" style={{ right: 8, bottom: 8, gap: 6 }}>
-                    <button
-                      type="button"
-                      onClick={() => coverInput.current?.click()}
-                      disabled={coverBusy}
-                      className="tap inline-flex items-center"
-                      style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800 }}
-                    >
-                      {coverBusy ? "Uploading…" : "Change"}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Remove the cover photo"
-                      onClick={() => update({ coverUrl: "" })}
-                      disabled={coverBusy}
-                      className="tap inline-flex items-center justify-center"
-                      style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF" }}
-                    >
-                      <X size={16} strokeWidth={2.4} />
-                    </button>
-                  </div>
+          <div style={{ gridColumn: stack ? "span 1" : "span 2", padding: "6px 4px 0" }}>
+            <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 800, color: m.ink }}>On the class page</p>
+            <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>Optional. {people === "clients" ? "Clients" : "Members"} see these on Explore.</p>
+          </div>
+          <FieldBox m={m} label="Cover photo" span={stack ? 1 : 2} error={coverErr} hint={coverErr ? undefined : "JPEG, PNG or WebP, up to 5 MB."}>
+            <input
+              ref={coverInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                void pickCover(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            {form.coverUrl ? (
+              <div className="relative overflow-hidden" style={{ borderRadius: 10, aspectRatio: "16 / 9", background: m.card }}>
+                <img src={form.coverUrl} alt="Class cover" className="w-full h-full object-cover" />
+                <div className="absolute flex" style={{ right: 8, bottom: 8, gap: 6 }}>
+                  <button type="button" onClick={() => coverInput.current?.click()} disabled={coverBusy} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800, border: 0 }}>
+                    {coverBusy ? "Uploading…" : "Change"}
+                  </button>
+                  <button type="button" aria-label="Remove the cover photo" onClick={() => update({ coverUrl: "" })} disabled={coverBusy} className="market-focus hit inline-flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", border: 0 }}>
+                    <X size={16} strokeWidth={2.4} aria-hidden />
+                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => coverInput.current?.click()}
-                  disabled={coverBusy || !onUploadCover}
-                  className="tap w-full flex items-center justify-center disabled:opacity-60"
-                  style={{ minHeight: 64, gap: 8, borderRadius: 14, border: `1px dashed ${c.hc ? c.border : c.tert}`, background: c.soft, fontSize: textPx(13), fontWeight: 700, color: c.pDark }}
-                >
-                  <ImagePlus size={17} strokeWidth={2} aria-hidden />
-                  {coverBusy ? "Uploading…" : "Add a cover photo"}
-                </button>
-              )}
-              <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: coverErr ? c.high : c.faint }}>
-                {coverErr ?? "JPEG, PNG or WebP, up to 5 MB."}
-              </span>
-            </div>
-            <div>
-              {label("About this class", `${uid}-about`)}
-              <textarea
-                id={`${uid}-about`}
-                value={form.about}
-                maxLength={ABOUT_MAX}
-                onChange={(e) => update({ about: e.target.value })}
-                placeholder="What it's like and who it's for"
-                rows={3}
-                className="class-sheet-input block w-full resize-none focus:outline-none"
-                style={{ minHeight: 76, borderRadius: 12, background: c.soft, border: `1px solid ${c.inputBd}`, padding: "10px 12px", fontSize: textPx(14), lineHeight: linePx(20), color: c.ink, caretColor: c.pDark }}
-              />
-            </div>
-            <div className="relative">
-              {label("Level")}
+              </div>
+            ) : (
               <button
-                ref={setLevelEl}
                 type="button"
-                aria-haspopup="menu"
-                aria-expanded={levelOpen}
-                aria-label={levelLabel ? `Level, ${levelLabel}` : "Level, not chosen"}
-                onClick={() => setLevelOpen(true)}
-                className="tap text-left"
-                style={fieldBox(false)}
+                onClick={() => coverInput.current?.click()}
+                disabled={coverBusy || !onUploadCover}
+                className="market-focus w-full flex items-center justify-center disabled:opacity-60"
+                style={{ minHeight: 64, gap: 8, borderRadius: 10, border: `1.5px dashed ${m.border}`, background: m.card, fontSize: textPx(13), fontWeight: 700, color: m.pdark }}
               >
-                <span className="truncate" style={{ color: levelLabel ? c.ink : c.faint }}>
-                  {levelLabel || "Not set"}
-                </span>
-                <ChevronDown size={14} style={{ color: c.faint }} className="shrink-0" />
+                <ImagePlus size={17} strokeWidth={2} aria-hidden />
+                {coverBusy ? "Uploading…" : "Add a cover photo"}
               </button>
-            </div>
-            <div>
-              {label("What to bring", `${uid}-bring`)}
-              {form.bring.length > 0 && (
-                <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }}>
-                  {form.bring.map((b) => (
-                    <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, padding: "0 4px 0 10px", borderRadius: 999, background: c.pale, color: c.pDark, fontSize: textPx(12), fontWeight: 700 }}>
-                      {b}
-                      <button type="button" aria-label={`Remove ${b}`} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="tap inline-flex items-center justify-center" style={{ width: 28, height: 28 }}>
-                        <X size={13} strokeWidth={2.6} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {form.bring.length < BRING_MAX_ITEMS && (
-                <div className="flex" style={{ gap: 8 }}>
+            )}
+          </FieldBox>
+          <FieldBox m={m} label="About this class" htmlFor={`${uid}-about`} span={stack ? 1 : 2}>
+            <textarea
+              id={`${uid}-about`}
+              value={form.about}
+              maxLength={ABOUT_MAX}
+              onChange={(e) => update({ about: e.target.value })}
+              placeholder="What it's like and who it's for"
+              rows={3}
+              className="cs-in block w-full resize-none market-focus"
+              style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
+            />
+          </FieldBox>
+          <FieldBox m={m} label="Level" span={stack ? 1 : 2}>
+            <button
+              ref={setLevelEl}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={levelOpen}
+              aria-label={levelLabel ? `Level, ${levelLabel}` : "Level, not chosen"}
+              onClick={() => setLevelOpen(true)}
+              className="market-focus"
+              style={fieldStyle(m, { active: levelOpen })}
+            >
+              {valueText(levelLabel || "Not set", !levelLabel)}
+              {chevron}
+            </button>
+          </FieldBox>
+          <FieldBox m={m} label="What to bring" htmlFor={`${uid}-bring`} span={stack ? 1 : 2} hint={`Up to ${BRING_MAX_ITEMS} items.`}>
+            {form.bring.length > 0 && (
+              <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }}>
+                {form.bring.map((b) => (
+                  <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, padding: "0 4px 0 10px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
+                    {b}
+                    <button type="button" aria-label={`Remove ${b}`} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="market-focus hit inline-flex items-center justify-center" style={{ width: 28, height: 28, background: "transparent", border: 0, color: m.pdark }}>
+                      <X size={13} strokeWidth={2.6} aria-hidden />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {form.bring.length < BRING_MAX_ITEMS && (
+              <div className="flex" style={{ gap: 8 }}>
+                <div className="cs-field flex-1 min-w-0" style={fieldStyle(m)}>
                   <input
                     id={`${uid}-bring`}
                     value={bringDraft}
@@ -1175,27 +1046,22 @@ function SheetBody({
                       }
                     }}
                     placeholder="e.g. Water bottle"
-                    className="class-sheet-input min-w-0 flex-1 focus:outline-none"
-                    style={{ ...fieldBox(false), caretColor: c.pDark }}
+                    style={inputStyle}
                   />
-                  <button
-                    type="button"
-                    onClick={addBring}
-                    disabled={!bringDraft.trim()}
-                    className="tap shrink-0 disabled:opacity-45"
-                    style={{ height: 40, padding: "0 14px", borderRadius: 12, border: `1px solid ${c.border}`, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}
-                  >
-                    Add
-                  </button>
                 </div>
-              )}
-              <span className="block" style={{ marginTop: 6, fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: c.faint }}>
-                Up to {BRING_MAX_ITEMS} items.
-              </span>
-            </div>
-          </div>
+                <button
+                  type="button"
+                  onClick={addBring}
+                  disabled={!bringDraft.trim()}
+                  className="market-focus shrink-0 disabled:opacity-40"
+                  style={{ minHeight: 41, padding: "0 14px", borderRadius: 10, border: `1px solid ${m.border}`, fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, background: m.card }}
+                >
+                  Add
+                </button>
+              </div>
+            )}
+          </FieldBox>
         </div>
-        <style>{`.class-sheet-input::placeholder { color: ${c.hc ? "rgb(var(--c-charcoal-soft))" : "rgb(var(--c-charcoal-faint))"}; opacity: 1; }`}</style>
       </BottomSheet>
 
       <PopupMenu
@@ -1209,7 +1075,7 @@ function SheetBody({
           setTypeOpen(false);
           typeEl?.focus();
         }}
-        heading="Class type"
+        heading="Type"
         align="left"
         width={182}
       />
@@ -1225,8 +1091,8 @@ function SheetBody({
             <div aria-busy="true" aria-label="Loading your team">
               {[0, 1].map((i) => (
                 <div key={i} className="flex items-center" style={{ gap: 9, padding: "9px 10px", marginTop: i ? 6 : 0 }}>
-                  <span aria-hidden style={{ width: 24, height: 24, borderRadius: 999, background: c.soft }} />
-                  <span aria-hidden style={{ width: 80, height: 10, borderRadius: 999, background: c.soft }} />
+                  <span aria-hidden style={{ width: 24, height: 24, borderRadius: 999, background: m.soft }} />
+                  <span aria-hidden style={{ width: 80, height: 10, borderRadius: 999, background: m.soft }} />
                 </div>
               ))}
             </div>
@@ -1239,14 +1105,28 @@ function SheetBody({
           setRunOpen(false);
           runEl?.focus();
         }}
-        heading="Run by"
+        heading="Instructor"
         backdrop={false}
+      />
+      <PopupMenu
+        open={durOpen}
+        onClose={() => setDurOpen(false)}
+        anchor={durEl}
+        options={durationOptions(durationMinutes(form.startTime, form.endTime)).map((d) => ({ value: String(d), label: `${d} min`, note: `Ends ${time12(fromMinutes(minutesOf(form.startTime) + d))}` }))}
+        selected={String(durationMinutes(form.startTime, form.endTime))}
+        clampTo={bodyEl?.parentElement ?? null}
+        onSelect={(v) => {
+          update({ endTime: fromMinutes(minutesOf(form.startTime) + Number(v)) });
+          setDurOpen(false);
+          durEl?.focus();
+        }}
+        heading="Duration"
+        width={200}
       />
       <PopupMenu
         open={repeatOpen}
         onClose={() => setRepeatOpen(false)}
         anchor={repeatEl}
-        matchWidth={repeatGroupEl}
         options={REPEAT_ORDER.map((k) => ({ value: k, label: REPEAT_LABEL[k] }))}
         selected={rp.kind}
         onSelect={(v) => {
@@ -1255,7 +1135,7 @@ function SheetBody({
           repeatEl?.focus();
         }}
         heading="Repeat"
-        backdrop={false}
+        width={200}
       />
       <PopupMenu
         open={levelOpen}
@@ -1300,7 +1180,7 @@ function SheetBody({
         }}
       />
       {/* AN3-066 (+ O1 / O2 / O3). B9: the server refuses any clash (ATXD9),
-          so the confirm is "Choose someone else" (opens Run by), not "Save anyway". */}
+          so the confirm is "Choose someone else" (opens Instructor), not "Save anyway". */}
       <ConfirmCard
         open={!!conflict}
         layout="decision"
@@ -1343,7 +1223,7 @@ function SheetBody({
         subtitle={mode === "edit" ? "You haven't saved them yet. Your changes will be lost." : "You haven't saved it yet. Everything you entered will be lost."}
         cancelLabel="Keep editing"
         confirmLabel="Discard"
-        confirmStyle={{ background: c.dark ? "#E0786A" : "#C0392B", color: c.dark ? "#0D0B1A" : "#FFFFFF" }}
+        confirmStyle={{ background: m.high, color: m.onfill }}
         onCancel={() => setDiscardOpen(false)}
         onConfirm={() => {
           setDiscardOpen(false);
@@ -1359,22 +1239,18 @@ function fieldsBanner(e: Partial<Record<ClassField, string>>): string {
   return `Fix ${words.length} ${words.length === 1 ? "field" : "fields"} to save: ${joinAnd(words)}.`;
 }
 
-export const Avatar: React.FC<{ c: OpsColors; name: string; size: number }> = ({ c, name, size }) => (
-  <span
-    aria-hidden
-    className="shrink-0 inline-flex items-center justify-center"
-    style={{ width: size, height: size, borderRadius: 999, background: c.tealPale, color: c.tealInk, fontSize: textPx(size >= 34 ? 12 : 11), fontWeight: 800 }}
-  >
+/** An instructor's initial on --tealbg / --tealink (the board's roster avatar colours). */
+export const Avatar: React.FC<{ m: MarketPalette; name: string; size: number }> = ({ m, name, size }) => (
+  <span aria-hidden className="shrink-0 inline-flex items-center justify-center" style={{ width: size, height: size, borderRadius: 999, background: m.tealbg, color: m.tealink, fontSize: textPx(size >= 32 ? 11.5 : 11), fontWeight: 800 }}>
     {initialOf(name)}
   </span>
 );
 
-/** ClassFlowsV6's saving spinner, rotated in CSS so Reduce motion can stop it (AN3-051 row 2). */
+/** The saving spinner, rotated in CSS so Reduce motion can stop it (AN3-051 row 2). */
 const Spinner: React.FC<{ reduced: boolean }> = ({ reduced }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden className="relative block" style={{ animation: reduced ? undefined : "class-spin .9s linear infinite" }}>
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden className="block" style={{ animation: reduced ? undefined : "class-spin .9s linear infinite" }}>
     <style>{`@keyframes class-spin { to { transform: rotate(360deg) } }`}</style>
     <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
     <path d="M8 2 A6 6 0 0 1 14 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
-

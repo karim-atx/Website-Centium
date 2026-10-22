@@ -51,7 +51,7 @@ import { recordListingEvent } from "../../services/marketplace/listingEvents";
 import { AMENITY_LABELS, firstVisitText, heroPhotos, isLivePassState, knownAmenities, parseListingSource, viewerSpotsLeft } from "../../services/marketplace/listingLogic";
 import { time12Split } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
-import { BookingDone, PlanSummary, PurchaseSheet } from "./PurchaseSheet";
+import { BookingDone, PlanSummary, PurchaseSheet, confirmLabel } from "./PurchaseSheet";
 import { areaOf, gymHoursRows, includesText, longDay, planExpiryIso, planRowLine, sheetPlanName, startsToday } from "./gymDetailModel";
 
 // Market + Share 3.0 · W2 · C-MO.4.2.1 Gym detail (`gymDetail`) and
@@ -776,7 +776,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         title={`Join ${gym.name}`}
         summary={sheetPlan ? <PlanSummary name={sheetPlanName(sheetPlan.name)} price={priceOf(sheetPlan)} rows={sheetRows} /> : null}
         cashHint="Pay at the front desk on your first visit"
-        ctaLabel={sheetPlan && sheetPlan.price > 0 ? `Confirm and pay ${priceOf(sheetPlan)}` : "Confirm"}
+        ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : "Confirm"}
         busy={busy}
         disabled={!online}
         error={checkoutError}

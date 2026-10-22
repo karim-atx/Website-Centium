@@ -1,33 +1,38 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
-  figuresLine,
-  initials,
-  isEarly,
-  membersLine,
-  periodLine,
-  payWith,
-  planIcon,
-  previewLines,
-  limitLabel,
-  commitmentLabel,
-  classesLabel,
-  billingForKind,
-  classTypeOptions,
   archiveBody,
-  archivedToast,
-  statusLine,
+  billingChipOf,
+  billingForKind,
+  cardMeta,
+  classesLabel,
+  classTypeOptions,
+  cleanIncludes,
+  commitmentLabel,
+  durationLabel,
+  includesProblem,
+  initials,
+  limitLabel,
+  memberLine,
+  oneTimeKind,
+  payWith,
+  previewLines,
   previewPrice,
   priceLine,
+  priceProblem,
   sharedNames,
   shortDate,
+  sortMembers,
+  statusChip,
+  statusLine,
   switchNote,
+  typeChips,
+  untilLabel,
 } from "./planModel.ts";
 
 test("price lines read per billing", () => {
   const base = { sessionsInPack: null, validForDays: null };
   assert.equal(priceLine({ ...base, kind: "membership", price: "$100", billing: "monthly" }), "$100 a month");
-  assert.equal(priceLine({ ...base, kind: "membership", price: "$1080", billing: "annually" }), "$1080 a year");
   assert.equal(priceLine({ ...base, kind: "membership", price: "$270", billing: "quarterly" }), "$270 every 3 months");
   assert.equal(priceLine({ ...base, kind: "day_pass", price: "$15", billing: "daily" }), "$15 a day");
   assert.equal(priceLine({ ...base, kind: "class_pack", price: "$120", billing: "monthly", sessionsInPack: 10 }), "$120 for 10 classes");
@@ -35,30 +40,71 @@ test("price lines read per billing", () => {
   assert.equal(priceLine({ ...base, kind: "intro_offer", price: "$20", billing: "monthly", validForDays: 7 }), "$20 for 7 days");
 });
 
-test("tile icons follow type and billing", () => {
-  assert.equal(planIcon({ kind: "membership", billing: "monthly" }), "repeat");
-  assert.equal(planIcon({ kind: "membership", billing: "annually" }), "calendar-range");
-  assert.equal(planIcon({ kind: "day_pass", billing: "daily" }), "sun");
-});
-
-test("members lines count people, singular and plural", () => {
-  assert.equal(membersLine("membership", 1), "1 active member");
-  assert.equal(membersLine("membership", 74), "74 active members");
-  assert.equal(membersLine("day_pass", 2), "2 active passes");
-});
-
-test("the figures line only says what the data supports", () => {
-  assert.equal(figuresLine([], null), "Add your first plan to start selling memberships.");
-  const plans = [
-    { name: "Monthly", status: "active" as const },
-    { name: "Day pass", status: "active" as const },
-  ];
-  assert.equal(figuresLine(plans, null), "");
-  assert.equal(figuresLine(plans, new Map([["Monthly", 0]])), "Members show here once someone buys a plan on Explore.");
+test("card duration and meta follow bizPlans (1 day, 30 / 90 / 180 days, includes joined with ·)", () => {
+  const base = { sessionsInPack: null, validForDays: null, includes: null };
+  assert.equal(durationLabel({ ...base, kind: "day_pass", billing: "daily" }), "1 day");
+  assert.equal(durationLabel({ ...base, kind: "membership", billing: "monthly" }), "30 days");
+  assert.equal(durationLabel({ ...base, kind: "membership", billing: "quarterly" }), "90 days");
+  assert.equal(durationLabel({ ...base, kind: "membership", billing: "semiannually" }), "180 days");
+  assert.equal(durationLabel({ ...base, kind: "membership", billing: "annually" }), "365 days");
+  assert.equal(durationLabel({ ...base, kind: "class_pack", billing: "monthly", sessionsInPack: 10, validForDays: 60 }), "10 classes · 60 days");
+  assert.equal(durationLabel({ ...base, kind: "drop_in", billing: "daily" }), "1 class");
   assert.equal(
-    figuresLine(plans, new Map([["Monthly", 2], ["Day pass", 1]])),
-    "Monthly is the most popular plan: 2 of 3 members."
+    cardMeta({ ...base, kind: "membership", billing: "semiannually", includes: ["Gym floor, lockers, showers", " 2 classes a week ", ""] }),
+    "180 days · Gym floor, lockers, showers · 2 classes a week"
   );
+  assert.equal(cardMeta({ ...base, kind: "membership", billing: "monthly" }), "30 days");
+});
+
+test("status chips and member lines", () => {
+  assert.deepEqual(statusChip("active"), { label: "Active", tone: "good" });
+  assert.deepEqual(statusChip("paused"), { label: "Paused", tone: "warn" });
+  assert.deepEqual(statusChip("hidden"), { label: "Hidden", tone: "soft" });
+  const f = { active: 128, soldMonth: 3, soldToday: 0 };
+  assert.equal(memberLine({ kind: "membership", dbStatus: "active" }, f), "128 members");
+  assert.equal(memberLine({ kind: "membership", dbStatus: "active" }, { ...f, active: 1 }), "1 member");
+  assert.equal(memberLine({ kind: "membership", dbStatus: "paused" }, f), "Not on sale");
+  assert.equal(memberLine({ kind: "day_pass", dbStatus: "active" }, { ...f, soldMonth: 21 }), "21 sold this month");
+  assert.equal(memberLine({ kind: "day_pass", dbStatus: "active" }, { ...f, soldMonth: 21, soldToday: 2 }), "21 sold this month · 2 today");
+  assert.equal(memberLine({ kind: "intro_offer", dbStatus: "active" }, { ...f, soldMonth: 4 }), "4 used this month");
+  assert.equal(memberLine({ kind: "membership", dbStatus: "active" }, { active: 0, soldMonth: 0, soldToday: 0, isNew: true }), "New · no members yet");
+  assert.equal(memberLine({ kind: "membership", dbStatus: "active" }, { active: null, soldMonth: null, soldToday: null }), null);
+  assert.equal(memberLine({ kind: "day_pass", dbStatus: "active" }, { active: 3, soldMonth: null, soldToday: null }), null);
+});
+
+test("billing chips map to the live enum (D-16)", () => {
+  assert.equal(billingChipOf("membership", "quarterly"), "quarterly");
+  assert.equal(billingChipOf("membership", null), null);
+  assert.equal(billingChipOf("day_pass", "daily"), "daily");
+  assert.equal(billingChipOf("class_pack", "quarterly"), "daily");
+  assert.equal(billingForKind("membership", "semiannually", null), "semiannually");
+  assert.equal(billingForKind("membership", null, null), "monthly");
+  assert.equal(billingForKind("day_pass", "monthly", null), "daily");
+  assert.equal(billingForKind("class_pack", null, 90), "quarterly");
+  assert.equal(oneTimeKind(["membership", "day_pass", "drop_in"]), "day_pass");
+  assert.equal(oneTimeKind(["membership", "class_pack", "drop_in"]), "drop_in");
+  assert.equal(oneTimeKind(["membership"]), null);
+});
+
+test("type chips: drawn two first, then the live types offered", () => {
+  assert.deepEqual(typeChips(["membership", "day_pass", "class_pack", "intro_offer", "drop_in"], true, "membership"), ["membership", "day_pass", "class_pack", "intro_offer", "drop_in"]);
+  assert.deepEqual(typeChips(["membership", "day_pass", "class_pack", "intro_offer", "drop_in"], false, "membership"), ["membership", "day_pass", "intro_offer"]);
+  assert.deepEqual(typeChips(["membership"], false, "drop_in"), ["membership", "drop_in"]);
+  assert.deepEqual(typeChips(null, true, "membership").length, 5);
+});
+
+test("price and included lines", () => {
+  assert.equal(priceProblem(""), "Enter a price for this plan.");
+  assert.equal(priceProblem("  "), "Enter a price for this plan.");
+  assert.equal(priceProblem("abc"), "Enter the price as a number, for example 45.");
+  assert.equal(priceProblem("$45"), null);
+  assert.equal(previewPrice("75"), "$75");
+  assert.equal(previewPrice("$8.5"), "$8.50");
+  assert.deepEqual(cleanIncludes([" Gym floor ", "", "gym floor", "Showers"]), ["Gym floor", "Showers"]);
+  assert.equal(cleanIncludes(["", " "]), null);
+  assert.equal(includesProblem(["x".repeat(121)]), "Each line can be 120 characters at most.");
+  assert.equal(includesProblem(Array.from({ length: 21 }, (_, i) => `line ${i}`)), "Keep it to 20 lines.");
+  assert.equal(includesProblem(["Gym floor"]), null);
 });
 
 test("the switch note names both types with the right article", () => {
@@ -72,68 +118,44 @@ test("the switch note names both types with the right article", () => {
   );
 });
 
-test("preview lines follow the source templates", () => {
-  assert.equal(previewPrice("75"), "$75");
-  assert.equal(previewPrice("$8.5"), "$8.50");
-  assert.equal(previewPrice("abc"), null);
+test("preview lines follow the kept templates", () => {
   const x = { runsClasses: true, classes: null, limit: null, sessions: null, validForDays: null, commitMonths: null, noticeDays: null };
-  assert.deepEqual(previewLines({ ...x, kind: "membership", price: "$75", period: "monthly" }), ["$75 a month · unlimited classes", ""]);
-  assert.deepEqual(previewLines({ ...x, kind: "membership", price: "$75", period: "yearly", runsClasses: false }), ["$75 a year", ""]);
-  assert.deepEqual(previewLines({ ...x, kind: "day_pass", price: "$15", period: "monthly" }), ["$15 a day · all classes", ""]);
-  // OP1-176 full form.
+  assert.deepEqual(previewLines({ ...x, kind: "membership", price: "$75", billing: "monthly" }), ["$75 a month · unlimited classes", ""]);
+  assert.deepEqual(previewLines({ ...x, kind: "membership", price: "$75", billing: "annually", runsClasses: false }), ["$75 a year", ""]);
+  assert.deepEqual(previewLines({ ...x, kind: "day_pass", price: "$15", billing: "daily" }), ["$15 a day · all classes", ""]);
   assert.deepEqual(
-    previewLines({ ...x, kind: "membership", price: "$75", period: "every_3_months", limit: 12, classes: ["Spin 45", "Strength Basics", "Lunch HIIT"], commitMonths: 6, noticeDays: 30 }),
+    previewLines({ ...x, kind: "membership", price: "$75", billing: "quarterly", limit: 12, classes: ["Spin 45", "Strength Basics", "Lunch HIIT"], commitMonths: 6, noticeDays: 30 }),
     ["$75 every 3 months · up to 12 classes every 3 months", "Spin 45, Strength Basics, Lunch HIIT · 6 months, 30 days' notice"]
   );
-  assert.deepEqual(previewLines({ ...x, kind: "class_pack", price: "$65", period: "monthly", sessions: 5, validForDays: 60 }), ["$65 for 5 classes · valid 2 months", ""]);
-  assert.deepEqual(previewLines({ ...x, kind: "drop_in", price: "$18", period: "monthly", classes: ["Spin 45", "Yoga Flow"] }), ["$18 a class · Spin 45 and Yoga Flow", ""]);
-  assert.equal(payWith("Cash"), "Pay with cash");
+  assert.deepEqual(previewLines({ ...x, kind: "class_pack", price: "$65", billing: "quarterly", sessions: 5, validForDays: 60 }), ["$65 for 5 classes · valid 2 months", ""]);
+  assert.deepEqual(previewLines({ ...x, kind: "drop_in", price: "$18", billing: "daily", classes: ["Spin 45", "Yoga Flow"] }), ["$18 a class · Spin 45 and Yoga Flow", ""]);
   assert.equal(payWith("Cash or Whish Money"), "Pay with cash or Whish Money");
 });
 
-test("small helpers", () => {
-  assert.equal(shortDate("2026-09-02"), "Sep 2");
-  assert.equal(initials("Taylor"), "T");
-  assert.equal(initials("Mary Ann"), "MA");
-  assert.deepEqual([...sharedNames([{ name: "A" }, { name: "B" }, { name: "A" }])], ["A"]);
-});
-
-test("early data: first members under 14 days ago, this month", () => {
-  assert.equal(isEarly("2026-10-05", "2026-10-14"), true);
-  assert.equal(isEarly("2026-09-30", "2026-10-02"), false);
-  assert.equal(isEarly("2026-10-01", "2026-10-20"), false);
-  assert.equal(isEarly(null, "2026-10-14"), false);
-  const plans = [{ name: "Monthly", status: "active" as const }];
-  assert.equal(figuresLine(plans, new Map([["Monthly", 3]]), true), "Your first members joined this month.");
-  assert.equal(figuresLine(plans, new Map([["Monthly", 0]]), true), "Members show here once someone buys a plan on Explore.");
-});
-
-test("B7 field values: no limit is never 0, commitment, classes, billing per type", () => {
+test("kept field values: no limit is never 0, commitment, classes", () => {
   assert.equal(limitLabel(null, "monthly"), "Unlimited");
   assert.equal(limitLabel(0, "monthly"), "Unlimited");
   assert.equal(limitLabel(12, "monthly"), "Up to 12 a month");
   assert.equal(commitmentLabel(0, 0), "None, cancel anytime");
   assert.equal(commitmentLabel(6, 30), "6 months, 30 days' notice");
   assert.equal(classesLabel(null), "All classes");
-  assert.equal(classesLabel(["Spin 45"]), "Spin 45");
   assert.equal(classesLabel(["A", "B", "C"]), "3 class types");
-  assert.equal(billingForKind("membership", "every_6_months", null), "semiannually");
-  assert.equal(billingForKind("day_pass", "monthly", null), "daily");
-  assert.equal(billingForKind("class_pack", "monthly", 90), "quarterly");
   assert.deepEqual(classTypeOptions([" Spin ", "spin", "", "x".repeat(61)]), { ok: ["Spin"], tooLong: ["x".repeat(61)] });
-});
-
-test("archive and pause copy", () => {
-  assert.equal(archiveBody(0), "It's removed from Explore and can't be bought.");
   assert.equal(archiveBody(6), "It's removed from Explore and can't be bought. The 6 current members keep it until it ends.");
-  assert.equal(archivedToast("Student monthly", 1), "Student monthly archived. 1 member keeps it until it ends.");
   assert.equal(statusLine("paused"), "Paused: nobody new can buy it. Members keep their plan and renewals continue.");
 });
 
-test("period line: sold / used this period for passes, drop-ins and intro offers (OP1-022 row 16, OP1-036 row 3)", () => {
-  assert.equal(periodLine("day_pass", 31), "31 sold this period");
-  assert.equal(periodLine("drop_in", 0), "0 sold this period");
-  assert.equal(periodLine("intro_offer", 12), "12 used this period");
-  assert.equal(periodLine("membership", 4), null);
-  assert.equal(periodLine("class_pack", 4), null);
+test("members: month-first dates, initials, order", () => {
+  assert.equal(shortDate("2026-09-02"), "Sep 2");
+  assert.equal(untilLabel("2026-11-15"), "Until Nov 15");
+  assert.equal(untilLabel(null), "");
+  assert.equal(initials("Maya K."), "MK");
+  assert.equal(initials("Taylor"), "T");
+  assert.deepEqual([...sharedNames([{ name: "A" }, { name: "B" }, { name: "A" }])], ["A"]);
+  const sorted = sortMembers([
+    { label: "Omar", expiresOn: null },
+    { label: "Lea", expiresOn: "2026-11-02" },
+    { label: "Maya", expiresOn: "2026-10-28" },
+  ]);
+  assert.deepEqual(sorted.map((m) => m.label), ["Maya", "Lea", "Omar"]);
 });

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useMarket } from "./MarketContext";
-import { lh, px } from "./kit";
+import { FOCUS_CSS } from "../../components/market/usePress";
+import { lh, px, useMarketColors } from "./listingParts";
 import { addDays, dateOf, dayMonth, daysBetween, isoOf } from "./model";
 
+// Market + Share 3.0 · W3 (D-13): kept and restyled in the handover chrome
+// (an r20 --card panel on --border; the edges --fill / --onfill, the range
+// --pale, today ringed; Cancel / Done as the CentredDialog's 14 / 700 pair).
 // MA1-102 / 133 / 134: the inline date-range calendar (opens in place under
 // the date fields, never a sheet). Monday first (user rule; October 2026
 // starts with 3 blanks). Past days disabled. `fixedDays` = Feature for a
@@ -31,7 +34,7 @@ export function RangeCalendar({
   onCancel: () => void;
   onDone: (from: string, to: string) => void;
 }) {
-  const { c } = useMarket();
+  const c = useMarketColors();
   const today = isoOf(new Date());
   const [a, setA] = useState<string | null>(from);
   const [b, setB] = useState<string | null>(fixedDays && from ? addDays(from, fixedDays - 1) : to);
@@ -60,16 +63,17 @@ export function RangeCalendar({
   };
   const line = a && b ? `${dayMonth(a)} to ${dayMonth(b)} · ${daysBetween(a, b)} days` : a ? `${dayMonth(a)} to …` : "";
   const nav = (d: number) => setMonth((x) => ({ y: x.m + d < 0 ? x.y - 1 : x.m + d > 11 ? x.y + 1 : x.y, m: (x.m + d + 12) % 12 }));
-  const disc = (dis: boolean) => ({ width: 32, height: 32, borderRadius: 999, background: c.soft, color: dis ? c.tert : c.inkSoft, display: "flex", alignItems: "center", justifyContent: "center", border: 0 });
+  const disc = (dis: boolean) => ({ width: 32, height: 32, borderRadius: 999, background: c.soft, color: dis ? c.tert : c.ink2, display: "flex", alignItems: "center", justifyContent: "center", border: 0 });
 
   return (
-    <div role="dialog" aria-label="Choose dates" style={{ borderRadius: 20, border: `1px solid ${c.border}`, background: c.card, padding: 12, boxShadow: "0 12px 32px rgba(95,80,147,0.16)" }}>
+    <div role="dialog" aria-label="Choose dates" style={{ borderRadius: 20, border: `1px solid ${c.border}`, background: c.card, padding: 12, lineHeight: "normal" }}>
+      <style>{FOCUS_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button type="button" aria-label="Previous month" aria-disabled={atCurrent} onClick={() => !atCurrent && nav(-1)} className="tap" style={disc(atCurrent)}>
+        <button type="button" aria-label="Previous month" aria-disabled={atCurrent} onClick={() => !atCurrent && nav(-1)} className="tap market-focus" style={disc(atCurrent)}>
           <ChevronLeft size={16} aria-hidden />
         </button>
         <p style={{ fontSize: px(15), fontWeight: 700, color: c.ink }} aria-live="polite">{`${MONTHS[month.m]} ${month.y}`}</p>
-        <button type="button" aria-label="Next month" onClick={() => nav(1)} className="tap" style={disc(false)}>
+        <button type="button" aria-label="Next month" onClick={() => nav(1)} className="tap market-focus" style={disc(false)}>
           <ChevronRight size={16} aria-hidden />
         </button>
       </div>
@@ -98,6 +102,7 @@ export function RangeCalendar({
               aria-pressed={edge || inR}
               aria-label={`${MONTHS[month.m]} ${i + 1}`}
               onClick={() => !past && pick(iso)}
+              className="market-focus"
               style={{
                 aspectRatio: "1",
                 borderRadius: 12,
@@ -106,9 +111,9 @@ export function RangeCalendar({
                 justifyContent: "center",
                 fontSize: px(13.5),
                 fontWeight: edge ? 800 : 600,
-                color: edge ? c.onFill : past ? c.tert : c.ink,
+                color: edge ? c.onfill : past ? c.tert : c.ink,
                 background: edge ? c.fill : inR ? c.pale : "transparent",
-                boxShadow: isToday ? `inset 0 0 0 1.5px ${c.primary}` : "none",
+                boxShadow: isToday ? `inset 0 0 0 1.5px ${c.fill}` : "none",
                 fontVariantNumeric: "tabular-nums",
                 border: 0,
                 padding: 0,
@@ -120,16 +125,17 @@ export function RangeCalendar({
           );
         })}
       </div>
-      <p style={{ fontSize: px(12), fontWeight: 700, color: c.inkSoft, textAlign: "center", marginTop: 10, minHeight: lh(18) }}>{line}</p>
+      <p style={{ fontSize: px(12), fontWeight: 700, color: c.ink2, textAlign: "center", marginTop: 10, minHeight: lh(18) }}>{line}</p>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.4fr)", gap: 8, marginTop: 10 }}>
-        <button type="button" onClick={onCancel} style={{ height: 40, borderRadius: 12, border: `1px solid ${c.border}`, background: "transparent", fontSize: px(13), fontWeight: 700, color: c.inkSoft }}>
+        <button type="button" onClick={onCancel} className="market-focus" style={{ height: 44, borderRadius: 14, border: 0, background: c.cancelbg, fontFamily: "inherit", fontSize: px(14), fontWeight: 700, color: c.cancelink, cursor: "pointer" }}>
           Cancel
         </button>
         <button
           type="button"
           onClick={() => a && b && onDone(a, b)}
           disabled={!a || !b}
-          style={{ height: 40, borderRadius: 12, background: c.fill, color: c.onFill, border: 0, fontSize: px(13), fontWeight: 800, opacity: a && b ? 1 : 0.4 }}
+          className="market-focus"
+          style={{ height: 44, borderRadius: 14, background: c.fill, color: c.onfill, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 700, opacity: a && b ? 1 : 0.4, cursor: a && b ? "pointer" : "default" }}
         >
           Done
         </button>

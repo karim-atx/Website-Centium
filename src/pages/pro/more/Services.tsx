@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Banknote, CalendarClock, Dumbbell, Gift, Package, Phone, Plus, Repeat, Stethoscope, Video } from "lucide-react";
+import { Banknote, CalendarClock, Dumbbell, Package, Phone, Plus, Repeat, Stethoscope, Video } from "lucide-react";
 import { SettingsRow } from "../../../components/pro/calendar/calendarFields";
-import { ComingSoonPill } from "../../../components/pro/ComingSoon";
 import { CtaButton, Section, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { ServiceSheet } from "../../../components/pro/profile/ServiceSheet";
 import { RatesSheet } from "../../../components/pro/profile/EditSheets";
@@ -25,7 +24,7 @@ import { fetchServicePlans, type ServicePlan } from "../../../services/pro/profi
  *   session_count): this is the hire plans editor's More row (lead
  *   carry-over), each plan opening MO16 to edit it;
  * - Rates: the monthly and consultation rates from the old Payments sheet;
- * - Offers: no backend yet, so Coming soon;
+ * - Offers: the Marketplace Offers tab (/app/pro/marketplace/offers, P-MA.3);
  * - pinned "Add a service" (+, 48 r14, 16 from the edges, 96 up; the page
  *   keeps 172 below).
  */
@@ -118,10 +117,6 @@ export default function Services() {
               onClick={() => setRatesOpen(true)}
               last
             />
-          </Section>
-
-          <Section label="Offers">
-            <SettingsRow icon={Gift} title="Offers for new clients" value={<ComingSoonPill />} last />
           </Section>
         </>
       )}

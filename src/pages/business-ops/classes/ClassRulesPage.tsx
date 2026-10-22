@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, Settings2 } from "lucide-react";
-import { Toggle } from "../../../components/ui/Toggle";
+import { ChevronDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { Toast } from "../../../components/ui/Toast";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
@@ -8,8 +8,10 @@ import { fetchVenueCancellationDefault } from "../../../services/business-classe
 import { fetchBookingPolicies, setBookingPolicy } from "../../../services/business-classes/schedule";
 import { effectiveRules, hoursBefore, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../../services/business-classes/scheduleRules";
 import { linePx, textPx } from "../../../theme/textSize";
-import { useOps, type OpsColors } from "./opsTheme";
-import { BackRow, Bone, ErrorCard, OpsCard } from "./parts";
+import type { MarketPalette } from "../../../theme/marketTokens";
+import { FOCUS_CSS } from "../../../components/market/usePress";
+import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
+import { BackHeader, BoardSwitch, useMarketColours } from "./parts";
 import { useSchedule } from "./useSchedule";
 import { todayIso } from "./scheduleModel";
 
@@ -32,7 +34,8 @@ const SIZES = [3, 5, 10, 20];
 const LATE = [2, 4, 6, 12, 24, 48];
 
 export default function ClassRulesPage() {
-  const c = useOps();
+  const m = useMarketColours();
+  const navigate = useNavigate();
   const api = useSchedule();
   const access = useConsoleAccess();
   const canWrite = access.ready ? access.meets("schedule") : false;
@@ -100,40 +103,21 @@ export default function ClassRulesPage() {
   const disabled = !canWrite || !api.online;
 
   return (
-    <div style={{ marginTop: -2 }}>
-      <BackRow c={c} label={back} to="/app/business/classes" />
-      <div className="flex items-center" style={{ gap: 14 }}>
-        <span className="shrink-0 flex items-center justify-center" style={{ width: 60, height: 60, borderRadius: 16, background: c.pale, color: c.pDark }}>
-          <Settings2 size={26} strokeWidth={1.8} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", lineHeight: linePx(27), color: c.ink }}>Waitlist and late cancels</p>
-          <p style={{ margin: "3px 0 0", fontSize: textPx(13), lineHeight: linePx(18), color: c.inkSoft }}>Rules for each class type</p>
-          <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(16), color: c.faint }}>{people} see these when they book</p>
-        </div>
-      </div>
+    <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
+      <style>{FOCUS_CSS}</style>
+      <BackHeader m={m} eyebrow={back} title="Class rules" onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"))} />
+      <p style={{ margin: 0, fontSize: textPx(13), color: m.ink2 }}>Waitlist and late cancels for each class type. {people} see these when they book.</p>
       {access.ready && !canWrite && (
-        <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: c.faint }}>Only staff who manage the schedule can change these.</p>
+        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Only staff who manage the schedule can change these.</p>
       )}
-      {!api.online && <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: c.faint }}>You're offline. Changes save when you're back online.</p>}
-      <div style={{ height: 18 }} aria-hidden />
+      {!api.online && <MarketOffline loaded style={{ marginTop: 12 }} />}
+      <div style={{ height: 14 }} aria-hidden />
 
       {loading ? (
-        [0, 1].map((i) => (
-          <OpsCard key={i} c={c} style={{ marginTop: i ? 14 : 0 }}>
-            <div style={{ padding: "14px 16px" }}>
-              <Bone c={c} w={90} h={12} />
-              <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
-                <Bone c={c} w="40%" h={11} />
-                <Bone c={c} w={46} h={28} r={999} />
-              </div>
-            </div>
-          </OpsCard>
-        ))
+        <MarketSkeleton radius={20} rows={3} count={2} gap={12} label="Loading your class rules" />
       ) : api.error || loadError ? (
-        <ErrorCard
-          c={c}
-          message="Couldn't load your class rules. Check your connection and try again."
+        <MarketError
+          thing="your class rules"
           onRetry={() => {
             api.reload();
             setTick((t) => t + 1);
@@ -146,7 +130,7 @@ export default function ClassRulesPage() {
             return (
               <RuleCard
                 key={typeKey(t)}
-                c={c}
+                m={m}
                 title={t}
                 waitlistCap={eff.waitlistCap}
                 lateHours={eff.cancellationHours}
@@ -160,7 +144,7 @@ export default function ClassRulesPage() {
           })}
           {def && (
             <RuleCard
-              c={c}
+              m={m}
               title={types.length ? "Other class types" : "Every class type"}
               note={`Class types without their own rules use these${def.waitlistCap === 0 ? ": no waitlist" : `: a waitlist of up to ${def.waitlistCap}`}, ${hoursBefore(def.cancellationHours).toLowerCase()}.`}
               waitlistCap={def.waitlistCap}
@@ -180,7 +164,7 @@ export default function ClassRulesPage() {
 }
 
 function RuleCard({
-  c,
+  m,
   title,
   note,
   waitlistCap,
@@ -191,7 +175,7 @@ function RuleCard({
   onSize,
   onLate,
 }: {
-  c: OpsColors;
+  m: MarketPalette;
   title: string;
   note?: string;
   waitlistCap: number;
@@ -211,18 +195,18 @@ function RuleCard({
       aria-label={aria}
       disabled={disabled || busy}
       onClick={(e) => setMenu({ which, el: e.currentTarget })}
-      className="tap shrink-0 inline-flex items-center whitespace-nowrap disabled:opacity-60"
-      style={{ minHeight: 40, padding: "0 10px 0 12px", borderRadius: 12, border: `1px solid ${c.border}`, gap: 5, fontSize: textPx(12), fontWeight: 800, color: c.ink }}
+      className="market-focus shrink-0 inline-flex items-center whitespace-nowrap disabled:opacity-60"
+      style={{ minHeight: 40, padding: "0 10px 0 12px", borderRadius: 12, border: `1px solid ${m.border}`, gap: 5, fontSize: textPx(12), fontWeight: 800, color: m.ink }}
     >
       {value}
-      <ChevronDown size={14} style={{ color: c.faint }} />
+      <ChevronDown size={14} style={{ color: m.faint }} />
     </button>
   );
   const row = (t: string, s: string | null, right: ReactNode, first = false) => (
-    <div className="flex items-center flex-wrap" style={{ gap: 10, padding: "10px 16px", borderTop: first ? "none" : `1px solid ${c.divider}`, minHeight: 54 }}>
+    <div className="flex items-center flex-wrap" style={{ gap: 10, padding: "10px 16px", borderTop: first ? "none" : `0.5px solid ${m.div}`, minHeight: 54 }}>
       <div className="flex-1 min-w-0" style={{ minWidth: 140 }}>
-        <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: c.ink }}>{t}</p>
-        {s && <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: c.faint }}>{s}</p>}
+        <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{t}</p>
+        {s && <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>{s}</p>}
       </div>
       {right}
     </div>
@@ -230,18 +214,18 @@ function RuleCard({
   const sizes = SIZES.includes(waitlistCap) || !on ? SIZES : [...SIZES, waitlistCap].sort((a, b) => a - b);
   const late = LATE.includes(lateHours) ? LATE : [...LATE, lateHours].sort((a, b) => a - b);
   return (
-    <OpsCard c={c} style={{ marginBottom: 14 }}>
-      <p style={{ margin: 0, padding: "14px 16px 6px", fontSize: textPx(14), fontWeight: 800, color: c.ink }}>{title}</p>
+    <div style={{ marginBottom: 12, borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
+      <p style={{ margin: 0, padding: "14px 16px 6px", fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{title}</p>
       {row(
         "Waitlist",
         on ? "When the class is full" : "Members can't join a waitlist",
-        <Toggle checked={on} onChange={(v) => onWaitlist(v)} disabled={disabled || busy} size="business-lg" label={`Waitlist for ${title}`} />,
+        <BoardSwitch m={m} checked={on} onChange={(v) => onWaitlist(v)} disabled={disabled || busy} label={`Waitlist for ${title}`} />,
         true
       )}
       {on && row("Waitlist size", null, picker("size", `Up to ${waitlistCap}`, `Waitlist size for ${title}, up to ${waitlistCap}`))}
       {row("Late cancel", "Cancelling later than this loses the booking", picker("late", hoursBefore(lateHours), `Late cancel for ${title}, ${hoursBefore(lateHours)}`))}
       {note && (
-        <p style={{ margin: 0, padding: "10px 16px 14px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), lineHeight: linePx(16), color: c.faint, textWrap: "pretty" }}>{note}</p>
+        <p style={{ margin: 0, padding: "10px 16px 14px", borderTop: `0.5px solid ${m.div}`, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textWrap: "pretty" }}>{note}</p>
       )}
       <PopupMenu
         open={!!menu}
@@ -262,6 +246,6 @@ function RuleCard({
         heading={menu?.which === "size" ? "Waitlist size" : "Late cancel"}
         width={190}
       />
-    </OpsCard>
+    </div>
   );
 }

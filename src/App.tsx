@@ -56,6 +56,7 @@ import { ClientOnly } from "./pages/marketplace/ClientOnly";
 import ClientNotificationsPage from "./pages/notifications/ClientNotificationsPage";
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
 import MarketRoutes from "./pages/business-market/MarketRoutes";
+import RedeemVoucher from "./pages/business-market/RedeemVoucher";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import TeamRoutes from "./pages/business-team/TeamRoutes";
@@ -512,6 +513,8 @@ function AppRoutes() {
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
         {/* B7: staff reach the console pages their permissions allow (ConsoleGate). */}
         <Route path="/app/business/marketplace/*" element={<ConsoleGate need="marketing"><MarketRoutes /></ConsoleGate>} />
+        {/* Market + Share 3.0 W3: B-MA.4 Redeem a voucher; the owner, marketing or front desk may check vouchers (D-25). */}
+        <Route path="/app/business/redeem" element={<ConsoleGate need={["marketing", "front_desk"]}><RedeemVoucher /></ConsoleGate>} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
             Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
             types keep today's listings page on this address. */}

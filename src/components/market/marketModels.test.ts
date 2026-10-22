@@ -200,3 +200,14 @@ test("ticket tones and offer chips are the board's (light)", async () => {
   assert.deepEqual(statusChip("paused", m), ["#F6E9C9", "#B07D16"]);
   assert.deepEqual(statusChip("expired", m), ["#F5F5F6", "#8C8378"]);
 });
+
+test("the strip's dark active fill reaches 4.5:1 under white; light keeps the drawn ink", async () => {
+  const { darkenForWhite, whiteContrast } = await import("./marketColor.ts");
+  const { SEGMENT_STEPS } = await import("../../theme/marketTokens.ts");
+  for (const [, ink] of SEGMENT_STEPS) {
+    const d = darkenForWhite(ink);
+    assert.ok(whiteContrast(d) >= 4.5, `${ink} -> ${d}`);
+    assert.ok(whiteContrast(d) < 5.1, "only just enough");
+  }
+  assert.equal(darkenForWhite("#5F5093"), "#5F5093", "a fill already at 4.5:1 stays as is");
+});
