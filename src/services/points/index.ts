@@ -22,19 +22,22 @@ const SERVER_MAX = 200;
 
 /**
  * The ledger, newest first, `limit` at a time: my_points_ledger(p_before,
- * p_limit) (Database 20261210300000: id, amount, source, reversed_source,
- * ref_label, description, day, expires_at, created_at). `cursor` is
- * ledgerCursor() of every row already shown (null for the first page); the
- * rows it names are asked for on top of the limit and dropped (see
- * ledgerCursor for why).
+ * p_limit, p_before_id) (Database 20261210300000 and f470909: id, amount,
+ * source, reversed_source, ref_label, description, day, expires_at,
+ * created_at). `cursor` is ledgerCursor() of the rows already shown (null for
+ * the first page). One row more than `limit` is asked for, to know whether
+ * there is a next page.
  */
 export async function fetchLedger(cursor: LedgerCursor | null = null, limit = 50): Promise<MarketResult<LedgerPage>> {
-  const seen = new Set(cursor?.seen ?? []);
-  const ask = Math.min(SERVER_MAX, limit + 1 + seen.size);
-  const r = await marketRpc("my_points_ledger", { p_before: cursor?.before ?? null, p_limit: ask }, "Couldn't load your points history.", parseLedgerRows);
+  const ask = Math.min(SERVER_MAX, limit + 1);
+  const r = await marketRpc(
+    "my_points_ledger",
+    { p_before: cursor?.before ?? null, p_before_id: cursor?.beforeId ?? null, p_limit: ask },
+    "Couldn't load your points history.",
+    parseLedgerRows
+  );
   if (!r.ok) return r;
-  const fresh = r.value.filter((e) => !seen.has(e.id));
-  return { ok: true, value: { entries: fresh.slice(0, limit), more: fresh.length > limit } };
+  return { ok: true, value: { entries: r.value.slice(0, limit), more: r.value.length > limit } };
 }
 
 const RULES_COLUMNS = "points_value_food, points_value_workout, points_value_metric, points_value_water_goal, points_daily_cap, points_expiry_months";

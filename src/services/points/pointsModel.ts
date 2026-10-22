@@ -174,26 +174,20 @@ export function ledgerLines(e: LedgerEntry, achievementTitle: (key: string) => s
 }
 
 /**
- * The cursor for the next my_points_ledger page.
- *
- * my_points_ledger pages on `created_at < p_before` alone, and rows written in
- * one transaction share a created_at (evaluate_achievements awards several
- * achievements in one statement: every local fixture's rows are ties). An
- * exclusive cursor at the oldest row's time would skip the rest of its ties,
- * so the cursor reaches one millisecond past it (JS times are milliseconds;
- * the column is microseconds) and names the rows already shown inside that
- * millisecond, which the next page asks for on top of its limit and drops.
+ * The cursor for the next my_points_ledger page: the last row shown, as
+ * (p_before, p_before_id). The server orders by created_at desc, id desc and
+ * pages on that pair (Database f470909), so rows sharing a created_at are
+ * neither repeated nor skipped. `before` is the row's created_at exactly as
+ * the server sent it (microseconds; a JS Date would round to milliseconds).
  */
 export interface LedgerCursor {
   before: string;
-  seen: string[];
+  beforeId: string;
 }
 
 export function ledgerCursor(entries: readonly LedgerEntry[]): LedgerCursor | null {
-  if (entries.length === 0) return null;
-  const ms = Math.min(...entries.map((e) => Date.parse(e.createdAt)));
-  if (!Number.isFinite(ms)) return null;
-  return { before: new Date(ms + 1).toISOString(), seen: entries.filter((e) => Date.parse(e.createdAt) === ms).map((e) => e.id) };
+  const last = entries[entries.length - 1];
+  return last ? { before: last.createdAt, beforeId: last.id } : null;
 }
 
 /** "+5" / "−800" (a true minus, U+2212, as the board). */

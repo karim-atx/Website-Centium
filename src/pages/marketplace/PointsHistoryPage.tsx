@@ -32,8 +32,8 @@ import { BackTitle } from "./BackTitle";
 // - the empty state (historyEmpty): padding 56 24 0, gap 10: the 56 tile
 //   radius 18 #EEEAF8 with the clock 24 (stroke 1.9) #7D67D9; "Your points
 //   activity will appear here." 14 / 20 --ink2, max 240.
-// The ledger is fetchLedger (my_points_ledger, keyset-paged on created_at:
-// "Load more" passes ledgerCursor of every row shown), the row words its
+// The ledger is fetchLedger (my_points_ledger, keyset-paged on (created_at, id):
+// "Load more" passes ledgerCursor of the rows shown), the row words its
 // ref_label and description, the balance and tier my_points_summary
 // (AppContext), achievement titles my_achievements (AppContext).
 
@@ -78,8 +78,7 @@ export default function PointsHistoryPage() {
     const r = await fetchLedger(ledgerCursor(entries), PAGE);
     setLoadingMore(false);
     if (!r.ok) return setMoreFailed(true);
-    const seen = new Set(entries.map((e) => e.id));
-    setEntries([...entries, ...r.value.entries.filter((e) => !seen.has(e.id))]);
+    setEntries([...entries, ...r.value.entries]);
     setMore(r.value.more);
   }, [entries, loadingMore]);
 

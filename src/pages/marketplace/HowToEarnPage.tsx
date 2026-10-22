@@ -38,9 +38,7 @@ import { pickAchievements, streakNow } from "./howToEarnModel";
 //     --soft / --ink, the days 12 / 800 and the points 11 --faint; the note.
 //     Right: "{n}-day streak". The points are the live achievements'
 //     (streak_7 / 30 / 100 / 365: my_achievements points), which is what the
-//     server pays today. Database 20261210000000 names a streak_milestone
-//     source at 50 / 200 / 750 / 3,000, but no migration writes it or stores
-//     those amounts yet, so they aren't shown.
+//     server pays: the board's 50 / 200 / 750 / 3,000 since Database f470909.
 //   - Achievements (body padding 4 14 8): rows (padding 10 0, gap 12): the
 //     title 13 / 600 (--ink unlocked, --ink2 locked), the chip 11 / 700
 //     radius 999 padding 2 8 (Unlocked --tealbg / --tealink, Locked --pale /

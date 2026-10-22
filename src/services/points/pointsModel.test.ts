@@ -130,11 +130,11 @@ test("ledger rows parse from my_points_ledger", () => {
   assert.deepEqual(rows[0], { id: "1", source: "reversal", amount: -10, description: "Reversed · Logging", refLabel: "Food log", day: "2026-10-16", createdAt: "2026-10-16T10:00:00.093963+00:00", expiresAt: null, reversedSource: "log_food" });
 });
 
-test("ledgerCursor reaches past the oldest row's millisecond and names its ties", () => {
+test("ledgerCursor is the last row shown, its created_at kept to the microsecond", () => {
   assert.equal(ledgerCursor([]), null);
   const tie = "2026-10-21T01:15:00.093963+00:00";
   const c = ledgerCursor([e("a", "achievement", 100, "2026-10-22T08:00:00.5+00:00"), e("b", "achievement", 25, tie), e("c", "achievement", 25, tie)]);
-  assert.deepEqual(c, { before: "2026-10-21T01:15:00.094Z", seen: ["b", "c"] });
+  assert.deepEqual(c, { before: tie, beforeId: "c" });
 });
 
 test("points rules parse from platform_settings, all or nothing", () => {
