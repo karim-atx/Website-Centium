@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   applicationStatus,
-  daysLeftText,
   hiringErrorOf,
   parseApplications,
   parseHiringFee,
@@ -67,8 +66,6 @@ test("existing-team window (D-31)", () => {
   assert.equal(windowUsed(24), 0.2);
   assert.equal(windowUsed(30), 0);
   assert.equal(windowUsed(-3), 1);
-  assert.equal(daysLeftText(24), "24 days left");
-  assert.equal(daysLeftText(1), "1 day left");
 });
 
 test("error names map by name", () => {

@@ -405,12 +405,6 @@ export function hiredWorkStrip(gym: string, startsOn: string | null, now: Date):
 // ---------------------------------------------------------------------------
 // P-MA.1 Opportunities card (ov.links)
 
-export interface CardCounts {
-  apps: MyApplication[] | null;
-  openings: number | null;
-  work: WorkItem[] | null;
-}
-
 /** "2 waiting · Hamra Strength Club, Cedar Fitness" / "None waiting". */
 export function offersSub(apps: readonly MyApplication[]): string {
   const offered = apps.filter((a) => a.status === "OFFERED");

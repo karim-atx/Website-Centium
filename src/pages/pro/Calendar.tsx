@@ -15,6 +15,7 @@ import { normaliseLink } from "../../components/calendar/calendarTime";
 import { EVENT_SWATCHES } from "../../components/calendar/eventColour";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { textPx } from "../../theme/textSize";
 import { monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
@@ -26,6 +27,12 @@ import { useProCalendar } from "../../components/pro/calendar/useProCalendar";
 import { buildItems, type CalItem } from "../../components/pro/calendar/calendarItems";
 import { AgendaRow, DayOffRow, DayTimeline, Eyebrow, HeaderCard, MonthGrid, RequestCard, WeekDayRow } from "../../components/pro/calendar/CalendarViews";
 import { AddSessionSheet, type SessionClient } from "../../components/pro/calendar/AddSessionSheet";
+import { HiredClassSheet } from "../../components/pro/calendar/HiredClassSheet";
+import { HiredEmpty, SyncNote } from "../../components/pro/calendar/CalendarSync";
+import { dayDots, type ClassInfo } from "../../components/pro/calendar/classModel";
+import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
+import { ageText, editedNote, pickNotices, stripOf } from "../../services/calendar-sync";
+import { supabase } from "../../../lib/supabase/client";
 import { SessionSheet } from "../../components/pro/calendar/SessionSheet";
 import { TimeOffSheet } from "../../components/pro/calendar/TimeOffSheet";
 import {
@@ -87,6 +94,12 @@ import { startThread } from "../../services/messaging";
  *   assigned to me, invitations with Accept / Decline (EventDetailSheet), own
  *   events with several invitees, attachments opened through a signed URL,
  *   location and meeting link.
+ * - Market + Share 3.0 W5 (P-CA): gym classes take the hired-event look in
+ *   their class colour (D-40; classModel), open the Class sheet
+ *   (HiredClassSheet); the Month grid has two dot rows; the sync strip (on
+ *   hire / cancelled / removed) sits under the tabs and the "Class time
+ *   changed" card over the header (DB12 notifications); the Week view shows
+ *   "No hired classes yet" when no class is on the calendar.
  * Deep links: ?day=YYYY-MM-DD opens that day (the hub's booking request),
  * ?new=1&client=<id> opens Add session for that client (the client page).
  */
@@ -122,6 +135,7 @@ export default function Calendar() {
   const { lane } = useProSubtype();
   const navigate = useNavigate();
   const dark = useIsDark();
+  const reducedMotion = useReducedMotion();
   const [params, setParams] = useSearchParams();
   const clinical = lane === "clinical_overview";
   const data = useProCalendar(clinical);
@@ -247,6 +261,7 @@ export default function Calendar() {
   const [addOpen, setAddOpen] = useState<{ date: string; start?: string; clientId?: string } | null>(null);
   const [session, setSession] = useState<CalItem | null>(null);
   const [detail, setDetail] = useState<CalItem | null>(null);
+  const [classSheet, setClassSheet] = useState<ClassInfo | null>(null);
   const [offSheet, setOffSheet] = useState<{ entry: TimeOffEntry | null; day: string } | null>(null);
   const [requestBusy, setRequestBusy] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
@@ -386,6 +401,7 @@ export default function Calendar() {
       return;
     }
     if ((i.kind === "session" || i.kind === "followup") && i.event?.mine) return setSession(i);
+    if (i.kind === "class" && i.cls) return setClassSheet(i.cls);
     if (i.kind === "event" && i.event?.mine && !i.event.sourceKind) return openEdit(i);
     setDetail(i);
   };
@@ -416,6 +432,23 @@ export default function Calendar() {
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setToast({ ok: false, text: r.message });
   };
+
+  // P-CA.4 Message gym: the gym's owner (business_profiles.profile_id, readable while the business is active).
+  const messageGym = async (businessId: string) => {
+    const { data } = await supabase.from("business_profiles").select("profile_id").eq("id", businessId).maybeSingle();
+    const owner = (data as { profile_id?: string | null } | null)?.profile_id ?? null;
+    if (!owner) return setToast({ ok: false, text: "Couldn't open that conversation. Try again." });
+    setClassSheet(null);
+    await message(owner);
+  };
+
+  // ---- calendar sync (P-CA.5.1 to 5.4; DB12 notifications) ----
+  const sync = useMemo(() => pickNotices(data.notices), [data.notices]);
+  const strip = sync.strip ? stripOf(sync.strip, data.hired, todayIso) : null;
+  const note = sync.note ? editedNote(sync.note, data.hired) : null;
+  const addedHire = sync.strip?.kind === "added" ? sync.strip.hireId : null;
+  const outlineOf = (i: CalItem) => !!addedHire && i.cls?.hireId === addedHire;
+  const noClasses = data.loaded && !data.error && data.classes.length === 0 && data.hired.length === 0;
 
   const cancelSession = async (): Promise<{ ok: boolean; message?: string }> => {
     const e = session?.event;
@@ -517,6 +550,25 @@ export default function Calendar() {
           idleInk="rgb(var(--c-charcoal-soft))"
           darkTone="partB"
         />
+        {strip && sync.strip && (
+          <div className="mt-[12px]" data-sync-strip>
+            <ConfirmationStrip
+              compact
+              still={reducedMotion}
+              tone={strip.tone}
+              text={strip.text}
+              action={strip.action}
+              onAction={() => {
+                const jumpTo = strip.jumpTo;
+                data.dismissNotice(sync.strip!.id);
+                if (jumpTo) {
+                  setSelected(jumpTo);
+                  setView("week");
+                }
+              }}
+            />
+          </div>
+        )}
         {view === "week" && (
           <div className="mt-[13px]">
             <HeaderCard
@@ -546,7 +598,8 @@ export default function Calendar() {
             monthLabel={`${monthNames[cursor.month]} ${cursor.year}`}
             todayIso={todayIso}
             selected={selected}
-            busy={(iso) => (items[iso] ?? []).some((i) => i.kind !== "request" && i.badge !== "declined")}
+            dots={(iso) => dayDots(items[iso] ?? [])}
+            hiredLive={data.hiredLive}
             dayOff={dayOff}
             leading={monthLeadingBlanks(cursor.year, cursor.month)}
             onSelect={setSelected}
@@ -584,8 +637,10 @@ export default function Calendar() {
                 setView("day");
               }}
               onOpen={openItem}
+              outlineOf={outlineOf}
             />
           ))}
+          {noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
         </div>
       )}
 
@@ -634,6 +689,7 @@ export default function Calendar() {
               open={openNow}
               nowMinutes={nowMinutes}
               clinical={clinical}
+              hiredLive={data.hiredLive}
               onOpen={openItem}
               onBreak={(e) => setOffSheet({ entry: e, day: selected })}
               onOpenSlot={(start) => setAddOpen({ date: selected, start })}
@@ -709,8 +765,21 @@ export default function Calendar() {
         online={data.online}
         onRespond={(accepted) => void respond(accepted)}
         onOpenAttachment={(p) => void openAttachment(p)}
-        bookingMade={!!detail?.event?.sourceKind && detail.kind !== "business"}
+        bookingMade={!!detail?.event?.sourceKind}
       />
+
+      <HiredClassSheet
+        info={classSheet}
+        onClose={() => setClassSheet(null)}
+        onViewClass={(id) => {
+          setClassSheet(null);
+          navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`);
+        }}
+        onMessageGym={(id) => void messageGym(id)}
+        onNote={(text) => setToast({ ok: true, text })}
+      />
+
+      {note && sync.note && <SyncNote title={note.title} body={note.body} age={ageText(sync.note.createdAt, now)} onClose={() => data.dismissNotice(sync.note!.id)} />}
 
       <EventComposeSheet
         open={composeOpen}

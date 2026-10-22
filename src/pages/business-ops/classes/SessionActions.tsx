@@ -167,7 +167,8 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         onGoToHiring={(form) => {
           parkedDraft = form;
           setSheet(null);
-          navigate("/app/business/hiring");
+          // The picker's "Post an opening" opens the hub's post sheet (W4 lead decision).
+          navigate("/app/business/hiring?post=1");
         }}
         onSave={async (draft, rule) => {
           if (!sheet) return { ok: false, message: "" };

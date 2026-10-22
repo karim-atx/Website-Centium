@@ -14,6 +14,7 @@
 import { formatShortDate } from "../../utils/date";
 import { formatPrice } from "../../utils/price";
 import { time12 } from "../../utils/time12";
+import { reviewMetaTail, targetOf, type PastBooking, type ReviewTarget } from "../../services/instructor-reviews/model";
 
 export type BookingsTab = "memberships" | "upcoming" | "past";
 
@@ -49,6 +50,8 @@ export interface BookingRow {
   href: string | null;
   /** The source id (a gym membership's id, for the row menu and the pass). */
   refId: string;
+  /** W5 (DB4 / DB10): the "Review" stub opens the instructor review for this class. */
+  review?: ReviewTarget | null;
 }
 
 /** "Hamra Strength Club" → "HS"; "Noor" → "NO"; two letters, as the board's tiles. */
@@ -287,6 +290,66 @@ export function splitSchedule(rows: readonly { row: BookingRow; past: boolean }[
     upcoming: rows.filter((r) => !r.past).map((r) => r.row).sort((a, b) => a.at - b.at),
     past: rows.filter((r) => r.past).map((r) => r.row).sort((a, b) => b.at - a.at),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Past from my_bookings (W5; DB4 `reviewable` / `reviewed`, D-43)
+//
+// When my_bookings(p_tab 'past') answers, Past is its rows (descending, as
+// DB4 sorts them), so a past class taught by a Team instructor carries the
+// server's reviewability (C-MO.4.5 `bookPast`, Client Professional Screens
+// `pastItems`):
+// - reviewable, not reviewed: meta "Fri, Oct 9 · 6:30 PM · Rate your
+//   instructor", the stub "Review" teal (a button → the review popup);
+// - reviewed (or sent this session): meta "… · you rated 5", the stub
+//   "Reviewed" muted;
+// - anything else: as the composed rows ("Mon Oct 12" muted, "Cancelled").
+// While my_bookings is pending, Past stays the composed rows (no Review stub).
+
+const OFF_STATUS = new Set(["cancelled", "late_cancel", "declined", "no_show", "rejected", "cancelled_by_venue"]);
+
+/** A my_bookings past row; `sentRating` is a review sent this session. */
+export function pastRow(b: PastBooking, sentRating?: number | null): BookingRow {
+  const start = b.startsAt ? new Date(b.startsAt) : null;
+  const end = b.endsAt ? new Date(b.endsAt) : null;
+  const okStart = start && !Number.isNaN(start.getTime()) ? start : null;
+  const off = !!b.status && OFF_STATUS.has(b.status);
+  const sent = sentRating !== undefined && sentRating !== null;
+  const target = sent ? null : targetOf(b);
+  const reviewed = sent || (b.kind === "class" && b.reviewed);
+  const isClass = b.kind === "class";
+  const isSession = b.kind === "professional_session";
+  const who = b.professionalName ? (isSession && b.professionalType ? `${b.professionalName} · ${b.professionalType}` : b.professionalName) : null;
+  const sub = isClass ? [b.providerName, who].filter(Boolean).join(" · ") : isSession ? (who ?? b.providerName) : b.providerName;
+  const tile = tileInitials(isSession ? (b.professionalName ?? b.providerName) : b.providerName || b.title);
+  const tail = target || reviewed ? reviewMetaTail({ reviewed, rating: sent ? (sentRating as number) : b.myRating }) : null;
+  const meta = okStart
+    ? (target || reviewed) && !off
+      ? [dayLine(okStart), clock(okStart), tail].filter(Boolean).join(" · ")
+      : sessionMeta(okStart, end && !Number.isNaN(end.getTime()) ? end : null) + (off ? " · Cancelled" : "")
+    : (tail ?? "");
+  const stub = off ? "Cancelled" : target ? "Review" : reviewed ? "Reviewed" : okStart ? pastStub(okStart) : "Past";
+  const href = isClass && b.sessionId ? `/app/marketplace/class?id=${encodeURIComponent(b.sessionId)}` : isSession && b.professionalId ? `/app/professionals/${encodeURIComponent(b.professionalId)}` : null;
+  return {
+    key: `p-${b.kind}-${b.refId}`,
+    kind: isClass ? "class" : isSession ? "session" : b.kind === "professional_package" ? "package" : "membership",
+    tile,
+    title: b.title,
+    sub,
+    meta,
+    note: null,
+    stub,
+    tone: target && !off ? "teal" : "muted",
+    at: okStart ? okStart.getTime() : 0,
+    href,
+    refId: b.refId,
+    review: off ? null : target,
+  };
+}
+
+/** Past from my_bookings: the rows, newest first. */
+export function pastRows(list: readonly PastBooking[], sent: Readonly<Record<string, number>>): BookingRow[] {
+  return list.map((b) => pastRow(b, sent[b.refId])).sort((a, b) => b.at - a.at);
 }
 
 // ---------------------------------------------------------------------------

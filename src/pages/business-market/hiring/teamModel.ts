@@ -99,6 +99,16 @@ export function removeSentence(classes: Pick<TeamClass, "title">[]): string | nu
   return `${list} will show Instructor not listed to clients until you name someone else.`;
 }
 
+/**
+ * Step 2 of the remove dialog. "The hiring fee already charged isn't refunded."
+ * only when a fee was charged: a Centium hire (W4 lead decision). An
+ * existing-team member added free in the window has no hire, so no fee line.
+ */
+export function removeConfirmBody(member: { source: "existing_team" | "hire"; hires: unknown[] }): string {
+  const charged = member.source === "hire" || member.hires.length > 0;
+  return charged ? "This can't be undone. The hiring fee already charged isn't refunded." : "This can't be undone.";
+}
+
 // ---------------------------------------------------------------------------
 // B-MA.8.5 Hiring fees
 

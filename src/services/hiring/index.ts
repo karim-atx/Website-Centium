@@ -206,11 +206,6 @@ export function sendHireOffer(businessId: string, d: HireOfferDraft, requestId: 
   );
 }
 
-export function withdrawHireOffer(offerId: string): Promise<HiringWrite> {
-  // awaiting DB stage DB8
-  return hiringWrite("withdraw_hire_offer", { p_offer_id: offerId }, "Couldn't withdraw the offer. Try again.", none);
-}
-
 /** search_professionals(p_query, p_existing_team): ranked, open to gym work only, no contact fields. */
 export function searchProfessionals(businessId: string, query: string, existingTeam = false): Promise<MarketResult<ProCard[]>> {
   // awaiting DB stage DB8 (and DB11 open_to_gym_work)

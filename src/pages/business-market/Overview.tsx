@@ -48,7 +48,8 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    "Gym · Hiring row") Hiring (→ /app/business/hiring): "{n} openings · {n}
 //    new applicants · Team of {n}" from my_openings('open') and my_team (DB8),
 //    with the NEW chip while there are new applicants. Studios have no Gym
-//    card (W3), so no Hiring row either; they reach Hiring from its routes.
+//    card (W3); since W5 (lead decision) they get the same Hiring row alone
+//    in that card's chrome under a caps "Studio".
 // Below the drawn blocks, under a caps "Listing" section, every live Listing
 // tab feature, restyled as handover cards (PLAN §3.4): Listing strength and
 // its sheets (hours, amenities, first visit, categories, policies), "Your
@@ -169,6 +170,15 @@ export function Overview() {
             <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
             <GymRow title="Classes" sub={classesLine(gym.sessionsThisWeek, gym.classBookingsThisWeek)} onOpen={() => navigate("/app/business/classes")} />
             <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
+            <HiringRow businessId={business.id} tick={tick} />
+          </div>
+        </>
+      ) : kind === "classes" ? (
+        // Studios hire too (W4 lead decision): the same Hiring row in the Gym
+        // card's chrome, alone (no Memberships / Classes rows, R1 decision 7).
+        <>
+          <CapsLabel style={{ marginTop: 4 }}>Studio</CapsLabel>
+          <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
             <HiringRow businessId={business.id} tick={tick} />
           </div>
         </>

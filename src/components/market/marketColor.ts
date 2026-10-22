@@ -1,4 +1,4 @@
-import { SEGMENT_STEPS, type MarketPalette } from "../../theme/marketTokens";
+import { SEGMENT_STEPS, highContrast, type MarketPalette } from "../../theme/marketTokens";
 
 // Market + Share 3.0 · colour helpers for the dark (readable, D-05) versions
 // of the board's fixed step / identity colours.
@@ -71,6 +71,9 @@ export function stubColors(tone: StubTone, m: MarketPalette, dark: boolean): { b
   const [bg, ink] = SEGMENT_STEPS[tone - 1];
   // Dark (D-05, not drawn): the step's ink as a 16% tint on the card, the ink lifted to read.
   if (dark) return { bg: hexAlpha(ink, 0.16), ink: liftInk(ink), perf: liftInk(ink) };
+  // High contrast (light; R2 gate): the drawn step inks read 3.2 to 3.7:1 on their tints; deepen the
+  // label ink to 4.5:1 on the tint. Normal mode keeps the drawn ink.
+  if (highContrast()) return { bg, ink: darkenForWhite(ink, 5.2), perf: ink };
   return { bg, ink, perf: ink };
 }
 

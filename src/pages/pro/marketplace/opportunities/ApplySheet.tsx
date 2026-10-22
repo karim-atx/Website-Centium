@@ -8,6 +8,7 @@ import { useApp } from "../../../../context/AppContext";
 import { useOnline } from "../../../../hooks/useOnline";
 import { fetchShowcaseServices } from "../../../../services/pro-market";
 import { applyToOpening, type ApplyInput, type Opportunity } from "../../../../services/team-hiring";
+import { fetchPublicProfile } from "../../../../services/pro-profile";
 import { payMoney, payText } from "../../../../services/hiring/fee";
 import { MasterSheet, PrimaryButton, SaveError, SoonNote, fieldStyle, lh, px, useMarketColors } from "../../../business-market/listingParts";
 import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parseRate, proposalHint, scheduleLine, unitWord } from "./opportunitiesModel";
@@ -29,8 +30,10 @@ import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parse
 //   12 / 3 tick, 13 / 18 700), required: Send stays disabled until it's ticked;
 // - Attach (fChips): the professional's own LIVE credentials (named, not
 //   expired unless shown when expired) and services (session types and
-//   offered plans), read only, as toggle chips; "Work history" is DB10
-//   (Centium work history: awaiting), drawn disabled with a quiet note;
+//   offered plans), read only, as toggle chips; "Work history" (W5) is a chip
+//   too once professional_public_profile (DB10, awaiting) lists Centium work
+//   history; pending it is drawn disabled with "Work history is coming
+//   soon.", and with no entries yet disabled with "No Centium work yet.";
 // - the footer CTA "Send application" → apply_to_opening ⟳ (one request id
 //   per sheet); pay_locked / already_applied show the board's words under it;
 //   pending shows "Hiring is coming soon." and changes nothing.
@@ -66,6 +69,8 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [soon, setSoon] = useState(false);
+  /** Centium work history (DB10): true / false once read, null while pending or unread. */
+  const [hasWork, setHasWork] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!authUserId) return;
@@ -74,6 +79,8 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
       if (!alive) return;
       setServices(r.ok ? [...r.data.sessions.map((s) => ({ id: s.id, label: s.name })), ...r.data.plans.filter((p) => p.active).map((p) => ({ id: p.id, label: p.name }))] : []);
     });
+    // awaiting DB stage DB10 (professional_public_profile): the Work history chip.
+    void fetchPublicProfile(authUserId).then((r) => alive && setHasWork(r.ok && r.value ? r.value.workHistory.length > 0 : null));
     return () => {
       alive = false;
     };
@@ -86,8 +93,9 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
     return [
       ...creds.map((c) => ({ key: `c:${c.id}`, kind: "credential" as const, refId: c.id, label: c.label })),
       ...(services ?? []).map((s) => ({ key: `s:${s.id}`, kind: "service" as const, refId: s.id, label: s.label })),
+      ...(hasWork ? [{ key: "wh", kind: "work_history" as const, refId: null, label: "Work history" }] : []),
     ];
-  }, [cv, services]);
+  }, [cv, services, hasWork]);
 
   const proposals = o.allowPayProposals;
   const rateValue = proposals ? parseRate(rate) : null;
@@ -234,14 +242,24 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
                 </button>
               );
             })}
-            {/* awaiting DB stage DB10 (Centium work history): the chip can't attach anything yet. */}
-            <button type="button" aria-pressed={false} aria-disabled aria-describedby={ids.wh} className="hit market-focus" style={{ ...sheetChipStyle(false), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "default", opacity: 0.4 }}>
-              Work history
-            </button>
+            {/* awaiting DB stage DB10 (Centium work history): until it lists entries the chip can't attach anything. */}
+            {hasWork ? null : (
+              <button type="button" aria-pressed={false} aria-disabled aria-describedby={ids.wh} className="hit market-focus" style={{ ...sheetChipStyle(false), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "default", opacity: 0.4 }}>
+                Work history
+              </button>
+            )}
           </div>
-          <div id={ids.wh} style={hint}>
-            {chips.length || services === null ? "Work history is coming soon." : "Add credentials and services to your profile to attach them. Work history is coming soon."}
-          </div>
+          {hasWork ? null : (
+            <div id={ids.wh} style={hint}>
+              {hasWork === false
+                ? chips.length || services === null
+                  ? "No Centium work yet."
+                  : "Add credentials and services to your profile to attach them. No Centium work yet."
+                : chips.length || services === null
+                  ? "Work history is coming soon."
+                  : "Add credentials and services to your profile to attach them. Work history is coming soon."}
+            </div>
+          )}
         </div>
       </div>
     </MasterSheet>

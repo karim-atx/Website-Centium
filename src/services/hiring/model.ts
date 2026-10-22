@@ -326,12 +326,6 @@ export function windowUsed(daysLeft: number): number {
   return (EXISTING_TEAM_WINDOW_DAYS - d) / EXISTING_TEAM_WINDOW_DAYS;
 }
 
-/** "24 days left", "1 day left", "Last day". */
-export function daysLeftText(daysLeft: number): string {
-  if (daysLeft <= 0) return "Last day";
-  return daysLeft === 1 ? "1 day left" : `${daysLeft} days left`;
-}
-
 // ---------------------------------------------------------------------------
 // errors (PLAN §2.2 DB8 / api.md names; mapped by name, as offers do)
 

@@ -192,7 +192,8 @@ export const BUSINESS_MORE_PAGES = [
  * reached from the Marketplace, and Hiring (B-MA.8, W4); the boards draw the bar with Marketplace lit
  * (W3 lead decision, R1 polish). The front-desk routes keep Front desk lit.
  */
-const MARKETPLACE_PAGES = ["/app/business/gym", "/app/business/redeem", "/app/business/hiring"];
+// B-MA.9 (W5 gate): the business notifications page is drawn with Marketplace lit.
+const MARKETPLACE_PAGES = ["/app/business/gym", "/app/business/redeem", "/app/business/hiring", "/app/business/notifications"];
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 

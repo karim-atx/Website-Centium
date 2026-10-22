@@ -19,6 +19,8 @@ import {
   type TimeOffRow,
 } from "../../../services/pro/calendar";
 import type { ExceptionMap } from "../../calendar/occurrences";
+import { fetchMyCalendar, type HiredClassEvent, type NotificationLike, SYNC_TITLE_KEYS } from "../../../services/calendar-sync";
+import { fetchNotifications, markRead } from "../../../services/pro/notifications";
 import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel";
 
 /**
@@ -31,6 +33,9 @@ import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel
  * - DB-4: availability (pro-wide and per-business), time off, session types,
  *   booking requests, each session's outcome / type / price / paid state;
  * - Clinical overview: follow-ups due (care plans).
+ * - Market + Share 3.0 W5 (P-CA): the hired class events (my_calendar, DB9;
+ *   pending until it lands, then they replace the live class rows by session)
+ *   and the unread calendar sync notifications (DB12 kinds).
  * A failed read keeps whatever was on screen (the rule every calendar here
  * follows): an empty calendar is a claim about somebody's day.
  */
@@ -53,6 +58,13 @@ export interface ProCalendarData {
   requests: BookingRow[];
   extras: Record<string, SessionExtras>;
   followUps: DueFollowUp[];
+  /** my_calendar's hired class events (empty while DB9 is pending). */
+  hired: HiredClassEvent[];
+  /** my_calendar answered (DB9 landed): the "Hired" words may show. */
+  hiredLive: boolean;
+  /** Unread calendar sync notifications (on hire, edited, cancelled, removed). */
+  notices: NotificationLike[];
+  dismissNotice: (id: string) => void;
   /** Display names by profile id: the roster first, then related_profile_summary. */
   names: Record<string, string>;
   reload: () => Promise<void>;
@@ -74,13 +86,16 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
   const [extras, setExtras] = useState<Record<string, SessionExtras>>({});
   const [followUps, setFollowUps] = useState<DueFollowUp[]>([]);
   const [extraNames, setExtraNames] = useState<Record<string, string>>({});
+  const [hired, setHired] = useState<HiredClassEvent[]>([]);
+  const [hiredLive, setHiredLive] = useState(false);
+  const [notices, setNotices] = useState<NotificationLike[]>([]);
 
   const reload = useCallback(async () => {
     if (!authUserId) return;
     const today = isoOf(new Date());
     const from = addDays(today, -400);
     const to = addDays(today, 800);
-    const [cal, cls, av, off, ty, rq, ex, fu] = await Promise.all([
+    const [cal, cls, av, off, ty, rq, ex, fu, mc, nt] = await Promise.all([
       getCalendar(authUserId),
       fetchClassesAssignedToMe(authUserId),
       fetchAvailability(authUserId),
@@ -89,6 +104,9 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       fetchBookingRequests(authUserId),
       fetchSessionExtras(authUserId, from, to),
       clinical ? fetchFollowUps(authUserId, from, to) : Promise.resolve({ ok: true as const, data: [] as DueFollowUp[] }),
+      // awaiting DB stage DB9 (my_calendar)
+      fetchMyCalendar(from, to),
+      fetchNotifications(),
     ]);
     setLoaded(true);
     setError(!cal.ok || !av.ok || !off.ok || !ty.ok || !rq.ok);
@@ -104,7 +122,22 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     if (rq.ok) setRequests(rq.data);
     setExtras(ex);
     if (fu.ok) setFollowUps(fu.data);
+    if (mc.ok) {
+      setHired(mc.value);
+      setHiredLive(true);
+    } else if (mc.pending) {
+      setHired([]);
+      setHiredLive(false);
+    }
+    // awaiting DB stage DB12 (the calendar sync kinds: classes_added, class_changed, class_cancelled, removed_from_team)
+    if (nt.ok) setNotices(nt.data.filter((n) => !n.readAt && (SYNC_TITLE_KEYS[n.titleKey] || SYNC_TITLE_KEYS[n.subjectType])));
   }, [authUserId, clinical]);
+
+  /** Seen: hidden here at once, read_at set on the server (the owner's own update). */
+  const dismissNotice = useCallback((id: string) => {
+    setNotices((list) => list.filter((n) => n.id !== id));
+    void markRead([id]);
+  }, []);
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
@@ -173,6 +206,10 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     requests,
     extras,
     followUps,
+    hired,
+    hiredLive,
+    notices,
+    dismissNotice,
     names,
     reload,
   };

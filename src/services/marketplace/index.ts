@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
 import { featuredFirst } from "./listingLogic";
+import { instructorFacts } from "./instructorRule";
 import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBookingRules, type VenuePolicyKind } from "./classBooking";
 
 // Marketplace discovery: what a consumer can actually find and book.
@@ -81,10 +82,19 @@ export interface MarketplaceClass {
   whatToBring?: string[];
   /** A public URL in the class-covers bucket. */
   coverUrl?: string | null;
-  /** Null unless the professional is listed publicly (the view decides). */
+  /**
+   * Null when no instructor may be shown (instructorRule.ts): until DB9 the
+   * view's rule (listed publicly, D-11); from DB9 only a Team instructor.
+   */
   instructorId?: string | null;
   instructorName?: string | null;
   instructorAvatarUrl?: string | null;
+  /** DB9 (awaiting): null while the columns haven't landed. */
+  instructorIsTeam?: boolean | null;
+  instructorSpecialty?: string | null;
+  instructorRating?: number | null;
+  instructorReviewCount?: number | null;
+  instructorHireCount?: number | null;
   /** class_starts_at(): the real moment, in the venue's time zone. */
   startsAt?: string | null;
   /** B13 MK-04: places left for non-members; null = no separate limit (members aren't limited). */
@@ -198,9 +208,8 @@ const toClass = (r: ClassRow): MarketplaceClass => ({
   level: r.level,
   whatToBring: r.what_to_bring ?? [],
   coverUrl: r.cover_url,
-  instructorId: r.instructor_id,
-  instructorName: r.instructor_name?.trim() || null,
-  instructorAvatarUrl: r.instructor_avatar_url,
+  // C-MO.4.3.1 / C-MO.4.3: the Team-only instructor rule, D-11 until DB9.
+  ...instructorFacts(r as unknown as Record<string, unknown>),
   startsAt: r.starts_at,
   centiumSpotsLeft: r.centium_spots_left ?? null,
   isFeatured: r.is_featured === true,
@@ -223,9 +232,13 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
   isFeatured: r.is_featured === true,
 });
 
-const CLASS_COLUMNS =
-  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, " +
-  "gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, starts_at, centium_spots_left, is_featured";
+// Every column of the view: the DB9 instructor columns (instructor_is_team,
+// instructor_specialty, instructor_rating, instructor_review_count,
+// instructor_hire_count) haven't landed, and naming one that doesn't exist
+// 400s the whole read, so "*" picks them up when they land and is the same
+// read today (the listed columns were all of the view's but series_id).
+// awaiting DB stage DB9
+const CLASS_COLUMNS = "*";
 const VENUE_COLUMNS =
   "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
 

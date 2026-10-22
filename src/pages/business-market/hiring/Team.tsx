@@ -11,7 +11,7 @@ import { BackHeader, CentredDialog, lh, px, useMarketColors, useStrip } from "..
 import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { ExistingTeamChip, HiringEmpty, NotForThisBusiness, PaleNote, PEOPLE_ICON } from "./teamParts";
-import { classLine, classTile, firstName, hireLine, removeSentence } from "./teamModel";
+import { classLine, classTile, firstName, hireLine, removeConfirmBody, removeSentence } from "./teamModel";
 
 // Market + Share 3.0 · W4-B · B-MA.8.4 Team (Business Hiring Screens lines
 // 156–185, `M()` / teamList / menu / teamRemove1–2 / teamRemoved / teamEmpty;
@@ -226,7 +226,7 @@ export default function TeamPage() {
         pad="24px 22px 22px"
         actionsTop={18}
         title={!r ? "" : r.step === 1 ? `Remove ${firstName(r.member.professional.name)} from your team?` : "Confirm remove"}
-        body={!r ? undefined : r.step === 1 ? (removeSentence(r.member.classes) ?? undefined) : "This can't be undone. The hiring fee already charged isn't refunded."}
+        body={!r ? undefined : r.step === 1 ? (removeSentence(r.member.classes) ?? undefined) : removeConfirmBody(r.member)}
         cancel="Cancel"
         action={r?.step === 2 ? "Remove from team" : "Remove"}
         busy={busy}

@@ -165,7 +165,7 @@ export const MARKET_HC_DARK: MarketPalette = {
 };
 
 /** The app's High contrast switch (AppContext puts `high-contrast` on <html>); false off the DOM (tests). */
-const highContrast = (): boolean => {
+export const highContrast = (): boolean => {
   const doc = (globalThis as { document?: { documentElement?: { classList?: { contains(c: string): boolean } } } }).document;
   return doc?.documentElement?.classList?.contains("high-contrast") === true;
 };

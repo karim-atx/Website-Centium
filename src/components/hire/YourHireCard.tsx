@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CentredPopup } from "../ui/CentredPopup";
-import { MemberTag } from "../marketplace/MemberTag";
-import type { TypeColours } from "../professionals/typeColour";
-import { textPx } from "../../theme/textSize";
+import { useIsDark } from "../../hooks/useIsDark";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette } from "../../theme/marketTokens";
+import { CentredDialog } from "../../pages/business-market/listingParts";
+import { Caps } from "../../pages/professionals/profile/parts";
 import {
   cancelHire,
   cancelPromptLine,
@@ -14,31 +15,18 @@ import {
   type MyHire,
 } from "../../services/hires";
 
-// A3-client: where a client sees their hire later — on the professional's
-// profile, above the pinned row, from my_hires(). The status is the
-// handover's "Pending payment" until the professional confirms receipt, then
-// Active. Cancel hire calls cancel_hire(); the wording is chosen by whether
-// the professional has confirmed (the predicate cancel_hire() returns as
-// was_free) and, after it, says what was agreed and that Centium records the
-// cancellation only. No charge or refund is ever named.
-//
-// UNSPECIFIED BY THE HANDOVER: no frame draws a hire's status on the profile
-// or a cancel action. Built from the profile's own pieces (the section label,
-// the r20 card with the 0.08 hairline the About card uses, the stage 5 member
-// tag, CentredPopup), so every size and colour here is theirs, not a frame's.
+// A3-client (kept, PLAN §3.2), restyled for C-MO.4.9 (Market + Share 3.0 W5):
+// the client's live hire with this professional, on the profile's Services
+// tab, from my_hires(). "Pending payment" until the professional confirms
+// receipt, then "Active". Cancel hire calls cancel_hire(); the wording is
+// chosen by whether the professional has confirmed (was_free) and names no
+// charge or refund. Not drawn on the board: built in its chrome (the caps
+// label, the 18 card with the 0.5px hairline, the status pill as the board's
+// pills: --cautionbg / --caution pending, --tealbg / --tealink active; the
+// CentredDialog for the destructive cancel).
 
-export function YourHireCard({
-  hire,
-  t,
-  sectionLabel,
-  onChanged,
-}: {
-  hire: MyHire;
-  t: TypeColours;
-  sectionLabel: (text: string) => React.ReactNode;
-  /** Reload my_hires() after a cancel; `note` is what cancelling did, for the page to show once this card is gone. */
-  onChanged: (note?: string) => void;
-}) {
+export function YourHireCard({ hire, onChanged }: { hire: MyHire; /** Reload my_hires() after a cancel; `note` is what cancelling did. */ onChanged: (note?: string) => void }) {
+  const m = marketPalette(useIsDark());
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,22 +49,22 @@ export function YourHireCard({
   };
 
   return (
-    <section className="mb-5 animate-fade-slide-up" aria-label="Your plan">
-      {sectionLabel("Your plan")}
-      <div className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4">
-        <div className="flex items-start gap-2.5">
-          <div className="min-w-0 flex-1">
-            <p className="m-0 font-semibold text-charcoal break-words" style={{ fontSize: textPx(13.5) }}>
-              {hire.planName}
-            </p>
-            <p className="m-0 mt-0.5 text-charcoal-faint tabular-nums" style={{ fontSize: textPx(11.5) }}>
+    <section aria-label="Your plan" style={{ lineHeight: "normal" }}>
+      <Caps>Your plan</Caps>
+      <div style={{ marginTop: 8, borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "12px 14px", color: m.ink }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: textPx(14), fontWeight: 700, overflowWrap: "anywhere" }}>{hire.planName}</div>
+            <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1, fontVariantNumeric: "tabular-nums" }}>
               {[priceShort(hire.priceAgreed), hire.paymentMethod === "whish" ? "Whish Money" : "Cash", until].filter(Boolean).join(" · ")}
-            </p>
+            </div>
           </div>
-          <MemberTag label={hireStatusLabel(hire)} tone={pending ? "pending" : "member"} />
+          <span style={{ flexShrink: 0, borderRadius: 999, padding: "4px 10px", fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap", background: pending ? m.cautionbg : m.tealbg, color: pending ? m.caution : m.tealink }}>
+            {hireStatusLabel(hire)}
+          </span>
         </div>
         {pending && (
-          <p className="m-0 mt-2 text-[12px] leading-[1.5] text-charcoal-soft">
+          <p style={{ margin: "8px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
             {hire.paymentMethod === "cash" ? `Pay ${hire.professionalFirstName || "them"} in person. ` : ""}
             Your hire becomes active once they confirm they've been paid.
           </p>
@@ -87,34 +75,28 @@ export function YourHireCard({
             setError(null);
             setConfirming(true);
           }}
-          className="tap mt-3 h-8 px-3 -ml-1 rounded-[10px] text-[12px] font-bold"
-          style={{ color: t.deep }}
+          className="hit market-focus"
+          style={{ marginTop: 8, height: 32, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.high, cursor: "pointer" }}
         >
           Cancel hire
         </button>
         {error && (
-          <p role="alert" className="m-0 mt-2 text-[12.5px] font-medium text-status-high">
+          <p role="alert" style={{ margin: "4px 0 0", fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
             {error}
           </p>
         )}
       </div>
 
-      <CentredPopup
+      <CentredDialog
         open={confirming}
-        onClose={() => !busy && setConfirming(false)}
         title="Cancel this hire?"
         body={cancelPromptLine(hire)}
-        cta={{ label: "Cancel hire", loading: busy, onClick: () => void cancel() }}
-      >
-        <button
-          type="button"
-          onClick={() => setConfirming(false)}
-          disabled={busy}
-          className="tap mt-2 w-full h-11 text-[14px] font-bold text-th-7d67d9 dark:text-primary-dark disabled:opacity-40"
-        >
-          Keep my plan
-        </button>
-      </CentredPopup>
+        cancel="Keep my plan"
+        action="Cancel hire"
+        busy={busy}
+        onAction={() => void cancel()}
+        onCancel={() => !busy && setConfirming(false)}
+      />
     </section>
   );
 }

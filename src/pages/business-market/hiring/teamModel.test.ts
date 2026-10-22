@@ -16,6 +16,7 @@ import {
   inviteIdentifierKind,
   inviteNote,
   isEmailOrPhone,
+  removeConfirmBody,
   removeSentence,
   shortDate,
   windowPct,
@@ -113,4 +114,11 @@ test("employee invite identifier: email, code, neither", () => {
 test("Gym card Hiring line", () => {
   assert.equal(hiringRowLine(3, 3, 3), "3 openings · 3 new applicants · Team of 3");
   assert.equal(hiringRowLine(1, 1, 0), "1 opening · 1 new applicant · Team of 0");
+});
+
+test("remove step 2: the fee line only when a fee was charged (W4 lead decision)", () => {
+  const fee = "This can't be undone. The hiring fee already charged isn't refunded.";
+  assert.equal(removeConfirmBody({ source: "hire", hires: [{}] }), fee);
+  assert.equal(removeConfirmBody({ source: "existing_team", hires: [{}] }), fee, "an existing-team member later hired again");
+  assert.equal(removeConfirmBody({ source: "existing_team", hires: [] }), "This can't be undone.");
 });

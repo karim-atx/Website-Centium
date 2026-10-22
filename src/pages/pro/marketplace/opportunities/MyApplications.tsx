@@ -10,6 +10,7 @@ import { useOnline } from "../../../../hooks/useOnline";
 import { acceptHireOffer, clashesOf, declineHireOffer, fetchMyApplications, type Clash, type MyApplication } from "../../../../services/team-hiring";
 import { BackHeader, CentredDialog, SoonNote, lh, px, useMarketColors } from "../../../business-market/listingParts";
 import { DialogRows, InitialsTile, OpEmpty } from "./parts";
+import { ConflictDialog } from "../../../../components/pro/calendar/ConflictDialog";
 import { fixedInk } from "./colours";
 import { useActionStrip } from "./useActionStrip";
 import { acceptBody, acceptRows, applicationMeta, clashBody, clashTime, hiredStrip, offerNote, roleLine, STATUS_TONE } from "./opportunitiesModel";
@@ -33,8 +34,8 @@ import { acceptBody, acceptRows, applicationMeta, clashBody, clashTime, hiredStr
 // nothing."; Not now / Accept offer) → accept_hire_offer. A `conflicts`
 // refusal opens the clash dialog (P-CA.5.5's copy and rows: the warning
 // tile, "This overlaps your calendar", the clashing titles and times, Go back
-// / Accept anyway → p_ack_conflicts true) in the CentredDialog chrome (the
-// final P-CA.5.5 visual is batch W5's). Hired → the card turns HIRED and the
+// / Accept anyway → p_ack_conflicts true) in P-CA.5.5's ConflictDialog
+// (components/pro/calendar, W5). Hired → the card turns HIRED and the
 // strip "You're hired · {gym}, {role}" with "My work". Decline →
 // decline_hire_offer (one tap: the board draws no confirm).
 // my_applications / accept / decline are DB8: pending, the drawn empty state;
@@ -165,25 +166,18 @@ export default function MyApplicationsPage() {
           {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
         </CentredDialog>
       ) : null}
-      {clash ? (
-        <CentredDialog
-          open
-          width={330}
-          tone="primary"
-          title="This overlaps your calendar"
-          body={clashBody(clash.app, Math.max(1, clash.clashes.length))}
-          cancel="Go back"
-          action="Accept anyway"
-          busy={busy}
-          error={dlgError}
-          onCancel={closeDialogs}
-          onAction={() => void accept(clash.app, true)}
-        >
-          <ClashList clashes={clash.clashes} />
-          <p style={{ margin: "8px 0 0", fontSize: px(11.5), lineHeight: lh(16), color: m.faint, textAlign: "left" }}>If you continue, both stay on your calendar. You can move your own sessions afterwards.</p>
-          {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
-        </CentredDialog>
-      ) : null}
+      {/* W5 (P-CA.5.5): the calendar's ConflictDialog; the data stays accept_hire_offer's `conflicts` refusal. */}
+      <ConflictDialog
+        open={!!clash}
+        body={clash ? clashBody(clash.app, Math.max(1, clash.clashes.length)) : ""}
+        clashes={(clash?.clashes ?? []).map((c) => ({ title: c.title || "A session on your calendar", time: clashTime(c.start, c.end) }))}
+        busy={busy}
+        error={dlgError}
+        onBack={closeDialogs}
+        onAccept={() => clash && void accept(clash.app, true)}
+      >
+        {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
+      </ConflictDialog>
       {strip}
     </div>
   );
@@ -231,27 +225,5 @@ function ApplicationCard({ a, now, justHired, declining, onAccept, onDecline }: 
         </>
       ) : null}
     </TicketStub>
-  );
-}
-
-/** The clashing sessions (P-CA.5.5 `clashes`): rows radius 15 in the own-session tint, the 3 bar, the title 12.5 / 700, the time 10 #A79E93, "Clash" 11 / 600 in --caution. */
-function ClashList({ clashes }: { clashes: Clash[] }) {
-  const m = useMarketColors();
-  const dark = useIsDark();
-  if (!clashes.length) return null;
-  const own = fixedInk("#7D6BB5", dark);
-  return (
-    <ul style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
-      {clashes.map((c, i) => (
-        <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 11, padding: "12px 14px", borderRadius: 15, background: `${own}29` }}>
-          <span aria-hidden style={{ width: 3, alignSelf: "stretch", minHeight: 32, borderRadius: 999, background: own, flex: "none" }} />
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: px(12.5), fontWeight: 700, lineHeight: 1.5, color: m.ink }}>{c.title || "A session on your calendar"}</span>
-            <span style={{ display: "block", fontSize: px(10), lineHeight: 1.5, color: dark ? m.faint : "#A79E93" }}>{clashTime(c.start, c.end)}</span>
-          </span>
-          <span style={{ fontSize: px(11), fontWeight: 600, whiteSpace: "nowrap", color: m.caution }}>Clash</span>
-        </li>
-      ))}
-    </ul>
   );
 }

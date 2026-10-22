@@ -5,6 +5,8 @@ import {
   classRow,
   hireRow,
   membershipRow,
+  pastRow,
+  pastRows,
   pastStub,
   sessionMeta,
   sessionRow,
@@ -128,4 +130,54 @@ test("a hired session: 'Name · Type', the price, requested and cancelled states
   assert.equal(sessionRow({ ...base, status: "requested" }, NOW).row.stub, "Requested");
   assert.equal(sessionRow({ ...base, status: "cancelled" }, NOW).row.tone, "muted");
   assert.equal(sessionRow({ ...base, startsAt: new Date(2026, 9, 12, 7).toISOString(), endsAt: new Date(2026, 9, 12, 8).toISOString() }, NOW).row.stub, "Mon Oct 12");
+});
+
+test("W5: Past from my_bookings, the Review stub, then Reviewed · you rated N", () => {
+  const base = {
+    kind: "class" as const,
+    refId: "bk1",
+    sessionId: "s1",
+    title: "Spin 45",
+    providerName: "Hamra Strength Club",
+    professionalId: "p1",
+    professionalName: "Rana Khoury",
+    professionalPhotoUrl: null,
+    professionalType: null,
+    startsAt: new Date(2026, 9, 9, 18, 30).toISOString(),
+    endsAt: new Date(2026, 9, 9, 19, 15).toISOString(),
+    status: "attended",
+    reviewable: true,
+    reviewed: false,
+    myRating: null,
+  };
+  const r = pastRow(base);
+  assert.equal(r.sub, "Hamra Strength Club · Rana Khoury");
+  assert.equal(r.meta, "Fri, Oct 9 · 6:30 PM · Rate your instructor");
+  assert.equal(r.stub, "Review");
+  assert.equal(r.tone, "teal");
+  assert.equal(r.review?.sessionId, "s1");
+  assert.equal(r.href, "/app/marketplace/class?id=s1");
+  const sent = pastRow(base, 5);
+  assert.equal(sent.stub, "Reviewed");
+  assert.equal(sent.tone, "muted");
+  assert.equal(sent.meta, "Fri, Oct 9 · 6:30 PM · you rated 5");
+  assert.equal(sent.review, null);
+  const done = pastRow({ ...base, reviewable: false, reviewed: true, myRating: 4 });
+  assert.equal(done.meta, "Fri, Oct 9 · 6:30 PM · you rated 4");
+  assert.equal(pastRow({ ...base, reviewable: false, reviewed: true }).meta, "Fri, Oct 9 · 6:30 PM");
+  // Not reviewable (no Team instructor, or not attended): the composed look.
+  const plain = pastRow({ ...base, reviewable: false, professionalName: null, professionalId: null });
+  assert.equal(plain.stub, "Fri Oct 9");
+  assert.equal(plain.sub, "Hamra Strength Club");
+  assert.equal(plain.meta, "Fri, Oct 9 · 6:30 PM · 45 min");
+  assert.equal(plain.review, null);
+  const off = pastRow({ ...base, status: "cancelled" });
+  assert.equal(off.stub, "Cancelled");
+  assert.equal(off.review, null);
+  const sess = pastRow({ ...base, kind: "professional_session", refId: "a1", title: "1:1 strength session", professionalType: "Trainer", reviewable: false });
+  assert.equal(sess.sub, "Rana Khoury · Trainer");
+  assert.equal(sess.tile, "RK");
+  assert.equal(sess.href, "/app/professionals/p1");
+  const sorted = pastRows([{ ...base, refId: "old", reviewable: false, startsAt: new Date(2026, 9, 5, 12, 30).toISOString() }, base], { bk1: 5 });
+  assert.deepEqual(sorted.map((x) => x.stub), ["Reviewed", "Mon Oct 5"]);
 });

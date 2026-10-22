@@ -238,8 +238,3 @@ export function acceptExistingTeamInvite(inviteId: string): Promise<HiringWrite>
   // awaiting DB stage DB8
   return hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, "Couldn't accept the invite. Try again.", () => null);
 }
-
-export function declineExistingTeamInvite(inviteId: string): Promise<HiringWrite> {
-  // awaiting DB stage DB8
-  return hiringWrite("decline_existing_team_invite", { p_invite_id: inviteId }, "Couldn't decline the invite. Try again.", () => null);
-}

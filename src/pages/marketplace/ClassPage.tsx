@@ -13,6 +13,7 @@ import { PinnedSlot } from "../../components/ui/PinnedCta";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
 import { InstructorCard } from "../../components/market/InstructorCard";
+import { hiredViaCentium } from "../../services/marketplace/instructorRule";
 import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
 import {
   MarketEmptyCard,
@@ -112,9 +113,15 @@ import {
 //   36 places the bar (flex, gap 2, 10 tall cells radius 2, 1px border); then
 //   (margin-top 14, baseline, gap 6) "{left} of {cap}" 20 / 700 #7D67D9
 //   tabular and "spots left" 14 / 400 --ink2;
-// - the instructor (margin-top 12): the W1 InstructorCard, listed only when
-//   the class has a publicly listed instructor (D-11, the view's rule), never
-//   with "Hired via Centium" in Release 1; else "Instructor not listed";
+// - the instructor (margin-top 12): the W1 InstructorCard. Release 2 (W5,
+//   HANDOVER §9): only a Team instructor is named; a class with none shows
+//   "Instructor not listed" (no photo, no link). The rule lives in
+//   services/marketplace/instructorRule.ts: until DB9's marketplace_classes
+//   columns land it keeps the D-11 interim (listed only for a publicly
+//   listed instructor, no "Hired via Centium"); from DB9 instructor_is_team
+//   decides, the card takes instructor_specialty / _rating / _review_count
+//   (the live directory listing stays the fallback) and "Hired via Centium"
+//   shows for a Team instructor with a Centium hire;
 // - "About this class" 10.5 / 700 0.1em caps --faint (margin-top 18) and the
 //   about 13 / 19.5 --ink2 (margin-top 6);
 // - the pinned CTA "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill.
@@ -870,17 +877,17 @@ export function ClassPage({ classId }: { classId: string }) {
         </div>
       </div>
 
-      {/* D-11 (Release 1): the listed card only for a publicly listed
-          instructor, without "Hired via Centium". */}
+      {/* The Team-only rule (instructorRule.ts; D-11 until DB9). */}
       {listed ? (
         <InstructorCard
           listed
           id={c.instructorId!}
           name={c.instructorName!}
           photoUrl={c.instructorAvatarUrl ?? null}
-          specialty={instructor?.role ?? "Instructor"}
-          rating={instructor?.rating ?? null}
-          reviewCount={instructor?.reviews ?? 0}
+          specialty={c.instructorSpecialty ?? instructor?.role ?? "Instructor"}
+          rating={c.instructorRating ?? instructor?.rating ?? null}
+          reviewCount={c.instructorReviewCount ?? instructor?.reviews ?? 0}
+          hiredViaCentium={hiredViaCentium(c)}
           to={`/app/professionals/${encodeURIComponent(c.instructorId!)}`}
           style={{ marginTop: 12 }}
         />
