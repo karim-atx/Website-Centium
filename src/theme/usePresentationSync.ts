@@ -33,7 +33,9 @@ import {
 // A FAILED SAVE KEEPS THE CHOICE. The setting stays applied on this device,
 // `pending` is kept (persisted, so it survives a reload), the error is shown
 // under the setting, and the save is retried on the next change, on
-// reconnecting and on the next sign-in.
+// reconnecting and on the next sign-in. A save whose row comes back without
+// the values written counts as failed (services/presentation/save.ts), so
+// flush's loop below never goes round on an answer that is not the write.
 
 const keyOf = (p: Presentation) => JSON.stringify(presentationToRow(p));
 
