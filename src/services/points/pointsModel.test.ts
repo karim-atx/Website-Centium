@@ -5,11 +5,13 @@ import {
   earnedToday,
   expiringLine,
   groupLedger,
+  ledgerCursor,
   ledgerLines,
   nextMilestone,
   nextRewardLine,
   parseLedgerRows,
   parsePointsExtras,
+  parsePointsRules,
   signedPoints,
   streakDays,
   todayLine,
@@ -18,8 +20,12 @@ import {
 
 const NOW = new Date(2026, 9, 16, 15, 0); // Fri Oct 16 2026, local
 
-test("summary extras are null until DB1's columns are there", () => {
+test("summary extras: my_points_summary's last four columns; a row without them is null", () => {
   assert.equal(parsePointsExtras({ balance: 10, tier_name: "Bronze" }), null);
+  // Nothing lapsing: both expiring columns null.
+  assert.deepEqual(parsePointsExtras({ earned_today: 0, daily_cap: 30, expiring_soon: 0, expiring_soon_date: null }), { earnedToday: 0, dailyCap: 30, expiringSoon: 0, expiringSoonDate: null });
+  // The cap is the server's, never a client default.
+  assert.equal(parsePointsExtras({ earned_today: 5, daily_cap: 40, expiring_soon: 0, expiring_soon_date: null })?.dailyCap, 40);
   assert.deepEqual(parsePointsExtras({ earned_today: 20, daily_cap: 30, expiring_soon: 180, expiring_soon_date: "2026-11-14" }), {
     earnedToday: 20,
     dailyCap: 30,
@@ -32,6 +38,7 @@ test("todayLine: 20 of 30, and the cap reads limit reached", () => {
   assert.equal(todayLine({ earnedToday: 20, dailyCap: 30 }), "20 of 30 today");
   assert.equal(todayLine({ earnedToday: 30, dailyCap: 30 }), "30 of 30 today · limit reached");
   assert.equal(todayLine({ earnedToday: 45, dailyCap: 30 }), "30 of 30 today · limit reached");
+  assert.equal(todayLine({ earnedToday: 20, dailyCap: 40 }), "20 of 40 today");
 });
 
 test("expiring line, month first", () => {
@@ -63,14 +70,17 @@ const e = (id: string, source: string, amount: number, createdAt: string, descri
   reversedSource: null,
 });
 
-test("ledger lines follow the board's LEDGER", () => {
-  const t = () => "First full day";
-  assert.deepEqual(ledgerLines(e("1", "water_goal", 5, "x"), t), { title: "Water goal reached", kind: "Earned · Logging" });
-  assert.deepEqual(ledgerLines(e("2", "achievement", 50, "x", "streak_7"), t), { title: "7-day streak", kind: "Earned · Streak" });
-  assert.deepEqual(ledgerLines(e("3", "achievement", 50, "x", "full_day"), t), { title: "First full day", kind: "Earned · Achievement" });
-  assert.deepEqual(ledgerLines(e("4", "reversal", -10, "x", "Workout deleted the same day"), t), { title: "Workout deleted the same day", kind: "Reversed · Logging" });
-  assert.equal(ledgerLines(e("5", "expiry", -40, "x"), t).title, "Points expired");
-  assert.equal(ledgerLines(e("6", "referral", 1500, "x"), t).kind, "Earned · Referral");
+test("ledger lines are the server's words: ref_label over description; achievements by title", () => {
+  const t = (k: string) => (k === "full_day" ? "First full day" : null);
+  const w = (x: LedgerEntry, refLabel: string | null, more: Partial<LedgerEntry> = {}): LedgerEntry => ({ ...x, refLabel, ...more });
+  assert.deepEqual(ledgerLines(w(e("1", "water_goal", 5, "x", "Daily logging"), "Water goal"), t), { title: "Water goal", kind: "Daily logging" });
+  assert.deepEqual(ledgerLines(w(e("2", "achievement", 50, "x", "streak_7"), "Achievement"), t), { title: "7-day streak", kind: "Earned · Achievement" });
+  assert.deepEqual(ledgerLines(w(e("3", "achievement", 50, "x", "full_day"), "Achievement"), t), { title: "First full day", kind: "Earned · Achievement" });
+  // A reversal is labelled with the kind it reversed (the server's ref_label).
+  assert.deepEqual(ledgerLines(w(e("4", "reversal", -10, "x", "Reversed · Logging"), "Workout", { reversedSource: "log_workout" }), t), { title: "Workout", kind: "Reversed · Logging" });
+  assert.deepEqual(ledgerLines(w(e("5", "expiry", -40, "x"), "Expired"), t), { title: "Expired", kind: "Spent" });
+  assert.deepEqual(ledgerLines(w(e("6", "referral", 1500, "x", "Referral redeemed by a new member"), "Referral"), t), { title: "Referral", kind: "Referral redeemed by a new member" });
+  assert.deepEqual(ledgerLines(e("7", "manual_adjustment", 20, "x"), t), { title: "Points", kind: "Earned" });
   assert.equal(streakDays("streak_365"), 365);
   assert.equal(streakDays("first_pr"), null);
 });
@@ -111,8 +121,28 @@ test("next streak milestone (32-day streak → 100, 68 to go, 32%)", () => {
   assert.equal(nextMilestone(400, () => null), null);
 });
 
-test("ledger rows parse from the table or the DB1 function", () => {
-  const rows = parseLedgerRows([{ id: "1", source: "achievement", amount: 25, description: "onboarded", created_at: "2026-10-16T10:00:00Z" }, { id: null }]);
+test("ledger rows parse from my_points_ledger", () => {
+  const rows = parseLedgerRows([
+    { id: "1", amount: -10, source: "reversal", reversed_source: "log_food", ref_label: "Food log", description: "Reversed · Logging", day: "2026-10-16", expires_at: null, created_at: "2026-10-16T10:00:00.093963+00:00" },
+    { id: null },
+  ]);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].refLabel, null);
+  assert.deepEqual(rows[0], { id: "1", source: "reversal", amount: -10, description: "Reversed · Logging", refLabel: "Food log", day: "2026-10-16", createdAt: "2026-10-16T10:00:00.093963+00:00", expiresAt: null, reversedSource: "log_food" });
+});
+
+test("ledgerCursor reaches past the oldest row's millisecond and names its ties", () => {
+  assert.equal(ledgerCursor([]), null);
+  const tie = "2026-10-21T01:15:00.093963+00:00";
+  const c = ledgerCursor([e("a", "achievement", 100, "2026-10-22T08:00:00.5+00:00"), e("b", "achievement", 25, tie), e("c", "achievement", 25, tie)]);
+  assert.deepEqual(c, { before: "2026-10-21T01:15:00.094Z", seen: ["b", "c"] });
+});
+
+test("points rules parse from platform_settings, all or nothing", () => {
+  assert.deepEqual(parsePointsRules({ points_value_food: 10, points_value_workout: 10, points_value_metric: 5, points_value_water_goal: 5, points_daily_cap: 30, points_expiry_months: 12 }), {
+    values: { log_food: 10, log_workout: 10, log_metric: 5, water_goal: 5 },
+    dailyCap: 30,
+    expiryMonths: 12,
+  });
+  assert.equal(parsePointsRules({ points_value_food: 10 }), null);
+  assert.equal(parsePointsRules(null), null);
 });

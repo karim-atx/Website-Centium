@@ -131,8 +131,8 @@ export async function getPointsSummary(): Promise<Result<PointsSummary>> {
       referralPoints: r.referral_points,
       otherPoints: r.other_points,
       achievementsEarned: r.achievements_earned,
-      // awaiting DB stage DB1: earned_today, daily_cap, expiring_soon,
-      // expiring_soon_date (appended at the end); null until they are there.
+      // earned_today, daily_cap, expiring_soon, expiring_soon_date (appended
+      // last by Database 20261210300000; not in the generated types).
       extras: parsePointsExtras(r as unknown as Record<string, unknown>),
     },
   };
