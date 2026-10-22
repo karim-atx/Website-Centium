@@ -509,10 +509,14 @@ export default function Calendar() {
 
   return (
     <div>
-      <FixedHeader paddingBottom={view === "week" || view === "day" ? 16 : 13}>
-        {/* cal.js calHead: the title 19 / 700 -0.03em, two 34 round buttons 8 apart. */}
-        <div className="flex items-start justify-between" style={{ gap: 12 }}>
-          <h1 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, marginTop: 3, lineHeight: 1.5 }}>Calendar</h1>
+      {/* P-CA.1-3 (raw P-CA.1/2/3 frames): the content under the header starts 14 below the header card
+          on Week ("This week", margin-top 14) and Day (the timeline, margin-top 14), 12 on Month (the grid card).
+          Year isn't drawn: it keeps 13. */}
+      <FixedHeader paddingBottom={view === "week" || view === "day" ? 14 : view === "month" ? 12 : 13}>
+        {/* P-CA title: 27 / 700, -0.022em, line-height 1.5 (40.5). The two 34 round buttons (Availability,
+            + New session) aren't drawn on the board; they are kept, centred on the title line. */}
+        <div className="flex items-center justify-between" style={{ gap: 12 }}>
+          <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", color: INK.ch, lineHeight: 1.5 }}>Calendar</h1>
           <div className="flex" style={{ gap: 8 }}>
             <button
               type="button"
@@ -534,8 +538,14 @@ export default function Calendar() {
             </button>
           </div>
         </div>
+        {/* P-CA tabs: margin-top 6, track pad 4 r14 gap 5 #F3F3FD; tabs 34 high r11, 12 / 700; idle #6D50D3
+            (the component's default ink). The global .tap box keeps each tab's hit area 44 tall. */}
         <SegmentedTabs
-          className="mt-[13px]"
+          className="mt-[6px]"
+          trackStyle={{ borderRadius: 14, padding: 4 }}
+          tabHeight={34}
+          tabRadius={11}
+          labelSize={12}
           items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
           activeKey={view}
           onChange={(k) => {
@@ -547,7 +557,6 @@ export default function Calendar() {
             if (k === "month") setCursor({ year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) - 1 });
             setView(k as View);
           }}
-          idleInk="rgb(var(--c-charcoal-soft))"
           darkTone="partB"
         />
         {strip && sync.strip && (
@@ -569,8 +578,20 @@ export default function Calendar() {
             />
           </div>
         )}
+        {view === "month" && (
+          <div className="mt-[12px]">
+            <HeaderCard
+              label={`${monthNames[cursor.month]} ${cursor.year}`}
+              onPrev={() => goMonth(-1)}
+              onNext={() => goMonth(1)}
+              prevLabel="Previous month"
+              nextLabel="Next month"
+              jump={jump.show ? jump.jump : null}
+            />
+          </div>
+        )}
         {view === "week" && (
-          <div className="mt-[13px]">
+          <div className="mt-[12px]">
             <HeaderCard
               label={dateRange(weekDays[0], weekDays[6])}
               onPrev={() => setSelected(addDays(selected, -7))}
@@ -582,7 +603,7 @@ export default function Calendar() {
           </div>
         )}
         {view === "day" && (
-          <div className="mt-[13px]">
+          <div className="mt-[12px]">
             <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel="Previous day" nextLabel="Next day" jump={jump.show ? jump.jump : null} />
           </div>
         )}
@@ -595,7 +616,6 @@ export default function Calendar() {
           <MonthGrid
             year={cursor.year}
             month={cursor.month}
-            monthLabel={`${monthNames[cursor.month]} ${cursor.year}`}
             todayIso={todayIso}
             selected={selected}
             dots={(iso) => dayDots(items[iso] ?? [])}
@@ -603,17 +623,15 @@ export default function Calendar() {
             dayOff={dayOff}
             leading={monthLeadingBlanks(cursor.year, cursor.month)}
             onSelect={setSelected}
-            onPrev={() => goMonth(-1)}
-            onNext={() => goMonth(1)}
-            jump={jump.show ? jump.jump : null}
           />
-          <Eyebrow>{[longDay(selected), hoursLine(selected) ? `Working ${hoursLine(selected)}` : hasHours || offToday ? "Day off" : null].filter(Boolean).join(" · ")}</Eyebrow>
+          {/* P-CA.3: the day eyebrow margin 12 0 8, the agenda gap 6. */}
+          <Eyebrow mt={12} mb={8}>{[longDay(selected), hoursLine(selected) ? `Working ${hoursLine(selected)}` : hasHours || offToday ? "Day off" : null].filter(Boolean).join(" · ")}</Eyebrow>
           {!data.loaded ? (
             skeletonRows
           ) : dayItems.length === 0 ? (
             <p style={{ fontSize: textPx(11.5), color: INK.chF }}>No sessions</p>
           ) : (
-            <div className="flex flex-col" style={{ gap: 7 }}>
+            <div className="flex flex-col" style={{ gap: 6 }}>
               {dayItems.map((i) => (
                 <AgendaRow key={i.key} item={i} onOpen={openItem} />
               ))}
@@ -622,8 +640,11 @@ export default function Calendar() {
         </>
       )}
 
+      {/* P-CA.1: "This week" (margin 14 0 9; the 14 is the header's bottom padding) over the day rows, 12 apart.
+          The board draws the current week only; other weeks carry no eyebrow (their label isn't drawn). */}
+      {view === "week" && weekDays.includes(todayIso) && <Eyebrow>This week</Eyebrow>}
       {view === "week" && (
-        <div className="flex flex-col" style={{ gap: 10 }}>
+        <div className="flex flex-col" style={{ gap: 12 }}>
           {weekDays.map((iso) => (
             <WeekDayRow
               key={iso}
@@ -640,9 +661,10 @@ export default function Calendar() {
               outlineOf={outlineOf}
             />
           ))}
-          {noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
         </div>
       )}
+      {/* P-CA.6: the empty card sits after the day column (its own margin-top 14), not inside its 12 gap. */}
+      {view === "week" && noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
 
       {view === "year" && (
         <YearScroll

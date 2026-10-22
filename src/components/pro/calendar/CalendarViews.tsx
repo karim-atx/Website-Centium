@@ -39,12 +39,12 @@ const CLASS_SWATCH = "#4F8F8A";
 const GOLD_TEXT = "#9A7424";
 const GOLD_TEXT_DARK = "#CAB082";
 
-export const Eyebrow: React.FC<{ children: React.ReactNode; mb?: number }> = ({ children, mb = 9 }) => {
+export const Eyebrow: React.FC<{ children: React.ReactNode; mb?: number; mt?: number }> = ({ children, mb = 9, mt }) => {
   const dark = useIsDark();
   return (
     <p
       className="[.high-contrast_&]:!text-charcoal"
-      style={{ marginBottom: mb, fontSize: textPx(9), fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: dark ? "rgba(245,243,250,0.55)" : "rgba(36,31,27,0.42)" }}
+      style={{ marginTop: mt, marginBottom: mb, fontSize: textPx(9), fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: dark ? "rgba(245,243,250,0.55)" : "rgba(36,31,27,0.42)" }}
     >
       {children}
     </p>
@@ -155,10 +155,12 @@ export const AgendaRow: React.FC<{ item: CalItem; onOpen: (i: CalItem) => void; 
 // Month (CA1 v2)
 // ---------------------------------------------------------------------------
 
+// P-CA.3 (raw P-CA.3_Month_Month-day-agenda): the month's header card sits
+// in the page header like Week / Day; the grid card is pad 12 12 10, letters
+// 26 high (margin-bottom 4), cells 40 high, the legend 8 / 8.
 export const MonthGrid: React.FC<{
   year: number;
   month: number;
-  monthLabel: string;
   todayIso: string;
   selected: string;
   /** P-CA.3's two dot rows: own sessions booked, and gym classes. */
@@ -168,20 +170,16 @@ export const MonthGrid: React.FC<{
   dayOff: (iso: string) => boolean;
   leading: number;
   onSelect: (iso: string) => void;
-  onPrev: () => void;
-  onNext: () => void;
-  jump: (() => void) | null;
-}> = ({ year, month, monthLabel, todayIso, selected, dots, hiredLive, dayOff, leading, onSelect, onPrev, onNext, jump }) => {
+}> = ({ year, month, todayIso, selected, dots, hiredLive, dayOff, leading, onSelect }) => {
   const dark = useIsDark();
   const days = new Date(year, month + 1, 0).getDate();
   const iso = (d: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const firstOff = Array.from({ length: days }, (_, i) => i + 1).find((d) => dayOff(iso(d)));
   return (
-    <div style={{ borderRadius: 15, background: dark ? "#1C1F28" : "#FFFFFF", border: `1px solid rgba(143,104,246,${dark ? 0.28 : 0.16})`, padding: "13px 14px", marginBottom: 13 }}>
-      <HeaderCard label={monthLabel} onPrev={onPrev} onNext={onNext} prevLabel="Previous month" nextLabel="Next month" jump={jump} />
-      <div className="grid grid-cols-7" style={{ gap: 2, margin: "10px 0 4px" }}>
+    <div style={{ borderRadius: 15, background: dark ? "#1C1F28" : "#FFFFFF", border: `1px solid rgba(143,104,246,${dark ? 0.28 : 0.16})`, padding: "12px 12px 10px" }}>
+      <div className="grid grid-cols-7" style={{ gap: 2, marginBottom: 4 }}>
         {DAY_LETTERS.map((l, i) => (
-          <div key={i} className="flex items-center justify-center" style={{ height: 31, fontSize: textPx(13), fontWeight: 600, color: dark ? "#B7ABDE" : "#5B3FE4" }}>
+          <div key={i} className="flex items-center justify-center" style={{ height: 26, fontSize: textPx(13), fontWeight: 600, color: dark ? "#B7ABDE" : "#5B3FE4" }}>
             {l}
           </div>
         ))}
@@ -210,7 +208,7 @@ export const MonthGrid: React.FC<{
                 sel ? "bg-primary-fill text-on-primary-fill" : id === todayIso ? "bg-team-lavender/[0.16]" : ""
               )}
               style={{
-                aspectRatio: "1 / 1",
+                height: 40,
                 borderRadius: 10,
                 gap: 2,
                 fontSize: textPx(15),
@@ -227,7 +225,7 @@ export const MonthGrid: React.FC<{
           );
         })}
       </div>
-      <div className="flex flex-wrap" style={{ gap: 14, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${INK.b06}`, fontSize: textPx(10.5), color: INK.chF }}>
+      <div className="flex flex-wrap" style={{ gap: 14, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${INK.b06}`, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center whitespace-nowrap" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 5, height: 5, borderRadius: 9999, background: dark ? "#4F8F8A" : "#6F9993" }} />
           Sessions booked
@@ -307,7 +305,10 @@ export const WeekDayRow: React.FC<{
 // Day (CA4 v2)
 // ---------------------------------------------------------------------------
 
-const HP = 56;
+/** P-CA.2 (raw P-CA.2_Day_Day-timeline, the board's `HP = 52`): px per hour; every top / height below derives from it. */
+const HP = 52;
+/** P-CA.2: the board's timeline box runs 40 past its last hour line (560 high for lines 0..520), then the legend at margin-top 6. */
+const TAIL = 40;
 
 export const RequestCard: React.FC<{ item: CalItem; busy: boolean; onAccept: () => void; onDecline: () => void }> = ({ item, busy, onAccept, onDecline }) => {
   const dark = useIsDark();
@@ -372,12 +373,13 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
   const gold = dark ? GOLD_TEXT_DARK : GOLD_TEXT;
   return (
     <>
-      <div className="relative" style={{ height: (to - from) * HP }}>
+      <div className="relative" data-day-timeline style={{ height: (to - from) * HP + TAIL }}>
         {Array.from({ length: to - from + 1 }, (_, k) => {
           const h = from + k;
           return (
             <div key={h} data-hour={h} className="absolute left-0 right-0 flex" style={{ top: k * HP, borderTop: `1px solid ${INK.b06}` }}>
-              <span className="shrink-0 text-right" style={{ fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingRight: 6, width: 36 }}>
+              {/* The board's label: 36 content + 6 padding (content-box), so 42 wide here (border-box), on the page fill. */}
+              <span className="shrink-0 text-right" style={{ fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingRight: 6, width: 42, background: "rgb(var(--c-cream))" }}>
                 {hourLabel12(h)}
               </span>
             </div>
@@ -482,7 +484,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
           </div>
         )}
       </div>
-      <div className="flex flex-wrap" style={{ gap: "10px 14px", marginTop: 14, fontSize: textPx(10.5), color: INK.chF }}>
+      <div className="flex flex-wrap" style={{ gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 14, height: 10, borderRadius: 3, background: `repeating-linear-gradient(135deg, ${INK.soft} 0 3px, transparent 3px 6px)`, border: `1px solid ${INK.b10}` }} />
           Outside working hours
