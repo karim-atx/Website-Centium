@@ -22,6 +22,9 @@ import { CapsLabel, CategoriesCard, OutlineButton, PhotosCard, RatingCard, Stren
 import { hoursSummary, notEnded, strengthItems, strengthPct, type StrengthInput, type StrengthItem } from "./model";
 import { useListingSwitch } from "./useListingSwitch";
 import { AmenitiesSheet, FirstVisitSheet } from "./DetailsSheets";
+import { fetchMyOpenings, fetchMyTeam } from "../../services/hiring";
+import { TagChip } from "./hiring/hiringParts";
+import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 
 // Market + Share 3.0 · W3 · B-MA.1 Listing Overview (HANDOVER §4 "B-MA.1
 // Listing Overview"; Business Marketplace Screens lines 51–98 and the `biz`,
@@ -41,8 +44,11 @@ import { AmenitiesSheet, FirstVisitSheet } from "./DetailsSheets";
 //    (DB5, awaiting; "–" while pending) and, for a gym, Active memberships ·
 //    Class bookings this week (live venue_dashboard, no change: "–");
 // 4. gym only: caps "Gym" and the card with Memberships (→ /app/business/gym)
-//    and Classes (→ /app/business/classes), live counts. The drawn third row
-//    "Hiring" (B-MA.8) is Release 2 (DB8) and isn't built in W3.
+//    and Classes (→ /app/business/classes), live counts, and (W4, B-MA.1
+//    "Gym · Hiring row") Hiring (→ /app/business/hiring): "{n} openings · {n}
+//    new applicants · Team of {n}" from my_openings('open') and my_team (DB8),
+//    with the NEW chip while there are new applicants. Studios have no Gym
+//    card (W3), so no Hiring row either; they reach Hiring from its routes.
 // Below the drawn blocks, under a caps "Listing" section, every live Listing
 // tab feature, restyled as handover cards (PLAN §3.4): Listing strength and
 // its sheets (hours, amenities, first visit, categories, policies), "Your
@@ -162,6 +168,8 @@ export function Overview() {
             <GymRow title="Memberships" sub={membershipsLine(gym.plans, gym.activeMemberships)} onOpen={() => navigate("/app/business/gym")} />
             <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
             <GymRow title="Classes" sub={classesLine(gym.sessionsThisWeek, gym.classBookingsThisWeek)} onOpen={() => navigate("/app/business/classes")} />
+            <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
+            <HiringRow businessId={business.id} tick={tick} />
           </div>
         </>
       ) : null}
@@ -172,8 +180,38 @@ export function Overview() {
   );
 }
 
-/** A Gym card row (lines 60 / 62): padding 14 16, gap 12, 14 / 700 title, 11.5 --faint sub, 16 chevron --faint. */
-function GymRow({ title, sub, onOpen }: { title: string; sub: string; onOpen: () => void }) {
+/**
+ * The Gym card's Hiring row (Business Marketplace Screens line 94; frame-check
+ * B-MA.1 "Gym · Hiring row"): GymRow with the NEW chip (10 / 800, 0.08em,
+ * #EEEAF8 / #7D67D9, padding 3 8) while there are new applicants. Counts from
+ * my_openings('open') (openings, new applicants) and my_team (Team of n).
+ * Pending (DB8 not landed): a calm line, never zeros; an error: its own line.
+ */
+function HiringRow({ businessId, tick }: { businessId: string; tick: number }) {
+  const navigate = useNavigate();
+  const [state, setState] = useState<{ key: string; sub: string; isNew: boolean } | null>(null);
+  const key = `${businessId}:${tick}`;
+  useEffect(() => {
+    let alive = true;
+    // awaiting DB stage DB8 (my_openings, my_team)
+    void Promise.all([fetchMyOpenings(businessId, "open"), fetchMyTeam(businessId)]).then(([o, t]) => {
+      if (!alive) return;
+      if (o.ok && t.ok) {
+        const fresh = o.value.reduce((n, x) => n + x.newApplicantCount, 0);
+        setState({ key, sub: hiringRowLine(o.value.length, fresh, t.value.length), isNew: fresh > 0 });
+      } else if ((!o.ok && o.pending) || (!t.ok && t.pending)) setState({ key, sub: HIRING_ROW_PENDING, isNew: false });
+      else setState({ key, sub: "Couldn't load your hiring figures.", isNew: false });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId, key]);
+  const s = state && state.key === key ? state : null;
+  return <GymRow title="Hiring" sub={s?.sub ?? ""} badge={s?.isNew ? <TagChip tag="NEW" /> : null} onOpen={() => navigate("/app/business/hiring")} />;
+}
+
+/** A Gym card row (lines 60 / 62 / 94): padding 14 16, gap 12, 14 / 700 title, 11.5 --faint sub, an optional chip, 16 chevron --faint. */
+function GymRow({ title, sub, onOpen, badge }: { title: string; sub: string; onOpen: () => void; badge?: React.ReactNode }) {
   const c = useMarketColors();
   return (
     <button
@@ -186,6 +224,7 @@ function GymRow({ title, sub, onOpen }: { title: string; sub: string; onOpen: ()
         <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{title}</span>
         {sub ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub}</span> : null}
       </span>
+      {badge}
       <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
     </button>
   );

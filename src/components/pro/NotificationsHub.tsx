@@ -10,7 +10,7 @@ import {
   CalendarCheck,
   CalendarX,
   Check,
-  CheckCheck,
+  ChevronLeft,
   CircleCheck,
   ClipboardCheck,
   ClipboardList,
@@ -24,13 +24,16 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CtaButton } from "../ui/PinnedCta";
 import { useOnline } from "../../hooks/useOnline";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBackCloses } from "../../hooks/useBackCloses";
-import { textPx } from "../../theme/textSize";
+import { linePx, textPx } from "../../theme/textSize";
+import { marketPalette, SEGMENT_STEPS, type MarketPalette } from "../../theme/marketTokens";
+import { hexAlpha, liftInk } from "../market/marketColor";
+import { FOCUS_CSS } from "../market/usePress";
+import { inviteFromNotification } from "../../services/team-hiring";
 import { INK } from "./proInk";
 import type { ProLane } from "./subtypeLanes";
 import { EmptyState } from "./EmptyState";
@@ -50,11 +53,11 @@ import type { FreePeriodFacts } from "../../services/subscription-tiers/freePeri
 
 /**
  * Release 3 · NotificationsHub (HANDOVER e, HO7, HO9, HO10, HO14 to HO17;
- * gen/hub5.js hubPanel5). A PopupMenu-style panel under the bell: top 66,
- * 12 from each edge, r20, card fill, 1 px rgba(143,104,246,0.22), shadow
- * 0 16 40 rgba(0,0,0,0.20), padding 12 14 10, max 660 high, with the pointer
- * towards the bell. Header "Notifications" 16 / 800 and Mark all read; tabs
- * Requests, To review, Updates (SegmentedTabs h36, 12).
+ * gen/hub5.js hubPanel5). Market + Share 3.0 W4 (P-MA.7, D-37): restyled
+ * as the handover notifications page, a full-screen panel over the screen
+ * the bell sits on: back header, Mark all read, the live Requests / To
+ * review / Updates kept as a filter sub-track, Today / Earlier groups of
+ * handover rows (see the row and panel comments below).
  *
  * Requests holds what needs an answer: people asking to work with you, with
  * the plan they chose and their message (Accept, Decline with a reason; for 5
@@ -132,6 +135,7 @@ export const NotificationsHub: React.FC<{
   onBusinesses: () => void;
 }> = (p) => {
   const dark = useIsDark();
+  const m = marketPalette(dark);
   const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
   useBackCloses(p.open, p.onClose);
@@ -164,7 +168,7 @@ export const NotificationsHub: React.FC<{
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       // A popup opened from the hub closes first.
-      if (document.querySelector('[aria-modal="true"]')) return;
+      if ([...document.querySelectorAll('[aria-modal="true"]')].some((el) => el !== panel.current)) return;
       p.onClose();
     };
     document.addEventListener("keydown", onKey);
@@ -198,6 +202,15 @@ export const NotificationsHub: React.FC<{
   // opens its review (HO20 for a check-in, CL10 for an intake) at
   // /app/more/forms/responses/{id}; every other row goes to the page's onOpen.
   const openRow = (n: ProNotification) => {
+    // W4 P-MA.5.4: an existing-team invite opens its dialog on Opportunities
+    // (router state, read by OpportunitiesTab). awaiting DB stage DB12 (the
+    // existing_team_invite notification and its payload).
+    const invite = inviteFromNotification(n);
+    if (invite) {
+      p.onClose();
+      navigate("/app/pro/marketplace/opportunities", { state: { existingTeamInvite: invite } });
+      return;
+    }
     if (n.subjectType === "form_response" && n.subjectId) {
       void inbox.markRead([n.id]);
       p.onClose();
@@ -207,62 +220,80 @@ export const NotificationsHub: React.FC<{
     p.onOpen(n);
   };
 
-  const notificationRow = (n: ProNotification, i: number, list: ProNotification[], withAction?: string) => {
+  // P-MA.7 row (Professional Marketplace Screens `notifList`): padding 12 14,
+  // gap 12, a 0.5px --div top line after the first, unread fill #FBFAFE; the
+  // 38 tile radius 12 (the tone's step tint and ink, icon 18 stroke 1.9), the
+  // title 13.5 / 18 700 and the time 11 --faint (nowrap, gap 8), the body
+  // 12 / 17 --ink2 (margin-top 2), the 8 unread dot #8F68F6. KEPT (not
+  // drawn): the action chip (Review / Open / Share) and the dismiss X.
+  const notificationRow = (n: ProNotification, i: number, _list: ProNotification[], withAction?: string) => {
     const t = notificationText(n, inbox.names);
     const Icon = ICONS[t.icon];
-    const tone = toneOf(t.tone, dark);
-    const last = i === list.length - 1;
+    const [tileBg, tileInk] = hubTone(t.tone, m, dark);
+    const unread = !n.readAt;
+    const when = whenLabel(n.createdAt, p.now);
     return (
-      <div key={n.id} className="flex" style={{ alignItems: withAction ? "center" : "flex-start", gap: 4, borderBottom: last ? "none" : `1px solid ${INK.b06}` }}>
-        <button
-          type="button"
-          onClick={() => openRow(n)}
-          className="tap flex-1 min-w-0 flex text-left"
-          style={{ alignItems: withAction ? "center" : "flex-start", gap: 10, padding: "11px 0" }}
-        >
-          {dot(!n.readAt)}
+      <div
+        key={n.id}
+        className="flex"
+        style={{ alignItems: "flex-start", gap: 4, padding: "0 6px 0 0", borderTop: i === 0 ? 0 : `0.5px solid ${dark ? m.div : "rgba(36,31,27,0.06)"}`, background: unread ? (dark ? "rgba(169,145,254,0.08)" : "#FBFAFE") : m.card }}
+      >
+        <button type="button" onClick={() => openRow(n)} className="market-focus flex-1 min-w-0 flex text-left" style={{ alignItems: "flex-start", gap: 12, padding: "12px 0 12px 14px", background: "none", border: 0, font: "inherit", color: m.ink, cursor: "pointer" }}>
           {withAction && n.clientId ? (
-            <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={34} />
+            <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={38} />
           ) : (
-            <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: tone.bg }}>
-              <Icon size={16} strokeWidth={1.75} aria-hidden style={{ color: tone.ink }} />
+            <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 38, height: 38, borderRadius: 12, background: tileBg }}>
+              <Icon size={18} strokeWidth={1.9} aria-hidden style={{ color: tileInk }} />
             </span>
           )}
-          <span className="flex-1 min-w-0">
-            <span className="block" style={{ fontSize: textPx(13), fontWeight: withAction ? 700 : 600, color: INK.ch, lineHeight: 1.35 }}>
-              {t.title}
+          <span className="flex-1 min-w-0 block">
+            <span className="flex justify-between" style={{ gap: 8 }}>
+              <span style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18), color: m.ink }}>{t.title}</span>
+              <span style={{ fontSize: textPx(11), color: m.faint, whiteSpace: "nowrap" }}>{when}</span>
             </span>
-            <span className="block" style={{ fontSize: textPx(withAction ? 12 : 11), color: withAction ? INK.chS : INK.chF, marginTop: 1 }}>
-              {t.line}
-            </span>
+            {t.line ? <span className="block" style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{t.line}</span> : null}
             {withAction && (
-              <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-                {whenLabel(n.createdAt, p.now)}
+              <span className="inline-flex items-center" style={{ marginTop: 8, height: 30, padding: "0 12px", borderRadius: 10, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
+                {withAction}
               </span>
             )}
           </span>
-          {withAction ? (
-            <span
-              className="flex items-center shrink-0"
-              style={{ height: 30, padding: "0 12px", borderRadius: 10, background: INK.prPale, color: INK.prDeep, fontSize: textPx(12), fontWeight: 700 }}
-            >
-              {withAction}
-            </span>
-          ) : (
-            <span style={{ fontSize: textPx(11), color: INK.chT, whiteSpace: "nowrap" }}>{whenLabel(n.createdAt, p.now)}</span>
-          )}
+          <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: unread ? "#8F68F6" : "transparent", flex: "none", marginTop: 6 }} />
         </button>
         <button
           type="button"
           aria-label={`Dismiss: ${t.title}`}
           onClick={() => void inbox.dismiss(n.id)}
-          className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[8px] before:content-['']"
-          style={{ width: 28, height: 28, marginTop: withAction ? 0 : 8, marginRight: -6 }}
+          className="tap market-focus relative flex items-center justify-center shrink-0 before:absolute before:-inset-[8px] before:content-['']"
+          style={{ width: 28, height: 28, marginTop: 12, background: "none", border: 0 }}
         >
-          <X size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
+          <X size={14} strokeWidth={2} aria-hidden style={{ color: m.faint }} />
         </button>
       </div>
     );
+  };
+
+  /** Today / Earlier groups (P-MA.7): caps heading, then a card radius 20, 1px --border. */
+  const grouped = (list: ProNotification[], action: (n: ProNotification) => string | undefined) => {
+    const day = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const today = list.filter((n) => day(new Date(n.createdAt)) === day(p.now));
+    const earlier = list.filter((n) => day(new Date(n.createdAt)) !== day(p.now));
+    return [
+      ["Today", today],
+      ["Earlier", earlier],
+    ]
+      .filter(([, items]) => (items as ProNotification[]).length > 0)
+      .map(([h, items]) => {
+        const rows = items as ProNotification[];
+        return (
+          <section key={h as string} aria-label={h as string}>
+            <h3 style={{ margin: 0, padding: "12px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>{h as string}</h3>
+            <div style={{ borderRadius: 20, border: `1px solid ${dark ? m.border : "rgba(36,31,27,0.11)"}`, overflow: "hidden", background: m.card }}>
+              {rows.map((n, i) => notificationRow(n, i, rows, action(n)))}
+            </div>
+          </section>
+        );
+      });
   };
 
   const requestsBody = () => {
@@ -341,7 +372,11 @@ export const NotificationsHub: React.FC<{
           </div>
         ))}
         <PendingHiresSection planLabel={p.planLabel} onConfirmed={p.onHireConfirmed} onDecline={p.onHireDecline} reloadKey={p.hireReloadKey} now={p.now} />
-        {otherRequests.map((n, i) => notificationRow(n, i, otherRequests))}
+        {otherRequests.length > 0 && (
+          <div style={{ marginTop: 12, borderRadius: 20, border: `1px solid ${dark ? m.border : "rgba(36,31,27,0.11)"}`, overflow: "hidden", background: m.card }}>
+            {otherRequests.map((n, i) => notificationRow(n, i, otherRequests))}
+          </div>
+        )}
         {empty && <EmptyState icon={UserPlus} title="No new requests" line="When someone asks to work with you, they appear here to accept or decline." />}
       </>
     );
@@ -366,99 +401,108 @@ export const NotificationsHub: React.FC<{
         <EmptyState icon={ReviewIcon} title="Nothing to review" line={REVIEW_EMPTY[p.lane]} />
       ) : (
         <>
-          <p style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, padding: "6px 0 2px" }}>
-            {REVIEW_LABEL[p.lane]}
-          </p>
-          {review.map((n, i) => notificationRow(n, i, review, p.lane === "clinical_overview" ? "Open" : "Review"))}
+          <p style={{ fontSize: textPx(12), fontWeight: 600, color: m.faint, padding: "8px 0 0" }}>{REVIEW_LABEL[p.lane]}</p>
+          {grouped(review, () => (p.lane === "clinical_overview" ? "Open" : "Review"))}
         </>
       )
     ) : updates.length === 0 ? (
       <EmptyState icon={Bell} title="No updates" line="Bookings, cancellations, messages, reviews and payments appear here." />
     ) : (
       // W8 SH4: an allowed share request carries a Share button (it opens the client's wins).
-      updates.map((n, i) => notificationRow(n, i, updates, n.titleKey === "pro.share.allowed" || n.titleKey === "pro.share.allowed_no_name" ? "Share" : undefined))
+      grouped(updates, (n) => (n.titleKey === "pro.share.allowed" || n.titleKey === "pro.share.allowed_no_name" ? "Share" : undefined))
     );
 
+  // P-MA.7 (D-37): the handover page, drawn over the screen it opens from
+  // (frame `notifPro`: a white panel from the status bar down, padding 0 16):
+  // the back header (44 back box, 22 chevron stroke 2.2; eyebrow "Home"
+  // 10.5 / 15.75 700 0.1em caps --faint over "Notifications" 22 / 28 800;
+  // "Mark all read" 12.5 / 700 --pdark), then Today / Earlier groups. KEPT
+  // (D-37, not drawn): the live Requests / To review / Updates as a filter
+  // track (the sub-track: --subtrack radius 12 padding 4 gap 4; tabs 34 tall
+  // radius 9, 12.5, active --subactive / --onfill 700, idle --subink 600),
+  // inline Accept / Decline / Undo, team invitations, payments to confirm,
+  // the toast, the offline line, dismiss and Clear all.
+  const TABS: { key: HubTab; label: string; n: number }[] = [
+    { key: "requests", label: "Requests", n: reqN },
+    { key: "review", label: "To review", n: revN },
+    { key: "updates", label: "Updates", n: updN },
+  ];
   return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-center pointer-events-none">
-      <div className="absolute inset-0 pointer-events-auto animate-fade-in" style={{ background: "rgba(36,31,27,0.12)" }} onClick={p.onClose} aria-hidden />
-      <div className="relative w-full pointer-events-none" style={{ maxWidth: 430 }}>
+    <div className="fixed inset-0 z-40 flex justify-center">
+      <div className="relative w-full h-full" style={{ maxWidth: 430 }}>
         <div
           ref={panel}
           role="dialog"
+          aria-modal="true"
           aria-label="Notifications"
           tabIndex={-1}
-          className="absolute pointer-events-auto outline-none flex flex-col animate-popup-in"
-          style={{
-            top: "calc(env(safe-area-inset-top) + 66px)",
-            left: 12,
-            right: 12,
-            maxHeight: "min(660px, calc(100dvh - 170px))",
-            borderRadius: 20,
-            background: INK.card,
-            border: "1px solid rgba(143,104,246,0.22)",
-            boxShadow: "0 16px 40px rgba(0,0,0,0.20)",
-            padding: "12px 14px 10px",
-          }}
+          className="absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"
+          style={{ background: m.page, color: m.ink, padding: "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
         >
-          <span
-            aria-hidden
-            className="absolute"
-            style={{ top: -7, right: 66, width: 12, height: 12, background: INK.card, borderLeft: "1px solid rgba(143,104,246,0.22)", borderTop: "1px solid rgba(143,104,246,0.22)", transform: "rotate(45deg)" }}
-          />
-          <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-            <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch }}>Notifications</p>
-            {anyUnread && (
-              <button
-                type="button"
-                onClick={() => void inbox.markRead(inbox.notifications.filter((n) => !n.readAt).map((n) => n.id))}
-                className="tap flex items-center"
-                style={{ gap: 4, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
-              >
-                <CheckCheck size={13} strokeWidth={2.2} aria-hidden />
-                Mark all read
-              </button>
-            )}
+          <style>{FOCUS_CSS}</style>
+          <div className="flex items-center shrink-0" style={{ gap: 6, margin: "-4px 0 6px -10px" }}>
+            <button type="button" onClick={p.onClose} aria-label="Back" className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
+              <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75) }}>Home</div>
+              <h2 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>Notifications</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => void inbox.markRead(inbox.notifications.filter((n) => !n.readAt).map((n) => n.id))}
+              disabled={!anyUnread}
+              className="market-focus"
+              style={{ minHeight: 44, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", cursor: anyUnread ? "pointer" : "default", opacity: anyUnread ? 1 : 0.4 }}
+            >
+              Mark all read
+            </button>
           </div>
-          <SegmentedTabs
-            items={[
-              { key: "requests", label: `Requests ${reqN}` },
-              { key: "review", label: `To review ${revN}` },
-              { key: "updates", label: `Updates ${updN}` },
-            ]}
-            activeKey={p.tab}
-            onChange={(k) => p.onTab(k as HubTab)}
-            tabHeight={36}
-            labelSize={12}
-            className="mb-2"
-          />
+          <div role="tablist" aria-label="Notifications" className="flex shrink-0" style={{ gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, margin: "6px 0 2px" }}>
+            {TABS.map((t) => {
+              const on = t.key === p.tab;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => p.onTab(t.key)}
+                  className="market-focus hit"
+                  style={{ flex: 1, minWidth: 0, height: 34, borderRadius: 9, border: 0, background: on ? m.subactive : "transparent", color: on ? m.onfill : m.subink, fontSize: textPx(12.5), fontWeight: on ? 700 : 600, font: "inherit", fontFamily: "inherit", whiteSpace: "nowrap", cursor: "pointer" }}
+                >
+                  <span style={{ fontSize: textPx(12.5), fontWeight: on ? 700 : 600 }}>
+                    {t.label} {t.n}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
           {inbox.offline && <OfflineLine />}
           {p.toast && (
             <div
               role="status"
               className="flex items-center"
-              style={{ gap: 10, borderRadius: 14, background: p.toast.tone === "ok" ? INK.goodBg : INK.soft, padding: "10px 12px", marginBottom: 8 }}
+              style={{ gap: 10, borderRadius: 16, background: p.toast.tone === "ok" ? m.goodbg : m.soft, padding: "12px 14px", margin: "8px 0 0" }}
             >
               {p.toast.tone === "ok" ? (
-                <CircleCheck size={16} strokeWidth={2} aria-hidden style={{ color: INK.good }} />
+                <CircleCheck size={16} strokeWidth={2} aria-hidden style={{ color: m.good }} />
               ) : (
-                <Info size={16} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+                <Info size={16} strokeWidth={2} aria-hidden style={{ color: m.ink2 }} />
               )}
-              <span className="flex-1" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.ch, lineHeight: 1.4 }}>
+              <span className="flex-1" style={{ fontSize: textPx(13), fontWeight: 700, color: m.ink, lineHeight: linePx(18) }}>
                 {p.toast.text}
               </span>
               {p.toast.action && (
-                <button type="button" onClick={p.toast.action.onClick} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
+                <button type="button" onClick={p.toast.action.onClick} className="tap market-focus" style={{ fontSize: textPx(13), fontWeight: 800, color: m.pdark, background: "none", border: 0 }}>
                   {p.toast.action.label}
                 </button>
               )}
             </div>
           )}
-          <div className="min-h-0 overflow-y-auto overscroll-contain" style={{ marginRight: -6, paddingRight: 6 }}>
-            {body}
-          </div>
+          <div className="shrink-0">{body}</div>
           {inbox.notifications.length > 0 && (
-            <div className="flex justify-center shrink-0" style={{ padding: "10px 0 2px", borderTop: `1px solid ${INK.b06}` }}>
+            <div className="flex justify-center shrink-0" style={{ padding: "18px 0 0" }}>
               <button
                 type="button"
                 onClick={() => {
@@ -466,8 +510,8 @@ export const NotificationsHub: React.FC<{
                   setConfirmClear(true);
                 }}
                 aria-haspopup="dialog"
-                className="tap relative before:absolute before:-inset-x-3 before:-inset-y-3 before:content-['']"
-                style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, whiteSpace: "nowrap" }}
+                className="tap market-focus relative before:absolute before:-inset-x-3 before:-inset-y-3 before:content-['']"
+                style={{ fontSize: textPx(12.5), fontWeight: 700, color: m.ink2, whiteSpace: "nowrap", background: "none", border: 0 }}
               >
                 Clear all
               </button>
@@ -491,20 +535,11 @@ export const NotificationsHub: React.FC<{
   );
 };
 
-function toneOf(t: NotificationText["tone"], dark: boolean): { bg: string; ink: string } {
-  // gen/ui.js TONE: req gold, att high, act good, pr lavender.
-  switch (t) {
-    case "req":
-      return { bg: INK.goldPale, ink: INK.goldInk };
-    case "att":
-      return { bg: INK.hiBg, ink: INK.hi };
-    case "act":
-      return { bg: INK.goodBg, ink: INK.good };
-    case "done":
-      return { bg: INK.tealPale, ink: dark ? "#93C1B9" : "#3C6B65" };
-    default:
-      return { bg: INK.prPale, ink: INK.prDeep };
-  }
+/** The board's tile tones (Professional Marketplace Screens `NT`) for the hub's row tones: a request gold, attention red, an action teal, done teal, everything else lavender. Dark: the ink at 16% with the ink lifted (D-05). */
+function hubTone(t: NotificationText["tone"], m: MarketPalette, dark: boolean): [string, string] {
+  const [bg, ink] = t === "req" ? ["#FDF3D6", "#9A7414"] : t === "att" ? [m.highbg, m.high] : t === "act" || t === "done" ? (SEGMENT_STEPS[3] as readonly [string, string]) : (SEGMENT_STEPS[0] as readonly [string, string]);
+  if (t === "att") return [bg, ink];
+  return dark ? [hexAlpha(ink, 0.16), liftInk(ink)] : [bg, ink];
 }
 
 /** HO7's second line: the plan and its price ("Appointment request · $60" for Clinical overview), or the plain request. */

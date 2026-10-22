@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Banknote, Bell, CalendarClock, CalendarX, Check, ChevronDown, ChevronRight, Eye, EyeOff, ImageOff, Package, PackageMinus, Receipt, ShieldAlert, Star, TriangleAlert, UserPlus, Users, UserX, X } from "lucide-react";
 import type { DashPalette } from "./palette";
 import type { SetupStep } from "./dashboardModel";
@@ -218,6 +219,8 @@ const ATT_ICON: Record<AttentionIcon, typeof EyeOff> = {
  * DA1-015 S1 · "Needs your attention" (anchored popup, w 300, r 14, dim 0.18).
  * B15: `items` is business_attention's (attention.ts); null = the read failed,
  * shown as a retry row rather than "You're all caught up".
+ * Market + Share 3.0 W4 (D-38): a "Notifications" row at the top opens the
+ * business inbox (B-MA.9, /app/business/notifications); the rest is kept.
  */
 export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRetry }: { c: DashPalette; open: boolean; items: AttentionItem[] | null; anchor: HTMLElement | null; onClose: () => void; onAction: (item: AttentionItem) => void; onRetry: () => void }) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
@@ -236,6 +239,7 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
       window.removeEventListener("keydown", onKey);
     };
   }, [open, anchor, onClose]);
+  const navigate = useNavigate();
   if (!open || !pos) return null;
   const toneCol = (t: AttentionItem["tone"]) => (t === "high" ? c.high : t === "caution" ? c.caution : c.pDark);
   return createPortal(
@@ -261,7 +265,27 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
           zIndex: 61,
         }}
       >
-        <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
+        <button
+          type="button"
+          data-notifications-row
+          onClick={() => {
+            onClose();
+            navigate("/app/business/notifications");
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 44, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised, cursor: "pointer", textAlign: "left", font: "inherit", boxSizing: "border-box" }}
+        >
+          <span style={{ display: "flex", color: c.pDark }}>
+            <Bell size={15} aria-hidden />
+          </span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
+            Notifications
+            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>Applications, offer replies, hiring fees and reviews</span>
+          </span>
+          <span style={{ display: "flex", color: c.faint }}>
+            <ChevronRight size={15} aria-hidden />
+          </span>
+        </button>
+        <p style={{ margin: "12px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
         {(items ?? []).map((a, n) => {
           const Icon = ATT_ICON[a.icon];
           return (

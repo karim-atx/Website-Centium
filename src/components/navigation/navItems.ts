@@ -189,10 +189,10 @@ export const BUSINESS_MORE_PAGES = [
 /**
  * Pages that light Marketplace (Products for a store) though they live
  * outside it: Memberships (B-MA.5 / B-MA.5.1) and Redeem a voucher (B-MA.4),
- * reached from the Marketplace; the boards draw the bar with Marketplace lit
+ * reached from the Marketplace, and Hiring (B-MA.8, W4); the boards draw the bar with Marketplace lit
  * (W3 lead decision, R1 polish). The front-desk routes keep Front desk lit.
  */
-const MARKETPLACE_PAGES = ["/app/business/gym", "/app/business/redeem"];
+const MARKETPLACE_PAGES = ["/app/business/gym", "/app/business/redeem", "/app/business/hiring"];
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 

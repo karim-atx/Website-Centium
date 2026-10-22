@@ -18,6 +18,8 @@ test("Memberships lights Marketplace, as B-MA.5 draws it; the front-desk routes 
   assert.deepEqual(lit("store", "/app/business/products"), ["Products"]);
   assert.deepEqual(lit("gym", "/app/business/redeem"), ["Marketplace"]);
   assert.deepEqual(lit("store", "/app/business/redeem"), ["Products"]);
+  assert.deepEqual(lit("gym", "/app/business/hiring"), ["Marketplace"]);
+  assert.deepEqual(lit("classes", "/app/business/hiring/team"), ["Marketplace"]);
 });
 
 test("the professional's Marketplace lights More, as P-MA draws it", async () => {

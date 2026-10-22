@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
@@ -8,6 +9,29 @@ import { fetchPlanSummary, missingPriceText, perPeriod, type SubscriptionPeriod 
 import { SeatPurchaseSheet } from "../business-analytics/team/SeatPurchaseSheet";
 import { roleOptions, type SeatCounts } from "./teamLogic";
 import { isOfflineNow } from "./parts";
+import { classifyCode, type CodeKind } from "../../services/hiring";
+import { useIsDark } from "../../hooks/useIsDark";
+import { marketPalette } from "../../theme/marketTokens";
+import { CautionCard } from "../business-market/hiring/teamParts";
+import { inviteIdentifierKind } from "../business-market/hiring/teamModel";
+
+/**
+ * Market + Share 3.0 · B-MA.8.7 (Business Hiring Screens codeMsg /
+ * staffBlocked): the cards a professional's client code or (after the
+ * existing-team window, D-33) a professional account's email gets in this
+ * sheet. Send invite stays off (0.4) while one shows; "Go to Hiring" opens
+ * Hiring.
+ */
+const GUARD_CARD: Record<"professional_code" | "professional_account", { title: string; hint: string }> = {
+  professional_code: {
+    title: "Add professionals to your team through Hiring.",
+    hint: "This is a professional's client code. It links a client to a professional for data sharing only.",
+  },
+  professional_account: {
+    title: "New professionals join through Hiring.",
+    hint: "This email belongs to a professional account. Employee invites are for front desk and other non-professional staff, and can't name class instructors.",
+  },
+};
 
 // The OpsTabsV4 sheets (template 341-371): Invite an employee (OP1-066 / 067)
 // and All seats in use (OP1-070 / 127). BottomSheet tone "business" draws the
@@ -30,6 +54,14 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Invite an employee (OP1-066). Sends invite_employee; the row starts
  * unaccepted (B0) so no seat is used until they accept.
+ *
+ * B-MA.8.7: the field reads "Email or code". An email or a code-shaped entry
+ * is first asked of classify_code (DB8, awaiting): a professional's client
+ * code or (after the window) a professional account shows the caution card,
+ * the field's border turns --caution and Send invite is off. A code is never
+ * sent (invite_employee takes an email, unchanged). While classify_code is
+ * pending, an email behaves exactly as before. invite_employee's own DB8
+ * `professional_account` refusal shows the same card.
  */
 export function InviteSheet({
   open,
@@ -61,6 +93,38 @@ export function InviteSheet({
   const [discard, setDiscard] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pickRef = useRef<HTMLButtonElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const navigate = useNavigate();
+  const dark = useIsDark();
+  const mk = marketPalette(dark);
+  // classify_code's answer for one exact entry (null: not asked / pending / failed → today's behaviour).
+  const [guard, setGuard] = useState<{ for: string; kind: CodeKind } | null>(null);
+  const trimmed = identifier.trim();
+  const idKind = inviteIdentifierKind(identifier);
+  const blockedKind = guard && guard.for === trimmed && guard.kind !== "other" ? guard.kind : null;
+
+  useEffect(() => {
+    if (!open || idKind === "other") return;
+    let alive = true;
+    const t = window.setTimeout(() => {
+      // awaiting DB stage DB8 (classify_code): pending answers nothing and the field works as before.
+      void classifyCode(businessId, trimmed).then((r) => {
+        if (alive && r.ok) setGuard({ for: trimmed, kind: r.value });
+      });
+    }, 400);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [open, businessId, trimmed, idKind]);
+
+  // The board's caution border (1px --caution) over the field's own !important border.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    if (blockedKind) el.style.setProperty("border", `1px solid ${mk.caution}`, "important");
+    else el.style.removeProperty("border");
+  }, [blockedKind, mk.caution, open]);
 
   useEffect(() => {
     if (!open) {
@@ -71,6 +135,7 @@ export function InviteSheet({
       setBusy(false);
       setFieldError(null);
       setSendError(null);
+      setGuard(null);
     }
   }, [open, kind, firstRole]);
 
@@ -93,7 +158,7 @@ export function InviteSheet({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [menu]);
 
-  const valid = EMAIL.test(identifier.trim());
+  const valid = EMAIL.test(identifier.trim()) && !blockedKind;
   const roleLabel = roles.find((r) => r.value === role)?.label ?? roles[0].label;
   const close = () => (identifier.trim() && !busy ? setDiscard(true) : onClose());
 
@@ -109,6 +174,7 @@ export function InviteSheet({
     const r = await inviteEmployee(businessId, identifier, role, message);
     setBusy(false);
     if (r.ok) return onSent();
+    if (r.reason === "professional_account") return setGuard({ for: identifier.trim(), kind: "professional_account" });
     if (r.reason === "no_seats") return onNoSeats();
     if (r.reason === "not_found") return setFieldError(r.message);
     setSendError(r.message);
@@ -129,9 +195,10 @@ export function InviteSheet({
           <SeatTop title={`${counts.used} of ${counts.total} seats used`} sub={seatSub} />
           <div className="tm-fld">
             <label className="tm-fld-l" htmlFor="tm-invite-id">
-              Email
+              Email or code
             </label>
             <input
+              ref={inputRef}
               id="tm-invite-id"
               className={fieldError ? "tm-input err" : "tm-input"}
               type="email"
@@ -140,8 +207,8 @@ export function InviteSheet({
               placeholder="name@example.com"
               value={identifier}
               disabled={busy}
-              aria-invalid={!!fieldError}
-              aria-describedby={fieldError ? "tm-invite-err" : undefined}
+              aria-invalid={!!fieldError || !!blockedKind}
+              aria-describedby={fieldError ? "tm-invite-err" : blockedKind ? "tm-invite-guard" : undefined}
               onChange={(e) => {
                 setIdentifier(e.target.value);
                 setFieldError(null);
@@ -156,6 +223,20 @@ export function InviteSheet({
               </p>
             )}
           </div>
+          {blockedKind && (
+            <div className="tm-fld">
+              <CautionCard
+                id="tm-invite-guard"
+                title={GUARD_CARD[blockedKind].title}
+                hint={GUARD_CARD[blockedKind].hint}
+                action="Go to Hiring"
+                onAction={() => {
+                  onClose();
+                  navigate("/app/business/hiring");
+                }}
+              />
+            </div>
+          )}
           <div className="tm-fld">
             <span className="tm-fld-l" id="tm-role-l">
               Role
@@ -222,7 +303,13 @@ export function InviteSheet({
             )}
           </div>
           {noSeatPicked && <p className="tm-sh-note">{`${roleLabel} uses a seat and none are free. Add seats, or pick a role that doesn't need one.`}</p>}
-          <button type="button" className={busy ? "tm-sh-btn busy" : "tm-sh-btn"} disabled={!valid || busy || noSeatPicked} onClick={() => void send()}>
+          <button
+            type="button"
+            className={busy ? "tm-sh-btn busy" : "tm-sh-btn"}
+            disabled={!valid || busy || noSeatPicked}
+            style={blockedKind ? { opacity: 0.4 } : undefined}
+            onClick={() => void send()}
+          >
             {busy ? "Sending…" : "Send invite"}
           </button>
           {sendError && (

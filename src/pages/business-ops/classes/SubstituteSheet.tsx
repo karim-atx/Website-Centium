@@ -10,6 +10,7 @@ import { fieldStyle, useMarketColours } from "./parts";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { Avatar } from "./ClassSheet";
 import { overlaps, running, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
+import { useClassTeam } from "./useClassTeam";
 
 // Request a substitute (OP1-089 … 093; kept, PLAN §3.4, in the B-MA.6
 // MasterBottomSheet chrome: --sgrey boxes, the pinned 50 CTA). Assigning names someone else on THIS
@@ -27,6 +28,12 @@ import { overlaps, running, weekdayShort, type Session, type SessionLite } from 
 // (OURS-AN5 A12). The note to the substitute (OP1-072 row 5, OP1-089 row 4,
 // OP1-092 row 2) goes to the substitute in the owner's direct thread with
 // them (B7 messaging) once the assignment has landed; see SessionActions.
+//
+// THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team. Once my_team
+// (DB8) answers, the free list keeps Team members only (DB9 makes
+// instructors_free_for Team-only on the server too). Until then it is the
+// live instructors_free_for list, unchanged.
+// awaiting DB stage DB8 (my_team) / DB9 (instructors_free_for Team only)
 
 export function SubstituteSheet({
   open,
@@ -76,6 +83,9 @@ export function SubstituteSheet({
     }
   }
 
+  // awaiting DB stage DB8 (my_team): pending keeps the live list.
+  const [team] = useClassTeam(businessId, open);
+  const teamIds = team.s === "team" ? new Set(team.team.map((t) => t.professional.id)) : null;
   const sessionId = session?.id ?? null;
   useEffect(() => {
     if (!open || !sessionId) return;
@@ -105,7 +115,7 @@ export function SubstituteSheet({
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   };
   const rows = (free ?? [])
-    .filter((f) => !f.isCurrent)
+    .filter((f) => !f.isCurrent && (!teamIds || teamIds.has(f.professionalId)))
     .map((f) => {
       const clash = f.isBusy ? here(f.professionalId) : null;
       const noHours = !f.withinAvailability && hasHours !== null && !hasHours.has(f.professionalId);
@@ -140,7 +150,8 @@ export function SubstituteSheet({
   const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
   const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
   const chosen = pick ? rows.find((r) => r.f.professionalId === pick)?.f.firstName || nameOf(pick) : "";
-  const teamSize = instructors.filter((i) => i.professionalId !== session.professionalId).length;
+  // Team mode: instructors_free_for lists every other Team member once DB9 lands, so no row means no one else.
+  const teamSize = teamIds ? 0 : instructors.filter((i) => i.professionalId !== session.professionalId).length;
 
   const assign = async () => {
     if (!pick || busy) return;
@@ -211,10 +222,12 @@ export function SubstituteSheet({
                   Retry
                 </button>
               </p>
-            ) : !free ? (
+            ) : !free || team.s === "loading" ? (
               <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
             ) : rows.length === 0 && teamSize === 0 ? (
-              <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>Nobody else is on your team yet. Invite an instructor in Team and access.</p>
+              <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
+                {teamIds ? "Nobody else is on your team yet. Add people through Hiring." : "Nobody else is on your team yet. Invite an instructor in Team and access."}
+              </p>
             ) : (
               <button
                 ref={setPickerEl}

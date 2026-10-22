@@ -5,6 +5,7 @@
 
 import { time12 } from "../../utils/time12";
 import { DAY_SHORT } from "../../utils/week";
+import { HIRING_ERROR_TEXT, hiringErrorOf } from "../hiring/model";
 
 // ---------------------------------------------------------------------------
 // Refusals
@@ -60,6 +61,9 @@ const CONNECTION = "Check your connection and try again.";
  * refusals): the B9 code meanings in the app's plain voice.
  */
 export function refusalMessage(action: ScheduleAction, error: DbError | null | undefined, people: "clients" | "members" = "members"): string {
+  // awaiting DB stage DB9: save_class_series / edit_class / assign_class_instructor
+  // refuse an instructor who isn't on the Team (Market + Share W4, B-MA.6 note's words).
+  if (hiringErrorOf(error) === "instructor_not_on_team") return HIRING_ERROR_TEXT.instructor_not_on_team;
   const r = refusalOf(error);
   switch (r) {
     case "busy": {

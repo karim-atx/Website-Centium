@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertCircle, Calendar as CalendarIcon, ChevronDown, ChevronRight, Clock, ImagePlus, Minus, Plus, RotateCw, WifiOff, X } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, ChevronDown, Clock, ImagePlus, Minus, Plus, RotateCw, WifiOff, X } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
@@ -17,7 +17,6 @@ import {
   nextLine,
   repeatSummary,
   seriesDates,
-  shortDay,
   slashDate,
   type RepeatRule,
 } from "../../../services/business-classes/scheduleRules";
@@ -40,7 +39,12 @@ import {
 } from "../../../services/business-classes";
 import { BoardSwitch, FieldBox, fieldStyle, useMarketColours } from "./parts";
 import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
-import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, shortDate, type SessionLite } from "./scheduleModel";
+import { InstructorPicker } from "./InstructorPicker";
+import { useClassTeam } from "./useClassTeam";
+import { NO_INSTRUCTOR, busyDayOf, clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, type ClashBusy, type ClashClass, type PickerPerson } from "./instructorTeam";
+import { CentredDialog } from "../../business-market/listingParts";
+import { HIRING_ERROR_TEXT } from "../../../services/hiring/model";
+import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, type SessionLite } from "./scheduleModel";
 
 // Market + Share 3.0 · B-MA.6 Add or edit a class (Business Marketplace
 // Screens `classEdit`, markup lines 409–427, script `classFields`; HANDOVER
@@ -53,11 +57,14 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 // Time, Duration, Capacity, Price, Repeat; CTA "Save class" (50, radius 16,
 // --fill, 15 / 700 --onfill).
 //
-// Instructor: the board's "Instructor · from Team" and its Team picker are
-// Release 2 (W4, B-MA.8). Until then the field is "Instructor" and keeps the
-// live choice of the business's accepted employees (business_employees,
-// D-11), with "No one yet" and the "Add an employee" route when the team is
-// empty.
+// Instructor (W4, B-MA.6 `classEdit` "Instructor · from Team"): the field
+// opens the InstructorPicker sheet (Business Hiring Screens `instrPicker` /
+// `instrNoTeam`). Its rows are the Team (my_team, DB8) once it answers, and
+// until then the live instructors (accepted business_employees,
+// fetchInstructors; D-35 backfills them as existing_team members). "Go to
+// Hiring" / "Post an opening" park the draft and open Hiring. The server's
+// Team check (DB9 `instructor_not_on_team`) shows under the field.
+// awaiting DB stage DB8 (my_team) / DB9 (instructor_not_on_team)
 //
 // KEPT live (PLAN §3.4), in the sheet's chrome, as span-2 boxes under the
 // drawn grid: the Repeat editor (Daily / Weekly / Every 2 weeks / Custom every
@@ -67,13 +74,14 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 // moved-class line, the capacity hints and floor, Show on Explore and the
 // spots open on Centium (B13 MK-04, the old Spots tab), notes for the
 // instructor, and the class page's cover photo, about, level and what to
-// bring (B9 EX-01). The instructor clash (ATXD9: the server refuses any
-// clash) keeps "Change time / Choose someone else", and closing an edited
-// sheet asks first. Time + Duration are the live start / end: the end follows
+// bring (B9 EX-01). The instructor clash is the board's CentredDialog
+// `assignConflict` ("{first} has a clash", busy times only): the server
+// refuses any clash (ATXD9), so the board's "Assign anyway" can't exist; its
+// actions are "Go back" (to the Time field, the live "Change time") and the
+// live "Choose someone else" (opens the picker). Closing an edited sheet asks
+// first. Time + Duration are the live start / end: the end follows
 // the start, keeping the length.
 
-/** The Instructor menu value of "No one yet" (clears the choice). */
-const NO_ONE = "__none";
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 const FIELD_ORDER: ClassField[] = ["name", "date", "times", "capacity", "price"];
@@ -119,8 +127,10 @@ export interface ClassSheetProps {
   onClose: () => void;
   /** `rule` is the repeat a new class asks for (null: one class). */
   onSave: (draft: ClassDraft, rule: RepeatRule | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
-  /** Instructor's "Add an employee": leave for Team with the draft kept. */
-  onAddEmployee: (form: ClassForm) => void;
+  /** The business the class belongs to: the Team (my_team) is read for it. */
+  businessId?: string | null;
+  /** The picker's "Go to Hiring" / "Post an opening": leave for Hiring with the draft kept. */
+  onGoToHiring: (form: ClassForm) => void;
 }
 
 export function ClassSheet(props: ClassSheetProps) {
@@ -151,7 +161,8 @@ function SheetBody({
   people,
   onClose,
   onSave,
-  onAddEmployee,
+  businessId,
+  onGoToHiring,
 }: ClassSheetProps) {
   const m = useMarketColours();
   const reduced = useReducedMotion();
@@ -166,9 +177,13 @@ function SheetBody({
   const [dateOpen, setDateOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
+  // DB9 instructor_not_on_team, under the Instructor field.
+  const [instrErr, setInstrErr] = useState<string | null>(null);
   const [durOpen, setDurOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string } | null>(null);
+  // awaiting DB stage DB8 (my_team): `pending` keeps the live instructors.
+  const [team, retryTeam] = useClassTeam(businessId, open);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [untilOpen, setUntilOpen] = useState(false);
   const [levelOpen, setLevelOpen] = useState(false);
@@ -191,7 +206,7 @@ function SheetBody({
 
   // Menu anchors as state (read while rendering the menus).
   const [typeEl, setTypeEl] = useState<HTMLButtonElement | null>(null);
-  const [runEl, setRunEl] = useState<HTMLButtonElement | null>(null);
+  const runRef = useRef<HTMLButtonElement | null>(null);
   const [runGroupEl, setRunGroupEl] = useState<HTMLDivElement | null>(null);
   const [bodyEl, setBodyEl] = useState<HTMLDivElement | null>(null);
   const fieldRefs = useRef<Partial<Record<ClassField, HTMLElement | null>>>({});
@@ -279,6 +294,12 @@ function SheetBody({
     const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null), timeout]);
     setSaving(false);
     if (r.ok) return; // the page closes the sheet and shows the toast
+    // awaiting DB stage DB9: instructor_not_on_team (scheduleRules maps it to the note's words).
+    if (r.message === HIRING_ERROR_TEXT.instructor_not_on_team) {
+      setInstrErr(r.message);
+      runGroupEl?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+      return;
+    }
     if ("code" in r && r.code === "busy") {
       // ATXD9: the server's clash check, any business (AN3-066 O3: never says where).
       setConflict({ hits: [], dates: 1, elsewhere: r.message });
@@ -344,29 +365,34 @@ function SheetBody({
     await doSave();
   };
 
-  const nameOf = (id: string) => instructors.find((i) => i.professionalId === id)?.firstName ?? "";
   const weekFrom = mondayOf(form.date || today);
   const weekTo = addDays(weekFrom, 6);
   const classesThisWeek = (id: string) => running(sessions as (SessionLite & { cancelled?: boolean })[]).filter((s) => s.professionalId === id && s.date >= weekFrom && s.date <= weekTo && s.id !== editing?.id).length;
-
-  const runOptions: PopupMenuOption<string>[] = [
-    ...instructors.map((i) => {
-      const n = classesThisWeek(i.professionalId);
-      return {
-        value: i.professionalId,
-        label: i.firstName,
-        note: n === 0 ? "No classes this week" : n === 1 ? "1 class this week" : `${n} classes this week`,
-        icon: <Avatar m={m} name={i.firstName} size={24} />,
-      };
-    }),
-    // V6-164: instructor optional. The app's unassign is kept as a last row.
-    { value: NO_ONE, label: "No one yet" },
-  ];
+  // The picker's rows: the Team once my_team answers, else the live instructors (D-35).
+  const pickerPeople: PickerPerson[] = team.s === "team" ? teamPeople(team.team) : livePeople(instructors, classesThisWeek);
+  const pickerLoading = team.s === "loading" || (team.s === "pending" && !instructorsLoaded);
+  /** The full name in Team mode, else the live first name (the field and the clash dialog). */
+  const nameOf = (id: string) => pickerPeople.find((p) => p.id === id)?.name ?? instructors.find((i) => i.professionalId === id)?.firstName ?? "";
 
   const typeOptions: PopupMenuOption<string>[] = [
     ...(isLegacyType(form.classType, CLASS_TYPES) ? [{ value: form.classType, label: form.classType, note: "Saved before this list" }] : []),
     ...CLASS_TYPES.map((t) => ({ value: t, label: t })),
   ];
+
+  // The clash dialog's values (B-MA.6 `assignConflict`).
+  const clashFirst = firstNameOf(nameOf(form.professionalId));
+  const clashRule = mode === "create" ? ruleOf(form) : null;
+  const clashClass: ClashClass = {
+    title: form.title.trim(),
+    date: form.date,
+    startTime: form.startTime,
+    endTime: form.endTime,
+    weekdays: clashRule ? clashRule.weekdays : mode === "edit" && scope === "future" && series ? series.weekdays : null,
+  };
+  const clashHit = conflict && !conflict.elsewhere ? conflict.hits[0] ?? null : null;
+  const clashBusy: ClashBusy = clashHit
+    ? { startTime: clashHit.startTime, endTime: clashHit.endTime, dayText: null }
+    : { startTime: null, endTime: null, dayText: busyDayOf(conflict?.elsewhere) };
 
   const blankUntouched = mode === "create" && !dirty;
   const editUnchanged = mode === "edit" && !dirty;
@@ -466,7 +492,8 @@ function SheetBody({
   const parts = toParts(form.startTime);
   const setTime = (p: Partial<TimeParts>) => setStart(fromParts({ ...parts, ...p }));
 
-  const runName = form.professionalId ? nameOf(form.professionalId) : "";
+  const runName = form.professionalId ? nameOf(form.professionalId) || (!instructorsLoaded || team.s === "loading" ? "" : "Unnamed") : "";
+  const runText = runName || (form.professionalId ? "Loading…" : NO_INSTRUCTOR);
   const saveLabel = saving ? "Saving…" : failed ? "Retry" : "Save class";
   const ctaOff = blankUntouched || editUnchanged;
   const repeatText =
@@ -563,38 +590,22 @@ function SheetBody({
             </button>
           </FieldBox>
 
-          <FieldBox m={m} label="Instructor" boxRef={setRunGroupEl}>
+          <FieldBox m={m} label="Instructor · from Team" boxRef={setRunGroupEl} error={instrErr} errorId={`${uid}-instr`}>
             <button
-              ref={setRunEl}
+              ref={runRef}
               type="button"
-              aria-haspopup="menu"
+              aria-haspopup="dialog"
               aria-expanded={runOpen}
-              aria-label={runName ? `Instructor, ${runName}` : "Instructor, not chosen"}
+              aria-label={`Instructor from your Team, ${runText}`}
+              aria-invalid={!!instrErr || undefined}
+              aria-describedby={instrErr ? `${uid}-instr` : undefined}
               onClick={() => setRunOpen(true)}
               className="market-focus"
-              style={fieldStyle(m, { active: runOpen })}
+              style={fieldStyle(m, { active: runOpen, error: !!instrErr })}
             >
-              <span className="flex items-center min-w-0" style={{ gap: 8 }}>
-                {runName && <Avatar m={m} name={runName} size={22} />}
-                {valueText(!instructorsLoaded ? "Loading…" : runName || (instructors.length === 0 ? "No team yet" : "No one yet"), !runName)}
-              </span>
+              {valueText(runText, !runName)}
               {chevron}
             </button>
-            {runOpen && instructorsLoaded && instructors.length === 0 && (
-              <div role="dialog" aria-label="Instructor" style={{ marginTop: 8, background: m.card, borderRadius: 10, padding: "10px 12px" }}>
-                <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>No employees yet</p>
-                <p style={{ margin: "2px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: m.faint }}>Classes need someone to run them. Add a professional by business ID.</p>
-                <div className="flex items-center" style={{ gap: 10, marginTop: 6 }}>
-                  <button type="button" onClick={() => onAddEmployee(form)} className="market-focus hit inline-flex items-center" style={{ gap: 4, fontSize: textPx(12), fontWeight: 800, color: m.pdark, minHeight: 32, background: "transparent", border: 0 }}>
-                    Add an employee
-                    <ChevronRight size={13} aria-hidden />
-                  </button>
-                  <button type="button" onClick={() => setRunOpen(false)} className="market-focus hit" style={{ fontSize: textPx(12), fontWeight: 700, color: m.ink2, minHeight: 32, background: "transparent", border: 0 }}>
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
           </FieldBox>
 
           <FieldBox
@@ -1079,34 +1090,26 @@ function SheetBody({
         align="left"
         width={182}
       />
-      <PopupMenu
-        open={runOpen && (instructors.length > 0 || !instructorsLoaded)}
+      <InstructorPicker
+        open={runOpen}
+        people={pickerPeople}
+        loading={pickerLoading}
+        error={team.s === "error" ? { offline: team.offline } : null}
+        selected={form.professionalId}
         onClose={() => setRunOpen(false)}
-        anchor={runEl}
-        matchWidth={runGroupEl}
-        options={runOptions}
-        emptyNote={
-          // AN3-022 O1: while the team loads, 2 skeleton rows (24 circle + 80×10 bar).
-          !instructorsLoaded ? (
-            <div aria-busy="true" aria-label="Loading your team">
-              {[0, 1].map((i) => (
-                <div key={i} className="flex items-center" style={{ gap: 9, padding: "9px 10px", marginTop: i ? 6 : 0 }}>
-                  <span aria-hidden style={{ width: 24, height: 24, borderRadius: 999, background: m.soft }} />
-                  <span aria-hidden style={{ width: 80, height: 10, borderRadius: 999, background: m.soft }} />
-                </div>
-              ))}
-            </div>
-          ) : undefined
-        }
-        selected={form.professionalId || null}
-        clampTo={bodyEl?.parentElement ?? null}
-        onSelect={(v) => {
-          update({ professionalId: v === NO_ONE ? "" : v });
+        onRetry={retryTeam}
+        onDone={(id) => {
+          if (id !== form.professionalId) {
+            update({ professionalId: id });
+            setInstrErr(null);
+          }
           setRunOpen(false);
-          runEl?.focus();
+          window.setTimeout(() => runRef.current?.focus(), 0);
         }}
-        heading="Instructor"
-        backdrop={false}
+        onGoToHiring={() => {
+          setRunOpen(false);
+          onGoToHiring(form);
+        }}
       />
       <PopupMenu
         open={durOpen}
@@ -1179,42 +1182,43 @@ function SheetBody({
           setDateOpen(false);
         }}
       />
-      {/* AN3-066 (+ O1 / O2 / O3). B9: the server refuses any clash (ATXD9),
-          so the confirm is "Choose someone else" (opens Instructor), not "Save anyway". */}
-      <ConfirmCard
+      {/* B-MA.6 `assignConflict` (Business Hiring Screens dlg, width 338): busy
+          times only, never what or where (AN3-066 O3). The server refuses any
+          clash (ATXD9), so "Assign anyway" can't exist: "Go back" returns to
+          the Time field (the live "Change time"), "Choose someone else" opens
+          the picker (live). */}
+      <CentredDialog
         open={!!conflict}
-        layout="decision"
-        title={
-          conflict
-            ? conflict.dates > 1
-              ? `${nameOf(form.professionalId) || "This instructor"} is already teaching at ${conflict.dates} of these times`
-              : `${nameOf(form.professionalId) || "This instructor"} is already teaching then`
-            : ""
-        }
-        subtitle={
-          conflict
-            ? conflict.elsewhere
-              ? conflict.elsewhere
-              : conflict.dates > 1
-                ? `First: ${conflict.hits[0].title}, ${shortDay(conflict.hits[0].date)}, ${time12(conflict.hits[0].startTime)} to ${time12(conflict.hits[0].endTime)}. Choose someone else or another time.`
-                : conflict.hits.length === 1
-                  ? `${conflict.hits[0].title}, ${shortDate(conflict.hits[0].date)}, ${time12(conflict.hits[0].startTime)} to ${time12(conflict.hits[0].endTime)}, overlaps this class. Choose someone else or another time.`
-                  : `${conflict.hits[0].title} and ${conflict.hits.length - 1} more overlap this class. Choose someone else or another time.`
-            : undefined
-        }
-        cancelLabel="Change time"
-        confirmLabel="Choose someone else"
+        width={338}
+        pad="24px 22px 22px"
+        actionsTop={18}
+        tone="primary"
+        title={clashTitle(clashFirst)}
+        body={conflict ? clashBody(clashClass, clashFirst, conflict.elsewhere ? 1 : conflict.dates) : undefined}
+        cancel="Go back"
+        action="Choose someone else"
         onCancel={() => {
           setConflict(null);
           fieldRefs.current.times?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
           window.setTimeout(() => startRef.current?.focus({ preventScroll: true }), 50);
         }}
-        onConfirm={() => {
+        onAction={() => {
           setConflict(null);
           runGroupEl?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
           window.setTimeout(() => setRunOpen(true), reduced ? 0 : 250);
         }}
-      />
+      >
+        {conflict ? (
+          <div style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+            {clashRows(clashClass, clashFirst, clashBusy).map((r, i) => (
+              <div key={r.k} className="flex justify-between" style={{ gap: 12, padding: "8px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: textPx(12.5) }}>
+                <span style={{ color: m.slabel }}>{r.k}</span>
+                <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{r.v}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </CentredDialog>
       <ConfirmCard
         open={discardOpen}
         layout="decision"

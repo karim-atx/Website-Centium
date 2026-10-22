@@ -13,6 +13,8 @@ import { OpportunitiesTab } from "./Opportunities";
 import { PerformanceTab } from "./Performance";
 import OfferEditorPage from "./OfferEditor";
 import RedeemPage from "./Redeem";
+import MyApplicationsPage from "./opportunities/MyApplications";
+import MyWorkPage from "./opportunities/MyWork";
 
 // Market + Share 3.0 · W3 · the professional Marketplace (P-MA, HANDOVER §4
 // "Professional Marketplace", §13 routes), /app/pro/marketplace/*:
@@ -20,6 +22,8 @@ import RedeemPage from "./Redeem";
 //   offers/new        P-MA.3 Create offer → Preview and publish
 //   offers/:offerId   the same editor for an existing offer
 //   redeem            P-MA.4 Redeem a voucher
+//   opportunities/applications  P-MA.5.2 My applications (W4)
+//   opportunities/work          P-MA.5.3 My work (W4)
 // Entry: More › Explore (D-39); the header's back chevron returns to More.
 //
 // The tabbed header is Professional Marketplace Screens lines 30–42: a row
@@ -50,6 +54,8 @@ export default function ProMarketplaceRoutes() {
       <Route path="offers/new" element={<OfferEditorPage />} />
       <Route path="offers/:offerId" element={<OfferEditorPage />} />
       <Route path="redeem" element={<RedeemPage />} />
+      <Route path="opportunities/applications" element={<MyApplicationsPage />} />
+      <Route path="opportunities/work" element={<MyWorkPage />} />
       <Route path=":tab" element={<ProMarketplacePage />} />
       <Route path="*" element={<Navigate to={`${PRO_MARKET_HOME}/overview`} replace />} />
     </Routes>

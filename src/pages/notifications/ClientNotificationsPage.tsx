@@ -147,10 +147,11 @@ export default function ClientNotificationsPage() {
   );
 }
 
-const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: () => void }> = ({ n, first, onOpen }) => {
+/** One inbox row; `look` (optional, W4 B-MA.9) gives another scope's tile (default: the member kinds). */
+export const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: () => void; look?: ReturnType<typeof notifLook>; openable?: boolean }> = ({ n, first, onOpen, look: lookOf, openable }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const look = notifLook(n.kind);
+  const look = lookOf ?? notifLook(n.kind);
   const [tileBg, tileInk] = NOTIF_TONES[look.tone];
   const unread = !n.readAt;
   const when = notifWhen(n.createdAt);
@@ -173,7 +174,7 @@ const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: ()
         font: "inherit",
         color: m.ink,
         textAlign: "left",
-        cursor: n.targetPath || unread ? "pointer" : "default",
+        cursor: (openable ?? !!n.targetPath) || unread ? "pointer" : "default",
       }}
     >
       <span aria-hidden style={{ width: 38, height: 38, borderRadius: 12, background: dark ? hexAlpha(tileInk, 0.16) : tileBg, color: dark ? liftInk(tileInk) : tileInk, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
@@ -193,7 +194,8 @@ const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: ()
   );
 };
 
-const NotificationsEmpty: React.FC = () => {
+/** The empty / pending state; `body` (optional, W4 B-MA.9) is another scope's line. */
+export const NotificationsEmpty: React.FC<{ body?: string }> = ({ body }) => {
   const m = marketPalette(useIsDark());
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "56px 24px 0" }}>
@@ -204,7 +206,7 @@ const NotificationsEmpty: React.FC = () => {
         </svg>
       </span>
       <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>No notifications yet</h2>
-      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>Points, vouchers and booking updates will show here.</p>
+      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>{body ?? "Points, vouchers and booking updates will show here."}</p>
     </div>
   );
 };

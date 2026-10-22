@@ -57,6 +57,8 @@ import ClientNotificationsPage from "./pages/notifications/ClientNotificationsPa
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
 import MarketRoutes from "./pages/business-market/MarketRoutes";
 import RedeemVoucher from "./pages/business-market/RedeemVoucher";
+import HiringRoutes from "./pages/business-market/hiring/HiringRoutes";
+import BusinessNotificationsPage from "./pages/notifications/BusinessNotificationsPage";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import TeamRoutes from "./pages/business-team/TeamRoutes";
@@ -515,6 +517,9 @@ function AppRoutes() {
         <Route path="/app/business/marketplace/*" element={<ConsoleGate need="marketing"><MarketRoutes /></ConsoleGate>} />
         {/* Market + Share 3.0 W3: B-MA.4 Redeem a voucher; the owner, marketing or front desk may check vouchers (D-25). */}
         <Route path="/app/business/redeem" element={<ConsoleGate need={["marketing", "front_desk"]}><RedeemVoucher /></ConsoleGate>} />
+        {/* Market + Share 3.0 W4: B-MA.8 Hiring (gyms and studios; owner or members, api.md) and B-MA.9 business notifications (D-38). */}
+        <Route path="/app/business/hiring/*" element={<ConsoleGate need="members"><HiringRoutes /></ConsoleGate>} />
+        <Route path="/app/business/notifications" element={<BusinessNotificationsPage />} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
             Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
             types keep today's listings page on this address. */}

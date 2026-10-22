@@ -108,3 +108,59 @@ export function groupNotifications(list: readonly AppNotification[], now: Date =
 }
 
 export const unreadCount = (list: readonly AppNotification[]): number => list.filter((n) => !n.readAt).length;
+
+// ---------------------------------------------------------------------------
+// Market + Share 3.0 · W4 · the business inbox (B-MA.9 `notifBiz`, D-38).
+// awaiting DB stage DB6 (the business scope) / DB12 (the hiring kinds).
+
+/** The business kinds the board draws (B-MA.9), to their tile; anything else is grey with the clock. */
+export function bizNotifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } {
+  switch (kind) {
+    case "application_received":
+      return { tone: "lav", glyph: "app" };
+    case "hire_offer_accepted":
+      return { tone: "teal", glyph: "hire" };
+    case "hiring_fee_added":
+      return { tone: "gold", glyph: "bill" };
+    case "hire_offer_declined":
+      return { tone: "grey", glyph: "x" };
+    case "voucher_redeemed":
+      return { tone: "blue", glyph: "qr" };
+    case "review":
+    case "review_received":
+    case "instructor_review":
+    case "gym_review":
+      return { tone: "gold", glyph: "star" };
+    default:
+      return { tone: "grey", glyph: "clock" };
+  }
+}
+
+const HIRING = "/app/business/hiring";
+
+/**
+ * Where a business row opens: the server's target_path (an /app path) when it
+ * sends one, else the kind's page (an application opens its opening's
+ * applicants when ref_id names it; a review opens Reputation). null: the row
+ * only marks itself read.
+ */
+export function bizNotifTarget(n: Pick<AppNotification, "kind" | "refId" | "targetPath">): string | null {
+  if (n.targetPath) return n.targetPath;
+  switch (n.kind) {
+    case "application_received":
+      return n.refId ? `${HIRING}/openings/${encodeURIComponent(n.refId)}` : HIRING;
+    case "hire_offer_accepted":
+      return `${HIRING}/team`;
+    case "hiring_fee_added":
+      return `${HIRING}/fees`;
+    case "hire_offer_declined":
+      return HIRING;
+    case "review":
+    case "review_received":
+    case "instructor_review":
+    case "gym_review":
+      return "/app/business/analytics/reputation";
+    default:
+      return null;
+  }
+}

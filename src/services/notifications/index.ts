@@ -25,3 +25,18 @@ export function markAllNotificationsRead(): Promise<MarketResult<null>> {
   // awaiting DB stage DB6
   return marketRpc("mark_all_notifications_read", { p_scope: "member", p_business_id: null }, "Couldn't mark your notifications as read.", () => null);
 }
+
+// Market + Share 3.0 · W4 · the business scope (B-MA.9, D-38), additive:
+// my_notifications('business', p_business_id, ...) and its mark-all. The row
+// shape and mark_notification_read are the member inbox's.
+
+/** my_notifications('business', businessId, p_before, p_limit), newest first. */
+export function fetchBusinessNotifications(businessId: string, before: string | null = null, limit = 50): Promise<MarketResult<AppNotification[]>> {
+  // awaiting DB stage DB6 (business scope) / DB12 (hiring kinds)
+  return marketRpc("my_notifications", { p_scope: "business", p_business_id: businessId, p_before: before, p_limit: limit }, "Couldn't load your notifications.", parseNotifications);
+}
+
+export function markAllBusinessNotificationsRead(businessId: string): Promise<MarketResult<null>> {
+  // awaiting DB stage DB6
+  return marketRpc("mark_all_notifications_read", { p_scope: "business", p_business_id: businessId }, "Couldn't mark your notifications as read.", () => null);
+}

@@ -36,3 +36,21 @@ test("Today / Earlier groups and unread count", () => {
   assert.deepEqual(groupNotifications(list, NOW).map((g) => [g.heading, g.items.length]), [["Today", 1], ["Earlier", 1]]);
   assert.equal(unreadCount(list), 1);
 });
+
+test("business kinds (B-MA.9 notifBiz): the board's tone and glyph, and where each row opens", async () => {
+  const { bizNotifLook, bizNotifTarget } = await import("./notificationsModel.ts");
+  assert.deepEqual(bizNotifLook("application_received"), { tone: "lav", glyph: "app" });
+  assert.deepEqual(bizNotifLook("hire_offer_accepted"), { tone: "teal", glyph: "hire" });
+  assert.deepEqual(bizNotifLook("hiring_fee_added"), { tone: "gold", glyph: "bill" });
+  assert.deepEqual(bizNotifLook("hire_offer_declined"), { tone: "grey", glyph: "x" });
+  assert.deepEqual(bizNotifLook("voucher_redeemed"), { tone: "blue", glyph: "qr" });
+  assert.deepEqual(bizNotifLook("review"), { tone: "gold", glyph: "star" });
+  assert.deepEqual(bizNotifLook("something_new"), { tone: "grey", glyph: "clock" });
+  assert.equal(bizNotifTarget({ kind: "application_received", refId: "op 1", targetPath: null }), "/app/business/hiring/openings/op%201");
+  assert.equal(bizNotifTarget({ kind: "application_received", refId: null, targetPath: null }), "/app/business/hiring");
+  assert.equal(bizNotifTarget({ kind: "hiring_fee_added", refId: null, targetPath: null }), "/app/business/hiring/fees");
+  assert.equal(bizNotifTarget({ kind: "hire_offer_accepted", refId: null, targetPath: null }), "/app/business/hiring/team");
+  assert.equal(bizNotifTarget({ kind: "review", refId: null, targetPath: null }), "/app/business/analytics/reputation");
+  assert.equal(bizNotifTarget({ kind: "voucher_redeemed", refId: null, targetPath: null }), null);
+  assert.equal(bizNotifTarget({ kind: "voucher_redeemed", refId: null, targetPath: "/app/business/redeem" }), "/app/business/redeem");
+});
