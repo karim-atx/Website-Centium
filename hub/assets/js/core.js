@@ -14,11 +14,17 @@
      request is raced against a 100ms timer and whichever fires first runs the
      callback, exactly once. A frame requested while the page was hidden,
      throttled or offscreen otherwise never arrives and the loop freezes. */
+  var frameWork = null; /* the governor's per-frame hook, set below */
   (function () {
     var nR = window.requestAnimationFrame.bind(window), nC = window.cancelAnimationFrame.bind(window), id = 0, live = {};
     window.requestAnimationFrame = function (fn) {
       var k = ++id, done = false;
-      var go = function (t) { if (done || !live[k]) return; done = true; delete live[k]; fn(typeof t === 'number' ? t : performance.now()); };
+      var go = function (t) {
+        if (done || !live[k]) return; done = true; delete live[k];
+        var s0 = performance.now();
+        fn(typeof t === 'number' ? t : s0);
+        if (frameWork) frameWork(t, performance.now() - s0);
+      };
       live[k] = [nR(go), setTimeout(function () { go(performance.now()); }, 100)];
       return k;
     };
@@ -88,9 +94,31 @@
     introLength: function () { return 0; }
   };
 
+  /* ---------- HANDOVER g: the frame-time governor ----------
+     "Drops one level if 90 frames average over 14ms." A frame's time is the
+     script time of every animation callback it ran (the scenes' render
+     calls included), summed per frame; the display's own refresh interval is
+     not counted, so a 60Hz screen does not read as slow. Frames are only
+     sampled while the page is visible and not under the opaque loader (load
+     is not representative), never under reduced motion (one settled frame),
+     and only at medium or high. After a drop the window starts again, so a
+     slow device steps down one level at a time. */
+  (function () {
+    var cur = -1, acc = 0, n = 0, sum = 0;
+    function flush() { if (cur < 0) return; if (acc > 0) { n++; sum += acc; } acc = 0; cur = -1;
+      if (n >= 90) { var avg = sum / n; n = 0; sum = 0; if (avg > 14) Atx.setQuality(QUALITY[QUALITY.indexOf(quality) - 1]); } }
+    frameWork = function (t, ms) {
+      if (quality === 'low' || mqR.matches || document.hidden || (Atx.loader && Atx.loader.covering)) { cur = -1; acc = 0; return; }
+      var key = typeof t === 'number' ? t : -2; /* a timer-driven callback (RV3 fallback) counts as its own frame */
+      if (key !== cur || key === -2) { flush(); cur = key === -2 ? performance.now() : key; }
+      acc += ms;
+    };
+    document.addEventListener('visibilitychange', function () { n = 0; sum = 0; cur = -1; acc = 0; });
+    Atx.onQuality(function () { n = 0; sum = 0; cur = -1; acc = 0; });
+  })();
+
   /* ---------- page switching ---------- */
   de.classList.add('is-loading');
-  window.__atxVT = !!(window.CSS && CSS.supports && CSS.supports('view-transition-name: none') && ('onpagereveal' in window));
   function tame(vt) {
     if (!vt) return;
     ['ready', 'finished', 'updateCallbackDone'].forEach(function (k) { try { if (vt[k] && vt[k].catch) vt[k].catch(function () {}); } catch { /* ignore */ } });
@@ -162,10 +190,19 @@
   });
 
   /* ---------- RV2: scroll safety net, RV3: kick every loop ---------- */
+  var lastY = -1; /* scroll position read by the first scroll listener of each event */
   (function () {
-    var ly = -1;
-    addEventListener('scroll', function () { ly = scrollY; }, { passive: true, capture: true });
-    setInterval(function () { if (scrollY !== ly) { ly = scrollY; dispatchEvent(new Event('scroll')); } }, 150);
+    var ly = -1, seen = -1e9;
+    addEventListener('scroll', function () { ly = lastY = scrollY; seen = performance.now(); }, { passive: true, capture: true });
+    /* B5: the check reads scrollY, which forces a style and layout pass when
+       anything has written styles since the last frame. It is skipped while
+       scroll events are arriving (the position is already known) and under
+       the opaque landing loader (its end kicks every loop), which took about
+       0.75s of forced layout out of the first 3s of a 6x-throttled load. */
+    setInterval(function () {
+      if (performance.now() - seen < 150 || (Atx.loader && Atx.loader.covering)) return;
+      var y = scrollY; if (y !== ly) { ly = y; dispatchEvent(new Event('scroll')); }
+    }, 150);
     addEventListener('pageshow', function () { ly = -1; });
     addEventListener('scroll', kickAll, { passive: true });
     addEventListener('pageshow', kickAll);
@@ -194,9 +231,14 @@
     function navH() { de.style.setProperty('--navh', nav.offsetHeight + 'px'); }
 
     /* the dark layer: 0 until 24px past the intro, 1 by 204px (Round 8) */
+    /* B5: inside a scroll frame, the position the scroll event already read
+       (reading scrollY or a rect here, after the scenes' style writes in the
+       same frame, forced a style and layout pass) */
+    var inScroll = false;
+    function posY() { return inScroll && lastY >= 0 ? lastY : scrollY; }
     function solid() {
       var L = Atx.reduced() ? 0 : (+Atx.introLength() || 0);
-      var k = Math.max(0, Math.min(1, (scrollY - L - 24) / 180));
+      var k = Math.max(0, Math.min(1, (posY() - L - 24) / 180));
       nav.style.setProperty('--gx-solid', k.toFixed(3));
     }
 
@@ -224,15 +266,21 @@
       menuWant = want;
       [].forEach.call(menu.querySelectorAll('a'), function (a) { a.classList.toggle('is-active', !!want && a.getAttribute('href') === want); });
     }
+    /* the sections' document offsets, measured once per layout change (the
+       sections themselves never move while scrolling; their stages pin) */
+    var tops = null, vh = innerHeight;
+    function measureTops() {
+      vh = innerHeight;
+      var y = scrollY;
+      tops = sectionIds.map(function (id) { var el = id && document.getElementById(id); return el ? el.getBoundingClientRect().top + y : null; });
+    }
     function active() {
       activeRaf = 0;
       var found = pageIdx;
       if (sectionIds.some(function (s) { return s; })) {
-        var mark = scrollY + innerHeight * 0.34;
-        for (var i = 0; i < sectionIds.length; i++) {
-          var el = sectionIds[i] && document.getElementById(sectionIds[i]);
-          if (el && el.getBoundingClientRect().top + scrollY <= mark) found = i;
-        }
+        if (!tops) measureTops();
+        var mark = posY() + vh * 0.34;
+        for (var i = 0; i < tops.length; i++) if (tops[i] !== null && tops[i] <= mark) found = i;
       }
       if (found !== current) {
         current = found;
@@ -286,12 +334,13 @@
 
     var solidRaf = 0;
     addEventListener('scroll', function () {
-      if (!activeRaf) activeRaf = requestAnimationFrame(active);
-      if (!solidRaf) solidRaf = requestAnimationFrame(function () { solidRaf = 0; solid(); });
+      if (!activeRaf) activeRaf = requestAnimationFrame(function () { inScroll = true; active(); inScroll = false; });
+      if (!solidRaf) solidRaf = requestAnimationFrame(function () { solidRaf = 0; inScroll = true; solid(); inScroll = false; });
     }, { passive: true });
-    addEventListener('resize', function () { navH(); solid(); paint(); }, { passive: true });
-    addEventListener('load', function () { navH(); solid(); active(); paint(); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { navH(); paint(); });
+    addEventListener('resize', function () { tops = null; navH(); solid(); paint(); }, { passive: true });
+    addEventListener('load', function () { tops = null; navH(); solid(); active(); paint(); });
+    if (window.ResizeObserver && document.body) new ResizeObserver(function () { tops = null; }).observe(document.body);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { tops = null; navH(); paint(); });
     if (window.ResizeObserver) new ResizeObserver(navH).observe(nav);
     navH(); solid(); active(); paint();
     Atx.refreshHeader = function () { solid(); active(); paint(); };

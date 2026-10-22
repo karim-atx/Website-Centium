@@ -534,3 +534,16 @@ html.jr-reduced .jr-stage > :not(.pf-hit, .pf-hint, .pf-track, .jr-dots) { anima
 }
 
 @media print { .ld { display: none !important; } }
+
+/* ---------- moved here from atraxia.css in B5 (landing only) ---------- */
+/* in-page nav jumps (landing): a dark veil while the position is set. The
+   reference code fades it over 0.16s (design-tokens.json says 120ms; the
+   reference markup wins, see B1.md). */
+.jr-jump { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: #02060C; transition: opacity 0.16s ease; }
+.jr-jump.is-on { opacity: 0.92; }
+
+@media (max-width: 760px) { html.page-landing .site-footer { padding-bottom: 5rem; } } /* room for the JN1 dock */
+@media (prefers-reduced-motion: reduce) { .jr-jump { transition: none; } }
+@media print { .jr-jump { display: none !important; } }
+/* a photo's <picture> adds no box: the img sizes against its frame */
+.ex-thumb > picture, .fd-photo > picture, .pf-logo > picture { display: contents; }

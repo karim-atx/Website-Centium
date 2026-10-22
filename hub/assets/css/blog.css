@@ -83,7 +83,7 @@
 .blog-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin: 3.5rem 0 1.5rem; }
 .blog-bar h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #F4FAFC; }
 .sl-search { position: relative; display: flex; align-items: center; width: min(320px, 100%); }
-.sl-search input { width: 100%; min-height: 44px; padding: 0 1rem 0 2.6rem; border-radius: 999px; font: inherit; font-size: .92rem; color: #F4FAFC; background: rgb(2 10 16 / .6); border: 1px solid rgb(143 216 232 / .22); -webkit-appearance: none; appearance: none; transition: border-color .25s ease, box-shadow .35s ease; }
+.sl-search input { width: 100%; min-height: 44px; padding: 0 1rem 0 2.6rem; border-radius: 999px; font: inherit; font-size: .92rem; color: #F4FAFC; background: rgb(2 10 16 / .6); border: 1px solid rgb(143 216 232 / .46); /* B5: was / .22, 1.6:1 (field boundary needs 3:1) */ -webkit-appearance: none; appearance: none; transition: border-color .25s ease, box-shadow .35s ease; }
 .sl-search input::placeholder { color: #6F8F99; }
 .sl-search input:focus { outline: none; border-color: #8FD8E8; box-shadow: 0 0 0 4px rgb(143 216 232 / .14), 0 0 26px -6px rgb(143 216 232 / .5); }
 .sl-search::before { content: ""; position: absolute; left: 1rem; width: 12px; height: 12px; border: 1.6px solid #8FD8E8; border-radius: 50%; box-sizing: content-box; }
@@ -161,3 +161,23 @@
   .post-feature:hover .post-thumb img, .post-card:hover .post-thumb img { transform: none; }
 }
 @media print { .sl-progress, .sl-share { display: none !important; } }
+
+/* ---------- moved here from atraxia.css in B5 (Blog and article only) ---------- */
+/* Blog and article: the lighter landing scene (blog-scene.js) on deep space.
+   The gradient shows only until the scene's canvas has drawn. */
+html.sl-blog .sl-sky { background: radial-gradient(54% 40% at 50% 8%, rgb(79 163 176 / 0.16), transparent 72%), radial-gradient(40% 36% at 86% 70%, rgb(104 84 178 / 0.10), transparent 72%), linear-gradient(180deg, #02060C, #030B13 60%, #02070D); }
+html.sl-post .sl-sky { background: radial-gradient(50% 34% at 50% 0%, rgb(79 163 176 / 0.12), transparent 72%), linear-gradient(180deg, #02060C, #02080F); }
+html.sc-live .sl-sky { background: #02060C; }
+.sl-sky .sc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+html.sl-post .sl-sky .sc-canvas { opacity: .55; }
+/* still fallback: no WebGL, or the scene did not start within 10s */
+html.sc-still .sl-sky {
+  background: #02060C url("../../atraxia/blog-scene-still.jpg") center / cover no-repeat;
+  background-image: image-set(url("../../atraxia/blog-scene-still.avif") type("image/avif"), url("../../atraxia/blog-scene-still.webp") type("image/webp"), url("../../atraxia/blog-scene-still.jpg") type("image/jpeg"));
+}
+html.sl-post.sc-still .sl-sky {
+  background-image: linear-gradient(rgb(2 6 12 / .45), rgb(2 6 12 / .45)), url("../../atraxia/blog-scene-still.jpg");
+  background-image: linear-gradient(rgb(2 6 12 / .45), rgb(2 6 12 / .45)), image-set(url("../../atraxia/blog-scene-still.avif") type("image/avif"), url("../../atraxia/blog-scene-still.webp") type("image/webp"), url("../../atraxia/blog-scene-still.jpg") type("image/jpeg"));
+}
+html.sc-still .sl-sky .sc-canvas { display: none; }
+

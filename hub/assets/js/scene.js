@@ -191,10 +191,14 @@
         return N;
       },
       /* draws one frame. U: uniform values by name (numbers, vec2/3 arrays, or
-         a 9-element mat3 for uR). dpr: device pixel ratio already capped. */
-      draw: function (U, dpr) {
+         a 9-element mat3 for uR). dpr: device pixel ratio already capped.
+         css: optional [width, height] of the canvas in CSS px, read by the
+         caller in its own layout-read phase; reading clientWidth here, after
+         the caller's style writes, forced a style and layout pass every
+         frame (B5, 6x CPU trace). */
+      draw: function (U, dpr, css) {
         if (lost || !count) return false;
-        var W = Math.round(canvas.clientWidth * dpr), H = Math.round(canvas.clientHeight * dpr);
+        var W = Math.round((css ? css[0] : canvas.clientWidth) * dpr), H = Math.round((css ? css[1] : canvas.clientHeight) * dpr);
         if (!W || !H) return false;
         if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
         gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);

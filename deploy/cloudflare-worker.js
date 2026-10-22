@@ -147,12 +147,10 @@ function buildCsp(scriptSrc) {
   ].join("; ");
 }
 
+// One policy for every page, the branded 404 included: hub/404.html was
+// rebuilt in the redesign with no inline script (it loads /assets/js/core.js
+// like the other pages), so it no longer needs a 'unsafe-inline' variant.
 const CSP = buildCsp(`'self' ${TURNSTILE_ORIGIN}`);
-// hub/404.html is kept unchanged from before the redesign and still carries
-// its own inline scripts (legacy cleanup, star field) and its own meta CSP
-// with 'unsafe-inline'; the header policy for that one page must allow them
-// too, or the intersection blocks them.
-const CSP_404 = buildCsp(`'self' 'unsafe-inline'`);
 
 // Adds the policy to an HTML response (other types pass through untouched).
 function withCsp(response, policy = CSP) {
@@ -315,8 +313,8 @@ async function proxy(originPath, search, request) {
   const originRequest = new Request(originUrl, request);
   const response = await fetch(originRequest);
   // Pass the origin's response straight through, status included; HTML
-  // gets the site's CSP (the kept 404 page its own variant).
-  return withCsp(new Response(response.body, response), originPath.endsWith("/404.html") ? CSP_404 : CSP);
+  // gets the site's CSP.
+  return withCsp(new Response(response.body, response));
 }
 
 // Atraxia's own branded 404 (hub/404.html, published to the GitHub Pages
@@ -326,7 +324,7 @@ async function proxy(originPath, search, request) {
 async function proxyHub404() {
   const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/404.html`;
   const response = await fetch(originUrl);
-  return withCsp(new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers }), CSP_404);
+  return withCsp(new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers }));
 }
 
 // THE INVARIANT THIS FILE EXISTS TO HOLD, and it is not stylistic.

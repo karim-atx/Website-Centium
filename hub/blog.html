@@ -28,6 +28,7 @@
     <meta name="twitter:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
     <link rel="stylesheet" href="assets/css/blog.css" />
@@ -43,8 +44,8 @@
     <header class="nav">
       <div class="wrap nav-top">
         <a class="lockup" href="index.html" aria-label="Atraxia home">
-          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-hi.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-hi.webp" /><img class="mark" src="atraxia/atraxia-mark-hi.png" alt="" width="1200" height="863" /></picture>
-          <img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" />
+          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-360.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-360.webp" /><img class="mark" src="atraxia/atraxia-mark-360.png" alt="" width="360" height="259" /></picture>
+          <picture><source type="image/avif" srcset="atraxia/atraxia-wordmark.avif" /><source type="image/webp" srcset="atraxia/atraxia-wordmark.webp" /><img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" /></picture>
         </a>
         <nav class="tabs" aria-label="Primary">
           <span class="tab-pill" aria-hidden="true"></span>
@@ -86,7 +87,7 @@
           <span class="sl-eyebrow">LATEST</span>
           <!-- posts:start · a static copy of the #atx-posts block in blog-post.html, which is the posts source (the Worker reads it). When a post is added or changed there, update these cards to match (title, excerpt, image, alt, date, read time = ceil(words / 200), minimum 1), and the three Explorations cards in index.html. -->
           <a class="post-feature" href="blog-post.html?slug=the-plan-comes-second">
-            <div class="post-thumb"><img src="atraxia/blog/plan-comes-second.jpg?v=3" alt="A star-forming nebula with a bright young star cluster at its core, teal and violet gas clouds and dark dust lanes threading through, against a dense star field" width="1280" height="800" /></div>
+            <div class="post-thumb"><picture><source type="image/avif" srcset="atraxia/blog/plan-comes-second.avif?v=3" /><source type="image/webp" srcset="atraxia/blog/plan-comes-second.webp?v=3" /><img src="atraxia/blog/plan-comes-second.jpg?v=3" alt="A star-forming nebula with a bright young star cluster at its core, teal and violet gas clouds and dark dust lanes threading through, against a dense star field" width="1280" height="800" fetchpriority="high" /></picture></div>
             <div class="body">
               <h2 class="post-title">The Plan Comes Second</h2>
               <p>We start from a question we can’t stop asking, and only then work out the plan.</p>
@@ -97,7 +98,7 @@
           <div class="blog-bar"><h2>More explorations</h2></div>
           <div class="post-grid post-grid--two">
             <a class="post-card" href="blog-post.html?slug=what-client-centric-actually-costs">
-              <div class="post-thumb"><img src="atraxia/blog/client-centric.jpg?v=4" alt="A banded teal gas giant lit from the upper right, its multi-banded ring passing in front of and behind it, with a small cratered moon" width="1280" height="800" loading="lazy" /></div>
+              <div class="post-thumb"><picture><source type="image/avif" srcset="atraxia/blog/client-centric.avif?v=4" /><source type="image/webp" srcset="atraxia/blog/client-centric.webp?v=4" /><img src="atraxia/blog/client-centric.jpg?v=4" alt="A banded teal gas giant lit from the upper right, its multi-banded ring passing in front of and behind it, with a small cratered moon" width="1280" height="800" loading="lazy" decoding="async" /></picture></div>
               <div class="body">
                 <h3>What “Client-Centric” Actually Costs</h3>
                 <p>Putting the client first sometimes means building what they need instead of what they asked for.</p>
@@ -105,7 +106,7 @@
               </div>
             </a>
             <a class="post-card" href="blog-post.html?slug=why-we-dont-ship-the-obvious-answer">
-              <div class="post-thumb"><img src="atraxia/blog/obvious-answer.jpg?v=3" alt="Four comets on different paths across a dense star field, one tail crossing a faint teal and violet nebula, with two meteor streaks" width="1280" height="800" loading="lazy" /></div>
+              <div class="post-thumb"><picture><source type="image/avif" srcset="atraxia/blog/obvious-answer.avif?v=3" /><source type="image/webp" srcset="atraxia/blog/obvious-answer.webp?v=3" /><img src="atraxia/blog/obvious-answer.jpg?v=3" alt="Four comets on different paths across a dense star field, one tail crossing a faint teal and violet nebula, with two meteor streaks" width="1280" height="800" loading="lazy" decoding="async" /></picture></div>
               <div class="body">
                 <h3>Why We Don’t Ship the Obvious Answer</h3>
                 <p>The first idea is only the one that came to mind first, so we treat it as a starting point.</p>
@@ -113,7 +114,7 @@
               </div>
             </a>
             <a class="post-card" href="blog-post.html?slug=the-weight-of-yes-we-could">
-              <div class="post-thumb"><img src="atraxia/blog/yes-we-could.jpg?v=1" alt="A black hole off-centre in a deep star field, its glowing accretion disk bent around the dark core by gravitational lensing, warm at the inner edge and teal further out" width="1280" height="800" loading="lazy" /></div>
+              <div class="post-thumb"><picture><source type="image/avif" srcset="atraxia/blog/yes-we-could.avif?v=1" /><source type="image/webp" srcset="atraxia/blog/yes-we-could.webp?v=1" /><img src="atraxia/blog/yes-we-could.jpg?v=1" alt="A black hole off-centre in a deep star field, its glowing accretion disk bent around the dark core by gravitational lensing, warm at the inner edge and teal further out" width="1280" height="800" loading="lazy" decoding="async" /></picture></div>
               <div class="body">
                 <h3>The Weight of “Yes, We Could”</h3>
                 <p>Being able to build something isn’t a reason to build it, especially when someone trusts us with their health.</p>
@@ -121,7 +122,7 @@
               </div>
             </a>
             <a class="post-card" href="blog-post.html?slug=what-we-mean-by-simple">
-              <div class="post-thumb"><img src="atraxia/blog/what-we-mean-by-simple.jpg?v=2" alt="Tall columns of dark gas and dust rising from a cloud bank against a glowing teal nebula and dense star field, their ragged edges lit from the upper right and young stars glinting inside them" width="1280" height="800" loading="lazy" /></div>
+              <div class="post-thumb"><picture><source type="image/avif" srcset="atraxia/blog/what-we-mean-by-simple.avif?v=2" /><source type="image/webp" srcset="atraxia/blog/what-we-mean-by-simple.webp?v=2" /><img src="atraxia/blog/what-we-mean-by-simple.jpg?v=2" alt="Tall columns of dark gas and dust rising from a cloud bank against a glowing teal nebula and dense star field, their ragged edges lit from the upper right and young stars glinting inside them" width="1280" height="800" loading="lazy" decoding="async" /></picture></div>
               <div class="body">
                 <h3>What We Mean by Simple</h3>
                 <p>Simple is about how little a person has to think to use something correctly, not how clean it looks.</p>
@@ -157,8 +158,8 @@
       </div>
       <div class="wrap footer-meta-row">
         <div class="brand-lockup">
-          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-hi.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-hi.webp" /><img class="mark" src="atraxia/atraxia-mark-hi.png" alt="Atraxia" width="1200" height="863" /></picture>
-          <img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" />
+          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-360.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-360.webp" /><img class="mark" src="atraxia/atraxia-mark-360.png" alt="Atraxia" width="360" height="259" /></picture>
+          <picture><source type="image/avif" srcset="atraxia/atraxia-wordmark.avif" /><source type="image/webp" srcset="atraxia/atraxia-wordmark.webp" /><img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" /></picture>
         </div>
         <nav class="footer-legal" aria-label="Legal">
           <a href="legal.html">Legal</a>

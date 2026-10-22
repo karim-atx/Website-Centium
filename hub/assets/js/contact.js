@@ -37,16 +37,15 @@
   if (!window.Atx || !de.classList.contains('page-contact')) return;
 
   /* ---------- configuration ----------
-     NOTE FOR KARIM: TURNSTILE_SITEKEY_PROD must be the public site key of the
-     Turnstile widget whose hostname list includes atraxia.org (and
-     www.atraxia.org). The decision was to add atraxia.org to the existing
-     widget's hostnames, so this is the same public key Centium's contact form
-     uses (Cloudflare dashboard → Turnstile → the widget → Site Key; it is the
-     NEXT_PUBLIC_TURNSTILE_SITEKEY of the Centium Pages project). Site keys are
-     public by design. Until it is filled in, the live form cannot send: on
-     submit it says the security check could not load and gives the email
-     address. */
-  var TURNSTILE_SITEKEY_PROD = '';
+     TURNSTILE_SITEKEY_PROD is the PUBLIC site key of the Turnstile widget
+     Centium's contact form already uses (its NEXT_PUBLIC_TURNSTILE_SITEKEY,
+     read from the live centium.atraxia.org bundle on 22 October 2026). The
+     decision was to add atraxia.org (and www.atraxia.org) to that widget's
+     hostnames: a manual Cloudflare step, listed in WORKER_STEPS.md. Until it
+     is done, the widget refuses to render on atraxia.org and the form says
+     the security check could not load, with the email address. Site keys are
+     public by design; the secret never belongs here. */
+  var TURNSTILE_SITEKEY_PROD = '0x4AAAAAAFBjQAzZoZK57wE-';
   /* Cloudflare's published test key: always passes, visible widget. Used only
      on local hosts. */
   var TURNSTILE_SITEKEY_TEST = '1x00000000000000000000AA';

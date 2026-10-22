@@ -5,8 +5,8 @@
     <style>html{background:#02060C;color-scheme:dark}</style>
     <meta name="color-scheme" content="dark" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Explorations · Atraxia</title>
-    <meta name="description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
+    <title>Article · Atraxia</title>
+    <meta name="description" content="An article from Explorations, the thinking behind Atraxia’s work." />
     <meta name="theme-color" content="#023B4A" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png" />
@@ -15,19 +15,20 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/favicon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
     <link rel="manifest" href="icons/site.webmanifest" />
-    <link rel="canonical" href="https://atraxia.org/blog" />
-    <meta property="og:type" content="website" />
+    <link rel="canonical" href="https://atraxia.org/blog-post.html" />
+    <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Atraxia" />
-    <meta property="og:title" content="Explorations · Atraxia" />
-    <meta property="og:description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
-    <meta property="og:url" content="https://atraxia.org/blog" />
+    <meta property="og:title" content="Article · Atraxia" />
+    <meta property="og:description" content="An article from Explorations, the thinking behind Atraxia’s work." />
+    <meta property="og:url" content="https://atraxia.org/blog-post.html" />
     <meta property="og:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Explorations · Atraxia" />
-    <meta name="twitter:description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
+    <meta name="twitter:title" content="Article · Atraxia" />
+    <meta name="twitter:description" content="An article from Explorations, the thinking behind Atraxia’s work." />
     <meta name="twitter:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
     <link rel="stylesheet" href="assets/css/blog.css" />
@@ -43,8 +44,8 @@
     <header class="nav">
       <div class="wrap nav-top">
         <a class="lockup" href="index.html" aria-label="Atraxia home">
-          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-hi.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-hi.webp" /><img class="mark" src="atraxia/atraxia-mark-hi.png" alt="" width="1200" height="863" /></picture>
-          <img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" />
+          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-360.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-360.webp" /><img class="mark" src="atraxia/atraxia-mark-360.png" alt="" width="360" height="259" /></picture>
+          <picture><source type="image/avif" srcset="atraxia/atraxia-wordmark.avif" /><source type="image/webp" srcset="atraxia/atraxia-wordmark.webp" /><img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" /></picture>
         </a>
         <nav class="tabs" aria-label="Primary">
           <span class="tab-pill" aria-hidden="true"></span>
@@ -79,7 +80,7 @@
             <div class="eyebrow"><span class="rule"></span><span class="label">EXPLORATIONS</span></div>
             <h1 class="hero-h1" data-p="title"></h1>
             <div class="post-meta" hidden>
-              <img class="avatar" data-p="authorImg" alt="" width="40" height="40" />
+              <picture><source type="image/avif" data-p="authorAvif" /><source type="image/webp" data-p="authorWebp" /><img class="avatar" data-p="authorImg" alt="" width="40" height="40" /></picture>
               <span class="author" data-p="authorName"></span>
               <span class="sep"></span>
               <time data-p="dateLabel"></time>
@@ -100,11 +101,11 @@
       <section class="bl-article" aria-label="Article">
         <div class="wrap">
           <article class="post-body">
-            <figure hidden><div class="post-thumb"><img data-p="img" alt="" width="1280" height="800" /></div></figure>
+            <figure hidden><div class="post-thumb"><picture><source type="image/avif" data-p="imgAvif" /><source type="image/webp" data-p="imgWebp" /><img data-p="img" alt="" width="1280" height="800" fetchpriority="high" /></picture></div></figure>
             <div data-body></div>
             <div class="post-end" hidden>
               <div class="who">
-                <img data-p="authorImg" alt="" width="52" height="52" />
+                <picture><source type="image/avif" data-p="authorAvif" /><source type="image/webp" data-p="authorWebp" /><img data-p="authorImg" alt="" width="52" height="52" loading="lazy" decoding="async" /></picture>
                 <div><strong data-p="authorName"></strong><span data-p="authorRole"></span></div>
               </div>
               <a class="btn btn--ghost" href="blog.html">← All posts</a>
@@ -188,8 +189,8 @@
       </div>
       <div class="wrap footer-meta-row">
         <div class="brand-lockup">
-          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-hi.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-hi.webp" /><img class="mark" src="atraxia/atraxia-mark-hi.png" alt="Atraxia" width="1200" height="863" /></picture>
-          <img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" />
+          <picture><source type="image/avif" srcset="atraxia/atraxia-mark-360.avif" /><source type="image/webp" srcset="atraxia/atraxia-mark-360.webp" /><img class="mark" src="atraxia/atraxia-mark-360.png" alt="Atraxia" width="360" height="259" /></picture>
+          <picture><source type="image/avif" srcset="atraxia/atraxia-wordmark.avif" /><source type="image/webp" srcset="atraxia/atraxia-wordmark.webp" /><img class="wordmark" src="atraxia/atraxia-wordmark.png" alt="" width="340" height="53" /></picture>
         </div>
         <nav class="footer-legal" aria-label="Legal">
           <a href="legal.html">Legal</a>

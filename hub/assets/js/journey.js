@@ -164,7 +164,8 @@
   var sky = J.querySelector('.jr-sky');
   var PF = { open: '', hov: '', h1: 0, h2: 0, k: 0, clickC: false, clickP: false };
   var pfCard = J.querySelector('.pf-card'), pfProto = J.querySelector('.pf-proto');
-  var hitC = J.querySelector('.pf-hit--c'), hitP = J.querySelector('.pf-hit--p'), pfHint = J.querySelector('.pf-hint');
+  var hitC = J.querySelector('.pf-hit--c'), hitP = J.querySelector('.pf-hit--p'), pfHint = J.querySelector('.pf-hint'), hintDy = 0;
+  addEventListener('resize', function () { hintDy = 0; }, { passive: true });
   var fdPh = [].slice.call(J.querySelectorAll('.fd-photo')), vlStars = [].slice.call(J.querySelectorAll('.vl-star'));
   var vlBlocks = [].slice.call(J.querySelectorAll('.vl-item')), cards = [].slice.call(J.querySelectorAll('.ex-card'));
   var cEl = document.getElementById('contact'), fEl = document.querySelector('.site-footer'), cCard = document.querySelector('.cxt-card'), cBtn = document.querySelector('.cxt-btn');
@@ -174,6 +175,9 @@
 
   function frame(now) {
     raf = 0;
+    /* B5: under the opaque loader, one warm-up frame, then wait for its
+       handoff (Atx.loader.covering; the loader kicks every loop) */
+    if (api.n > 0 && Atx.loader && Atx.loader.covering) return;
     try { frameInner(now); } catch (e) { api.err = String(e && e.stack || e); }
     if (!reduced() && api._vis) sched(document.hidden ? 400 : 0);
   }
@@ -225,8 +229,13 @@
       else { stars = vlBlocks.map(function (b) { return eoc(win(selfP(b), .2, .7)); }); line = vlBlocks.length ? win(selfP(vlBlocks[2]), .7, 1) : 0; } }
     var VGP = VG.map(function (o) { return o ? [o.st.offsetLeft + o.st.offsetWidth / 2, o.st.offsetTop + o.st.offsetHeight / 2] : null; });
     var pfOn = !!(pfCard && pf.top < G.vh && pf.top + pf.h > 0), cw = 290, chh = 220;
+    /* B5 (audit 14): the one-time phone hint sits under the Centium window's
+       own "Tap to explore" pill, not on it: its offset below the planet is
+       the window's half height, the pill's gap and height, and an 8px gap */
+    if (mob && pfOn && pfHint && !hintDy && hitC) { var tip = hitC.querySelector('.pf-hit-tip'); hintDy = hitC.offsetHeight / 2 + 2 + 8 + (tip ? tip.offsetHeight : 30) + 8; }
     if (pfOn && !mob) { cw = pfCard.offsetWidth || 290; chh = pfCard.offsetHeight || 220; }
     var r7 = cCard && cBtn ? cCard.getBoundingClientRect() : null, b7 = r7 ? cBtn.getBoundingClientRect() : null;
+    var cvCss = cv ? [cv.clientWidth, cv.clientHeight] : null;
 
     /* ---------- state ---------- */
     /* formation weights: two neighbouring formations blend at a time */
@@ -304,7 +313,7 @@
       PF.clickC = fm >= 1 && onS(wp); PF.clickP = fm >= 1 && onS(pr2);
       [[hitC, PF.clickC], [hitP, PF.clickP]].forEach(function (x) { var h = x[0]; if (!h) return; var hk = fm.toFixed(3) + x[1]; if (h.__k === hk) return; h.__k = hk; if (!x[1] && document.activeElement === h) h.blur(); h.style.opacity = fm.toFixed(3); h.style.pointerEvents = x[1] ? '' : 'none'; h.tabIndex = x[1] ? 0 : -1; h.setAttribute('aria-hidden', x[1] ? 'false' : 'true'); h.classList.toggle('is-off', !x[1]); });
       if (PF.open && !(PF.open === 'centium' ? PF.clickC : PF.clickP)) pfCtl.auto();
-      if (mob && pfHint) { pfHint.style.left = clamp(wp[0] - 80, 12, G.vw - 172).toFixed(1) + 'px'; pfHint.style.top = (wp[1] + 44).toFixed(1) + 'px'; }
+      if (mob && pfHint) { pfHint.style.left = clamp(wp[0] - 80, 12, G.vw - 172).toFixed(1) + 'px'; pfHint.style.top = (wp[1] + (hintDy || 44)).toFixed(1) + 'px'; }
       if (pfProto && !mob) { pfProto.style.left = (pr2[0] + 36).toFixed(1) + 'px'; pfProto.style.top = (pr2[1] - 18).toFixed(1) + 'px'; }
       if (!mob && !red) pfCard.style.transform = 'perspective(900px) rotateY(' + (ptr.x * 7).toFixed(2) + 'deg) rotateX(' + (-ptr.y * 5).toFixed(2) + 'deg)';
     } else if (PF.inRange !== false) {
@@ -343,7 +352,7 @@
       /* Reach out: the beacon sits on the card, the button is its target */
       if (r7) { var bx = mob ? r7.left + r7.width * .5 : r7.left + r7.width * .26, by = mob ? r7.top + r7.height * .32 : r7.top + r7.height * .5;
         U.uBc = [(bx / G.vw * 2 - 1) * asp7, 1 - 2 * by / G.vh]; U.uBtn = [((b7.left + b7.width / 2) / G.vw * 2 - 1) * asp7, 1 - 2 * (b7.top + b7.height / 2) / G.vh]; U.uBR = Math.max(r7.width, r7.height) / G.vh * (mob ? 1.3 : 1.05); }
-      scene.draw(U, dpr);
+      scene.draw(U, dpr, cvCss);
     }
     api._vis = vis;
   }

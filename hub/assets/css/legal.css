@@ -99,3 +99,13 @@
   .lg-content .table-wrap { border-color: #999999; }
   .lg-content th, .lg-content td { border-color: #CCCCCC; background: none; }
 }
+
+/* ---------- moved here from atraxia.css in B5 (Legal only) ---------- */
+/* Legal only: the Atraxia mark as a flat white silhouette, 3.5% (3% on phones), large and partly off the right edge */
+.sl-sky .bd-logo {
+  position: absolute; right: -6vw; top: 50%; width: min(70vw, 900px); aspect-ratio: 1; transform: translateY(-50%);
+  background: url("../../atraxia/atraxia-mark-hi.png") center / contain no-repeat;
+  background-image: image-set(url("../../atraxia/atraxia-mark-hi.avif") type("image/avif"), url("../../atraxia/atraxia-mark-hi.webp") type("image/webp"), url("../../atraxia/atraxia-mark-hi.png") type("image/png"));
+  filter: brightness(0) invert(1); opacity: .035;
+}
+@media (max-width: 760px) { .sl-sky .bd-logo { width: 120vw; right: -40vw; opacity: .03; } }

@@ -5,7 +5,7 @@
    spot). Ported literally from source/index.r26.html (the __atxLoader
    script): the Atraxia mark gathers from starlight. Grains drift in from a
    faint star field and settle on the exact mark, sampled from
-   atraxia-mark-hi.png with getImageData (same-origin, so the canvas is never
+   atraxia-mark-hi (AVIF, else WebP, else PNG) with getImageData (same-origin, so the canvas is never
    tainted); the swish draws in left to right with a travelling point of
    light; the finished mark glows and the wordmark is unmasked; then the
    mark's light unfolds into a two-armed spiral at the centre, where the hero
@@ -72,8 +72,13 @@
     }
     ready = true; sch();
   };
-  img.onerror = function () { ready = true; sch(); };
-  img.src = 'atraxia/atraxia-mark-hi.png';
+  /* B5: the same file the header's <picture> picks (AVIF, preloaded in the
+     head), so the mark downloads once; WebP, then the PNG, where AVIF does not
+     decode. Sampled at 300px, the AVIF classifies 29 of the PNG's 14,775 mark
+     pixels differently (0.2%), which moves no grain visibly. */
+  var SRCS = ['atraxia/atraxia-mark-hi.avif', 'atraxia/atraxia-mark-hi.webp', 'atraxia/atraxia-mark-hi.png'], si = 0;
+  img.onerror = function () { if (++si < SRCS.length) { img.src = SRCS[si]; return; } ready = true; sch(); };
+  img.src = SRCS[0];
 
   /* real loading: document parsed and loaded, the hero intro and the journey
      scene running, the first 14 images, the fonts, and the mark image. A page
@@ -177,6 +182,7 @@
     ld.classList.add('is-gone'); ld.style.display = 'none';
     try { localStorage.setItem(KEY, '1'); } catch { /* ignore */ }
     window.dispatchEvent(new Event('atx:loaded'));
+    Atx.kick();
   }
   /* the reference's own scheduler: a frame raced against a 50ms timer */
   function sch() {
@@ -194,7 +200,7 @@
       if (!ready && el < 9000) tgt = Math.min(tgt, .05);
       e += (tgt - e) * Math.min(1, dt * 3.2);
       if (tgt >= 1 && e > .985) { e = 1; phase = 'ignite'; t0 = now; }
-    } else if (phase === 'ignite') { ig = Math.min(1, el / IGN); if (ig >= 1) { phase = 'handoff'; t0 = now; } }
+    } else if (phase === 'ignite') { ig = Math.min(1, el / IGN); if (ig >= 1) { phase = 'handoff'; t0 = now; Atx.kick(); } }
     else { ho = Math.min(1, el / HO); if (ho >= 1) { render(now / 1000); finish(); return; } }
     render(now / 1000); sch();
   }
@@ -217,7 +223,13 @@
     get progress() { return e; },
     get value() { return pv; },
     get repeat() { return repeat; },
-    get ready() { return ready; }
+    get ready() { return ready; },
+    /* B5: true while the opaque loader hides the whole page (gather and
+       ignite). The hero and journey scenes draw one frame to warm up, then
+       wait under it; the handoff (or a skip) kicks them back on, before the
+       loader starts to fade. This takes their frames out of the load-time
+       long tasks, so the loader itself animates smoothly. */
+    get covering() { return !done && phase !== 'handoff'; }
   };
   timing(); size(); t0 = performance.now(); tick(t0);
 })();

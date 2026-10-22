@@ -24,6 +24,12 @@
     return Math.max(1, Math.ceil(words / 200));
   }
   function show(sel) { var el = $(sel); if (el) el.hidden = false; }
+  /* every photo has AVIF and WebP siblings next to the JPEG (same name and query) */
+  function fmt(src, ext) { return String(src).replace(/\.(jpg|png)(\?|$)/, '.' + ext + '$2'); }
+  function pic(src, alt, attrs) { return '<picture><source type="image/avif" srcset="' + esc(fmt(src, 'avif')) + '" /><source type="image/webp" srcset="' + esc(fmt(src, 'webp')) + '" /><img src="' + esc(src) + '" alt="' + esc(alt) + '"' + attrs + ' /></picture>'; }
+  /* the post's own head tags, as the Worker writes them for bots (for
+     crawlers that run the page) */
+  function meta(sel, attr, val) { var el = document.head.querySelector(sel); if (el) el.setAttribute(attr, val); }
 
   var post = null;
   try {
@@ -51,12 +57,26 @@
       [].forEach.call(document.querySelectorAll('[data-p]'), function (el) {
         var k = el.getAttribute('data-p');
         if (k === 'authorImg') el.src = post.authorImg;
+        else if (k === 'authorAvif' || k === 'authorWebp') el.srcset = fmt(post.authorImg, k === 'authorAvif' ? 'avif' : 'webp');
+        else if (k === 'imgAvif' || k === 'imgWebp') el.srcset = fmt(post.img, k === 'imgAvif' ? 'avif' : 'webp');
         else if (k === 'img') { el.src = post.img; el.alt = post.alt; }
         else if (k === 'read') el.textContent = read;
         else el.textContent = post[k];
       });
       var t = $('time[data-p]'); if (t) t.setAttribute('datetime', post.date);
       document.title = post.title + ' · Atraxia';
+      var url = 'https://atraxia.org/blog/' + post.slug, image = 'https://atraxia.org/' + String(post.img).replace(/^\/+/, '');
+      meta('meta[name="description"]', 'content', post.excerpt);
+      meta('link[rel="canonical"]', 'href', url);
+      meta('meta[property="og:type"]', 'content', 'article');
+      meta('meta[property="og:title"]', 'content', document.title);
+      meta('meta[property="og:description"]', 'content', post.excerpt);
+      meta('meta[property="og:url"]', 'content', url);
+      meta('meta[property="og:image"]', 'content', image);
+      meta('meta[name="twitter:card"]', 'content', 'summary_large_image');
+      meta('meta[name="twitter:title"]', 'content', document.title);
+      meta('meta[name="twitter:description"]', 'content', post.excerpt);
+      meta('meta[name="twitter:image"]', 'content', image);
       show('.post-meta'); show('.post-body figure'); show('.post-end'); show('.sl-share');
     }
 
@@ -68,7 +88,7 @@
       var tb = document.querySelector('template[data-post-body="' + p.slug + '"]');
       var r = tb ? minutes(tb.content) : p.read;
       return '<a class="post-card" href="blog-post.html?slug=' + encodeURIComponent(p.slug) + '">' +
-        '<div class="post-thumb"><img src="' + esc(p.img) + '" alt="' + esc(p.alt) + '" width="1280" height="800" loading="lazy" /></div><div class="body">' +
+        '<div class="post-thumb">' + pic(p.img, p.alt, ' width="1280" height="800" loading="lazy" decoding="async"') + '</div><div class="body">' +
         '<h3>' + esc(p.title) + '</h3><p>' + esc(p.excerpt) + '</p>' +
         '<div class="post-byline"><span class="author">' + esc(p.authorName) + '</span><span class="sep"></span><time datetime="' + esc(p.date) + '">' + esc(p.dateLabel) + '</time><span class="sep"></span><span>' + r + ' min read</span></div>' +
         '</div></a>';

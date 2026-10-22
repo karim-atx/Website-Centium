@@ -518,10 +518,14 @@
     api.phase = red ? 'Reduced motion' : p <= 0 ? 'Opening' : p < .15 ? '1 · Entering' : p < .45 ? '2 · Pull-back reveal' : p < .75 ? '3 · Glide' : p < .92 ? '4 · Text reveal' : p < 1 ? '5 · Lock-in' : 'Released';
   }
 
-  var raf = 0, last = 0, onScreen = true, lost = false, frozen = 12;
+  var raf = 0, last = 0, onScreen = true, lost = false, frozen = 12, drawn = false;
   function frame(now) {
     raf = 0;
     if (lost || !onScreen) return;
+    /* B5: under the opaque loader, one warm-up frame, then wait for its
+       handoff (Atx.loader.covering; the loader kicks every loop) */
+    if (drawn && Atx.loader && Atx.loader.covering) return;
+    drawn = true;
     var minDt = Q.fps === 30 ? 31 : 0;
     if (now - last < minDt) { raf = requestAnimationFrame(frame); return; }
     last = now;
