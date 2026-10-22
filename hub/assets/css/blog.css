@@ -1,0 +1,183 @@
+/* Atraxia website: the Blog index (BO1) and the article (BG1). Values are
+   the reference build's final cascade (source/blog.r26.html and
+   blog-post.r26.html), checked against their rendered getComputedStyle at
+   1440, 390 and 360. The backdrop (the lighter landing scene, its still
+   fallback) is blog-scene.js plus the html.sl-blog / html.sl-post rules in
+   atraxia.css. The nav is in the flow here (sticky), so the reference's
+   calc(var(--navh) + Xrem) top paddings, with main pulled up under the nav,
+   are Xrem. */
+
+.bl { line-height: normal; }
+.bl section { padding: 4rem 0; }
+
+/* ---------- the title block ---------- */
+.bl .hero { position: relative; z-index: 2; display: flex; align-items: center; overflow: hidden; padding: 4.5rem 0 2.5rem; }
+.bl .hero > .wrap { flex: 1; }
+.bl .hs-copy { max-width: 40rem; }
+.bl .hero .eyebrow { margin-bottom: 2rem; }
+.hero-h1 { margin: 0 0 1.6rem; max-width: 17ch; font-size: clamp(2.7rem, 5.3vw, 4.1rem); line-height: 1.04; font-weight: 800; letter-spacing: -.036em; color: #F4FAFC; text-shadow: 0 2px 46px rgb(1 5 10 / .78); text-wrap: pretty; }
+.hero-lede { margin: 0 0 3.25rem; max-width: 43ch; font-size: 1.16rem; line-height: 1.7; color: #A5C0CA; text-shadow: 0 1px 22px rgb(1 5 10 / .7); }
+
+/* the article's title block */
+.bl .hero--post { padding: 3.5rem 0 2.5rem; }
+.hero--post .hs-copy { max-width: 46rem; margin: 0 auto; }
+.hero--post .hero-h1 { margin-bottom: 2rem; max-width: 20ch; font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.08; text-wrap: balance; }
+.hero--post .hero-back { display: inline-flex; margin-bottom: 2.4rem; }
+.post-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem .85rem; font-size: .92rem; color: #8FB3BE; }
+.post-meta[hidden] { display: none; }
+.post-meta .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: center 22%; border: 1px solid rgb(191 219 227 / .3); }
+.post-meta .author { font-weight: 700; }
+.post-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: rgb(143 216 232 / .35); opacity: .6; }
+
+/* the text-link buttons on these pages (All posts, Visit Centium, Send another) */
+.bl .btn--ghost { padding: 0 0 2px; border: 0; border-bottom: 1px solid rgb(191 219 227 / .3); border-radius: 0; background: none; }
+.bl .hero-back.btn--ghost { font-size: .95rem; }
+.bl .btn--ghost:hover, .bl .btn--ghost:focus-visible { border-color: #8FD8E8; }
+.bl .btn--primary { border: 1px solid transparent; box-shadow: 0 0 0 0 rgb(143 216 232 / 0), 0 10px 24px -18px rgb(0 0 0 / .6); }
+
+/* sharing */
+.sl-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1.4rem; }
+.sl-share[hidden] { display: none; }
+.sl-share > span:first-child { margin-right: .3rem; font-size: .68rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #8FB3BE; }
+.sl-share a, .sl-share button { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .95rem; border-radius: 999px; font: inherit; font-size: .82rem; font-weight: 700; color: #DCEEF2; text-decoration: none; cursor: pointer; background: rgb(255 255 255 / .06); border: 1px solid rgb(143 216 232 / .22); transition: border-color .18s ease, background-color .18s ease; }
+.sl-share a:hover, .sl-share button:hover, .sl-share a:focus-visible, .sl-share button:focus-visible { border-color: #8FD8E8; background: rgb(143 216 232 / .1); }
+.sl-share button.is-copied { background: #8FD8E8; color: #0B2B33; border-color: #8FD8E8; }
+@media (hover: none) { .sl-share a:hover, .sl-share button:not(.is-copied):hover { border-color: rgb(143 216 232 / .22); background: rgb(255 255 255 / .06); } }
+
+/* reading progress */
+.sl-progress { position: fixed; left: 0; top: 0; z-index: 120; width: 100%; height: 2px; transform-origin: 0 50%; transform: scaleX(var(--rp, 0)); background: linear-gradient(90deg, #4FA3B0, #8FD8E8); box-shadow: 0 0 12px rgb(143 216 232 / .7); pointer-events: none; }
+
+/* ---------- the listing ---------- */
+.bl #posts { padding: 1rem 0 4rem; }
+.post-thumb { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 1.25rem; background: #02060C; }
+#posts .post-thumb { background: #06121A; }
+.post-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s cubic-bezier(.22,1,.36,1), filter .6s ease; }
+.post-byline { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .6rem; font-size: .8rem; color: #8FB3BE; }
+.post-byline .author { font-weight: 700; }
+.post-byline .sep { width: 3px; height: 3px; border-radius: 50%; background: rgb(143 216 232 / .35); opacity: .7; }
+.bl-post .post-byline .sep { background: currentColor; }
+
+.post-feature, .post-card {
+  position: relative; text-decoration: none; color: inherit;
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, rgb(12 30 40 / .62), rgb(5 14 22 / .55)) padding-box, linear-gradient(160deg, rgb(143 216 232 / .3), rgb(143 216 232 / .04) 40%, rgb(143 216 232 / .14)) border-box;
+  box-shadow: 0 30px 70px -45px rgb(0 0 0 / .9), inset 0 1px 0 rgb(255 255 255 / .05);
+  transition: box-shadow .45s ease, background .45s ease;
+}
+#posts .post-feature, #posts .post-card { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.post-feature[hidden], .post-card[hidden] { display: none; }
+.post-feature:focus-visible, .post-card:focus-visible { outline: 2px solid #8FD8E8; outline-offset: 2px; }
+@media (hover: hover) {
+  .post-feature:hover, .post-card:hover { box-shadow: 0 40px 80px -40px rgb(0 0 0 / .95), 0 0 0 1px rgb(143 216 232 / .22), inset 0 1px 0 rgb(255 255 255 / .07); }
+  .post-feature:hover .post-thumb img, .post-card:hover .post-thumb img { transform: scale(1.035); }
+  .post-feature:hover .read { text-decoration: underline; }
+}
+
+.post-feature { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 2rem; align-items: center; padding: .7rem; border-radius: 1.75rem; }
+.post-feature .post-thumb { aspect-ratio: 16 / 11; }
+.post-feature .body { display: flex; flex-direction: column; align-items: flex-start; gap: .9rem; padding: 1.5rem 1.5rem 1.5rem 0; }
+.post-feature .post-title { margin: 0; font-size: clamp(1.6rem, 2.8vw, 2.15rem); line-height: 1.15; font-weight: 800; letter-spacing: -.015em; color: #F4FAFC; text-wrap: pretty; }
+.post-feature p { margin: 0; max-width: 46ch; line-height: 1.6; color: #A5C0CA; }
+.post-feature .read { margin-top: .4rem; font-size: .85rem; font-weight: 800; letter-spacing: .04em; color: #8FD8E8; }
+
+.blog-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin: 3.5rem 0 1.5rem; }
+.blog-bar h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #F4FAFC; }
+.sl-search { position: relative; display: flex; align-items: center; width: min(320px, 100%); }
+.sl-search input { width: 100%; min-height: 44px; padding: 0 1rem 0 2.6rem; border-radius: 999px; font: inherit; font-size: .92rem; color: #F4FAFC; background: rgb(2 10 16 / .6); border: 1px solid rgb(143 216 232 / .46); /* B5: was / .22, 1.6:1 (field boundary needs 3:1) */ -webkit-appearance: none; appearance: none; transition: border-color .25s ease, box-shadow .35s ease; }
+.sl-search input::placeholder { color: #6F8F99; }
+.sl-search input:focus { outline: none; border-color: #8FD8E8; box-shadow: 0 0 0 4px rgb(143 216 232 / .14), 0 0 26px -6px rgb(143 216 232 / .5); }
+.sl-search::before { content: ""; position: absolute; left: 1rem; width: 12px; height: 12px; border: 1.6px solid #8FD8E8; border-radius: 50%; box-sizing: content-box; }
+.sl-search::after { content: ""; position: absolute; left: 1.95rem; top: 60%; width: 6px; height: 1.6px; background: #8FD8E8; transform: rotate(45deg); }
+.sl-none { display: none; flex-direction: column; align-items: flex-start; gap: .7rem; padding: 2.5rem 0 1rem; }
+.sl-none.is-on { display: flex; }
+.sl-none strong { font-size: 1.15rem; font-weight: 800; color: #F4FAFC; }
+.sl-none span { color: #A5C0CA; }
+
+.post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; }
+.post-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.post-card { display: flex; flex-direction: column; padding: .6rem; border-radius: 1.75rem; }
+.post-card .body { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: .6rem; padding: 1.1rem .9rem .95rem; }
+.post-card h3 { margin: 0; font-size: 1.15rem; line-height: 1.3; font-weight: 800; letter-spacing: -.005em; color: #F4FAFC; text-wrap: pretty; }
+.post-card p { margin: 0; font-size: .9rem; line-height: 1.55; color: #A5C0CA; }
+.post-card .post-byline { margin-top: auto; padding-top: .5rem; }
+
+/* ---------- the article ---------- */
+.bl .bl-article { padding-top: 1.5rem; }
+.post-body { max-width: 46rem; margin: 0 auto; }
+.post-body figure { margin: 0 0 2.6rem; }
+.post-body figure[hidden] { display: none; }
+.post-body figure .post-thumb { aspect-ratio: 16 / 9; border-radius: 1.25rem; box-shadow: 0 40px 90px -50px rgb(0 0 0 / .9), 0 0 0 1px rgb(143 216 232 / .14); }
+[data-body] { max-width: 42rem; margin-inline: auto; font-size: 1.12rem; line-height: 1.78; color: #C6DAE0; }
+[data-body] p { margin: 0 0 1.35em; max-width: 68ch; font-size: 1.08rem; line-height: 1.8; color: #C6DAE0; }
+[data-body] .lead, [data-body] p:first-child { font-size: 1.24rem; line-height: 1.8; color: #E2EFF3; }
+[data-body] a { color: #8FD8E8; font-weight: 700; text-decoration: underline; text-decoration-color: rgb(143 216 232 / .4); text-underline-offset: 3px; }
+[data-body] strong { color: #F4FAFC; }
+.bl-retry { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+.post-end { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 3rem; padding-top: 1.75rem; border-top: 1px solid rgb(143 216 232 / .14); }
+.post-end[hidden] { display: none; }
+.post-end .who { display: flex; align-items: center; gap: .85rem; }
+.post-end .who img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: center 22%; }
+.post-end .who strong { display: block; font-size: .95rem; color: #F4FAFC; }
+.post-end .who span { font-size: .82rem; color: #8FB3BE; }
+
+.section-head { max-width: 62ch; margin-bottom: 2.5rem; }
+.section-head h2 { margin: .6rem 0 .75rem; font-size: clamp(1.6rem, 3vw, 2.15rem); font-weight: 800; letter-spacing: -.01em; color: #F4FAFC; }
+
+/* ---------- write to us ---------- */
+.bl .contact-card { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 2.5rem; border-radius: 1.75rem; background: rgb(8 22 30 / .6); border: 1px solid rgb(143 216 232 / .14); box-shadow: 0 2px 10px rgb(0 0 0 / .05); }
+.bl .contact-card .label { margin-bottom: .4rem; font-size: .78rem; font-weight: 700; letter-spacing: .1em; color: #8FB3BE; }
+.bl .contact-card .email { font-size: 1.3rem; font-weight: 800; color: #F4FAFC; text-decoration: none; }
+.bl .contact-card .email:hover, .bl .contact-card .email:focus-visible { text-decoration: underline; }
+.bl .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.9rem; }
+
+/* ---------- phones ---------- */
+@media (max-width: 760px) {
+  .bl .hero { padding: 2rem 0 1.5rem; }
+  .hero-lede { margin-bottom: 2.5rem; font-size: 1.06rem; }
+  .bl .hero--post { padding: 1.8rem 0 1.5rem; }
+  .hero--post .hero-h1 { font-size: 2rem; }
+  [data-body] { font-size: 1.04rem; line-height: 1.72; }
+  [data-body] .lead, [data-body] p:first-child { font-size: 1.12rem; }
+  .post-feature { grid-template-columns: 1fr; gap: 0; }
+  .post-feature .body { padding: 1.1rem 1.2rem 1.3rem; }
+  #posts .post-grid { gap: .9rem; } /* the index only; the article's related grid keeps 1.25rem */
+  /* BO1 card fix (audit 8b): the thumbnail fills its 96px track and the row
+     height (width: 100%; height: 100%) instead of growing a square from the
+     row height and painting over the title */
+  .post-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); }
+  .post-card .post-thumb { aspect-ratio: auto; width: 100%; height: 100%; }
+  .post-card .body { padding: .85rem 1rem; }
+  .post-card .body p { display: none; }
+  #posts .post-card h3 { font-size: 1rem; }
+  .sl-search { width: 100%; }
+  .bl .contact-card { flex-direction: column; align-items: flex-start; }
+  .bl .contact-card .btn { width: 100%; justify-content: center; }
+  .bl .hero-actions { gap: 1.4rem; }
+}
+@media (max-width: 640px) { .post-grid, .post-grid--two { grid-template-columns: 1fr; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .post-thumb img { transition: none; }
+  .post-feature:hover .post-thumb img, .post-card:hover .post-thumb img { transform: none; }
+}
+@media print { .sl-progress, .sl-share { display: none !important; } }
+
+/* ---------- moved here from atraxia.css in B5 (Blog and article only) ---------- */
+/* Blog and article: the lighter landing scene (blog-scene.js) on deep space.
+   The gradient shows only until the scene's canvas has drawn. */
+html.sl-blog .sl-sky { background: radial-gradient(54% 40% at 50% 8%, rgb(79 163 176 / 0.16), transparent 72%), radial-gradient(40% 36% at 86% 70%, rgb(104 84 178 / 0.10), transparent 72%), linear-gradient(180deg, #02060C, #030B13 60%, #02070D); }
+html.sl-post .sl-sky { background: radial-gradient(50% 34% at 50% 0%, rgb(79 163 176 / 0.12), transparent 72%), linear-gradient(180deg, #02060C, #02080F); }
+html.sc-live .sl-sky { background: #02060C; }
+.sl-sky .sc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+html.sl-post .sl-sky .sc-canvas { opacity: .55; }
+/* still fallback: no WebGL, or the scene did not start within 10s */
+html.sc-still .sl-sky {
+  background: #02060C url("../../atraxia/blog-scene-still.jpg") center / cover no-repeat;
+  background-image: image-set(url("../../atraxia/blog-scene-still.avif") type("image/avif"), url("../../atraxia/blog-scene-still.webp") type("image/webp"), url("../../atraxia/blog-scene-still.jpg") type("image/jpeg"));
+}
+html.sl-post.sc-still .sl-sky {
+  background-image: linear-gradient(rgb(2 6 12 / .45), rgb(2 6 12 / .45)), url("../../atraxia/blog-scene-still.jpg");
+  background-image: linear-gradient(rgb(2 6 12 / .45), rgb(2 6 12 / .45)), image-set(url("../../atraxia/blog-scene-still.avif") type("image/avif"), url("../../atraxia/blog-scene-still.webp") type("image/webp"), url("../../atraxia/blog-scene-still.jpg") type("image/jpeg"));
+}
+html.sc-still .sl-sky .sc-canvas { display: none; }
+

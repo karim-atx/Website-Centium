@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The Atraxia hub's own sitemap. Centium has its own at
-     https://centium.atraxia.org/sitemap.xml (source: public/sitemap.xml) —
-     each site lists only its own URLs. -->
+<!-- The Atraxia site's own sitemap. Centium has its own at
+     https://centium.atraxia.org/sitemap.xml (source: public/sitemap.xml);
+     each site lists only its own URLs. The URLs are the ones the Worker
+     serves (deploy/cloudflare-worker.js): /contact and /blog are pretty
+     routes, Legal keeps its file name. Posts are not listed (crawlers reach
+     them from /blog), so there is no fourth copy of the posts list to sync. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://atraxia.org/</loc></url>
+  <url><loc>https://atraxia.org/blog</loc></url>
+  <url><loc>https://atraxia.org/contact</loc></url>
   <url><loc>https://atraxia.org/legal.html</loc></url>
 </urlset>
