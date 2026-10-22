@@ -1,36 +1,40 @@
 // Market + Share 3.0 · W2 · points, pure (C-MO.4.1 hero, C-MO.4.7 history,
 // C-MO.4.8 how to earn). Every figure arrives from the server
-// (my_points_summary, points_ledger / my_points_ledger, reward_catalog); this
-// file only arranges and words it. Strings and colours are the Client Explore
-// Screens script's (`TV`, `LEDGER`, `todayLine`, `daily`, `streaks`).
+// (my_points_summary, my_points_ledger, platform_settings, reward_catalog);
+// this file only arranges it. The ledger's row words are the server's
+// (ref_label, description); the other strings and colours are the Client
+// Explore Screens script's (`TV`, `LEDGER`, `todayLine`, `daily`, `streaks`).
 
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
 
 // ---------------------------------------------------------------------------
-// The summary's DB1 extras
+// The summary's today and expiring figures
 
 /**
- * my_points_summary()'s DB1 columns (PLAN §2.2 DB1: earned_today, daily_cap,
- * expiring_soon, expiring_soon_date, appended at the end). Null until the
- * stage lands (the columns are absent), and the hero then leaves out the
+ * my_points_summary()'s last four columns (Database 20261210300000):
+ * earned_today (LOGGING points today, net of reversals, in the member's
+ * timezone; achievements and streak milestones excluded), daily_cap (from
+ * platform_settings), expiring_soon and expiring_soon_date (both null or both
+ * set). A row without them parses to null, and the hero then leaves out the
  * "N of 30 today" line and the expiring row rather than guess.
  */
 export interface PointsExtras {
   earnedToday: number;
   dailyCap: number;
   expiringSoon: number;
-  /** YYYY-MM-DD, or null when nothing expires within 30 days. */
+  /** YYYY-MM-DD, or null when nothing lapses within the notice window. */
   expiringSoonDate: string | null;
 }
 
 export function parsePointsExtras(row: Record<string, unknown> | null | undefined): PointsExtras | null {
-  if (!row || !("earned_today" in row)) return null;
+  if (!row) return null;
   const earned = num(row.earned_today);
-  if (earned === null) return null;
+  const cap = num(row.daily_cap);
+  if (earned === null || cap === null) return null;
   return {
     earnedToday: earned,
-    dailyCap: num(row.daily_cap) ?? 30,
+    dailyCap: cap,
     expiringSoon: num(row.expiring_soon) ?? 0,
     expiringSoonDate: str(row.expiring_soon_date),
   };
@@ -38,7 +42,7 @@ export function parsePointsExtras(row: Record<string, unknown> | null | undefine
 
 /** "20 of 30 today", or at the cap "30 of 30 today · limit reached" (homeCap). */
 export function todayLine(x: Pick<PointsExtras, "earnedToday" | "dailyCap">): string {
-  const cap = x.dailyCap > 0 ? x.dailyCap : 30;
+  const cap = Math.max(0, Math.round(x.dailyCap));
   const earned = Math.max(0, Math.min(cap, Math.round(x.earnedToday)));
   return earned >= cap ? `${cap} of ${cap} today · limit reached` : `${earned} of ${cap} today`;
 }
@@ -103,18 +107,18 @@ export function nextRewardLine(
 
 export interface LedgerEntry {
   id: string;
-  /** points_source: log_food, log_workout, log_metric, water_goal, achievement, streak, referral, redemption, expiry, reversal, manual_adjustment, other. */
+  /** points_source: log_food, log_workout, log_metric, water_goal, streak_milestone, achievement, streak, referral, redemption, expiry, reversal, manual_adjustment. */
   source: string;
   amount: number;
-  /** points_ledger.description (an achievement's key on achievement rows). */
+  /** The server's words for the row ("Daily logging", "Reversed · Logging"); an achievement's key on achievement rows. */
   description: string | null;
-  /** DB1 ref_label: the board's sub-line source ("Redeemed at Outline Activewear"). */
+  /** my_points_ledger ref_label: the display word for the row's kind ("Food log", "Achievement", "Reward"); a reversal carries the kind it reversed. */
   refLabel: string | null;
-  /** DB1 day (the user's local day); null on rows from before DB1. */
+  /** The member's local day the award belongs to; null for sources that aren't day-scoped. */
   day: string | null;
   createdAt: string;
   expiresAt: string | null;
-  /** A reversal row's logging source (DB1); null elsewhere or before DB1. */
+  /** On a reversal row, the logging source it reversed; null elsewhere. */
   reversedSource: string | null;
 }
 
@@ -140,16 +144,6 @@ export function parseLedgerRows(data: unknown): LedgerEntry[] {
   });
 }
 
-const LOGGING: Record<string, string> = {
-  log_food: "Food logged",
-  log_workout: "Workout logged",
-  log_metric: "Health metric logged",
-  water_goal: "Water goal reached",
-};
-
-/** A reversed log, by its source: "Workout deleted the same day". */
-const DELETED: Record<string, string> = { log_food: "Food log", log_workout: "Workout", log_metric: "Health metric", water_goal: "Water log" };
-
 /** streak_7 → 7 (the streak achievements are the milestones, D-08). */
 export function streakDays(key: string | null): number | null {
   const m = key ? /^streak_(\d+)$/.exec(key) : null;
@@ -157,37 +151,49 @@ export function streakDays(key: string | null): number | null {
 }
 
 /**
- * A row's two lines (`l.src` 13.5 / 700, `l.kind` 11 --faint), as the board's
- * LEDGER: "Water goal reached" / "Earned · Logging"; "7-day streak" /
- * "Earned · Streak"; "First full day" / "Earned · Achievement"; "Redeemed at
- * Outline Activewear" / "Redeemed · 15% off"; "Points expired" / "Expired";
- * "Workout deleted the same day" / "Reversed · Logging".
- * `achievementTitle` turns an achievement key into its title (my_achievements).
+ * A row's two lines (`l.src` 13.5 / 700, `l.kind` 11 --faint). The words are
+ * the server's (my_points_ledger, Database 20261210300000), never a client
+ * mapping of `source`:
+ * - an achievement row: its title (my_achievements, by the key in
+ *   `description`; "7-day streak" for a streak rung the list doesn't name)
+ *   over "Earned · {ref_label}";
+ * - every other row: `ref_label` ("Food log", "Water goal", "Referral",
+ *   "Reward", "Expired"; a reversal carries the kind it reversed) over
+ *   `description` ("Daily logging", "Reversed · Logging", "Referral redeemed
+ *   by a new member"), or "Earned" / "Spent" by the sign when it has none.
+ * `achievementTitle` turns an achievement key into its title.
  */
 export function ledgerLines(e: LedgerEntry, achievementTitle: (key: string) => string | null): { title: string; kind: string } {
-  if (e.source in LOGGING) return { title: e.refLabel ?? LOGGING[e.source], kind: "Earned · Logging" };
-  switch (e.source) {
-    case "achievement": {
-      const days = streakDays(e.description);
-      if (days !== null) return { title: e.refLabel ?? `${days}-day streak`, kind: "Earned · Streak" };
-      return { title: e.refLabel ?? (e.description ? achievementTitle(e.description) : null) ?? "Achievement unlocked", kind: "Earned · Achievement" };
-    }
-    case "streak":
-    case "streak_milestone":
-      return { title: e.refLabel ?? e.description ?? "Streak milestone", kind: "Earned · Streak" };
-    case "referral":
-      return { title: e.refLabel ?? "Referral bonus", kind: "Earned · Referral" };
-    case "redemption":
-      return { title: e.refLabel ?? "Redeemed for a reward", kind: e.description ? `Redeemed · ${e.description}` : "Redeemed" };
-    case "expiry":
-      return { title: "Points expired", kind: e.description ? `Expired · ${e.description}` : "Expired" };
-    case "reversal":
-      return { title: e.refLabel ?? e.description ?? `${DELETED[e.reversedSource ?? ""] ?? "Log"} deleted the same day`, kind: "Reversed · Logging" };
-    case "manual_adjustment":
-      return { title: e.refLabel ?? e.description ?? "Adjustment", kind: e.amount > 0 ? "Added by Centium" : "Removed by Centium" };
-    default:
-      return { title: e.refLabel ?? e.description ?? "Points", kind: e.amount > 0 ? "Earned" : "Spent" };
+  const label = e.refLabel ?? "Points";
+  if (e.source === "achievement") {
+    const days = streakDays(e.description);
+    const title = (e.description ? achievementTitle(e.description) : null) ?? (days !== null ? `${days}-day streak` : label);
+    return { title, kind: `Earned · ${label}` };
   }
+  return { title: label, kind: e.description ?? (e.amount > 0 ? "Earned" : "Spent") };
+}
+
+/**
+ * The cursor for the next my_points_ledger page.
+ *
+ * my_points_ledger pages on `created_at < p_before` alone, and rows written in
+ * one transaction share a created_at (evaluate_achievements awards several
+ * achievements in one statement: every local fixture's rows are ties). An
+ * exclusive cursor at the oldest row's time would skip the rest of its ties,
+ * so the cursor reaches one millisecond past it (JS times are milliseconds;
+ * the column is microseconds) and names the rows already shown inside that
+ * millisecond, which the next page asks for on top of its limit and drops.
+ */
+export interface LedgerCursor {
+  before: string;
+  seen: string[];
+}
+
+export function ledgerCursor(entries: readonly LedgerEntry[]): LedgerCursor | null {
+  if (entries.length === 0) return null;
+  const ms = Math.min(...entries.map((e) => Date.parse(e.createdAt)));
+  if (!Number.isFinite(ms)) return null;
+  return { before: new Date(ms + 1).toISOString(), seen: entries.filter((e) => Date.parse(e.createdAt) === ms).map((e) => e.id) };
 }
 
 /** "+5" / "−800" (a true minus, U+2212, as the board). */
@@ -196,7 +202,7 @@ export const signedPoints = (n: number): string => `${n > 0 ? "+" : "−"}${Math
 /** The amount's ink (`l.ink`): earned #4F8F8A, spent / reversed / expired #7D67D9. */
 export const amountTone = (n: number): "earned" | "spent" => (n > 0 ? "earned" : "spent");
 
-/** The row's local day: DB1 `day`, else the created_at's local date. */
+/** The row's local day: the server's `day`, else the created_at's local date. */
 export function entryDay(e: LedgerEntry): string {
   if (e.day) return e.day;
   const d = new Date(e.createdAt);
@@ -248,8 +254,8 @@ export function earnedToday(entries: readonly LedgerEntry[], now: Date = new Dat
   const net = new Map<string, number>();
   for (const e of entries) {
     if (entryDay(e) !== today) continue;
-    const src = e.source === "reversal" ? e.reversedSource : e.source;
-    if (src && src in LOGGING) net.set(src, (net.get(src) ?? 0) + e.amount);
+    const src = e.reversedSource ?? e.source;
+    if (DAILY_SOURCES.has(src)) net.set(src, (net.get(src) ?? 0) + e.amount);
   }
   return new Set([...net].filter(([, v]) => v > 0).map(([k]) => k));
 }
@@ -257,13 +263,40 @@ export function earnedToday(entries: readonly LedgerEntry[], now: Date = new Dat
 // ---------------------------------------------------------------------------
 // How to earn (C-MO.4.8): the board's rules, HANDOVER §9.
 
-/** `daily`: [source, label, points]. */
-export const DAILY_RULES: readonly [string, string, number][] = [
-  ["log_food", "Food logged", 10],
-  ["log_workout", "Workout logged", 10],
-  ["log_metric", "Health metric logged or synced", 5],
-  ["water_goal", "Water goal reached", 5],
+/** `daily`: [source, label]. The board's labels; the points are platform_settings' (PointsRules). */
+export const DAILY_RULES: readonly [string, string][] = [
+  ["log_food", "Food logged"],
+  ["log_workout", "Workout logged"],
+  ["log_metric", "Health metric logged or synced"],
+  ["water_goal", "Water goal reached"],
 ];
+
+const DAILY_SOURCES: ReadonlySet<string> = new Set(DAILY_RULES.map(([s]) => s));
+
+/**
+ * The rules How to earn states, as the server pays them: platform_settings
+ * (Database 20261210100000) points_value_food / _workout / _metric /
+ * _water_goal, points_daily_cap and points_expiry_months, the columns
+ * points_award_value and points_recount_day read when they award.
+ */
+export interface PointsRules {
+  /** Points per DAILY_RULES source. */
+  values: Record<string, number>;
+  dailyCap: number;
+  expiryMonths: number;
+}
+
+export function parsePointsRules(row: Record<string, unknown> | null | undefined): PointsRules | null {
+  if (!row) return null;
+  const food = num(row.points_value_food);
+  const workout = num(row.points_value_workout);
+  const metric = num(row.points_value_metric);
+  const water = num(row.points_value_water_goal);
+  const cap = num(row.points_daily_cap);
+  const months = num(row.points_expiry_months);
+  if (food === null || workout === null || metric === null || water === null || cap === null || months === null) return null;
+  return { values: { log_food: food, log_workout: workout, log_metric: metric, water_goal: water }, dailyCap: cap, expiryMonths: months };
+}
 
 /** The streak milestones (D-08: the streak achievements streak_7 / 30 / 100 / 365). */
 export const STREAK_MILESTONES: readonly number[] = [7, 30, 100, 365];

@@ -59,8 +59,8 @@ export interface PointsSummary {
   otherPoints: number;
   achievementsEarned: number;
   /**
-   * Market + Share 3.0 (W2): the DB1 columns (earned today, the daily cap,
-   * expiring soon). null until DB1 lands. awaiting DB stage DB1
+   * Market + Share 3.0: earned today, the daily cap and what is expiring soon
+   * (Database 20261210300000). null when the row lacks them.
    */
   extras?: PointsExtras | null;
 }

@@ -8,7 +8,7 @@ import { PointsFigure } from "../../components/market/PointsFigure";
 import { MarketError, MarketSkeleton } from "../../components/market/MarketStates";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
-import { fetchLedger, groupLedger, ledgerLines, signedPoints, amountTone, type LedgerEntry } from "../../services/points";
+import { fetchLedger, groupLedger, ledgerCursor, ledgerLines, signedPoints, amountTone, type LedgerEntry } from "../../services/points";
 import { BackTitle } from "./BackTitle";
 
 // Market + Share 3.0 · W2 · Points history (C-MO.4.7 `history`,
@@ -32,8 +32,9 @@ import { BackTitle } from "./BackTitle";
 // - the empty state (historyEmpty): padding 56 24 0, gap 10: the 56 tile
 //   radius 18 #EEEAF8 with the clock 24 (stroke 1.9) #7D67D9; "Your points
 //   activity will appear here." 14 / 20 --ink2, max 240.
-// The ledger is fetchLedger (awaiting DB stage DB1 my_points_ledger; the
-// points_ledger table until then), the balance and tier my_points_summary
+// The ledger is fetchLedger (my_points_ledger, keyset-paged on created_at:
+// "Load more" passes ledgerCursor of every row shown), the row words its
+// ref_label and description, the balance and tier my_points_summary
 // (AppContext), achievement titles my_achievements (AppContext).
 
 const PAGE = 50;
@@ -74,8 +75,7 @@ export default function PointsHistoryPage() {
     if (!entries || entries.length === 0 || loadingMore) return;
     setLoadingMore(true);
     setMoreFailed(false);
-    const oldest = entries.reduce((a, e) => (e.createdAt < a ? e.createdAt : a), entries[0].createdAt);
-    const r = await fetchLedger(oldest, PAGE);
+    const r = await fetchLedger(ledgerCursor(entries), PAGE);
     setLoadingMore(false);
     if (!r.ok) return setMoreFailed(true);
     const seen = new Set(entries.map((e) => e.id));

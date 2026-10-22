@@ -24,8 +24,9 @@ import { fetchRewardCatalog, type CatalogOffer } from "../../services/offers";
 // padding 8 10, --cautionbg, a 6 --caution dot, 11.5 / 16 700 --caution);
 // the How to earn / History pills (margin-top 12, two columns gap 8; 36
 // tall, radius 10, tier pill fill, 0.5px tier border, 12.5 / 700 tier TEXT
-// ink). Every figure is the server's: my_points_summary (balance, tier, the
-// DB1 extras) and reward_catalog (the next reward, DB2).
+// ink). Every figure is the server's: my_points_summary (balance, tier,
+// earned_today of daily_cap, expiring_soon on expiring_soon_date) and
+// reward_catalog (the next reward, DB2).
 //
 // Kept from the old card (PLAN §3.1): the by-source breakdown moved to Points
 // history, the tier disc rail to How to earn "Tiers", the tap-through to
@@ -108,7 +109,6 @@ export function PointsHero() {
       <style>{FOCUS_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 800, textTransform: "uppercase", letterSpacing: "1.4px", color: t.text }}>Points</span>
-        {/* awaiting DB stage DB1: earned_today / daily_cap. */}
         {extras ? <span style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 700, color: t.text }}>{todayLine(extras)}</span> : null}
       </div>
       <div style={{ marginTop: 2 }}>
@@ -121,7 +121,6 @@ export function PointsHero() {
       <div aria-hidden style={{ height: 5, borderRadius: 999, overflow: "hidden", marginTop: 8, background: t.track }}>
         <div style={{ height: "100%", width: `${next.pct}%`, borderRadius: 999, background: t.ink, transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)" }} />
       </div>
-      {/* awaiting DB stage DB1: expiring_soon / expiring_soon_date. */}
       {expiring ? (
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, borderRadius: 12, padding: "8px 10px", background: m.cautionbg }}>
           <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: m.caution, flexShrink: 0 }} />

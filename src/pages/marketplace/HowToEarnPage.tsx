@@ -7,7 +7,8 @@ import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette, tierRank, tierStyle, type TierStyle } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { FOCUS_CSS } from "../../components/market/usePress";
-import { DAILY_RULES, STREAK_MILESTONES, earnedToday, fetchLedger, nextMilestone, todayLine } from "../../services/points";
+import { MarketError } from "../../components/market/MarketStates";
+import { DAILY_RULES, STREAK_MILESTONES, earnedToday, fetchLedger, fetchPointsRules, nextMilestone, todayLine, type PointsRules } from "../../services/points";
 import { BackTitle } from "./BackTitle";
 import { pickAchievements, streakNow } from "./howToEarnModel";
 
@@ -24,14 +25,22 @@ import { pickAchievements, streakNow } from "./howToEarnModel";
 //     (padding 10 0, gap 12, 0.5px --div): the 22 tick circle (--good with a
 //     white 12 tick, stroke 3, when today's ledger has the source; else a
 //     1.5px --border ring), the label 13 / 600, "+10" 13 / 800; the note
-//     11.5 / 17 --faint (margin-top 10). Right: "20 of 30 today" (DB1 extras).
+//     11.5 / 17 --faint (margin-top 10). Right: "20 of 30 today"
+//     (my_points_summary earned_today / daily_cap). The points, the cap in
+//     the note and the months in the closing note are platform_settings'
+//     (fetchPointsRules: points_value_*, points_daily_cap,
+//     points_expiry_months), the values the server awards with; until they
+//     load the figures are blank, and a failed read shows the error strip.
 //   - Streak milestones (body padding 12 14): "Next: 100 days" 12.5 / 700 and
 //     "68 days to go · +750" --faint; the 5 bar (margin-top 8, --tiertrack,
 //     fill the tier ink); the 4-column grid (margin-top 12, gap 6): radius
 //     12, padding 8 0, reached = --tierpill + the tier's text ink, else
 //     --soft / --ink, the days 12 / 800 and the points 11 --faint; the note.
 //     Right: "{n}-day streak". The points are the live achievements'
-//     (streak_7 / 30 / 100 / 365), so the page never disagrees with them.
+//     (streak_7 / 30 / 100 / 365: my_achievements points), which is what the
+//     server pays today. Database 20261210000000 names a streak_milestone
+//     source at 50 / 200 / 750 / 3,000, but no migration writes it or stores
+//     those amounts yet, so they aren't shown.
 //   - Achievements (body padding 4 14 8): rows (padding 10 0, gap 12): the
 //     title 13 / 600 (--ink unlocked, --ink2 locked), the chip 11 / 700
 //     radius 999 padding 2 8 (Unlocked --tealbg / --tealink, Locked --pale /
@@ -42,7 +51,8 @@ import { pickAchievements, streakNow } from "./howToEarnModel";
 //   fill, the name 13 / 700, "From 1,000 points" 11.5 --faint, the current
 //   one marked "Your tier" in its pill.
 // - the note "Points expire 12 months after they are earned. Points have no
-//   cash value." 11.5 / 17 --faint (margin-top 14).
+//   cash value." 11.5 / 17 --faint (margin-top 14); the months are
+//   points_expiry_months.
 
 export default function HowToEarnPage() {
   const dark = useIsDark();
@@ -58,8 +68,8 @@ export default function HowToEarnPage() {
   const rank = tierRank(pointTiers, pointsSummary?.tierName);
   const t = tierStyle(rank, dark);
 
-  // Today's ticks: the ledger's newest page (awaiting DB stage DB1: the
-  // logging sources only exist once DB1 lands; until then nothing ticks).
+  // Today's ticks: my_points_ledger's newest page, the logging sources with
+  // a net award on today's day (a same-day reversal cancels its kind).
   const [ticks, setTicks] = useState<Set<string>>(new Set());
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +80,22 @@ export default function HowToEarnPage() {
       cancelled = true;
     };
   }, []);
+
+  // The values the server awards with (platform_settings).
+  const [rules, setRules] = useState<PointsRules | null>(null);
+  const [rulesFailed, setRulesFailed] = useState(false);
+  const [rulesTry, setRulesTry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPointsRules().then((r) => {
+      if (cancelled) return;
+      if (r.ok) setRules(r.value);
+      else setRulesFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [rulesTry]);
 
   const streak = streakNow(achievements, streaks);
   const milestonePoints = (days: number) => achievements?.find((a) => a.key === `streak_${days}`)?.points ?? null;
@@ -83,8 +109,9 @@ export default function HowToEarnPage() {
       <BackTitle title="How to earn" parent="/app/marketplace" />
 
       <Section title="Daily logging" aside={pointsSummary?.extras ? todayLine(pointsSummary.extras) : null} t={t} first bodyPadding="4px 14px 12px">
-        {DAILY_RULES.map(([source, label, pts]) => {
+        {DAILY_RULES.map(([source, label]) => {
           const on = ticks.has(source);
+          const pts = rules?.values[source];
           return (
             <div key={source} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `0.5px solid ${m.div}` }}>
               <span
@@ -97,11 +124,17 @@ export default function HowToEarnPage() {
                 </svg>
               </span>
               <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 600 }}>{label}</span>
-              <span style={{ fontSize: textPx(13), fontWeight: 800 }}>+{pts}</span>
+              <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{pts !== undefined ? `+${pts.toLocaleString("en-US")}` : ""}</span>
             </div>
           );
         })}
-        <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>Each action counts once a day, up to 30 points. Only entries logged for today earn points.</p>
+        {rulesFailed ? <MarketError thing="the points values" onRetry={() => {
+              setRulesFailed(false);
+              setRulesTry((x) => x + 1);
+            }} style={{ marginTop: 10 }} /> : null}
+        <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>
+          {rules ? `Each action counts once a day, up to ${rules.dailyCap.toLocaleString("en-US")} points. ` : "Each action counts once a day. "}Only entries logged for today earn points.
+        </p>
       </Section>
 
       <Section title="Streak milestones" aside={streak !== null ? `${streak}-day streak` : null} t={t} bodyPadding="12px 14px">
@@ -189,7 +222,9 @@ export default function HowToEarnPage() {
         </Section>
       ) : null}
 
-      <p style={{ margin: "14px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>Points expire 12 months after they are earned. Points have no cash value.</p>
+      <p style={{ margin: "14px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>
+        {rules ? `Points expire ${rules.expiryMonths} ${rules.expiryMonths === 1 ? "month" : "months"} after they are earned. ` : ""}Points have no cash value.
+      </p>
     </div>
   );
 }
