@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine, priceText, sectionOf } from "./showcaseModel.ts";
+import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine, priceText } from "./showcaseModel.ts";
 
 test("caps header and prices as the board writes them", () => {
   assert.equal(itemsHeader(5), "5 items · drag to reorder");
@@ -30,8 +30,6 @@ test("store sections: alphabetical, Other last, list order kept", () => {
       ["Other", ["b"]],
     ]
   );
-  assert.equal(sectionOf(null), "Other");
-  assert.equal(sectionOf("Tops"), "Tops");
 });
 
 test("moveTo clamps and leaves the list alone for a no-op", () => {

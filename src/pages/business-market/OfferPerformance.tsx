@@ -158,7 +158,7 @@ function HeaderRow({ choices, offerId, range, onOffer, onRange }: { choices: Off
         aria-expanded={open}
         aria-label={`Offer: ${label}`}
         onClick={() => setOpen(true)}
-        className="market-focus"
+        className="market-focus hit"
         style={{ flex: 1, minWidth: 0, height: 42, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, padding: "0 10px 0 12px", fontFamily: "inherit", fontSize: px(12.5), fontWeight: 700, color: m.ink, cursor: "pointer", lineHeight: "normal" }}
       >
         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
@@ -257,7 +257,7 @@ function EmptyCard({ offer, today }: { offer: OfferChoice | null; today: string 
         placeholder={`Charts start on ${chartDate(offer.startsOn!)}`}
       />
     );
-  return <MarketEmptyCard title="No data yet" body="Views, redemptions and points show here once members can see your offers." placeholder="Charts start with your first offer view" />;
+  return <MarketEmptyCard title="No data yet" body="Views, redemptions and points show here once members can see your offers." placeholder="Charts start with your first offer view" placeholderContentBox />;
 }
 
 /**

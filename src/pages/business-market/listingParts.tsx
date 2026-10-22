@@ -50,7 +50,7 @@ export function CapsLabel({ children, style, as = "h2" }: { children: React.Reac
   return <Tag style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: "normal", margin: 0, ...style }}>{children}</Tag>;
 }
 
-/** The board's outlined button ("Add item"): min-height 40, radius 12, 1px --border, 12.5 / 800 --pdark, padding 0 14, gap 6. */
+/** The board's outlined button ("Add item", "Add service", "Add plan"): 42 tall overall (the board's min-height 40 + its 1px --border; W3 lead decision), radius 12, 12.5 / 800 --pdark, padding 0 14, gap 6. Market screens only. */
 export function OutlineButton({ children, onClick, disabled, style, ariaLabel }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; style?: React.CSSProperties; ariaLabel?: string }) {
   const m = useMarketColors();
   return (
@@ -63,7 +63,7 @@ export function OutlineButton({ children, onClick, disabled, style, ariaLabel }:
         aria-label={ariaLabel}
         className="tap market-focus"
         style={{
-          minHeight: 40,
+          minHeight: 42,
           borderRadius: 12,
           border: `1px solid ${m.border}`,
           background: "transparent",
@@ -289,12 +289,15 @@ export function CentredDialog({
   onAction,
   onCancel,
   children,
+  width = 320,
 }: {
   open: boolean;
   title: string;
   body?: React.ReactNode;
   cancel: string;
   action: string;
+  /** The card width when a board draws other than 320 (P-MA.2 delete: 330). */
+  width?: number;
   tone?: "destructive" | "primary";
   busy?: boolean;
   error?: string | null;
@@ -340,7 +343,7 @@ export function CentredDialog({
         tabIndex={-1}
         style={{
           position: "relative",
-          width: 320,
+          width,
           maxWidth: "100%",
           boxSizing: "border-box",
           padding: 24,

@@ -208,33 +208,6 @@ export function templateAllowed(t: ClientTemplate, locks: ShareLocks): boolean {
   return true;
 }
 
-/** The payload a card is drawn from (what is shared): only the switched-on, allowed stats. */
-export interface ClientCardPayload {
-  template: ClientTemplate;
-  format: ClientFormat;
-  background: ClientBackground;
-  eyebrow: string;
-  date: string;
-  big: string;
-  unit: string;
-  subject: string;
-  stats: { key: string; value: string; label: string }[];
-}
-
-export function clientPayload(spec: ClientCardSpec, format: ClientFormat, background: ClientBackground, on: ReadonlySet<string>, locks: ShareLocks): ClientCardPayload {
-  return {
-    template: spec.template,
-    format,
-    background: format === "sticker" ? "B" : background,
-    eyebrow: spec.eyebrow,
-    date: spec.date,
-    big: spec.big,
-    unit: spec.unit,
-    subject: spec.subject,
-    stats: cardStats(spec, on, locks).map(({ key, value, label }) => ({ key, value, label })),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Formatting
 

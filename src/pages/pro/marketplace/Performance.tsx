@@ -88,7 +88,7 @@ export function PerformanceTab() {
   let body: React.ReactNode;
   if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={5} gap={12} label="Loading your performance" />;
   else if (load.state === "error") body = <MarketError thing="your performance" onRetry={retry} />;
-  else if (empty || load.state !== "ok") body = <MarketEmptyCard title="No data yet" body="Profile views, hire requests and redemptions show here once your listing is visible." placeholder="Charts start with your first profile view" />;
+  else if (empty || load.state !== "ok") body = <MarketEmptyCard title="No data yet" body="Profile views, hire requests and redemptions show here once your listing is visible." placeholder="Charts start with your first profile view" placeholderContentBox />;
   else {
     const s = load.series;
     const views = s.profile_views;

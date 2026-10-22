@@ -75,7 +75,7 @@ export function PointsHero() {
     <button
       type="button"
       onClick={() => navigate(to)}
-      className="market-focus"
+      className="market-focus hit"
       {...press.handlers}
       style={{
         height: 36,

@@ -684,7 +684,7 @@ export function ClassPage({ classId }: { classId: string }) {
       </h1>
       <Link
         to={venueTo}
-        className="market-focus"
+        className="market-focus hit"
         style={{
           display: "block",
           width: "fit-content",

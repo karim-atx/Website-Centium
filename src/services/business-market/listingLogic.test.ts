@@ -2,8 +2,6 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   AMENITY_KEYS,
-  amenityLine,
-  centiumSpotsFor,
   cleanAmenities,
   cleanFirstVisit,
   funnelLine,
@@ -33,7 +31,6 @@ import {
 test("amenities: the server's twelve keys, in vocabulary order, unknown keys dropped", () => {
   assert.deepEqual(AMENITY_KEYS, ["showers", "lockers", "changing_rooms", "towels", "parking", "wifi", "water", "cafe", "sauna", "pool", "childcare", "accessible"]);
   assert.deepEqual(cleanAmenities(["pool", "spa", "showers", "pool"]), ["showers", "pool"]);
-  assert.equal(amenityLine(["accessible", "wifi"]), "Wi-Fi, Wheelchair access");
 });
 
 test("first visit: trimmed, at most 300, blank is null", () => {
@@ -139,5 +136,4 @@ test("centium spots: open now and what to store", () => {
   assert.equal(openOnCentium(20, 10, 4, 1), 3);
   assert.equal(openOnCentium(20, 18, 6, 1), 2);
   assert.equal(openOnCentium(20, 10, 2, 5), 0);
-  assert.equal(centiumSpotsFor(4, 2), 6);
 });

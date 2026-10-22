@@ -10,6 +10,7 @@ import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useIsDark } from "../../../hooks/useIsDark";
 import type { MarketPalette } from "../../../theme/marketTokens";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
+import { fillUnder } from "../../../components/market/marketColor";
 import { MarketEmptyCard, MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
 import { StatLedger } from "../../../components/market/StatLedger";
 import { PLANS_ROUTE } from "../plans";
@@ -476,7 +477,7 @@ function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "w
             aria-label={`${label} view`}
             title={`${label} view`}
             onClick={() => onChange(k)}
-            className="market-focus flex items-center justify-center"
+            className="market-focus hit flex items-center justify-center"
             style={{ width: 40, height: 40, borderRadius: 10, background: on ? m.segactive : "transparent", color: on ? m.onfill : m.segink, border: 0 }}
           >
             {icon}
@@ -487,7 +488,7 @@ function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "w
   );
 }
 
-/** bizWeek (lines 385–391): 7 tiles, flex 1, gap 6, 62 tall, radius 12; selected --segactive with --onfill ink. */
+/** bizWeek (lines 385–391): 7 tiles, flex 1, gap 6, 62 tall, radius 12; selected --segactive with --onfill ink, the fill lifted to 4.5:1 under white (lead decision, R1 polish). */
 function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; days: ReturnType<typeof weekStrip>; selected: string | null; today: string; onPick: (day: string) => void }) {
   return (
     <div role="group" aria-label="Days of the week" className="flex" style={{ gap: 6 }}>
@@ -504,7 +505,7 @@ function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; day
             aria-label={`${weekdayLong(d.day)} ${d.n}, ${classesCount(d.count)}`}
             onClick={() => onPick(d.day)}
             className="market-focus flex flex-col items-center justify-center min-w-0"
-            style={{ flex: 1, minHeight: 62, borderRadius: 12, background: on ? m.segactive : m.soft, border: 0, padding: 0, lineHeight: "normal" }}
+            style={{ flex: 1, minHeight: 62, borderRadius: 12, background: on ? fillUnder(m.segactive, m.onfill) : m.soft, border: 0, padding: 0, lineHeight: "normal" }}
           >
             <span style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.6px", color: dayInk }}>{d.w}</span>
             <span style={{ fontSize: textPx(15), fontWeight: 800, color: ink }}>{d.n}</span>

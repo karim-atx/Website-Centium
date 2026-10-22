@@ -122,7 +122,7 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
               tabIndex={on ? 0 : -1}
               onClick={() => onTab(k)}
               onKeyDown={(e) => onKey(e, i)}
-              className="market-focus"
+              className="market-focus hit"
               style={{
                 flex: larger ? "1 0 auto" : 1,
                 minWidth: 0,

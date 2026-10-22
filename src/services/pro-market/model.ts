@@ -338,10 +338,10 @@ export function weeklyHours(rowsIn: HoursRow[], fmt: (start: string, end: string
 }
 
 // ---------------------------------------------------------------------------
-// Deferred delete (P-MA.2 "Service deleted · Undo")
+// Delete in flight (P-MA.2 "Service deleted")
 // ---------------------------------------------------------------------------
 
-/** The cards without the ones waiting to be deleted (they come back on Undo). */
+/** The cards without the ones being deleted (a failed delete brings them back). */
 export function withoutPending<T extends { key: string }>(cards: T[], pending: ReadonlySet<string>): T[] {
   return pending.size ? cards.filter((c) => !pending.has(c.key)) : cards;
 }

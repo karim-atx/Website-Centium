@@ -34,9 +34,8 @@ import {
 import { marketPalette } from "../../../theme/marketTokens";
 import { formatShortDate } from "../../../utils/date";
 import { range12 } from "../../../utils/time12";
-import { CapsLabel, CentredDialog, OutlineButton, SheetSwitch, lh, px, useMarketColors } from "../../business-market/listingParts";
+import { CapsLabel, CentredDialog, OutlineButton, SheetSwitch, lh, px, useMarketColors, useStrip } from "../../business-market/listingParts";
 import { MarketplaceEmpty, Stars } from "./showcaseParts";
-import { useActionStrip } from "./useActionStrip";
 import { ServiceEditSheet } from "./ServiceEditSheet";
 
 // Market + Share 3.0 · W3 · P-MA.2 Showcase (HANDOVER §4 "P-MA.2 Showcase";
@@ -55,8 +54,9 @@ import { ServiceEditSheet } from "./ServiceEditSheet";
 //   appointment_services (Book) and professional_plans (Hire) (D-18) as cards
 //   with the kebab (Edit · Hide · Delete); Edit / Add → the Edit service sheet
 //   (ServiceEditSheet); Delete → "Delete this service?" → "Confirm delete" →
-//   the strip "Service deleted · Undo" (the delete is written when the strip
-//   goes, so Undo puts it back untouched); Hide is DB3 showcase_visible
+//   the delete is written at once and the strip reads "Service deleted"
+//   (lead decision: no deferred Undo, as the dialog says "This can't be
+//   undone"); Hide is DB3 showcase_visible
 //   (awaiting): a quiet strip. A plan not offered is drawn at 0.5 with "Not
 //   offered" (its live state; "Hidden" is for showcase_visible);
 // - Availability (scAvailability): the LIVE weekly hours (own practice rows of
@@ -229,7 +229,7 @@ function ServicesPanel() {
   const [sheet, setSheet] = useState<{ target: ServiceRef | null } | null>(null);
   const [del, setDel] = useState<{ ref: ServiceRef; step: 1 | 2 } | null>(null);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
-  const [strip, showStrip] = useActionStrip();
+  const [strip, showStrip] = useStrip();
   const reload = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
@@ -245,45 +245,31 @@ function ServicesPanel() {
     };
   }, [authUserId, tick]);
 
-  // The delete is written when its strip goes (time, another strip, leaving
-  // the tab); Undo cancels it. A failed write brings the card back.
-  const commit = useCallback(
-    async (ref: ServiceRef) => {
-      if (!authUserId) return;
-      const key = `${ref.kind}:${ref.item.id}`;
-      const r = ref.kind === "session" ? await deleteSessionType(authUserId, ref.item.id) : await deletePlanService(ref.item.id);
-      setPending((s) => {
-        const n = new Set(s);
-        n.delete(key);
-        return n;
-      });
-      if (r.ok) reload();
-      else showStrip(r.message, { tone: "error" });
-    },
-    [authUserId, reload, showStrip]
-  );
-
-  const confirmDelete = (ref: ServiceRef) => {
+  // Lead decision (R1 polish): the delete is written at once, matching the
+  // dialog's "This can't be undone" (no deferred Undo). The card leaves while
+  // the write runs; a failed write brings it back with the error strip.
+  const confirmDelete = async (ref: ServiceRef) => {
+    if (!authUserId) return;
     const key = `${ref.kind}:${ref.item.id}`;
     setDel(null);
     setSheet(null);
     setPending((s) => new Set(s).add(key));
-    showStrip("Service deleted", {
-      action: "Undo",
-      onAction: () =>
-        setPending((s) => {
-          const n = new Set(s);
-          n.delete(key);
-          return n;
-        }),
-      onGone: () => void commit(ref),
+    const r = ref.kind === "session" ? await deleteSessionType(authUserId, ref.item.id) : await deletePlanService(ref.item.id);
+    setPending((s) => {
+      const n = new Set(s);
+      n.delete(key);
+      return n;
     });
+    if (r.ok) {
+      showStrip("Service deleted");
+      reload();
+    } else showStrip(r.message, "error");
   };
 
   const hide = async () => {
     const r = await setServiceShowcaseVisible();
     if (r.ok) return reload();
-    showStrip(r.pending ? "Hiding a service is coming soon." : r.message, { tone: "neutral" });
+    showStrip(r.pending ? "Hiding a service is coming soon." : r.message, "neutral");
   };
 
   let body: React.ReactNode;
@@ -346,11 +332,12 @@ function ServicesPanel() {
       ) : null}
       <CentredDialog
         open={!!del}
+        width={330}
         title={del?.step === 2 ? "Confirm delete" : "Delete this service?"}
         body={del?.step === 2 ? "This can't be undone." : "Clients who already booked it keep their sessions."}
         cancel="Cancel"
         action={del?.step === 2 ? "Delete service" : "Delete"}
-        onAction={() => (del?.step === 1 ? setDel({ ref: del.ref, step: 2 }) : del && confirmDelete(del.ref))}
+        onAction={() => (del?.step === 1 ? setDel({ ref: del.ref, step: 2 }) : del && void confirmDelete(del.ref))}
         onCancel={() => setDel(null)}
       />
       {strip}

@@ -99,7 +99,7 @@ function ExploreLinks() {
     <button
       type="button"
       onClick={() => navigate(to)}
-      className="market-focus"
+      className="market-focus hit"
       {...p.handlers}
       style={{ flex: 1, height: 40, borderRadius: 12, border: 0, background: m.segidle, color: m.segink, font: "inherit", fontSize: textPx(13), fontWeight: 700, cursor: "pointer", minWidth: 0, ...p.style }}
     >

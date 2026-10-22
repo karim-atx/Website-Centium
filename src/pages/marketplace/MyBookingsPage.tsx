@@ -139,7 +139,7 @@ export default function MyBookingsPage() {
               tabIndex={on ? 0 : -1}
               onClick={() => setTab(t.key)}
               onKeyDown={(e) => onTabKey(e, i)}
-              className="market-focus"
+              className="market-focus hit"
               style={{ flex: 1, minWidth: 0, height: 40, padding: "0 10px", borderRadius: 12, border: 0, background: on ? m.segactive : m.segidle, color: on ? m.onfill : m.segink, display: "flex", alignItems: "center", justifyContent: "center", font: "inherit", fontSize: textPx(13), fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer" }}
             >
               {t.label}

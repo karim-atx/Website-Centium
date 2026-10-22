@@ -214,7 +214,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     <button
       type="button"
       onClick={onExpand}
-      className="market-focus"
+      className="market-focus hit"
       style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, width: "100%", padding: 0, border: 0, background: "none", font: "inherit", color: m.ink, textAlign: "left", cursor: "pointer" }}
     >
       <span style={{ fontSize: textPx(13.5), lineHeight: linePx(19), fontWeight: 800 }}>{question}</span>

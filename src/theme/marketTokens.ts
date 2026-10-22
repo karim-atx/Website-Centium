@@ -115,7 +115,63 @@ export const MARKET_DARK: MarketPalette = {
   cancelink: "#C3B3FB",
 };
 
-export const marketPalette = (dark: boolean): MarketPalette => (dark ? MARKET_DARK : MARKET_LIGHT);
+/**
+ * Settings › Accessibility › High contrast (R19, as the rest of the app,
+ * index.css `html.high-contrast`): every text grey takes the strongest ink,
+ * every hairline 30 % of it, the board's purples, greens and golds darken to
+ * 4.5:1 or better (the app's #5B48B8 / #4B3BA0 for Centium light), and white
+ * text sits on #5B48B8. Fills, tiers and identity colours keep the board.
+ * Added in the R1 gate: the market screens read hex values, so they missed
+ * the CSS variables High contrast switches.
+ */
+export const MARKET_HC_LIGHT: MarketPalette = {
+  ...MARKET_LIGHT,
+  ink: "#111111",
+  ink2: "#111111",
+  faint: "#111111",
+  tert: "#111111",
+  subink: "#111111",
+  slabel: "#111111",
+  hair: "rgba(17,17,17,0.3)",
+  border: "rgba(17,17,17,0.3)",
+  div: "rgba(17,17,17,0.3)",
+  srule: "rgba(17,17,17,0.3)",
+  accent: "#4B3BA0",
+  pdark: "#4B3BA0",
+  segink: "#4B3BA0",
+  stitle: "#4B3BA0",
+  cancelink: "#4B3BA0",
+  fill: "#5B48B8",
+  segactive: "#5B48B8",
+  subactive: "#5B48B8",
+  good: "#2E7A52",
+  caution: "#7A5C1C",
+  gold: "#8C6A21",
+  high: "#A13023",
+};
+
+export const MARKET_HC_DARK: MarketPalette = {
+  ...MARKET_DARK,
+  ink: "rgb(245 243 250)",
+  ink2: "rgb(245 243 250)",
+  faint: "rgb(245 243 250)",
+  tert: "rgb(245 243 250)",
+  subink: "rgb(245 243 250)",
+  slabel: "rgb(245 243 250)",
+  hair: "rgba(245,243,250,0.3)",
+  border: "rgba(245,243,250,0.3)",
+  div: "rgba(245,243,250,0.3)",
+  srule: "rgba(245,243,250,0.3)",
+};
+
+/** The app's High contrast switch (AppContext puts `high-contrast` on <html>); false off the DOM (tests). */
+const highContrast = (): boolean => {
+  const doc = (globalThis as { document?: { documentElement?: { classList?: { contains(c: string): boolean } } } }).document;
+  return doc?.documentElement?.classList?.contains("high-contrast") === true;
+};
+
+export const marketPalette = (dark: boolean, hc: boolean = highContrast()): MarketPalette =>
+  hc ? (dark ? MARKET_HC_DARK : MARKET_HC_LIGHT) : dark ? MARKET_DARK : MARKET_LIGHT;
 
 /** The handover's motion (ConfirmationStrip, HANDOVER §4 Shared chrome). */
 export const MARKET_MOTION = {
@@ -211,17 +267,6 @@ export function tierRank(tiers: readonly { name: string; sortOrder: number }[], 
   return clampRank(i < 0 ? 1 : i + 1);
 }
 
-/** The board's tier as CSS variables (the screens' --tierfill, --tierink, ...). */
-export const tierVars = (t: TierStyle): Record<string, string> => ({
-  "--tierfill": t.fill,
-  "--tierink": t.ink,
-  "--tiertext": t.text,
-  "--tiericon": t.icon,
-  "--tierborder": t.border,
-  "--tierpill": t.pill,
-  "--tiertrack": t.track,
-});
-
 // ---------------------------------------------------------------------------
 // Fixed identity colours (tokens.json): the same in every theme, as the app's
 // metric colours are.
@@ -245,7 +290,7 @@ export const SEGMENT_STEPS = [
   ["#E6F1EF", "#4F8F8A"],
 ] as const;
 
-/** statusSteps: [bg, ink]. */
+/** statusSteps: [bg, ink] (the Release 2 hiring statuses, W4). */
 export const STATUS_STEPS = {
   APPLIED: ["#EEEAF8", "#7D67D9"],
   SHORTLISTED: ["#ECEFF5", "#667BB1"],
@@ -265,18 +310,4 @@ export const SHARE_TOKENS = {
   safeMargin: 10,
   scaleMin: 0.5,
   scaleMax: 2,
-} as const;
-
-/** tokens.json "chart". */
-export const CHART_TOKENS = {
-  line: "#AEA1DC",
-  lineWidth: 2,
-  area: "rgba(174,161,220,0.22)",
-  scrub: "#7D6BB5",
-  barIdle: "#AEA1DC",
-  barActive: "#7D6BB5",
-  grid: "rgba(36,31,27,0.06)",
-  tooltipBg: "#241F1B",
-  tooltipInk: "#FFFFFF",
-  compare: "#6F9993",
 } as const;

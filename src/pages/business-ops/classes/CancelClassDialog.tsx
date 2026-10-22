@@ -5,8 +5,8 @@ import { linePx, textPx } from "../../../theme/textSize";
 import { useBackCloses } from "../../../hooks/useBackCloses";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { FOCUS_CSS } from "../../../components/market/usePress";
-import { BoardSwitch, scrimOf, useMarketColours } from "./parts";
-import { cancelExtras, cancelText, notifyText, type Session } from "./scheduleModel";
+import { scrimOf, useMarketColours } from "./parts";
+import { cancelExtras, cancelText, notifiedText, type Session } from "./scheduleModel";
 
 // B-MA.6 Cancel class (Business Marketplace Screens `classCancel`, markup
 // lines 450–464): the board draws its own dialog, not the CentredDialog: a
@@ -14,15 +14,14 @@ import { cancelExtras, cancelText, notifyText, type Session } from "./scheduleMo
 // radius 20, padding 22 20 18, a centred column: the 48 --highbg circle with
 // the 20 calendar-x (--high, stroke 2.2); "Cancel {name}?" 17 / 800
 // (margin-top 12); the body 12.5 / 18 --ink2 (margin-top 4); the toggle row
-// (margin-top 14, --soft radius 14 padding 10 12): "Notify the {n} booked
-// members" 12.5 / 700 and the 42 × 26 switch; "Cancel class" 48 radius 14
+// (drawn as a switch; see below); "Cancel class" 48 radius 14
 // --highbg / --high 14 / 800 (margin-top 14); "Keep class" 44, 14 / 700
 // --ink2.
 //
 // THE TOGGLE: cancel_class_session(p_class_id, p_reason) has no notify
-// switch; it always tells every booked member (and the waitlist). The switch
-// is drawn on and read-only, with a line that says so, rather than a choice
-// the server would ignore.
+// switch; it always tells every booked member (and the waitlist). Lead
+// decision (R1 polish): no switch is drawn; the dialog says so in a plain
+// line (12.5 / 18 600 --ink2): "Members with a booking are notified."
 //
 // KEPT (PLAN §3.4): the reason field (optional, only the team sees it) and
 // the live waitlist / paid counts (from the desk roster); the offline line and
@@ -121,15 +120,7 @@ export function CancelClassDialog({
           {extras ? ` ${extras}` : ""}
         </p>
         {session.booked > 0 && (
-          <div className="w-full" style={{ marginTop: 14 }}>
-            <div className="flex items-center justify-between text-left" style={{ borderRadius: 14, background: m.soft, padding: "10px 12px", gap: 10 }}>
-              <span id={`${titleId}-notify`} style={{ fontSize: textPx(12.5), fontWeight: 700, color: m.ink }}>{notifyText(session.booked, people)}</span>
-              <BoardSwitch m={m} checked readOnly label={`${notifyText(session.booked, people)}. Always on`} />
-            </div>
-            <p className="text-left" style={{ margin: "6px 2px 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-              {`Booked ${people} are always told when a class is cancelled.`}
-            </p>
-          </div>
+          <p style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.ink2 }}>{notifiedText(people)}</p>
         )}
         <div className="w-full text-left" style={{ marginTop: 12 }}>
           <label htmlFor={`${titleId}-reason`} className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: m.ink2, marginBottom: 6 }}>

@@ -22,6 +22,7 @@ import { FeaturedChip } from "../../components/marketplace/FeaturedChip";
 import { useFilter } from "../../components/market/useFilter";
 import { matchesFilter } from "../../components/market/filterModel";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
+import { fillUnder } from "../../components/market/marketColor";
 import { formatShortDate } from "../../utils/date";
 import { useImpression } from "../../services/marketplace/listingEvents";
 import { exploreSource, isLivePassState, viewerSpotsLeft, type ListingEvent } from "../../services/marketplace/listingLogic";
@@ -386,7 +387,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
   );
 }
 
-/** C-MO.4.3 day strip (lines 215–223). */
+/** C-MO.4.3 day strip (lines 215–223). The selected fill is lifted to 4.5:1 under white (fillUnder; the W3 lead decision for the week-day tile). */
 function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chosen: string; withClasses: Set<string>; onPick: (d: string) => void }) {
   const dark = useIsDark();
   const m = marketPalette(dark);
@@ -420,7 +421,7 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
               alignItems: "center",
               justifyContent: "center",
               gap: 1,
-              background: on ? m.fill : m.soft,
+              background: on ? fillUnder(m.fill, m.onfill) : m.soft,
               color: on ? m.onfill : m.ink,
               font: "inherit",
               cursor: "pointer",

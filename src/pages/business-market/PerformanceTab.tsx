@@ -235,7 +235,7 @@ function ListingGroup() {
       </Card>
 
       {empty ? (
-        <MarketEmptyCard title={v.chartTitle} body={v.chartSub} placeholder={`${v.chartModes[0]} and ${doneWord} start once your listing is seen.`} />
+        <MarketEmptyCard title={v.chartTitle} body={v.chartSub} placeholder={`${v.chartModes[0]} and ${doneWord} start once your listing is seen.`} placeholderContentBox />
       ) : (
         <>
           <ChartCard

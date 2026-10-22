@@ -150,9 +150,6 @@ const LOGGING: Record<string, string> = {
 /** A reversed log, by its source: "Workout deleted the same day". */
 const DELETED: Record<string, string> = { log_food: "Food log", log_workout: "Workout", log_metric: "Health metric", water_goal: "Water log" };
 
-/** Is this source one of the four daily logging sources. */
-export const isLoggingSource = (source: string): boolean => source in LOGGING;
-
 /** streak_7 → 7 (the streak achievements are the milestones, D-08). */
 export function streakDays(key: string | null): number | null {
   const m = key ? /^streak_(\d+)$/.exec(key) : null;

@@ -110,7 +110,7 @@ function ProMarketplacePage() {
               tabIndex={on ? 0 : -1}
               onClick={() => go(t.key)}
               onKeyDown={(e) => onKey(e, i)}
-              className="market-focus"
+              className="market-focus hit"
               style={{
                 flex: "1 1 auto",
                 minHeight: 38,

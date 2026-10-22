@@ -54,8 +54,13 @@ import { BackHeader, BoxInput, Caps, FieldError, FieldLabel, FundingCheck, Prima
 //   (radius 24, 1px --border, padding 4 16; rows padding 10 0, 12.5, 0.5px
 //   --div between); the acknowledgement on --pale; Publish; "Edit offer"
 //   (44, 14 / 700 --ink2).
-// Ours: the Headline field at the top (every offer needs one; lead's
-// decision), the unticked checkbox, field errors, the date boxes (the app's
+// Ours: the Headline field at the top. The board's form draws none, but its
+// OfferCard (B-MA.3 preview "15% off outerwear", C-MO.4.4 rows) and the
+// Offer detail title (C-MO.4.4.2 "15% off full-price items", 24 / 800) draw a
+// separate headline line that no drawn field (Type, Value, Terms) can
+// produce, and types.ts / PLAN §2.2 carry `headline`; so it stays (the W3
+// lead decision's condition, checked in the R1 polish pass). Also ours: the
+// unticked checkbox, field errors, the date boxes (the app's
 // date input, shown month first), the read-only view of an expired offer.
 
 export interface AppliesToOption {

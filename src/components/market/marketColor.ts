@@ -46,6 +46,16 @@ export function darkenForWhite(hex: string, ratio = 4.5): string {
   return "#000000";
 }
 
+/**
+ * A selected tile's fill under its ink (W3 lead decision, R1 polish: the
+ * selected week-day tile, white on #A79AD5, is lifted to 4.5:1 like the
+ * strip). White ink gets the fill darkened just enough; any other ink (the
+ * dark theme's #0D0B1A --onfill, already past 7:1) keeps the drawn fill.
+ */
+export function fillUnder(fill: string, ink: string): string {
+  return ink.toUpperCase() === "#FFFFFF" ? darkenForWhite(fill) : fill;
+}
+
 // ---------------------------------------------------------------------------
 // TicketStub tones (Client Explore Screens `STUB`, Professional Marketplace
 // Screens `STEP`).

@@ -75,10 +75,3 @@ export async function copyText(text: string): Promise<boolean> {
     return false;
   }
 }
-
-/** Every pixel's alpha in a sticker canvas's corner: 0 means the background is transparent. */
-export function cornerAlpha(canvas: HTMLCanvasElement): number {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return -1;
-  return ctx.getImageData(0, 0, 1, 1).data[3];
-}

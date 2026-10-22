@@ -233,19 +233,6 @@ export async function fetchClassCentium(classIds: string[]): Promise<Result<Map<
   return { ok: true, value: out };
 }
 
-export async function saveClassCentium(classId: string, patch: { centiumSpots?: number | null; listed?: boolean }): Promise<Result<null>> {
-  const row: Record<string, unknown> = {};
-  if (patch.centiumSpots !== undefined) row.centium_spots = patch.centiumSpots;
-  if (patch.listed !== undefined) row.listed_on_explore = patch.listed;
-  const { data, error } = await db.from("business_classes").update(row).eq("id", classId).select("id");
-  if (error) {
-    console.error("[marketplace] Could not save the class:", error.message);
-    return failWith(error, "Couldn't save. Try again.");
-  }
-  if (!data || data.length === 0) return { ok: false, message: "You need the Schedule permission to change this. Ask the owner." };
-  return { ok: true, value: null };
-}
-
 /** Classes featured this week (MK-06 live placements; the marker on MA1-003 row 7b). Empty when not readable. */
 export async function fetchFeaturedClassIds(businessId: string): Promise<Set<string>> {
   const { data, error } = await db.from("featured_placements").select("target_id").eq("business_id", businessId).eq("target_kind", "class").eq("status", "live");

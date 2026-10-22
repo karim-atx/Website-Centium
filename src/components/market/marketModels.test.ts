@@ -211,3 +211,51 @@ test("the strip's dark active fill reaches 4.5:1 under white; light keeps the dr
   }
   assert.equal(darkenForWhite("#5F5093"), "#5F5093", "a fill already at 4.5:1 stays as is");
 });
+
+test("a selected day tile's fill reaches 4.5:1 under its ink, light and dark", async () => {
+  const { fillUnder, whiteContrast, luminance } = await import("./marketColor.ts");
+  const { marketPalette } = await import("../../theme/marketTokens.ts");
+  const ratio = (a: string, b: string) => {
+    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  for (const dark of [false, true]) {
+    const m = marketPalette(dark);
+    for (const fill of [m.segactive, m.fill]) {
+      const f = fillUnder(fill, m.onfill);
+      assert.ok(ratio(f, m.onfill) >= 4.5, `${dark ? "dark" : "light"} ${fill} -> ${f}`);
+    }
+  }
+  assert.ok(whiteContrast(fillUnder("#A79AD5", "#FFFFFF")) >= 4.5);
+  assert.equal(fillUnder("#A991FE", "#0D0B1A"), "#A991FE", "the dark ink keeps the drawn fill");
+});
+
+test("High contrast: every market text ink reaches 4.5:1 on the card and its own pale fill", async () => {
+  const { luminance } = await import("./marketColor.ts");
+  const { marketPalette, MARKET_LIGHT, MARKET_DARK } = await import("../../theme/marketTokens.ts");
+  const hex = (s: string) => {
+    const m = /rgba?\(([^)]+)\)/.exec(s);
+    if (!m) return s;
+    const [r, g, b] = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+  };
+  const ratio = (a: string, b: string) => {
+    const [x, y] = [luminance(hex(a)), luminance(hex(b))].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  assert.equal(marketPalette(false, false), MARKET_LIGHT, "High contrast off: the board");
+  assert.equal(marketPalette(true, false), MARKET_DARK);
+  for (const dark of [false, true]) {
+    const m = marketPalette(dark, true);
+    for (const k of ["ink", "ink2", "faint", "tert", "subink", "slabel", "accent", "pdark"] as const) {
+      assert.ok(ratio(m[k], m.card) >= 4.5, `${dark ? "dark" : "light"} ${k} ${m[k]} on card`);
+      assert.ok(ratio(m[k], m.soft) >= 4.5, `${dark ? "dark" : "light"} ${k} ${m[k]} on soft`);
+    }
+    assert.ok(ratio(m.segink, m.segidle) >= 4.5, "segink on segidle");
+    assert.ok(ratio(m.pdark, m.pale) >= 4.5, "pdark on pale");
+    assert.ok(ratio(m.good, m.goodbg) >= 4.5, "good on goodbg");
+    assert.ok(ratio(m.caution, m.cautionbg) >= 4.5, "caution on cautionbg");
+    assert.ok(ratio(m.high, m.highbg) >= 4.5, "high on highbg");
+    for (const f of [m.fill, m.segactive, m.subactive]) assert.ok(ratio(m.onfill, f) >= 4.5, `onfill on ${f}`);
+  }
+});

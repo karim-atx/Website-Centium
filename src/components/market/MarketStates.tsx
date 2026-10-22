@@ -83,7 +83,13 @@ export const MarketOffline: React.FC<{ loaded: boolean; onRetry?: () => void; fo
   );
 };
 
-export const MarketEmptyCard: React.FC<{ title: string; body?: string; placeholder?: string; className?: string; style?: React.CSSProperties }> = ({ title, body, placeholder, className, style }) => {
+/**
+ * The empty card. `placeholderContentBox` (the market Performance screens,
+ * B-MA.7 / P-MA.6 "No data yet"): the dashed box is 120 tall INSIDE its 1.5px
+ * border, as the boards draw it (content-box, 2 px taller); unset keeps 120
+ * overall (W3 lead decision: size drifts are fixed by optional props only).
+ */
+export const MarketEmptyCard: React.FC<{ title: string; body?: string; placeholder?: string; placeholderContentBox?: boolean; className?: string; style?: React.CSSProperties }> = ({ title, body, placeholder, placeholderContentBox, className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   return (
@@ -95,6 +101,7 @@ export const MarketEmptyCard: React.FC<{ title: string; body?: string; placehold
           style={{
             marginTop: 14,
             height: 120,
+            boxSizing: placeholderContentBox ? "content-box" : undefined,
             borderRadius: 12,
             border: `1.5px dashed ${dark ? "rgba(245,243,250,0.14)" : "rgba(36,31,27,0.14)"}`,
             display: "flex",

@@ -49,48 +49,6 @@ export const tierIcon = (rank: number): LucideIcon => TIER_ICON_BY_RANK[clampRan
 export const levelHex = (level: AchievementLevel | null | undefined): string =>
   (level && LEVEL_HEX[level]) || LEVEL_HEX.bronze;
 
-export interface ColourSet {
-  /** Text and icons in the colour. */
-  ink: string;
-  /** The card's fill. */
-  fill: string;
-  /** A hairline in the colour. */
-  border: string;
-  /** A filled shape (the current tier disc, the progress bar). */
-  solid: string;
-  /** Text on `solid`. */
-  onSolid: string;
-  /** An empty progress track. */
-  track: string;
-}
-
-const DARK_CARD = "#1C1F28";
-
-/** The v5.1 tier colours, still used by the Explore tier card (MO1.4). */
-export function colourSet(hex: string, dark: boolean): ColourSet {
-  if (!dark) {
-    const fill = hex === BRONZE_HEX ? "#FBF7F4" : tintOn(hex, 0.05, "#FFFFFF");
-    return {
-      ink: hex,
-      fill,
-      border: `${hex}3D`, // 24%
-      solid: hex,
-      onSolid: "#FFFFFF",
-      track: tintOn(hex, 0.14, fill),
-    };
-  }
-  const fill = tintOn(hex, 0.14, DARK_CARD);
-  const solid = liftTo(hex, fill, 3);
-  return {
-    ink: liftTo(hex, fill),
-    fill,
-    border: `${hex}73`, // 45%
-    solid,
-    onSolid: "#0D0B1A",
-    track: tintOn(hex, 0.3, DARK_CARD),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // v6 (MO1.1.3 #6-#19, MO1.1.3.2 #54-#61). Dark values marked * in the tables
 // are derived from Bronze's drawn family: Bronze's dark ink is #D9A57F*, and

@@ -12,7 +12,6 @@ import {
   cardH,
   cardMetrics,
   cardStats,
-  clientPayload,
   exportSize,
   fmtDuration,
   foodCard,
@@ -117,10 +116,8 @@ test("toggling a stat removes it from the card and the payload (the export)", ()
   const on = initialOn(spec);
   on.delete("sets");
   assert.deepEqual(cardStats(spec, on, adult).map((s) => s.key), ["duration", "personal_bests"]);
-  const p = clientPayload(spec, "story", "B", on, adult);
-  assert.deepEqual(p.stats.map((s) => s.key), ["duration", "personal_bests"]);
   on.add("body_weight");
-  assert.deepEqual(clientPayload(spec, "post", "I", on, adult).stats.map((s) => s.key), ["duration", "personal_bests", "body_weight"]);
+  assert.deepEqual(cardStats(spec, on, adult).map((s) => s.key), ["duration", "personal_bests", "body_weight"]);
 });
 
 test("recovery mode and under-18s: weight locked, no switch, the lock line; never on the card", () => {
@@ -132,7 +129,6 @@ test("recovery mode and under-18s: weight locked, no switch, the lock line; neve
     assert.equal(w.on, false);
     assert.equal(w.sub, l.lockLine);
     assert.ok(!cardStats(spec, all, l).some((s) => s.key === "body_weight"));
-    assert.ok(!clientPayload(spec, "story", "B", all, l).stats.some((s) => s.key === "body_weight"));
   }
   assert.equal(statRows(spec, all, recovery).find((r) => r.key === "body_weight")!.sub, "Not shared while recovery-sensitive mode is on.");
   assert.equal(statRows(spec, all, minor).find((r) => r.key === "body_weight")!.sub, "Not available on cards for under-18s.");

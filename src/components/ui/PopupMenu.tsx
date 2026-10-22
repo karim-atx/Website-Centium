@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Minus, Plus, SquareCheck } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -147,7 +147,7 @@ const EDGE = 8; // min distance from the viewport edges
  * 0 12px 32px rgba(95,80,147,0.18), padding 8. Options are rows: radius 8,
  * border #E5E6EB, fill #FAFAFB, 12.5px; selected = fill #F0EDF9, border
  * #AEA1DC, bold, check #7D6BB5. Destructive option text rgb(192,57,43). Tap
- * outside closes. Long lists scroll inside.
+ * outside closes, and so does Escape. Long lists scroll inside.
  *
  * Used by row / folder ⋮ menus, sort, goal selector, dietary restriction,
  * discipline filter and the Nutrient Summary filter.
@@ -227,6 +227,26 @@ export function PopupMenu<V extends string>({
       window.removeEventListener("scroll", place, true);
     };
   }, [open, anchor, width, align, pad, gap, matchWidth, clampTo]);
+
+  // Escape closes the card (W3 lead decision, R1 polish) and returns focus to
+  // its trigger. Caught on the window in the capture phase and stopped there,
+  // so a sheet or dialog under the menu stays open.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeRef.current();
+      anchor?.focus?.();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, anchor]);
 
   if (!open || !pos) return null;
 

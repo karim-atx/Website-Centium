@@ -133,7 +133,7 @@ export default function OfferDetailPage() {
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
         <OwnerTile name={o.ownerName || o.ownerSubtitle} logoUrl={o.ownerLogoUrl} size={44} />
         {ownerHref ? (
-          <Link to={ownerHref} className="market-focus" style={{ fontSize: textPx(13), fontWeight: 700, color: m.accent, textDecoration: "none", minWidth: 0 }}>
+          <Link to={ownerHref} className="market-focus hit" style={{ fontSize: textPx(13), fontWeight: 700, color: m.accent, textDecoration: "none", minWidth: 0 }}>
             {o.ownerSubtitle}
           </Link>
         ) : (

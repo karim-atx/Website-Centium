@@ -61,14 +61,3 @@ export async function fetchClassCreatedAt(classId: string, seriesId: string | nu
     return null;
   }
 }
-
-/** A showcase item's photo (business_offerings.image_url, a public storage URL), or null. */
-export async function fetchOfferingImage(offeringId: string): Promise<string | null> {
-  try {
-    const r = await db.from("business_offerings").select("image_url").eq("id", offeringId).maybeSingle();
-    const v = r.data?.image_url;
-    return !r.error && typeof v === "string" && v.trim() ? v : null;
-  } catch {
-    return null;
-  }
-}

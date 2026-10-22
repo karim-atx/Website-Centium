@@ -4,6 +4,7 @@
 
 import { minutesOfDay, range12, time12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { openOnCentium } from "../../../services/business-market/listingLogic";
 
 export interface SessionLite {
   id: string;
@@ -474,9 +475,13 @@ export function cancelText(day: string, startTime: string, booked: number): stri
   return `${head} The ${booked} ${booked === 1 ? "booking" : "bookings"} for this session will be cancelled.`;
 }
 
-/** The cancel dialog's toggle: "Notify the 14 booked members". */
-export function notifyText(booked: number, people: "clients" | "members"): string {
-  return `Notify the ${booked} booked ${booked === 1 ? people.slice(0, -1) : people}`;
+/**
+ * The cancel dialog's notify line (lead decision, R1 polish): the board's
+ * "Notify the {n} booked members" switch is replaced by a plain line, because
+ * cancel_class_session always tells every booked member.
+ */
+export function notifiedText(people: "clients" | "members"): string {
+  return `${people === "clients" ? "Clients" : "Members"} with a booking are notified.`;
 }
 
 /** The live waitlist / paid counts under the cancel body (cancel_class_session tells the waitlist; paid bookings stay paid). */
@@ -524,9 +529,8 @@ export function centiumLine(o: {
   if (o.cancelled || o.ended) return null;
   if (o.listingActive === false) return { text: "Listing is off", tone: "faint", open: 0 };
   if (!o.listed) return { text: "Members only", tone: "faint", open: 0 };
-  const free = Math.max(0, o.capacity - o.booked);
   if (o.centiumSpots !== null && o.fromCentium === null) return { text: "On Explore", tone: "teal", open: 0 };
-  const open = o.centiumSpots === null ? free : Math.max(0, Math.min(free, o.centiumSpots - (o.fromCentium ?? 0)));
+  const open = openOnCentium(o.capacity, o.booked, o.centiumSpots, o.fromCentium ?? 0);
   return { text: `${open} open on Centium`, tone: "teal", open };
 }
 

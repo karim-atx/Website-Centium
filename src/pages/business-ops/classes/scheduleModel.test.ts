@@ -116,8 +116,8 @@ test("B-MA.6: strip, caps, card words and the Bookings / cancel lines", async ()
   assert.equal(m.whenText("2026-10-16", "18:30"), "Fri, Oct 16, 6:30 PM");
   assert.equal(m.cancelText("2026-10-16", "18:30", 14), "Fri, Oct 16, 6:30 PM. The 14 bookings for this session will be cancelled.");
   assert.equal(m.cancelText("2026-10-16", "18:30", 1), "Fri, Oct 16, 6:30 PM. The 1 booking for this session will be cancelled.");
-  assert.equal(m.notifyText(14, "members"), "Notify the 14 booked members");
-  assert.equal(m.notifyText(1, "clients"), "Notify the 1 booked client");
+  assert.equal(m.notifiedText("members"), "Members with a booking are notified.");
+  assert.equal(m.notifiedText("clients"), "Clients with a booking are notified.");
   assert.equal(m.cancelExtras(2, 1), "2 on the waitlist are told too. 1 paid booking stays paid. Record any refund in Revenue.");
   assert.equal(m.payMethodText("cash", 15), "Cash");
   assert.equal(m.payMethodText("membership", null), "Membership");

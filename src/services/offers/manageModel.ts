@@ -249,8 +249,6 @@ export function validateDraft(d: OfferDraft, variant: OfferVariant): DraftErrors
   return e;
 }
 
-export const draftValid = (d: OfferDraft, variant: OfferVariant): boolean => Object.keys(validateDraft(d, variant)).length === 0;
-
 /** The documented create_offer / update_offer fields (PLAN §2.2 DB2), from a valid draft. */
 export function offerArgs(d: OfferDraft, variant: OfferVariant): Record<string, unknown> {
   return {

@@ -77,20 +77,18 @@ export const Chip: React.FC<{ label: string; bg: string; ink: string; icon?: Rea
 /**
  * The board's switch (the cancel dialog's toggle, line 459): 42 × 26 radius
  * 999, on --fill / off --swoff, a 22 white knob 2 from the edge with
- * 0 1px 3px rgba(0,0,0,0.18). A 44 hit box. `readOnly` shows the state
- * without letting it change (aria-disabled), for a setting the server fixes.
+ * 0 1px 3px rgba(0,0,0,0.18). A 44 hit box.
  */
-export const BoardSwitch: React.FC<{ m: MarketPalette; checked: boolean; onChange?: (on: boolean) => void; label: string; disabled?: boolean; readOnly?: boolean }> = ({ m, checked, onChange, label, disabled, readOnly }) => (
+export const BoardSwitch: React.FC<{ m: MarketPalette; checked: boolean; onChange?: (on: boolean) => void; label: string; disabled?: boolean }> = ({ m, checked, onChange, label, disabled }) => (
   <button
     type="button"
     role="switch"
     aria-checked={checked}
     aria-label={label}
-    aria-disabled={readOnly || disabled || undefined}
     disabled={disabled}
-    onClick={() => !readOnly && !disabled && onChange?.(!checked)}
+    onClick={() => !disabled && onChange?.(!checked)}
     className="market-focus hit shrink-0 disabled:opacity-40"
-    style={{ position: "relative", width: 42, height: 26, borderRadius: 999, background: checked ? m.fill : m.swoff, border: 0, padding: 0, cursor: readOnly ? "default" : undefined }}
+    style={{ position: "relative", width: 42, height: 26, borderRadius: 999, background: checked ? m.fill : m.swoff, border: 0, padding: 0 }}
   >
     <span aria-hidden style={{ position: "absolute", top: 2, left: checked ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }} />
   </button>

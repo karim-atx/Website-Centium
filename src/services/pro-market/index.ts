@@ -156,9 +156,3 @@ export async function setServiceShowcaseVisible(): Promise<MarketResult<null>> {
   // awaiting DB stage DB3: no column to write yet.
   return { ok: false, pending: true, message: "Hiding a service is coming soon." };
 }
-
-/** A service photo (photo_path, storage per the owner-uid path rule). */
-export async function setServicePhoto(): Promise<MarketResult<null>> {
-  // awaiting DB stage DB3: no column to write yet.
-  return { ok: false, pending: true, message: "Service photos are coming soon." };
-}

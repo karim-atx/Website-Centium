@@ -40,9 +40,6 @@ export function groupByCategory<T extends Pick<ShowcaseRowItem, "category">>(lis
   return [...map.entries()].sort(([a], [b]) => (a === OTHER ? 1 : b === OTHER ? -1 : a.localeCompare(b))).map(([name, l]) => ({ name, list: l }));
 }
 
-/** The section a "See all" link opens (?category=): the item's group name, "Other" for none. */
-export const sectionOf = (category: string | null): string => category ?? OTHER;
-
 /** Moves `id` to index `to` (clamped). */
 export function moveTo(ids: string[], id: string, to: number): string[] {
   const from = ids.indexOf(id);

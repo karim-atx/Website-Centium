@@ -5,7 +5,6 @@
 import { distanceKm, type Coords } from "../../../services/geo/distance";
 import { distanceText } from "../../../services/marketplace/classBooking";
 import {
-  CATEGORY_TYPES,
   REDEEM_ERROR_TEXT,
   categoryOfType,
   limitLabel,
@@ -31,9 +30,6 @@ export function businessesForCategory<T extends { venueType: string }>(list: rea
   if (category === "all") return [...list];
   return list.filter((b) => categoryOfType(b.venueType) === category);
 }
-
-/** True when the chip has a business type of its own (every chip but All and Professionals). */
-export const chipHasType = (c: RewardCategory): c is keyof typeof CATEGORY_TYPES => c in CATEGORY_TYPES;
 
 // ---------------------------------------------------------------------------
 // Showcase (C-MO.4.4.1)
