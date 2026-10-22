@@ -30,9 +30,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
+    <link rel="stylesheet" href="assets/css/blog.css" />
     <script src="assets/js/core.js"></script>
     <script src="assets/js/scene.js" defer></script>
     <script src="assets/js/blog-scene.js" defer></script>
+    <script src="assets/js/blog.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -69,8 +71,79 @@
         <span class="meta">EST. 2026</span>
       </div>
     </header>
-    <main id="main" tabindex="-1">
-      <!-- Blog index content (featured post and cards) arrives in batch 4. -->
+    <main id="main" tabindex="-1" class="bl">
+      <div class="hero hero--compact">
+        <div class="wrap">
+          <div class="hs-copy">
+            <div class="eyebrow"><span class="rule"></span><span class="label">EXPLORATIONS</span></div>
+            <h1 class="hero-h1">Thoughts on what’s next</h1>
+            <p class="hero-lede">A space for the thinking behind our work, what we’re learning, what we’re questioning, and what we’re discovering along the way.</p>
+          </div>
+        </div>
+      </div>
+      <section id="posts" aria-label="Posts">
+        <div class="wrap">
+          <span class="sl-eyebrow">LATEST</span>
+          <!-- posts:start · a static copy of the #atx-posts block in blog-post.html, which is the posts source (the Worker reads it). When a post is added or changed there, update these cards to match (title, excerpt, image, alt, date, read time = ceil(words / 200), minimum 1), and the three Explorations cards in index.html. -->
+          <a class="post-feature" href="blog-post.html?slug=the-plan-comes-second">
+            <div class="post-thumb"><img src="atraxia/blog/plan-comes-second.jpg?v=3" alt="A star-forming nebula with a bright young star cluster at its core, teal and violet gas clouds and dark dust lanes threading through, against a dense star field" width="1280" height="800" /></div>
+            <div class="body">
+              <h2 class="post-title">The Plan Comes Second</h2>
+              <p>We start from a question we can’t stop asking, and only then work out the plan.</p>
+              <div class="post-byline"><span class="author">Dr. Karim El Khaldi</span><span class="sep"></span><time datetime="2026-09-29">29 September 2026</time><span class="sep"></span><span>1 min read</span></div>
+              <span class="read">Read the post →</span>
+            </div>
+          </a>
+          <div class="blog-bar"><h2>More explorations</h2></div>
+          <div class="post-grid post-grid--two">
+            <a class="post-card" href="blog-post.html?slug=what-client-centric-actually-costs">
+              <div class="post-thumb"><img src="atraxia/blog/client-centric.jpg?v=4" alt="A banded teal gas giant lit from the upper right, its multi-banded ring passing in front of and behind it, with a small cratered moon" width="1280" height="800" loading="lazy" /></div>
+              <div class="body">
+                <h3>What “Client-Centric” Actually Costs</h3>
+                <p>Putting the client first sometimes means building what they need instead of what they asked for.</p>
+                <div class="post-byline"><span class="author">Abdallah Diab</span><span class="sep"></span><time datetime="2026-09-15">15 September 2026</time><span class="sep"></span><span>2 min read</span></div>
+              </div>
+            </a>
+            <a class="post-card" href="blog-post.html?slug=why-we-dont-ship-the-obvious-answer">
+              <div class="post-thumb"><img src="atraxia/blog/obvious-answer.jpg?v=3" alt="Four comets on different paths across a dense star field, one tail crossing a faint teal and violet nebula, with two meteor streaks" width="1280" height="800" loading="lazy" /></div>
+              <div class="body">
+                <h3>Why We Don’t Ship the Obvious Answer</h3>
+                <p>The first idea is only the one that came to mind first, so we treat it as a starting point.</p>
+                <div class="post-byline"><span class="author">Dr. Karim El Khaldi</span><span class="sep"></span><time datetime="2026-09-01">1 September 2026</time><span class="sep"></span><span>2 min read</span></div>
+              </div>
+            </a>
+            <a class="post-card" href="blog-post.html?slug=the-weight-of-yes-we-could">
+              <div class="post-thumb"><img src="atraxia/blog/yes-we-could.jpg?v=1" alt="A black hole off-centre in a deep star field, its glowing accretion disk bent around the dark core by gravitational lensing, warm at the inner edge and teal further out" width="1280" height="800" loading="lazy" /></div>
+              <div class="body">
+                <h3>The Weight of “Yes, We Could”</h3>
+                <p>Being able to build something isn’t a reason to build it, especially when someone trusts us with their health.</p>
+                <div class="post-byline"><span class="author">Abdallah Diab</span><span class="sep"></span><time datetime="2026-08-18">18 August 2026</time><span class="sep"></span><span>2 min read</span></div>
+              </div>
+            </a>
+            <a class="post-card" href="blog-post.html?slug=what-we-mean-by-simple">
+              <div class="post-thumb"><img src="atraxia/blog/what-we-mean-by-simple.jpg?v=2" alt="Tall columns of dark gas and dust rising from a cloud bank against a glowing teal nebula and dense star field, their ragged edges lit from the upper right and young stars glinting inside them" width="1280" height="800" loading="lazy" /></div>
+              <div class="body">
+                <h3>What We Mean by Simple</h3>
+                <p>Simple is about how little a person has to think to use something correctly, not how clean it looks.</p>
+                <div class="post-byline"><span class="author">Dr. Karim El Khaldi</span><span class="sep"></span><time datetime="2026-08-04">4 August 2026</time><span class="sep"></span><span>2 min read</span></div>
+              </div>
+            </a>
+          </div>
+          <!-- posts:end -->
+          <div class="sl-none" role="status"></div>
+        </div>
+      </section>
+      <section class="bl-cta" aria-label="Get in touch">
+        <div class="wrap">
+          <div class="contact-card">
+            <div>
+              <div class="label">HAVE A THOUGHT TO SHARE?</div>
+              <a class="email" href="mailto:support@atraxia.org">support@atraxia.org</a>
+            </div>
+            <a class="btn btn--primary" href="contact">Get in touch</a>
+          </div>
+        </div>
+      </section>
     </main>
     <footer class="site-footer">
       <div class="wrap footer-tabs-row">

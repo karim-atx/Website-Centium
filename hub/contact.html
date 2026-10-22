@@ -30,6 +30,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
+    <link rel="stylesheet" href="assets/css/contact.css" />
     <script src="assets/js/core.js"></script>
     <script src="assets/js/contact.js" defer></script>
   </head>
@@ -68,8 +69,97 @@
         <span class="meta">EST. 2026</span>
       </div>
     </header>
-    <main id="main" tabindex="-1">
-      <!-- Contact page content (form, every state, Copy email, Turnstile) arrives in batch 4. -->
+    <main id="main" tabindex="-1" class="ct-page">
+      <div class="wrap">
+        <div class="ct-head">
+          <span class="sl-eyebrow">CONTACT</span>
+          <h1>Contact Atraxia</h1>
+          <p>Questions about the company, partnerships, press, or our ventures and what’s on the horizon.</p>
+        </div>
+        <div class="ct-card">
+          <!-- The form posts to the shared submit-contact function (contact.js). It
+               is never submitted natively: form-action is 'none' in the CSP. -->
+          <form class="ct-form cx-form" novalidate data-state="idle">
+            <div class="cx-body">
+              <div class="cx-row">
+                <div class="cx-field" data-f="name">
+                  <label for="cx-name">Name</label>
+                  <input id="cx-name" name="name" type="text" autocomplete="name" maxlength="100" required aria-describedby="cx-name-err" />
+                  <p class="cx-err" id="cx-name-err"></p>
+                </div>
+                <div class="cx-field" data-f="email">
+                  <label for="cx-email">Email</label>
+                  <input id="cx-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" spellcheck="false" required aria-describedby="cx-email-err" />
+                  <p class="cx-err" id="cx-email-err"></p>
+                </div>
+              </div>
+              <div class="cx-field" data-f="topic">
+                <label for="cx-topic" id="cx-topic-lab">Topic</label>
+                <div class="cx-select">
+                  <select id="cx-topic" name="topic" required aria-describedby="cx-topic-err">
+                    <option value="" selected disabled>Choose a topic</option>
+                    <option value="general">General</option>
+                    <option value="partnerships">Partnerships</option>
+                    <option value="press">Press</option>
+                    <option value="ventures">Ventures</option>
+                  </select>
+                </div>
+                <p class="cx-err" id="cx-topic-err"></p>
+              </div>
+              <div class="cx-field" data-f="message">
+                <label for="cx-message">Message</label>
+                <textarea id="cx-message" name="message" rows="5" maxlength="1500" required aria-describedby="cx-message-err cx-count"></textarea>
+                <div class="cx-under">
+                  <p class="cx-err" id="cx-message-err"></p>
+                  <p class="cx-count" id="cx-count"><span class="cx-count-n">0</span> / 1,500<span class="visually-hidden"> characters</span></p>
+                </div>
+                <span class="cx-count-live visually-hidden" aria-live="polite"></span>
+              </div>
+              <div class="cx-hp" aria-hidden="true">
+                <label for="cx-website">Leave this field empty</label>
+                <input id="cx-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+              </div>
+              <div class="cx-field cx-ts-field" data-f="turnstile">
+                <div class="cx-ts" id="cx-ts" tabindex="-1" aria-describedby="cx-turnstile-err"></div>
+                <p class="cx-err" id="cx-turnstile-err"></p>
+              </div>
+              <div class="cx-alert" role="alert" hidden>
+                <strong class="cx-alert-title">We couldn’t send your message.</strong>
+                <span class="cx-alert-msg">Please try again, or email us directly at <a href="mailto:support@atraxia.org">support@atraxia.org</a>.</span>
+                <div class="cx-alert-actions">
+                  <button type="submit" class="cx-retry">Try again</button>
+                  <button type="button" class="cx-linkbtn" data-copy><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><rect x="8.5" y="8.5" width="11" height="11" rx="2.6" stroke="currentColor" stroke-width="1.7"/><path d="M15.5 8.5V6.6A2.1 2.1 0 0 0 13.4 4.5H6.6A2.1 2.1 0 0 0 4.5 6.6v6.8a2.1 2.1 0 0 0 2.1 2.1h1.9" stroke="currentColor" stroke-width="1.7"/></svg><span data-copy-label>Copy email</span></button>
+                </div>
+              </div>
+              <div class="cx-foot">
+                <button class="btn btn--primary cx-submit" type="submit"><span class="cx-spin" aria-hidden="true"></span><span class="cx-submit-label">Send message</span></button>
+              </div>
+            </div>
+            <div class="cx-success" hidden tabindex="-1">
+              <span class="cx-success-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <h2>Thanks, we’ll get back to you soon</h2>
+              <p>Your message is on its way to the Atraxia team.</p>
+              <button type="button" class="btn btn--ghost cx-again">Send another message</button>
+            </div>
+            <p class="cx-status visually-hidden" id="cx-status" role="status" aria-live="polite"></p>
+          </form>
+          <aside class="ct-side cx-direct" aria-label="Email Atraxia directly">
+            <div class="label">GENERAL ENQUIRIES</div>
+            <div class="cx-email-row"><a class="email" href="mailto:support@atraxia.org">support@atraxia.org</a><button type="button" class="cx-copy cx-copy--icon" data-copy aria-label="Copy email" data-tip="Copy email"><svg class="i-copy" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><rect x="8.5" y="8.5" width="11" height="11" rx="2.6" stroke="currentColor" stroke-width="1.7"/><path d="M15.5 8.5V6.6A2.1 2.1 0 0 0 13.4 4.5H6.6A2.1 2.1 0 0 0 4.5 6.6v6.8a2.1 2.1 0 0 0 2.1 2.1h1.9" stroke="currentColor" stroke-width="1.7"/></svg><svg class="i-check" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M5.5 12.5l4.2 4.2 8.8-9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+            <span class="cx-copied-live visually-hidden" aria-live="polite"></span>
+            <a class="cx-mailto" href="mailto:support@atraxia.org">Open in your email app</a>
+            <div class="cx-web">
+              <span>Use webmail?</span>
+              <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=support@atraxia.org" target="_blank" rel="noopener">Open in Gmail</a>
+              <a href="https://outlook.office.com/mail/deeplink/compose?to=support@atraxia.org" target="_blank" rel="noopener">Open in Outlook</a>
+            </div>
+          </aside>
+        </div>
+        <div class="ct-actions">
+          <a class="btn btn--primary" href="index.html">Back to home</a>
+          <a class="ct-outline" href="legal.html">Legal</a>
+        </div>
+      </div>
     </main>
     <footer class="site-footer">
       <div class="wrap footer-tabs-row">

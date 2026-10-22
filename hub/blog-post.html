@@ -30,6 +30,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="assets/css/atraxia.css" />
+    <link rel="stylesheet" href="assets/css/blog.css" />
     <script src="assets/js/core.js"></script>
     <script src="assets/js/scene.js" defer></script>
     <script src="assets/js/blog-scene.js" defer></script>
@@ -70,9 +71,111 @@
         <span class="meta">EST. 2026</span>
       </div>
     </header>
-    <main id="main" tabindex="-1">
-      <!-- Article content (the post body, related posts, not-found and render-error states) arrives in batch 4. -->
+    <main id="main" tabindex="-1" class="bl bl-post">
+      <div class="hero hero--compact hero--post">
+        <div class="wrap">
+          <div class="hs-copy">
+            <a class="btn btn--ghost hero-back" href="blog.html">← All posts</a>
+            <div class="eyebrow"><span class="rule"></span><span class="label">EXPLORATIONS</span></div>
+            <h1 class="hero-h1" data-p="title"></h1>
+            <div class="post-meta" hidden>
+              <img class="avatar" data-p="authorImg" alt="" width="40" height="40" />
+              <span class="author" data-p="authorName"></span>
+              <span class="sep"></span>
+              <time data-p="dateLabel"></time>
+              <span class="sep"></span>
+              <span><span data-p="read"></span> min read</span>
+            </div>
+            <div class="sl-share" hidden>
+              <span>Share</span>
+              <button type="button" data-share-copy>Copy link</button>
+              <a target="_blank" rel="noopener" data-share="linkedin">LinkedIn</a>
+              <a target="_blank" rel="noopener" data-share="x">X</a>
+              <a data-share="email">Email</a>
+              <span class="sl-share-live visually-hidden" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <section class="bl-article" aria-label="Article">
+        <div class="wrap">
+          <article class="post-body">
+            <figure hidden><div class="post-thumb"><img data-p="img" alt="" width="1280" height="800" /></div></figure>
+            <div data-body></div>
+            <div class="post-end" hidden>
+              <div class="who">
+                <img data-p="authorImg" alt="" width="52" height="52" />
+                <div><strong data-p="authorName"></strong><span data-p="authorRole"></span></div>
+              </div>
+              <a class="btn btn--ghost" href="blog.html">← All posts</a>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="bl-related" aria-labelledby="bl-related-h">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="sl-eyebrow">KEEP EXPLORING</span>
+            <h2 id="bl-related-h">Related posts</h2>
+          </div>
+          <div class="post-grid post-grid--two" data-related></div>
+        </div>
+      </section>
+      <section class="bl-cta" aria-label="Get in touch">
+        <div class="wrap">
+          <div class="contact-card">
+            <div>
+              <div class="label">CURIOUS WHERE THIS LEADS?</div>
+              <a class="email" href="mailto:support@atraxia.org">support@atraxia.org</a>
+            </div>
+            <div class="hero-actions">
+              <a class="btn btn--ghost" href="https://centium.atraxia.org">Visit Centium →</a>
+              <a class="btn btn--primary" href="contact">Get in touch</a>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- The post bodies, carried over unchanged from the pre-redesign hub/blog-post.html
+           (git show 0f506a1:hub/blog-post.html). One per slug in the #atx-posts block. -->
+      <template data-post-body="the-plan-comes-second">
+              <p class="lead">Most companies begin with a plan: a product, a market, a timeline. We have plans too, but they come second. First comes a question we can&rsquo;t stop asking.</p>
+              <p>It usually starts somewhere unglamorous: a workflow that takes four extra steps for no good reason, a tool that almost works, a problem everyone&rsquo;s quietly adapted to instead of solving. We notice it, and then we can&rsquo;t stop noticing it. That&rsquo;s the part that doesn&rsquo;t show up in a pitch deck, the itch that comes before the business case.</p>
+              <p>Centium started this way. Not from a market-sizing spreadsheet, but from watching how disconnected the pieces of someone&rsquo;s health actually are. The data lives in one app. The professional guidance lives somewhere else entirely. There&rsquo;s no real link between the two. The plan came after we understood that gap, not before.</p>
+              <p>We think that order matters. A plan built on a real question tends to survive contact with reality better than one built to justify an opportunity. It&rsquo;s slower at the start. It&rsquo;s usually worth it by the end.</p>
+              <p>This is the thinking we&rsquo;ll keep sharing here. Not polished conclusions, but the questions behind what we&rsquo;re building, as we&rsquo;re still working through them.</p>
+      </template>
+      <template data-post-body="what-client-centric-actually-costs">
+              <p class="lead">It&rsquo;s easy to say the client comes first. Almost every company says it. It&rsquo;s harder to say no to a feature a client is actively asking for, paying for, maybe even frustrated about not having, because it doesn&rsquo;t actually serve what they need.</p>
+              <p>That&rsquo;s the distinction we try to hold onto: what a client wants in the moment and what actually moves them forward aren&rsquo;t always the same thing. Giving someone exactly what they ask for feels responsive. It isn&rsquo;t always right.</p>
+              <p>This shows up constantly in healthcare-adjacent products. Someone wants a feature that makes a number look better on a dashboard. What they need is to understand why the number is what it is, and what to do about it. The first is easier to build and easier to sell. The second is the harder, slower work of actually being useful.</p>
+              <p>Being client-centric, to us, doesn&rsquo;t mean saying yes to every request. It means taking the request seriously enough to ask what&rsquo;s underneath it. Sometimes that means building something different from what was asked for, because it&rsquo;s what the person actually needs.</p>
+              <p>That costs trust in the short term. A client who doesn&rsquo;t get the feature they asked for can feel unheard. But we&rsquo;d rather earn that trust back by being right than keep it by being agreeable.</p>
+      </template>
+      <template data-post-body="why-we-dont-ship-the-obvious-answer">
+              <p class="lead">The first solution to a problem is rarely the right one. It&rsquo;s just the first one you thought of. There&rsquo;s a real difference between those two things, and it&rsquo;s easy to lose sight of it when a deadline is close and the obvious answer is sitting right there.</p>
+              <p>The obvious answer usually looks like whatever the last product you used did. It&rsquo;s familiar, it&rsquo;s defensible in a meeting, and it ships fast. None of that makes it correct for the problem in front of you.</p>
+              <p>We&rsquo;ve learned to treat the first idea as a starting point, not a destination. The real question isn&rsquo;t &ldquo;does this work?&rdquo; Almost anything works well enough to demo. The question is whether it&rsquo;s actually the right shape for the problem, or just the shape we reached for because it was closest.</p>
+              <p>That usually means sitting with a problem longer than feels comfortable, sketching out two or three alternatives even when the first one seems fine, and being willing to throw away work that technically functions but doesn&rsquo;t actually solve the thing.</p>
+              <p>It&rsquo;s slower. It also means what we ship tends to still make sense six months later, instead of becoming the thing we quietly patch around.</p>
+      </template>
+      <template data-post-body="the-weight-of-yes-we-could">
+              <p class="lead">Working in health and wellness means running into a particular kind of temptation often. Not the temptation to cut corners, but the opposite: the temptation to add. A feature that would work. A data point that&rsquo;s technically available. A capability that&rsquo;s genuinely possible to build.</p>
+              <p>&ldquo;Yes, we could&rdquo; is a dangerous sentence in this industry. Just because something is technically possible doesn&rsquo;t mean it belongs in a product that handles someone&rsquo;s health information. Every additional piece of data collected is something that has to be protected, explained, and justified. Every added capability is something a user now has to understand, even if they never asked for it.</p>
+              <p>We&rsquo;ve turned down features that would have been easy to build and easy to market, because the honest answer to &ldquo;should we build this&rdquo; was no, even when the answer to &ldquo;can we build this&rdquo; was yes. That&rsquo;s not a popular stance in a culture that rewards shipping fast and shipping often.</p>
+              <p>But health products carry a different weight than most. Someone trusts us with information about their body, sometimes their most sensitive information. That trust doesn&rsquo;t get earned by how much we build. It gets earned by how carefully we decide what not to.</p>
+              <p>So we keep asking the harder question first. Not &ldquo;can we,&rdquo; but &ldquo;should we,&rdquo; and we&rsquo;re comfortable with the answer sometimes being no.</p>
+      </template>
+      <template data-post-body="what-we-mean-by-simple">
+              <p class="lead">&ldquo;Simple&rdquo; gets used as a compliment so often that it&rsquo;s started to mean almost nothing. Everyone says their product is simple. Most of them aren&rsquo;t. What they usually mean is that it looks clean, which is a different thing entirely.</p>
+              <p>Real simplicity isn&rsquo;t about how something looks. It&rsquo;s about how much a person has to think to use it correctly. A screen can look minimal and still be confusing, if the thing it&rsquo;s asking you to do doesn&rsquo;t match how you actually think about the problem. A screen can look busy and still be simple, if every piece of information on it is exactly where you&rsquo;d expect to find it.</p>
+              <p>We&rsquo;ve rebuilt the same screen more times than we&rsquo;d like to admit, not because it looked wrong, but because using it required remembering something, or guessing at something, or backtracking to fix something. Those are the real signs that a design has failed at simplicity, even if it passed every visual review.</p>
+              <p>The harder version of our job isn&rsquo;t adding capability. It&rsquo;s absorbing complexity somewhere the user never has to see it, so the interaction in front of them stays obvious. That usually means more work on our end, not less. Simple, done properly, is rarely the easy option for the people building it.</p>
+              <p>That&rsquo;s the standard we hold ourselves to: not whether something looks clean, but whether someone can use it correctly without having to think about it. If it fails that test, it isn&rsquo;t simple yet, no matter how it looks.</p>
+      </template>
     </main>
+    <!-- Renders the requested post right after its templates, before anything else paints
+         (the reference ran this inline here; the CSP has no 'unsafe-inline', so it is a file). -->
+    <script src="assets/js/blog-post.js"></script>
     <footer class="site-footer">
       <div class="wrap footer-tabs-row">
         <nav class="tabs" aria-label="Footer">
