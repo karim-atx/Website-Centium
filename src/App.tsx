@@ -46,6 +46,14 @@ import ProRoutes, { ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRout
 import ProMoreRoutes from "./pages/pro/more/MoreRoutes";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
+import MyBookingsPage from "./pages/marketplace/MyBookingsPage";
+import MyRewardsPage from "./pages/marketplace/MyRewardsPage";
+import PointsHistoryPage from "./pages/marketplace/PointsHistoryPage";
+import HowToEarnPage from "./pages/marketplace/HowToEarnPage";
+import OfferDetailPage from "./pages/marketplace/rewards/OfferDetailPage";
+import VoucherPage from "./pages/marketplace/rewards/VoucherPage";
+import { ClientOnly } from "./pages/marketplace/ClientOnly";
+import ClientNotificationsPage from "./pages/notifications/ClientNotificationsPage";
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
 import MarketRoutes from "./pages/business-market/MarketRoutes";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
@@ -491,6 +499,15 @@ function AppRoutes() {
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
+        {/* Market + Share 3.0 (W2, HANDOVER §13): the client Explore pages. Static
+            segments, so they win over :category. */}
+        <Route path="/app/marketplace/bookings" element={<ClientOnly><MyBookingsPage /></ClientOnly>} />
+        <Route path="/app/marketplace/rewards/mine" element={<ClientOnly><MyRewardsPage /></ClientOnly>} />
+        <Route path="/app/marketplace/rewards/:offerId" element={<ClientOnly><OfferDetailPage /></ClientOnly>} />
+        <Route path="/app/marketplace/vouchers/:id" element={<ClientOnly><VoucherPage /></ClientOnly>} />
+        <Route path="/app/marketplace/points/history" element={<ClientOnly><PointsHistoryPage /></ClientOnly>} />
+        <Route path="/app/marketplace/points/earn" element={<ClientOnly><HowToEarnPage /></ClientOnly>} />
+        <Route path="/app/notifications" element={<ClientOnly><ClientNotificationsPage /></ClientOnly>} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
         {/* B7: staff reach the console pages their permissions allow (ConsoleGate). */}

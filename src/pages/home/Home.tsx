@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { QuickActions } from "../../components/dashboard/QuickActions";
 import { StreaksBar } from "../../components/dashboard/StreaksBar";
@@ -10,7 +10,8 @@ import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
-import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
+import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X, Bell } from "lucide-react";
+import { fetchMyNotifications, unreadCount } from "../../services/notifications";
 import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -72,6 +73,8 @@ export default function Home() {
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+        <HomeBell />
         <button
           onClick={() => navigate("/app/profile")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-team-teal-ink font-extrabold text-[13px] shrink-0 overflow-hidden"
@@ -86,6 +89,7 @@ export default function Home() {
             user.firstName.charAt(0)
           )}
         </button>
+        </div>
       </div>
 
       {/* QA 12.0: "When accessing the account for the first time [with
@@ -199,5 +203,39 @@ export default function Home() {
       <CreateRoutineSheet open={createRoutineOpen} onClose={() => setCreateRoutineOpen(false)} folderId={null} />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
     </div>
+  );
+}
+
+/**
+ * Market + Share 3.0 · W2 · D-36: the client Home's bell, beside the avatar,
+ * opening C-MO.4.10 (/app/notifications). Not drawn: a 36 box with a 44 hit
+ * area (.tap), lucide Bell 20 in the header's ink, and the board's 8 unread
+ * dot #8F68F6 (C-MO.4.10's `n.dot`) when the inbox reports unread rows. It
+ * reads my_notifications once on mount; while DB6 is pending there is no dot
+ * (awaiting DB stage DB6).
+ */
+function HomeBell() {
+  const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    // awaiting DB stage DB6
+    void fetchMyNotifications().then((r) => {
+      if (!cancelled && r.ok) setUnread(unreadCount(r.value));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return (
+    <button
+      type="button"
+      onClick={() => navigate("/app/notifications")}
+      aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+      className="tap relative w-9 h-9 rounded-full flex items-center justify-center text-charcoal shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
+    >
+      <Bell size={20} strokeWidth={1.9} aria-hidden />
+      {unread > 0 && <span aria-hidden className="absolute rounded-full" style={{ top: 6, right: 7, width: 8, height: 8, background: "#8F68F6" }} />}
+    </button>
   );
 }

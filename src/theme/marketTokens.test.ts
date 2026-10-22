@@ -33,6 +33,23 @@ test("tier inks on their fills: D-01 and dark at 4.5:1; the drawn Silver and Gol
   for (const r of [1, 2, 3, 4, 5] as const) assert.ok(ratio(TIERS_DARK[r]) >= 4.5, `dark rank ${r}`);
 });
 
+test("tier TEXT inks reach 4.5:1 on the fill and on the pill (W1 Q1), fills keep the drawn ink", () => {
+  // The pill is the ink at 12% over the fill.
+  const over = (ink: string, a: number, fill: string) => {
+    const h = (x: string) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16));
+    const [f, k] = [h(fill), h(ink)];
+    return "#" + f.map((v, i) => Math.round(v + (k[i] - v) * a).toString(16).padStart(2, "0")).join("");
+  };
+  for (const r of [1, 2, 3, 4, 5] as const) {
+    const t = TIERS_LIGHT[r];
+    assert.ok(contrastRatio(t.text, t.fill) >= 4.5, `rank ${r} on fill`);
+    assert.ok(contrastRatio(t.text, over(t.ink, 0.12, t.fill)) >= 4.5, `rank ${r} on pill`);
+    assert.ok(contrastRatio(TIERS_DARK[r].text, TIERS_DARK[r].fill) >= 4.5, `dark rank ${r}`);
+  }
+  assert.deepEqual([TIERS_LIGHT[2].text, TIERS_LIGHT[3].text], ["#576579", "#7F6010"]);
+  assert.equal(TIERS_LIGHT[2].ink, "#64748B");
+});
+
 test("rank comes from point_tiers' order, never the name", () => {
   assert.equal(tierRank(TIERS, "Gold"), 3);
   assert.equal(tierRank(TIERS, "Diamond"), 5);

@@ -16,6 +16,7 @@
 // decoration. A ladder with no levels then needs no special case.
 
 import type { Database } from "../../../lib/supabase/database.types";
+import type { PointsExtras } from "../points/pointsModel";
 
 export type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
 export type AchievementLevel = Database["public"]["Enums"]["achievement_level"];
@@ -57,6 +58,11 @@ export interface PointsSummary {
   referralPoints: number;
   otherPoints: number;
   achievementsEarned: number;
+  /**
+   * Market + Share 3.0 (W2): the DB1 columns (earned today, the daily cap,
+   * expiring soon). null until DB1 lands. awaiting DB stage DB1
+   */
+  extras?: PointsExtras | null;
 }
 
 /** One row of point_tiers, for the pips. */

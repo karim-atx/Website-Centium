@@ -1,182 +1,164 @@
 import type { ReactNode } from "react";
-import { Check } from "lucide-react";
 import type { MarketplaceClass } from "../../services/marketplace";
-import { time12Split } from "../../utils/time12";
-import { useKnownPosition } from "../../hooks/useKnownPosition";
-import { distanceKm } from "../../services/geo/distance";
-import { distanceText } from "../../services/marketplace/classBooking";
+import { useIsDark } from "../../hooks/useIsDark";
+import { useOnline } from "../../hooks/useOnline";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette } from "../../theme/marketTokens";
+import { NO_ICON_SCALE } from "../pro/proInk";
+import { TicketStub } from "../market/TicketStub";
+import { ConfirmationStrip } from "../market/ConfirmationStrip";
+import { FOCUS_CSS } from "../market/usePress";
+import { time12 } from "../../utils/time12";
 import { FeaturedChip } from "./FeaturedChip";
+import { classCardLines, shortDate, venueOf } from "./classCardModel";
 
-// v6 MO1.4 #37-#46 (Explore class card), shared by Explore › Classes and the
-// gym page's Classes tab (OURS-gym-classes-tab #3, venue line hidden there).
-//
-// Literal values (MO1.4 table, light / dark):
-//   card     pad 12 · r18 · cream-card · 0.5px #241F1B@8% / #F5F3FA@8% (hair-08)
-//   block    56 wide · pad 8 0 · r12 · #F0EDF9 / #303141 (primary-pale) · 12 to the text
-//   day      10.5/15.8 800 ls 0.6 · #7D67D9 / #9A8CD6
-//   time     14/21 800 · charcoal; meridiem 9.5/12 700 #8C8378 under it (V6-148)
-//   title    14/21 700 · venue 12/18 600 #7D67D9 / #9A8CD6 · place 11.5/17.3 400 faint
-//   price    pad 2 8 · 11/16.5 700 · #2F5F58 on #E4F0EE (dark: the app's teal pair, V6-92)
-//   spots    11/16.5 400 faint; "Full" 11/16.5 700 #C0392B / #F09A8E (K8)
-//   Book     h30 · pad 0 14 · r10 · 12/18 700 #7D67D9 on cream-card · 0.5px #AEA1DC /
-//            #9A8CD6 on #1C1F28 · 0.5px #A991FE; 44 hit area from .tap
-// The whole card opens the class page (S7); Book / Booked open the same page.
-
-/** A class 7 or more days out, whose weekday alone would not say which week. */
-const farOff = (iso: string) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(`${iso}T00:00:00`).getTime() - today.getTime() >= 7 * 86_400_000;
-};
-
-/**
- * The date block's top line: the weekday ("SAT"), or for a class a week or
- * more away the date ("OCT 18", K7). Upper-cased by the block's style.
- */
-export const blockDay = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return farOff(iso)
-    ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : d.toLocaleDateString("en-US", { weekday: "short" });
-};
+// Market + Share 3.0 · W2 · the class ticket card (C-MO.4.3 `classes`,
+// Client Explore Screens lines 240–256), shared by Explore › Classes, the gym
+// page's Classes tab (venue left out there), the business's Explore preview
+// and ProfessionalExplore. Built on the W1 TicketStub (stubWidth 72):
+// - the ticket: relative flex, min-height 88, radius 18, --card, 0.5px --hair,
+//   overflow hidden;
+// - the body: padding 20, a column with gap 12: a row (gap 12, top aligned)
+//   of the 64 wide time block (the time 16 / 22 700 tabular, the duration
+//   12 / 16 --faint) and the title 16 / 22 600 + "{venue} · {instructor}"
+//   13 / 18 500 --ink2 (each one line with an ellipsis); then
+//   "{b} of {cap} booked" 11 / 15 --faint and the 3 tall bar (--soft track,
+//   --segactive fill, radius 999, margin-top 5);
+// - the 72 price stub (1.5px dashed --fill, --pale, the price 18 / 800
+//   --pdark; "Free" for a free class) and its two 14 notches at right 65
+//   (--page with a 0.5px --hair ring).
+// Undrawn live features, in the same chrome: the Featured chip after the
+// title (B13 MK-06); a class the viewer holds turns its stub teal (STUB
+// "booked": --tealbg / --tealink / --teal) with a tick and "Booked"; a class
+// full for this viewer (viewerSpotsLeft applied by the caller) turns it muted
+// (--soft / --faint / --border) with "Full", and "· Full" ends the booked
+// line; a viewer's own smaller limit adds "· 2 spots left"; a class a week
+// or more out leads the booked line with its date ("Oct 30 · ").
+// Times are 12-hour (D-03): the meridiem follows the time at 11 / 700 so
+// "12:30 PM" stays inside the 64 block. The whole ticket is one button that
+// opens the class page; there is no Book button on the drawn card, so
+// book_tap is recorded by the class page's own Book (it already records it,
+// once per session, with the page's ?src=).
 
 export function ClassCard({
   c,
   booked,
   onOpen,
   hideVenue,
-  onBook,
 }: {
   c: MarketplaceClass;
   booked: boolean;
   onOpen: (c: MarketplaceClass) => void;
-  /** B13 MK-07: Book was tapped (before it opens the class page), for book_tap. */
+  /**
+   * B13 MK-07 book_tap. Kept for the callers' signature: the redrawn card has
+   * no Book button, so the class page's Book records book_tap instead.
+   */
   onBook?: (c: MarketplaceClass) => void;
   /** The gym page's Classes tab: the venue is the page itself. */
   hideVenue?: boolean;
 }) {
-  const here = useKnownPosition();
-  // The gym page's own tab is at that gym: no distance there.
-  const distance =
-    !hideVenue && here && c.venueLat != null && c.venueLng != null ? distanceText(distanceKm(here, { lat: c.venueLat, lng: c.venueLng })) : null;
-  const free = !c.priceValue;
-  const t = time12Split(c.startTime);
-  const when = `${blockDay(c.date)} ${t ? `${t.time} ${t.meridiem}` : c.startTime}`;
+  const dark = useIsDark();
+  const m = marketPalette(dark);
+  const l = classCardLines(c, { booked, hideVenue });
+  const when = [shortDate(c.date), time12(c.startTime)].filter(Boolean).join(" ");
+  const label = `${c.title}${hideVenue ? "" : `, ${venueOf(c)}`}, ${when}. ${booked ? "Booked" : l.stub === "full" ? "Full" : l.price}. Open class`;
+  const one = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } as const;
+  const stub =
+    l.stub === "booked" ? (
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: m.tealink }}>
+        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        <span style={{ fontSize: textPx(12), fontWeight: 800 }}>Booked</span>
+      </span>
+    ) : undefined;
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(c)}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen(c);
-        }
-      }}
-      aria-label={`${c.title}${hideVenue ? "" : `, ${c.businessName}`}, ${when}. Open class`}
-      data-class-card=""
-      className="cursor-pointer rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 animate-fade-slide-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-    >
-      <div className="flex gap-3">
-        <span
-          data-date-block=""
-          className="w-14 shrink-0 self-center rounded-[12px] bg-primary-pale flex flex-col items-center justify-center py-2"
-        >
-          <span className="text-[10.5px] leading-[15.8px] font-extrabold uppercase tracking-[0.6px] text-th-7d67d9 dark:text-primary-accent whitespace-nowrap">
-            {blockDay(c.date)}
+    <>
+      <style>{FOCUS_CSS}</style>
+      <TicketStub
+        stubWidth={72}
+        tone={l.stub === "booked" ? "teal" : l.stub === "full" ? "muted" : "pale"}
+        stubLabel={l.stub === "full" ? "Full" : l.price}
+        stub={stub}
+        minHeight={88}
+        onPress={() => onOpen(c)}
+        ariaLabel={label}
+        className="market-focus"
+        bodyStyle={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}
+      >
+        <span data-class-card="" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <span style={{ width: 64, flexShrink: 0 }}>
+            <span style={{ display: "block", fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+              {l.time ? (
+                <>
+                  {l.time.time}
+                  <span style={{ fontSize: textPx(11), lineHeight: 1, fontWeight: 700 }}>{` ${l.time.meridiem}`}</span>
+                </>
+              ) : (
+                c.startTime
+              )}
+            </span>
+            <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(16), color: m.faint }}>{l.dur}</span>
           </span>
-          <span className="text-[14px] leading-[21px] font-extrabold text-charcoal tabular-nums">{t?.time ?? c.startTime}</span>
-          {t && <span className="text-[9.5px] leading-[12px] font-bold text-charcoal-faint">{t.meridiem}</span>}
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+              <span style={{ fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 600, minWidth: 0, ...one }}>{c.title}</span>
+              {c.isFeatured && <FeaturedChip />}
+            </span>
+            <span style={{ display: "block", fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 500, color: m.ink2, ...one }}>{l.sub}</span>
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          {/* B13 MK-06: a live featured week, the chip after the title. */}
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p className="min-w-0 text-[14px] leading-[21px] font-bold text-charcoal truncate">{c.title}</p>
-            {c.isFeatured && <FeaturedChip />}
-          </div>
-          {!hideVenue && (
-            <p className="text-[12px] leading-[18px] font-semibold text-th-7d67d9 dark:text-primary-accent truncate">{c.businessName}</p>
-          )}
-          {/* #43 PB-O-50 (B9): the place, then "· 1.2 km" from the venue's
-              coordinates (marketplace_classes venue_lat / venue_lng) when the
-              device has already shared its position; place only otherwise. */}
-          {(c.location || distance) && (
-            <p className="text-[11.5px] leading-[17.3px] text-charcoal-faint truncate">{[c.location, distance].filter(Boolean).join(" · ")}</p>
-          )}
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="inline-flex items-center text-[11px] leading-[16.5px] font-bold rounded-full px-2 py-[2px] bg-th-e4f0ee text-th-2f5f58 dark:bg-teal-pale dark:text-teal-deep-text">
-              {free ? "Free" : c.price}
-            </span>
-            <span
-              className={`text-[11px] leading-[16.5px] ${c.isFull ? "font-bold text-status-high" : "text-charcoal-faint"}`}
-            >
-              {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
-            </span>
-            {booked ? (
-              // K10: Booked in the Book slot, the class page's teal check style.
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpen(c);
-                }}
-                aria-label={`Booked: ${c.title}`}
-                className="tap ml-auto h-[30px] px-2.5 rounded-[10px] border-[0.5px] inline-flex items-center gap-1 text-[12px] leading-[18px] font-bold bg-th-e7f2f0 border-th-c1d5d2 text-th-3c6b65 dark:bg-teal-pale dark:border-teal-dark/50 dark:text-teal-deep-text"
-              >
-                <Check size={13} strokeWidth={2.4} aria-hidden /> Booked
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBook?.(c);
-                  onOpen(c);
-                }}
-                aria-label={`Book ${c.title}`}
-                className="tap ml-auto h-[30px] px-[14px] rounded-[10px] bg-cream-card border-[0.5px] border-th-aea1dc dark:border-primary text-[12px] leading-[18px] font-bold text-th-7d67d9 dark:text-primary-accent"
-              >
-                Book
-              </button>
+        <span style={{ display: "block" }}>
+          <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
+            {l.booked}
+            {l.extra && (
+              <>
+                {" · "}
+                <span style={{ fontWeight: 700, color: l.extra === "Full" ? m.high : m.ink2 }}>{l.extra}</span>
+              </>
             )}
-          </div>
-        </div>
+          </span>
+          <span aria-hidden style={{ display: "block", marginTop: 5, height: 3, borderRadius: 999, background: m.soft, overflow: "hidden" }}>
+            <span style={{ display: "block", height: "100%", width: `${l.pct}%`, borderRadius: 999, background: m.segactive }} />
+          </span>
+        </span>
+      </TicketStub>
+    </>
+  );
+}
+
+/**
+ * The shared empty state (Explore, the gym page's Classes tab), in the
+ * handover's empty-card style (MarketEmptyCard: radius 20, --card, 1px
+ * --border, padding 16; the title 13.5 / 800, the line 12.5 / 18 --ink2),
+ * with the caller's icon in a 36 --pale tile (--accent glyph) to its left.
+ */
+export function ExploreEmptyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
+  const m = marketPalette(useIsDark());
+  return (
+    <div style={{ lineHeight: "normal", display: "flex", alignItems: "flex-start", gap: 12, borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: 16, color: m.ink }}>
+      <span aria-hidden className="[&_svg]:w-5 [&_svg]:h-5" style={{ width: 36, height: 36, borderRadius: 12, background: m.pale, color: m.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {icon}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 800 }}>{title}</p>
+        <p style={{ margin: "4px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2 }}>{body}</p>
       </div>
     </div>
   );
 }
 
 /**
- * Foundations' empty-state block (MO1.4.3): a 56 primary-tint tile, a title
- * and a line. Shared by Explore and the gym page's Classes tab.
- */
-export function ExploreEmptyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
-  return (
-    // 42 here plus the list's 14 = the block's 56 from the rail above.
-    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-[42px] pb-0">
-      <span className="w-14 h-14 rounded-[18px] bg-primary-pale flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">{icon}</span>
-      <p className="text-[16px] font-extrabold text-charcoal">{title}</p>
-      <p className="text-[13px] text-charcoal-faint leading-[1.55]">{body}</p>
-    </div>
-  );
-}
-
-/**
- * The shared load-error line (MO1.4 K15 / O-ERR / O-OFF): 12/600 danger
- * #C0392B / #F09A8E and a "Retry" text button 12/700 #7D67D9 / #9A8CD6 with
- * a 44 hit area.
+ * The shared load-error line, as the handover's strip (D-04): the error tone
+ * with the caller's message and a "Retry" stub; the neutral tone while the
+ * browser is offline (the caller's offline wording).
  */
 export function RetryLine({ message, onRetry, className }: { message: string; onRetry?: () => void; className?: string }) {
+  const online = useOnline();
   return (
-    <p role="alert" className={`flex flex-wrap items-center gap-x-2 text-[12px] leading-[18px] font-semibold text-status-high ${className ?? ""}`}>
-      <span>{message}</span>
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="tap text-[12px] leading-[18px] font-bold text-th-7d67d9 dark:text-primary-accent">
-          Retry
-        </button>
-      )}
-    </p>
+    <div className={className}>
+      <ConfirmationStrip tone={online ? "error" : "neutral"} text={message} action={onRetry ? "Retry" : undefined} onAction={onRetry} still />
+    </div>
   );
 }
 

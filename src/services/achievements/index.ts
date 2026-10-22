@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Achievement, PointsSummary, PointTier } from "./ladder";
+import { parsePointsExtras } from "../points/pointsModel";
 
 export * from "./ladder";
 
@@ -130,6 +131,9 @@ export async function getPointsSummary(): Promise<Result<PointsSummary>> {
       referralPoints: r.referral_points,
       otherPoints: r.other_points,
       achievementsEarned: r.achievements_earned,
+      // awaiting DB stage DB1: earned_today, daily_cap, expiring_soon,
+      // expiring_soon_date (appended at the end); null until they are there.
+      extras: parsePointsExtras(r as unknown as Record<string, unknown>),
     },
   };
 }

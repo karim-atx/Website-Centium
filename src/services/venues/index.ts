@@ -76,6 +76,10 @@ export interface VenuePlan extends PlanLite {
   /** Commitment terms, information only (not enforced): MB-05 follow-up 5. */
   minimumTermMonths: number | null;
   noticeDays: number | null;
+  /** W2 (C-MO.4.2.1 plan rows): a fixed window that beats the billing period (packs, intro offers, drop-ins). */
+  validForDays?: number | null;
+  /** W2 (C-MO.4.2.1 / .2.2): what the plan includes, as the business wrote it. */
+  includes?: string[] | null;
 }
 
 export interface GymMembership {
@@ -332,7 +336,7 @@ export async function fetchPlansFor(businessIds: string[]): Promise<Result<Venue
   // archived one is gone; purchase_gym_membership does not refuse them yet.
   const { data, error } = await supabase
     .from("membership_plans")
-    .select("id, business_id, name, price, billing, minimum_term_months, notice_days")
+    .select("id, business_id, name, price, billing, minimum_term_months, notice_days, valid_for_days, includes")
     .in("business_id", ids)
     .filter("status", "eq", "active")
     .filter("visible_on_explore", "eq", true);
@@ -342,12 +346,14 @@ export async function fetchPlansFor(businessIds: string[]): Promise<Result<Venue
   }
   return {
     ok: true,
-    // minimum_term_months / notice_days are newer than the generated types.
-    value: ((data ?? []) as unknown as { id: string; business_id: string; name: string; price: number | string; billing: string; minimum_term_months: number | null; notice_days: number | null }[]).map((p) => ({
+    // minimum_term_months / notice_days / valid_for_days / includes are newer than the generated types.
+    value: ((data ?? []) as unknown as { id: string; business_id: string; name: string; price: number | string; billing: string; minimum_term_months: number | null; notice_days: number | null; valid_for_days?: number | null; includes?: string[] | null }[]).map((p) => ({
       id: p.id,
       businessId: p.business_id,
       minimumTermMonths: p.minimum_term_months ?? null,
       noticeDays: p.notice_days ?? null,
+      validForDays: p.valid_for_days ?? null,
+      includes: p.includes ?? null,
       name: p.name,
       price: Number(p.price),
       billing: p.billing as Billing,

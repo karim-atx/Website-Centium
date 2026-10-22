@@ -34,7 +34,8 @@ import { marketPalette } from "../../theme/marketTokens";
 //   stroke 3 #7D6BB5 at opacity 1 when selected, 0 when not;
 // - Done: margin-top 8, 100% × 40, radius 10, #AEA1DC, #FFFFFF 13 / 800
 //   (closeFilter).
-// Not drawn: the rows are 37 tall (the board's), within a 43 pitch.
+// The rows are 37 tall (the board's), within a 43 pitch; each carries .hit
+// (W1 lead decision Q8), a centred 44 hit box that leaves the drawing as is.
 
 export type FilterVariant = "client" | "pro";
 
@@ -228,6 +229,9 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
                     role="menuitemcheckbox"
                     aria-checked={on}
                     onClick={() => onToggle(o)}
+                    // W1 Q8: the drawn row is 37 tall at a 43 pitch; .hit
+                    // centres a 44 (48 with Bigger targets) hit box on it.
+                    className="hit"
                     style={{
                       width: "100%",
                       display: "flex",

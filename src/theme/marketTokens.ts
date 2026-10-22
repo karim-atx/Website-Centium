@@ -135,6 +135,16 @@ export interface TierStyle {
   fallbackName: string;
   fill: string;
   ink: string;
+  /**
+   * The ink for TEXT (W1 lead decision Q1: the 4.5:1 rule wins over the drawn
+   * hex for text; fills, bars and icons keep the drawn `ink`): the drawn ink
+   * darkened just enough to reach 4.5:1 on both the tier fill and the tier
+   * pill (12% ink over the fill, the darker surface). Light: Bronze #835528
+   * (drawn #8B5A2B is 4.16 on its pill), Silver #576579 (drawn #64748B 4.20
+   * on its fill), Gold #7F6010 (drawn #9A7414 3.89), Platinum as drawn,
+   * Diamond #2D6B7B. Dark: the lifted ink.
+   */
+  text: string;
   icon: string;
   border: string;
   pill: string;
@@ -149,8 +159,8 @@ function alpha(hex: string, a: number): string {
 }
 
 /** The drawn alpha recipe (tokens.json tiers: border 0.24, pill 0.12, track 0.16 of the ink). */
-function tier(rank: TierRank, fallbackName: string, fill: string, ink: string, icon: string, Icon: LucideIcon): TierStyle {
-  return { rank, fallbackName, fill, ink, icon, border: alpha(ink, 0.24), pill: alpha(ink, 0.12), track: alpha(ink, 0.16), Icon };
+function tier(rank: TierRank, fallbackName: string, fill: string, ink: string, icon: string, Icon: LucideIcon, text: string = ink): TierStyle {
+  return { rank, fallbackName, fill, ink, text, icon, border: alpha(ink, 0.24), pill: alpha(ink, 0.12), track: alpha(ink, 0.16), Icon };
 }
 
 /**
@@ -163,11 +173,11 @@ function tier(rank: TierRank, fallbackName: string, fill: string, ink: string, i
  * (tierRanks.test.ts).
  */
 export const TIERS_LIGHT: Record<TierRank, TierStyle> = {
-  1: tier(1, "Bronze", "#F3E8DD", "#8B5A2B", "#8B5A2B", Medal),
-  2: tier(2, "Silver", "#EEF1F5", "#64748B", "#94A3B8", Shield),
-  3: tier(3, "Gold", "#FDF3D6", "#9A7414", "#F6C445", Crown),
+  1: tier(1, "Bronze", "#F3E8DD", "#8B5A2B", "#8B5A2B", Medal, "#835528"),
+  2: tier(2, "Silver", "#EEF1F5", "#64748B", "#94A3B8", Shield, "#576579"),
+  3: tier(3, "Gold", "#FDF3D6", "#9A7414", "#F6C445", Crown, "#7F6010"),
   4: tier(4, "Platinum", "#EEF0F8", "#4F5B85", "#8C96C2", Crown),
-  5: tier(5, "Diamond", "#E6F4F7", "#2F6F80", "#5FB7CC", Gem),
+  5: tier(5, "Diamond", "#E6F4F7", "#2F6F80", "#5FB7CC", Gem, "#2D6B7B"),
 };
 
 /**
@@ -205,6 +215,7 @@ export function tierRank(tiers: readonly { name: string; sortOrder: number }[], 
 export const tierVars = (t: TierStyle): Record<string, string> => ({
   "--tierfill": t.fill,
   "--tierink": t.ink,
+  "--tiertext": t.text,
   "--tiericon": t.icon,
   "--tierborder": t.border,
   "--tierpill": t.pill,

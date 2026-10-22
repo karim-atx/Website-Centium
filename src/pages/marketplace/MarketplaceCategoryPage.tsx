@@ -1,30 +1,21 @@
-import { useBusinessStatus } from "../../hooks/useBusinessStatus";
-import { closedLine } from "../../services/business-closure/logic";
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
-  fetchOfferingsByBusiness,
   fetchOfferingsByCategory,
   type Offering,
   type OfferingCategory,
   type PublicOffering,
 } from "../../services/business-offerings";
-import { fetchMarketplaceVenues, type MarketplaceVenue } from "../../services/marketplace";
-import { recordListingEvent } from "../../services/marketplace/listingEvents";
-import { parseListingSource } from "../../services/marketplace/listingLogic";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { MapPin, Building2, SlidersHorizontal, Check, ChevronRight, ShoppingBag, type LucideIcon } from "lucide-react";
+import { MapPin, Building2, SlidersHorizontal, Check, type LucideIcon } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
-import { initials } from "../../components/professionals/typeColour";
-import { TYPE_CATEGORY, typeLabel } from "./venueTypes";
 import { ClassPage } from "./ClassPage";
-import { GymReviews } from "../../components/marketplace/GymReviews";
-import { businessHasVenue } from "../../services/venues";
 import { GymPage } from "./GymPage";
+import { ShowcasePage } from "./rewards/ShowcasePage";
 
 type FilterMode = "rating" | "proximity" | "discount";
 const filterOptions: { value: FilterMode; label: string }[] = [
@@ -38,12 +29,12 @@ const filterOptions: { value: FilterMode; label: string }[] = [
 // unfiltered "browse everything" list.
 //
 // Decision 23 (kept-list items 43 and 46): /app/marketplace/business?id=…
-// is a business's page, opened by its row on Explore › Businesses. It reuses
-// this route and this page's listing card rather than adding a route.
+// is a business's page. Market + Share 3.0 (W2): it is the C-MO.4.4.1
+// showcase (rewards/ShowcasePage), opened from Rewards' business rows.
 export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
   const [params] = useSearchParams();
-  if (category === "business") return <BusinessPage key={params.get("id") ?? ""} businessId={params.get("id") ?? ""} source={params.get("src")} />;
+  if (category === "business") return <ShowcasePage key={params.get("id") ?? ""} businessId={params.get("id") ?? ""} source={params.get("src")} />;
   // Handover-complete pass: the class page (MO1.4.4) and the gym page
   // (MO1.4.2.1) on the same route, as the business page.
   if (category === "class") return <ClassPage key={params.get("id") ?? ""} classId={params.get("id") ?? ""} />;
@@ -212,189 +203,5 @@ function OfferingCard({
         )}
       </div>
     </Card>
-  );
-}
-
-/**
- * A business's page (decision 23, items 43 and 46; MO1.4.1 interactions
- * 12–16, whose destination the board leaves unspecified). Everything on it is
- * data that already exists: the venue row (bio, perk, upcoming-class count,
- * place), the business's listings from business_offerings, and a link to the
- * category page each of its listings — or its business type — belongs to, so
- * every category page stays reachable now the "More categories" grid is gone.
- *
- * NOT HERE, because nothing stores it: a logo, opening hours, contact
- * details, distance (B25, B26). Reviews: a business with no venue lists its
- * own here (B14 follow-up business_reviews_public, the gym reviews' card
- * and language); a business with a venue is reviewed on its venue's page.
- */
-function BusinessPage({ businessId, source }: { businessId: string; source: string | null }) {
-  const [venue, setVenue] = useState<MarketplaceVenue | null | undefined>(undefined);
-  const [offerings, setOfferings] = useState<Offering[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // B14 RP-01: a business with no venue is reviewed here (write_business_review).
-  const [venueLess, setVenueLess] = useState(false);
-  // CP: a closed or paused business is off Explore; say so where it can be told.
-  const bizStatus = useBusinessStatus(businessId);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const [v, o] = await Promise.all([fetchMarketplaceVenues(), fetchOfferingsByBusiness(businessId)]);
-      if (cancelled) return;
-      if (!v.ok) {
-        // v6 Explore O-ERR: our own line, not the raw service message.
-        setError(typeof navigator !== "undefined" && navigator.onLine === false ? "You're offline. Try again when you're connected." : "Couldn't load this business.");
-        setVenue(null);
-      } else {
-        // Businesses only: a gym has no listings and its page waits on MO1.4.2.1.
-        const found = v.venues.find((x) => x.kind === "business" && x.venueId === businessId) ?? null;
-        setVenue(found);
-        // B13 MK-07: the profile opened, with where it was opened from
-        // (&src=…; a link from anywhere else is 'direct'). Once per session.
-        if (found) recordListingEvent({ businessId: found.venueId, kind: "profile_open", source: parseListingSource(source) });
-      }
-      setOfferings(o.ok ? o.offerings : []);
-      if (!o.ok && v.ok) setError("Couldn't load this business's listings right now.");
-      const has = await businessHasVenue(businessId);
-      if (!cancelled) setVenueLess(has === false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [businessId, source]);
-
-  if (venue === undefined) {
-    return (
-      <div>
-        <PageHeader title="Explore" showBack />
-        <div className="space-y-2.5" aria-busy="true" aria-label="Loading">
-          {[96, 72, 72].map((h, i) => (
-            <div key={i} aria-hidden="true" className="animate-skeleton-pulse rounded-[18px] bg-cream-soft" style={{ height: h }} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (venue === null) {
-    return (
-      <div>
-        <PageHeader title="Explore" showBack />
-        <p role={error ? "alert" : undefined} className={`text-[12px] font-semibold ${error ? "text-status-high" : "text-charcoal-faint"}`}>
-          {error ?? closedLine(bizStatus, "bookings") ?? "This business isn't listed on Explore right now."}
-        </p>
-      </div>
-    );
-  }
-
-  // The category pages this business leads to: its own type's, then every
-  // category it has a listing in.
-  const own = TYPE_CATEGORY[venue.venueType];
-  const categoryIds = [...new Set([...(own ? [own] : []), ...(offerings ?? []).map((o) => o.category)])].filter(
-    (c) => c !== "gyms" && c !== "classes"
-  );
-  const categoryLabel = (c: string) => marketplaceCategories.find((m) => m.id === c)?.label ?? c;
-
-  return (
-    <div>
-      <PageHeader title={venue.name} subtitle={[typeLabel(venue.venueType), venue.location].filter(Boolean).join(" · ")} showBack />
-
-      {/* What the Explore row used to carry below its place line (B26):
-          the bio, the upcoming-class count and the perk. */}
-      <Card className="mb-4 animate-fade-slide-up">
-        <div className="flex items-center gap-3">
-          <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-th-7d67d9 dark:text-primary-accent">
-            {initials(venue.name)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11.5px] text-charcoal-faint">
-              {venue.upcomingClassCount > 0
-                ? `${venue.upcomingClassCount} upcoming ${venue.upcomingClassCount === 1 ? "class" : "classes"}`
-                : "No upcoming classes"}
-            </p>
-            {venue.perk && (
-              <span className="inline-block mt-1 text-[10px] font-bold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5 leading-snug">
-                {venue.perk}
-              </span>
-            )}
-          </div>
-        </div>
-        {venue.bio && <p className="text-xs text-charcoal-soft mt-3 leading-relaxed whitespace-pre-line">{venue.bio}</p>}
-      </Card>
-
-      {error && (
-        <p role="alert" className="mb-3 text-[12px] font-semibold text-status-high">
-          {error}
-        </p>
-      )}
-
-      {/* v6 Batch 4 (V6-49, designed by us): a store's shop, cart and checkout,
-          and booking for a Wellness Service (the storefront links to it). */}
-      {TYPE_CATEGORY[venue.venueType] && (
-        <Link
-          to={`/app/store/${venue.venueId}`}
-          className="tap mb-4 flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 no-underline"
-        >
-          <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
-            <ShoppingBag size={17} className="text-primary-dark" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-semibold text-charcoal truncate">Shop</span>
-            <span className="block text-[12px] text-charcoal-faint truncate">{venue.venueType === "wellness_service" ? "Products and appointments" : "Products, pickup and delivery"}</span>
-          </span>
-          <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
-        </Link>
-      )}
-
-      <p className="section-label text-charcoal-faint pt-2 mb-2.5">Listings</p>
-      <div className="space-y-2.5 mb-4">
-        {offerings === null ? (
-          <div aria-hidden="true" className="animate-skeleton-pulse rounded-[18px] bg-cream-soft h-[72px]" />
-        ) : offerings.length === 0 ? (
-          <p className="text-[12px] text-charcoal-faint">No listings yet.</p>
-        ) : (
-          offerings.map((o) => (
-            <OfferingCard key={o.id} offering={o} Icon={marketplaceCategoryIcon[o.category] ?? marketplaceCategoryIcon.stores} />
-          ))
-        )}
-      </div>
-
-      {/* B14 RP-01 + follow-up: a venue-less business's reviews (business_reviews_public,
-          signed out too) in the gym reviews' card and language; the author's own
-          is edited (my_reviews, edit_gym_review / delete_gym_review). */}
-      {venueLess && (
-        <>
-          <p className="section-label text-charcoal-faint pt-2 mb-0">Reviews</p>
-          <div className="mb-4">
-            <GymReviews businessId={venue.venueId} gymName={venue.name} summary={null} onChanged={() => undefined} pinned={false} />
-          </div>
-        </>
-      )}
-
-      {categoryIds.length > 0 && (
-        <>
-          <p className="section-label text-charcoal-faint pt-2 mb-2.5">Browse by category</p>
-          <div className="space-y-2.5">
-            {categoryIds.map((c) => {
-              const Icon = marketplaceCategoryIcon[c as MarketplaceCategoryId] ?? marketplaceCategoryIcon.stores;
-              return (
-                <Link
-                  key={c}
-                  to={`/app/marketplace/${c}`}
-                  className="tap flex items-center gap-3 rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-3 no-underline"
-                >
-                  <span className="w-9 h-9 rounded-[11px] bg-primary-pale flex items-center justify-center shrink-0">
-                    <Icon size={17} className="text-primary-dark" />
-                  </span>
-                  <span className="min-w-0 flex-1 text-[14px] font-semibold text-charcoal truncate">{categoryLabel(c)}</span>
-                  <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
