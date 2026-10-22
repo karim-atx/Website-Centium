@@ -80,19 +80,20 @@ test(
 );
 
 test(
-  "a refused, failed or unreachable save is an error, after one attempt",
+  "a refused, failed or unreachable save is an error, after one attempt; only a refusal is a permission error",
   quiet(async () => {
-    const cases: [string, Answer, string][] = [
-      ["403", () => json(403, JSON.stringify({ code: "42501", message: "permission denied" })), "Your session expired. Sign in again to save this."],
-      ["500", () => json(500, JSON.stringify({ code: "XX000", message: "internal error" })), "Couldn't save your display settings. Try again."],
-      ["503 text", () => new Response("upstream unavailable", { status: 503 }), "Couldn't save your display settings. Try again."],
-      ["network", () => Promise.reject(new TypeError("Failed to fetch")), "Couldn't reach the server."],
+    const cases: [string, Answer, string, boolean][] = [
+      ["403", () => json(403, JSON.stringify({ code: "42501", message: "permission denied" })), "Your session expired. Sign in again to save this.", true],
+      ["500", () => json(500, JSON.stringify({ code: "XX000", message: "internal error" })), "Couldn't save your display settings. Try again.", false],
+      ["503 text", () => new Response("upstream unavailable", { status: 503 }), "Couldn't save your display settings. Try again.", false],
+      ["network", () => Promise.reject(new TypeError("Failed to fetch")), "Couldn't reach the server.", false],
     ];
-    for (const [name, answer, message] of cases) {
+    for (const [name, answer, message, permission] of cases) {
       const s = server(answer);
       const result = await s.save({ theme: "dark" });
       assert.equal(result.status, "error", name);
       assert.ok(result.status === "error" && result.message.startsWith(message), `${name}: ${JSON.stringify(result)}`);
+      assert.ok(result.status === "error" && result.permission === permission, `${name}: permission`);
       assert.deepEqual(s.writes, ["PATCH"], name);
     }
   })

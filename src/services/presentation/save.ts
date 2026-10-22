@@ -1,5 +1,6 @@
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { PRESENTATION_PLATFORM, rowToPresentation, type Presentation, type PresentationRow } from "./mapping";
+import { isPermissionCode } from "./retry";
 
 // The write half of the presentation service, with the table handed in so
 // node --test can drive it without a Supabase client (index.ts passes the real
@@ -31,15 +32,26 @@ export type PresentationTable = {
   };
 };
 
-export type PresentationSave = { status: "ok"; settings: Presentation } | { status: "error"; message: string };
+export type PresentationSave =
+  | { status: "ok"; settings: Presentation }
+  /** `permission`: this account may not write the row now; retrying can't help. */
+  | { status: "error"; message: string; permission: boolean };
 
 export function describePresentationError(error: unknown): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = (error as { code?: string } | null)?.code ?? "";
-  if (code === "ATX01" || code === "PGRST301" || code === "42501") {
+  if (isPermissionCode(code)) {
     return "Your session expired. Sign in again to save this.";
   }
   return "Couldn't save your display settings. Try again.";
+}
+
+function failed(error: unknown): PresentationSave {
+  return {
+    status: "error",
+    message: describePresentationError(error),
+    permission: isPermissionCode((error as { code?: string } | null)?.code),
+  };
 }
 
 /** Whether `row` is one row holding every value in `written`. */
@@ -61,14 +73,14 @@ export async function saveToTable(
     const landed = (row: unknown, written: Partial<PresentationRow>): PresentationSave => {
       if (holdsWritten(row, written)) return { status: "ok", settings: rowToPresentation(row as Partial<PresentationRow>) };
       console.error("[presentation] The saved row does not hold the values written.");
-      return { status: "error", message: describePresentationError(null) };
+      return failed(null);
     };
 
     if (Object.keys(changed).length > 0) {
       const updated = await update(changed);
       if (updated.error) {
         console.error("[presentation] Could not update:", updated.error.code, updated.error.message);
-        return { status: "error", message: describePresentationError(updated.error) };
+        return failed(updated.error);
       }
       if (updated.data && updated.data.length > 0) return landed(updated.data[0], changed);
     }
@@ -86,8 +98,8 @@ export async function saveToTable(
     }
 
     console.error("[presentation] Could not insert:", inserted.error?.code, inserted.error?.message);
-    return { status: "error", message: describePresentationError(inserted.error) };
+    return failed(inserted.error);
   } catch (e) {
-    return { status: "error", message: describePresentationError(e) };
+    return failed(e);
   }
 }

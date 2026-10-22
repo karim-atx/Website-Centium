@@ -8,6 +8,7 @@ import {
   savePresentation,
   type Presentation,
 } from "../services/presentation";
+import { afterFailure, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
 
 // Keeps this device's presentation settings (light / dark / auto, colour
 // theme, the four accessibility switches) in step with this account's 'web'
@@ -33,7 +34,10 @@ import {
 // A FAILED SAVE KEEPS THE CHOICE. The setting stays applied on this device,
 // `pending` is kept (persisted, so it survives a reload), the error is shown
 // under the setting, and the save is retried on the next change, on
-// reconnecting and on the next sign-in. A save whose row comes back without
+// reconnecting and on the next sign-in, BOUNDED (services/presentation/retry):
+// a backoff between failures (its timer saves the latest choice when it ends),
+// no retry after a permission refusal, and none after five failures in a row,
+// until the next sign-in. A save whose row comes back without
 // the values written counts as failed (services/presentation/save.ts), so
 // flush's loop below never goes round on an answer that is not the write.
 
@@ -99,9 +103,21 @@ export function usePresentationSync({
     [setDeviceOwner]
   );
 
+  // Failed saves in a row for this sign-in, and the backoff timer (retry.ts).
+  const retry = useRef<RetryState>(RETRY_START);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncRef = useRef<() => Promise<void>>(async () => {});
+  const clearRetryTimer = () => {
+    if (retryTimer.current) clearTimeout(retryTimer.current);
+    retryTimer.current = null;
+  };
+
   const flush = useCallback(async () => {
     const id = owner.current;
     if (!id || saving.current || server.current === undefined) return;
+    // Waiting out a backoff (the timer saves the latest choice when it ends),
+    // or stopped until the next sign-in.
+    if (canSave(retry.current, Date.now()) !== "now") return;
     saving.current = true;
     try {
       // A loop, so a change made while a save is in flight is written next.
@@ -115,8 +131,17 @@ export function usePresentationSync({
         if (result.status === "error") {
           setPending(true);
           setSaveError({ owner: id, message: `${result.message} ${KEPT}` });
+          retry.current = afterFailure(retry.current, result.permission, Date.now());
+          clearRetryTimer();
+          if (!retry.current.blocked) {
+            retryTimer.current = setTimeout(() => {
+              retryTimer.current = null;
+              if (owner.current === id && pendingRef.current) void syncRef.current();
+            }, retry.current.notBefore - Date.now());
+          }
           return;
         }
+        retry.current = RETRY_START;
         server.current = result.settings;
       }
       setPending(false);
@@ -162,12 +187,20 @@ export function usePresentationSync({
     await flush();
   }, [flush, applyQuietly, claim, setPending]);
 
-  // Sign-in (or a different account): read the row once.
+  useEffect(() => {
+    syncRef.current = sync;
+  }, [sync]);
+
+  // Sign-in (or a different account): read the row once, with a fresh retry
+  // count.
   useEffect(() => {
     owner.current = ownerId;
     server.current = undefined;
     loading.current = false;
+    retry.current = RETRY_START;
+    clearRetryTimer();
     if (ownerId) void sync();
+    return clearRetryTimer;
   }, [ownerId, sync]);
 
   // A change on this device: write it (or, before the row is read, remember
