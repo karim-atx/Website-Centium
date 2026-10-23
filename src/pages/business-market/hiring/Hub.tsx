@@ -10,10 +10,10 @@ import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { useBizShareSheet } from "../../../components/share/business/useBizShareSheet";
 import { BackHeader, OutlineButton } from "../listingParts";
-import { fetchExistingTeamWindow, fetchMyOpenings, fetchMyTeam, payText, type Opening } from "../../../services/hiring";
+import { fetchExistingTeamWindow, fetchMyOpenings, fetchMyTeam, payText, setOpeningStatus, type Opening } from "../../../services/hiring";
 import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
-import { HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
+import { CLOSED_OPENING_MENU, HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
 import PostOpeningSheet from "./PostOpeningSheet";
 import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
 
@@ -42,10 +42,10 @@ import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, t
 //
 // Ours: a non-owner (staff with the members permission) sees the Team button
 // alone across the track (Hiring fees is the owner's, ConsoleGate "owner");
-// the ⋮ on Open cards only (B-SH.1 opening menu: Edit / Share / Pause /
-// Delete; Share is live through useBizShareSheet; Database Release 2 has
-// no writer that edits, pauses or deletes an opening (set_opening_status
-// only moves it between open / filled / closed), so the other three answer
+// the ⋮ on Open cards (B-SH.1 opening menu: Edit / Share / Pause /
+// Delete; Share is live through useBizShareSheet; Pause closes the opening
+// (Karim: set_opening_status 'closed', reopenable from Closed cards' ⋮ > Reopen);
+// Database Release 2 has no writer that edits or deletes one, so those two answer
 // a calm strip). Reads (Database Release 2): my_openings, my_team (the Team
 // count), existing_team_window (the banner, only while it is open; closed
 // with no dates until Karim sets the start).
@@ -98,8 +98,18 @@ export default function HubPage() {
       void share.open(() => ({ t: "hiring", d: { id: o.id, title: o.title, typeLabel: typeLabel(o.type), schedule: scheduleLine(o), pay: o.pay != null && o.pay > 0 ? payText(o.pay, o.payUnit) : null } }));
       return;
     }
+    if (a === "pause" || a === "reopen") {
+      // Karim: Pause = set_opening_status 'closed' (it moves to Closed); Reopen = 'open'.
+      void setOpeningStatus(o.id, a === "pause" ? "closed" : "open").then((r) => {
+        if (!r.ok) return showStrip(r.message, { tone: "error" });
+        setPosted((p) => p.filter((x) => x.id !== o.id));
+        showStrip(a === "pause" ? `Opening paused · ${o.title}` : `Opening reopened · ${o.title}`);
+        openings.retry();
+      });
+      return;
+    }
     // No writer in the contract (Database gap): a calm strip, nothing changes.
-    const text = a === "edit" ? "Editing an opening is coming soon." : a === "pause" ? "Pausing an opening is coming soon." : "Deleting an opening is coming soon.";
+    const text = a === "edit" ? "Editing an opening is coming soon." : "Deleting an opening is coming soon.";
     showStrip(text, { tone: "neutral" });
   };
 
@@ -211,7 +221,13 @@ export default function HubPage() {
             o={o}
             justPosted={o.id === justPosted}
             onOpen={() => navigate(HIRING_ROUTES.applicants(o.id), { state: { opening: o } })}
-            menu={tab === "open" ? <OpeningMenuButton title={o.title} onAction={(a) => onMenu(o, a)} /> : undefined}
+            menu={
+              tab === "open" ? (
+                <OpeningMenuButton title={o.title} onAction={(a) => onMenu(o, a)} />
+              ) : tab === "closed" ? (
+                <OpeningMenuButton title={o.title} options={CLOSED_OPENING_MENU} onAction={(a) => onMenu(o, a)} />
+              ) : undefined
+            }
           />
         ))}
       </div>

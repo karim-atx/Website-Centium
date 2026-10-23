@@ -303,7 +303,7 @@ export const KebabButton = React.forwardRef<HTMLButtonElement, { label: string; 
 });
 KebabButton.displayName = "KebabButton";
 
-export type OpeningAction = "edit" | "share" | "pause" | "delete";
+export type OpeningAction = "edit" | "share" | "pause" | "delete" | "reopen";
 
 const OPENING_MENU: PopupMenuOption<OpeningAction>[] = [
   { value: "edit", label: "Edit" },
@@ -312,6 +312,9 @@ const OPENING_MENU: PopupMenuOption<OpeningAction>[] = [
   { value: "delete", label: "Delete", destructive: true },
 ];
 
+/** Ours (Karim: Pause = close, reopenable): a closed opening's ⋮ has Reopen alone. */
+export const CLOSED_OPENING_MENU: PopupMenuOption<OpeningAction>[] = [{ value: "reopen", label: "Reopen" }];
+
 /**
  * The opening's ⋮ (B-SH.1 "Hiring · opening menu"): the app PopupMenu at the
  * drawn 194 (176 content + 8 padding + 1 border each side), rows 37 tall
@@ -319,7 +322,18 @@ const OPENING_MENU: PopupMenuOption<OpeningAction>[] = [
  * Delete (Delete in --high). It takes focus on its first row; Escape closes
  * it and focus returns to the kebab.
  */
-export function OpeningMenuButton({ title, onAction, style }: { title: string; onAction: (a: OpeningAction) => void; style?: React.CSSProperties }) {
+export function OpeningMenuButton({
+  title,
+  onAction,
+  style,
+  options = OPENING_MENU,
+}: {
+  title: string;
+  onAction: (a: OpeningAction) => void;
+  style?: React.CSSProperties;
+  /** Optional: another menu (CLOSED_OPENING_MENU); the drawn four by default. */
+  options?: PopupMenuOption<OpeningAction>[];
+}) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const btn = useRef<HTMLButtonElement | null>(null);
   const open = !!anchor;
@@ -340,7 +354,7 @@ export function OpeningMenuButton({ title, onAction, style }: { title: string; o
           setAnchor(null);
           btn.current?.focus();
         }}
-        options={OPENING_MENU}
+        options={options}
         onSelect={(a) => onAction(a)}
       />
     </>

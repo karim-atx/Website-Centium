@@ -304,6 +304,15 @@ export function decideApplication(applicationId: string, status: "shortlisted" |
   return hiringWrite("decide_application", { p_application_id: applicationId, p_status: status }, status === "shortlisted" ? "Couldn't shortlist. Try again." : "Couldn't decline. Try again.", none);
 }
 
+/**
+ * set_opening_status(p_opening_id, p_status): Karim's Pause is "closed" and
+ * Reopen is "open" (the contract has no separate pause); ATXH8 while an admin
+ * has the opening hidden.
+ */
+export function setOpeningStatus(openingId: string, status: "open" | "closed"): Promise<HiringWrite> {
+  return hiringWrite("set_opening_status", { p_opening_id: openingId, p_status: status }, status === "closed" ? "Couldn't pause this opening. Try again." : "Couldn't reopen this opening. Try again.", none);
+}
+
 // ---------------------------------------------------------------- offers
 
 /** quote_hiring_fee(p_type, p_pay, p_pay_unit, p_classes_per_month): the fee the confirmation shows (platform_settings' rate and floors). */
