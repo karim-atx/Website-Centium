@@ -75,7 +75,7 @@ test("meta lines, month first (B-MA.3 offerList)", () => {
   assert.equal(offerMeta(one(), TODAY), "Ends Dec 31, 2026 · 30 redeemed");
   assert.equal(offerMeta(one({ starts_on: "2026-11-01", redeemed_count: 0 }), TODAY), "Starts Nov 1, 2026");
   assert.equal(offerMeta(one({ paused_at: PAUSED, redeemed_count: 8 }), TODAY), "Paused Oct 10, 2026 · 8 redeemed");
-  assert.equal(offerMeta(one({ hidden_at: PAUSED, redeemed_count: 8 }), TODAY), "Taken down by Centium · 8 redeemed");
+  assert.equal(offerMeta(one({ hidden_at: PAUSED, redeemed_count: 8 }), TODAY), "Hidden by Centium. Contact support for details.");
   assert.equal(offerMeta(one({ ends_on: null }), TODAY), "No end date · 30 redeemed");
   assert.equal(offerMeta(one({ starts_on: "2026-06-01", ends_on: "2026-09-30", redeemed_count: 41 }), TODAY), "Ended Sep 30, 2026 · 41 redeemed");
   assert.equal(offerMeta(one({ redeemed_count: 1200 }), TODAY), "Ends Dec 31, 2026 · 1,200 redeemed");

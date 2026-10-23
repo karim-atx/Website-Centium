@@ -138,15 +138,15 @@ export function instantDayLabel(iso: string): string {
  * The manager row's meta line (B-MA.3 `offerList`, D-02 month first):
  * "Ends Dec 31, 2026 · 30 redeemed", "Starts Nov 1, 2026",
  * "Paused Oct 10, 2026 · 8 redeemed", "Ended Sep 30, 2026 · 41 redeemed".
- * Ours: "No end date · 30 redeemed" (ends_on null) and "Taken down by
- * Centium · 8 redeemed" (hidden).
+ * Ours: "No end date · 30 redeemed" (ends_on null) and, when Centium hid it,
+ * "Hidden by Centium. Contact support for details." (Karim: never the internal note).
  */
 export function offerMeta(o: ManagedOffer, today: string = localDay()): string {
   const s = offerStatus(o, today);
   const red = `${formatPoints(o.redeemedCount)} redeemed`;
   if (s === "scheduled") return `Starts ${dayLabel(o.startsOn)}`;
   if (s === "expired") return `Ended ${dayLabel(o.endsOn ?? "")} · ${red}`;
-  if (o.hiddenAt) return `Taken down by Centium · ${red}`;
+  if (o.hiddenAt) return "Hidden by Centium. Contact support for details.";
   if (s === "paused") return o.pausedAt ? `Paused ${instantDayLabel(o.pausedAt)} · ${red}` : `Paused · ${red}`;
   return o.endsOn ? `Ends ${dayLabel(o.endsOn)} · ${red}` : `No end date · ${red}`;
 }
