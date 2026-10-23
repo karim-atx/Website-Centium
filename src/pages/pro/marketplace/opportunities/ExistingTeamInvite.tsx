@@ -13,7 +13,7 @@ import { expiredBody, expiredRows, inviteBody, inviteExpired, inviteRows, invite
 // confirm tone #AEA1DC):
 // - "Join {business}'s team?", the body, rows Gym · Hiring fee "None" ·
 //   Invited · Accept by, Not now / Accept → accept_existing_team_invite
-//   (awaiting DB8). "Not now" only closes (the invite stays open until its
+//   (Database Release 2). "Not now" only closes (the invite stays open until its
 //   accept-by date; decline_existing_team_invite has no drawn control);
 // - Expired (the server's invite_expired, or the accept-by date has passed):
 //   "This invite has expired", the body naming the close date, rows Gym ·
@@ -61,8 +61,8 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
     setSoon(false);
     const r = await acceptExistingTeamInvite(invite.id);
     setBusy(false);
-    // accept_existing_team_invite (Database Release 2): ATXH21 → the expired dialog; ATX08 shows its words. No seat
-    // refusal since Database #38 (a Team professional uses no paid seat).
+    // accept_existing_team_invite (Database Release 2): ATXH21 → the expired dialog; ATX08 shows its words; ATXC0
+    // (the business's seats are full; an existing-team addition takes a seat, Database #38) shows NO_SEAT_FOR_YOU.
     if (r.ok) return onDone(invite);
     if (r.pending) return setSoon(true);
     if (r.error === "invite_expired") return setExpired(true);

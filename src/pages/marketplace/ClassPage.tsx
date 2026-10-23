@@ -11,7 +11,6 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PinnedSlot } from "../../components/ui/PinnedCta";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
-import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
 import { InstructorCard } from "../../components/market/InstructorCard";
 import { hiredViaCentium } from "../../services/marketplace/instructorRule";
 import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
@@ -24,12 +23,10 @@ import {
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { useClassBooking, type BookOutcome } from "../../hooks/useClassBooking";
 import { useKnownPosition } from "../../hooks/useKnownPosition";
-import { fetchListing } from "../../services/directory";
 import { distanceKm } from "../../services/geo/distance";
 import {
   bookingWindowLine,
   distanceText,
-  instructorRole,
   levelLabel,
   whatToBringLine,
 } from "../../services/marketplace/classBooking";
@@ -116,12 +113,11 @@ import {
 // - the instructor (margin-top 12): the W1 InstructorCard. Release 2 (W5,
 //   HANDOVER §9): only a Team instructor is named; a class with none shows
 //   "Instructor not listed" (no photo, no link). The rule lives in
-//   services/marketplace/instructorRule.ts: until DB9's marketplace_classes
-//   columns land it keeps the D-11 interim (listed only for a publicly
-//   listed instructor, no "Hired via Centium"); from DB9 instructor_is_team
-//   decides, the card takes instructor_specialty / _rating / _review_count
-//   (the live directory listing stays the fallback) and "Hired via Centium"
-//   shows for a Team instructor with a Centium hire;
+//   services/marketplace/instructorRule.ts: marketplace_classes'
+//   instructor_is_team decides (Database #38), the card takes
+//   instructor_specialty / _rating / _review_count ("Instructor" when no
+//   specialty is set) and "Hired via Centium" shows for a Team instructor
+//   with a Centium hire (instructor_hire_count);
 // - "About this class" 10.5 / 700 0.1em caps --faint (margin-top 18) and the
 //   about 13 / 19.5 --ink2 (margin-top 6);
 // - the pinned CTA "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill.
@@ -305,37 +301,6 @@ export function ClassPage({ classId }: { classId: string }) {
       : null;
   const distance =
     here && venueCoords ? distanceText(distanceKm(here, venueCoords)) : null;
-
-  // PB-O-52: the instructor's role and rating from the public directory (the
-  // view gives the name and photo only, and only when they are listed).
-  const instructorId = c?.instructorId ?? null;
-  const [listing, setListing] = useState<{
-    id: string;
-    role: string | null;
-    rating: number | null;
-    reviews: number;
-  } | null>(null);
-  useEffect(() => {
-    if (!instructorId) return;
-    let on = true;
-    void fetchListing(instructorId).then((l) => {
-      if (!on) return;
-      // "Personal Trainer", as the directory card's type line.
-      const type = l?.subtype
-        ? SUBTYPE_SINGULAR[l.subtype].replace(/\b\w/g, (ch) => ch.toUpperCase())
-        : null;
-      setListing({
-        id: instructorId,
-        role: l ? instructorRole(l.specialty, type) : null,
-        rating: l?.averageRating ?? null,
-        reviews: l?.reviewCount ?? 0,
-      });
-    });
-    return () => {
-      on = false;
-    };
-  }, [instructorId]);
-  const instructor = listing && listing.id === instructorId ? listing : null;
 
   // The confirmation's first-visit line: the venue's own (gyms.first_visit).
   const gymId = c?.gymId ?? live?.gymId ?? null;
@@ -877,16 +842,16 @@ export function ClassPage({ classId }: { classId: string }) {
         </div>
       </div>
 
-      {/* The Team-only rule (instructorRule.ts; D-11 until DB9). */}
+      {/* The Team-only rule (instructorRule.ts). */}
       {listed ? (
         <InstructorCard
           listed
           id={c.instructorId!}
           name={c.instructorName!}
           photoUrl={c.instructorAvatarUrl ?? null}
-          specialty={c.instructorSpecialty ?? instructor?.role ?? "Instructor"}
-          rating={c.instructorRating ?? instructor?.rating ?? null}
-          reviewCount={c.instructorReviewCount ?? instructor?.reviews ?? 0}
+          specialty={c.instructorSpecialty ?? "Instructor"}
+          rating={c.instructorRating ?? null}
+          reviewCount={c.instructorReviewCount ?? 0}
           hiredViaCentium={hiredViaCentium(c)}
           to={`/app/professionals/${encodeURIComponent(c.instructorId!)}`}
           style={{ marginTop: 12 }}

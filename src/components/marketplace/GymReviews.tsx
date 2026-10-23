@@ -393,6 +393,8 @@ function GymReviewForm({ gymId, businessId, gymName, existing, onDone }: { gymId
       initialText={existing?.body ?? ""}
       placeholder={`How has ${gymName} been?`}
       submitLabel={existing ? "Save changes" : "Submit review"}
+      // Stars alone are a review (write_gym_review / write_business_review since Database #38).
+      textOptional
       onSubmit={async (rating, text) => {
         const r = existing
           ? await editGymReview(existing.id, rating, text)

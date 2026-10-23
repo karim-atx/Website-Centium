@@ -235,7 +235,6 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
       <SubstituteSheet
         open={!!subFor}
         session={subSession}
-        instructors={api.instructors}
         sessions={api.sessions}
         businessId={api.businessId}
         nameOf={api.nameOf}

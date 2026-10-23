@@ -159,6 +159,7 @@ export function helpTopics(kind: BizKind): HelpTopic[] {
       articles: [
         a("seats", "How seat blocks work", [
           "Each seat block lets 5 professionals join your business.",
+          "Instructors and personal trainers use a seat, including the existing team you add for free. Professionals you hire through Centium don't use one.",
           "Professionals use your business ID to ask to join, and you approve each request.",
           "When every seat is used, approving another request asks you to add a block.",
         ]),

@@ -534,9 +534,10 @@ export function fetchHiringFees(businessId: string): Promise<MarketResult<Hiring
 /**
  * existing_team_window(p_business_id): greatest(the business's created_at,
  * platform_settings.existing_team_window_opens_at) + existing_team_window_days.
- * CLOSED, with no dates, until that start is set. Free: no hiring fee and,
- * since Database #38, no paid seat (a seat binds only staff without a
- * professional account), so add_existing_team never meets ATXC0.
+ * CLOSED, with no dates, until that start is set. Free means no hiring fee:
+ * an existing-team addition still takes a paid seat (Database #38,
+ * 20261213190000; only a Centium hire is seat-free), so add_existing_team
+ * refuses with ATXC0 (no_seats) when the seats are full and adds nobody.
  */
 export function fetchExistingTeamWindow(businessId: string): Promise<MarketResult<ExistingTeamWindow | null>> {
   return marketRpc("existing_team_window", { p_business_id: businessId }, "Couldn't load the existing-team window.", parseWindow);

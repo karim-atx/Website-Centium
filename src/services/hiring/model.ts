@@ -402,7 +402,7 @@ export type HiringError =
   | "not_your_hire" // ATXH24 · 42501 (raise_hiring_dispute: no caller, the board draws no dispute flow)
   | "dispute_open" // ATXH25 · ATX10 (raise_hiring_dispute: support's only since Database #38, no member or business caller)
   | "has_applicants" // ATXH26 · ATX10 (delete_opening once somebody has applied: close it instead)
-  | "no_seats" // ATXC0 · 23514 (the seat cap: since Database #38 it binds only staff WITHOUT a professional account, so invite_employee only)
+  | "no_seats" // ATXC0 · 23514 (the seat cap, Database #38 20261213190000: everyone but a Centium hire takes a seat, so add_existing_team and accept_existing_team_invite meet it)
   | "not_your_business" // ATXB8 · 42501
   | "rate_limited" // ATX02 (check_rate_limit)
   | "invalid_opening" // 23514 (a title / description / requirements CHECK)

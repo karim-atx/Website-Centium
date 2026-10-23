@@ -274,13 +274,18 @@ export function fetchMyTeamInvites(): Promise<MarketResult<ExistingTeamInvite[]>
 /**
  * accept_existing_team_invite(p_invite_id) → the employment id (null when
  * already on the team). Matched on the caller's own email or phone; ATXH21
- * expired; ATX08 somebody else's / accepted / a bad id. Since Database #38
- * the employment uses no paid seat (the caller is a professional), so the
- * seat cap (ATXC0) can't refuse it.
+ * expired; ATX08 somebody else's / accepted / a bad id. The employment takes
+ * one of the business's paid seats (Database #38, 20261213190000: only a
+ * Centium hire is seat-free), so a full business refuses it with ATXC0
+ * (no_seats), worded for the professional, who can't buy seats.
  */
-export function acceptExistingTeamInvite(inviteId: string): Promise<HiringWrite> {
-  return hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, "Couldn't accept the invite. Try again.", () => null);
+export async function acceptExistingTeamInvite(inviteId: string): Promise<HiringWrite> {
+  const r = await hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, "Couldn't accept the invite. Try again.", () => null);
+  return !r.ok && r.error === "no_seats" ? { ...r, message: NO_SEAT_FOR_YOU } : r;
 }
+
+/** ATXC0 on the professional's side (the wording of accept_business_employment's refusal, services/business-team/employment.ts). */
+export const NO_SEAT_FOR_YOU = "This business has no free seat right now. Ask them to add one.";
 
 // ---------------------------------------------------------------- open to gym work (P-MA.2)
 

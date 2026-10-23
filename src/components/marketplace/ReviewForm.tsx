@@ -32,7 +32,7 @@ export function ReviewForm({
   onSubmit: (rating: number, text: string) => Promise<string | null>;
   /** Own review only: "Delete review", tapped twice. */
   onDelete?: () => Promise<string | null>;
-  /** Optional: stars alone can be sent (write_class_review since Database #38); the text is required by default. */
+  /** Optional: stars alone can be sent (write_class_review, write_gym_review and write_business_review since Database #38); the text is required by default. */
   textOptional?: boolean;
 }) {
   const m = marketPalette(useIsDark());

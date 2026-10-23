@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchMyTeam, type TeamMember } from "../../../services/hiring";
 
 // Market + Share 3.0 · W4 · B-MA.6: the Team the class sheets name from
-// (ClassSheet's InstructorPicker, SubstituteSheet's list): my_team (Database
+// (ClassSheet's InstructorPicker; the substitute list is the server's Team-only instructors_free_for): my_team (Database
 // Release 2). `pending` only on a stack without it; the callers then keep the
 // live source (lead decision D-35).
 

@@ -82,15 +82,12 @@ export interface MarketplaceClass {
   whatToBring?: string[];
   /** A public URL in the class-covers bucket. */
   coverUrl?: string | null;
-  /**
-   * Null when no instructor may be shown (instructorRule.ts): until DB9 the
-   * view's rule (listed publicly, D-11); from DB9 only a Team instructor.
-   */
+  /** Null when no instructor may be shown (instructorRule.ts): only a Team instructor the view names. */
   instructorId?: string | null;
   instructorName?: string | null;
   instructorAvatarUrl?: string | null;
-  /** DB9 (awaiting): null while the columns haven't landed. */
-  instructorIsTeam?: boolean | null;
+  /** marketplace_classes.instructor_is_team (Database #38). */
+  instructorIsTeam?: boolean;
   instructorSpecialty?: string | null;
   instructorRating?: number | null;
   instructorReviewCount?: number | null;
@@ -153,6 +150,11 @@ type ClassRow = {
   instructor_id: string | null;
   instructor_name: string | null;
   instructor_avatar_url: string | null;
+  instructor_is_team: boolean | null;
+  instructor_specialty: string | null;
+  instructor_rating: number | string | null;
+  instructor_review_count: number | string | null;
+  instructor_hire_count: number | string | null;
   starts_at: string | null;
   centium_spots_left: number | null;
   is_featured: boolean | null;
@@ -208,7 +210,7 @@ const toClass = (r: ClassRow): MarketplaceClass => ({
   level: r.level,
   whatToBring: r.what_to_bring ?? [],
   coverUrl: r.cover_url,
-  // C-MO.4.3.1 / C-MO.4.3: the Team-only instructor rule, D-11 until DB9.
+  // C-MO.4.3.1 / C-MO.4.3: the Team-only instructor rule.
   ...instructorFacts(r as unknown as Record<string, unknown>),
   startsAt: r.starts_at,
   centiumSpotsLeft: r.centium_spots_left ?? null,
@@ -232,13 +234,14 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
   isFeatured: r.is_featured === true,
 });
 
-// Every column of the view: the DB9 instructor columns (instructor_is_team,
-// instructor_specialty, instructor_rating, instructor_review_count,
-// instructor_hire_count) haven't landed, and naming one that doesn't exist
-// 400s the whole read, so "*" picks them up when they land and is the same
-// read today (the listed columns were all of the view's but series_id).
-// awaiting DB stage DB9
-const CLASS_COLUMNS = "*";
+// The columns this file reads, named (never "*"). The five instructor
+// columns are Database #38's (20261213200000). Every column here reads for
+// anon as well as authenticated: the view inlines the Team test, the rating
+// and, since 20261213210000, starts_at (class_starts_at() was not anon's to
+// execute, so a signed-out "*" read failed before). Every reader in this file
+// runs signed in today (the Explore pages sit behind /app).
+const CLASS_COLUMNS =
+  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, instructor_is_team, instructor_specialty, instructor_rating, instructor_review_count, instructor_hire_count, starts_at, centium_spots_left, is_featured";
 const VENUE_COLUMNS =
   "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
 

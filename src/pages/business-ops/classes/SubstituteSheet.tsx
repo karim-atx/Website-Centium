@@ -4,13 +4,12 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
-import { fetchInstructorAvailability, type Instructor } from "../../../services/business-classes";
+import { fetchInstructorAvailability } from "../../../services/business-classes";
 import { instructorsFreeFor, type FreeInstructor } from "../../../services/business-classes/schedule";
 import { fieldStyle, useMarketColours } from "./parts";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { Avatar } from "./ClassSheet";
 import { overlaps, running, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
-import { useClassTeam } from "./useClassTeam";
 
 // Request a substitute (OP1-089 … 093; kept, PLAN §3.4, in the B-MA.6
 // MasterBottomSheet chrome: --sgrey boxes, the pinned 50 CTA). Assigning names someone else on THIS
@@ -29,18 +28,15 @@ import { useClassTeam } from "./useClassTeam";
 // OP1-092 row 2) goes to the substitute in the owner's direct thread with
 // them (B7 messaging) once the assignment has landed; see SessionActions.
 //
-// THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team. Once my_team
-// (DB8) answers, the free list keeps Team members only. Until then it is the
-// live instructors_free_for list, unchanged. Database #38 made
-// assign_class_instructor refuse anyone off the Team (ATX76, read as the
-// B-MA.6 note), but instructors_free_for itself still lists every accepted
-// employment (revoked ones included), so the client filter stays.
-// awaiting DB stage DB9 (instructors_free_for Team only on the server)
+// THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team, as the server
+// answers it. instructors_free_for asks business_team_professional() (Database
+// #38, 20261213190000): accepted, not revoked, a professional account. So the
+// front desk and anybody who left are never offered, and an empty list means
+// nobody else is on the Team.
 
 export function SubstituteSheet({
   open,
   session,
-  instructors,
   sessions,
   businessId,
   nameOf,
@@ -51,7 +47,6 @@ export function SubstituteSheet({
 }: {
   open: boolean;
   session: Session | null;
-  instructors: Instructor[];
   sessions: SessionLite[];
   businessId: string | null;
   nameOf: (id: string | null) => string;
@@ -85,9 +80,6 @@ export function SubstituteSheet({
     }
   }
 
-  // my_team (Database Release 2) narrows the free list to the Team.
-  const [team] = useClassTeam(businessId, open);
-  const teamIds = team.s === "team" ? new Set(team.team.map((t) => t.professional.id)) : null;
   const sessionId = session?.id ?? null;
   useEffect(() => {
     if (!open || !sessionId) return;
@@ -117,7 +109,7 @@ export function SubstituteSheet({
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   };
   const rows = (free ?? [])
-    .filter((f) => !f.isCurrent && (!teamIds || teamIds.has(f.professionalId)))
+    .filter((f) => !f.isCurrent)
     .map((f) => {
       const clash = f.isBusy ? here(f.professionalId) : null;
       const noHours = !f.withinAvailability && hasHours !== null && !hasHours.has(f.professionalId);
@@ -152,8 +144,6 @@ export function SubstituteSheet({
   const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
   const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
   const chosen = pick ? rows.find((r) => r.f.professionalId === pick)?.f.firstName || nameOf(pick) : "";
-  // Team mode: instructors_free_for lists every other Team member once DB9 lands, so no row means no one else.
-  const teamSize = teamIds ? 0 : instructors.filter((i) => i.professionalId !== session.professionalId).length;
 
   const assign = async () => {
     if (!pick || busy) return;
@@ -224,11 +214,11 @@ export function SubstituteSheet({
                   Retry
                 </button>
               </p>
-            ) : !free || team.s === "loading" ? (
+            ) : !free ? (
               <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
-            ) : rows.length === 0 && teamSize === 0 ? (
+            ) : rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-                {teamIds ? "Nobody else is on your team yet. Add people through Hiring." : "Nobody else is on your team yet. Invite an instructor in Team and access."}
+                Nobody else is on your team yet. Add people through Hiring.
               </p>
             ) : (
               <button

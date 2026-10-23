@@ -129,12 +129,4 @@ export function distanceText(km: number | null | undefined): string | null {
   return `${Math.round(km)} km`;
 }
 
-/**
- * MO1.4.4 #20 "Yoga instructor · Physio": the professional's specialty and
- * then their type, from the public directory; the type alone without one.
- */
-export function instructorRole(specialty: string | null | undefined, typeLabel: string | null | undefined): string | null {
-  const parts = [specialty?.trim(), typeLabel?.trim()].filter((s): s is string => !!s);
-  const unique = parts.filter((p, i) => parts.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i);
-  return unique.length ? unique.join(" · ") : null;
-}
+
