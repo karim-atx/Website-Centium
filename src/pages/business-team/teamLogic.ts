@@ -339,7 +339,7 @@ export function requestedWhen(iso: string, today: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Public profile rows (OP1-132 C1, C2, C5, C6; OP1-124 9c), from what the
+// Public profile rows (OP1-132 C1, C2, C5; OP1-124 9c), from what the
 // professional lists publicly. OpsTabsV4 logic 509-510 for the words.
 
 /** Whole years since the earliest job started (OP1-132 C1 OURS rule: no column holds it); null without jobs. */
@@ -376,25 +376,6 @@ export function requestLine(details: PublicDetails | null, today: string): strin
   const what = details.specialty ?? (years ? yearsText(years) : null);
   const parts = [discipline, what].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
-}
-
-/** C6 values and their external link (S2), or null when the value can't be a safe link. */
-export function profileLink(kind: "website" | "instagram" | "x", raw: string): { text: string; href: string | null } {
-  const v = raw.trim();
-  if (kind === "website") {
-    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
-    let href: string | null = null;
-    try {
-      const u = new URL(withScheme);
-      href = u.protocol === "https:" || u.protocol === "http:" ? u.href : null;
-    } catch {
-      href = null;
-    }
-    return { text: v.replace(/^https?:\/\//i, "").replace(/\/$/, ""), href };
-  }
-  const handle = v.replace(/^https?:\/\/(www\.)?(instagram\.com|x\.com|twitter\.com)\//i, "").replace(/^@/, "").replace(/\/.*$/, "");
-  const ok = /^[A-Za-z0-9._]{1,30}$/.test(handle);
-  return { text: `@${handle}`, href: ok ? (kind === "instagram" ? `https://www.instagram.com/${handle}/` : `https://x.com/${handle}`) : null };
 }
 
 /** "expires Oct 30" from "Expires Oct 30" (only the first letter). */
