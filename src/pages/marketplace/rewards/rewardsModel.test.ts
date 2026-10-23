@@ -12,6 +12,7 @@ import {
   websiteHost,
   websiteHref,
 } from "./rewardsModel.ts";
+import { parseShelf } from "./rewardsModel.ts";
 
 const biz = [
   { name: "Outline", venueType: "clothing_store" },
@@ -86,4 +87,22 @@ test("request ids are uuids and differ", () => {
   const b = newRequestId();
   assert.match(a, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.notEqual(a, b);
+});
+
+// DB3 (Database 73ea87b): public_showcase rows as the Products grid's products.
+test("parseShelf: public_showcase's columns, the reader's order kept, junk dropped", () => {
+  const list = parseShelf([
+    { id: "i2", title: "Protein shake", description: null, category: "supplements", price: "4.50", image_url: "https://x/p.jpg", format: null, duration_label: null, bookable: false, sort: 1 },
+    { id: "i1", title: "Day pass", description: "One visit", category: "gyms", price: null, image_url: null, format: "in_person", duration_label: "1 day", bookable: true, sort: 2 },
+    { title: "no id" },
+    null,
+  ]);
+  assert.deepEqual(
+    list.map((p) => [p.id, p.name, p.price, p.marketCategory, p.imageUrl, p.visible, p.stock]),
+    [
+      ["i2", "Protein shake", 4.5, "supplements", "https://x/p.jpg", true, null],
+      ["i1", "Day pass", null, "gyms", null, true, null],
+    ]
+  );
+  assert.deepEqual(parseShelf(null), []);
 });

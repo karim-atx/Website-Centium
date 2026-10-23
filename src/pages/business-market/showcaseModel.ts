@@ -1,7 +1,6 @@
 // Market + Share 3.0 · W3 · B-MA.2 Showcase Manager: pure rules (node:test
 // loads this file). Items are business_offerings rows (D-17), read in the
-// live order (created_at, newest first): DB3's `sort` exists but an owner
-// can't write it (no UPDATE grant, no reorder function).
+// shelf order (sort, then newest first, then id: public_showcase's).
 
 export interface ShowcaseRowItem {
   id: string;

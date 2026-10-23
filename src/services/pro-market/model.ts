@@ -6,12 +6,15 @@
 //   redemptionsThisMonth, pointsRedeemed, activeClients, gymsWorkingWith).
 //   The ledger's per-row changes are not in the documented shape: they are
 //   read when the row carries them (`*_delta` / `*_delta_pct`), else "–".
-//   `marketplace_visible` is read the same way (DB3's flag; D-19 default
-//   true): the overview is the only reader that could carry it without
-//   selecting a column that doesn't exist yet.
-// - The Showcase services are the LIVE appointment_services (Book, session
-//   types) and professional_plans (Hire) (D-18), in the live order (sessions
-//   by created_at, then plans by position) until DB3's `sort` exists.
+//   `marketplace_visible` is read the same way when the row carries it; the
+//   Overview reads the live flag itself (set_marketplace_visible writes
+//   professional_profiles.listed_publicly, Database 73ea87b).
+// - The Showcase services are the professional's own shelf (business_offerings
+//   with professional_id, Database 73ea87b: what public_showcase shows members,
+//   in its order) and the LIVE appointment_services (Book, session types) and
+//   professional_plans (Hire) (D-18), sessions by created_at, then plans by
+//   position. The Database gave sessions and plans no photo, showcase flag,
+//   format or sort; those stay with the shelf rows.
 
 import { bool, num, rows, str } from "../market/parse";
 import { countDelta, formatCount, heroDelta, pctDelta, QUIET } from "../business-market/overviewModel";
@@ -47,7 +50,7 @@ export interface ProOverview {
   activeClientsDelta: number | null;
   gymsWorkingWith: number;
   gymsWorkingWithDelta: number | null;
-  /** DB3's marketplace flag when the row carries it; null = not said (the live default, visible). */
+  /** The marketplace flag when the overview row carries it; null = not said. */
   marketplaceVisible: boolean | null;
 }
 
@@ -133,7 +136,7 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
   };
 }
 
-/** Visible unless the overview says hidden (D-19: every professional is visible today). */
+/** The tile's state before the live flag is read (or when it can't be): visible unless the overview says hidden. The tile is disabled then. */
 export function visibleFrom(state: ProOverviewState): boolean {
   return !(state.status === "ok" && state.value?.marketplaceVisible === false);
 }
@@ -172,7 +175,30 @@ export interface PlanService {
   createdAt: string;
 }
 
-export type ServiceRef = { kind: "session"; item: SessionService } | { kind: "plan"; item: PlanService };
+/**
+ * A professional's own shelf row: business_offerings with professional_id
+ * (Database 20261210900000 / 20261211400000), what public_showcase
+ * ('professional', id) shows members. Fields as the handover's ShowcaseItem
+ * (types.ts: format in_person | online | both, durationLabel "60 min").
+ */
+export interface ShelfItem {
+  id: string;
+  name: string;
+  description: string | null;
+  /** null = no price shown. */
+  price: number | null;
+  imageUrl: string | null;
+  format: Format | null;
+  durationLabel: string | null;
+  /** "Show in Showcase" (business_offerings.visible). */
+  visible: boolean;
+  /** Taken down by Centium (hidden_at): the owner can't undo it. */
+  hiddenByCentium: boolean;
+  sort: number;
+  createdAt: string;
+}
+
+export type ServiceRef = { kind: "session"; item: SessionService } | { kind: "plan"; item: PlanService } | { kind: "shelf"; item: ShelfItem };
 
 export interface ServiceCard {
   key: string;
@@ -182,7 +208,7 @@ export interface ServiceCard {
   meta: string;
   description: string | null;
   price: string;
-  /** Drawn at 0.5 (a plan not offered; a service hidden from the Showcase once DB3 lands). */
+  /** Drawn at 0.5 (a plan not offered; a shelf item hidden or taken down). */
   dim: boolean;
   /** The chip under a dimmed card. */
   chip: string | null;
@@ -198,8 +224,69 @@ export function planMeta(sessionCount: number | null, billing: string): string {
 
 export const serviceKey = (r: ServiceRef): string => `${r.kind}:${r.item.id}`;
 
-/** Book (session types, created order) then Hire (plans, position order), as cards. */
-export function serviceCards(sessions: SessionService[], plans: PlanService[]): ServiceCard[] {
+/** The shelf's order, as public_showcase returns it: sort, then newest first, then id. */
+export function shelfOrder<T extends Pick<ShelfItem, "id" | "sort" | "createdAt">>(list: T[]): T[] {
+  return list.slice().sort((a, b) => a.sort - b.sort || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
+}
+
+const FORMAT_WORD: Record<Format, string> = { in_person: "In person", online: "Online", both: "In person or online" };
+
+/** The shelf card's meta line: "60 min · In person" (either part left out when unset). */
+export function shelfMeta(durationLabel: string | null, format: Format | null): string {
+  return [durationLabel?.trim() || null, format ? FORMAT_WORD[format] : null].filter(Boolean).join(" · ");
+}
+
+/** "$80", "Free" for 0, "" when the item shows no price. */
+export function shelfPrice(price: number | null): string {
+  return price === null ? "" : priceLabel(price);
+}
+
+export const parseFormat = (v: unknown): Format | null => (v === "in_person" || v === "online" || v === "both" ? v : null);
+
+/** The professional's own business_offerings rows (the select below), in the shelf's order. */
+export function parseShelfRows(data: unknown): ShelfItem[] {
+  return shelfOrder(
+    rows(data)
+      .filter((r) => str(r.id))
+      .map(
+        (r): ShelfItem => ({
+          id: String(r.id),
+          name: str(r.title) ?? "",
+          description: str(r.description)?.trim() || null,
+          price: num(r.price),
+          imageUrl: str(r.image_url),
+          format: parseFormat(r.format),
+          durationLabel: str(r.duration_label)?.trim() || null,
+          visible: r.visible !== false,
+          hiddenByCentium: !!str(r.hidden_at),
+          sort: num(r.sort) ?? 0,
+          createdAt: str(r.created_at) ?? "",
+        })
+      )
+  );
+}
+
+/** "Hidden by Centium": an item an admin took down (ours; the owner can't show it again). */
+export const TAKEN_DOWN_CHIP = "Hidden by Centium";
+
+function shelfCard(x: ShelfItem): ServiceCard {
+  const ref: ServiceRef = { kind: "shelf", item: x };
+  const dim = !x.visible || x.hiddenByCentium;
+  return {
+    key: serviceKey(ref),
+    ref,
+    name: x.name,
+    meta: shelfMeta(x.durationLabel, x.format),
+    description: x.description,
+    price: shelfPrice(x.price),
+    dim,
+    chip: x.hiddenByCentium ? TAKEN_DOWN_CHIP : x.visible ? null : "Hidden",
+  };
+}
+
+/** The shelf (its own order) first, then Book (session types, created order), then Hire (plans, position order), as cards. */
+export function serviceCards(sessions: SessionService[], plans: PlanService[], shelf: ShelfItem[] = []): ServiceCard[] {
+  const sh = shelfOrder(shelf).map(shelfCard);
   const s = sessions
     .slice()
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -224,13 +311,41 @@ export function serviceCards(sessions: SessionService[], plans: PlanService[]): 
         chip: x.active ? null : "Not offered",
       };
     });
-  return [...s, ...p];
+  return [...sh, ...s, ...p];
 }
+
+/** The ids of the shelf after moving `id` one place up (-1) or down (1); null when it can't move. */
+export function shelfMove(shelf: ShelfItem[], id: string, dir: -1 | 1): string[] | null {
+  const ids = shelfOrder(shelf).map((x) => x.id);
+  const i = ids.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) return null;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  return ids;
+}
+
+// ---------------------------------------------------------------------------
+// P-MA.1 Visible / Hidden (set_marketplace_visible, D-19)
+// ---------------------------------------------------------------------------
+
+/**
+ * set_marketplace_visible's refusals (Database 73ea87b): turning it ON can
+ * fail; turning it off always works. Short lines in the board's voice (ours).
+ */
+export const VISIBLE_REFUSALS: Record<string, string> = {
+  ATXC6: "You can show your Showcase once your licence or certificate is verified.",
+  ATX47: "Accounts under 18 can't show a Showcase to clients and gyms.",
+  ATX48: "Add your date of birth to show your Showcase.",
+  ATX09: "Only a professional account has a Showcase.",
+};
+
+/** The refusal line for a code, or null when the code isn't one of the documented refusals. */
+export const visibleRefusal = (code: string | null | undefined): string | null => (code && VISIBLE_REFUSALS[code]) || null;
 
 /** "5 services" (the caps header), "1 service". */
 export const servicesHeader = (n: number): string => `${n} ${n === 1 ? "service" : "services"}`;
 
-/** The Format chips (DB3 `format` for plans; for a session type, its live location_kind). */
+/** The Format chips (a shelf item's `format`; for a session type, its live location_kind; plans have none). */
 export type Format = "in_person" | "online" | "both";
 export const FORMATS: { key: Format; label: string }[] = [
   { key: "in_person", label: "In person" },
@@ -345,3 +460,11 @@ export function weeklyHours(rowsIn: HoursRow[], fmt: (start: string, end: string
 export function withoutPending<T extends { key: string }>(cards: T[], pending: ReadonlySet<string>): T[] {
   return pending.size ? cards.filter((c) => !pending.has(c.key)) : cards;
 }
+
+/**
+ * Turning a VISIBLE Showcase off asks first when the professional has no
+ * verified licence or certificate (null = not known yet, treated as
+ * unverified): coming back on is refused with ATXC6 until one is verified.
+ * Turning it on, and a verified professional turning it off, never ask.
+ */
+export const needsHideWarning = (visible: boolean, next: boolean, verified: boolean | null): boolean => visible && !next && verified !== true;

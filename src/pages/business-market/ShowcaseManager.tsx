@@ -38,12 +38,10 @@ import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, pri
 // Reorder: drag the handle (pointer, the rows move as it passes their
 // middles) or, from the keyboard, Space / Enter to pick up, arrows to move,
 // Space / Enter to drop, Escape to cancel. The order is saved through
-// reorder_business_offerings (awaiting DB3: DB3 added business_offerings.sort
-// in 20261210900000 and public_showcase orders by it, but there is no reorder
-// function and authenticated holds no UPDATE grant on `sort`): while it is
-// pending the order goes back and a neutral strip says "Saving the order is
-// coming soon." The list shows the live order (created_at, newest first);
-// `sort` is never selected here.
+// reorder_showcase_items (Database 73ea87b; the whole list, top to bottom:
+// "Order saved"); a refusal puts the order back with the error strip. The list
+// reads the shelf order (sort, then newest first, then id), the same order
+// members see through public_showcase.
 
 const CAP = 3;
 
@@ -67,7 +65,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
   useEffect(() => {
     if (!businessId) return;
     let alive = true;
-    void fetchStoreProducts(businessId).then((r) => {
+    void fetchStoreProducts(businessId, "shelf").then((r) => {
       if (!alive) return;
       setOrder(null);
       setState(r.status === "ok" ? { status: "ok", value: r.value } : r.status === "error" ? { status: "error", offline: r.offline } : { status: "pending" });
@@ -97,8 +95,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
       return;
     }
     setOrder(before);
-    if (r.pending) showStrip("Saving the order is coming soon.", "neutral");
-    else showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
+    showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
   };
 
   const open = (p: Product | null) => setEditor({ open: true, product: p });

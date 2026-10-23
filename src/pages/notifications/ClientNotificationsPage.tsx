@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBack } from "../../hooks/useBack";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
+import { useApp } from "../../context/AppContext";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
@@ -11,11 +13,14 @@ import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import {
   CLIENT_KINDS,
+  applyReadChanges,
   clientNotificationTarget,
   fetchMyNotifications,
   groupNotifications,
+  hasNewRows,
   markNotificationsRead,
   markReadLocally,
+  mergeFirstPage,
   NOTIF_GLYPHS,
   NOTIF_TONES,
   notificationCopy,
@@ -86,6 +91,26 @@ export default function ClientNotificationsPage() {
       cancelled = true;
     };
   }, [tick]);
+
+  // Live (Database 73ea87b): a new client-kind row re-reads the FIRST page
+  // only and merges it on top (mergeFirstPage; pages already loaded stay); a
+  // read_at changed elsewhere is applied to the row shown. A reconnect
+  // re-reads the first page once.
+  const { authUserId } = useApp();
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+  useInboxRealtime(authUserId, "page", CLIENT_KINDS, (changes, resync) => {
+    const st = stateRef.current;
+    if (st.s !== "ok") return;
+    if (changes.length) setState((x) => (x.s === "ok" ? { ...x, list: applyReadChanges(x.list, changes) } : x));
+    if (!resync && !hasNewRows(st.list, changes)) return;
+    void fetchMyNotifications(null, PAGE, CLIENT_KINDS).then((r) => {
+      if (!r.ok) return;
+      setState((x) => (x.s === "ok" ? { s: "ok", ...mergeFirstPage(x.list, x.more, r.value) } : x));
+    });
+  });
 
   const list = state.s === "ok" ? state.list : [];
   const unread = unreadCount(list);

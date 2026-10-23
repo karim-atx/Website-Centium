@@ -4,15 +4,15 @@
 // and its places' coordinates (the Location segment's device distance) from
 // gyms. Both tables are publicly readable for a listed business
 // (business_profiles_select_public: active; gyms_select_public: not hidden and
-// the business listed). The Products grid is DB3's public_showcase
-// (fetchShowcaseItems below); the offers are DB2 `offers`
-// (services/offers fetchShowcaseOffers).
+// the business listed). The rest of the showcase reads the live services
+// (marketplace_venues), the business's DB2 offers (services/offers) and its
+// public shelf (fetchPublicShelf below, DB3 public_showcase).
 
 import { supabase } from "../../../../lib/supabase/client";
 import { storagePath } from "../../../services/venues/venueLogic";
-import { marketRpc } from "../../../services/market/rpc";
-import { num as numOf, rows, str } from "../../../services/market/parse";
-import type { OfferingCategory, Product } from "../../../services/store/types";
+import { marketRpc, type MarketResult } from "../../../services/market/rpc";
+import type { Product } from "../../../services/store/types";
+import { parseShelf } from "./rewardsModel";
 
 export interface ShowcaseExtras {
   website: string | null;
@@ -24,39 +24,6 @@ const num = (v: unknown): number | null => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : null;
 };
-
-/**
- * public_showcase(p_owner_kind, p_owner_id) (Database 20261210900000,
- * HANDOVER_API Release 1 "Showcase"): the owner's visible, unhidden shelf
- * items in the owner's order (sort, then created_at); nothing for a paused
- * listing, a closed business or an unlisted professional. Read here as the
- * grid's Product shape (no stock or store group in this projection). Null
- * when the read fails.
- */
-export async function fetchShowcaseItems(ownerKind: "business" | "professional", ownerId: string): Promise<Product[] | null> {
-  const r = await marketRpc("public_showcase", { p_owner_kind: ownerKind, p_owner_id: ownerId }, "Couldn't load the products.", (data) =>
-    rows(data).flatMap((x): Product[] => {
-      const id = str(x.id);
-      if (!id) return [];
-      return [
-        {
-          id,
-          name: str(x.title) ?? "",
-          price: numOf(x.price),
-          description: str(x.description) ?? "",
-          marketCategory: x.category as OfferingCategory,
-          stock: null,
-          visible: true,
-          categoryId: null,
-          category: null,
-          categoryGlyph: null,
-          imageUrl: str(x.image_url),
-        },
-      ];
-    })
-  );
-  return r.ok ? r.value : null;
-}
 
 /** The website, logo and place coordinates; a failed read gives nulls (the segments then hide, the tile shows initials). */
 export async function fetchShowcaseExtras(businessId: string): Promise<ShowcaseExtras> {
@@ -79,3 +46,16 @@ export async function fetchShowcaseExtras(businessId: string): Promise<ShowcaseE
     places: Array.isArray(gyms.data) ? (gyms.data as { lat: unknown; lng: unknown }[]).map((g) => ({ lat: num(g.lat), lng: num(g.lng) })) : [],
   };
 }
+
+/**
+ * One owner's public shelf (Database 73ea87b, 20261211400000):
+ * public_showcase(p_owner_kind, p_owner_id), the visible items without an
+ * admin takedown, in the owner's order (sort, then newest first, then id).
+ * Empty for a paused or closed business or an unlisted professional (not an
+ * error). Rows are mapped as products (title → name, image_url → imageUrl;
+ * the projection has no stock and no store category).
+ */
+export function fetchPublicShelf(ownerKind: "business" | "professional", ownerId: string): Promise<MarketResult<Product[]>> {
+  return marketRpc("public_showcase", { p_owner_kind: ownerKind, p_owner_id: ownerId }, "Couldn't load the products.", parseShelf);
+}
+

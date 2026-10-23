@@ -18,18 +18,22 @@ import { fetchMyProfile, type ProfessionalProfile } from "../../../services/prof
 import {
   aboutRows,
   deletePlanService,
+  deleteShelfItem,
+  fetchShelf,
   fetchShowcaseServices,
   initials,
   ratingLine,
   serviceCards,
   servicesHeader,
   setServiceShowcaseVisible,
+  setShelfItemVisible,
   weeklyHours,
   withoutPending,
   type PlanService,
   type ServiceCard,
   type ServiceRef,
   type SessionService,
+  type ShelfItem,
 } from "../../../services/pro-market";
 import { marketPalette } from "../../../theme/marketTokens";
 import { formatShortDate } from "../../../utils/date";
@@ -56,15 +60,20 @@ import { ServiceEditSheet } from "./ServiceEditSheet";
 //   type, rating · reviews · area; bio; specialties; credentials, languages
 //   and the contact line, D-27), read only with "Edit profile" →
 //   /app/more/edit-profile. "Hired via Centium" is DB10 (Release 2): not drawn;
-// - Services (scServices / scServicesEmpty / scDeleted): the LIVE
-//   appointment_services (Book) and professional_plans (Hire) (D-18) as cards
-//   with the kebab (Edit · Hide · Delete); Edit / Add → the Edit service sheet
-//   (ServiceEditSheet); Delete → "Delete this service?" → "Confirm delete" →
-//   the delete is written at once and the strip reads "Service deleted"
-//   (lead decision: no deferred Undo, as the dialog says "This can't be
-//   undone"); Hide is DB3 showcase_visible
-//   (awaiting): a quiet strip. A plan not offered is drawn at 0.5 with "Not
-//   offered" (its live state; "Hidden" is for showcase_visible);
+// - Services (scServices / scServicesEmpty / scDeleted): the professional's
+//   own shelf (business_offerings with professional_id, Database 73ea87b:
+//   what members see through public_showcase, in its order) first, then the
+//   LIVE appointment_services (Book) and professional_plans (Hire) (D-18), as
+//   cards with the kebab (Edit · Hide / Show · Delete); Edit / Add → the Edit
+//   service sheet (ServiceEditSheet; adding a "Showcase item" writes a shelf
+//   row); Delete → "Delete this service?" → "Confirm delete" → the delete is
+//   written at once and the strip reads "Service deleted" (lead decision: no
+//   deferred Undo, as the dialog says "This can't be undone"). Hide / Show on
+//   a shelf item writes its `visible` (drawn at 0.5 with "Hidden"; an item
+//   Centium took down reads "Hidden by Centium" and can't be shown again);
+//   Hide on a session type or plan is still a quiet strip (no
+//   showcase_visible on those tables). A plan not offered is drawn at 0.5
+//   with "Not offered" (its live state);
 // - Availability (scAvailability): the LIVE weekly hours (own practice rows of
 //   instructor_availability, 12-hour), "Open to gym work" (DB11, Release 2:
 //   shown off and disabled with a note), "Edit hours" →
@@ -224,7 +233,7 @@ function AboutPanel() {
 // ---------------------------------------------------------------------------
 // Services (lines 148–163, the sheet 551–576, the dialogs 600–615)
 
-type Loaded = { status: "loading" } | { status: "error"; offline: boolean } | { status: "ok"; sessions: SessionService[]; plans: PlanService[] };
+type Loaded = { status: "loading" } | { status: "error"; offline: boolean } | { status: "ok"; sessions: SessionService[]; plans: PlanService[]; shelf: ShelfItem[] };
 
 function ServicesPanel() {
   const navigate = useNavigate();
@@ -242,9 +251,11 @@ function ServicesPanel() {
   useEffect(() => {
     if (!authUserId) return;
     let alive = true;
-    void fetchShowcaseServices(authUserId).then((r) => {
+    void Promise.all([fetchShowcaseServices(authUserId), fetchShelf(authUserId)]).then(([r, sh]) => {
       if (!alive) return;
-      setState(r.ok ? { status: "ok", sessions: r.data.sessions, plans: r.data.plans } : { status: "error", offline: r.offline });
+      if (!r.ok) return setState({ status: "error", offline: r.offline });
+      if (!sh.ok) return setState({ status: "error", offline: sh.offline });
+      setState({ status: "ok", sessions: r.data.sessions, plans: r.data.plans, shelf: sh.data });
     });
     void fetchBookingPolicy(authUserId).then((r) => alive && r.ok && setAudience(r.data.whoCanBook));
     return () => {
@@ -261,7 +272,8 @@ function ServicesPanel() {
     setDel(null);
     setSheet(null);
     setPending((s) => new Set(s).add(key));
-    const r = ref.kind === "session" ? await deleteSessionType(authUserId, ref.item.id) : await deletePlanService(ref.item.id);
+    const r =
+      ref.kind === "session" ? await deleteSessionType(authUserId, ref.item.id) : ref.kind === "shelf" ? await deleteShelfItem(authUserId, ref.item.id) : await deletePlanService(ref.item.id);
     setPending((s) => {
       const n = new Set(s);
       n.delete(key);
@@ -273,7 +285,15 @@ function ServicesPanel() {
     } else showStrip(r.message, "error");
   };
 
-  const hide = async () => {
+  const hide = async (ref: ServiceRef) => {
+    if (ref.kind === "shelf") {
+      if (!authUserId || ref.item.hiddenByCentium) return;
+      const show = !ref.item.visible;
+      const r = await setShelfItemVisible(authUserId, ref.item.id, show);
+      if (!r.ok) return showStrip(r.message, "error");
+      showStrip(show ? "Service shown" : "Service hidden");
+      return reload();
+    }
     const r = await setServiceShowcaseVisible();
     if (r.ok) return reload();
     showStrip(r.pending ? "Hiding a service is coming soon." : r.message, "neutral");
@@ -285,7 +305,7 @@ function ServicesPanel() {
   } else if (state.status === "error") {
     body = <MarketError thing="your services" onRetry={reload} style={{ marginTop: 14 }} />;
   } else {
-    const cards = withoutPending(serviceCards(state.sessions, state.plans), pending);
+    const cards = withoutPending(serviceCards(state.sessions, state.plans, state.shelf), pending);
     body = cards.length ? (
       <>
         <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -303,7 +323,7 @@ function ServicesPanel() {
               editing={!!sheet?.target && `${sheet.target.kind}:${sheet.target.item.id}` === card.key}
               canEdit={online}
               onEdit={() => setSheet({ target: card.ref })}
-              onHide={() => void hide()}
+              onHide={() => void hide(card.ref)}
               onDelete={() => setDel({ ref: card.ref, step: 1 })}
             />
           ))}
@@ -323,6 +343,7 @@ function ServicesPanel() {
           open={!!sheet}
           target={sheet?.target ?? null}
           plans={state.plans}
+          shelf={state.shelf}
           audience={audience}
           onClose={() => setSheet(null)}
           onSaved={(msg) => {
@@ -358,6 +379,8 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const menu = !!anchor;
   const op = card.dim ? 0.5 : 1;
+  const shelfHidden = card.ref.kind === "shelf" && !card.ref.item.visible;
+  const takenDown = card.ref.kind === "shelf" && card.ref.item.hiddenByCentium;
   return (
     <li style={{ borderRadius: 20, background: c.card, border: editing ? `1.5px solid ${c.fill}` : `1px solid ${c.border}`, padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -393,7 +416,8 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
         align="right"
         options={[
           { value: "edit", label: "Edit", disabled: !canEdit },
-          { value: "hide", label: "Hide", disabled: !canEdit },
+          // A hidden shelf item reads "Show"; one Centium took down can't be shown again.
+          { value: "hide", label: shelfHidden ? "Show" : "Hide", disabled: !canEdit || takenDown },
           { value: "delete", label: "Delete", destructive: true, disabled: !canEdit },
         ]}
         onSelect={(v) => {

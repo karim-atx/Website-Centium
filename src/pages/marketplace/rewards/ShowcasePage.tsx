@@ -31,7 +31,7 @@ import { marketplaceCategoryIcon } from "../../../utils/icons";
 import type { MarketplaceCategoryId } from "../../../types";
 import { TYPE_CATEGORY } from "../venueTypes";
 import { distanceLine, productsNote, showcaseSegments, showcaseTypeLabel, type ShowcaseSegKey } from "./rewardsModel";
-import { fetchShowcaseExtras, fetchShowcaseItems, type ShowcaseExtras } from "./showcaseData";
+import { fetchPublicShelf, fetchShowcaseExtras, type ShowcaseExtras } from "./showcaseData";
 import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsParts";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.1 Business showcase (`showcase`,
@@ -56,10 +56,10 @@ import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsP
 // - "Products" + "Display prices. Buy in store or online." (11 --faint,
 //   baseline row, margin-top 18), then (margin-top 8) a 2-column grid, gap 10:
 //   a square photo radius 16 --soft, the name 13 / 700 (margin-top 6), the
-//   price 12 --ink2. The business's shelf from DB3's public_showcase (the
-//   visible, unhidden business_offerings rows in the owner's order; empty for
-//   a paused or closed business); no photo is a designed empty tile (a bag
-//   glyph in --tert), never "PRODUCT PHOTO".
+//   price 12 --ink2. The business's public shelf, public_showcase('business',
+//   id) (Database 73ea87b: visible items without a takedown, in the owner's
+//   order; empty for a paused or closed business); no photo is a designed
+//   empty tile (a bag glyph in --tert), never "PRODUCT PHOTO".
 // Segments with no data are left out (no website → no Online; no location →
 // no Location), see rewardsModel.showcaseSegments.
 //
@@ -123,10 +123,10 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   const loadProducts = useCallback(() => {
     let live = true;
     setProducts({ state: "loading" });
-    // DB3 public_showcase: the visible, unhidden items in the owner's order.
-    void fetchShowcaseItems("business", businessId).then((list) => {
+    void fetchPublicShelf("business", businessId).then((r) => {
       if (!live) return;
-      setProducts(list ? { state: "done", ok: true, list } : { state: "done", ok: false, list: [] });
+      // public_showcase: visible items without a takedown, in the owner's order.
+      setProducts(r.ok ? { state: "done", ok: true, list: r.value } : { state: "done", ok: false, list: [] });
     });
     return () => {
       live = false;
