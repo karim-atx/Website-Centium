@@ -156,7 +156,7 @@ export const CLIENT_COPY: NotificationCopyTable = {
   class_cancelled: { title: "Class cancelled", body: "One of your booked classes is cancelled." },
   review_prompt: { title: "Rate your instructor", body: "How was your class? Tell others what it was like." },
   voucher_redeemed: { title: "Voucher redeemed", body: "A member used a voucher for one of your offers." },
-  offer_hidden: { title: "Offer taken down", body: "Centium hid one of your offers. Members can't see it in Rewards now." },
+  offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
