@@ -67,17 +67,6 @@ export const Row = ({ icon, title, sub, trailing }: { icon?: ReactNode; title: s
   </div>
 );
 
-/** A Row that opens an external link in a new tab (OP1-132 S2: rel noopener). */
-export const LinkRow = ({ icon, title, sub, href, label }: { icon: ReactNode; title: string; sub: string; href: string; label: string }) => (
-  <a className="tm-row tap" href={href} target="_blank" rel="noopener noreferrer" aria-label={label} style={{ color: "inherit", textDecoration: "none" }}>
-    <span className="tm-row-i">{icon}</span>
-    <div className="tm-row-b">
-      <p className="tm-row-t">{title}</p>
-      <p className="tm-row-s">{sub}</p>
-    </div>
-  </a>
-);
-
 /** The fixed CTA with its fade (OP1-053 #28), portaled so no transform pins it to a wrapper. */
 export const TeamCta = ({ label, icon, onClick, disabled }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean }) =>
   createPortal(
