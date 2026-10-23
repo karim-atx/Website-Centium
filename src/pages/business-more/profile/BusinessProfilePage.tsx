@@ -281,6 +281,7 @@ export default function BusinessProfilePage() {
     rating: showRating && rating ? `${rating.average.toFixed(1)} · ${rating.total} reviews` : null,
     coverUrl: business?.coverUrl ?? null,
     logoUrl: business?.logoUrl ?? null,
+    slug: business?.slug ?? null,
     rows: [
       locations?.[0] ? { kind: "address" as const, text: locations[0].address } : null,
       locations?.[0] ? { kind: "hours" as const, text: todayLine(locations[0]) } : null,

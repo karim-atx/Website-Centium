@@ -4,21 +4,23 @@
 // public page and node:test share one definition.
 //
 // A link is the site address (config/site.ts, never centium.app) + /b/{slug}
-// with an optional /{kind}/{item}:
-// - week   this week's timetable (no item);
-// - c      a class (business_classes.id);
-// - o      a point offer (offers.id, DB2);
-// - i      a showcase item (business_offerings.id);
-// - m      a membership plan (membership_plans.id);
-// - j      an opening (DB8, Release 2; parsed so a Release 2 link resolves, never built in Release 1);
-// - none   the business itself ("Find us on Centium").
+// with an optional /{kind word}/{item}: exactly the shape of
+// resolve_share_link's target_url (Karim, #33: print the server's words).
+// - week        this week's timetable (no item);
+// - class       a class (business_classes.id);            internal kind "c"
+// - offer       a point offer (offers.id, DB2);           internal kind "o"
+// - item        a showcase item (business_offerings.id);  internal kind "i"
+// - membership  a membership plan (membership_plans.id);  internal kind "m"
+// - opening     an opening (DB8, Release 2; parsed so a Release 2 link
+//               resolves, never built in Release 1);       internal kind "j"
+// - none        the business itself ("Find us on Centium"; server "profile").
 // business_profiles.slug is the slug (B5: 3 to 40 of a-z 0-9 and single
 // hyphens, never all digits). Items are uuids (resolve_share_link p_item_id).
 //
-// The letters are the handover's (api.md "Deep links"); the server names the
-// same kinds in words (week, class, offer, item, membership, opening,
-// profile) and builds its own target_url with them, so the route reads both
-// and the resolver is always called with the word.
+// The single letters are the handover's (api.md "Deep links") and stay the
+// app's internal kind names. Links printed before this change used them
+// (/b/{slug}/c/{id}), so the route still reads both letters and words;
+// every link built now prints the word.
 
 import { siteHref, siteText } from "../../config/site";
 
@@ -52,13 +54,13 @@ export interface ShareLinkTarget {
   item: string | null;
 }
 
-/** "/b/flexfitness", "/b/flexfitness/week", "/b/flexfitness/c/{id}". Throws on a bad slug or a missing item. */
+/** "/b/flexfitness", "/b/flexfitness/week", "/b/flexfitness/class/{id}" (the server's words). Throws on a bad slug or a missing item. */
 export function bizSharePath(slug: string, kind: ShareLinkKind | null = null, item: string | null = null): string {
   if (!isBizSlug(slug)) throw new Error("bizSharePath: not a business slug");
   if (!kind) return `/b/${slug}`;
   if (kind === "week") return `/b/${slug}/week`;
   if (!item || !ITEM_RE.test(item)) throw new Error("bizSharePath: this kind needs an item");
-  return `/b/${slug}/${kind}/${item.toLowerCase()}`;
+  return `/b/${slug}/${serverKind(kind)}/${item.toLowerCase()}`;
 }
 
 /** The link to open or share (QR value, Copy, navigator.share url). */
@@ -70,7 +72,8 @@ export const bizShareText = (slug: string, kind: ShareLinkKind | null = null, it
 /**
  * The route's splat (everything after /b/:slug/) as a target, or null when it
  * isn't a link: "" → the business, "week", "{kind}/{item}" with the kind as
- * a letter (ours) or a word (the server's target_url).
+ * a word (what we print; the server's target_url) or a letter (links printed
+ * before the switch to words).
  */
 export function parseShareSplat(splat: string | null | undefined): ShareLinkTarget | null {
   const parts = (splat ?? "").split("/").filter(Boolean);
@@ -86,4 +89,9 @@ export function parseShareSplat(splat: string | null | undefined): ShareLinkTarg
     return null;
   }
   return ITEM_RE.test(item) ? { kind, item: item.toLowerCase() } : null;
+}
+
+/** The business's public page (More › Business card, MO1B-026): href + printed text, or null without a valid slug (no dead link). */
+export function bizProfileLink(slug: string | null | undefined): { href: string; text: string } | null {
+  return isBizSlug(slug) ? { href: bizShareHref(slug), text: bizShareText(slug) } : null;
 }

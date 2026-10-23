@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bizShareHref, bizSharePath, bizShareText, isBizSlug, parseShareSplat, serverKind } from "./links.ts";
+import { bizProfileLink, bizShareHref, bizSharePath, bizShareText, isBizSlug, parseShareSplat, serverKind } from "./links.ts";
 import { classifyShareLinkError, parseBusiness, parseItem, parseResolution, priceText } from "./resolveModel.ts";
 
 const ID = "e1000000-0000-4000-8000-0000000000c1";
@@ -8,10 +8,10 @@ const ID = "e1000000-0000-4000-8000-0000000000c1";
 test("links are built on the site address, never centium.app", () => {
   assert.equal(bizShareHref("flexfitness"), "https://centium.atraxia.org/b/flexfitness");
   assert.equal(bizShareHref("flexfitness", "week"), "https://centium.atraxia.org/b/flexfitness/week");
-  assert.equal(bizShareHref("flexfitness", "c", ID), `https://centium.atraxia.org/b/flexfitness/c/${ID}`);
-  assert.equal(bizShareText("flexfitness", "m", ID), `centium.atraxia.org/b/flexfitness/m/${ID}`);
-  for (const k of ["c", "o", "i", "m", "j"] as const) assert.equal(bizSharePath("hamra-strength", k, ID), `/b/hamra-strength/${k}/${ID}`);
-  assert.equal(bizSharePath("hamra-strength", "c", ID.toUpperCase()), `/b/hamra-strength/c/${ID}`);
+  assert.equal(bizShareHref("flexfitness", "c", ID), `https://centium.atraxia.org/b/flexfitness/class/${ID}`);
+  assert.equal(bizShareText("flexfitness", "m", ID), `centium.atraxia.org/b/flexfitness/membership/${ID}`);
+  for (const k of ["c", "o", "i", "m", "j"] as const) assert.equal(bizSharePath("hamra-strength", k, ID), `/b/hamra-strength/${serverKind(k)}/${ID}`);
+  assert.equal(bizSharePath("hamra-strength", "c", ID.toUpperCase()), `/b/hamra-strength/class/${ID}`);
   assert.ok(!bizShareHref("flexfitness", "o", ID).includes("centium.app"));
 });
 
@@ -61,6 +61,24 @@ test("the server's kind words: we call the resolver with them, and its target_ur
   assert.deepEqual(parseShareSplat(`membership/${ID}`), { kind: "m", item: ID });
   assert.deepEqual(parseShareSplat(`offer/${ID.toUpperCase()}`), { kind: "o", item: ID });
   assert.equal(parseShareSplat("profile"), null);
+});
+
+test("every printed link has the exact shape of resolve_share_link's target_url", () => {
+  // The resolver: base || '/b/' || slug || case when kind = 'profile' then '' else '/' || kind || coalesce('/' || item::text, '') end
+  const targetUrl = (base: string, slug: string, kind: string, item: string | null) =>
+    base + "/b/" + slug + (kind === "profile" ? "" : "/" + kind + (item ? "/" + item : ""));
+  const base = "https://centium.atraxia.org";
+  for (const [k, item] of [[null, null], ["week", null], ["c", ID], ["o", ID], ["i", ID], ["m", ID], ["j", ID]] as const) {
+    assert.equal(bizShareHref("flexfitness", k, item), targetUrl(base, "flexfitness", serverKind(k), item));
+    assert.ok(!/\/b\/flexfitness\/[coimj]\//.test(bizShareHref("flexfitness", k, item)), "no letter form is printed");
+  }
+});
+
+test("links printed before the switch (letters) still open the same target as the words", () => {
+  for (const [letter, word] of [["c", "class"], ["o", "offer"], ["i", "item"], ["m", "membership"], ["j", "opening"]] as const) {
+    assert.deepEqual(parseShareSplat(`${letter}/${ID}`), parseShareSplat(`${word}/${ID}`));
+    assert.deepEqual(parseShareSplat(`${letter}/${ID}`), { kind: letter, item: ID });
+  }
 });
 
 const BIZ = "e1000000-0000-4000-8000-0000000000b1";
@@ -133,4 +151,12 @@ test("the card: only public fields, and an item that isn't this business's or is
   assert.ok(!JSON.stringify(parseItem("o", BIZ, offer)).includes("46"));
   assert.equal(priceText("45.00"), "$45");
   assert.equal(priceText(85.5), "$85.50");
+});
+
+test("the business card's link: /b/{slug} on the site address, none without a slug", () => {
+  assert.deepEqual(bizProfileLink("flexfitness"), { href: "https://centium.atraxia.org/b/flexfitness", text: "centium.atraxia.org/b/flexfitness" });
+  assert.equal(bizProfileLink(null), null);
+  assert.equal(bizProfileLink(undefined), null);
+  assert.equal(bizProfileLink(""), null);
+  assert.equal(bizProfileLink("Flex Fitness"), null);
 });

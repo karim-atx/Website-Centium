@@ -161,7 +161,7 @@ test("weekly schedule: Monday-first, this week only, cancelled left out, 12-hour
   assert.ok(card.small);
 });
 
-test("plan and links: membership, its unit and the /m/ link", () => {
+test("plan and links: membership, its unit and the /membership/ link", () => {
   const d = planData({ id: "p1", name: "Monthly", price: "$45", billing: "monthly", kind: "membership", sessionsInPack: null, validForDays: null, includes: ["Gym floor", "lockers", " showers "] });
   assert.deepEqual(d, { id: "p1", name: "Monthly", price: "$45", unit: "a month", duration: "Monthly", includes: "Gym floor, lockers, showers" });
   const c = cardContent(BRAND, { t: "plan", d }, []);
@@ -169,10 +169,10 @@ test("plan and links: membership, its unit and the /m/ link", () => {
   assert.deepEqual(c.rows.map((r) => r.k), ["Duration", "Includes"]);
   // Items are uuids (resolve_share_link p_item_id uuid).
   const U = "e1000000-0000-4000-8000-0000000000c1";
-  assert.equal(cardLink("flexfitness", { t: "plan", d: { ...d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/m/${U}`);
+  assert.equal(cardLink("flexfitness", { t: "plan", d: { ...d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/membership/${U}`);
   assert.equal(cardLink("flexfitness", { t: "profile", d: { rating: null } }).text, "centium.atraxia.org/b/flexfitness");
-  assert.equal(cardLink("flexfitness", { t: "class", d: { ...(CLASS as Extract<TemplateData, { t: "class" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/c/${U}`);
-  assert.equal(cardLink("flexfitness", { t: "offer", d: { ...(OFFER as Extract<TemplateData, { t: "offer" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/o/${U}`);
+  assert.equal(cardLink("flexfitness", { t: "class", d: { ...(CLASS as Extract<TemplateData, { t: "class" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/class/${U}`);
+  assert.equal(cardLink("flexfitness", { t: "offer", d: { ...(OFFER as Extract<TemplateData, { t: "offer" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/offer/${U}`);
   assert.throws(() => cardLink("flexfitness", { t: "plan", d }));
 });
 

@@ -3,18 +3,28 @@ import { Clock, Download, Mail, MapPin, Phone, Share2, Star, X } from "lucide-re
 import { useBackCloses } from "../../../hooks/useBackCloses";
 import {  } from "../../../components/business-more/kit";
 import { copyText } from "../../../components/business-more/share";
+import { NO_LINK_HINT } from "../../../components/share/business/BizShareButton";
+import { ShareQr, qrRows } from "../../../components/share/ShareQr";
+import { bizProfileLink } from "../../../services/share-links/links";
 
 // MO1B-026 / -027 / -028 · the business card (BizMoreV8 `hasShare`, line 151):
 // left / right 20, centred, r24, shadow 0 20px 48px rgba(36,31,27,0.28); a 96
 // cover band (stripes, or the cover photo) with a 36 close; the 60 r18 logo
 // ringed 3 in the card colour, 30 into the band; name 18/800, type 12, the
-// rating 11.5/700 with a 13 / 2.4 star; info rows 11.5/600 line 15 with 13 /
-// 2.2 glyphs; Share (fill) and Save image (soft), 46 r14.
+// rating 11.5/700 with a 13 / 2.4 star; then a grid minmax(0,1fr) 96px, gap
+// 12, margin-top 12, align start: info rows (gap 8, 11.5/600 line 15 with 13
+// / 2.2 glyphs) beside the QR (96 square, r12, #FFFFFF in both themes, 1px
+// c.border = rgba(36,31,27,0.11) / dark rgba(245,243,250,0.10), padding 7,
+// border-box, #241F1B modules); the link under it (margin-top 10, centred,
+// ui-monospace 11/700 c.pDark #7D6BB5 / #C3B3FB); Share (fill) and Save
+// image (soft), 46 r14, margin-top 12.
 //
-// PUBLIC FIELDS ONLY (HANDOVER 4). THE QR AND THE /b/{slug} LINK
-// ARE NOT DRAWN: there is no public business page for them to open yet
-// (BU6-13), and a code that leads nowhere would be worse than none. Share
-// sends the card's text instead; Save image renders the card to a PNG.
+// PUBLIC FIELDS ONLY (HANDOVER 4). The QR and the link are the business's
+// public page, /b/{slug} on the site address (config/site.ts; the board's
+// "centium.app" is a placeholder). A business without a slug gets no QR and
+// no link (never a dead one): the rows run full width and the link line says
+// why, in the #33 no-link wording. Share sends the card's text with the link;
+// Save image renders the card, QR and link included, to a PNG.
 
 export interface CardData {
   name: string;
@@ -24,6 +34,8 @@ export interface CardData {
   rows: { kind: "address" | "hours" | "phone" | "email"; text: string }[];
   coverUrl: string | null;
   logoUrl: string | null;
+  /** business_profiles.slug; null (or not a valid slug) = no public link yet. */
+  slug: string | null;
 }
 
 const ICON = { address: MapPin, hours: Clock, phone: Phone, email: Mail } as const;
@@ -44,23 +56,25 @@ export function BusinessCard({
   useBackCloses(open, onClose);
   if (!open) return null;
 
+  const link = bizProfileLink(data.slug);
   const shareText = [data.name, data.type, ...data.rows.map((r) => r.text)].filter(Boolean).join("\n");
 
   const share = async () => {
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (typeof nav.share === "function") {
       try {
-        await nav.share({ title: data.name, text: shareText });
+        await nav.share({ title: data.name, text: shareText, ...(link ? { url: link.href } : null) });
         return;
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return;
       }
     }
-    onToast((await copyText(shareText)) ? "Details copied." : "Couldn't share right now. Try again.");
+    const copy = link ? `${shareText}\n${link.href}` : shareText;
+    onToast((await copyText(copy)) ? "Details copied." : "Couldn't share right now. Try again.");
   };
 
   const save = async () => {
-    const ok = await renderCardPng(data);
+    const ok = await renderCardPng(data, link);
     onToast(ok ? "Image saved to your downloads." : "Couldn't save the image. Try again.");
   };
 
@@ -104,18 +118,40 @@ export function BusinessCard({
               {data.rating}
             </p>
           )}
-          {data.rows.length > 0 && (
-            <div className="flex flex-col" style={{ gap: 8, marginTop: 12 }}>
-              {data.rows.map((r) => {
-                const Icon = ICON[r.kind];
-                return (
-                  <span key={r.kind} className="flex text-[11.5px] font-semibold leading-[15px] text-charcoal-soft" style={{ gap: 7 }}>
-                    <Icon size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-primary-dark" style={{ marginTop: 1 }} />
-                    <span className="min-w-0 [overflow-wrap:anywhere]">{r.text}</span>
-                  </span>
-                );
-              })}
+          {(data.rows.length > 0 || link) && (
+            <div className="grid" style={{ gridTemplateColumns: link ? "minmax(0,1fr) 96px" : "minmax(0,1fr)", gap: 12, marginTop: 12, alignItems: "start" }}>
+              <div className="flex flex-col" style={{ gap: 8 }}>
+                {data.rows.map((r) => {
+                  const Icon = ICON[r.kind];
+                  return (
+                    <span key={r.kind} className="flex text-[11.5px] font-semibold leading-[15px] text-charcoal-soft" style={{ gap: 7 }}>
+                      <Icon size={13} strokeWidth={2.2} aria-hidden className="shrink-0 text-primary-dark" style={{ marginTop: 1 }} />
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{r.text}</span>
+                    </span>
+                  );
+                })}
+              </div>
+              {link && (
+                <div
+                  className="[--biz-qr-border:rgba(36,31,27,0.11)] dark:[--biz-qr-border:rgba(245,243,250,0.10)]"
+                  style={{ width: 96, height: 96, borderRadius: 12, background: "#FFFFFF", border: "1px solid var(--biz-qr-border)", padding: 7, boxSizing: "border-box" }}
+                >
+                  <ShareQr value={link.href} size={80} label={`QR code to ${data.name} on Centium`} />
+                </div>
+              )}
             </div>
+          )}
+          {link ? (
+            <p
+              className="text-[11px] font-bold text-primary-dark text-center [overflow-wrap:anywhere]"
+              style={{ marginTop: 10, fontFamily: "ui-monospace, Menlo, monospace" }}
+            >
+              {link.text}
+            </p>
+          ) : (
+            <p className="text-[11.5px] font-semibold leading-[15px] text-charcoal-soft text-center" style={{ marginTop: 10 }}>
+              {NO_LINK_HINT}
+            </p>
           )}
           <div className="flex" style={{ gap: 8, marginTop: 12 }}>
             <button
@@ -173,18 +209,23 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, width: number): strin
   return lines;
 }
 
-async function renderCardPng(d: CardData): Promise<boolean> {
+async function renderCardPng(d: CardData, link: { href: string; text: string } | null): Promise<boolean> {
   try {
     const W = 350;
     const S = 2;
     const font = "Manrope, ui-sans-serif, system-ui, sans-serif";
+    const mono = "ui-monospace, Menlo, monospace";
     const measure = document.createElement("canvas").getContext("2d");
     if (!measure) return false;
+    // With a link the rows share the width with the 96 QR (gap 12).
+    const qr = link ? await qrRows(link.href) : null;
     measure.font = `600 11.5px ${font}`;
-    const rowLines = d.rows.map((r) => wrap(measure, r.text, W - 36 - 20));
+    const rowLines = d.rows.map((r) => wrap(measure, r.text, W - 36 - 20 - (link ? 96 + 12 : 0)));
     measure.font = `800 18px ${font}`;
     const nameLines = wrap(measure, d.name, W - 36);
-    const H = 96 + 34 + 8 + nameLines.length * 24 + 17 + (d.rating ? 19 : 0) + (rowLines.length ? 12 : 0) + rowLines.reduce((n, l) => n + l.length * 15 + 8, 0) + 16;
+    const rowsH = rowLines.reduce((n, l) => n + l.length * 15 + 8, 0);
+    const gridH = link ? Math.max(rowsH, 96 + 8) : rowsH;
+    const H = 96 + 34 + 8 + nameLines.length * 24 + 17 + (d.rating ? 19 : 0) + (rowLines.length || link ? 12 : 0) + gridH + (link ? 2 + 15 : 0) + 16;
 
     const canvas = document.createElement("canvas");
     canvas.width = W * S;
@@ -262,7 +303,8 @@ async function renderCardPng(d: CardData): Promise<boolean> {
       ctx.fillText(`★ ${d.rating}`, 18, y + 4 + 12);
       y += 19;
     }
-    if (rowLines.length) y += 12;
+    if (rowLines.length || link) y += 12;
+    const gridTop = y;
     ctx.fillStyle = "#5B5349";
     ctx.font = `600 11.5px ${font}`;
     rowLines.forEach((lines) => {
@@ -277,6 +319,30 @@ async function renderCardPng(d: CardData): Promise<boolean> {
       }
       y += 8;
     });
+
+    if (link) {
+      // QR 96 r12 white, 1px rgba(36,31,27,0.11), padding 7; then the link 10 below, mono 11/700 #7D6BB5, centred.
+      const qx = W - 18 - 96;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "rgba(36,31,27,0.11)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(qx + 0.5, gridTop + 0.5, 95, 95, 12);
+      ctx.fill();
+      ctx.stroke();
+      if (qr) {
+        const n = qr.length;
+        const m = 80 / n;
+        ctx.fillStyle = "#241F1B";
+        qr.forEach((row, ry) => row.forEach((dark, rx) => dark && ctx.fillRect(qx + 8 + rx * m, gridTop + 8 + ry * m, m + 0.02, m + 0.02)));
+      }
+      y = gridTop + Math.max(y - gridTop, 96 + 8) + 2;
+      ctx.fillStyle = "#7D6BB5";
+      ctx.font = `700 11px ${mono}`;
+      ctx.textAlign = "center";
+      ctx.fillText(link.text, W / 2, y + 11);
+      ctx.textAlign = "left";
+    }
 
     const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return false;
