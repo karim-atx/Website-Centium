@@ -167,10 +167,13 @@ test("plan and links: membership, its unit and the /m/ link", () => {
   const c = cardContent(BRAND, { t: "plan", d }, []);
   assert.equal(c.val, "$45");
   assert.deepEqual(c.rows.map((r) => r.k), ["Duration", "Includes"]);
-  assert.equal(cardLink("flexfitness", { t: "plan", d }).href, "https://centium.atraxia.org/b/flexfitness/m/p1");
+  // Items are uuids (resolve_share_link p_item_id uuid).
+  const U = "e1000000-0000-4000-8000-0000000000c1";
+  assert.equal(cardLink("flexfitness", { t: "plan", d: { ...d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/m/${U}`);
   assert.equal(cardLink("flexfitness", { t: "profile", d: { rating: null } }).text, "centium.atraxia.org/b/flexfitness");
-  assert.equal(cardLink("flexfitness", CLASS).href, "https://centium.atraxia.org/b/flexfitness/c/c1");
-  assert.equal(cardLink("flexfitness", OFFER).href, "https://centium.atraxia.org/b/flexfitness/o/o1");
+  assert.equal(cardLink("flexfitness", { t: "class", d: { ...(CLASS as Extract<TemplateData, { t: "class" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/c/${U}`);
+  assert.equal(cardLink("flexfitness", { t: "offer", d: { ...(OFFER as Extract<TemplateData, { t: "offer" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/o/${U}`);
+  assert.throws(() => cardLink("flexfitness", { t: "plan", d }));
 });
 
 test("B-SH.4 privacy: no card carries an Overview figure, member names or counts, client data or revenue", () => {

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Flag } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -19,6 +20,9 @@ import type { MarketResult } from "../../../services/market/rpc";
 import { offerCells, redeemGate } from "./rewardsModel";
 import { BackRow, OwnerTile } from "./rewardsParts";
 import { RedeemSheet } from "./RedeemDialogs";
+import { BottomSheet } from "../../../components/ui/BottomSheet";
+import { ReviewReportForm } from "../../../components/professionals/ReviewForms";
+import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOffer } from "../../../services/offers/report";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.2 Offer detail (`offer`, `offerLocked`)
 // at /app/marketplace/rewards/:offerId. Literal values, Client Explore
@@ -47,6 +51,13 @@ import { RedeemSheet } from "./RedeemDialogs";
 //   --fill 15 / 800 (opacity 0.4 and inert when locked).
 // The offer is DB2's `offers` row (fetchOfferDetail); null (no such offer,
 // or not live: RLS hides it or offer_is_live wouldn't pass) → the not-found card.
+//
+// Ours (the board draws no report affordance): "Report this offer" under the
+// honoured-by line opens the app's member report sheet (ReviewReportForm, as
+// on professional reviews and shared cards) with report_offer's 300-character
+// note. One report per member per offer: once the member's own offer_reports
+// row exists (read back, or just sent) the row reads "You reported this
+// offer." Hidden on a professional's own offer.
 
 const ICONS: React.ReactNode[] = [
   <>
@@ -73,7 +84,7 @@ type Load = { state: "loading" } | { state: "done"; result: MarketResult<OfferDe
 
 export default function OfferDetailPage() {
   const { offerId = "" } = useParams<{ offerId: string }>();
-  const { pointsSummary, pointTiers, refreshAchievements } = useApp();
+  const { pointsSummary, pointTiers, refreshAchievements, authUserId } = useApp();
   const dark = useIsDark();
   const m = marketPalette(dark);
   const back = useBack("/app/marketplace?tab=rewards");
@@ -83,6 +94,10 @@ export default function OfferDetailPage() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [termsOpen, setTermsOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  // Whether this member has reported the offer, keyed by the offer it was read for.
+  const [reportedFor, setReportedFor] = useState<{ id: string; v: boolean | null } | null>(null);
+  const reported = reportedFor?.id === offerId ? reportedFor.v : null;
 
   const fetchIt = useCallback(() => {
     let live = true;
@@ -93,6 +108,14 @@ export default function OfferDetailPage() {
     };
   }, [offerId]);
   useEffect(() => fetchIt(), [fetchIt]);
+  useEffect(() => {
+    if (!authUserId) return;
+    let live = true;
+    void hasReportedOffer(offerId).then((v) => live && setReportedFor({ id: offerId, v }));
+    return () => {
+      live = false;
+    };
+  }, [offerId, authUserId]);
   // Opened straight from a link, the balance may not have been read yet:
   // the app's one points read (it re-reads my_points_summary).
   const summaryKnown = !!pointsSummary;
@@ -119,6 +142,7 @@ export default function OfferDetailPage() {
   const tier = tierStyle(tierRank(pointTiers, pointsSummary?.tierName), dark);
   const gate = summaryKnown ? redeemGate(o, balance) : { locked: true, line: null };
   const cells = offerCells(o);
+  const ownOffer = o.ownerType === "professional" && !!authUserId && o.ownerId === authUserId;
   const ownerHref = o.ownerType === "business" ? (o.ownerId ? `/app/marketplace/business?id=${encodeURIComponent(o.ownerId)}` : null) : o.ownerId ? `/app/professionals/${encodeURIComponent(o.ownerId)}` : null;
   const notch: React.CSSProperties = { position: "absolute", width: 14, height: 14, borderRadius: 999, background: m.page, pointerEvents: "none" };
   const divider = dark ? "1.5px dashed rgba(245,243,250,0.16)" : DIVIDER;
@@ -218,6 +242,23 @@ export default function OfferDetailPage() {
 
       <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName || o.ownerSubtitle}.</p>
 
+      {authUserId && !ownOffer ? (
+        reported ? (
+          <p role="status" style={{ margin: "4px 0 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6, fontSize: textPx(13), fontWeight: 700, color: m.ink2 }}>
+            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> You reported this offer.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            className="market-focus"
+            style={{ marginTop: 4, minHeight: 44, padding: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.ink2, cursor: "pointer" }}
+          >
+            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> Report this offer
+          </button>
+        )
+      ) : null}
+
       <PinnedSlot>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, lineHeight: "normal" }}>
           {gate.line ? (
@@ -250,6 +291,20 @@ export default function OfferDetailPage() {
           </button>
         </div>
       </PinnedSlot>
+
+      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title="Report this offer">
+        {reportOpen && (
+          <ReviewReportForm
+            reasons={OFFER_REPORT_REASONS}
+            detailMax={OFFER_REPORT_NOTE_MAX}
+            onSend={async (reason, detail) => {
+              const r = await reportOffer(o.offerId, reason, detail);
+              if (r.ok) setReportedFor({ id: o.offerId, v: true });
+              return r.ok ? null : r.message;
+            }}
+          />
+        )}
+      </BottomSheet>
 
       <RedeemSheet open={sheetOpen} onClose={() => setSheetOpen(false)} offerId={o.offerId} headline={o.headline} owner={o.ownerSubtitle} cost={o.pointsCost} balance={balance} />
     </div>

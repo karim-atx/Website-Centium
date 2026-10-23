@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bizShareHref, bizSharePath, bizShareText, isBizSlug, parseShareSplat } from "./links.ts";
-import { classifyShareLinkError, parseShareLink, priceText } from "./resolveModel.ts";
+import { bizShareHref, bizSharePath, bizShareText, isBizSlug, parseShareSplat, serverKind } from "./links.ts";
+import { classifyShareLinkError, parseBusiness, parseItem, parseResolution, priceText } from "./resolveModel.ts";
 
 const ID = "e1000000-0000-4000-8000-0000000000c1";
 
@@ -10,7 +10,8 @@ test("links are built on the site address, never centium.app", () => {
   assert.equal(bizShareHref("flexfitness", "week"), "https://centium.atraxia.org/b/flexfitness/week");
   assert.equal(bizShareHref("flexfitness", "c", ID), `https://centium.atraxia.org/b/flexfitness/c/${ID}`);
   assert.equal(bizShareText("flexfitness", "m", ID), `centium.atraxia.org/b/flexfitness/m/${ID}`);
-  for (const k of ["c", "o", "i", "m", "j"] as const) assert.equal(bizSharePath("hamra-strength", k, "x1"), `/b/hamra-strength/${k}/x1`);
+  for (const k of ["c", "o", "i", "m", "j"] as const) assert.equal(bizSharePath("hamra-strength", k, ID), `/b/hamra-strength/${k}/${ID}`);
+  assert.equal(bizSharePath("hamra-strength", "c", ID.toUpperCase()), `/b/hamra-strength/c/${ID}`);
   assert.ok(!bizShareHref("flexfitness", "o", ID).includes("centium.app"));
 });
 
@@ -20,6 +21,8 @@ test("a bad slug or a missing item throws rather than building a dead link", () 
   assert.throws(() => bizSharePath("ab"));
   assert.throws(() => bizSharePath("flexfitness", "c"));
   assert.throws(() => bizSharePath("flexfitness", "o", "a/b"));
+  // resolve_share_link takes p_item_id uuid: a non-uuid item is never built.
+  assert.throws(() => bizSharePath("flexfitness", "m", "monthly"));
 });
 
 test("slugs follow business_profiles_slug_check", () => {
@@ -41,37 +44,93 @@ test("the route's splat parses back to the target it was built from", () => {
   assert.equal(parseShareSplat("x/1"), null);
   assert.equal(parseShareSplat("c"), null);
   assert.equal(parseShareSplat("c/1/2"), null);
-  for (const [k, item] of [["c", ID], ["m", "monthly"], [null, null], ["week", null]] as const) {
+  assert.equal(parseShareSplat("c/1"), null);
+  assert.equal(parseShareSplat("constructor/" + ID), null);
+  for (const [k, item] of [["c", ID], ["m", ID], [null, null], ["week", null]] as const) {
     const path = bizSharePath("flexfitness", k, item);
     assert.deepEqual(parseShareSplat(path.replace(/^\/b\/flexfitness\/?/, "")), { kind: k, item });
   }
 });
 
-test("resolve_share_link: documented errors read as missing, a missing function as unavailable (DB13 not landed)", () => {
-  assert.equal(classifyShareLinkError({ code: "P0001", message: "not_found" }), "missing");
-  assert.equal(classifyShareLinkError({ code: "P0001", message: "not_public" }), "missing");
-  assert.equal(classifyShareLinkError({ code: "PGRST202", message: "Could not find the function public.resolve_share_link" }), "unavailable");
-  assert.equal(classifyShareLinkError({ code: "42883", message: "function does not exist" }), "unavailable");
+test("the server's kind words: we call the resolver with them, and its target_url opens our route", () => {
+  assert.equal(serverKind(null), "profile");
+  assert.equal(serverKind("week"), "week");
+  assert.deepEqual((["c", "o", "i", "m", "j"] as const).map(serverKind), ["class", "offer", "item", "membership", "opening"]);
+  // target_url = public_base_url || '/b/' || slug || '/' || kind || '/' || item
+  assert.deepEqual(parseShareSplat(`class/${ID}`), { kind: "c", item: ID });
+  assert.deepEqual(parseShareSplat(`membership/${ID}`), { kind: "m", item: ID });
+  assert.deepEqual(parseShareSplat(`offer/${ID.toUpperCase()}`), { kind: "o", item: ID });
+  assert.equal(parseShareSplat("profile"), null);
+});
+
+const BIZ = "e1000000-0000-4000-8000-0000000000b1";
+const row = (o: Record<string, unknown>) => [{ found: false, business_id: null, business_name: null, kind: "profile", item_id: null, target_url: null, disabled: false, ...o }];
+
+test("resolve_share_link's row: found, taken down, and every not-found case look as documented", () => {
+  assert.deepEqual(parseResolution(row({ found: true, business_id: BIZ, business_name: "Flex Fitness", kind: "class", item_id: ID, target_url: "https://centium.atraxia.org/b/flexfitness/class/" + ID })), {
+    status: "found",
+    businessId: BIZ,
+    businessName: "Flex Fitness",
+    kind: "class",
+    itemId: ID,
+  });
+  // Disabled: found = false, nothing else, disabled = true.
+  assert.deepEqual(parseResolution(row({ kind: "offer", item_id: ID, disabled: true })), { status: "disabled" });
+  // A bad slug, a closed business and a hidden one: found = false with nothing else.
+  assert.deepEqual(parseResolution(row({})), { status: "missing" });
+  // Unreadable answers never draw a card.
+  assert.deepEqual(parseResolution([]), { status: "missing" });
+  assert.deepEqual(parseResolution(null), { status: "missing" });
+  assert.deepEqual(parseResolution(row({ found: true, business_id: BIZ })), { status: "missing" });
+  assert.deepEqual(parseResolution(row({ found: true, business_id: BIZ, business_name: "X", kind: "nope" })), { status: "missing" });
+  // A single object (not a set) parses the same.
+  assert.equal(parseResolution({ found: true, business_id: BIZ, business_name: "X", kind: "profile", item_id: null }).status, "found");
+});
+
+test("resolve_share_link refusals: a bad kind or item is not found, anything else an error", () => {
+  assert.equal(classifyShareLinkError({ code: "22023", message: "unknown link kind" }), "missing");
+  assert.equal(classifyShareLinkError({ code: "22P02", message: "invalid input syntax for type uuid" }), "missing");
+  assert.equal(classifyShareLinkError({ code: "PGRST202", message: "Could not find the function" }), "error");
   assert.equal(classifyShareLinkError({ code: "08006", message: "connection failure" }), "error");
 });
 
-test("resolve_share_link: only the documented public fields are read; an unreadable answer is no card", () => {
-  const card = parseShareLink(
-    {
-      business: { business_name: "Flex Fitness", logo_url: null, category: "Gym", area: "Beirut", rating: 4.8, review_count: 12, members_reached: 1840, revenue: 9000 },
-      item: { headline: "15% off", points_cost: 900, ends_on: "2026-12-31", where_used: "In store", redeemed_count: 46 },
-    },
-    "o",
-  );
-  assert.ok(card);
-  assert.deepEqual(card.business, { name: "Flex Fitness", logoUrl: null, category: "Gym", area: "Beirut", rating: { average: 4.8, count: 12 } });
-  assert.deepEqual(card.item, { kind: "o", headline: "15% off", pointsCost: 900, validUntil: "2026-12-31", where: "In store" });
-  const flat = JSON.stringify(card);
-  for (const leak of ["1840", "9000", "46", "members", "revenue", "redeemed"]) assert.ok(!flat.includes(leak), leak);
-  assert.equal(parseShareLink(null, "o"), null);
-  assert.equal(parseShareLink({ business: { business_name: "X" }, item: {} }, "o"), null);
-  assert.equal(parseShareLink({ business: {} }, null), null);
-  assert.deepEqual(parseShareLink([{ business_name: "X" }], null)?.item, { kind: null });
+test("the card: only public fields, and an item that isn't this business's or isn't public is not found", () => {
+  assert.deepEqual(parseBusiness("Flex Fitness", { logo_url: null, business_type: "gym", location: "Beirut", members_reached: 1840 }), {
+    name: "Flex Fitness",
+    logoUrl: null,
+    type: "gym",
+    area: "Beirut",
+  });
+  assert.deepEqual(parseBusiness("Flex Fitness", null), { name: "Flex Fitness", logoUrl: null, type: null, area: null });
+  assert.equal(parseBusiness("F", { logo_url: "uid/logo.png" }, (v) => `https://cdn/${v}`).logoUrl, "https://cdn/uid/logo.png");
+  assert.equal((parseItem("i", BIZ, { business_id: BIZ, title: "T", visible: true, image_url: "javascript:alert(1)" }) as { imageUrl: string | null }).imageUrl, null);
+
+  assert.deepEqual(parseItem(null, BIZ, undefined), { kind: null });
+  assert.deepEqual(parseItem("week", BIZ, undefined), { kind: "week" });
+  assert.deepEqual(parseItem("j", BIZ, undefined), { kind: "j" });
+
+  const cls = { business_id: BIZ, title: "Spin", event_date: "2026-10-23", start_time: "07:00:00", cancelled_at: null, listed_on_explore: true, max_capacity: 20 };
+  assert.deepEqual(parseItem("c", BIZ, cls), { kind: "c", title: "Spin", date: "2026-10-23", startTime: "07:00:00" });
+  assert.equal(parseItem("c", BIZ, { ...cls, cancelled_at: "2026-10-20T10:00:00Z" }), null);
+  assert.equal(parseItem("c", BIZ, { ...cls, listed_on_explore: false }), null);
+  assert.equal(parseItem("c", "another-business", cls), null);
+  assert.equal(parseItem("c", BIZ, null), null);
+
+  const plan = { business_id: BIZ, name: "Monthly", price: "45.00", visible_on_explore: true, status: "active" };
+  assert.deepEqual(parseItem("m", BIZ, plan), { kind: "m", name: "Monthly", price: "$45" });
+  assert.equal(parseItem("m", BIZ, { ...plan, visible_on_explore: false }), null);
+  assert.equal(parseItem("m", BIZ, { ...plan, status: "archived" }), null);
+
+  const shop = { business_id: BIZ, title: "Shaker", price: 12.5, description: null, image_url: "https://x/y.jpg", visible: true, hidden_at: null };
+  assert.deepEqual(parseItem("i", BIZ, shop), { kind: "i", name: "Shaker", price: "$12.50", imageUrl: "https://x/y.jpg", description: null });
+  assert.equal(parseItem("i", BIZ, { ...shop, hidden_at: "2026-10-01T00:00:00Z" }), null);
+
+  // An offer: read signed in; signed out (not read) the card has no details.
+  const offer = { business_id: BIZ, title: "15% off", points_cost: 900, ends_on: "2026-12-31", where_used: "in_store", redeemed_count: 46 };
+  assert.deepEqual(parseItem("o", BIZ, offer), { kind: "o", offer: { headline: "15% off", pointsCost: 900, validUntil: "2026-12-31", where: "in_store" } });
+  assert.deepEqual(parseItem("o", BIZ, undefined), { kind: "o", offer: null });
+  assert.equal(parseItem("o", BIZ, null), null);
+  assert.ok(!JSON.stringify(parseItem("o", BIZ, offer)).includes("46"));
   assert.equal(priceText("45.00"), "$45");
   assert.equal(priceText(85.5), "$85.50");
 });
