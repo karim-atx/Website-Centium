@@ -99,7 +99,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
   const [saveNote, setSaveNote] = useState<{ text: string; quiet: boolean } | null>(null);
   // create_offer ⟳: one request id for the life of this open form.
   const [requestId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`));
-  const [existing, setExisting] = useState<{ kind: "loading" } | { kind: "ready"; offer: ManagedOffer } | { kind: "missing" } | { kind: "pending" } | { kind: "error" } | null>(isNew ? null : { kind: "loading" });
+  const [existing, setExisting] = useState<{ kind: "loading" } | { kind: "ready"; offer: ManagedOffer } | { kind: "missing" } | { kind: "error" } | null>(isNew ? null : { kind: "loading" });
   const [tick, setTick] = useState(0);
   const formRef = useRef<HTMLDivElement | null>(null);
   const ownerKey = owner ? (owner.variant === "business" ? owner.businessId : "me") : null;
@@ -111,7 +111,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
     void fetchMyOffer(owner, offerId).then((r) => {
       if (!alive) return;
       if (!r.ok) {
-        setExisting(r.pending ? { kind: "pending" } : { kind: "error" });
+        setExisting({ kind: "error" });
         return;
       }
       if (!r.value) {
@@ -152,7 +152,6 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
         {existing.kind === "loading" ? <MarketSkeleton radius={20} rows={3} count={3} label="Loading offer" /> : null}
         {existing.kind === "error" ? <MarketError thing="this offer" onRetry={() => setTick((t) => t + 1)} /> : null}
         {existing.kind === "missing" ? <MarketEmptyCard title="This offer isn't available" body="It may have been removed. Go back to see your offers." /> : null}
-        {existing.kind === "pending" ? <MarketEmptyCard title="Point offers are coming soon" body="You'll be able to edit your offers here soon." /> : null}
       </div>
     );
   }

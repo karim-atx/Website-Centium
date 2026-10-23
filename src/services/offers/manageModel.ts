@@ -1,13 +1,16 @@
 // Market + Share 3.0 · W3 · the owner's point offers, pure (B-MA.3 / P-MA.3
-// Offers Manager, Create offer, Preview and publish). Row shape: PLAN §2.2 DB2
-// `offers` (owner_type, owner_id, headline, type, value, applies_to,
-// points_cost, quantity_cap, per_member_limit, starts_on, ends_on, where_used,
-// terms, paused, funding_ack_at, redeemed_count, created_at) and the derived
-// status; re-check the names when DB2 lands in HANDOVER_API.
+// Offers Manager, Create offer, Preview and publish). Rows: the DB2 `offers`
+// table (Database 33c0bf5, 20261210800000): title, kind, value, category,
+// points_cost, quantity_cap, per_member_limit, starts_on, ends_on (null = no
+// end), where_used (in_person | online | both), terms, paused_at, hidden_at /
+// hidden_reason (Centium took it down), funding_ack_at, redeemed_count,
+// created_at. The table has no applies_to column and no status: the status is
+// derived here. The form's create / update arguments stay in PLAN §2.2's shape:
+// DB2 ships no owner writer (see manage.ts).
 
 import { formatShortDate } from "../../utils/date";
 import { formatPoints } from "../../components/market/pointsModel";
-import { bool, num, rows, str } from "../market/parse";
+import { num, rows, str } from "../market/parse";
 
 export type OfferVariant = "business" | "professional";
 export type OfferStatus = "active" | "scheduled" | "paused" | "expired";
@@ -15,33 +18,37 @@ export type OfferType = "percent_off" | "amount_off" | "free_item";
 /** Business: in_store | online | both. Professional: in_person | online | both. */
 export type OfferWhere = "in_store" | "online" | "both" | "in_person";
 
+/** The owner's read of their own offers. */
+export const MANAGED_OFFER_SELECT =
+  "id,owner_kind,business_id,professional_id,title,category,kind,value,points_cost,quantity_cap,per_member_limit,starts_on,ends_on,where_used,terms,paused_at,hidden_at,funding_ack_at,redeemed_count,created_at";
+
 export interface ManagedOffer {
   id: string;
   headline: string;
   type: OfferType;
   value: number | null;
+  /** Not a DB2 column (a professional's "Applies to" service): always null from the server. */
   appliesTo: string | null;
+  category: string | null;
   pointsCost: number;
   quantityCap: number | null;
   perMemberLimit: number;
   /** YYYY-MM-DD */
   startsOn: string;
-  /** YYYY-MM-DD */
-  endsOn: string;
+  /** YYYY-MM-DD, or null: the offer has no end date. */
+  endsOn: string | null;
   where: OfferWhere;
   terms: string;
   paused: boolean;
   pausedAt: string | null;
+  /** Set when Centium took the offer down (admin_set_offer_hidden). */
+  hiddenAt: string | null;
   fundingAckAt: string | null;
   redeemedCount: number;
-  /** The server's status when it sends one; `offerStatus` derives it otherwise. */
-  status: OfferStatus | null;
   createdAt: string | null;
 }
 
 const TYPES: readonly OfferType[] = ["percent_off", "amount_off", "free_item"];
-const WHERES: readonly OfferWhere[] = ["in_store", "online", "both", "in_person"];
-const STATUSES: readonly OfferStatus[] = ["active", "scheduled", "paused", "expired"];
 
 /** The date part of an ISO date or timestamp ("2026-12-31"). */
 const day = (v: unknown): string | null => {
@@ -49,44 +56,51 @@ const day = (v: unknown): string | null => {
   return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null;
 };
 
+/** where_used → the form's words: a business's in_person is "In store". */
+function whereOf(v: unknown, professional: boolean): OfferWhere {
+  const w = str(v);
+  if (w === "online" || w === "both") return w;
+  return professional ? "in_person" : "in_store";
+}
+
 export function parseManagedOffer(r: unknown): ManagedOffer | null {
   if (!r || typeof r !== "object") return null;
   const o = r as Record<string, unknown>;
-  const id = str(o.id) ?? str(o.offer_id);
-  const startsOn = day(o.starts_on) ?? day(o.starts_at);
-  const endsOn = day(o.ends_on) ?? day(o.ends_at);
-  if (!id || !startsOn || !endsOn) return null;
-  const t = str(o.type);
-  const w = str(o.where_used) ?? str(o.where);
-  const s = str(o.status);
+  const id = str(o.id);
+  const startsOn = day(o.starts_on);
+  if (!id || !startsOn) return null;
+  const t = str(o.kind);
+  const pausedAt = str(o.paused_at);
   return {
     id,
-    headline: str(o.headline) ?? "",
+    headline: str(o.title) ?? "",
     type: TYPES.includes(t as OfferType) ? (t as OfferType) : "percent_off",
     value: num(o.value),
-    appliesTo: str(o.applies_to),
+    appliesTo: null,
+    category: str(o.category),
     pointsCost: num(o.points_cost) ?? 0,
     quantityCap: num(o.quantity_cap),
     perMemberLimit: num(o.per_member_limit) ?? 1,
     startsOn,
-    endsOn,
-    where: WHERES.includes(w as OfferWhere) ? (w as OfferWhere) : "both",
+    endsOn: day(o.ends_on),
+    where: whereOf(o.where_used, o.owner_kind === "professional"),
     terms: str(o.terms) ?? "",
-    paused: bool(o.paused),
-    pausedAt: str(o.paused_at),
+    paused: !!pausedAt,
+    pausedAt,
+    hiddenAt: str(o.hidden_at),
     fundingAckAt: str(o.funding_ack_at),
     redeemedCount: num(o.redeemed_count) ?? 0,
-    status: STATUSES.includes(s as OfferStatus) ? (s as OfferStatus) : null,
     createdAt: str(o.created_at),
   };
 }
 
-export const parseManagedOffers = (data: unknown): ManagedOffer[] => rows(data).flatMap((r) => {
-  const o = parseManagedOffer(r);
-  return o ? [o] : [];
-});
+export const parseManagedOffers = (data: unknown): ManagedOffer[] =>
+  rows(data).flatMap((r) => {
+    const o = parseManagedOffer(r);
+    return o ? [o] : [];
+  });
 
-/** The first offer in a write's answer (create_offer / update_offer / set_offer_paused return the Offer). */
+/** The first offer in a write's answer. */
 export const parseOneOffer = (data: unknown): ManagedOffer | null => parseManagedOffers(data)[0] ?? null;
 
 /** Today as YYYY-MM-DD in the device's local day. */
@@ -95,15 +109,13 @@ export function localDay(now: Date = new Date()): string {
 }
 
 /**
- * The status the list shows: the server's when it sends one (it derives it in
- * the owner's timezone), else from the dates and the paused flag: after the
- * end it's Expired (even if paused), before the start Scheduled, then Paused
- * or Active.
+ * The status the list shows, from the row: after the end it's Expired (even
+ * if paused), then Paused (paused by the owner, or taken down by Centium),
+ * before the start Scheduled, else Active.
  */
-export function offerStatus(o: Pick<ManagedOffer, "status" | "paused" | "startsOn" | "endsOn">, today: string = localDay()): OfferStatus {
-  if (o.status) return o.status;
-  if (o.endsOn < today) return "expired";
-  if (o.paused) return "paused";
+export function offerStatus(o: Pick<ManagedOffer, "paused" | "hiddenAt" | "startsOn" | "endsOn">, today: string = localDay()): OfferStatus {
+  if (o.endsOn && o.endsOn < today) return "expired";
+  if (o.paused || o.hiddenAt) return "paused";
   if (o.startsOn > today) return "scheduled";
   return "active";
 }
@@ -126,19 +138,22 @@ export function instantDayLabel(iso: string): string {
  * The manager row's meta line (B-MA.3 `offerList`, D-02 month first):
  * "Ends Dec 31, 2026 · 30 redeemed", "Starts Nov 1, 2026",
  * "Paused Oct 10, 2026 · 8 redeemed", "Ended Sep 30, 2026 · 41 redeemed".
+ * Ours: "No end date · 30 redeemed" (ends_on null) and "Taken down by
+ * Centium · 8 redeemed" (hidden).
  */
 export function offerMeta(o: ManagedOffer, today: string = localDay()): string {
   const s = offerStatus(o, today);
   const red = `${formatPoints(o.redeemedCount)} redeemed`;
   if (s === "scheduled") return `Starts ${dayLabel(o.startsOn)}`;
-  if (s === "expired") return `Ended ${dayLabel(o.endsOn)} · ${red}`;
+  if (s === "expired") return `Ended ${dayLabel(o.endsOn ?? "")} · ${red}`;
+  if (o.hiddenAt) return `Taken down by Centium · ${red}`;
   if (s === "paused") return o.pausedAt ? `Paused ${instantDayLabel(o.pausedAt)} · ${red}` : `Paused · ${red}`;
-  return `Ends ${dayLabel(o.endsOn)} · ${red}`;
+  return o.endsOn ? `Ends ${dayLabel(o.endsOn)} · ${red}` : `No end date · ${red}`;
 }
 
 const RANK: Record<OfferStatus, number> = { active: 0, scheduled: 1, paused: 2, expired: 3 };
 
-/** The board's order: Active, Scheduled, Paused, Expired (server order within each). */
+/** The board's order: Active, Scheduled, Paused, Expired (read order within each). */
 export function sortOffers(list: ManagedOffer[], today: string = localDay()): ManagedOffer[] {
   return list
     .map((o, i) => ({ o, i, r: RANK[offerStatus(o, today)] }))
@@ -192,7 +207,7 @@ export function draftOf(o: ManagedOffer): OfferDraft {
     quantityCap: o.quantityCap === null ? "" : String(o.quantityCap),
     perMemberLimit: String(o.perMemberLimit),
     startsOn: o.startsOn,
-    endsOn: o.endsOn,
+    endsOn: o.endsOn ?? "",
     where: o.where,
     terms: o.terms,
     fundingAck: !!o.fundingAckAt,

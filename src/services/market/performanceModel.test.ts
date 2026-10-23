@@ -11,7 +11,6 @@ import {
   isPerfRange,
   longDate,
   offerRateFraction,
-  parseOfferChoices,
   parsePerformance,
   proStepFraction,
   RANGE_UNIT,
@@ -97,16 +96,3 @@ test("ranges and the scheduled-offer state", () => {
   assert.equal(startsLater(null, "2026-10-22"), false);
 });
 
-test("parseOfferChoices keeps offers with an id and a headline", () => {
-  const list = parseOfferChoices([
-    { id: "of1", headline: "15% off full-price items", status: "active", starts_on: "2026-10-02" },
-    { id: "of3", headline: "15% off outerwear", status: "scheduled", starts_on: "2026-11-01T00:00:00Z" },
-    { id: "", headline: "No id" },
-    { id: "x", headline: "" },
-  ]);
-  assert.deepEqual(list, [
-    { id: "of1", headline: "15% off full-price items", status: "active", startsOn: "2026-10-02" },
-    { id: "of3", headline: "15% off outerwear", status: "scheduled", startsOn: "2026-11-01" },
-  ]);
-  assert.deepEqual(parseOfferChoices(null), []);
-});

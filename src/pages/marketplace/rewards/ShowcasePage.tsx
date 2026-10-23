@@ -22,7 +22,8 @@ import { recordListingEvent } from "../../../services/marketplace/listingEvents"
 import { parseListingSource } from "../../../services/marketplace/listingLogic";
 import { businessHasVenue } from "../../../services/venues";
 import { fetchStoreProducts, type Product } from "../../../services/store/products";
-import { fetchShowcaseOffers, type CatalogOffer } from "../../../services/offers";
+import { fetchShowcaseOffers, forAge, type CatalogOffer } from "../../../services/offers";
+import { forumAccess } from "../../../services/forum/rules";
 import type { MarketResult } from "../../../services/market/rpc";
 import { formatPrice } from "../../../utils/price";
 import { marketplaceCategories } from "../../../data/mockProfessionals";
@@ -49,8 +50,9 @@ import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsP
 // - "Offers for your points" (margin-top 18; list margin-top 8, gap 8): rows
 //   radius 16, 0.5px --hair, padding 12 14, gap 12: the headline 14 / 700,
 //   "You can redeem" 11 / 700 --tealink (margin-top 3) or "N to go"; the cost
-//   15 / 700 + the 11 leaf. The rows open the offer. public_showcase is
-//   DB3's: until it lands the section stays out (quiet);
+//   15 / 700 + the 11 leaf. The rows open the offer. The offers are the
+//   business's live DB2 `offers` (fetchShowcaseOffers); with none the section
+//   stays out;
 // - "Products" + "Display prices. Buy in store or online." (11 --faint,
 //   baseline row, margin-top 18), then (margin-top 8) a 2-column grid, gap 10:
 //   a square photo radius 16 --soft, the name 13 / 700 (margin-top 6), the
@@ -70,7 +72,8 @@ type Offers = { state: "loading" } | { state: "done"; result: MarketResult<Catal
 type Products = { state: "loading" } | { state: "done"; ok: boolean; list: Product[] };
 
 export function ShowcasePage({ businessId, source }: { businessId: string; source: string | null }) {
-  const { pointsSummary, refreshAchievements } = useApp();
+  const { pointsSummary, refreshAchievements, user } = useApp();
+  const adult = forumAccess(user.dateOfBirth) === "adult";
   const dark = useIsDark();
   const m = marketPalette(dark);
   const back = useBack("/app/marketplace?tab=rewards");
@@ -131,14 +134,13 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   const loadOffers = useCallback(() => {
     let live = true;
     setOffers({ state: "loading" });
-    // awaiting DB stage DB3: public_showcase (the active offers).
     void fetchShowcaseOffers("business", businessId).then((result) => {
-      if (live) setOffers({ state: "done", result });
+      if (live) setOffers({ state: "done", result: result.ok ? { ok: true, value: forAge(result.value, adult) } : result });
     });
     return () => {
       live = false;
     };
-  }, [businessId]);
+  }, [businessId, adult]);
 
   useEffect(() => {
     if (!venue) return;
@@ -261,7 +263,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
         </Link>
       ) : null}
 
-      {/* Offers for your points (DB3) */}
+      {/* Offers for your points (DB2 `offers`) */}
       <ShowcaseOffers state={offers} balance={balance} onRetry={loadOffers} onOpen={(o) => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.offerId)}`)} />
 
       {/* Products */}
@@ -336,10 +338,9 @@ const rowBox = (m: ReturnType<typeof marketPalette>): React.CSSProperties => ({
   lineHeight: "normal",
 });
 
-/** "Offers for your points": quiet while DB3 is pending (the section stays out). */
+/** "Offers for your points": the business's live offers (none: the section stays out). */
 const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => void; onOpen: (o: CatalogOffer) => void }> = ({ state, balance, onRetry, onOpen }) => {
   const m = marketPalette(useIsDark());
-  if (state.state === "done" && !state.result.ok && state.result.pending) return null;
   if (state.state === "done" && state.result.ok && state.result.value.length === 0) return null;
   return (
     <section aria-labelledby="showcase-offers" style={{ marginTop: 18 }}>

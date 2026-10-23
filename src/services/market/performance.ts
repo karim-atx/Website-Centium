@@ -5,12 +5,13 @@
 // - offer_performance(p_range, p_metric, p_offer_id, p_compare): DB5,
 //   business (marketing). p_offer_id null = all offers.
 // - professional_performance(p_range, p_metric): DB5, the professional.
-// - my_offers(p_status): DB2, the header's offer selector (the owner's offers).
+// - the header's offer selector: the owner's offers (DB2 `offers`, services/offers/manage).
 // Only the documented arguments are sent: an extra one would make PostgREST
 // miss the function once it lands.
 
 import { marketRpc, type MarketResult } from "./rpc";
-import { parseOfferChoices, parsePerformance, type OfferChoice, type OfferMetric, type PerfRange, type PerfSeries, type ProMetric } from "./performanceModel";
+import { fetchMyOffers } from "../offers/manage";
+import { parsePerformance, type OfferChoice, type OfferMetric, type PerfRange, type PerfSeries, type ProMetric } from "./performanceModel";
 
 export async function fetchOfferPerformance(range: PerfRange, metric: OfferMetric, offerId: string | null, compare: boolean): Promise<MarketResult<PerfSeries | null>> {
   // awaiting DB stage DB5
@@ -22,7 +23,7 @@ export async function fetchProfessionalPerformance(range: PerfRange, metric: Pro
   return marketRpc("professional_performance", { p_range: range, p_metric: metric }, "Couldn't load your performance.", (d) => parsePerformance(d, range));
 }
 
-export async function fetchOfferChoices(): Promise<MarketResult<OfferChoice[]>> {
-  // awaiting DB stage DB2
-  return marketRpc("my_offers", { p_status: null }, "Couldn't load your offers.", parseOfferChoices);
+export async function fetchOfferChoices(businessId: string): Promise<MarketResult<OfferChoice[]>> {
+  const r = await fetchMyOffers({ variant: "business", businessId });
+  return r.ok ? { ok: true, value: r.value.map((o) => ({ id: o.id, headline: o.headline, startsOn: o.startsOn })) } : r;
 }

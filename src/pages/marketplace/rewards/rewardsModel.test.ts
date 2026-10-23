@@ -65,11 +65,11 @@ test("distance to the nearest place", () => {
 });
 
 test("offer cells with fallbacks", () => {
-  const full = offerCells({ startsOn: "2026-10-01", endsOn: "2026-12-31", where: "both", perMemberLimit: 1, voucherDays: 90 });
+  const full = offerCells({ startsOn: "2026-10-01", endsOn: "2026-12-31", where: "both", perMemberLimit: 1, voucherDays: 90, voucherCappedOn: null });
   assert.deepEqual(full.map((c) => c.value), ["Oct 1 to Dec 31, 2026", "In store and online", "1 per member", "90 days after it is issued"]);
   assert.deepEqual(full.map((c) => c.key), ["Valid", "Where to use", "Limit", "Voucher expires"]);
-  const bare = offerCells({ startsOn: null, endsOn: null, where: null, perMemberLimit: null, voucherDays: null });
-  assert.deepEqual(bare.map((c) => c.value), ["While it lasts", "See terms", "No limit", "90 days after it is issued"]);
+  const bare = offerCells({ startsOn: null, endsOn: null, where: null, perMemberLimit: null, voucherDays: 12, voucherCappedOn: "2026-11-03" });
+  assert.deepEqual(bare.map((c) => c.value), ["While it lasts", "See terms", "No limit", "Until Nov 3, 2026"]);
 });
 
 test("redeem gate", () => {

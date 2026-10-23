@@ -26,7 +26,8 @@ import { CapsLabel } from "./rewardsParts";
 //   (howToUse: in store / online by where it's valid);
 // - with ?new=1 (straight after redeeming), the ConfirmationStrip (margin-top
 //   16) tone teal "Saved to My Rewards" with "View" → My rewards.
-// my_vouchers is DB2's: pending → a quiet "not available yet" card.
+// The voucher is DB2's `vouchers` row (fetchMyVoucher, the member's own); the
+// QR carries the code, which is what check_voucher reads.
 
 type Load = { state: "loading" } | { state: "done"; result: MarketResult<Voucher | null> };
 
@@ -45,7 +46,6 @@ export default function VoucherPage() {
   const fetchIt = useCallback(() => {
     let live = true;
     setLoad({ state: "loading" });
-    // awaiting DB stage DB2: my_vouchers.
     void fetchMyVoucher(id).then((result) => live && setLoad({ state: "done", result }));
     return () => {
       live = false;
@@ -93,7 +93,6 @@ export default function VoucherPage() {
   if (load.state === "loading") return shell(<MarketSkeleton radius={24} count={1} rows={3} height={320} label="Loading your voucher" />);
   const r = load.result;
   if (!r.ok) {
-    if (r.pending) return shell(<MarketEmptyCard title="This voucher isn't available yet" body="Vouchers you redeem with your points will show here once rewards open." />);
     return shell(<MarketError thing="your voucher" onRetry={fetchIt} />);
   }
   const v = r.value;

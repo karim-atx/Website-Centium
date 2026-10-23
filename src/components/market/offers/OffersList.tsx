@@ -29,9 +29,9 @@ import { useOverlayStrip } from "./useOverlayStrip";
 //   tile radius 18 #EEEAF8 (--pale in dark) with the 24 leaf, "No offers yet"
 //   16 / 800, the body 13 / 1.55 --faint (max-width 290), "Create offer"
 //   without the + (margin-top 6);
-// - pending (DB2 not landed): the same panel with quiet "coming soon" copy and
-//   no Create offer; loading MarketSkeleton (radius 20); error / offline the
-//   MarketStates strips.
+// - loading MarketSkeleton (radius 20); error / offline the
+//   MarketStates strips. The list reads DB2 `offers`; Create / Edit / Pause
+//   answer "coming soon" until the Database ships owner writers (manage.ts).
 
 export interface OffersListProps {
   variant: "business" | "professional";
@@ -45,7 +45,7 @@ export interface OffersListProps {
   flash?: string | null;
 }
 
-type Load = { kind: "loading" } | { kind: "ready"; offers: ManagedOffer[] } | { kind: "pending" } | { kind: "error" } | { kind: "offline" };
+type Load = { kind: "loading" } | { kind: "ready"; offers: ManagedOffer[] } | { kind: "error" } | { kind: "offline" };
 
 export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManage, onCreate, onOpen, flash }) => {
   const dark = useIsDark();
@@ -69,7 +69,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
     void fetchMyOffers(owner).then((r) => {
       if (!alive) return;
       if (r.ok) setLoad({ kind: "ready", offers: r.value });
-      else setLoad(r.pending ? { kind: "pending" } : r.offline ? { kind: "offline" } : { kind: "error" });
+      else setLoad(r.offline ? { kind: "offline" } : { kind: "error" });
     });
     return () => {
       alive = false;
@@ -98,8 +98,6 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
   };
 
   const empty = load.kind === "ready" && offers.length === 0;
-  const pending = load.kind === "pending";
-  const who = variant === "professional" ? "clients" : "members";
 
   return (
     <section aria-labelledby={`offers-caps-${variant}`} style={{ color: m.ink, lineHeight: "normal" }}>
@@ -107,7 +105,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
       {strip}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <Caps id={`offers-caps-${variant}`}>Point offers</Caps>
-        {canManage && !pending ? <OutlineButton label="Create offer" onPress={onCreate} disabled={!owner} /> : null}
+        {canManage ? <OutlineButton label="Create offer" onPress={onCreate} disabled={!owner} /> : null}
       </div>
 
       {load.kind === "loading" ? <MarketSkeleton radius={20} rows={2} count={3} label="Loading offers" style={{ marginTop: 10 }} /> : null}
@@ -121,7 +119,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
             {offers.map((o) => {
               const status = offerStatus(o);
               const meta = offerMeta(o);
-              const hasMenu = canManage && status !== "expired";
+              const hasMenu = canManage && status !== "expired" && !o.hiddenAt;
               return (
                 <li key={o.id}>
                   <OfferCard
@@ -156,18 +154,16 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
         </>
       ) : null}
 
-      {empty || pending ? (
+      {empty ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "44px 24px 0" }}>
           <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: dark ? m.pale : "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <PointsLeaf height={24} label={null} />
           </span>
-          <div style={{ fontSize: textPx(16), fontWeight: 800 }}>{pending ? "Point offers are coming soon" : "No offers yet"}</div>
+          <div style={{ fontSize: textPx(16), fontWeight: 800 }}>No offers yet</div>
           <div style={{ fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 290 }}>
-            {pending
-              ? `You'll be able to offer discounts ${who} redeem with their points here soon.`
-              : variant === "professional"
-                ? "Offer a discount on your services that clients can redeem with their points. You fund it in full."
-                : "Offer a discount that members can redeem with their points. You fund it in full."}
+            {variant === "professional"
+              ? "Offer a discount on your services that clients can redeem with their points. You fund it in full."
+              : "Offer a discount that members can redeem with their points. You fund it in full."}
           </div>
           {empty && canManage ? <OutlineButton label="Create offer" icon={false} onPress={onCreate} style={{ marginTop: 6 }} /> : null}
         </div>

@@ -122,13 +122,13 @@ export interface ClassData {
   instructor: string | null;
 }
 
-/** awaiting DB stage DB2: types.ts Offer (offers table), the fields a card shows. */
+/** An offer card's fields, from the DB2 `offers` row (ManagedOffer: title, points_cost, ends_on, where_used). */
 export interface OfferData {
   id: string;
   headline: string;
   pointsCost: number;
-  /** ISO day, offers.ends_on. */
-  validUntil: string;
+  /** ISO day, offers.ends_on; null = the offer has no end date. */
+  validUntil: string | null;
   where: "in_store" | "online" | "both" | "in_person";
 }
 
@@ -231,7 +231,7 @@ export function toggleRows(data: TemplateData, brand: Pick<BizBrand, "name" | "c
       return [
         { key: "headline", title: "Offer headline", sub: o.headline, lock: true },
         { key: "points", title: "Points cost", sub: `${pointsText(o.pointsCost)} points`, lock: false },
-        { key: "valid", title: "Validity dates", sub: `Until ${longDay(o.validUntil)}`, lock: false },
+        ...(o.validUntil ? [{ key: "valid", title: "Validity dates", sub: `Until ${longDay(o.validUntil)}`, lock: false }] : []),
         { key: "where", title: "Where", sub: whereLabel(o.where), lock: false },
       ];
     }
@@ -352,7 +352,7 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
         unit: pts ? "points" : "",
         sub: "Redeem with Centium Points",
         rows: keep([
-          { key: "valid", k: "Valid", v: `Until ${longDay(o.validUntil)}` },
+          ...(o.validUntil ? [{ key: "valid", k: "Valid", v: `Until ${longDay(o.validUntil)}` }] : []),
           { key: "where", k: "Where", v: whereLabel(o.where) },
         ]),
       };

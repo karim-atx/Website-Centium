@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
-import { CameraOff, Clock, Keyboard, WifiOff } from "lucide-react";
+import { CameraOff, Keyboard, WifiOff } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useOnline } from "../../../hooks/useOnline";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -38,8 +38,8 @@ import { checkVoucher, checkView, codeComplete, formatCode, markVoucherUsed, typ
 //   --slabel / 700, 0.5px --div between); the CTA "Mark as used" or "Scan
 //   another" (the markup's --fill, not R's unused ctaBg).
 // Ours: the "Voucher marked as used" result after Mark as used (a repeat
-// shows Already used and changes nothing), the pending "coming soon" result
-// while DB2 hasn't landed, the error and offline lines.
+// shows Already used and changes nothing), "Code not found" and "Voucher
+// cancelled" (check_voucher states the board doesn't draw), the error and offline lines.
 
 export interface RedeemScreenProps {
   variant: "business" | "professional";
@@ -47,7 +47,7 @@ export interface RedeemScreenProps {
   backLabel: string;
 }
 
-type Result = { kind: "check"; check: VoucherCheck } | { kind: "pending" };
+type Result = { kind: "check"; check: VoucherCheck };
 
 export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, backLabel }) => {
   const dark = useIsDark();
@@ -85,11 +85,6 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         setResult({ kind: "check", check: r.check });
         return;
       }
-      if (r.pending) {
-        setEnterOpen(false);
-        setResult({ kind: "pending" });
-        return;
-      }
       const text = r.offline ? "You're offline. Check the voucher again when you're connected." : r.message;
       if (from === "typed") setEnterError(text);
       else setScanNote(text);
@@ -121,10 +116,6 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
     setMarking(false);
     if (r.ok) {
       setResult({ kind: "check", check: r.check });
-      return;
-    }
-    if (r.pending) {
-      setResult({ kind: "pending" });
       return;
     }
     setMarkError(r.offline ? "You're offline. Try again when you're connected." : r.message);
@@ -213,7 +204,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         footerRule
         footer={
           <SheetCta
-            label={result?.kind === "pending" ? "Close" : marking ? "One moment…" : (view?.cta ?? "Scan another")}
+            label={marking ? "One moment…" : (view?.cta ?? "Scan another")}
             busy={marking}
             onPress={() => {
               if (result?.kind === "check" && view?.cta === "Mark as used") void mark(result.check);
@@ -222,9 +213,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
           />
         }
       >
-        {result?.kind === "pending" ? (
-          <ResultBody m={m} tone="neutral" icon="clock" title="Voucher checks are coming soon" body="You'll be able to check vouchers and mark them as used here soon." rows={[]} />
-        ) : view ? (
+        {view ? (
           <ResultBody m={m} tone={view.tone} icon={view.icon} title={view.title} body={view.body} rows={view.rows} error={markError} />
         ) : null}
       </BottomSheet>
@@ -336,14 +325,14 @@ const EnterCodeSheet: React.FC<{
 
 const ResultBody: React.FC<{
   m: MarketPalette;
-  tone: CheckView["tone"] | "neutral";
-  icon: CheckView["icon"] | "clock";
+  tone: CheckView["tone"];
+  icon: CheckView["icon"];
   title: string;
   body: string;
   rows: { k: string; v: string }[];
   error?: string | null;
 }> = ({ m, tone, icon, title, body, rows, error }) => {
-  const [bg, ink] = tone === "good" ? [m.goodbg, m.good] : tone === "caution" ? [m.cautionbg, m.caution] : tone === "high" ? [m.highbg, m.high] : [m.soft, m.faint];
+  const [bg, ink] = tone === "good" ? [m.goodbg, m.good] : tone === "caution" ? [m.cautionbg, m.caution] : [m.highbg, m.high];
   return (
     <div role="status" aria-live="polite" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", lineHeight: "normal", color: m.ink }}>
       <span aria-hidden style={{ width: 56, height: 56, borderRadius: 999, background: bg, color: ink, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -351,13 +340,11 @@ const ResultBody: React.FC<{
           <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" style={NO_ICON_SCALE}>
             <path d="M20 6 9 17l-5-5" />
           </svg>
-        ) : icon === "x" ? (
+        ) : (
           <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" style={NO_ICON_SCALE}>
             <path d="M18 6 6 18" />
             <path d="m6 6 12 12" />
           </svg>
-        ) : (
-          <Clock size={24} strokeWidth={2.4} style={NO_ICON_SCALE} />
         )}
       </span>
       <div style={{ fontSize: textPx(20), fontWeight: 800, marginTop: 12 }}>{title}</div>

@@ -23,13 +23,14 @@ import { FOCUS_CSS } from "./usePress";
 // - "Valid until Jan 15, 2027" 13 / 700 (D-02 month first).
 // Used and expired vouchers are not drawn on the board: the QR box shows the
 // state instead of a scannable code, the hint goes, and the date line reads
-// "Used on …" / "Expired on …".
+// "Used on …" / "Expired on …"; a void voucher (DB2: cancelled and refunded by
+// Centium, ours) "Void" / "Cancelled · points refunded".
 
-export type VoucherStatus = "issued" | "used" | "expired";
+export type VoucherStatus = "issued" | "used" | "expired" | "void";
 
 export interface VoucherCardProps {
   code: string;
-  /** The voucher's qrPayload (api.md: an opaque signed token). */
+  /** What the QR carries: the voucher code (check_voucher reads codes; DB2 has no qr_token reader). */
   qr: string;
   /** ISO date-time the voucher expires (validUntil). */
   validUntil: string;
@@ -49,7 +50,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ code, qr, validUntil, 
   const m = marketPalette(dark);
   const live = status === "issued";
   const dateLine =
-    status === "used" ? (usedAt ? `Used on ${longDate(usedAt)}` : "Used") : status === "expired" ? `Expired on ${longDate(validUntil)}` : `Valid until ${longDate(validUntil)}`;
+    status === "used" ? (usedAt ? `Used on ${longDate(usedAt)}` : "Used") : status === "void" ? "Cancelled · points refunded" : status === "expired" ? `Expired on ${longDate(validUntil)}` : `Valid until ${longDate(validUntil)}`;
   const copy = async () => {
     const ok = await copyText(code);
     onCopied?.(ok);
@@ -63,7 +64,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ code, qr, validUntil, 
             <PassQr value={qr} size={176} label="Voucher QR code" failedText="Couldn't draw this voucher's code. Close it and try again." />
           </span>
         ) : (
-          <span style={{ fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.tert }}>{status === "used" ? "Used" : "Expired"}</span>
+          <span style={{ fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.tert }}>{status === "used" ? "Used" : status === "void" ? "Void" : "Expired"}</span>
         )}
       </div>
       <button

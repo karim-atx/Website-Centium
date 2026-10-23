@@ -33,8 +33,8 @@ import { BackRow } from "./rewards/rewardsParts";
 //   16 / 800, the body 13 / 1.55 --faint, the outline button (margin-top 6,
 //   min-height 40, radius 12, 1px --border, padding 0 14, 12.5 / 800 --pdark)
 //   "Browse rewards" → Explore › Rewards.
-// my_vouchers is DB2's: until it lands (pending) the page shows the empty
-// state.
+// The vouchers are DB2's `vouchers` rows (fetchMyVouchers); a void voucher
+// (cancelled and refunded by Centium) sits under Expired.
 
 const EMPTY: Record<VoucherTab, { title: string; body: string }> = {
   active: { title: "No active vouchers", body: "Vouchers you redeem with your points will show here." },
@@ -59,8 +59,7 @@ export default function MyRewardsPage() {
   const fetchIt = useCallback(() => {
     let live = true;
     setLoad({ state: "loading" });
-    // awaiting DB stage DB2: my_vouchers.
-    void fetchMyVouchers(null).then((result) => live && setLoad({ state: "done", result }));
+    void fetchMyVouchers().then((result) => live && setLoad({ state: "done", result }));
     return () => {
       live = false;
     };
@@ -114,7 +113,7 @@ export default function MyRewardsPage() {
       <div id="rewards-panel" role="tabpanel" aria-labelledby={`rewards-tab-${tab}`}>
         {load.state === "loading" ? (
           <MarketSkeleton radius={18} count={2} rows={3} label="Loading your rewards" style={{ marginTop: 14 }} />
-        ) : !load.result.ok && !load.result.pending ? (
+        ) : !load.result.ok ? (
           <MarketError thing="your rewards" onRetry={fetchIt} style={{ marginTop: 14 }} />
         ) : rows.length === 0 ? (
           <EmptyState tab={tab} onBrowse={() => navigate("/app/marketplace?tab=rewards")} />
@@ -131,7 +130,7 @@ export default function MyRewardsPage() {
                   tone={row.tone}
                   labelType={[10.5, "0.16em"]}
                   onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`)}
-                  ariaLabel={`${v.offerHeadline}, ${v.ownerName}. ${row.meta}. ${row.stub}`}
+                  ariaLabel={`${[v.offerHeadline, v.ownerName].filter(Boolean).join(", ")}. ${row.meta}. ${row.stub}`}
                   className="market-focus"
                   bodyStyle={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
                 >

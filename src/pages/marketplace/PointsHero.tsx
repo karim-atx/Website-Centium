@@ -9,7 +9,8 @@ import { tierProgress } from "../../services/achievements";
 import { PointsFigure } from "../../components/market/PointsFigure";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { expiringLine, nextRewardLine, todayLine } from "../../services/points";
-import { fetchRewardCatalog, type CatalogOffer } from "../../services/offers";
+import { fetchRewardCatalog, forAge, type CatalogOffer } from "../../services/offers";
+import { forumAccess } from "../../services/forum/rules";
 
 // Market + Share 3.0 · W2 · the points hero (C-MO.4.1 homeBronze / home /
 // homeGold / homeExpiring / homeCap; HANDOVER §4 "Points hero"; Client Explore
@@ -26,7 +27,8 @@ import { fetchRewardCatalog, type CatalogOffer } from "../../services/offers";
 // tall, radius 10, tier pill fill, 0.5px tier border, 12.5 / 700 tier TEXT
 // ink). Every figure is the server's: my_points_summary (balance, tier,
 // earned_today of daily_cap, expiring_soon on expiring_soon_date) and
-// reward_catalog (the next reward, DB2).
+// the cheapest live offers (the next reward, DB2 `offers`; no supplement
+// offers for an under-18, forAge).
 //
 // Kept from the old card (PLAN §3.1): the by-source breakdown moved to Points
 // history, the tier disc rail to How to earn "Tiers", the tap-through to
@@ -34,7 +36,8 @@ import { fetchRewardCatalog, type CatalogOffer } from "../../services/offers";
 // points are coming soon." line is gone (no longer true).
 
 export function PointsHero() {
-  const { pointsSummary, pointTiers } = useApp();
+  const { pointsSummary, pointTiers, user } = useApp();
+  const adult = forumAccess(user.dateOfBirth) === "adult";
   const navigate = useNavigate();
   const dark = useIsDark();
   const reduced = useReducedMotion();
@@ -49,9 +52,9 @@ export function PointsHero() {
   }, [pointsSummary]);
   useEffect(() => {
     let cancelled = false;
-    // awaiting DB stage DB2: reward_catalog; pending → the tier fallback.
+    // The live offers (DB2 `offers`); a failed read falls back to tier progress.
     void fetchRewardCatalog("all").then((r) => {
-      if (!cancelled) setOffers(r.ok ? r.value : null);
+      if (!cancelled) setOffers(r.ok ? r.value.map((o) => ({ ...o, ownerName: o.ownerName || o.ownerSubtitle })) : null);
     });
     return () => {
       cancelled = true;
@@ -66,7 +69,7 @@ export function PointsHero() {
   const rank = tierRank(pointTiers, pointsSummary.tierName);
   const t = tierStyle(rank, dark);
   const extras = pointsSummary.extras ?? null;
-  const next = nextRewardLine(pointsSummary.balance, offers, {
+  const next = nextRewardLine(pointsSummary.balance, offers ? forAge(offers, adult) : null, {
     nextTierName: pointsSummary.nextTierName,
     pointsToNextTier: pointsSummary.pointsToNextTier,
     progress: tierProgress(pointsSummary),

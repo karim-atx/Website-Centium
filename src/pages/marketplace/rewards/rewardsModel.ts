@@ -124,14 +124,15 @@ export interface OfferCell {
 /**
  * Valid · Where to use · Limit · Voucher expires, as offersModel words them.
  * A value the server leaves out reads (ours): "While it lasts", "See terms",
- * "No limit", and the D-24 default "90 days after it is issued".
+ * "No limit"; the voucher line is D-24's 90 days, or "Until {the offer's end}"
+ * when the offer ends first (redeem_offer caps expires_at there).
  */
-export function offerCells(d: Pick<OfferDetail, "startsOn" | "endsOn" | "where" | "perMemberLimit" | "voucherDays">): OfferCell[] {
+export function offerCells(d: Pick<OfferDetail, "startsOn" | "endsOn" | "where" | "perMemberLimit" | "voucherDays" | "voucherCappedOn">): OfferCell[] {
   return [
     { key: "Valid", value: validRange(d.startsOn, d.endsOn) ?? "While it lasts", i: 0 },
     { key: "Where to use", value: whereLabel(d.where) ?? "See terms", i: 1 },
     { key: "Limit", value: limitLabel(d.perMemberLimit) ?? "No limit", i: 2 },
-    { key: "Voucher expires", value: voucherExpiryLabel(d.voucherDays) ?? "90 days after it is issued", i: 3 },
+    { key: "Voucher expires", value: voucherExpiryLabel(d.voucherDays, d.voucherCappedOn), i: 3 },
   ];
 }
 
