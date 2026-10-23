@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  bizLinkState,
   BIZ_FILLS,
   CARD_W,
   DEF_HIDE,
@@ -192,4 +193,15 @@ test("B-SH.4 privacy: no card carries an Overview figure, member names or counts
   }
   const profile = cardContent(BRAND, { t: "profile", d: { rating: "4.8 · 212 reviews" } }, []);
   assert.deepEqual(profile.rows.map((r) => r.k), ["Category", "Location", "Rating"]);
+});
+
+test("bizLinkState: a link only for a slugged business on Explore, open and not paused", () => {
+  const b = { slug: "flexfitness", active: true, closedAt: null, deactivatedAt: null };
+  assert.equal(bizLinkState(b), "ready");
+  assert.equal(bizLinkState({ ...b, slug: null }), "noSlug");
+  assert.equal(bizLinkState({ ...b, slug: "Not A Slug" }), "noSlug");
+  assert.equal(bizLinkState({ ...b, active: false }), "hidden");
+  assert.equal(bizLinkState({ ...b, closedAt: "2026-10-01T00:00:00Z" }), "hidden");
+  // Verification sets active without clearing the pause: still no link.
+  assert.equal(bizLinkState({ ...b, deactivatedAt: "2026-10-01T00:00:00Z" }), "paused");
 });

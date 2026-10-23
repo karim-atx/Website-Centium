@@ -34,8 +34,10 @@ export interface CardData {
   rows: { kind: "address" | "hours" | "phone" | "email"; text: string }[];
   coverUrl: string | null;
   logoUrl: string | null;
-  /** business_profiles.slug; null (or not a valid slug) = no public link yet. */
+  /** business_profiles.slug, only when the link resolves (bizLinkState "ready"); null = no QR and no link. */
   slug: string | null;
+  /** Why there is no link (the share button's hint for the same state); defaults to the no-slug line. */
+  noLinkHint?: string;
 }
 
 const ICON = { address: MapPin, hours: Clock, phone: Phone, email: Mail } as const;
@@ -150,7 +152,7 @@ export function BusinessCard({
             </p>
           ) : (
             <p className="text-[11.5px] font-semibold leading-[15px] text-charcoal-soft text-center" style={{ marginTop: 10 }}>
-              {NO_LINK_HINT}
+              {data.noLinkHint ?? NO_LINK_HINT}
             </p>
           )}
           <div className="flex" style={{ gap: 8, marginTop: 12 }}>

@@ -16,7 +16,7 @@
 
 import { SHARE_TOKENS } from "../../../theme/marketTokens";
 import { time12 } from "../../../utils/time12";
-import { bizShareHref, bizShareText, type ShareLinkKind } from "../../../services/share-links/links";
+import { bizShareHref, bizShareText, isBizSlug, type ShareLinkKind } from "../../../services/share-links/links";
 import type { MembershipPlanRow } from "../../../services/membership-plans/types";
 import { billingLabel, daysLabel, priceLine } from "../../../pages/business-ops/plans/planModel";
 
@@ -573,3 +573,20 @@ export const ITEM_NOUN: Record<BizTemplate, string> = {
   plan: "this plan",
   profile: "your profile",
 };
+
+/**
+ * Whether the business's share link resolves, in the order the share button
+ * explains it. resolve_share_link answers found only for a publicly visible
+ * business (Database 727924b, business_is_publicly_visible): on Explore
+ * (`active`), not closed (`closedAt`) and not paused (`deactivatedAt`; a
+ * verification can set active without clearing it). Any other answer would
+ * offer a link that no longer opens.
+ */
+export type BizLinkState = "ready" | "noSlug" | "hidden" | "paused";
+
+export function bizLinkState(b: { slug: string | null; active: boolean; closedAt: string | null; deactivatedAt: string | null }): BizLinkState {
+  if (!isBizSlug(b.slug)) return "noSlug";
+  if (!b.active || b.closedAt) return "hidden";
+  if (b.deactivatedAt) return "paused";
+  return "ready";
+}

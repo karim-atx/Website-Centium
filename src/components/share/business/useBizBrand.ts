@@ -4,20 +4,22 @@ import { fetchBusinessFull, type BusinessFull } from "../../../services/business
 import { fetchReviewMetrics } from "../../../services/reputation";
 import { isBizSlug } from "../../../services/share-links/links";
 import { initialsOf, typeLabel } from "../../business-more/kind";
-import { fillOf, type BizBrand } from "./bizCardModel";
+import { bizLinkState, fillOf, type BizBrand } from "./bizCardModel";
 
 // The business on a B-SH card: name, logo, type, location and slug from the
 // console's business row (fetchBusinessFull: the owned business, or the one
 // this account works for), read once per account and shared by every share
 // button on a page. A card needs a link, so a business without a slug
-// (business_profiles.slug is null) or not shown on Explore (a link would
-// lead to not_public) can't share yet: the button says why.
+// (business_profiles.slug is null), not shown on Explore, closed, or paused
+// (deactivated_at: the link would not resolve, Database 727924b) can't share
+// yet: the button says why (bizLinkState).
 
 export type BrandState =
   | { status: "loading" }
   | { status: "ready"; brand: BizBrand; businessId: string }
   | { status: "noSlug" }
   | { status: "hidden" }
+  | { status: "paused" }
   | { status: "error" };
 
 let cache: { uid: string; at: number; p: Promise<BusinessFull | null | "error"> } | null = null;
@@ -59,8 +61,9 @@ export function useBizBrand(enabled = true): BrandState {
       if (b === "error") return setState({ status: "error" });
       if (!b) return setState({ status: "noSlug" });
       const brand = brandOf(b);
-      if (!brand) return setState({ status: "noSlug" });
-      if (!b.active || b.closedAt) return setState({ status: "hidden" });
+      const link = bizLinkState(b);
+      if (!brand || link === "noSlug") return setState({ status: "noSlug" });
+      if (link !== "ready") return setState({ status: link });
       setState({ status: "ready", brand, businessId: b.id });
     });
     return () => {

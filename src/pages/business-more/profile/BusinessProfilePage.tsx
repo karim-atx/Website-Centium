@@ -30,6 +30,8 @@ import { fetchReviewMetrics } from "../../../services/reputation";
 import { dayValue, isoWeekdayIn, NOT_PUBLISHED } from "../../../services/venues/hours";
 import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet } from "./ProfileSheets";
 import { BusinessCard, type CardData } from "./BusinessCard";
+import { bizLinkState } from "../../../components/share/business/bizCardModel";
+import { NO_LINK_HINT, NOT_LISTED_HINT, PAUSED_HINT } from "../../../components/share/business/BizShareButton";
 
 // MO1B-011 / -013 / -025 · Business Profile (BizMoreV8 screen="profile", hero
 // block line 43, rows lines 262 to 268). Replaces the old listing form
@@ -274,6 +276,8 @@ export default function BusinessProfilePage() {
   const typeLine = [typeLabel(business?.type ?? user.businessType), place].filter(Boolean).join(" · ");
   const showRating = !!rating && rating.total >= 3;
 
+  // The card prints a link and QR only when the link resolves (same rule as the share button).
+  const linkState = business ? bizLinkState(business) : "noSlug";
   const cardData: CardData = {
     name,
     initials,
@@ -281,7 +285,8 @@ export default function BusinessProfilePage() {
     rating: showRating && rating ? `${rating.average.toFixed(1)} · ${rating.total} reviews` : null,
     coverUrl: business?.coverUrl ?? null,
     logoUrl: business?.logoUrl ?? null,
-    slug: business?.slug ?? null,
+    slug: linkState === "ready" ? (business?.slug ?? null) : null,
+    noLinkHint: linkState === "hidden" ? NOT_LISTED_HINT : linkState === "paused" ? PAUSED_HINT : NO_LINK_HINT,
     rows: [
       locations?.[0] ? { kind: "address" as const, text: locations[0].address } : null,
       locations?.[0] ? { kind: "hours" as const, text: todayLine(locations[0]) } : null,
