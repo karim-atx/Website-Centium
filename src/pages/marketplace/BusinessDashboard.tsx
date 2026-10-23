@@ -7,6 +7,7 @@ import { useMyVenues } from "../../hooks/useMyVenues";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { usePoll } from "../../hooks/usePoll";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { localDayOf } from "../../utils/date";
@@ -123,8 +124,11 @@ export default function BusinessDashboard() {
   // Market + Share 3.0 (B-MA.9, D-38): the panel's Notifications row shows the
   // unread business notices, my_unread_notification_count(BUSINESS_KINDS)
   // (capped at 99), read on arrival and each time the panel opens; null (no
-  // count) when the read fails.
+  // count) when the read fails. Live (Database 73ea87b): an INSERT or UPDATE
+  // of one of the owner's business-kind rows, or a reconnect, re-reads the
+  // count only (useInboxRealtime, coalesced), never the list.
   const [notifUnread, setNotifUnread] = useState<number | null>(null);
+  const [notifTick, setNotifTick] = useState(0);
   useEffect(() => {
     if (!profileReady || !authUserId) return;
     let live = true;
@@ -132,7 +136,8 @@ export default function BusinessDashboard() {
     return () => {
       live = false;
     };
-  }, [profileReady, authUserId, panelOpen]);
+  }, [profileReady, authUserId, panelOpen, notifTick]);
+  useInboxRealtime(authUserId, "biz-bell", BUSINESS_KINDS, () => setNotifTick((t) => t + 1));
 
   const business = raw?.business ?? null;
   const listed = raw ? !!business?.active : null;

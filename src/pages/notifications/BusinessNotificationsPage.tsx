@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBack } from "../../hooks/useBack";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
+import { useApp } from "../../context/AppContext";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
@@ -11,14 +13,17 @@ import { FOCUS_CSS } from "../../components/market/usePress";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { typeLabel } from "../../components/business-more/kind";
 import {
+  applyReadChanges,
   bizNotifLook,
   bizNotifTarget,
   BUSINESS_COPY,
   BUSINESS_KINDS,
   fetchMyNotifications,
   groupNotifications,
+  hasNewRows,
   markNotificationsRead,
   markReadLocally,
+  mergeFirstPage,
   notificationCursor,
   unreadCount,
   type MemberNotification,
@@ -95,6 +100,26 @@ export default function BusinessNotificationsPage() {
       cancelled = true;
     };
   }, [tick]);
+
+  // Live (Database 73ea87b, as the client page): a new business-kind row
+  // re-reads the FIRST page only and merges it on top (mergeFirstPage; pages
+  // already loaded stay); a read_at changed elsewhere is applied to the row
+  // shown without a read. A reconnect re-reads the first page once.
+  const { authUserId } = useApp();
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+  useInboxRealtime(authUserId, "biz-page", BUSINESS_KINDS, (changes, resync) => {
+    const st = stateRef.current;
+    if (st.s !== "ok") return;
+    if (changes.length) setState((x) => (x.s === "ok" ? { ...x, list: applyReadChanges(x.list, changes) } : x));
+    if (!resync && !hasNewRows(st.list, changes)) return;
+    void readBusinessRows(null).then((r) => {
+      if (!r.ok) return;
+      setState((x) => (x.s === "ok" ? { s: "ok", ...mergeFirstPage(x.list, x.more, r) } : x));
+    });
+  });
 
   const list = state.s === "ok" ? state.list : [];
   const unread = unreadCount(list);

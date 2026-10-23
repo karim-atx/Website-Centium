@@ -9,6 +9,8 @@ import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { initialsOf } from "../../../components/market/peopleModel";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { useIsDark } from "../../../hooks/useIsDark";
+import { useInboxRealtime } from "../../../hooks/useInboxRealtime";
+import { useApp } from "../../../context/AppContext";
 import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
 import { fetchMyApplications, fetchOpportunities, inviteFromNotification, type Opportunity } from "../../../services/team-hiring";
 import type { ExistingTeamInvite } from "../../../services/hiring/model";
@@ -72,6 +74,7 @@ import {
 // notification) opens P-MA.5.4.
 
 const HOME = "/app/pro/marketplace";
+const INVITE_KINDS: readonly string[] = ["existing_team_invite"];
 type Tab = "gyms" | "classes";
 type ListState = { status: "loading" } | { status: "pending" } | { status: "error" } | { status: "ok"; list: Opportunity[] };
 type Loaded = { key: string; s: ListState };
@@ -140,11 +143,12 @@ export function OpportunitiesTab() {
     // Consume the state so Back / reload don't reopen it.
     navigate(location.pathname, { replace: true, state: null });
   }, [routed, navigate, location.pathname]);
+  const [inviteTick, setInviteTick] = useState(0);
   useEffect(() => {
     let alive = true;
     // The member inbox's existing_team_invite rows (Database 20261210600000).
     // awaiting DB stage DB12: nothing writes existing_team_invite yet.
-    void fetchMemberInbox(["existing_team_invite"]).then((r) => {
+    void fetchMemberInbox(INVITE_KINDS).then((r) => {
       if (!alive || !r.ok) return;
       const now = new Date();
       const seen = new Set<string>();
@@ -161,7 +165,15 @@ export function OpportunitiesTab() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [inviteTick]);
+  // Live (Database 73ea87b): a new existing_team_invite row (or a reconnect)
+  // re-reads the invites only; one read elsewhere drops its note without a read.
+  const { authUserId } = useApp();
+  useInboxRealtime(authUserId, "pro-opportunities", INVITE_KINDS, (changes, resync) => {
+    const read = new Set(changes.filter((c) => c.type === "UPDATE" && c.id && c.readAt).map((c) => c.id));
+    if (read.size) setWaiting((w) => w.filter((x) => !read.has(x.notificationId)));
+    if (resync || changes.some((c) => c.type === "INSERT")) setInviteTick((t) => t + 1);
+  });
 
   const onTabKey = (e: React.KeyboardEvent, i: number) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;

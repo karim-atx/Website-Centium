@@ -21,8 +21,12 @@ import {
 import type { ExceptionMap } from "../../calendar/occurrences";
 import { fetchMyCalendar, type HiredClassEvent, type NotificationLike, SYNC_KINDS } from "../../../services/calendar-sync";
 import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
-import { CALENDAR_SYNC_KINDS } from "../../../services/notifications/notificationsModel";
+import { applyReadChanges, CALENDAR_SYNC_KINDS, hasNewRows } from "../../../services/notifications/notificationsModel";
+import { useInboxRealtime } from "../../../hooks/useInboxRealtime";
 import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel";
+
+/** The strips' notices: unread rows of a kind the calendar draws. */
+const unreadNotices = (list: readonly NotificationLike[]): NotificationLike[] => list.filter((n) => !n.readAt && !!SYNC_KINDS[n.kind]);
 
 /**
  * Release 3 · W4 the professional calendar's data, in one place:
@@ -134,7 +138,7 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     // The member inbox's calendar kinds (Database 20261210600000).
     // awaiting DB stage DB12: nothing writes classes_added / class_changed / removed_from_team
     // (or class_cancelled to an instructor) yet.
-    if (nt.ok) setNotices(nt.data.filter((n) => !n.readAt && !!SYNC_KINDS[n.kind]));
+    if (nt.ok) setNotices(unreadNotices(nt.data));
   }, [authUserId, clinical]);
 
   /** Seen: hidden here at once, read_at set on the server (the owner's own update). */
@@ -142,6 +146,21 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     setNotices((list) => list.filter((n) => n.id !== id));
     void markMemberRead([id]);
   }, []);
+
+  // Live (Database 73ea87b): a new calendar-kind row re-reads the strips'
+  // notices only (not the whole calendar); a read_at set elsewhere hides its
+  // strip without a read; a reconnect re-reads the notices once.
+  const noticesRef = useRef(notices);
+  useEffect(() => {
+    noticesRef.current = notices;
+  });
+  useInboxRealtime(profileReady ? authUserId : null, "pro-calendar", CALENDAR_SYNC_KINDS, (changes, resync) => {
+    if (changes.length) setNotices((list) => unreadNotices(applyReadChanges(list, changes)));
+    if (!resync && !hasNewRows(noticesRef.current, changes)) return;
+    void fetchMemberInbox(CALENDAR_SYNC_KINDS).then((nt) => {
+      if (nt.ok) setNotices(unreadNotices(nt.data));
+    });
+  });
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;

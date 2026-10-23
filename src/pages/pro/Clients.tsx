@@ -146,7 +146,8 @@ export default function Clients() {
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [invitesAllowed, setInvitesAllowed] = useState(false);
   const [nonce, setNonce] = useState(0);
-  const inbox = useProInbox();
+  // Requests and declines only: no notification rows here, so no live member-inbox channel.
+  const inbox = useProInbox(null);
 
   const rosterKey = professionalClients.map((c) => c.clientId ?? c.id).join(",");
   useEffect(() => {
