@@ -40,6 +40,13 @@ import { formatShortDate } from "../../../utils/date";
 import { range12 } from "../../../utils/time12";
 import { CapsLabel, CentredDialog, OutlineButton, SheetSwitch, lh, px, useMarketColors, useStrip } from "../../business-market/listingParts";
 import { MarketplaceEmpty, Stars } from "./showcaseParts";
+import { workCountLine, workMetaLine } from "./showcaseWork";
+import { TicketStub, type StubTone } from "../../../components/market/TicketStub";
+import { TicketCheck } from "../../../components/market/ProfessionalCard";
+import { initialsOf } from "../../../components/market/peopleModel";
+import { stubColors } from "../../../components/market/marketColor";
+import { fetchOpenToGymWork, setOpenToGymWork } from "../../../services/team-hiring";
+import { fetchWorkHistory, sortWork, workRoleLine, workStub, type WorkEntry } from "../../../services/pro-profile";
 import { ServiceEditSheet } from "./ServiceEditSheet";
 
 // Market + Share 3.0 · W3 · P-MA.2 Showcase (HANDOVER §4 "P-MA.2 Showcase";
@@ -72,9 +79,10 @@ import { ServiceEditSheet } from "./ServiceEditSheet";
 //   instructor_availability, 12-hour), "Open to gym work" (DB11, Release 2:
 //   shown off and disabled with a note), "Edit hours" →
 //   /app/pro/calendar/availability;
-// - Work history (scWork / scWorkEmpty): Centium work entries are DB10
-//   (Release 2), so the drawn empty state; below it the LIVE reviews block
-//   (professional_reviews about me) when there are reviews.
+// - Work history (scWork / scWorkEmpty; W5): professional_public_profile
+//   (DB10, awaiting) gives the Centium work-history entries and the
+//   class-context reviews; while it is pending, the drawn empty state with
+//   the LIVE reviews block (professional_reviews about me) below it.
 
 type Section = "about" | "services" | "availability" | "work";
 
@@ -475,76 +483,214 @@ function AvailabilityPanel() {
     <>
       <CapsLabel style={{ marginTop: 14 }}>Weekly hours</CapsLabel>
       {hours}
-      <div style={{ marginTop: 12, borderRadius: 16, border: `1px solid ${c.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: px(14), fontWeight: 700 }}>Open to gym work</div>
-          <div id="pm-gymwork-sub" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint }}>
-            Gyms can find you in search and send you direct offers.
-          </div>
-          <div id="pm-gymwork-soon" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint, fontWeight: 700, marginTop: 2 }}>
-            Coming soon with Opportunities.
-          </div>
-        </div>
-        {/* awaiting DB stage DB11 (Release 2): professional_profiles.open_to_gym_work. */}
-        <SheetSwitch on={false} onChange={() => undefined} label="Open to gym work" describedBy="pm-gymwork-sub pm-gymwork-soon" disabled />
-      </div>
+      <GymWorkRow />
       <WideButton onClick={() => navigate("/app/pro/calendar/availability")}>Edit hours</WideButton>
     </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Work history (lines 182–225)
+// Work history (lines 182–225, `workList`, `reviews`; W5)
+//
+// work_history(my id) (Database Release 2): with entries, the head
+// row (margin-top 14, space-between: caps "Hired via Centium" 10.5 / 700
+// 0.1em --faint; "2 roles · 1 class slot" 11.5 / 700 --tealink), the
+// ticket-stub entries (margin-top 8, gap 10; TicketStub 46, min 96; the body
+// padding 12 14, gap 12, top aligned: the 44 tile radius 12 --pale with the
+// gym's initials 12.5 / 800 --accent; the gym 12 / 600 --accent; "{role} ·
+// Role" 14 / 19 700; the dates 11.5 --faint (margin-top 1); "Hired via
+// Centium" 11 / 700 --tealink with the ticket-check 12, gap 4, margin-top 5;
+// the stub ROLE step 4 #E6F1EF / #4F8F8A, CLASS SLOT #EEEAF8 / #7D67D9 with
+// #AEA1DC dashes, ENDED --soft / --faint / --border), then the reviews block
+// (caps "Reviews · N" margin-top 18; the card margin-top 8 radius 20 1px
+// --border: 30 / 34 800 average, the 13 stars, "From clients who attended
+// your classes" 11.5 --faint; rows padding 12 16 with a 0.5 --div rule: name
+// 12.5 / 800, date --faint, "{class} · {gym}" 11.5 / 600 --accent
+// (margin-top 1), the text 12.5 / 18 --ink2 (margin-top 4)). No entries: the
+// drawn empty state (scWorkEmpty). The reviews block is the live reviews about
+// me (useReviewsAboutMe): the contract has no reader of class reviews with
+// their class and gym (Database gap).
+
+type WorkLoad = { ok: true; value: WorkEntry[] } | { ok: false; pending?: boolean; offline?: boolean } | null;
+
+/**
+ * P-MA.2 "Open to gym work": professional_profiles.open_to_gym_work (own row)
+ * and set_gym_work_available(p_open) (Database Release 2). On: gyms find
+ * them in search_professionals and may send direct offers; off stops both
+ * (pending offers stay). The switch moves at once and comes back with a strip
+ * when the save fails.
+ */
+function GymWorkRow() {
+  const c = useMarketColors();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [strip, showStrip] = useStrip();
+  useEffect(() => {
+    let alive = true;
+    void fetchOpenToGymWork().then((r) => alive && setOn(r.ok ? r.value : null));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const change = async (v: boolean) => {
+    if (busy || on === null) return;
+    setBusy(true);
+    setOn(v);
+    const r = await setOpenToGymWork(v);
+    setBusy(false);
+    if (r.ok) setOn(r.value);
+    else {
+      setOn(!v);
+      showStrip(r.message, "error");
+    }
+  };
+  return (
+    <>
+      {strip}
+      <div style={{ marginTop: 12, borderRadius: 16, border: `1px solid ${c.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: px(14), fontWeight: 700 }}>Open to gym work</div>
+          <div id="pm-gymwork-sub" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint }}>
+            Gyms can find you in search and send you direct offers.
+          </div>
+        </div>
+        <SheetSwitch on={!!on} onChange={(v) => void change(v)} label="Open to gym work" describedBy="pm-gymwork-sub" disabled={on === null || busy} />
+      </div>
+    </>
+  );
+}
 
 function WorkPanel() {
+  const navigate = useNavigate();
+  const { authUserId } = useApp();
+  const [load, setLoad] = useState<WorkLoad>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!authUserId) return;
+    let alive = true;
+    setLoad(null);
+    void fetchWorkHistory(authUserId).then((r) => alive && setLoad(r.ok ? { ok: true, value: r.value } : { ok: false, pending: r.pending, offline: r.offline }));
+    return () => {
+      alive = false;
+    };
+  }, [authUserId, tick]);
+  const empty = (
+    <MarketplaceEmpty
+      title="No Centium work yet"
+      body="Roles and class slots you're hired for through Opportunities show here with the gym's name. Reviews from class clients follow."
+      cta="Browse opportunities"
+      onCta={() => navigate("/app/pro/marketplace/opportunities")}
+    />
+  );
+  if (load === null) return <MarketSkeleton radius={18} rows={4} height={100} count={2} label="Loading your work history" style={{ marginTop: 14 }} />;
+  if (!load.ok) return load.offline ? <MarketOffline loaded={false} force onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} /> : <MarketError thing="your work history" onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} />;
+  return (
+    <>
+      {load.value.length ? <WorkList list={load.value} /> : empty}
+      <LiveReviews />
+    </>
+  );
+}
+
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+function WorkList({ list }: { list: WorkEntry[] }) {
+  const c = useMarketColors();
+  const dark = useIsDark();
+  const today = todayIso();
+  const sorted = sortWork(list, today);
+  const tone = (stub: "Role" | "Class slot" | "Ended"): StubTone => {
+    if (stub === "Ended") return "muted";
+    if (stub === "Role") return 4;
+    // CLASS SLOT: step 1's fill and ink with --fill dashes (the board's #AEA1DC).
+    const s1 = stubColors(1, c, dark);
+    return { ...s1, perf: dark ? s1.perf : c.fill };
+  };
+  return (
+    <>
+      <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <CapsLabel as="span">Hired via Centium</CapsLabel>
+        <span style={{ fontSize: px(11.5), fontWeight: 700, color: c.tealink }}>{workCountLine(list)}</span>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+        {sorted.map((e) => {
+          const stub = workStub(e, today);
+          const role = workRoleLine(e);
+          const meta = workMetaLine(e, today);
+          return (
+            <TicketStub
+              key={e.id}
+              stubWidth={46}
+              vertical
+              labelType={[9.5, "0.1em"]}
+              minHeight={96}
+              tone={tone(stub)}
+              stubLabel={stub}
+              ariaLabel={`${e.businessName}, ${role}, ${meta}, Hired via Centium`}
+              bodyStyle={{ display: "flex", gap: 12, padding: "12px 14px" }}
+            >
+              <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: px(12.5), fontWeight: 800, color: c.accent, flexShrink: 0 }}>
+                {initialsOf(e.businessName)}
+              </span>
+              <span aria-hidden style={{ flex: 1, minWidth: 0, display: "block" }}>
+                <span style={{ display: "block", fontSize: px(12), fontWeight: 600, color: c.accent }}>{e.businessName}</span>
+                <span style={{ display: "block", fontSize: px(14), lineHeight: lh(19), fontWeight: 700, color: c.ink }}>{role}</span>
+                <span style={{ display: "block", fontSize: px(11.5), color: c.faint, marginTop: 1 }}>{meta}</span>
+                <span style={{ marginTop: 5, display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(11), fontWeight: 700, color: c.tealink }}>
+                  <TicketCheck size={12} />
+                  Hired via Centium
+                </span>
+              </span>
+            </TicketStub>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/** The live reviews about me (professional_reviews), as W3 drew them. */
+function LiveReviews() {
   const c = useMarketColors();
   const navigate = useNavigate();
   const { reviews, loading, error, reload } = useReviewsAboutMe();
   const shown = reviews.filter((r) => !r.redactedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const avg = averageOf(reviews);
   const LIMIT = 3;
-  return (
+  return error && !shown.length ? (
+    <MarketError thing="your reviews" onRetry={() => void reload()} style={{ marginTop: 18 }} />
+  ) : loading && !shown.length ? (
+    <MarketSkeleton radius={20} rows={3} height={120} label="Loading your reviews" style={{ marginTop: 18 }} />
+  ) : shown.length ? (
     <>
-      {/* Centium work history entries: awaiting DB stage DB10 (Release 2). */}
-      <MarketplaceEmpty
-        title="No Centium work yet"
-        body="Roles and class slots you're hired for through Opportunities show here with the gym's name. Reviews from class clients follow."
-        cta="Browse opportunities"
-        onCta={() => navigate("/app/pro/marketplace/opportunities")}
-      />
-      {error && !shown.length ? (
-        <MarketError thing="your reviews" onRetry={() => void reload()} style={{ marginTop: 18 }} />
-      ) : loading && !shown.length ? (
-        <MarketSkeleton radius={20} rows={3} height={120} label="Loading your reviews" style={{ marginTop: 18 }} />
-      ) : shown.length ? (
-        <>
-          <CapsLabel style={{ marginTop: 18 }}>{`Reviews · ${shown.length}`}</CapsLabel>
-          <div style={{ marginTop: 8, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
-              <span style={{ fontSize: px(30), lineHeight: lh(34), fontWeight: 800 }}>{avg !== null ? avg.toFixed(1) : "–"}</span>
-              <div>
-                <span role="img" aria-label={avg !== null ? `${avg.toFixed(1)} out of 5` : "No rating"}>
-                  <Stars filled={avg !== null ? Math.round(avg) : 0} />
-                </span>
-                <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>From your clients</div>
-              </div>
-            </div>
-            {shown.slice(0, LIMIT).map((r) => (
-              <div key={r.id} style={{ padding: "12px 16px", borderTop: `0.5px solid ${c.div}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: px(12.5) }}>
-                  <span style={{ fontWeight: 800 }}>{reviewerLabel(r.reviewerName)}</span>
-                  <span style={{ color: c.faint, flexShrink: 0 }}>{formatShortDate(new Date(r.createdAt), { month: "short", day: "numeric", year: "numeric" })}</span>
-                </div>
-                <span role="img" aria-label={`${r.rating} out of 5`} style={{ display: "inline-flex", marginTop: 2 }}>
-                  <Stars filled={r.rating} />
-                </span>
-                {r.body ? <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>{r.body}</div> : null}
-              </div>
-            ))}
+      <CapsLabel style={{ marginTop: 18 }}>{`Reviews · ${shown.length}`}</CapsLabel>
+      <div style={{ marginTop: 8, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
+          <span style={{ fontSize: px(30), lineHeight: lh(34), fontWeight: 800 }}>{avg !== null ? avg.toFixed(1) : "–"}</span>
+          <div>
+            <span role="img" aria-label={avg !== null ? `${avg.toFixed(1)} out of 5` : "No rating"}>
+              <Stars filled={avg !== null ? Math.round(avg) : 0} />
+            </span>
+            <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>From your clients</div>
           </div>
-          {shown.length > LIMIT ? <WideButton onClick={() => navigate("/app/more/reviews")}>See all reviews</WideButton> : null}
-        </>
-      ) : null}
+        </div>
+        {shown.slice(0, LIMIT).map((r) => (
+          <div key={r.id} style={{ padding: "12px 16px", borderTop: `0.5px solid ${c.div}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: px(12.5) }}>
+              <span style={{ fontWeight: 800 }}>{reviewerLabel(r.reviewerName)}</span>
+              <span style={{ color: c.faint, flexShrink: 0 }}>{formatShortDate(new Date(r.createdAt), { month: "short", day: "numeric", year: "numeric" })}</span>
+            </div>
+            <span role="img" aria-label={`${r.rating} out of 5`} style={{ display: "inline-flex", marginTop: 2 }}>
+              <Stars filled={r.rating} />
+            </span>
+            {r.body ? <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>{r.body}</div> : null}
+          </div>
+        ))}
+      </div>
+      {shown.length > LIMIT ? <WideButton onClick={() => navigate("/app/more/reviews")}>See all reviews</WideButton> : null}
     </>
-  );
+  ) : null;
 }

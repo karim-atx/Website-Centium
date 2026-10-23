@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Banknote, Bell, CalendarClock, CalendarX, Check, ChevronDown, ChevronRight, Eye, EyeOff, ImageOff, Package, PackageMinus, Receipt, ShieldAlert, Star, TriangleAlert, UserPlus, Users, UserX, X } from "lucide-react";
 import type { DashPalette } from "./palette";
 import type { SetupStep } from "./dashboardModel";
@@ -9,6 +10,7 @@ import { Toggle } from "../ui/Toggle";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
 import type { MyVenue } from "../../services/venues/consoleLogic";
+import { bellBadge, unreadBadge } from "../../services/notifications/notificationsModel";
 
 // DA1-015 #2-#7 (header, bell, name row, Listed chip), S1 (Needs your
 // attention), DA2-003 (Finish setting up), OURS-DA-kept-features #1, #2, #4
@@ -21,6 +23,7 @@ export function DashHeader({
   name,
   listed,
   attentionCount,
+  notificationsUnread,
   panelOpen,
   onBell,
   onChip,
@@ -34,6 +37,8 @@ export function DashHeader({
   /** null while the listing is unknown (loading): the chip is hidden (OURS-DA-states #1). */
   listed: boolean | null;
   attentionCount: number;
+  /** Optional (Market + Share, Karim): unread business notices, counted into the badge. */
+  notificationsUnread?: number | null;
   panelOpen: boolean;
   onBell: () => void;
   onChip: () => void;
@@ -41,6 +46,10 @@ export function DashHeader({
   venueChip?: React.ReactNode;
 }) {
   const chip = listed ? { bg: c.goodTint, ink: c.good, dot: c.good, text: "Listed" } : { bg: c.soft, ink: c.faint, dot: c.tert, text: "Hidden" };
+  const badge = bellBadge(attentionCount, notificationsUnread);
+  const bellLabel = notificationsUnread
+    ? `Needs your attention, ${attentionCount} items, ${unreadBadge(notificationsUnread)} unread notifications`
+    : `Needs your attention, ${attentionCount} items`;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -56,7 +65,7 @@ export function DashHeader({
           ref={bellRef}
           type="button"
           data-bell
-          aria-label={`Needs your attention, ${attentionCount} items`}
+          aria-label={bellLabel}
           aria-haspopup="menu"
           aria-expanded={panelOpen}
           onClick={onBell}
@@ -77,7 +86,7 @@ export function DashHeader({
           }}
         >
           <Bell size={19} strokeWidth={1.8} aria-hidden />
-          {attentionCount > 0 && (
+          {badge && (
             <span
               data-badge
               style={{
@@ -99,7 +108,7 @@ export function DashHeader({
                 boxSizing: "border-box",
               }}
             >
-              {attentionCount}
+              {badge}
             </span>
           )}
         </button>
@@ -218,8 +227,31 @@ const ATT_ICON: Record<AttentionIcon, typeof EyeOff> = {
  * DA1-015 S1 · "Needs your attention" (anchored popup, w 300, r 14, dim 0.18).
  * B15: `items` is business_attention's (attention.ts); null = the read failed,
  * shown as a retry row rather than "You're all caught up".
+ * Market + Share 3.0 W4 (D-38): a "Notifications" row at the top opens the
+ * business inbox (B-MA.9, /app/business/notifications); the rest is kept.
+ * `notificationsUnread` (optional): the unread business notices
+ * (my_unread_notification_count(BUSINESS_KINDS)), a count pill on that row
+ * when above 0 ("99+" at the cap); null or 0 shows none.
  */
-export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRetry }: { c: DashPalette; open: boolean; items: AttentionItem[] | null; anchor: HTMLElement | null; onClose: () => void; onAction: (item: AttentionItem) => void; onRetry: () => void }) {
+export function AttentionPanel({
+  c,
+  open,
+  items,
+  anchor,
+  onClose,
+  onAction,
+  onRetry,
+  notificationsUnread,
+}: {
+  c: DashPalette;
+  open: boolean;
+  items: AttentionItem[] | null;
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  onAction: (item: AttentionItem) => void;
+  onRetry: () => void;
+  notificationsUnread?: number | null;
+}) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   useEffect(() => {
     if (!open || !anchor) return;
@@ -236,6 +268,7 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
       window.removeEventListener("keydown", onKey);
     };
   }, [open, anchor, onClose]);
+  const navigate = useNavigate();
   if (!open || !pos) return null;
   const toneCol = (t: AttentionItem["tone"]) => (t === "high" ? c.high : t === "caution" ? c.caution : c.pDark);
   return createPortal(
@@ -261,7 +294,37 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
           zIndex: 61,
         }}
       >
-        <p style={{ margin: "2px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
+        <button
+          type="button"
+          data-notifications-row
+          aria-label={notificationsUnread ? `Notifications, ${unreadBadge(notificationsUnread)} unread` : undefined}
+          onClick={() => {
+            onClose();
+            navigate("/app/business/notifications");
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 44, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised, cursor: "pointer", textAlign: "left", font: "inherit", boxSizing: "border-box" }}
+        >
+          <span style={{ display: "flex", color: c.pDark }}>
+            <Bell size={15} aria-hidden />
+          </span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
+            Notifications
+            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>Applications, offer replies, hiring fees and reviews</span>
+          </span>
+          {notificationsUnread ? (
+            <span
+              data-notifications-count
+              aria-hidden
+              style={{ minWidth: 18, height: 18, padding: "0 5px", borderRadius: 999, background: c.fill, color: c.onFill, fontSize: textPx(10), fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box", flexShrink: 0 }}
+            >
+              {unreadBadge(notificationsUnread)}
+            </span>
+          ) : null}
+          <span style={{ display: "flex", color: c.faint }}>
+            <ChevronRight size={15} aria-hidden />
+          </span>
+        </button>
+        <p style={{ margin: "12px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
         {(items ?? []).map((a, n) => {
           const Icon = ATT_ICON[a.icon];
           return (

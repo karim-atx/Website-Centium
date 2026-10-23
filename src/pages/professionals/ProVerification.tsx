@@ -63,7 +63,6 @@ export default function ProVerification() {
       const r = await setPublicListing(true);
       if (r.status === "ok") listedNow = r.listed;
       else if (r.status === "error") notListed = r.message;
-      else if (r.status === "affiliated") notListed = "Your listing is handled by your business while you're affiliated.";
       else if (r.status === "needs_verification") notListed = NEEDS_VERIFICATION;
       // ATXC6: the database doesn't count the check yet, so keep the item and list on a later visit.
       if (r.status !== "needs_verification") await markOwnerItemDismissed(authUserId, GO_LIVE_ON_VERIFICATION);

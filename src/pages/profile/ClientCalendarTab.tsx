@@ -9,6 +9,9 @@ import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RateClassSheet } from "../../components/marketplace/RateClassSheet";
+import { InstructorReviewDialog } from "../../components/market/InstructorReviewDialog";
+import { findReviewTarget, sentText, type ReviewTarget } from "../../services/instructor-reviews";
+import { useStrip } from "../business-market/listingParts";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
@@ -190,6 +193,22 @@ export default function ClientCalendarTab() {
   const [toast, setToast] = useState<string | null>(null);
   // B14 RP-04: Rate this class from a booked class that has ended.
   const [rate, setRate] = useState<{ bookingId: string; title: string; businessName: string } | null>(null);
+  // Market + Share 3.0 W5 (D-43): Rate opens the InstructorReviewDialog when
+  // the class had an instructor and my_class_bookings (DB4) says it's
+  // reviewable (review_instructor, Database Release 2: one per member per
+  // series); otherwise the live Rate sheet above (write_class_review, which
+  // now writes the venue review only when nobody is named).
+  const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
+  const [reviewStrip, showReviewStrip] = useStrip();
+  const rateSeq = useRef(0);
+  const openRate = useCallback((r: { bookingId: string; title: string; businessName: string; classId?: string | null }) => {
+    const n = ++rateSeq.current;
+    void findReviewTarget(r.bookingId, r.classId ?? null).then((t) => {
+      if (n !== rateSeq.current) return;
+      if (t) setReviewTarget(t);
+      else setRate({ bookingId: r.bookingId, title: r.title, businessName: r.businessName });
+    });
+  }, []);
   const online = useOnline();
 
   // Populate on launch, and keep whatever is on screen if the read fails —
@@ -347,16 +366,16 @@ export default function ClientCalendarTab() {
     const legacy = bookedClasses.find((c) => c.bookingId === rateParam);
     const linked = linkedBookings.find((b) => b.bookingId === rateParam);
     const hit = legacy
-      ? { title: legacy.title, businessName: legacy.businessName, date: legacy.date, endTime: legacy.endTime }
+      ? { title: legacy.title, businessName: legacy.businessName, date: legacy.date, endTime: legacy.endTime, classId: legacy.id }
       : linked
-        ? { title: linked.title, businessName: linked.businessName, date: linked.date, endTime: linked.endTime }
+        ? { title: linked.title, businessName: linked.businessName, date: linked.date, endTime: linked.endTime, classId: linked.classId }
         : null;
     const ended = hit ? new Date(`${hit.date}T${hit.endTime}:00`).getTime() <= Date.now() : false;
     const next = new URLSearchParams(params);
     next.delete("rate");
     setParams(next, { replace: true });
-    if (hit && ended) setRate({ bookingId: rateParam, title: hit.title, businessName: hit.businessName });
-  }, [rateParam, bookingsRead, bookedClasses, linkedBookings, params, setParams]);
+    if (hit && ended) openRate({ bookingId: rateParam, title: hit.title, businessName: hit.businessName, classId: hit.classId });
+  }, [rateParam, bookingsRead, bookedClasses, linkedBookings, params, setParams, openRate]);
 
   const bookedClassEvents = useMemo<ClientCalendarEvent[]>(
     () =>
@@ -1337,7 +1356,7 @@ export default function ClientCalendarTab() {
             onRate={
               booking && ended && detail
                 ? () => {
-                    setRate({ bookingId: booking.bookingId, title: detail.title, businessName: booking.businessName });
+                    openRate({ bookingId: booking.bookingId, title: detail.title, businessName: booking.businessName, classId: classId ?? null });
                     setDetailId(null);
                   }
                 : undefined
@@ -1355,6 +1374,15 @@ export default function ClientCalendarTab() {
         businessName={rate?.businessName ?? ""}
         onClose={() => setRate(null)}
       />
+      <InstructorReviewDialog
+        target={reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        onSent={(t) => {
+          setReviewTarget(null);
+          showReviewStrip(sentText(t.professionalName, t.gymName), "success", { label: "View", onPress: () => navigate(`/app/professionals/${encodeURIComponent(t.professionalId)}`) });
+        }}
+      />
+      {reviewStrip}
 
       {/* MO1.6 K10: a failed invitation answer, the shared toast with the
           danger icon (#C0392B / #F09A8E). */}

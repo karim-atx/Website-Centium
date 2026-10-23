@@ -41,6 +41,7 @@ import { reinviteRefusal, resendRefusal, revokeRefusal } from "./inviteRefusals"
 import { rpc } from "../pro/rpc";
 
 export { roleUsesSeat } from "./seats";
+import { seatAnswer } from "./seats";
 
 interface EmployeeRow {
   id: string;
@@ -121,6 +122,23 @@ async function payRatesFor(businessId: string): Promise<Map<string, number | nul
   return out;
 }
 
+/**
+ * How each Team professional joined, from my_team (Database Release 2:
+ * source existing_team | hire), for the seat answer (seatAnswer: a Centium
+ * hire uses no seat). my_team needs the members permission; a refusal or a
+ * failed read leaves every source unknown and the server's per-person flag
+ * stands.
+ */
+async function sourcesFor(businessId: string): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const { data, error } = await rpc("my_team", { p_business_id: businessId });
+  if (error) return out;
+  for (const r of (data ?? []) as { professional_id: string; source: string | null }[]) {
+    if (r.source) out.set(r.professional_id, r.source);
+  }
+  return out;
+}
+
 const TEAM_COLUMNS = "id, professional_id, created_at, accepted_at, role, permissions, invite_message";
 /** Batch 2 CO: the invitation window, SELECT-granted to authenticated (migration 20261201000000). */
 const WINDOW_COLUMNS = "expires_at, revoked_at, resent_count, sent_at";
@@ -159,10 +177,11 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
   if (rows.error && !isOffline(rows.error)) rows = await read(TEAM_COLUMNS);
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
   const list = (rows.data ?? []) as unknown as EmployeeRow[];
-  const [names, about, pay] = await Promise.all([
+  const [names, about, pay, sources] = await Promise.all([
     namesFor(list.map((r) => r.professional_id)),
     professionsFor(businessId),
     payRatesFor(businessId),
+    sourcesFor(businessId),
   ]);
   return {
     ok: true,
@@ -183,7 +202,7 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
       subtype: about.get(r.professional_id)?.subtype ?? null,
       otherDiscipline: about.get(r.professional_id)?.otherDiscipline ?? null,
       closestGroup: about.get(r.professional_id)?.closestGroup ?? null,
-      usesSeat: about.get(r.professional_id)?.usesSeat ?? null,
+      usesSeat: seatAnswer(about.get(r.professional_id)?.usesSeat, sources.get(r.professional_id)),
     })),
   };
 }
@@ -235,7 +254,7 @@ export async function fetchSeatBlockPrice(): Promise<Result<{ monthly: number; s
 
 export type InviteOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "no_seats" | "rate_limited" | "not_allowed" | "failed"; message: string };
+  | { ok: false; reason: "not_found" | "no_seats" | "rate_limited" | "not_allowed" | "professional_account" | "professional_code" | "failed"; message: string };
 
 /**
  * invite_employee(identifier, role, business, message). The identifier is an
@@ -259,6 +278,14 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
   if (text.includes("ATXC0") || error.code === "23514") return { ok: false, reason: "no_seats", message: "All seats are in use." };
   if (text.includes("ATXB9") && error.code === "22023") return { ok: false, reason: "not_found", message: "No professional found with that ID or email." };
   if (isBusinessClosedError(error)) return { ok: false, reason: "not_allowed", message: closureMessage(CLOSED_INVITE_STAFF, error.message) };
+  // Database Release 2: ATXH17 (22023) "add professionals to your team through Hiring" for a
+  // professional's own code, or a professional ACCOUNT once the free window has closed (the hint says
+  // which). Both show the B-MA.8.7 card.
+  if (text.includes("ATXH17")) {
+    return /window/i.test(error.hint ?? "")
+      ? { ok: false, reason: "professional_account", message: "New professionals join through Hiring." }
+      : { ok: false, reason: "professional_code", message: "Add professionals to your team through Hiring." };
+  }
   if (error.code === "42501") return { ok: false, reason: "not_allowed", message: "You can't invite people to this business." };
   if (error.code === "ATX02") return { ok: false, reason: "rate_limited", message: "Too many invites in a short time. Try again in an hour." };
   console.error("[business-team] invite_employee failed:", error.code, error.message);
@@ -399,8 +426,9 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
  * What a professional shows the public (OP1-132 C1, C2, C5; OP1-124 9c):
  * public_professional_directory (subtype, specialty, bio) and
  * public_professional_experience. Both views read listed_publicly
- * professionals only: an unlisted one (and affiliating with a business turns
- * listing off) answers null, and the person page leaves those rows out.
+ * professionals only: an unlisted one answers null, and the person page
+ * leaves those rows out (since Database #38 joining a team no longer unlists
+ * anybody).
  *
  * NO WEBSITE OR SOCIAL LINKS (DB7, 20261211000000): the directory no longer
  * carries website / instagram / facebook / x, and per D-27 a business does

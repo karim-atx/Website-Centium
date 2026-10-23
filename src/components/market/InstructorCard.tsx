@@ -17,7 +17,7 @@ import { FOCUS_CSS, usePress } from "./usePress";
 //   rating 12 --ink2 ("Cycling and HIIT · 4.8 · 38 reviews"); "Hired via
 //   Centium" 11 / 700 --tealink with the ticket-check 12 (gap 4, margin-top 3,
 //   only for a Team hire); a chevron 16 stroke 2 --faint;
-// - unlisted (D-11 interim, or "No instructor named"): the same row on
+// - unlisted (not on the Team, or "No instructor named"): the same row on
 //   --soft with no border and no link; the avatar a 48 circle outlined 1.5px
 //   dashed --border with the lucide user 20 stroke 1.75 --tert;
 //   "INSTRUCTOR"; "Instructor not listed" 14.5 / 20 700 --ink2.

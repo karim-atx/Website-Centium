@@ -1,22 +1,19 @@
-import { useEffect, useState } from "react";
-import { Banknote, Check, Handshake, Lock, MessageCircle, Send, Wallet } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { CtaButton } from "../ui/PinnedCta";
-import { goldPill, initials, type TypeColours } from "../professionals/typeColour";
-import { ConfirmedMark } from "../ui/ConfirmedMark";
-import { linePx } from "../../theme/textSize";
-import { useIsDark } from "../../hooks/useIsDark";
 import { useApp } from "../../context/AppContext";
+import { useIsDark } from "../../hooks/useIsDark";
 import { forumAccess } from "../../services/forum/rules";
-import { textPx } from "../../theme/textSize";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette } from "../../theme/marketTokens";
+import { FOCUS_CSS, usePress } from "../market/usePress";
+import { PaymentMethods, SheetBox, confirmLabel } from "../../pages/marketplace/PurchaseSheet";
+import { EmptyBlock } from "../../pages/professionals/profile/parts";
 import {
   describeHireError,
   fetchMyHires,
   fetchPlansFor,
   hireProfessional,
-  hireStatusLabel,
   planPriceLabel,
-  priceExact,
   priceShort,
   type HirePaymentMethod,
   type MyHire,
@@ -25,34 +22,26 @@ import {
 import type { HireRequestExtras } from "../../services/hire-request";
 import { REQUEST_MESSAGE_MAX } from "../../services/public-pro/logic";
 
-// A3-client: MO1.2.1.5 (hire sheet) → MO1.2.1.5.1 (checkout) → MO1.2.1.5.2
-// (confirmed), one Lavender-header sheet whose content changes step, as the
-// three frames draw the same sheet over the same profile.
+// Market + Share 3.0 · W5 · the hire sheet, restyled as the handover purchase
+// sheet (HANDOVER §4 "Purchase / booking sheets"; C-MO.4.9 Services › Hire,
+// Client Professional Screens lines 216–252): MasterBottomSheet chrome (the
+// app BottomSheet defaults, as PurchaseSheet), a column (gap 12) of --sgrey
+// boxes (radius 14, padding 12 14, the label 13 / 500 --slabel 8 above), the
+// plan ticket with the 72 price stub (1.5px dashed --fill on --pale, 18 / 800
+// --pdark, the two 14 notches), the payment box (Cash selected, "Pay {first}
+// at the start of the session"; App Store / Google Play and Whish Money greyed
+// "Coming soon"), the pinned CTA 50 radius 16 --fill 15 / 700 "Confirm · $X"
+// (W2 lead decision). The confirmed step is gone: a hire closes the sheet and
+// the profile shows the strip ("Hired {first} · Pending payment") and the
+// hire's card on Services.
 //
-//   plans      professional_plans_for(id): name 15/700 type deep, price 14/700
-//              #241F1B, bullets in the type main, Choose 40 / r12 on the type
-//              CTA fill; "Already hired" for is_hired. Empty, minor and ATXA0
-//              ("not taking new clients right now", a normal answer) are
-//              Foundations › Empty state blocks.
-//   checkout   professional row, plan line, included lines, Payment method
-//              (Whish Money drawn but not choosable, exactly as stage 5's gym
-//              checkout; Cash chosen), Order total, "Pay $400" (Lock) →
-//              hire_professional(plan, 'cash').
-//   confirmed  my_hires() row: the v6 confirmation (ConfirmedMark, 124 crop
-//              on a 132 panel-colour tile), "You've hired {first}", "{plan} ·
-//              {price}", Pending payment while payment_status = pending.
-//              v6 MO1.2.1.5.2: the "Hired" sheet title is drawn again (the
-//              new handover supersedes C-08 / D26).
-//
-// REMOVED FROM THE FRAMES BY DECISION: the App Store / Google Play payment row
-// (decision 8 / C-10 / decision 23), the v7-v10 confirmation animations (v6
-// ships), the v8 snake-crawl animation (do not build).
-//
-// NOT BUILT, AND WHY: the "Popular" tag and "save 8%" (professional_plans has
-// no popular flag and no comparison price); the copy line "By paying you
-// agree to the terms. Cancel within 24 hours for a full refund." (Centium
-// makes no refunds and cancellation is free until the professional confirms
-// receipt, per the contract) is replaced with a line that says exactly that.
+// KEPT LIVE FEATURES (PLAN §3.2), every rule as before: plans from
+// professional_plans_for with "Already hired"; under-18 "Not available under
+// 18" (ATXA2); "Not taking new clients" (ATXA0, a normal answer); "No plans
+// yet" with Send a request (pending_client_requests, optional plan and
+// message) and Message; the ?hire=<planId> deep link (straight to that plan's
+// checkout, or a note); ATX98 (gone since loading: back to the list with a
+// note); hire_professional(plan, 'cash').
 
 export interface HirePro {
   id: string;
@@ -63,42 +52,42 @@ export interface HirePro {
   avatarUrl: string | null;
 }
 
-type Step = "plans" | "checkout" | "confirmed" | "request";
+type Step = "plans" | "checkout" | "request";
 
-/** MO1.2.1.5 › Empty state (Foundations): 56 tile, 26 icon, 15/700, 12.5/500 muted, max 260. */
-function StateBlock({ t, icon, title, line, children }: { t: TypeColours; icon: React.ReactNode; title: string; line: string; children?: React.ReactNode }) {
+/** The 44-tall buttons inside the sheet's states (primary --fill, secondary outline). */
+const SheetButton: React.FC<{ children: React.ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean; ariaLabel?: string }> = ({ children, onClick, disabled, primary, ariaLabel }) => {
+  const m = marketPalette(useIsDark());
+  const press = usePress();
   return (
-    <div className="flex flex-col items-center text-center gap-2.5 px-6 py-8" role="status">
-      <span className="w-14 h-14 rounded-[18px] flex items-center justify-center" style={{ background: t.pill, color: t.main }} aria-hidden>
-        {icon}
-      </span>
-      <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>
-      <p className="m-0 text-[12.5px] font-medium text-charcoal-faint leading-[1.55] max-w-[260px]">{line}</p>
+    <button
+      type="button"
+      onClick={() => !disabled && onClick()}
+      aria-disabled={disabled || undefined}
+      aria-label={ariaLabel}
+      className="market-focus"
+      {...press.handlers}
+      style={{
+        height: 44,
+        padding: "0 16px",
+        borderRadius: 14,
+        font: "inherit",
+        fontSize: textPx(14),
+        fontWeight: 800,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        ...(primary ? { background: m.fill, color: m.onfill, border: 0 } : { background: "transparent", color: m.pdark, border: `1px solid ${m.border}` }),
+        ...(disabled ? {} : press.style),
+      }}
+    >
       {children}
-    </div>
+    </button>
   );
-}
-
-/** A bullet list: 12.5–13/400 #5B5349 lines, 5 apart, with the type-main dot (5 pt, measured). */
-function Bullets({ items, t, size }: { items: string[]; t: TypeColours; size: number }) {
-  if (items.length === 0) return null;
-  return (
-    <ul className="m-0 p-0 list-none flex flex-col gap-[5px]">
-      {items.map((f, i) => (
-        <li key={i} className="flex items-start gap-2 text-charcoal-soft leading-[18px]" style={{ fontSize: textPx(size) }}>
-          <span aria-hidden className="mt-[6.5px] w-[5px] h-[5px] rounded-full shrink-0" style={{ background: t.main }} />
-          <span className="min-w-0 break-words">{f}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+};
 
 export function HireSheet({
   open,
   onClose,
   pro,
-  t,
   initialPlanId,
   onHired,
   onMessage,
@@ -108,28 +97,24 @@ export function HireSheet({
   open: boolean;
   onClose: () => void;
   pro: HirePro;
-  t: TypeColours;
-  /** The ?hire=<planId> deep link (a chat plans card's Hire): open that plan's checkout. */
+  /** A plan to open straight on its checkout: the ?hire=<planId> deep link, or the Services tab's Hire. */
   initialPlanId?: string | null;
-  /** my_hires() after a hire, so the profile can show its status. */
-  onHired: (hires: MyHire[] | null) => void;
+  /** my_hires() after a hire (null when it failed to load) and the new hire, so the profile can show its strip and card. */
+  onHired: (hires: MyHire[] | null, hire: MyHire) => void;
   onMessage: () => void;
   messageBusy?: boolean;
-  /**
-   * The free request to connect (pending_client_requests), kept for a
-   * professional with no plans: before A3 it was the only way to ask to work
-   * with someone, and it stays reachable where there is nothing to hire.
-   */
+  /** The free request to connect (pending_client_requests), for someone not yet a client. */
   request?: {
     state: "none" | "pending" | "cooling_down";
     busy: boolean;
     error: string | null;
-    /** Release 3 (W7): an optional plan and message go with the request. */
     onSend: (extras?: HireRequestExtras) => void;
   };
 }) {
   const { user } = useApp();
   const dark = useIsDark();
+  const m = marketPalette(dark);
+  const press = usePress();
   const minor = forumAccess(user.dateOfBirth) === "minor";
 
   const [step, setStep] = useState<Step>("plans");
@@ -141,16 +126,10 @@ export function HireSheet({
   const [error, setError] = useState<string | null>(null);
   /** A note over the plan list (a deep-linked plan that is no longer offered, ATX98). */
   const [note, setNote] = useState<string | null>(null);
-  /** ATXA0: a normal answer, rendered as its own state, not as an error. */
-  // Stamped with the professional it was said about, so it lasts while this
-  // profile is open (reopening the sheet shows it again) and never carries over.
+  // ATXA0, stamped with the professional it was said about.
   const [notTakingFor, setNotTakingFor] = useState<string | null>(null);
   const notTaking = notTakingFor === pro.id;
-  const [hired, setHired] = useState<MyHire | null>(null);
-  const [settled, setSettled] = useState(false);
   const [deepLinkUsed, setDeepLinkUsed] = useState<string | null>(null);
-  // Release 3 (W7, CU12 audit "the free request inside HireSheet"): the
-  // request's optional plan and message.
   const [requestPlan, setRequestPlan] = useState<string | null>(null);
   const [requestMessage, setRequestMessage] = useState("");
 
@@ -176,14 +155,10 @@ export function HireSheet({
       setPlan(null);
       setError(null);
       setNote(null);
-      setHired(null);
-      setSettled(false);
       setRequestPlan(null);
       setRequestMessage("");
       const loaded = await load();
       if (cancelled || !loaded) return;
-      // The deep link, once per plan id: straight to that plan's checkout
-      // while it is still offered; otherwise the sheet, with a note.
       if (initialPlanId && deepLinkUsed !== initialPlanId) {
         setDeepLinkUsed(initialPlanId);
         const found = loaded.find((p) => p.id === initialPlanId);
@@ -202,6 +177,12 @@ export function HireSheet({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload per open and per professional only
   }, [open, pro.id, initialPlanId]);
+
+  // The deep link is used once per plan id while the sheet is open; a new
+  // open from the Services tab with the same plan should take it again.
+  useEffect(() => {
+    if (!open) setDeepLinkUsed(null);
+  }, [open]);
 
   const choose = (p: Plan) => {
     setPlan(p);
@@ -222,7 +203,6 @@ export function HireSheet({
         return;
       }
       if (r.code === "ATX98") {
-        // Gone since the sheet loaded: back to the current list, with a note.
         setNote(describeHireError("ATX98"));
         setPlan(null);
         setStep("plans");
@@ -234,29 +214,26 @@ export function HireSheet({
     }
     const mine = await fetchMyHires();
     const row = mine.ok ? mine.hires.find((h) => h.id === r.hireId) ?? null : null;
-    setHired(
-      row ?? {
-        // my_hires() failed to load: what was just created, as the contract
-        // defines it (pending, cash, price copied from the plan).
-        id: r.hireId,
-        professionalId: pro.id,
-        professionalFirstName: pro.first,
-        planName: plan.name,
-        status: "pending",
-        paymentMethod: method,
-        paymentStatus: "pending",
-        priceAgreed: plan.price,
-        startedOn: new Date().toISOString().slice(0, 10),
-        expiresOn: null,
-        confirmedAt: null,
-        cancelledAt: null,
-        cancellationReason: null,
-        cancellationMessage: null,
-      }
-    );
-    onHired(mine.ok ? mine.hires : null);
+    const hire: MyHire = row ?? {
+      // my_hires() failed to load: what was just created, as the contract
+      // defines it (pending, cash, price copied from the plan).
+      id: r.hireId,
+      professionalId: pro.id,
+      professionalFirstName: pro.first,
+      planName: plan.name,
+      status: "pending",
+      paymentMethod: method,
+      paymentStatus: "pending",
+      priceAgreed: plan.price,
+      startedOn: new Date().toISOString().slice(0, 10),
+      expiresOn: null,
+      confirmedAt: null,
+      cancelledAt: null,
+      cancellationReason: null,
+      cancellationMessage: null,
+    };
     setBusy(false);
-    setStep("confirmed");
+    onHired(mine.ok ? mine.hires : null, hire);
   };
 
   const close = () => {
@@ -264,191 +241,142 @@ export function HireSheet({
     onClose();
   };
 
-  // ---- the three steps -------------------------------------------------------
+  const body = (text: React.ReactNode, extra?: React.CSSProperties) => (
+    <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2, ...extra }}>{text}</p>
+  );
+
+  // ---- the plan list -----------------------------------------------------------
 
   const plansBody = () => {
-    if (minor) {
-      return <StateBlock t={t} icon={<Handshake size={26} strokeWidth={1.5} />} title="Not available under 18" line={describeHireError("ATXA2")} />;
-    }
+    if (minor) return <EmptyBlock title="Not available under 18" body={describeHireError("ATXA2")} style={{ paddingTop: 24, paddingBottom: 16 }} />;
     if (notTaking) {
-      // ATXA0, as the contract writes it, with no reason.
       return (
-        <StateBlock t={t} icon={<Handshake size={26} strokeWidth={1.5} />} title="Not taking new clients" line={describeHireError("ATXA0")}>
-          <button
-            type="button"
-            onClick={onMessage}
-            disabled={messageBusy}
-            className="tap mt-2 h-10 px-4 rounded-xl inline-flex items-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
-            style={{ background: t.pill, color: t.deep }}
-          >
-            <MessageCircle size={14} aria-hidden /> Message {pro.first}
-          </button>
-        </StateBlock>
+        <EmptyBlock title="Not taking new clients" body={describeHireError("ATXA0")} style={{ paddingTop: 24, paddingBottom: 16 }}>
+          <SheetButton onClick={onMessage} disabled={messageBusy}>
+            Message {pro.first}
+          </SheetButton>
+        </EmptyBlock>
       );
     }
     if (plans === null) {
-      // States › Loading: skeleton blocks at the card positions (surface.soft).
       return (
-        <div aria-busy="true" className="flex flex-col gap-2.5">
-          <span className="sr-only">Loading…</span>
-          <span aria-hidden className="h-[18px] w-48 rounded-md bg-cream-soft mb-1" />
-          <span aria-hidden className="h-[194px] rounded-[18px] bg-cream-soft" />
-          <span aria-hidden className="h-[194px] rounded-[18px] bg-cream-soft" />
+        <div aria-busy="true" role="status" aria-label="Loading" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[0, 1].map((i) => (
+            <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ height: 120, borderRadius: 14, background: m.sgrey }} />
+          ))}
         </div>
       );
     }
     if (loadError) {
       return (
-        <p role="alert" className="m-0 px-1 text-[12.5px] font-medium text-status-high">
+        <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
           {loadError}
         </p>
       );
     }
     if (plans.length === 0) {
       return (
-        <StateBlock
-          t={t}
-          icon={<Handshake size={26} strokeWidth={1.5} />}
+        <EmptyBlock
           title="No plans yet"
-          line={
+          body={
             request
               ? `${pro.first} hasn't set up any plans to hire. Send a request to work together, or message them.`
               : `${pro.first} hasn't set up any plans to hire. Message them to ask about working together.`
           }
+          style={{ paddingTop: 24, paddingBottom: 16 }}
         >
-          {request && (
-            <button
-              type="button"
-              onClick={() => setStep("request")}
-              disabled={request.busy || request.state !== "none"}
-              className="tap mt-2 h-10 px-4 rounded-xl inline-flex items-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
-              style={{ background: t.cta, color: t.onMain }}
-            >
-              {request.state === "pending"
-                ? "Request sent"
-                : request.state === "cooling_down"
-                ? "Not taking requests right now"
-                : request.busy
-                ? "Sending…"
-                : "Send a request"}
-            </button>
-          )}
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 4 }}>
+            {request && (
+              <SheetButton primary onClick={() => setStep("request")} disabled={request.busy || request.state !== "none"}>
+                {request.state === "pending" ? "Request sent" : request.state === "cooling_down" ? "Not taking requests right now" : request.busy ? "Sending…" : "Send a request"}
+              </SheetButton>
+            )}
+            <SheetButton onClick={onMessage} disabled={messageBusy}>
+              Message {pro.first}
+            </SheetButton>
+          </div>
           {request?.error && (
-            <p role="alert" className="m-0 mt-1 text-[12px] text-status-high">
+            <p role="alert" style={{ margin: "4px 0 0", fontSize: textPx(12), color: m.high }}>
               {request.error}
             </p>
           )}
-          <button
-            type="button"
-            onClick={onMessage}
-            disabled={messageBusy}
-            className="tap mt-2 h-10 px-4 rounded-xl inline-flex items-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
-            style={{ background: t.pill, color: t.deep }}
-          >
-            <MessageCircle size={14} aria-hidden /> Message {pro.first}
-          </button>
-        </StateBlock>
+        </EmptyBlock>
       );
     }
     return (
-      <div className="flex flex-col">
-        {/* #10: intro 13/400 #5B5349, 14 above the first card (measured). */}
-        <p className="m-0 mb-3.5 text-charcoal-soft" style={{ fontSize: textPx(13) }}>
-          Choose a plan {pro.first} offers
-        </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {body(`Choose a plan ${pro.first} offers`)}
         {note && (
-          <p role="status" className="m-0 mb-3 px-1 text-[12.5px] font-medium text-status-high">
+          <p role="status" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
             {note}
           </p>
         )}
-        {/* Plan cards: r18, 1 px #E9E8E8 (charcoal 0.10), padding 16 / 12
-            bottom, 10 apart (measured on the frame). */}
-        <div className="flex flex-col gap-2.5">
-          {plans.map((p) => (
-            <article key={p.id} className="rounded-[18px] border border-charcoal/[0.10] bg-cream-card px-4 pt-4 pb-3" aria-label={p.name}>
-              <h3 className="m-0 font-bold leading-5 break-words" style={{ color: t.deep, fontSize: textPx(15) }}>
-                {p.name}
-              </h3>
-              <p className="m-0 mt-0.5 font-bold text-charcoal leading-5 tabular-nums" style={{ fontSize: textPx(14) }}>
-                {planPriceLabel(p.price, p.billing)}
-              </p>
-              {p.features.length > 0 && (
-                <div className="mt-1.5">
-                  <Bullets items={p.features} t={t} size={13} />
+        <SheetBox label="Plans" id="hire-plans">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {plans.map((p) => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 10, background: m.card, border: `0.5px solid ${m.border}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink, overflowWrap: "anywhere" }}>{p.name}</div>
+                  <div style={{ fontSize: textPx(12), fontWeight: 700, color: m.accent, fontVariantNumeric: "tabular-nums" }}>{planPriceLabel(p.price, p.billing)}</div>
+                  {p.features.length > 0 && (
+                    <ul style={{ margin: "4px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
+                      {p.features.map((f, i) => (
+                        <li key={i} style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, overflowWrap: "anywhere" }}>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-              )}
-              {p.isHired ? (
-                <div className="mt-3 h-10 rounded-xl flex items-center justify-center gap-1.5 text-[14px] font-bold" style={{ background: t.pill, color: t.deep }}>
-                  <Check size={14} strokeWidth={3} aria-hidden /> Already hired
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => choose(p)}
-                  className="tap mt-3 w-full h-10 rounded-xl text-[14px] font-bold transition-[filter] duration-150 active:brightness-[0.92]"
-                  style={{ background: t.cta, color: t.onMain }}
-                  aria-label={`Choose ${p.name}`}
-                >
-                  Choose
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
+                {p.isHired ? (
+                  <span style={{ flexShrink: 0, borderRadius: 999, padding: "4px 10px", background: m.tealbg, color: m.tealink, fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap" }}>Already hired</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => choose(p)}
+                    aria-label={`Choose ${p.name}`}
+                    className="hit market-focus"
+                    style={{ flexShrink: 0, height: 32, padding: "0 14px", borderRadius: 10, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(12), fontWeight: 800, cursor: "pointer" }}
+                  >
+                    Choose
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </SheetBox>
         {request && request.state === "none" && (
-          // Release 3 (W7): the free request, for a client who wants to talk
-          // first; it can name one of these plans and carry a note.
           <button
             type="button"
             onClick={() => setStep("request")}
-            className="tap mt-3 self-center min-h-11 px-3 inline-flex items-center gap-1.5 font-bold"
-            style={{ color: t.deep, fontSize: textPx(13) }}
+            className="hit market-focus"
+            style={{ alignSelf: "center", minHeight: 44, background: "none", border: 0, padding: "0 8px", font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer" }}
           >
-            <Send size={14} aria-hidden /> Send {pro.first} a request instead
+            Send {pro.first} a request instead
           </button>
         )}
-        {request && request.state === "pending" && (
-          <p role="status" className="m-0 mt-3 text-center text-charcoal-faint" style={{ fontSize: textPx(12.5) }}>
-            Your request to {pro.first} is waiting for an answer.
-          </p>
-        )}
+        {request && request.state === "pending" && body(`Your request to ${pro.first} is waiting for an answer.`, { textAlign: "center", fontSize: textPx(12.5), color: m.faint })}
       </div>
     );
   };
 
-  // Release 3 (W7): the request composer. pending_client_requests takes an
-  // optional plan_id (one of this professional's active plans) and message
-  // (at most 500); plan_price is the database's to set.
+  // ---- the request ----------------------------------------------------------------
+
   const requestBody = () => {
     if (!request) return null;
     if (request.state === "pending") {
-      return (
-        <StateBlock
-          t={t}
-          icon={<Send size={26} strokeWidth={1.5} />}
-          title="Request sent"
-          line={`${pro.first} can accept your request or message you about it.`}
-        />
-      );
+      return <EmptyBlock title="Request sent" body={`${pro.first} can accept your request or message you about it.`} style={{ paddingTop: 24, paddingBottom: 16 }} />;
     }
-    const label = (text: string, className = "") => (
-      <p className={`m-0 px-0.5 text-[10.5px] font-bold uppercase tracking-[0.12em] ${className}`} style={{ color: t.main }}>
-        {text}
-      </p>
-    );
     const options = [
       { id: null as string | null, name: "No particular plan", price: null as string | null },
       ...(plans ?? []).map((p) => ({ id: p.id as string | null, name: p.name, price: planPriceLabel(p.price, p.billing) as string | null })),
     ];
     return (
-      <div className="flex flex-col">
-        <p className="m-0 mb-3.5 text-charcoal-soft" style={{ fontSize: textPx(13) }}>
-          Ask {pro.first} to work with you. Nothing is shared until you choose to share it.
-        </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {body(`Ask ${pro.first} to work with you. Nothing is shared until you choose to share it.`)}
         {(plans?.length ?? 0) > 0 && (
-          <>
-            {label("Plan (optional)")}
-            <div className="mt-2.5 mb-[22px] flex flex-col gap-2" role="radiogroup" aria-label="Plan">
+          <SheetBox label="Plan (optional)" id="hire-request-plan">
+            <div role="radiogroup" aria-labelledby="hire-request-plan" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {options.map((o) => {
                 const on = o.id === requestPlan;
                 return (
@@ -458,46 +386,35 @@ export function HireSheet({
                     role="radio"
                     aria-checked={on}
                     onClick={() => setRequestPlan(o.id)}
-                    className="tap w-full min-h-[48px] rounded-[14px] px-3 py-2 flex items-center gap-3 text-start bg-cream-card"
-                    style={on ? { border: `1px solid ${t.main}`, boxShadow: `0 0 0 3px ${t.pill}` } : { border: "1px solid rgb(var(--c-charcoal) / 0.10)" }}
+                    className="market-focus"
+                    style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 44, padding: "9px 13px", borderRadius: 10, background: m.card, border: on ? `1.5px solid ${m.segactive}` : `0.5px solid ${m.border}`, font: "inherit", textAlign: "left", cursor: "pointer", color: m.ink }}
                   >
-                    <span className="min-w-0 flex-1 font-medium text-charcoal break-words" style={{ fontSize: textPx(14) }}>
-                      {o.name}
-                    </span>
-                    {o.price && (
-                      <span className="shrink-0 font-bold tabular-nums" style={{ color: t.deep, fontSize: textPx(13) }}>
-                        {o.price}
-                      </span>
-                    )}
-                    <span
-                      aria-hidden
-                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${on ? "" : "border border-charcoal/[0.18]"}`}
-                      style={on ? { background: t.cta, color: t.onMain } : undefined}
-                    >
-                      {on && <Check size={12} strokeWidth={3} />}
-                    </span>
+                    <span aria-hidden style={{ width: 20, height: 20, borderRadius: 999, boxSizing: "border-box", border: on ? `6px solid ${m.segactive}` : `1.5px solid ${m.border}`, flexShrink: 0 }} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 700, overflowWrap: "anywhere" }}>{o.name}</span>
+                    {o.price && <span style={{ flexShrink: 0, fontSize: textPx(12), fontWeight: 700, color: m.accent }}>{o.price}</span>}
                   </button>
                 );
               })}
             </div>
-          </>
+          </SheetBox>
         )}
-        {label("Message (optional)")}
-        <textarea
-          value={requestMessage}
-          onChange={(e) => setRequestMessage(e.target.value.slice(0, REQUEST_MESSAGE_MAX))}
-          maxLength={REQUEST_MESSAGE_MAX}
-          rows={4}
-          aria-label={`Message to ${pro.first}`}
-          placeholder={`What would you like to work on with ${pro.first}?`}
-          className="mt-2.5 w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-          style={{ fontSize: textPx(14) }}
-        />
-        <p className="m-0 mt-1 text-right text-charcoal-faint tabular-nums" style={{ fontSize: textPx(11.5) }} aria-live="polite">
-          {requestMessage.length}/{REQUEST_MESSAGE_MAX}
-        </p>
+        <SheetBox label="Message (optional)" id="hire-request-message">
+          <textarea
+            value={requestMessage}
+            onChange={(e) => setRequestMessage(e.target.value.slice(0, REQUEST_MESSAGE_MAX))}
+            maxLength={REQUEST_MESSAGE_MAX}
+            rows={4}
+            aria-labelledby="hire-request-message"
+            placeholder={`What would you like to work on with ${pro.first}?`}
+            className="market-focus placeholder:text-charcoal-faint"
+            style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", borderRadius: 10, border: `0.5px solid ${m.border}`, background: m.card, padding: "11px 13px", font: "inherit", fontSize: textPx(13.5), lineHeight: linePx(19), color: m.ink, outline: "none" }}
+          />
+          <p aria-live="polite" style={{ margin: "4px 0 0", textAlign: "right", fontSize: textPx(11), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
+            {requestMessage.length}/{REQUEST_MESSAGE_MAX}
+          </p>
+        </SheetBox>
         {request.error && (
-          <p role="alert" className="m-0 mt-2 text-[12.5px] font-medium text-status-high">
+          <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
             {request.error}
           </p>
         )}
@@ -505,129 +422,35 @@ export function HireSheet({
     );
   };
 
+  // ---- checkout ------------------------------------------------------------------------
+
   const checkoutBody = () => {
     if (!plan) return null;
-    const rows: { key: HirePaymentMethod; Icon: typeof Wallet; name: string; hint: string; off: boolean }[] = [
-      // Whish: on the enum since stage 5 but not wired, so drawn, not
-      // choosable — exactly as the gym checkout and the class booking popup.
-      { key: "whish", Icon: Wallet, name: "Whish Money", hint: "Pay with your Whish wallet", off: true },
-      { key: "cash", Icon: Banknote, name: "Cash", hint: `Pay ${pro.first} in person`, off: false },
-    ];
-    const label = (text: string, className = "") => (
-      <p className={`m-0 px-0.5 text-[10.5px] font-bold uppercase tracking-[0.12em] ${className}`} style={{ color: t.main }}>
-        {text}
-      </p>
-    );
+    const notch: React.CSSProperties = { position: "absolute", right: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
     return (
-      <div className="flex flex-col">
-        {/* #11–13: the summary card (r18, 1 px #EEEDED, p16): avatar 40 on
-            #E7E2F6, name 14/700 deep, type 11.5/500 main, gap 12; a #F2F2F2
-            rule 12 under; plan 15/700 #241F1B with the price 14/700 deep;
-            included lines 12.5/400 #5B5349, gap 5. */}
-        <div className="rounded-[18px] border border-charcoal/[0.08] bg-cream-card p-4">
-          <div className="flex items-center gap-3">
-            <span
-              className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0 text-[14px] font-bold"
-              style={{ background: t.pill, color: t.deep }}
-              aria-hidden
-            >
-              {pro.avatarUrl ? <img src={pro.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(pro.name)}
-            </span>
-            <span className="min-w-0">
-              <span className="block font-bold truncate" style={{ color: t.deep, fontSize: textPx(14) }}>
-                {pro.name}
-              </span>
-              {pro.role && (
-                <span className="block font-medium" style={{ color: t.main, fontSize: textPx(11.5) }}>
-                  {pro.role}
-                </span>
-              )}
-            </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div role="group" aria-label="Plan" style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
+          <div style={{ flex: 1, minWidth: 0, padding: "12px 14px" }}>
+            <div style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>Plan</div>
+            <div style={{ fontSize: textPx(15), fontWeight: 800, overflowWrap: "anywhere" }}>{plan.name}</div>
+            <div style={{ fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{[pro.name, pro.role].filter(Boolean).join(" · ")}</div>
+            <div style={{ fontSize: textPx(12), color: m.ink2, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{planPriceLabel(plan.price, plan.billing)}</div>
+            {plan.features.map((f, i) => (
+              <div key={i} style={{ fontSize: textPx(12), color: m.ink2, overflowWrap: "anywhere" }}>
+                {f}
+              </div>
+            ))}
           </div>
-          <div aria-hidden className="h-px bg-charcoal/[0.06] mt-3" />
-          <div className="mt-3 flex items-baseline justify-between gap-3">
-            <span className="min-w-0 font-bold text-charcoal break-words" style={{ fontSize: textPx(15) }}>
-              {plan.name}
-            </span>
-            <span className="shrink-0 font-bold tabular-nums" style={{ color: t.deep, fontSize: textPx(14) }}>
-              {planPriceLabel(plan.price, plan.billing)}
-            </span>
+          <div style={{ width: 72, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: textPx(18), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{priceShort(plan.price)}</span>
           </div>
-          {plan.features.length > 0 && (
-            <div className="mt-2">
-              <Bullets items={plan.features} t={t} size={12.5} />
-            </div>
-          )}
+          <span aria-hidden style={{ ...notch, top: -7 }} />
+          <span aria-hidden style={{ ...notch, bottom: -7 }} />
         </div>
-
-        {label("Payment method", "mt-[22px]")}
-        {/* Rows: 60 tall, r14, 1 px #E9E8E8, padding 12, 8 apart; tile 34 on
-            the type pill with the 16/1.75 icon in the type main; the chosen
-            row takes a 1 px main border and a 3 px pill ring; the check is a
-            20 circle on the CTA fill with Check 12/3 (measured). */}
-        <div className="mt-2.5 flex flex-col gap-2" role="radiogroup" aria-label="Payment method">
-          {rows.map((o) => {
-            const on = o.key === method;
-            return (
-              <button
-                key={o.key}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                disabled={o.off}
-                className="w-full min-h-[60px] rounded-[14px] px-3 py-2.5 flex items-center gap-3 text-start bg-cream-card disabled:opacity-40"
-                style={
-                  on
-                    ? { border: `1px solid ${t.main}`, boxShadow: `0 0 0 3px ${t.pill}`, background: `color-mix(in srgb, ${t.pill} 40%, transparent)` }
-                    : { border: "1px solid rgb(36 31 27 / 0.10)" }
-                }
-              >
-                <span className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: t.pill, color: t.main }} aria-hidden>
-                  <o.Icon size={16} strokeWidth={1.75} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-charcoal" style={{ fontSize: textPx(15) }}>
-                    {o.name}
-                  </span>
-                  <span className="block text-charcoal-faint" style={{ fontSize: textPx(13) }}>
-                    {o.hint}
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${on ? "" : "border border-charcoal/[0.18]"}`}
-                  style={on ? { background: t.cta, color: t.onMain } : undefined}
-                >
-                  {on && <Check size={12} strokeWidth={3} />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {label("Order total", "mt-[22px]")}
-        {/* Subtotal / Service fee 14/400 #5B5349, a #F0EFEF rule, Total 15/700. */}
-        <div className="mt-2.5 rounded-[18px] border border-charcoal/[0.08] bg-cream-card p-4 flex flex-col gap-2 tabular-nums">
-          <span className="flex justify-between gap-3 text-charcoal-soft" style={{ fontSize: textPx(14) }}>
-            <span>Subtotal</span>
-            <span>{priceExact(plan.price)}</span>
-          </span>
-          <span className="flex justify-between gap-3 text-charcoal-soft" style={{ fontSize: textPx(14) }}>
-            <span>Service fee</span>
-            <span>{priceExact(0)}</span>
-          </span>
-          <span aria-hidden className="h-px bg-charcoal/[0.07]" />
-          <span className="flex justify-between gap-3 font-bold text-charcoal" style={{ fontSize: textPx(15) }}>
-            <span>Total</span>
-            <span>{priceExact(plan.price)}</span>
-          </span>
-        </div>
-        <p className="mt-3 mb-0 text-[12px] leading-[1.5] text-charcoal-faint">
-          Centium doesn't take the payment. Your hire stays Pending payment until {pro.first} confirms they've been paid, and you can cancel for
-          free until then.
-        </p>
+        <PaymentMethods cashHint={`Pay ${pro.first} at the start of the session`} />
+        {body(`Centium doesn't take the payment. Your hire stays Pending payment until ${pro.first} confirms they've been paid, and you can cancel for free until then.`, { fontSize: textPx(12), lineHeight: linePx(17), color: m.faint })}
         {error && (
-          <p role="alert" className="mt-3 mb-0 text-[12.5px] font-medium text-status-high">
+          <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
             {error}
           </p>
         )}
@@ -635,110 +458,39 @@ export function HireSheet({
     );
   };
 
-  const confirmedBody = () => {
-    if (!hired) return null;
-    const pending = hired.paymentStatus !== "paid";
-    const gold = goldPill(dark);
-    return (
-      // #30-#32: the mark's 132 tile sits 88 under the body panel's top
-      // (20 body padding + 68), centred.
-      <div className="flex flex-col items-center text-center pt-[68px] pb-4 min-h-[528px]">
-        {/* #31 / #32: a 132 tile in the panel colour (#FFFFFF / #1C1F28)
-            behind the 124 crop of the v6 confirmation (GIF in Centium light;
-            the V6-99 SVG rebuild in dark and the other themes). */}
-        <span data-mark-backdrop="" className="w-[132px] h-[132px] flex items-center justify-center bg-cream-card">
-          <ConfirmedMark size={124} onSettled={() => setSettled(true)} />
-        </span>
-        {/* S3 / #33: the text shows when the motion ends (1.8 s; at once
-            under Reduce motion). */}
-        <div className={`flex flex-col items-center transition-opacity duration-100 ${settled ? "opacity-100" : "opacity-0"}`}>
-          {/* #33: 22/28 800 ls -0.4, #5F5093 / #C3B3FB, 18 under the tile. */}
-          <h3
-            className="m-0 mt-[18px] font-extrabold tracking-[-0.4px]"
-            style={{ color: t.deep, fontSize: textPx(22), lineHeight: linePx(28) }}
-          >
-            You've hired {pro.first}
-          </h3>
-          {/* #34: 14/21 700 #241F1B / #F5F3FA, 6 under. */}
-          <p className="m-0 mt-1.5 font-bold text-charcoal tabular-nums" style={{ fontSize: textPx(14), lineHeight: linePx(21) }}>
-            {hired.planName} · {priceShort(hired.priceAgreed)}
-          </p>
-          {/* K1: the "Pending payment" state from my_hires(), as #9's pill
-              (26 tall, 0 10, 11/16.5 600) in the gold pair while pending;
-              the type pill once paid. */}
-          <span
-            data-hire-status=""
-            className="mt-2 inline-flex items-center h-[26px] px-2.5 rounded-full text-[11px] leading-[16.5px] font-semibold"
-            style={
-              pending
-                ? { background: gold.bg, color: gold.ink, border: `1px solid ${gold.border}` }
-                : { background: t.pill, color: t.deep }
-            }
-          >
-            {hireStatusLabel(hired)}
-          </span>
-          {/* #35: 13/20.8 400 #5B5349 / #B8B3C7, 270 wide, 12 under. */}
-          <p className="m-0 mt-3 max-w-[270px] text-charcoal-soft" style={{ fontSize: textPx(13), lineHeight: linePx(20.8) }}>
-            {pro.first} will reach out to schedule your first session.
-            {pending && hired.paymentMethod === "cash" ? " Pay them in person; your hire becomes active once they confirm they've been paid." : ""}
-          </p>
-        </div>
-      </div>
-    );
-  };
+  const cta = (label: string, onClick: () => void, isBusy: boolean) => (
+    <>
+      <style>{FOCUS_CSS}</style>
+      <button
+        type="button"
+        onClick={() => !isBusy && onClick()}
+        aria-busy={isBusy || undefined}
+        className="market-focus"
+        {...press.handlers}
+        style={{ width: "100%", height: 50, borderRadius: 16, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(15), fontWeight: 700, cursor: isBusy ? "default" : "pointer", ...(isBusy ? {} : press.style) }}
+      >
+        {isBusy ? "One moment…" : label}
+      </button>
+    </>
+  );
 
   const footer =
-    step === "request" && request && request.state === "none" ? (
-      <CtaButton
-        size="sheet"
-        label="Send request"
-        icon={<Send size={15} aria-hidden />}
-        loading={request.busy}
-        onClick={() => request.onSend({ planId: requestPlan, message: requestMessage })}
-        style={{ background: t.cta, color: t.onMain }}
-      />
-    ) : step === "checkout" && plan ? (
-      <CtaButton
-        size="sheet"
-        label={`Pay ${priceShort(plan.price)}`}
-        icon={<Lock size={16} strokeWidth={1.75} aria-hidden />}
-        loading={busy}
-        onClick={() => void pay()}
-        style={{ background: t.cta, color: t.onMain }}
-      />
-    ) : step === "confirmed" ? (
-      // #36-#38: Message {first} (the type pill, deep ink, MessageCircle 15)
-      // and Done (the type CTA), 8 apart.
-      <div className="flex gap-2">
-        <CtaButton
-          size="sheet"
-          variant="secondary"
-          label={`Message ${pro.first}`}
-          icon={<MessageCircle size={15} aria-hidden />}
-          loading={messageBusy}
-          onClick={onMessage}
-          style={{ background: t.pill, color: t.deep }}
-        />
-        <CtaButton size="sheet" label="Done" onClick={onClose} style={{ background: t.cta, color: t.onMain }} />
-      </div>
-    ) : undefined;
+    step === "request" && request && request.state === "none"
+      ? cta("Send request", () => request.onSend({ planId: requestPlan, message: requestMessage }), request.busy)
+      : step === "checkout" && plan
+        ? cta(confirmLabel(priceShort(plan.price)), () => void pay(), busy)
+        : undefined;
 
   return (
     <BottomSheet
       open={open}
       onClose={close}
-      // v6 MO1.2.1.5.2 #27: "Hired" on the confirmed step (supersedes C-08 / D26).
-      title={step === "plans" ? `Hire ${pro.first}` : step === "checkout" ? "Checkout" : step === "request" ? "Send a request" : "Hired"}
-      // #25 / #26 / #28 (X-03, X-07): the Part B sheet chrome (0.5px outline,
-      // close ring 1.1), the warm scrim in both modes with no blur; S2 swipe
-      // down on the band closes.
-      chrome="partB"
-      scrimBlur={false}
-      swipeToClose
+      title={step === "request" ? "Send a request" : `Hire ${pro.first}`}
+      footerRule={!!footer}
       onBack={(step === "checkout" && !busy) || (step === "request" && !request?.busy) ? () => setStep("plans") : undefined}
       footer={footer}
     >
-      {step === "plans" ? plansBody() : step === "checkout" ? checkoutBody() : step === "request" ? requestBody() : confirmedBody()}
+      <div style={{ lineHeight: "normal" }}>{step === "plans" ? plansBody() : step === "checkout" ? checkoutBody() : requestBody()}</div>
     </BottomSheet>
   );
 }

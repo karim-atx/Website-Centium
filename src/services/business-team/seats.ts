@@ -12,7 +12,25 @@ import type { BusinessRole } from "./types";
  */
 export const roleUsesSeat = (role: BusinessRole): boolean => role === "instructor" || role === "trainer";
 
-/** A person's seat answer: the server's uses_seat when the reader returned it, else the role rule. */
+/**
+ * The seat rule (Database #38, 20261213190000; HANDOVER_API "A Centium hire is
+ * seat-free"): business_seats_used() counts accepted, seat-using roles whose
+ * source isn't 'hire'. A professional HIRED through Centium uses no seat (the
+ * hiring fee replaces it); one added in the free existing-team window uses a
+ * seat ("free" is the fee), and so does an instructor or trainer with no
+ * professional account. my_business_seat_capacity, business_attention, the
+ * invite checks and the cap all delegate to that one function.
+ *
+ * Per person: employee_credentials.uses_seat answers role_uses_seat(role)
+ * alone, so it can't tell a hire apart; my_team's documented `source` can.
+ * A hire is never a seat; otherwise the server's flag, else the role rule.
+ */
+export function seatAnswer(serverFlag: boolean | null | undefined, source: string | null | undefined): boolean | null {
+  if (source === "hire") return false;
+  return typeof serverFlag === "boolean" ? serverFlag : null;
+}
+
+/** A person's seat answer: the server's (seatAnswer) when known, else the role rule. */
 export const personUsesSeat = (p: { role: BusinessRole; usesSeat?: boolean | null }): boolean =>
   typeof p.usesSeat === "boolean" ? p.usesSeat : roleUsesSeat(p.role);
 

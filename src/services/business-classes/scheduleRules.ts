@@ -5,6 +5,7 @@
 
 import { time12 } from "../../utils/time12";
 import { DAY_SHORT } from "../../utils/week";
+import { HIRING_ERROR_TEXT } from "../hiring/model";
 
 // ---------------------------------------------------------------------------
 // Refusals
@@ -23,7 +24,7 @@ export type ScheduleRefusal =
   | "cancelled" // ATXE0 the class was cancelled
   | "booked" // ATXE1 a class with bookings can't be deleted
   | "started" // ATX86 the class has started
-  | "not_team" // ATX76 not on the team
+  | "not_team" // ATX76 not on the Team (Database #38 business_team_professional: an accepted, unrevoked professional)
   | "capacity" // ATX13 capacity under the booked count
   | "denied" // ATX03 / 42501 no schedule permission
   | "gone" // ATX08 no such class / series / business
@@ -73,7 +74,9 @@ export function refusalMessage(action: ScheduleAction, error: DbError | null | u
     case "started":
       return "This class has already started.";
     case "not_team":
-      return "That instructor isn't on your team any more.";
+      // Database #38: save_class_series, edit_class, assign_class_instructor and the
+      // business_classes trigger name only a Team professional (ATX76). The B-MA.6 note's words.
+      return HIRING_ERROR_TEXT.instructor_not_on_team;
     case "capacity":
       return error?.message || "Capacity can't go below the number already booked.";
     case "denied":

@@ -15,6 +15,7 @@ import { normaliseLink } from "../../components/calendar/calendarTime";
 import { EVENT_SWATCHES } from "../../components/calendar/eventColour";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { textPx } from "../../theme/textSize";
 import { monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
@@ -26,6 +27,12 @@ import { useProCalendar } from "../../components/pro/calendar/useProCalendar";
 import { buildItems, type CalItem } from "../../components/pro/calendar/calendarItems";
 import { AgendaRow, DayOffRow, DayTimeline, Eyebrow, HeaderCard, MonthGrid, RequestCard, WeekDayRow } from "../../components/pro/calendar/CalendarViews";
 import { AddSessionSheet, type SessionClient } from "../../components/pro/calendar/AddSessionSheet";
+import { HiredClassSheet } from "../../components/pro/calendar/HiredClassSheet";
+import { HiredEmpty, SyncNote } from "../../components/pro/calendar/CalendarSync";
+import { dayDots, type ClassInfo } from "../../components/pro/calendar/classModel";
+import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
+import { ageText, editedNote, pickNotices, stripOf } from "../../services/calendar-sync";
+import { supabase } from "../../../lib/supabase/client";
 import { SessionSheet } from "../../components/pro/calendar/SessionSheet";
 import { TimeOffSheet } from "../../components/pro/calendar/TimeOffSheet";
 import {
@@ -87,6 +94,12 @@ import { startThread } from "../../services/messaging";
  *   assigned to me, invitations with Accept / Decline (EventDetailSheet), own
  *   events with several invitees, attachments opened through a signed URL,
  *   location and meeting link.
+ * - Market + Share 3.0 W5 (P-CA): gym classes take the hired-event look in
+ *   their class colour (D-40; classModel), open the Class sheet
+ *   (HiredClassSheet); the Month grid has two dot rows; the sync strip (on
+ *   hire / cancelled / removed) sits under the tabs and the "Class time
+ *   changed" card over the header (the member inbox's calendar kinds); the Week view shows
+ *   "No hired classes yet" when no class is on the calendar.
  * Deep links: ?day=YYYY-MM-DD opens that day (the hub's booking request),
  * ?new=1&client=<id> opens Add session for that client (the client page).
  */
@@ -122,6 +135,7 @@ export default function Calendar() {
   const { lane } = useProSubtype();
   const navigate = useNavigate();
   const dark = useIsDark();
+  const reducedMotion = useReducedMotion();
   const [params, setParams] = useSearchParams();
   const clinical = lane === "clinical_overview";
   const data = useProCalendar(clinical);
@@ -247,6 +261,7 @@ export default function Calendar() {
   const [addOpen, setAddOpen] = useState<{ date: string; start?: string; clientId?: string } | null>(null);
   const [session, setSession] = useState<CalItem | null>(null);
   const [detail, setDetail] = useState<CalItem | null>(null);
+  const [classSheet, setClassSheet] = useState<ClassInfo | null>(null);
   const [offSheet, setOffSheet] = useState<{ entry: TimeOffEntry | null; day: string } | null>(null);
   const [requestBusy, setRequestBusy] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
@@ -386,6 +401,7 @@ export default function Calendar() {
       return;
     }
     if ((i.kind === "session" || i.kind === "followup") && i.event?.mine) return setSession(i);
+    if (i.kind === "class" && i.cls) return setClassSheet(i.cls);
     if (i.kind === "event" && i.event?.mine && !i.event.sourceKind) return openEdit(i);
     setDetail(i);
   };
@@ -416,6 +432,23 @@ export default function Calendar() {
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setToast({ ok: false, text: r.message });
   };
+
+  // P-CA.4 Message gym: the gym's owner (business_profiles.profile_id, readable while the business is active).
+  const messageGym = async (businessId: string) => {
+    const { data } = await supabase.from("business_profiles").select("profile_id").eq("id", businessId).maybeSingle();
+    const owner = (data as { profile_id?: string | null } | null)?.profile_id ?? null;
+    if (!owner) return setToast({ ok: false, text: "Couldn't open that conversation. Try again." });
+    setClassSheet(null);
+    await message(owner);
+  };
+
+  // ---- calendar sync (P-CA.5.1 to 5.4; the member inbox's calendar kinds) ----
+  const sync = useMemo(() => pickNotices(data.notices), [data.notices]);
+  const strip = sync.strip ? stripOf(sync.strip, data.hired, todayIso) : null;
+  const note = sync.note ? editedNote(sync.note, data.hired) : null;
+  const addedHire = sync.strip?.kind === "added" ? sync.strip.hireId : null;
+  const outlineOf = (i: CalItem) => !!addedHire && i.cls?.hireId === addedHire;
+  const noClasses = data.loaded && !data.error && data.classes.length === 0 && data.hired.length === 0;
 
   const cancelSession = async (): Promise<{ ok: boolean; message?: string }> => {
     const e = session?.event;
@@ -476,10 +509,14 @@ export default function Calendar() {
 
   return (
     <div>
-      <FixedHeader paddingBottom={view === "week" || view === "day" ? 16 : 13}>
-        {/* cal.js calHead: the title 19 / 700 -0.03em, two 34 round buttons 8 apart. */}
-        <div className="flex items-start justify-between" style={{ gap: 12 }}>
-          <h1 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, marginTop: 3, lineHeight: 1.5 }}>Calendar</h1>
+      {/* P-CA.1-3 (raw P-CA.1/2/3 frames): the content under the header starts 14 below the header card
+          on Week ("This week", margin-top 14) and Day (the timeline, margin-top 14), 12 on Month (the grid card).
+          Year isn't drawn: it keeps 13. */}
+      <FixedHeader paddingBottom={view === "week" || view === "day" ? 14 : view === "month" ? 12 : 13}>
+        {/* P-CA title: 27 / 700, -0.022em, line-height 1.5 (40.5). The two 34 round buttons (Availability,
+            + New session) aren't drawn on the board; they are kept, centred on the title line. */}
+        <div className="flex items-center justify-between" style={{ gap: 12 }}>
+          <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", color: INK.ch, lineHeight: 1.5 }}>Calendar</h1>
           <div className="flex" style={{ gap: 8 }}>
             <button
               type="button"
@@ -501,8 +538,14 @@ export default function Calendar() {
             </button>
           </div>
         </div>
+        {/* P-CA tabs: margin-top 6, track pad 4 r14 gap 5 #F3F3FD; tabs 34 high r11, 12 / 700; idle #6D50D3
+            (the component's default ink). The global .tap box keeps each tab's hit area 44 tall. */}
         <SegmentedTabs
-          className="mt-[13px]"
+          className="mt-[6px]"
+          trackStyle={{ borderRadius: 14, padding: 4 }}
+          tabHeight={34}
+          tabRadius={11}
+          labelSize={12}
           items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
           activeKey={view}
           onChange={(k) => {
@@ -514,11 +557,41 @@ export default function Calendar() {
             if (k === "month") setCursor({ year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) - 1 });
             setView(k as View);
           }}
-          idleInk="rgb(var(--c-charcoal-soft))"
           darkTone="partB"
         />
+        {strip && sync.strip && (
+          <div className="mt-[12px]" data-sync-strip>
+            <ConfirmationStrip
+              compact
+              still={reducedMotion}
+              tone={strip.tone}
+              text={strip.text}
+              action={strip.action}
+              onAction={() => {
+                const jumpTo = strip.jumpTo;
+                data.dismissNotice(sync.strip!.id);
+                if (jumpTo) {
+                  setSelected(jumpTo);
+                  setView("week");
+                }
+              }}
+            />
+          </div>
+        )}
+        {view === "month" && (
+          <div className="mt-[12px]">
+            <HeaderCard
+              label={`${monthNames[cursor.month]} ${cursor.year}`}
+              onPrev={() => goMonth(-1)}
+              onNext={() => goMonth(1)}
+              prevLabel="Previous month"
+              nextLabel="Next month"
+              jump={jump.show ? jump.jump : null}
+            />
+          </div>
+        )}
         {view === "week" && (
-          <div className="mt-[13px]">
+          <div className="mt-[12px]">
             <HeaderCard
               label={dateRange(weekDays[0], weekDays[6])}
               onPrev={() => setSelected(addDays(selected, -7))}
@@ -530,7 +603,7 @@ export default function Calendar() {
           </div>
         )}
         {view === "day" && (
-          <div className="mt-[13px]">
+          <div className="mt-[12px]">
             <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel="Previous day" nextLabel="Next day" jump={jump.show ? jump.jump : null} />
           </div>
         )}
@@ -543,24 +616,22 @@ export default function Calendar() {
           <MonthGrid
             year={cursor.year}
             month={cursor.month}
-            monthLabel={`${monthNames[cursor.month]} ${cursor.year}`}
             todayIso={todayIso}
             selected={selected}
-            busy={(iso) => (items[iso] ?? []).some((i) => i.kind !== "request" && i.badge !== "declined")}
+            dots={(iso) => dayDots(items[iso] ?? [])}
+            hiredLive={data.hiredLive}
             dayOff={dayOff}
             leading={monthLeadingBlanks(cursor.year, cursor.month)}
             onSelect={setSelected}
-            onPrev={() => goMonth(-1)}
-            onNext={() => goMonth(1)}
-            jump={jump.show ? jump.jump : null}
           />
-          <Eyebrow>{[longDay(selected), hoursLine(selected) ? `Working ${hoursLine(selected)}` : hasHours || offToday ? "Day off" : null].filter(Boolean).join(" · ")}</Eyebrow>
+          {/* P-CA.3: the day eyebrow margin 12 0 8, the agenda gap 6. */}
+          <Eyebrow mt={12} mb={8}>{[longDay(selected), hoursLine(selected) ? `Working ${hoursLine(selected)}` : hasHours || offToday ? "Day off" : null].filter(Boolean).join(" · ")}</Eyebrow>
           {!data.loaded ? (
             skeletonRows
           ) : dayItems.length === 0 ? (
             <p style={{ fontSize: textPx(11.5), color: INK.chF }}>No sessions</p>
           ) : (
-            <div className="flex flex-col" style={{ gap: 7 }}>
+            <div className="flex flex-col" style={{ gap: 6 }}>
               {dayItems.map((i) => (
                 <AgendaRow key={i.key} item={i} onOpen={openItem} />
               ))}
@@ -569,8 +640,11 @@ export default function Calendar() {
         </>
       )}
 
+      {/* P-CA.1: "This week" (margin 14 0 9; the 14 is the header's bottom padding) over the day rows, 12 apart.
+          The board draws the current week only; other weeks carry no eyebrow (their label isn't drawn). */}
+      {view === "week" && weekDays.includes(todayIso) && <Eyebrow>This week</Eyebrow>}
       {view === "week" && (
-        <div className="flex flex-col" style={{ gap: 10 }}>
+        <div className="flex flex-col" style={{ gap: 12 }}>
           {weekDays.map((iso) => (
             <WeekDayRow
               key={iso}
@@ -584,10 +658,13 @@ export default function Calendar() {
                 setView("day");
               }}
               onOpen={openItem}
+              outlineOf={outlineOf}
             />
           ))}
         </div>
       )}
+      {/* P-CA.6: the empty card sits after the day column (its own margin-top 14), not inside its 12 gap. */}
+      {view === "week" && noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
 
       {view === "year" && (
         <YearScroll
@@ -634,6 +711,7 @@ export default function Calendar() {
               open={openNow}
               nowMinutes={nowMinutes}
               clinical={clinical}
+              hiredLive={data.hiredLive}
               onOpen={openItem}
               onBreak={(e) => setOffSheet({ entry: e, day: selected })}
               onOpenSlot={(start) => setAddOpen({ date: selected, start })}
@@ -709,8 +787,21 @@ export default function Calendar() {
         online={data.online}
         onRespond={(accepted) => void respond(accepted)}
         onOpenAttachment={(p) => void openAttachment(p)}
-        bookingMade={!!detail?.event?.sourceKind && detail.kind !== "business"}
+        bookingMade={!!detail?.event?.sourceKind}
       />
+
+      <HiredClassSheet
+        info={classSheet}
+        onClose={() => setClassSheet(null)}
+        onViewClass={(id) => {
+          setClassSheet(null);
+          navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`);
+        }}
+        onMessageGym={(id) => void messageGym(id)}
+        onNote={(text) => setToast({ ok: true, text })}
+      />
+
+      {note && sync.note && <SyncNote title={note.title} body={note.body} age={ageText(sync.note.createdAt, now)} onClose={() => data.dismissNotice(sync.note!.id)} />}
 
       <EventComposeSheet
         open={composeOpen}

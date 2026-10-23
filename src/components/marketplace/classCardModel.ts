@@ -67,7 +67,7 @@ export function shortName(name: string | null | undefined): string {
 /** The venue the class is held at: the gym's name, else the business's. */
 export const venueOf = (c: Pick<MarketplaceClass, "venueName" | "businessName">) => c.venueName?.trim() || c.businessName;
 
-/** The board's "Instructor not listed" when the class names nobody publicly (D-11). */
+/** The board's "Instructor not listed" when the class names no Team instructor (instructorRule.ts). */
 export const NOT_LISTED = "Instructor not listed";
 
 export type ClassStub = "price" | "booked" | "full";

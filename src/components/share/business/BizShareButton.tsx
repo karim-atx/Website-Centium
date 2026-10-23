@@ -1,15 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../pro/proInk";
-import { ConfirmationStrip } from "../../market/ConfirmationStrip";
-import { BusinessShareSheet, type ShareResult } from "./BusinessShareSheet";
-import { useBizBrand } from "./useBizBrand";
-import type { TemplateData } from "./bizCardModel";
+import { brandHint, useBizShareSheet, type BizShareGetData } from "./useBizShareSheet";
 
 // Market + Share 3.0 · B-SH.1 the share entry: the board's share button (a 44
 // target around a 34 circle #F0EDF9 with the 15 share glyph in #7D6BB5, stroke
@@ -19,6 +14,9 @@ import type { TemplateData } from "./bizCardModel";
 // edge) that says why. It opens the share sheet (B-SH.3), and the sheet's
 // result shows as the B-SH.5 strip ("Card shared", "Saved to Photos",
 // "Sticker copied. Paste it onto your photo.") with Done.
+//
+// The sheet and the strip are useBizShareSheet's (W4), which a menu row uses
+// too; the button adds its disabled look and the tip.
 //
 // The board's 2px #AEA1DC ring marks the entry each frame is about (an
 // annotation, on one row of several); it isn't shipped.
@@ -32,14 +30,11 @@ const SHARE_GLYPH = (
   </>
 );
 
-export const NOT_LISTED_HINT = "Show your business on Explore to share it.";
-export const NO_LINK_HINT = "Your business needs a Centium link before it can be shared.";
-export const PAUSED_HINT = "Your listing is paused. Resume it to share your business.";
-export const LOAD_FAILED_HINT = "Couldn't load your business. Try again.";
+export { LOAD_FAILED_HINT, NOT_LISTED_HINT, NO_LINK_HINT, PAUSED_HINT } from "./useBizShareSheet";
 
 export interface BizShareButtonProps {
   /** The card's data, built when pressed (it may read a field the host doesn't have, e.g. a class's created_at). */
-  getData: (businessId: string) => TemplateData | Promise<TemplateData | null> | null;
+  getData: BizShareGetData;
   /** Nothing to share yet (the host's rule): the button is disabled and the tip says this. */
   emptyHint?: string | null;
   /** The accessible name ("Share", "Share Monthly"). */
@@ -51,28 +46,12 @@ export interface BizShareButtonProps {
 export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHint, label = "Share", className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const reduced = useReducedMotion();
-  const { authUserId } = useApp();
-  const brand = useBizBrand();
-  const [data, setData] = useState<TemplateData | null>(null);
-  const [open, setOpen] = useState(false);
-  const [opened, setOpened] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const share = useBizShareSheet();
+  const { brand, busy } = share;
   const [tip, setTip] = useState<{ text: string; top: number; right: number } | null>(null);
-  const [strip, setStrip] = useState<(ShareResult & { n: number }) | null>(null);
   const btn = useRef<HTMLButtonElement>(null);
 
-  const hint =
-    emptyHint ??
-    (brand.status === "noSlug"
-      ? NO_LINK_HINT
-      : brand.status === "hidden"
-        ? NOT_LISTED_HINT
-        : brand.status === "paused"
-          ? PAUSED_HINT
-          : brand.status === "error"
-            ? LOAD_FAILED_HINT
-            : null);
+  const hint = emptyHint ?? brandHint(brand);
   const disabled = !!hint || brand.status !== "ready" || busy;
 
   useEffect(() => {
@@ -80,12 +59,6 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
     const id = window.setTimeout(() => setTip(null), 3500);
     return () => window.clearTimeout(id);
   }, [tip]);
-  useEffect(() => {
-    if (!strip) return;
-    const id = window.setTimeout(() => setStrip(null), 5000);
-    return () => window.clearTimeout(id);
-  }, [strip]);
-
   const press = async () => {
     if (hint) {
       const r = btn.current?.getBoundingClientRect();
@@ -93,17 +66,7 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
       return;
     }
     if (brand.status !== "ready" || busy) return;
-    setBusy(true);
-    try {
-      const d = await getData(brand.businessId);
-      if (d) {
-        setData(d);
-        setOpened((n) => n + 1);
-        setOpen(true);
-      }
-    } finally {
-      setBusy(false);
-    }
+    await share.open(getData);
   };
 
   const off = !!hint || brand.status !== "ready";
@@ -141,19 +104,7 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
           document.body,
         )}
 
-      {brand.status === "ready" && data && (
-        <BusinessShareSheet key={opened} open={open} onClose={() => setOpen(false)} brand={brand.brand} data={data} userId={authUserId} onResult={(r) => setStrip({ ...r, n: Date.now() })} />
-      )}
-
-      {strip &&
-        createPortal(
-          <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
-            <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }}>
-              <ConfirmationStrip key={strip.n} text={strip.text} tone={strip.tone} action="Done" onAction={() => setStrip(null)} still={reduced} />
-            </div>
-          </div>,
-          document.body,
-        )}
+      {share.node}
     </>
   );
 };

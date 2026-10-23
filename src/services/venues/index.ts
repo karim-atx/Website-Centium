@@ -709,9 +709,12 @@ export async function fetchMyReviews(): Promise<Result<MyReview[]>> {
   };
 }
 
-/** Any signed-in account may review a visible venue, once (ATX92); 1–5 (ATX91); 5 an hour (ATX02). */
+/**
+ * Any signed-in account may review a visible venue, once (ATX92); 1–5 (ATX91); 5 an hour (ATX02).
+ * Stars alone are a review (Database #38, 20261213190000: p_body defaults to null); a blank text is sent as null.
+ */
 export async function writeGymReview(gymId: string, rating: number, body: string): Promise<Result<string>> {
-  const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() });
+  const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() || null });
   if (error) return fail(error, "Couldn't post your review. Try again.");
   return { ok: true, value: data ?? "" };
 }
@@ -729,10 +732,11 @@ export async function businessHasVenue(businessId: string): Promise<boolean | nu
 /**
  * B14 RP-01: a review of a business with no venue, once per person (ATX92);
  * staff of the business are refused (ATX03). Read back with
- * business_reviews_public; the author's own is edited (my_reviews).
+ * business_reviews_public; the author's own is edited (my_reviews). Stars
+ * alone are a review (Database #38): a blank text is sent as null.
  */
 export async function writeBusinessReview(businessId: string, rating: number, body: string): Promise<Result<string>> {
-  const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() });
+  const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
     const own =
       error.code === "ATX92"
@@ -751,9 +755,10 @@ export async function writeBusinessReview(businessId: string, rating: number, bo
  * B14 RP-04 "Rate your visit": a review from a class booking, once the class
  * has happened (ATX10). One review per person per venue (or business): an
  * existing one is edited and tagged with this class and its instructor.
+ * Stars alone are a review since Database #38: a blank text is sent as null.
  */
 export async function writeClassReview(bookingId: string, rating: number, body: string): Promise<Result<string>> {
-  const { data, error } = await rpc<string>("write_class_review", { p_booking_id: bookingId, p_rating: rating, p_body: body.trim() });
+  const { data, error } = await rpc<string>("write_class_review", { p_booking_id: bookingId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
     const own =
       error.code === "ATX10"
@@ -761,16 +766,20 @@ export async function writeClassReview(bookingId: string, rating: number, body: 
         : error.code === "ATX94"
           ? "That booking couldn't be found."
           : error.code === "22023"
-            ? "Write a few words, up to 2,000 characters."
+            ? "Keep it under 2,000 characters."
             : null;
     return own ? { ok: false, code: error.code, message: own } : fail(error, "Couldn't post your review. Try again.");
   }
   return { ok: true, value: data ?? "" };
 }
 
-/** Own review only; a redacted one can't be edited (ATX93). */
+/**
+ * Own review only; a redacted one can't be edited (ATX93). Clearing the text
+ * leaves the stars alone: a blank is sent as null (edit_gym_review stores
+ * btrim(p_body), and the body CHECK refuses an empty string but takes null).
+ */
 export async function editGymReview(reviewId: string, rating: number, body: string): Promise<Result<null>> {
-  const { error } = await rpc<null>("edit_gym_review", { p_review_id: reviewId, p_rating: rating, p_body: body.trim() });
+  const { error } = await rpc<null>("edit_gym_review", { p_review_id: reviewId, p_rating: rating, p_body: body.trim() || null });
   if (error) return fail(error, "Couldn't save your review. Try again.");
   return { ok: true, value: null };
 }

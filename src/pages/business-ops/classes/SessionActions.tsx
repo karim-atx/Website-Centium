@@ -31,7 +31,7 @@ import type { ScheduleApi } from "./useSchedule";
 // Messaging needs both messages and front_desk: the booked list
 // (venue_class_roster) is a desk reader.
 
-/** A draft kept while the owner goes to Team to add an employee (AN3-024 S1). */
+/** A draft kept while the owner goes to Hiring from the instructor picker (AN3-024 S1; B-MA.6 "Go to Hiring"). */
 let parkedDraft: ClassForm | null = null;
 export const takeParkedDraft = () => {
   const d = parkedDraft;
@@ -163,10 +163,12 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           return uploadClassCover(authUserId, api.businessId, file);
         }}
         onClose={() => setSheet(null)}
-        onAddEmployee={(form) => {
+        businessId={api.businessId}
+        onGoToHiring={(form) => {
           parkedDraft = form;
           setSheet(null);
-          navigate("/app/business/more/employees");
+          // The picker's "Post an opening" opens the hub's post sheet (W4 lead decision).
+          navigate("/app/business/hiring?post=1");
         }}
         onSave={async (draft, rule) => {
           if (!sheet) return { ok: false, message: "" };
@@ -233,7 +235,6 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
       <SubstituteSheet
         open={!!subFor}
         session={subSession}
-        instructors={api.instructors}
         sessions={api.sessions}
         businessId={api.businessId}
         nameOf={api.nameOf}

@@ -7,6 +7,7 @@ import { useMyVenues } from "../../hooks/useMyVenues";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { usePoll } from "../../hooks/usePoll";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { localDayOf } from "../../utils/date";
@@ -25,6 +26,7 @@ import { TodayBlock, VenueBoxes } from "../../components/business-dashboard/Toda
 import { ScheduleBlock } from "../../components/business-dashboard/ScheduleBlock";
 import { ActivityScreen, RecentActivityCard } from "../../components/business-dashboard/RecentActivity";
 import { textPx } from "../../theme/textSize";
+import { BUSINESS_KINDS, fetchUnreadNotificationCount } from "../../services/notifications";
 
 // v6 Business Dashboard (Release 2 · Batch 3): DA1 / DA2 / DA3, decisions
 // V6-52 (BizSummaryV27 gauge cluster as drawn + the per-type BizTypeKit
@@ -119,6 +121,23 @@ export default function BusinessDashboard() {
   const [setupHidden, setSetupHidden] = useState(false);
   const [bell, setBell] = useState<HTMLButtonElement | null>(null);
   useBackCloses(activityOpen, () => setActivityOpen(false));
+  // Market + Share 3.0 (B-MA.9, D-38): the panel's Notifications row shows the
+  // unread business notices, my_unread_notification_count(BUSINESS_KINDS)
+  // (capped at 99), read on arrival and each time the panel opens; null (no
+  // count) when the read fails. Live (Database 73ea87b): an INSERT or UPDATE
+  // of one of the owner's business-kind rows, or a reconnect, re-reads the
+  // count only (useInboxRealtime, coalesced), never the list.
+  const [notifUnread, setNotifUnread] = useState<number | null>(null);
+  const [notifTick, setNotifTick] = useState(0);
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let live = true;
+    void fetchUnreadNotificationCount(BUSINESS_KINDS).then((r) => live && setNotifUnread(r.ok ? r.value : null));
+    return () => {
+      live = false;
+    };
+  }, [profileReady, authUserId, panelOpen, notifTick]);
+  useInboxRealtime(authUserId, "biz-bell", BUSINESS_KINDS, () => setNotifTick((t) => t + 1));
 
   const business = raw?.business ?? null;
   const listed = raw ? !!business?.active : null;
@@ -223,13 +242,14 @@ export default function BusinessDashboard() {
         name={business?.name || user.businessName || "Your business"}
         listed={listed}
         attentionCount={attention?.length ?? 0}
+        notificationsUnread={notifUnread}
         panelOpen={panelOpen}
         onBell={() => setPanelOpen(true)}
         onChip={openListing}
         bellRef={setBell}
         venueChip={<VenueChip c={c} venues={venues} selected={selected} onSelect={select} />}
       />
-      <AttentionPanel c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} onRetry={() => void load()} />
+      <AttentionPanel c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} onRetry={() => void load()} notificationsUnread={notifUnread} />
 
       {error && !raw && <ErrorRow c={c} text={error} onRetry={() => void load()} />}
 

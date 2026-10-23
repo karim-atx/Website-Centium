@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
 import { featuredFirst } from "./listingLogic";
+import { instructorFacts } from "./instructorRule";
 import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBookingRules, type VenuePolicyKind } from "./classBooking";
 
 // Marketplace discovery: what a consumer can actually find and book.
@@ -81,10 +82,16 @@ export interface MarketplaceClass {
   whatToBring?: string[];
   /** A public URL in the class-covers bucket. */
   coverUrl?: string | null;
-  /** Null unless the professional is listed publicly (the view decides). */
+  /** Null when no instructor may be shown (instructorRule.ts): only a Team instructor the view names. */
   instructorId?: string | null;
   instructorName?: string | null;
   instructorAvatarUrl?: string | null;
+  /** marketplace_classes.instructor_is_team (Database #38). */
+  instructorIsTeam?: boolean;
+  instructorSpecialty?: string | null;
+  instructorRating?: number | null;
+  instructorReviewCount?: number | null;
+  instructorHireCount?: number | null;
   /** class_starts_at(): the real moment, in the venue's time zone. */
   startsAt?: string | null;
   /** B13 MK-04: places left for non-members; null = no separate limit (members aren't limited). */
@@ -143,6 +150,11 @@ type ClassRow = {
   instructor_id: string | null;
   instructor_name: string | null;
   instructor_avatar_url: string | null;
+  instructor_is_team: boolean | null;
+  instructor_specialty: string | null;
+  instructor_rating: number | string | null;
+  instructor_review_count: number | string | null;
+  instructor_hire_count: number | string | null;
   starts_at: string | null;
   centium_spots_left: number | null;
   is_featured: boolean | null;
@@ -198,9 +210,8 @@ const toClass = (r: ClassRow): MarketplaceClass => ({
   level: r.level,
   whatToBring: r.what_to_bring ?? [],
   coverUrl: r.cover_url,
-  instructorId: r.instructor_id,
-  instructorName: r.instructor_name?.trim() || null,
-  instructorAvatarUrl: r.instructor_avatar_url,
+  // C-MO.4.3.1 / C-MO.4.3: the Team-only instructor rule.
+  ...instructorFacts(r as unknown as Record<string, unknown>),
   startsAt: r.starts_at,
   centiumSpotsLeft: r.centium_spots_left ?? null,
   isFeatured: r.is_featured === true,
@@ -223,9 +234,14 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
   isFeatured: r.is_featured === true,
 });
 
+// The columns this file reads, named (never "*"). The five instructor
+// columns are Database #38's (20261213200000). Every column here reads for
+// anon as well as authenticated: the view inlines the Team test, the rating
+// and, since 20261213210000, starts_at (class_starts_at() was not anon's to
+// execute, so a signed-out "*" read failed before). Every reader in this file
+// runs signed in today (the Explore pages sit behind /app).
 const CLASS_COLUMNS =
-  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, " +
-  "gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, starts_at, centium_spots_left, is_featured";
+  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, instructor_is_team, instructor_specialty, instructor_rating, instructor_review_count, instructor_hire_count, starts_at, centium_spots_left, is_featured";
 const VENUE_COLUMNS =
   "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
 

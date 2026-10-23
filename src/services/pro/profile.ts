@@ -111,17 +111,11 @@ export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>>
   }
 }
 
-/**
- * ATX03 from professional_profiles_guard_listing: the row says listed while
- * the professional works at a business, and the guard refuses every update.
- */
-export const LISTED_BY_BUSINESS = "Your business manages your listing, so this can't be saved here right now. Contact support if it keeps happening.";
-
 /** Update, else insert (the grants differ; never an upsert, see saveMyProfile). */
 async function writeProfile(me: string, row: Record<string, unknown>, fallback: string): Promise<Write> {
   try {
     const up = await from("professional_profiles").update(row as never).eq("profile_id", me).select("profile_id");
-    if (up.error) return (up.error as { code?: string }).code === "ATX03" ? { ok: false, message: LISTED_BY_BUSINESS } : failed(up.error, fallback);
+    if (up.error) return failed(up.error, fallback);
     if ((up.data ?? []).length > 0) return { ok: true };
     const ins = await from("professional_profiles").insert({ profile_id: me, ...row } as never);
     return ins.error ? failed(ins.error, fallback) : { ok: true };
@@ -166,7 +160,6 @@ export function describeHandleError(error: { code?: string; message?: string; de
   // ATXB6: the one namespace handles share with business slugs (checked with psql: "flexfitness").
   if (code === "23505" || code === "ATXB6") return /reserved/i.test(msg) ? "That handle is reserved. Try another." : "That handle is taken by another account or business. Try another.";
   if (code === "ATX09") return "Only a professional account has a handle.";
-  if (code === "ATX03") return LISTED_BY_BUSINESS;
   return "Couldn't save your handle. Try again.";
 }
 

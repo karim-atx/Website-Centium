@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../../services/profile";
 import { recordLegalAcceptances } from "../../../services/legal/acceptances";
-import { fetchMyProfile, setMapArea, UNDER_18_LISTING } from "../../../services/professional-profile";
+import { setMapArea, UNDER_18_LISTING } from "../../../services/professional-profile";
 import { fetchMyCv } from "../../../services/professional-cv";
 import { requestToJoin } from "../../../services/business-team/employment";
 import { fetchGoLiveStatus, logOtherDiscipline, markOwnerItemDone, saveProLaneColumns } from "../../../services/professional-onboarding";
@@ -175,12 +175,11 @@ export function ProLane<D extends DraftLike>({
     // Nobody is listed at submit (user decision, 14 Oct 2026, every lane): the
     // listing waits for the licence or certificate check (GO_LIVE_ON_VERIFICATION,
     // acted on by the dashboard and the verification screen). Under 18 (ATX47)
-    // and affiliated (ATX03) accounts are never listed individually.
+    // accounts are never listed; since Database #38 working at a business
+    // (affiliation) no longer keeps anyone off the directory.
     const age = ageFromDateOfBirth(draft.dateOfBirth);
-    const mine = await fetchMyProfile(authUserId);
     let notListed: string | null = null;
     if (age != null && age < 18) notListed = UNDER_18_LISTING;
-    else if (mine.ok && mine.profile?.affiliatedBusinessId) notListed = "Your listing is handled by your business while you're affiliated.";
     else await markOwnerItemDone(authUserId, GO_LIVE_ON_VERIFICATION).then(() => undefined);
     const [cv, goLive] = await Promise.all([fetchMyCv(authUserId), fetchGoLiveStatus(authUserId, isRegulated(kind))]);
     onFinished();

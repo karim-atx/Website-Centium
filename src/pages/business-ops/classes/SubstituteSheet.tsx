@@ -4,7 +4,7 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
-import { fetchInstructorAvailability, type Instructor } from "../../../services/business-classes";
+import { fetchInstructorAvailability } from "../../../services/business-classes";
 import { instructorsFreeFor, type FreeInstructor } from "../../../services/business-classes/schedule";
 import { fieldStyle, useMarketColours } from "./parts";
 import { FOCUS_CSS } from "../../../components/market/usePress";
@@ -27,11 +27,16 @@ import { overlaps, running, weekdayShort, type Session, type SessionLite } from 
 // (OURS-AN5 A12). The note to the substitute (OP1-072 row 5, OP1-089 row 4,
 // OP1-092 row 2) goes to the substitute in the owner's direct thread with
 // them (B7 messaging) once the assignment has landed; see SessionActions.
+//
+// THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team, as the server
+// answers it. instructors_free_for asks business_team_professional() (Database
+// #38, 20261213190000): accepted, not revoked, a professional account. So the
+// front desk and anybody who left are never offered, and an empty list means
+// nobody else is on the Team.
 
 export function SubstituteSheet({
   open,
   session,
-  instructors,
   sessions,
   businessId,
   nameOf,
@@ -42,7 +47,6 @@ export function SubstituteSheet({
 }: {
   open: boolean;
   session: Session | null;
-  instructors: Instructor[];
   sessions: SessionLite[];
   businessId: string | null;
   nameOf: (id: string | null) => string;
@@ -140,7 +144,6 @@ export function SubstituteSheet({
   const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
   const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
   const chosen = pick ? rows.find((r) => r.f.professionalId === pick)?.f.firstName || nameOf(pick) : "";
-  const teamSize = instructors.filter((i) => i.professionalId !== session.professionalId).length;
 
   const assign = async () => {
     if (!pick || busy) return;
@@ -213,8 +216,10 @@ export function SubstituteSheet({
               </p>
             ) : !free ? (
               <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
-            ) : rows.length === 0 && teamSize === 0 ? (
-              <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>Nobody else is on your team yet. Invite an instructor in Team and access.</p>
+            ) : rows.length === 0 ? (
+              <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
+                Nobody else is on your team yet. Add people through Hiring.
+              </p>
             ) : (
               <button
                 ref={setPickerEl}

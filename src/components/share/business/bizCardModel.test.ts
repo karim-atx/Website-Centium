@@ -119,7 +119,7 @@ test("TG: class Spots left can go off (sToggles) and reads '6 of 20 · off'", ()
   const off = cardContent(BRAND, CLASS, toggleHide([], rows, "spots", false));
   assert.deepEqual(off.rows.map((r) => r.k), ["When", "Duration"]);
   assert.equal(off.rows[0].v, "Sun, Oct 25 · 10:00 AM");
-  assert.deepEqual(DEF_HIDE, {});
+  assert.deepEqual(DEF_HIDE, { hiring: ["pay"] });
 });
 
 test("class: NEW CLASS for 14 days; no instructor before Release 2 (D-11)", () => {
@@ -193,6 +193,45 @@ test("B-SH.4 privacy: no card carries an Overview figure, member names or counts
   }
   const profile = cardContent(BRAND, { t: "profile", d: { rating: "4.8 · 212 reviews" } }, []);
   assert.deepEqual(profile.rows.map((r) => r.k), ["Category", "Location", "Rating"]);
+});
+
+test("Now hiring (W4, SPEC.hiring): eyebrow, sub, rows; pay off by default; Story and Post only; /opening/ link; 'Share opening'", async () => {
+  const { ITEM_NOUN, SHEET_TITLE } = await import("./bizCardModel.ts");
+  const HIRING: TemplateData = { t: "hiring", d: { id: "2a200000-0000-4000-8000-000000000011", title: "Sunday Spin instructor", typeLabel: "Role · ongoing", schedule: "Sun 10:00 AM · 4 classes a month", pay: "$80 per class" } };
+  assert.deepEqual(templateFormats("hiring"), ["story", "post"]);
+  assert.equal(SHEET_TITLE.hiring, "Share opening");
+  assert.equal(ITEM_NOUN.hiring, "this opening");
+  const rows = toggleRows(HIRING, BRAND);
+  assert.deepEqual(rows.map((r) => [r.title, r.sub, r.lock]), [
+    ["Role and schedule", "Sunday Spin instructor", true],
+    ["Type", "Role · ongoing", false],
+    ["Pay", "$80 per class", false],
+  ]);
+  const pay = rows.find((r) => r.key === "pay")!;
+  assert.equal(toggleSub(pay, false), "$80 per class · off by default");
+  assert.equal(toggleSub(pay, true), "$80 per class");
+  // DEF_HIDE: the card starts without Pay.
+  const def = cardContent(BRAND, HIRING, DEF_HIDE.hiring ?? []);
+  assert.equal(def.eyebrow, "Now hiring");
+  assert.equal(def.title, "Sunday Spin instructor");
+  assert.equal(def.sub, "Apply on Centium");
+  assert.deepEqual(def.rows.map((r) => [r.k, r.v]), [
+    ["Type", "Role · ongoing"],
+    ["Schedule", "Sun 10:00 AM · 4 classes a month"],
+  ]);
+  const withPay = cardContent(BRAND, HIRING, toggleHide(DEF_HIDE.hiring ?? [], rows, "pay", true));
+  assert.deepEqual(withPay.rows.map((r) => r.k), ["Type", "Schedule", "Pay"]);
+  const noType = cardContent(BRAND, HIRING, toggleHide(DEF_HIDE.hiring ?? [], rows, "type", false));
+  assert.deepEqual(noType.rows.map((r) => r.k), ["Schedule"]);
+  assert.deepEqual(toggleHide([], rows, "role", false), []);
+  // No pay set: no Pay toggle, no Pay row.
+  const unpaid: TemplateData = { t: "hiring", d: { ...(HIRING.d as { id: string; title: string; typeLabel: string; schedule: string }), pay: null } };
+  assert.deepEqual(toggleRows(unpaid, BRAND).map((r) => r.key), ["role", "type"]);
+  assert.equal(cardLink("flexfitness", HIRING).href, "https://centium.atraxia.org/b/flexfitness/opening/2a200000-0000-4000-8000-000000000011");
+  assert.equal(cardLink("flexfitness", HIRING).text, "centium.atraxia.org/b/flexfitness/opening/2a200000-0000-4000-8000-000000000011");
+  // B-SH.4: nothing private on it.
+  const text = JSON.stringify(cardContent(BRAND, HIRING, [])) + JSON.stringify(rows);
+  for (const f of PRIVATE_FIGURES) assert.ok(!text.includes(f), f);
 });
 
 test("bizLinkState: a link only for a slugged business on Explore, open and not paused", () => {

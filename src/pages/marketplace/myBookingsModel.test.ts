@@ -5,6 +5,8 @@ import {
   classRow,
   hireRow,
   membershipRow,
+  pastRow,
+  pastRows,
   pastStub,
   sessionMeta,
   sessionRow,
@@ -14,6 +16,7 @@ import {
   upcomingStub,
   type MembershipInput,
 } from "./myBookingsModel.ts";
+import type { PastBooking } from "../../services/instructor-reviews/model.ts";
 
 const NOW = new Date(2026, 9, 15, 12, 0); // Thu Oct 15 2026, local
 
@@ -128,4 +131,61 @@ test("a hired session: 'Name · Type', the price, requested and cancelled states
   assert.equal(sessionRow({ ...base, status: "requested" }, NOW).row.stub, "Requested");
   assert.equal(sessionRow({ ...base, status: "cancelled" }, NOW).row.tone, "muted");
   assert.equal(sessionRow({ ...base, startsAt: new Date(2026, 9, 12, 7).toISOString(), endsAt: new Date(2026, 9, 12, 8).toISOString() }, NOW).row.stub, "Mon Oct 12");
+});
+
+test("DB4: Past classes from my_class_bookings, the Review stub, then Reviewed · you rated N", () => {
+  const base: PastBooking = {
+    refId: "bk1",
+    sessionId: "s1",
+    seriesId: "cs1",
+    title: "Spin 45",
+    providerName: "Hamra Strength Club",
+    gymId: "g1",
+    professionalId: "p1",
+    professionalName: "Rana Khoury",
+    professionalPhotoUrl: null,
+    startsAt: new Date(2026, 9, 9, 18, 30).toISOString(),
+    endsAt: new Date(2026, 9, 9, 19, 15).toISOString(),
+    cancelled: false,
+    reviewable: true,
+    reviewed: false,
+    myRating: null,
+  };
+  const r = pastRow(base);
+  assert.equal(r.sub, "Hamra Strength Club · Rana Khoury");
+  assert.equal(r.meta, "Fri, Oct 9 · 6:30 PM · Rate your instructor");
+  assert.equal(r.stub, "Review");
+  assert.equal(r.tone, "teal");
+  assert.equal(r.review?.sessionId, "s1");
+  assert.equal(r.href, "/app/marketplace/class?id=s1");
+  assert.equal(r.kind, "class");
+  const sent = pastRow(base, 5);
+  assert.equal(sent.stub, "Reviewed");
+  assert.equal(sent.tone, "muted");
+  assert.equal(sent.meta, "Fri, Oct 9 · 6:30 PM · you rated 5");
+  assert.equal(sent.review, null);
+  // my_rating from the server (can_review is then false)
+  const done = pastRow({ ...base, reviewable: false, reviewed: true, myRating: 4 });
+  assert.equal(done.meta, "Fri, Oct 9 · 6:30 PM · you rated 4");
+  assert.equal(done.stub, "Reviewed");
+  // Not reviewable (no instructor named, or the server says no): the composed look.
+  const plain = pastRow({ ...base, reviewable: false, professionalName: null, professionalId: null });
+  assert.equal(plain.stub, "Fri Oct 9");
+  assert.equal(plain.sub, "Hamra Strength Club");
+  assert.equal(plain.meta, "Fri, Oct 9 · 6:30 PM · 45 min");
+  assert.equal(plain.review, null);
+  // The venue cancelled it: as the composed class row.
+  const off = pastRow({ ...base, cancelled: true, reviewable: false });
+  assert.equal(off.stub, "Cancelled");
+  assert.equal(off.meta, "Fri, Oct 9 · 6:30 PM · 45 min · Cancelled by the venue");
+  assert.equal(off.review, null);
+  // Past = the DB4 classes + the composed rows that aren't classes, newest first.
+  const session = sessionRow({ id: "a1", serviceName: "1:1 strength", professionalId: "p2", who: "Rami · Coach", startsAt: new Date(2026, 9, 7, 9).toISOString(), endsAt: new Date(2026, 9, 7, 10).toISOString(), status: "confirmed", price: 35 }, NOW).row;
+  const composedClass = classRow({ bookingId: "bk1", classId: "s1", title: "Spin 45", place: "Hamra Strength Club", eventDate: "2026-10-09", startTime: "18:30", endTime: "19:15", cancelledAt: null }, NOW).row;
+  const sorted = pastRows([{ ...base, refId: "old", reviewable: false, startsAt: new Date(2026, 9, 5, 12, 30).toISOString() }, base], { bk1: 5 }, [composedClass, session]);
+  assert.deepEqual(
+    sorted.map((x) => x.stub),
+    ["Reviewed", "Wed Oct 7", "Mon Oct 5"]
+  );
+  assert.equal(sorted.filter((x) => x.kind === "class").length, 2);
 });

@@ -78,6 +78,18 @@ export function parseUnreadCount(data: unknown): number {
 /** The count as shown: "99+" at the cap (the reader stops counting there). */
 export const unreadBadge = (n: number): string => (n >= UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP}+` : String(Math.max(0, Math.floor(n))));
 
+/**
+ * The business bell's badge (Karim): the attention items plus the unread
+ * business notices. "99+" once the notices reach the reader's cap (the true
+ * total is unknown past it) or the sum passes 99; null when there is nothing.
+ */
+export function bellBadge(attention: number, unread: number | null | undefined): string | null {
+  const notices = Math.max(0, Math.floor(unread ?? 0));
+  const total = Math.max(0, Math.floor(attention)) + notices;
+  if (total === 0) return null;
+  return notices >= UNREAD_COUNT_CAP || total > UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP}+` : String(total);
+}
+
 /** One my_notifications row. `kind` stays a string so a Release 2 kind still parses. */
 export interface MemberNotification {
   id: string;
@@ -147,7 +159,8 @@ export type NotificationCopyTable = Readonly<Record<string, NotificationCopy>>;
  * depend on a payload value, and the line shown when a documented key is
  * missing (CLIENT_FILLS adds the values). voucher_redeemed and offer_hidden
  * go to an offer's owner (not in CLIENT_KINDS, so the client page never
- * reads them); they stay here because the business inbox reuses their lines.
+ * reads them; the business page reads BUSINESS_COPY); Release 1 keeps a line
+ * here for every Release 1 kind.
  */
 export const CLIENT_COPY: NotificationCopyTable = {
   voucher_issued: { title: "Voucher ready", body: "Your voucher is in My rewards." },
@@ -258,16 +271,25 @@ function own<T>(t: Readonly<Record<string, T>>, k: string): T | null {
   return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null;
 }
 
+/** Each inbox's copy table brings its own fills (CLIENT_, BUSINESS_, PRO_); any other table none. */
+function defaultFills(table: NotificationCopyTable): NotificationFillTable | null {
+  if (table === CLIENT_COPY) return CLIENT_FILLS;
+  if (table === BUSINESS_COPY) return BUSINESS_FILLS;
+  if (table === PRO_COPY) return PRO_FILLS;
+  return null;
+}
+
 /**
  * title_key's line, else the kind's, else the generic line; then the payload
  * values from `fills` (by the same key) when the row carries a payload. The
- * table's own entry comes back unchanged when nothing fills. CLIENT_COPY
- * brings CLIENT_FILLS by default; another table brings its own (or none).
+ * table's own entry comes back unchanged when nothing fills. CLIENT_COPY,
+ * BUSINESS_COPY and PRO_COPY bring their own fills by default; another table
+ * brings its own (or none).
  */
 export function notificationCopy(
   n: Pick<MemberNotification, "titleKey" | "kind"> & { payload?: Readonly<Record<string, unknown>> },
   table: NotificationCopyTable = CLIENT_COPY,
-  fills: NotificationFillTable | null = table === CLIENT_COPY ? CLIENT_FILLS : null
+  fills: NotificationFillTable | null = defaultFills(table)
 ): NotificationCopy {
   const k = own(table, n.titleKey) ? n.titleKey : own(table, n.kind) ? n.kind : null;
   if (k === null) return GENERIC_COPY;
@@ -381,6 +403,398 @@ export const unreadCount = (list: readonly { readAt: string | null }[]): number 
 /** Marks `ids` (null = every row) read locally, as mark_notifications_read did on the server. */
 export function markReadLocally<T extends { id: string; readAt: string | null }>(list: readonly T[], ids: ReadonlySet<string> | null, at: string): T[] {
   return list.map((n) => (!n.readAt && (!ids || ids.has(n.id)) ? { ...n, readAt: at } : n));
+}
+
+// ---------------------------------------------------------------------------
+// Market + Share 3.0 · W4 · the business inbox (B-MA.9 `notifBiz`, D-38),
+// Release 2, on the member inbox (Database 20261210600000, HANDOVER_API
+// Release 1 "Notifications"): the page reads my_notifications(p_kinds =
+// BUSINESS_KINDS), Mark all read is mark_notifications_read(null,
+// BUSINESS_KINDS), and the bell row's count is
+// my_unread_notification_count(BUSINESS_KINDS). The reader, cursor, parser,
+// grouping and local mark are the ones above.
+// Writers (Database #38 sends the documented keys, HANDOVER_API "The
+// notification payloads now match the contract"): redeem_offer
+// (voucher_redeemed), admin_set_offer_hidden (offer_hidden), apply_to_opening
+// (application_received: subject application; professional_name,
+// opening_title, opening_id), accept_hire_offer (hire_offer_accepted: subject
+// hire_offer; professional_name, role_title — and hiring_fee_added: subject
+// centium_charge; amount, currency, professional_name, role_title),
+// decline_hire_offer (hire_offer_declined: professional_name, role_title) and
+// the gym_reviews trigger (gym_review_received: venue reviews only; gym_name,
+// rating, has_body).
+
+/**
+ * The kinds that reach a business owner (the migration's payload table):
+ * Release 1's owner kinds, the hiring kinds addressed to the business, and
+ * gym_review_received ("to the BUSINESS"). The rest of the enum goes to a
+ * member (CLIENT_KINDS) or a professional (PRO_KINDS).
+ */
+export const BUSINESS_KINDS: readonly MemberNotificationKind[] = [
+  "voucher_redeemed",
+  "offer_hidden",
+  "application_received",
+  "hire_offer_accepted",
+  "hire_offer_declined",
+  "hiring_fee_added",
+  "gym_review_received",
+];
+
+/**
+ * The business lines without payload: the board's titles where they don't
+ * name a person, a role or a class, and the line shown when a documented key
+ * is missing (BUSINESS_FILLS adds the values).
+ */
+export const BUSINESS_COPY: NotificationCopyTable = {
+  application_received: { title: "New application", body: "A professional applied to one of your openings." },
+  hire_offer_accepted: { title: "Your offer was accepted", body: "They're on your team now." },
+  hire_offer_declined: { title: "Your offer was declined", body: "You can offer the role to someone else." },
+  hiring_fee_added: { title: "Hiring fee added to your Centium bill", body: "Due on your next bill." },
+  voucher_redeemed: { title: "Voucher redeemed at the front desk", body: "A member used a voucher for one of your offers." },
+  offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
+  gym_review_received: { title: "New review", body: "A member left you a review." },
+};
+
+/** "$25.60" (fees always show cents, as feeMoney); another currency with its own symbol. Null when the amount isn't a number. */
+export function noticeMoney(amount: unknown, currency: unknown): string | null {
+  const n = num(amount);
+  if (n === null || n < 0) return null;
+  const code = typeof currency === "string" && /^[A-Za-z]{3}$/.test(currency.trim()) ? currency.trim().toUpperCase() : "USD";
+  if (code === "USD") return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  try {
+    return n.toLocaleString("en-US", { style: "currency", currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch {
+    return null;
+  }
+}
+
+/** The role a hiring row names: payload role_title (the documented key; Database #38 corrected the writers). */
+const roleOf = (p: Readonly<Record<string, unknown>>): string | null => pText(p, "role_title");
+
+/** "5 stars" / "1 star"; null outside 1–5. */
+const starsText = (p: Readonly<Record<string, unknown>>): string | null => {
+  const r = pCount(p, "rating");
+  return r !== null && r <= 5 ? (r === 1 ? "1 star" : `${r} stars`) : null;
+};
+
+/**
+ * The business kinds' payload values (the migration's table; B-MA.9's
+ * wording where the board draws the row):
+ * - application_received (application; professional_name, opening_title,
+ *   opening_id): "New application · {opening_title}" / "{name} applied.";
+ * - hire_offer_accepted (hire_offer; professional_name, role_title): "{name}
+ *   accepted your offer" / "They're on your team now as {role_title}.";
+ * - hire_offer_declined (hire_offer; same keys): "{name} declined your
+ *   offer" / "{name} declined {role_title}.";
+ * - hiring_fee_added (centium_charge; amount, currency, professional_name,
+ *   role_title): "{$25.60} for {name} · {role}. Due on your next bill.";
+ * - voucher_redeemed (voucher; offer_title, points; actor = the member):
+ *   "A member used a voucher for {offer_title}." (points not shown);
+ * - offer_hidden (offer; offer_title, reason): "{offer_title} is hidden" /
+ *   "Hidden by Centium. Contact support for details." (Karim; reason never shown);
+ * - gym_review_received (gym_review; gym_name, rating, has_body): "New review
+ *   for {gym_name}" / "5 stars, with a written review." ("5 stars." without).
+ */
+export const BUSINESS_FILLS: NotificationFillTable = {
+  application_received: (p) => {
+    const role = pText(p, "opening_title");
+    const who = pText(p, "professional_name");
+    const out: Partial<NotificationCopy> = {};
+    if (role) out.title = `New application · ${role}`;
+    if (who) out.body = `${who} applied.`;
+    return out;
+  },
+  hire_offer_accepted: (p) => {
+    const who = pText(p, "professional_name");
+    const role = roleOf(p);
+    const out: Partial<NotificationCopy> = {};
+    if (who) out.title = `${who} accepted your offer`;
+    if (role) out.body = `They're on your team now as ${role}.`;
+    return out;
+  },
+  hire_offer_declined: (p) => {
+    const who = pText(p, "professional_name");
+    const role = roleOf(p);
+    const out: Partial<NotificationCopy> = {};
+    if (who) out.title = `${who} declined your offer`;
+    if (who && role) out.body = `${who} declined ${role}.`;
+    else if (role) out.body = `Your offer for ${role} was declined.`;
+    return out;
+  },
+  hiring_fee_added: (p) => {
+    const money = noticeMoney(p.amount, p.currency);
+    if (!money) return {};
+    const who = pText(p, "professional_name");
+    const role = roleOf(p);
+    const forWhom = who ? ` for ${who}${role ? ` · ${role}` : ""}` : "";
+    return { body: `${money}${forWhom}. Due on your next bill.` };
+  },
+  voucher_redeemed: (p) => {
+    const offer = pText(p, "offer_title");
+    return offer ? { body: `A member used a voucher for ${offer}.` } : {};
+  },
+  offer_hidden: (p) => {
+    const offer = pText(p, "offer_title");
+    return offer ? { title: `${offer} is hidden` } : {};
+  },
+  gym_review_received: (p) => {
+    const gym = pText(p, "gym_name");
+    const stars = starsText(p);
+    const out: Partial<NotificationCopy> = {};
+    if (gym) out.title = `New review for ${gym}`;
+    if (stars) out.body = p.has_body === true ? `${stars}, with a written review.` : `${stars}.`;
+    return out;
+  },
+};
+
+/** The business kinds to their tile, as B-MA.9 draws them; anything else is grey with the clock. */
+export function bizNotifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } {
+  switch (kind) {
+    case "application_received":
+      return { tone: "lav", glyph: "app" };
+    case "hire_offer_accepted":
+      return { tone: "teal", glyph: "hire" };
+    case "hiring_fee_added":
+      return { tone: "gold", glyph: "bill" };
+    case "hire_offer_declined":
+      return { tone: "grey", glyph: "x" };
+    case "voucher_redeemed":
+      return { tone: "blue", glyph: "qr" };
+    case "gym_review_received":
+      return { tone: "gold", glyph: "star" };
+    default:
+      return { tone: "grey", glyph: "clock" };
+  }
+}
+
+const HIRING = "/app/business/hiring";
+
+/**
+ * Where a business row opens, from its kind and documented subject (never a
+ * path the server sends): an application (subject `application`) opens its
+ * opening's applicants from the payload's opening_id, else the hiring hub;
+ * an accepted offer opens Team; a fee (`centium_charge`) Hiring fees; a
+ * declined offer the hub; a gym review (`gym_review`) Reputation; a hidden
+ * offer (`offer`) its editor. null (voucher_redeemed, anything else): the row
+ * only marks itself read.
+ */
+export function bizNotifTarget(n: Pick<MemberNotification, "kind" | "subjectType" | "subjectId"> & { payload?: Readonly<Record<string, unknown>> }): string | null {
+  const id = n.subjectId && UUID.test(n.subjectId) ? n.subjectId : null;
+  switch (n.kind) {
+    case "application_received": {
+      const opening = n.payload ? pText(n.payload, "opening_id") : null;
+      return opening && UUID.test(opening) ? `${HIRING}/openings/${opening}` : HIRING;
+    }
+    case "hire_offer_accepted":
+      return `${HIRING}/team`;
+    case "hiring_fee_added":
+      return `${HIRING}/fees`;
+    case "hire_offer_declined":
+      return HIRING;
+    case "gym_review_received":
+      return "/app/business/analytics/reputation";
+    case "offer_hidden":
+      return n.subjectType === "offer" && id ? `/app/business/marketplace/offers/${id}` : "/app/business/marketplace";
+    default:
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Market + Share 3.0 · Release 2 · the professional's member-inbox kinds.
+//
+// professional_notifications (pro_notification_kind request / to_review /
+// update, `pro.*` title keys) is NOT migrated and keeps the console's own
+// rows. The Release 2 professional kinds are member_notification_kind labels,
+// and notify_member() is the only writer of that enum, so they arrive in
+// `notifications` (the member inbox, keyed on the professional's profile):
+// P-MA.7 NotificationsHub merges them in with my_notifications(p_kinds =
+// PRO_KINDS); the calendar strips read the sync kinds; Opportunities reads
+// existing_team_invite. Writers (Database #38, the documented keys):
+// send_hire_offer (hire_offer_received), accept_hire_offer (hired, and
+// classes_added once the sessions exist: session_count, first_starts_at),
+// add_existing_team (hired with the extra key source 'existing_team'),
+// remove_from_team (removed_from_team), invite_existing_team
+// (existing_team_invite: subject business_employee = the invitation;
+// business_name, business_id, accept_by a date, fee_text 'free'),
+// review_instructor (instructor_review_received) and the business_classes
+// trigger (class_changed / class_cancelled, future sessions only).
+
+/** The kinds addressed to a professional (the migration's payload table; instructor_review_received "to the INSTRUCTOR"). */
+export const PRO_KINDS: readonly MemberNotificationKind[] = [
+  "hire_offer_received",
+  "hired",
+  "classes_added",
+  "class_changed",
+  "removed_from_team",
+  "existing_team_invite",
+  "instructor_review_received",
+];
+
+/**
+ * The calendar's sync kinds (services/calendar-sync SYNC_KINDS). class_cancelled
+ * stays a CLIENT kind for the member bell (lead); a professional's own inbox
+ * is read for it here only, for the P-CA.5.3 strip.
+ */
+export const CALENDAR_SYNC_KINDS: readonly MemberNotificationKind[] = ["classes_added", "class_changed", "class_cancelled", "removed_from_team"];
+
+/** Where a professional's member-inbox row sits in P-MA.7's sub-track: an offer or an invite needs an answer. */
+export function proHubKind(kind: string): "request" | "update" {
+  return kind === "hire_offer_received" || kind === "existing_team_invite" ? "request" : "update";
+}
+
+/**
+ * The professional kinds' lines without payload (ours; P-MA.7 draws only the
+ * filled rows, PRO_FILLS).
+ */
+export const PRO_COPY: NotificationCopyTable = {
+  hire_offer_received: { title: "New offer", body: "Accept or decline in Opportunities." },
+  hired: { title: "You're hired", body: "See it in My work." },
+  classes_added: { title: "Classes added to your calendar", body: "Your calendar is updated." },
+  class_changed: { title: "Class time changed", body: "A gym changed one of your classes. Your calendar is updated." },
+  class_cancelled: { title: "Class cancelled", body: "A gym cancelled one of your sessions. It's struck through in your calendar." },
+  removed_from_team: { title: "Your role ended", body: "Future classes were removed from your calendar. Past ones stay as history." },
+  existing_team_invite: { title: "A gym added you to their team", body: "Accept to join as existing team." },
+  instructor_review_received: { title: "New review", body: "A member reviewed one of your classes." },
+};
+
+/** pay_unit words; an unknown unit is left out. */
+const PAY_UNIT: Readonly<Record<string, string>> = { per_class: "per class", per_session: "per session", per_hour: "an hour", per_month: "a month", hour: "an hour", month: "a month", class: "per class", session: "per session" };
+
+/**
+ * The professional kinds' payload values (the migration's table; P-MA.7
+ * `notifList` wording where the board draws the row):
+ * - hire_offer_received (hire_offer; business_name, role_title, pay,
+ *   pay_unit, starts_on, …): "New offer from {business}" / "{role} · {$70 per
+ *   class} · from {Mon, Nov 2}. Accept or decline in Opportunities.";
+ * - hired (hire; business_name, role_title, starts_on): "{business} hired
+ *   you" / "{role} · starts {Mon, Nov 2}.";
+ * - classes_added (hire; business_name, session_count, first_starts_at):
+ *   "{business} added {n} classes. The first is {Mon, Nov 2}.";
+ * - class_changed (class_series; business_name, class_title, starts_at,
+ *   previous_starts_at): "{business} moved {class} from {7:00 AM} to {7:30
+ *   AM}. Your calendar is updated." (the days too when they differ);
+ * - class_cancelled (class_session; business_name, class_title, starts_at):
+ *   "{class} on {Fri, Nov 6} is cancelled" / "{business} cancelled this
+ *   session. It's struck through in your calendar.";
+ * - removed_from_team (business; business_name): "Your role at {business}
+ *   ended";
+ * - existing_team_invite (business_employee; business_name, accept_by,
+ *   fee_text): "{business} added you to their team" / "Accept by {Nov 14,
+ *   2026} to join as existing team, {fee_text}.";
+ * - instructor_review_received (gym_review; gym_name, class_title, rating,
+ *   has_body): "New review · 5 stars" / "A member reviewed {class} at {gym}."
+ *   (the board's reviewer name isn't in the payload).
+ */
+export const PRO_FILLS: NotificationFillTable = {
+  hire_offer_received: (p) => {
+    const biz = pText(p, "business_name");
+    const role = roleOf(p);
+    const pay = num(p.pay);
+    const unit = pText(p, "pay_unit");
+    const from = pDate(p, "starts_on");
+    const out: Partial<NotificationCopy> = {};
+    if (biz) out.title = `New offer from ${biz}`;
+    const payLine = pay !== null && pay >= 0 ? `$${Number.isInteger(pay) ? pay : pay.toFixed(2)}${unit && PAY_UNIT[unit] ? ` ${PAY_UNIT[unit]}` : ""}` : null;
+    const parts = [role, payLine, from ? `from ${formatNoticeDay(from)}` : null].filter(Boolean);
+    if (parts.length) out.body = `${parts.join(" · ")}. Accept or decline in Opportunities.`;
+    return out;
+  },
+  hired: (p) => {
+    const biz = pText(p, "business_name");
+    const role = roleOf(p);
+    const from = pDate(p, "starts_on");
+    const out: Partial<NotificationCopy> = {};
+    // add_existing_team writes `hired` too, with source 'existing_team': no hire, no role.
+    if (p.source === "existing_team") {
+      if (biz) out.title = `${biz} added you to their team`;
+      out.body = "You're on their team as existing team. No hiring fee.";
+      return out;
+    }
+    if (biz) out.title = `${biz} hired you`;
+    if (role) out.body = from ? `${role} · starts ${formatNoticeDay(from)}.` : `${role}.`;
+    return out;
+  },
+  classes_added: (p) => {
+    const biz = pText(p, "business_name");
+    const n = pCount(p, "session_count");
+    const first = pDate(p, "first_starts_at");
+    if (!biz || n === null) return {};
+    return { body: `${biz} added ${n === 1 ? "1 class" : `${formatCount(n)} classes`}.${first ? ` The first is ${formatNoticeDay(first)}.` : ""}` };
+  },
+  class_changed: (p) => {
+    const biz = pText(p, "business_name");
+    const cls = pText(p, "class_title");
+    const now = pDate(p, "starts_at");
+    const was = pDate(p, "previous_starts_at");
+    if (!biz || !cls) return {};
+    const when = now && was ? (formatNoticeDay(now) === formatNoticeDay(was) ? ` from ${clock12(was)} to ${clock12(now)}` : ` from ${formatNoticeDay(was)}, ${clock12(was)} to ${formatNoticeDay(now)}, ${clock12(now)}`) : "";
+    return { body: `${biz} moved ${cls}${when}. Your calendar is updated.` };
+  },
+  class_cancelled: (p) => {
+    const biz = pText(p, "business_name");
+    const cls = pText(p, "class_title");
+    const at = pDate(p, "starts_at");
+    const out: Partial<NotificationCopy> = {};
+    if (cls) out.title = at ? `${cls} on ${formatNoticeDay(at)} is cancelled` : `${cls} is cancelled`;
+    if (biz) out.body = `${biz} cancelled this session. It's struck through in your calendar.`;
+    return out;
+  },
+  removed_from_team: (p) => {
+    const biz = pText(p, "business_name");
+    return biz ? { title: `Your role at ${biz} ended` } : {};
+  },
+  existing_team_invite: (p) => {
+    const biz = pText(p, "business_name");
+    const by = pDate(p, "accept_by");
+    const fee = pText(p, "fee_text");
+    const out: Partial<NotificationCopy> = {};
+    if (biz) out.title = `${biz} added you to their team`;
+    if (by) out.body = `Accept by ${formatNoticeDate(by)} to join as existing team${fee ? `, ${fee}` : ""}.`;
+    return out;
+  },
+  instructor_review_received: (p) => {
+    const stars = starsText(p);
+    const cls = pText(p, "class_title");
+    const gym = pText(p, "gym_name");
+    const out: Partial<NotificationCopy> = {};
+    if (stars) out.title = `New review · ${stars}`;
+    if (cls) out.body = `A member reviewed ${cls}${gym ? ` at ${gym}` : ""}.`;
+    return out;
+  },
+};
+
+const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * Where a professional's member-inbox row opens: an offer My applications; a
+ * hire or an ended role My work; the calendar kinds the calendar, on the day
+ * of the first, moved or cancelled class when the payload says it; a review
+ * the professional's reviews (More › Reviews, as the console's pro.review.new
+ * row). existing_team_invite opens its P-MA.5.4 dialog on Opportunities
+ * (NotificationsHub, from services/team-hiring inviteFromNotification).
+ */
+export function proMemberTarget(n: Pick<MemberNotification, "kind"> & { payload?: Readonly<Record<string, unknown>> }): string {
+  const day = (k: string) => {
+    const d = n.payload ? pDate(n.payload, k) : null;
+    return d ? `?day=${localDay(d)}` : "";
+  };
+  switch (n.kind) {
+    case "hire_offer_received":
+      return "/app/pro/marketplace/opportunities/applications";
+    case "hired":
+    case "removed_from_team":
+      return "/app/pro/marketplace/opportunities/work";
+    case "classes_added":
+      return `/app/pro/calendar${day("first_starts_at")}`;
+    case "class_changed":
+    case "class_cancelled":
+      return `/app/pro/calendar${day("starts_at")}`;
+    case "instructor_review_received":
+      return "/app/more/reviews";
+    default:
+      return "/app/pro/marketplace/opportunities";
+  }
 }
 
 // ---------------------------------------------------------------------------

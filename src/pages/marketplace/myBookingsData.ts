@@ -1,6 +1,7 @@
-// Market + Share 3.0 · W2 · My bookings' reads (C-MO.4.5). DB4 my_bookings
-// (optional, PLAN §2.2) hasn't landed, so the tabs are composed client-side
-// from the live readers, each through its own RLS:
+// Market + Share 3.0 · W2 · My bookings' reads (C-MO.4.5). The tabs are
+// composed client-side from the live readers, each through its own RLS (DB4's
+// my_class_bookings replaces only Past's classes, services/instructor-reviews
+// fetchPastBookings; the lead's decision):
 // - Memberships: my_gym_memberships() (services/venues, with its offline pass
 //   copy) and my_hires() (services/hires);
 // - Upcoming / Past: my_class_schedule (self-scoping view), the classes'

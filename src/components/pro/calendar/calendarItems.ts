@@ -6,9 +6,10 @@ import type { ClientCalendarEvent } from "../../../services/calendar";
 import type { BookingRow, DueFollowUp, SessionExtras } from "../../../services/pro/calendar";
 import type { ProCalendarData } from "./useProCalendar";
 import { isoOf, minutes } from "./calendarModel";
+import { classBadge, mergeClasses, type ClassInfo } from "./classModel";
 
-export type ItemKind = "session" | "event" | "invite" | "business" | "request" | "followup" | "programme";
-export type ItemBadge = "completed" | "business" | "followup" | "request" | "invitation" | "going" | "declined" | "scheduled" | null;
+export type ItemKind = "session" | "event" | "invite" | "class" | "request" | "followup" | "programme";
+export type ItemBadge = "completed" | "cancelled" | "updated" | "followup" | "request" | "invitation" | "going" | "declined" | "scheduled" | null;
 
 export interface CalItem {
   key: string;
@@ -29,10 +30,12 @@ export interface CalItem {
   request?: BookingRow;
   followUp?: DueFollowUp;
   extras?: SessionExtras;
+  /** A gym class (live assigned or hired; P-CA). */
+  cls?: ClassInfo;
 }
 
-/** Board colours (cal.js SES): the business gold, the follow-up plum. */
-export const BUSINESS_GOLD = "#D9A441";
+/** Board colours (cal.js SES): the request gold, the follow-up plum. */
+export const REQUEST_GOLD = "#D9A441";
 export const FOLLOW_UP_PLUM = "#9C4F7C";
 export const DEFAULT_SESSION = "#7D6BB5";
 
@@ -84,36 +87,27 @@ export function buildItems(d: ProCalendarData, from: string, to: string): Record
     });
   }
 
-  for (const c of d.classes) {
+  // Market + Share 3.0 W5 (P-CA, D-40): the gym classes, the live assigned
+  // rows merged with the my_calendar hired events (classModel), each in its
+  // class colour (the gold "Scheduled by" look is gone).
+  for (const c of mergeClasses(d.classes, d.hired)) {
     if (c.date < from || c.date > to) continue;
+    const badge = classBadge(c);
     push({
-      key: `class:${c.id}`,
-      kind: "business",
+      key: `class:${c.sessionId}`,
+      kind: "class",
       date: c.date,
       allDay: false,
-      start: c.startTime,
-      end: c.endTime,
+      start: c.start,
+      end: c.end,
       name: c.title,
       title: c.businessName,
-      place: "At a business",
-      colour: BUSINESS_GOLD,
-      badge: "business",
-      done: false,
+      place: c.location,
+      colour: c.colour,
+      badge,
+      done: badge === "completed",
       clientId: null,
-      event: {
-        id: c.id,
-        title: c.title,
-        date: c.date,
-        allDay: false,
-        startTime: c.startTime,
-        endTime: c.endTime,
-        repeat: "none",
-        notes: `Scheduled by ${c.businessName}${c.notes ? `: ${c.notes}` : ""}`,
-        color: BUSINESS_GOLD,
-        mine: false,
-        assignmentSourced: false,
-        alert: "none",
-      },
+      cls: c,
     });
   }
 
@@ -130,7 +124,7 @@ export function buildItems(d: ProCalendarData, from: string, to: string): Record
       name: (r.clientId && d.names[r.clientId]) || null,
       title: r.serviceName,
       place: null,
-      colour: BUSINESS_GOLD,
+      colour: REQUEST_GOLD,
       badge: "request",
       done: false,
       clientId: r.clientId,

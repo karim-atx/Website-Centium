@@ -48,6 +48,8 @@ export function RateClassSheet({
               key={bookingId}
               placeholder={`How was ${classTitle}?`}
               submitLabel="Submit review"
+              // Database #38: write_class_review takes a rating alone (the text is optional).
+              textOptional
               onSubmit={async (rating, text) => {
                 const r = await writeClassReview(bookingId, rating, text);
                 if (!r.ok) return r.message;

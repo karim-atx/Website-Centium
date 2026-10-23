@@ -13,6 +13,11 @@ import { fetchMarketplaceVisible, fetchProOverview, needsHideWarning, overviewVi
 import { useMyCv } from "../../../components/cv/useMyCv";
 import { licenceFacts } from "../../../components/pro/profile/profileModel";
 import { CapsLabel, CentredDialog, lh, px, useMarketColors, useStrip } from "../../business-market/listingParts";
+import { useIsDark } from "../../../hooks/useIsDark";
+import { STATUS_STEPS } from "../../../theme/marketTokens";
+import { fetchMyApplications, fetchMyWork, fetchOpportunities } from "../../../services/team-hiring";
+import { fixedPair } from "./opportunities/colours";
+import { offeredCount, offersSub, openingsSub, workSub } from "./opportunities/opportunitiesModel";
 
 // Market + Share 3.0 · W3 · P-MA.1 Overview (HANDOVER §4 "P-MA.1 Overview";
 // Professional Marketplace Screens lines 60–109 and the `ov` / `lt` script;
@@ -40,21 +45,44 @@ import { CapsLabel, CentredDialog, lh, px, useMarketColors, useStrip } from "../
 //    professionalClients, active_professional_clients) answers; ovEmpty when
 //    the answer has nobody reached (zeros, the dashed flat line, "Shows once
 //    clients start finding you");
-// 4. caps "Opportunities" (margin-top 4) and the card (radius 24): Offers from
-//    gyms · Openings near you · My work, each → the Opportunities tab. They
-//    are Release 2 (DB8): no counts and no OFFERED badge until then. A fourth
-//    row "Gyms and colleagues" keeps the live ProfessionalExplore
-//    (/app/marketplace) reachable now that More › Explore points here (D-39).
+// 4. caps "Opportunities" (margin-top 4) and the card (radius 24, rows
+//    padding 14 16, 0.5px --div between; title 14 / 700, sub 11.5 --faint, the
+//    16 chevron), W4 (`ov.links`): "Offers from gyms" ("2 waiting · {gyms}",
+//    the OFFERED badge 10 / 800 0.08em #EBF2F4 / #5A859E while an offer waits;
+//    my_applications) → My applications; "Openings near you" ("6 roles and
+//    class slots"; opportunities, the Gyms tab unfiltered) → the
+//    Opportunities tab; "My work" ("{gym} · 2 classes a week"; my_work) → My
+//    work. Each read is DB8: pending (or loading / failed), the row keeps the
+//    W3 quiet line, never a count. A fourth row "Gyms and colleagues" keeps
+//    the live ProfessionalExplore (/app/marketplace) reachable now that More ›
+//    Explore points here (D-39).
 
 const HOME = "/app/pro/marketplace";
 
-/** The Opportunities card rows (lines 100–107): titles as drawn; the subs are ours until DB8 gives counts. */
-const LINKS: { title: string; sub: string; to: string }[] = [
-  { title: "Offers from gyms", sub: "Gyms can send you direct offers here soon", to: `${HOME}/opportunities` },
-  { title: "Openings near you", sub: "Roles and class slots near you, coming soon", to: `${HOME}/opportunities` },
-  { title: "My work", sub: "When a gym hires you, it shows here", to: `${HOME}/opportunities` },
-  { title: "Gyms and colleagues", sub: "Your gyms, their classes and other professionals", to: "/app/marketplace" },
+type Sub = { text: string; badge?: boolean } | null;
+/** The Opportunities card rows (lines 100–107): titles as drawn; the quiet subs (ours) show until DB8 answers. */
+const LINKS: { key: "offers" | "openings" | "work" | "explore"; title: string; quiet: string; to: string }[] = [
+  { key: "offers", title: "Offers from gyms", quiet: "Gyms can send you direct offers here soon", to: `${HOME}/opportunities/applications` },
+  { key: "openings", title: "Openings near you", quiet: "Roles and class slots near you, coming soon", to: `${HOME}/opportunities` },
+  { key: "work", title: "My work", quiet: "When a gym hires you, it shows here", to: `${HOME}/opportunities/work` },
+  { key: "explore", title: "Gyms and colleagues", quiet: "Your gyms, their classes and other professionals", to: "/app/marketplace" },
 ];
+
+/** The three DB8 reads behind the card; a sub only when its read answers. */
+function useOpportunityCard(): Record<"offers" | "openings" | "work", Sub> {
+  const [subs, setSubs] = useState<Record<"offers" | "openings" | "work", Sub>>({ offers: null, openings: null, work: null });
+  useEffect(() => {
+    let alive = true;
+    // Database Release 2: my_hire_offers + own applications, opportunities, my_work.
+    void fetchMyApplications().then((r) => alive && r.ok && setSubs((s) => ({ ...s, offers: { text: offersSub(r.value), badge: offeredCount(r.value) > 0 } })));
+    void fetchOpportunities("gyms", { type: null, specialty: null, distanceKm: null }).then((r) => alive && r.ok && setSubs((s) => ({ ...s, openings: { text: openingsSub(r.value.length) } })));
+    void fetchMyWork().then((r) => alive && r.ok && setSubs((s) => ({ ...s, work: { text: workSub(r.value) } })));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return subs;
+}
 
 export function OverviewTab() {
   const c = useMarketColors();
@@ -68,6 +96,8 @@ export function OverviewTab() {
   const [busy, setBusy] = useState(false);
   const [strip, showStrip] = useStrip();
   const retry = useCallback(() => setTick((t) => t + 1), []);
+  const card = useOpportunityCard();
+  const [offeredBg, offeredInk] = fixedPair(STATUS_STEPS.OFFERED[0], STATUS_STEPS.OFFERED[1], useIsDark());
 
   useEffect(() => {
     let alive = true;
@@ -150,7 +180,9 @@ export function OverviewTab() {
       {state.status === "error" ? <MarketError thing="your marketplace figures" onRetry={retry} /> : null}
       <CapsLabel style={{ marginTop: 4 }}>Opportunities</CapsLabel>
       <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-        {LINKS.map((l, i) => (
+        {LINKS.map((l, i) => {
+          const sub = l.key === "explore" ? null : card[l.key];
+          return (
           <button
             key={l.title}
             type="button"
@@ -176,11 +208,15 @@ export function OverviewTab() {
           >
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{l.title}</span>
-              <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{l.sub}</span>
+              <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub?.text ?? l.quiet}</span>
             </span>
+            {sub?.badge ? (
+              <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: offeredBg, color: offeredInk, flexShrink: 0 }}>OFFERED</span>
+            ) : null}
             <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
           </button>
-        ))}
+          );
+        })}
       </div>
       <CentredDialog
         open={confirmHide}

@@ -29,6 +29,7 @@ import {
   notifWhen,
   unreadCount,
   type MemberNotification,
+  type NotificationCopyTable,
 } from "../../services/notifications";
 
 // Market + Share 3.0 · W2 · the client's notifications (C-MO.4.10
@@ -225,12 +226,25 @@ export default function ClientNotificationsPage() {
   );
 }
 
-const NotificationRow: React.FC<{ n: MemberNotification; first: boolean; onOpen: () => void }> = ({ n, first, onOpen }) => {
+/**
+ * One inbox row. The optional props are W4 B-MA.9's (the business inbox): `look`
+ * is another inbox's tile, `copy` its copy table, `openable` whether its row
+ * opens a page; left out, the row is the client's (notifLook, CLIENT_COPY,
+ * clientNotificationTarget).
+ */
+export const NotificationRow: React.FC<{
+  n: MemberNotification;
+  first: boolean;
+  onOpen: () => void;
+  look?: ReturnType<typeof notifLook>;
+  copy?: NotificationCopyTable;
+  openable?: boolean;
+}> = ({ n, first, onOpen, look: lookOf, copy: table, openable }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const look = notifLook(n.kind);
-  const copy = notificationCopy(n);
-  const opens = clientNotificationTarget(n) !== null;
+  const look = lookOf ?? notifLook(n.kind);
+  const copy = notificationCopy(n, table);
+  const opens = openable ?? clientNotificationTarget(n) !== null;
   const [tileBg, tileInk] = NOTIF_TONES[look.tone];
   const unread = !n.readAt;
   const when = notifWhen(n.createdAt);
@@ -273,7 +287,8 @@ const NotificationRow: React.FC<{ n: MemberNotification; first: boolean; onOpen:
   );
 };
 
-const NotificationsEmpty: React.FC = () => {
+/** The empty state; `body` (optional, W4 B-MA.9) is another inbox's line. */
+export const NotificationsEmpty: React.FC<{ body?: string }> = ({ body }) => {
   const m = marketPalette(useIsDark());
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "56px 24px 0" }}>
@@ -284,7 +299,7 @@ const NotificationsEmpty: React.FC = () => {
         </svg>
       </span>
       <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>No notifications yet</h2>
-      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>Points, vouchers and booking updates will show here.</p>
+      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>{body ?? "Points, vouchers and booking updates will show here."}</p>
     </div>
   );
 };

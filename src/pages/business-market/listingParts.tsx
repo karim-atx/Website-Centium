@@ -290,6 +290,8 @@ export function CentredDialog({
   onCancel,
   children,
   width = 320,
+  pad = 24,
+  actionsTop = 20,
 }: {
   open: boolean;
   title: string;
@@ -298,6 +300,10 @@ export function CentredDialog({
   action: string;
   /** The card width when a board draws other than 320 (P-MA.2 delete: 330). */
   width?: number;
+  /** The card padding when a board draws other than 24 (Business Hiring Screens `dlg`: "24px 22px 22px"). */
+  pad?: number | string;
+  /** The buttons' margin-top when a board draws other than 20 (Business Hiring Screens `dlg`: 18). */
+  actionsTop?: number;
   tone?: "destructive" | "primary";
   busy?: boolean;
   error?: string | null;
@@ -346,7 +352,7 @@ export function CentredDialog({
           width,
           maxWidth: "100%",
           boxSizing: "border-box",
-          padding: 24,
+          padding: pad,
           borderRadius: 32,
           background: m.sbody,
           border: `1px solid ${m.sborder}`,
@@ -371,7 +377,7 @@ export function CentredDialog({
             {error}
           </p>
         ) : null}
-        <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
+        <div style={{ marginTop: actionsTop, display: "flex", gap: 8 }}>
           <button type="button" onClick={onCancel} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
             {cancel}
           </button>
@@ -397,13 +403,14 @@ export function CentredDialog({
  * share button shows its result: fixed 12 from the top, 16 from the sides,
  * up to 398 wide; it closes with Done or after 5 s.
  */
-export function useStrip(): [React.ReactNode, (text: string, tone?: StripTone) => void] {
+export function useStrip(): [React.ReactNode, (text: string, tone?: StripTone, act?: { label: string; onPress: () => void }) => void] {
   const reduced = useReducedMotion();
-  const [s, setS] = useState<{ text: string; tone: StripTone; n: number } | null>(null);
+  const [s, setS] = useState<{ text: string; tone: StripTone; n: number; act?: { label: string; onPress: () => void } } | null>(null);
   const seq = useRef(0);
-  const show = useCallback((text: string, tone: StripTone = "success") => {
+  // `act` (optional): the stub's word and what it does when a board draws other than "Done" (B-MA.8.8 etDone: "Team").
+  const show = useCallback((text: string, tone: StripTone = "success", act?: { label: string; onPress: () => void }) => {
     seq.current += 1;
-    setS({ text, tone, n: seq.current });
+    setS({ text, tone, n: seq.current, act });
   }, []);
   useEffect(() => {
     if (!s) return;
@@ -414,7 +421,17 @@ export function useStrip(): [React.ReactNode, (text: string, tone?: StripTone) =
     ? createPortal(
         <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
           <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }} data-strip>
-            <ConfirmationStrip key={s.n} text={s.text} tone={s.tone} action="Done" onAction={() => setS(null)} still={reduced} />
+            <ConfirmationStrip
+              key={s.n}
+              text={s.text}
+              tone={s.tone}
+              action={s.act?.label ?? "Done"}
+              onAction={() => {
+                setS(null);
+                s.act?.onPress();
+              }}
+              still={reduced}
+            />
           </div>
         </div>,
         document.body

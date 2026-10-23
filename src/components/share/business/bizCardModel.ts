@@ -5,9 +5,10 @@
 // lists (368 to 373) and the sheet's preview widths (361).
 //
 // Templates (HANDOVER §4 B-SH; PLAN F34): Weekly schedule, Class spotlight,
-// Offer, Product spotlight, Membership plan, Find us on Centium. "Now hiring"
-// is Release 2 (W4): it slots in as another BizTemplate with its own content
-// builder and DEF_HIDE["hiring"] = ["pay"]; nothing ships for it here.
+// Offer, Product spotlight, Membership plan, Find us on Centium, and (W4,
+// Release 2) Now hiring: SPEC.hiring, DEF_HIDE = { hiring: ["pay"] }, the TG
+// list "Role and schedule" / Type / Pay, Story and Post only, the sheet
+// "Share opening", link kind j (the opening id).
 //
 // Privacy (B-SH.4, HANDOVER §9): a card is built only from what is already
 // public on Centium. The data types below have no field for member names or
@@ -20,7 +21,7 @@ import { bizShareHref, bizShareText, isBizSlug, type ShareLinkKind } from "../..
 import type { MembershipPlanRow } from "../../../services/membership-plans/types";
 import { billingLabel, daysLabel, priceLine } from "../../../pages/business-ops/plans/planModel";
 
-export type BizTemplate = "schedule" | "class" | "offer" | "product" | "plan" | "profile";
+export type BizTemplate = "schedule" | "class" | "offer" | "product" | "plan" | "profile" | "hiring";
 export type BizFormat = "story" | "post" | "sticker";
 /** Business colours · Centium · Your photo (sticker: none). */
 export type BizBackground = "biz" | "cen" | "photo";
@@ -154,6 +155,23 @@ export interface PlanData {
   includes: string | null;
 }
 
+/**
+ * W4 B-SH "Now hiring" (SPEC.hiring): an opening, public fields only.
+ * The link resolves through resolve_share_link's kind "opening" (the public page draws it; the openings are Database Release 2).
+ */
+export interface HiringData {
+  /** The opening id (the link's item). */
+  id: string;
+  /** "Sunday Spin instructor" */
+  title: string;
+  /** "Role · ongoing" / "Class slot · one-off" */
+  typeLabel: string;
+  /** "Sun 10:00 AM · 4 classes a month" */
+  schedule: string;
+  /** "0 per class" (feeds payText), or null: no Pay row or toggle. */
+  pay: string | null;
+}
+
 export interface ProfileData {
   /** "4.8 · 212 reviews", or null under 3 reviews (the live rule). */
   rating: string | null;
@@ -165,7 +183,8 @@ export type TemplateData =
   | { t: "offer"; d: OfferData }
   | { t: "product"; d: ProductData }
   | { t: "plan"; d: PlanData }
-  | { t: "profile"; d: ProfileData };
+  | { t: "profile"; d: ProfileData }
+  | { t: "hiring"; d: HiringData };
 
 /** Never on a card (B-SH.4): the Overview figures and anything about members, clients or money earned. */
 export const PRIVATE_FIGURES = ["Members reached", "Redemptions", "Active offers", "Revenue", "Members", "Booked", "Check-ins"] as const;
@@ -187,6 +206,9 @@ export function linkOf(data: TemplateData): { kind: ShareLinkKind | null; item: 
       return { kind: "m", item: data.d.id };
     case "profile":
       return { kind: null, item: null };
+    case "hiring":
+      // resolve_share_link kind "opening"; the public page shows it.
+      return { kind: "j", item: data.d.id };
   }
 }
 
@@ -205,10 +227,12 @@ export interface ToggleRow {
   sub: string;
   /** "Always on" (the headline). */
   lock: boolean;
+  /** The line's tail when off, when the board words it other than "off" (hiring Pay: "off by default"). */
+  offText?: string;
 }
 
-/** DEF_HIDE: off by default per template (hiring: ["pay"] in Release 2). */
-export const DEF_HIDE: Partial<Record<BizTemplate, string[]>> = {};
+/** DEF_HIDE: off by default per template (the board's: hiring pay). */
+export const DEF_HIDE: Partial<Record<BizTemplate, string[]>> = { hiring: ["pay"] };
 
 const WHERE: Record<OfferData["where"], string> = { in_store: "In store", online: "Online", both: "In store and online", in_person: "In person" };
 export const whereLabel = (w: OfferData["where"]) => WHERE[w];
@@ -267,6 +291,14 @@ export function toggleRows(data: TemplateData, brand: Pick<BizBrand, "name" | "c
         ...(brand.location ? [{ key: "loc", title: "Location", sub: brand.location, lock: false }] : []),
         ...(data.d.rating ? [{ key: "rating", title: "Rating", sub: data.d.rating, lock: false }] : []),
       ];
+    case "hiring": {
+      const h = data.d;
+      return [
+        { key: "role", title: "Role and schedule", sub: h.title, lock: true },
+        { key: "type", title: "Type", sub: h.typeLabel, lock: false },
+        ...(h.pay ? [{ key: "pay", title: "Pay", sub: h.pay, lock: false, offText: "off by default" }] : []),
+      ];
+    }
     case "schedule":
       return [{ key: "week", title: "This week's classes", sub: `${data.d.count} ${data.d.count === 1 ? "class" : "classes"}`, lock: true }];
   }
@@ -281,7 +313,7 @@ export function toggleHide(hide: readonly string[], rows: readonly ToggleRow[], 
 }
 
 /** The row's line with its state: "6 of 20 · off" when off (TG: "6 of 20 · off"). */
-export const toggleSub = (row: ToggleRow, on: boolean) => (row.lock || on ? row.sub : [row.sub, "off"].filter(Boolean).join(" · "));
+export const toggleSub = (row: ToggleRow, on: boolean) => (row.lock || on ? row.sub : [row.sub, row.offText ?? "off"].filter(Boolean).join(" · "));
 
 // ---------------------------------------------------------------------------
 // The card's content (SPEC + bcard's row filter)
@@ -372,6 +404,20 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
         rows: keep([
           { key: "dur", k: "Duration", v: p.duration },
           ...(p.includes ? [{ key: "inc", k: "Includes", v: p.includes }] : []),
+        ]).filter((r) => r.v),
+      };
+    }
+    case "hiring": {
+      const h = data.d;
+      return {
+        ...base,
+        eyebrow: "Now hiring",
+        title: h.title,
+        sub: "Apply on Centium",
+        rows: keep([
+          { key: "type", k: "Type", v: h.typeLabel },
+          { key: "sched", k: "Schedule", v: h.schedule },
+          ...(h.pay ? [{ key: "pay", k: "Pay", v: h.pay }] : []),
         ]).filter((r) => r.v),
       };
     }
@@ -562,6 +608,7 @@ export const SHEET_TITLE: Record<BizTemplate, string> = {
   product: "Share item",
   plan: "Share plan",
   profile: "Share profile",
+  hiring: "Share opening",
 };
 
 /** What the QR opens, for the Destinations note and the public page ("this offer"). */
@@ -572,6 +619,7 @@ export const ITEM_NOUN: Record<BizTemplate, string> = {
   product: "this item",
   plan: "this plan",
   profile: "your profile",
+  hiring: "this opening",
 };
 
 /**

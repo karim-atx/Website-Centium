@@ -1,47 +1,48 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { EllipsisVertical, Flag, LogIn, MessageSquareWarning, Pencil, Star } from "lucide-react";
-import { PageHeader } from "../../components/ui/PageHeader";
+import { EllipsisVertical, Flag, LogIn, MessageSquareWarning, Pencil } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
-import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { ReviewFormSheet, ReviewReportForm } from "../../components/professionals/ReviewForms";
-import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
-import { typeColours } from "../../components/professionals/typeColour";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { reportReply, reportReview } from "../../services/professional-reviews";
 import { ratingDistribution, ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { useIsDark } from "../../hooks/useIsDark";
-import { textPx } from "../../theme/textSize";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette } from "../../theme/marketTokens";
+import { NO_ICON_SCALE } from "../../components/pro/proInk";
+import { MarketError, MarketSkeleton } from "../../components/market/MarketStates";
+import { FOCUS_CSS } from "../../components/market/usePress";
+import { BackRow, Caps, EmptyBlock, PressButton } from "./profile/parts";
+import { typeLabel } from "./profile/profileModel";
 
-// MO1.2.1.1 · Profile · Reviews, as a page (B9) where it used to be a sheet on
-// the profile. The summary card's breakdown is counted from the rows this
-// reader already has, so it needs no backend; the average and count are the
-// directory view's (professional_rating_summary), the same numbers the
-// profile shows. Handover-complete pass: kept, though not drawn, only what
-// is safety or privacy: Report (⋮ menu), the moderator's note on a removed
-// review, the professional's reply (their right of reply to a public review
-// about them) and "A client" for a reviewer who didn't share their name. The
-// reader's own review is no longer pinned first and the "Edited" tags are
-// gone. The pinned action is "Write a review", or "Edit your review" once
-// there is one, and is absent for anyone who cannot review (B11).
-
-const typeName = (s: DirectoryListing["subtype"]) =>
-  s ? SUBTYPE_SINGULAR[s].replace(/\b\w/g, (c) => c.toUpperCase()) : "Professional";
+// Market + Share 3.0 · W5 · the full Reviews page (/app/professionals/:id/
+// reviews), reached from the profile's Reviews tab ("See all reviews"). Not
+// a board frame: kept (PLAN §3.2) and restyled in the C-MO.4.9 Reviews chrome
+// (Client Professional Screens lines 134–148): the back row with the title
+// 22 / 800; the summary card (radius 18, --card, 0.5px --hair, padding 14 16:
+// the average 30 / 34 800, five 13 stars in --gold, the count 11.5 --faint)
+// with the kept distribution bars (5 tall, --pale track, --accent fill, the
+// counts 11 --faint); "All reviews" in the caps label; the rows in one card
+// (padding 12 16, 0.5px --div rules).
+// Kept live features: the distribution (each bar its share of all reviews),
+// the professional's reply, Report / Report reply (⋮ menu, safety), the
+// moderator's note on a removed review, "A client" for a hidden name, the
+// signed-out gate (review text has no anon grant), and the pinned "Write a
+// review" / "Edit your review" for someone who may review.
 
 export default function ProfessionalReviews() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dark = useIsDark();
+  const m = marketPalette(dark);
   const [listing, setListing] = useState<DirectoryListing | null | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
-  /** The open ⋮ menu: which review, and the button it anchors to. */
   const [menuFor, setMenuFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
-  /** Release 3: the review whose reply is being reported. */
   const [reportingReplyId, setReportingReplyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,37 +56,32 @@ export default function ProfessionalReviews() {
     };
   }, [id]);
 
-  const { mine, myStatus, others, error, canReview, signedOut, save, withdraw } = useProfessionalReviews(listing?.profileId ?? null);
+  const { mine, myStatus, others, error, canReview, signedOut, loading, save, withdraw, reload } = useProfessionalReviews(listing?.profileId ?? null);
 
-  // MO1.2.1.1 States, Loading: skeleton blocks at the anatomy positions
-  // (surface.soft): the 140 summary card and the reviews card, radius 18.
   if (listing === undefined)
     return (
-      <div aria-busy="true">
-        <PageHeader title="Reviews" showBack bottomGap={16} />
-        <span className="sr-only">Loading…</span>
-        <div aria-hidden className="h-[140px] rounded-[18px] bg-cream-soft mb-5" />
-        <div aria-hidden className="h-[14px] w-24 rounded bg-cream-soft mb-2 ml-1" />
-        <div aria-hidden className="h-[336px] rounded-[18px] bg-cream-soft" />
+      <div aria-busy="true" style={{ lineHeight: "normal" }}>
+        <BackRow title="Reviews" />
+        <MarketSkeleton radius={18} rows={3} height={110} label="Loading reviews" style={{ marginTop: 14 }} />
+        <MarketSkeleton radius={18} rows={4} height={240} label="Loading reviews" style={{ marginTop: 18 }} />
       </div>
     );
   if (listing === null)
     return (
-      <div className="text-center py-20 text-charcoal-soft">
-        Professional not found.
-        <div className="mt-4">
-          <Button onClick={() => navigate("/app/professionals")}>Back</Button>
-        </div>
+      <div style={{ lineHeight: "normal" }}>
+        <BackRow title="Reviews" />
+        <EmptyBlock title="Professional not found." body={null}>
+          <PressButton onClick={() => navigate("/app/professionals")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
+            Back
+          </PressButton>
+        </EmptyBlock>
       </div>
     );
 
-  const t = typeColours(listing.subtype, dark);
   const firstName = listing.name.split(" ")[0];
   const label = ratingLabel(listing.averageRating, listing.reviewCount);
   const ownCounts = mine && myStatus !== "withdrawn";
   const dist = ratingDistribution([...others, ...(ownCounts ? [mine] : [])]);
-  // MO1.2.1.1: each bar is its share of all the reviews (15 of 18 is 83%), not
-  // of the largest count.
   const total = Math.max(1, dist.reduce((a, b) => a + b, 0));
 
   const refresh = async () => {
@@ -93,134 +89,104 @@ export default function ProfessionalReviews() {
     if (found) setListing(found);
   };
 
-  // One list, newest first, as drawn: the reader's own review takes its place
-  // by date (handover-complete pass; it used to be pinned first), still
-  // labelled "You" since its name may not be shown to others.
   const rows = [...others, ...(ownCounts && mine ? [mine] : [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
   const menuReview = menuFor ? rows.find((r) => r.id === menuFor.id) ?? null : null;
   const canWrite = !signedOut && canReview === true && !mine;
   const canEdit = !!mine && myStatus === "editable";
+  const stars = label.kind === "average" ? Math.round(Number(label.value)) : 0;
+  const card: React.CSSProperties = { borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, color: m.ink };
 
   return (
-    <div className={canWrite || canEdit ? "pb-[172px]" : ""}>
-      <PageHeader title="Reviews" subtitle={`${listing.name} · ${typeName(listing.subtype)}`} subtitleColor={t.main} showBack bottomGap={16} />
+    <div className={canWrite || canEdit ? "pb-[172px]" : ""} style={{ lineHeight: "normal", color: m.ink }}>
+      <style>{FOCUS_CSS}</style>
+      <BackRow title="Reviews" />
+      <p style={{ margin: "2px 0 0", fontSize: textPx(13), color: m.ink2 }}>
+        {listing.name} · {listing.specialty?.trim() || typeLabel(listing.subtype)}
+      </p>
 
-      {/* The summary: the average (or "New" under three reviews, B7), the
-          count, and the five bars. */}
-      <section
-        aria-label="Rating summary"
-        // 18 to the "All reviews" label (card foot 247, label cap 269 on the frame).
-        className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-4 mb-[18px] flex items-center gap-5"
-      >
-        {/* 98 wide (measured: stars centred at x 81–82, the bars' digits at x 151). */}
-        <div className="flex flex-col items-center gap-1 w-[98px] shrink-0">
-          <p className="text-[40px] font-extrabold leading-none" style={{ color: t.deep }}>
-            {label.kind === "average" ? label.value : "New"}
-          </p>
-          {label.kind === "average" && (
-            <span className="flex gap-0.5" role="img" aria-label={`${label.value} out of 5`}>
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star key={i} size={13} className={i < Math.round(Number(label.value)) ? "fill-gold text-gold" : "text-charcoal/15"} aria-hidden />
-              ))}
-            </span>
-          )}
-          <p className="text-[11.5px] text-charcoal-faint">{listing.reviewCount > 0 ? reviewCountLabel(listing.reviewCount) : "No reviews yet"}</p>
+      <section aria-label="Rating summary" style={{ ...card, marginTop: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ fontSize: textPx(30), lineHeight: linePx(34), fontWeight: 800 }}>{label.kind === "average" ? label.value : "New"}</div>
+          <span role="img" aria-label={`${stars} out of 5 stars`} style={{ display: "flex", gap: 2, marginTop: 2 }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <svg key={i} width={13} height={13} viewBox="0 0 24 24" fill={i < stars ? m.gold : "none"} stroke={i < stars ? m.gold : m.border} strokeWidth={1.5} strokeLinejoin="round" aria-hidden style={{ display: "block", ...NO_ICON_SCALE }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            ))}
+          </span>
+          <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 2 }}>{listing.reviewCount > 0 ? reviewCountLabel(listing.reviewCount) : "No reviews yet"}</div>
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5" aria-label="Reviews by stars">
+        <div aria-label="Reviews by stars" role="list" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
           {[5, 4, 3, 2, 1].map((n) => (
-            <div key={n} className="flex items-center gap-2 text-[11px]">
-              <span className="w-2 font-bold text-charcoal-soft">{n}</span>
-              {/* 5 thick (measured on the frame at 2x). */}
-              <span className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: t.pill }}>
-                <span className="block h-full rounded-full" style={{ width: `${(dist[n - 1] / total) * 100}%`, background: t.main }} />
+            <div key={n} role="listitem" aria-label={`${n} stars: ${dist[n - 1]}`} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(11) }}>
+              <span aria-hidden style={{ width: 8, fontWeight: 700, color: m.ink2 }}>{n}</span>
+              <span aria-hidden style={{ flex: 1, height: 5, borderRadius: 999, overflow: "hidden", background: m.pale }}>
+                <span style={{ display: "block", height: "100%", borderRadius: 999, width: `${(dist[n - 1] / total) * 100}%`, background: m.accent }} />
               </span>
-              <span className="w-4 text-right text-charcoal-faint tabular-nums">{dist[n - 1]}</span>
+              <span aria-hidden style={{ width: 16, textAlign: "right", color: m.faint, fontVariantNumeric: "tabular-nums" }}>{dist[n - 1]}</span>
             </div>
           ))}
         </div>
       </section>
 
-      <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2" style={{ color: t.main }}>
-        All reviews
-      </p>
+      <Caps style={{ marginTop: 18 }}>All reviews</Caps>
 
       {signedOut ? (
-        // The count is public; the words are for members.
-        // Decision 23 (kept-list 60): Foundations › Empty state (56 primary.tint
-        // tile, 26 thin-stroke icon in primary.accent, title 15/700, one line
-        // 12.5/500 muted, max 260), keeping the Sign in button under it.
-        <div className="flex flex-col items-center text-center py-8">
-          <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
-            <LogIn size={26} strokeWidth={1.5} aria-hidden />
-          </span>
-          <p className="text-[15px] font-bold text-charcoal mt-3">Sign in to read reviews</p>
-          <p className="text-[12.5px] font-medium text-charcoal-faint mt-1 leading-relaxed max-w-[260px]">
-            Reviews are from {firstName}'s clients, and members can read them.
-          </p>
-          <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
+        <EmptyBlock icon={<LogIn size={24} strokeWidth={1.75} aria-hidden style={NO_ICON_SCALE} />} title="Sign in to read reviews" body={`Reviews are from ${firstName}'s clients, and members can read them.`}>
+          <PressButton onClick={() => navigate("/app/onboarding")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
             Sign in
-          </Button>
-        </div>
+          </PressButton>
+        </EmptyBlock>
+      ) : loading && rows.length === 0 ? (
+        <MarketSkeleton radius={18} rows={4} height={200} label="Loading reviews" style={{ marginTop: 8 }} />
+      ) : error && rows.length === 0 ? (
+        <MarketError thing="reviews" onRetry={() => void reload()} style={{ marginTop: 8 }} />
+      ) : rows.length === 0 ? (
+        <EmptyBlock title="No reviews yet" body={null} style={{ paddingTop: 24 }} />
       ) : (
-        <div className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4">
-          {rows.map((r) =>
-            r.id === mine?.id ? (
-              <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
+        <div style={{ ...card, marginTop: 8, padding: "0 16px" }}>
+          {rows.map((r, i) => (
+            <div key={r.id} style={{ padding: "12px 0", borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
+              {r.id === mine?.id ? (
                 <ReviewItem review={r} layout="row" showName={false} replyLabel={`Reply from ${firstName}`} />
-              </div>
-            ) : (
-            <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
-              {/* Decision 23 (kept-list 190): Report (safety) in a ⋮ menu
-                  (Foundations Dropdown menu) on the name line; 44 tap target
-                  held in the row by negative margins (a hidden accessibility
-                  path: the drawn row is unchanged). */}
-              <ReviewItem
-                review={r}
-                layout="row"
-                replyLabel={`Reply from ${firstName}`}
-                menu={
-                  <button
-                    type="button"
-                    aria-label="Review options"
-                    aria-haspopup="menu"
-                    aria-expanded={menuFor?.id === r.id}
-                    onClick={(e) => setMenuFor({ id: r.id, anchor: e.currentTarget })}
-                    className="tap w-11 h-11 -my-3.5 -mr-3 rounded-full flex items-center justify-center text-charcoal-faint"
-                  >
-                    <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />
-                  </button>
-                }
-              />
+              ) : (
+                <ReviewItem
+                  review={r}
+                  layout="row"
+                  replyLabel={`Reply from ${firstName}`}
+                  menu={
+                    <button
+                      type="button"
+                      aria-label="Review options"
+                      aria-haspopup="menu"
+                      aria-expanded={menuFor?.id === r.id}
+                      onClick={(e) => setMenuFor({ id: r.id, anchor: e.currentTarget })}
+                      className="tap w-11 h-11 -my-3.5 -mr-3 rounded-full flex items-center justify-center"
+                      style={{ color: m.faint }}
+                    >
+                      <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />
+                    </button>
+                  }
+                />
+              )}
             </div>
-            )
-          )}
-          {error && <p role="alert" className="py-4 text-[12.5px] font-medium text-status-high text-center">{error}</p>}
-          {!error && rows.length === 0 && (
-            // Decision 23 (kept-list 59): Foundations › Empty state with the
-            // existing words as its title. The handover gives no copy for the
-            // one line under it, so there is none (unspecified).
-            <div className="flex flex-col items-center text-center py-8">
-              <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent">
-                <Star size={26} strokeWidth={1.5} aria-hidden />
-              </span>
-              <p className="text-[15px] font-bold text-charcoal mt-3">No reviews yet</p>
-            </div>
+          ))}
+          {error && (
+            <p role="alert" style={{ margin: 0, padding: "12px 0", textAlign: "center", fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
+              {error}
+            </p>
           )}
         </div>
       )}
 
       {(canWrite || canEdit) && (
-        // MO1.2.1.1 #9: 358 × 44, r12, #9A8CD6 (the type's CTA fill), 13.5/700
-        // white, Pencil 15, gap 7. "Edit your review" is the same action once
-        // the reader has one (a state the frame doesn't draw).
         <PinnedCta
           size="base"
           primary={{
             label: canEdit ? "Edit your review" : "Write a review",
             icon: <Pencil size={15} />,
             onClick: () => setFormOpen(true),
-            style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
+            style: { background: m.fill, color: m.onfill, fontSize: textPx(14), fontWeight: 800 },
           }}
         />
       )}
@@ -248,8 +214,6 @@ export default function ProfessionalReviews() {
         onClose={() => setMenuFor(null)}
         options={[
           { value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> },
-          // Release 3 (DECISIONS "Review replies can be reported"): only
-          // under a review that has a live reply.
           ...(menuReview?.reply && !menuReview.reply.redactedAt
             ? [{ value: "report-reply", label: "Report reply", icon: <MessageSquareWarning size={15} strokeWidth={1.75} /> }]
             : []),

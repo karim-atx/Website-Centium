@@ -19,7 +19,14 @@ import {
   type TimeOffRow,
 } from "../../../services/pro/calendar";
 import type { ExceptionMap } from "../../calendar/occurrences";
+import { fetchMyCalendar, type HiredClassEvent, type NotificationLike, SYNC_KINDS } from "../../../services/calendar-sync";
+import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
+import { applyReadChanges, CALENDAR_SYNC_KINDS, hasNewRows } from "../../../services/notifications/notificationsModel";
+import { useInboxRealtime } from "../../../hooks/useInboxRealtime";
 import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel";
+
+/** The strips' notices: unread rows of a kind the calendar draws. */
+const unreadNotices = (list: readonly NotificationLike[]): NotificationLike[] => list.filter((n) => !n.readAt && !!SYNC_KINDS[n.kind]);
 
 /**
  * Release 3 · W4 the professional calendar's data, in one place:
@@ -31,6 +38,10 @@ import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel
  * - DB-4: availability (pro-wide and per-business), time off, session types,
  *   booking requests, each session's outcome / type / price / paid state;
  * - Clinical overview: follow-ups due (care plans).
+ * - Market + Share 3.0 W5 (P-CA): the class sessions from my_calendar (Database
+ *   Release 2; they replace the live class rows by session)
+ *   and the unread calendar sync notices (the member inbox's calendar kinds,
+ *   my_notifications(p_kinds = CALENDAR_SYNC_KINDS)).
  * A failed read keeps whatever was on screen (the rule every calendar here
  * follows): an empty calendar is a claim about somebody's day.
  */
@@ -53,6 +64,13 @@ export interface ProCalendarData {
   requests: BookingRow[];
   extras: Record<string, SessionExtras>;
   followUps: DueFollowUp[];
+  /** my_calendar's class sessions (empty until it answers). */
+  hired: HiredClassEvent[];
+  /** my_calendar answered: the "Hired" words may show. */
+  hiredLive: boolean;
+  /** Unread calendar sync notifications (on hire, edited, cancelled, removed). */
+  notices: NotificationLike[];
+  dismissNotice: (id: string) => void;
   /** Display names by profile id: the roster first, then related_profile_summary. */
   names: Record<string, string>;
   reload: () => Promise<void>;
@@ -74,13 +92,16 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
   const [extras, setExtras] = useState<Record<string, SessionExtras>>({});
   const [followUps, setFollowUps] = useState<DueFollowUp[]>([]);
   const [extraNames, setExtraNames] = useState<Record<string, string>>({});
+  const [hired, setHired] = useState<HiredClassEvent[]>([]);
+  const [hiredLive, setHiredLive] = useState(false);
+  const [notices, setNotices] = useState<NotificationLike[]>([]);
 
   const reload = useCallback(async () => {
     if (!authUserId) return;
     const today = isoOf(new Date());
     const from = addDays(today, -400);
     const to = addDays(today, 800);
-    const [cal, cls, av, off, ty, rq, ex, fu] = await Promise.all([
+    const [cal, cls, av, off, ty, rq, ex, fu, mc, nt] = await Promise.all([
       getCalendar(authUserId),
       fetchClassesAssignedToMe(authUserId),
       fetchAvailability(authUserId),
@@ -89,6 +110,9 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       fetchBookingRequests(authUserId),
       fetchSessionExtras(authUserId, from, to),
       clinical ? fetchFollowUps(authUserId, from, to) : Promise.resolve({ ok: true as const, data: [] as DueFollowUp[] }),
+      // my_calendar (Database Release 2): the class sessions this professional is named on, a year per call.
+      fetchMyCalendar(from, to),
+      fetchMemberInbox(CALENDAR_SYNC_KINDS),
     ]);
     setLoaded(true);
     setError(!cal.ok || !av.ok || !off.ok || !ty.ok || !rq.ok);
@@ -104,7 +128,39 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     if (rq.ok) setRequests(rq.data);
     setExtras(ex);
     if (fu.ok) setFollowUps(fu.data);
+    if (mc.ok) {
+      setHired(mc.value);
+      setHiredLive(true);
+    } else if (mc.pending) {
+      setHired([]);
+      setHiredLive(false);
+    }
+    // The member inbox's calendar kinds (Database 20261210600000). Writers (Database #38):
+    // accept_hire_offer (classes_added), the business_classes trigger (class_changed /
+    // class_cancelled, future sessions only) and remove_from_team (removed_from_team).
+    if (nt.ok) setNotices(unreadNotices(nt.data));
   }, [authUserId, clinical]);
+
+  /** Seen: hidden here at once, read_at set on the server (the owner's own update). */
+  const dismissNotice = useCallback((id: string) => {
+    setNotices((list) => list.filter((n) => n.id !== id));
+    void markMemberRead([id]);
+  }, []);
+
+  // Live (Database 73ea87b): a new calendar-kind row re-reads the strips'
+  // notices only (not the whole calendar); a read_at set elsewhere hides its
+  // strip without a read; a reconnect re-reads the notices once.
+  const noticesRef = useRef(notices);
+  useEffect(() => {
+    noticesRef.current = notices;
+  });
+  useInboxRealtime(profileReady ? authUserId : null, "pro-calendar", CALENDAR_SYNC_KINDS, (changes, resync) => {
+    if (changes.length) setNotices((list) => unreadNotices(applyReadChanges(list, changes)));
+    if (!resync && !hasNewRows(noticesRef.current, changes)) return;
+    void fetchMemberInbox(CALENDAR_SYNC_KINDS).then((nt) => {
+      if (nt.ok) setNotices(unreadNotices(nt.data));
+    });
+  });
 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
@@ -173,6 +229,10 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
     requests,
     extras,
     followUps,
+    hired,
+    hiredLive,
+    notices,
+    dismissNotice,
     names,
     reload,
   };

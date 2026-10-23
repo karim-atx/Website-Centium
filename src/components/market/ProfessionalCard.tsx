@@ -99,9 +99,18 @@ export interface ProfessionalCardProps {
   onPress: () => void;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * W5 (optional): hide the hired line while the Centium work count is
+   * unknown (DB10 pending), so "No Centium work yet" is never claimed on a
+   * guess. The footer goes too when there is no price either. Unset keeps the
+   * line.
+   */
+  hideHired?: boolean;
+  /** W5 (optional): a mark after the name (the live Verified check). */
+  nameAdornment?: React.ReactNode;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, onPress, className, style }) => {
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, onPress, className, style, hideHired, nameAdornment }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const press = usePress();
@@ -112,14 +121,21 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, o
         type="button"
         onClick={onPress}
         {...press.handlers}
-        aria-label={`${rank ? `${rank}. ` : ""}${pro.name}, ${pro.specialty}. ${ratingLine(pro.rating, pro.reviewCount, placeOf(pro))}. ${hiredText(pro.hiredViaCentiumCount)}${pro.fromPrice ? `. ${pro.fromPrice}` : ""}`}
+        aria-label={`${rank ? `${rank}. ` : ""}${pro.name}, ${pro.specialty}. ${ratingLine(pro.rating, pro.reviewCount, placeOf(pro))}${hideHired ? "" : `. ${hiredText(pro.hiredViaCentiumCount)}`}${pro.fromPrice ? `. ${pro.fromPrice}` : ""}`}
         className={`market-focus ${className ?? ""}`}
         style={{ display: "block", width: "100%", textAlign: "left", font: "inherit", lineHeight: "normal", cursor: "pointer", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "14px 16px", color: m.ink, ...press.style, ...style }}
       >
         <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <MarketAvatar id={pro.id} name={pro.name} photoUrl={pro.photoUrl} size={52} fontSize={16} />
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: textPx(15), fontWeight: 800, lineHeight: linePx(20) }}>{pro.name}</span>
+            {nameAdornment ? (
+              <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                <span style={{ fontSize: textPx(15), fontWeight: 800, lineHeight: linePx(20), minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pro.name}</span>
+                {nameAdornment}
+              </span>
+            ) : (
+              <span style={{ display: "block", fontSize: textPx(15), fontWeight: 800, lineHeight: linePx(20) }}>{pro.name}</span>
+            )}
             <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{pro.specialty}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>
               <Star size={11} />
@@ -130,10 +146,12 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, o
             <path d="m9 18 6-6-6-6" />
           </svg>
         </span>
-        <span style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingTop: 10, borderTop: `0.5px solid ${m.div}` }}>
-          <HiredBadge roles={pro.hiredViaCentiumCount} />
-          {pro.fromPrice ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: m.accent, flexShrink: 0 }}>{pro.fromPrice}</span> : null}
-        </span>
+        {hideHired && !pro.fromPrice ? null : (
+          <span style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingTop: 10, borderTop: `0.5px solid ${m.div}` }}>
+            {hideHired ? <span aria-hidden /> : <HiredBadge roles={pro.hiredViaCentiumCount} />}
+            {pro.fromPrice ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: m.accent, flexShrink: 0 }}>{pro.fromPrice}</span> : null}
+          </span>
+        )}
       </button>
     </>
   );

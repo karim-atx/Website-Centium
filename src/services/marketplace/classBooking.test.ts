@@ -4,7 +4,6 @@ import {
   bookingWindowLine,
   classErrorMessage,
   distanceText,
-  instructorRole,
   isClassPolicyKind,
   levelLabel,
   sortClassPolicies,
@@ -64,10 +63,6 @@ test("level, what to bring, distance and role", () => {
   assert.equal(distanceText(12.6), "13 km");
   assert.equal(distanceText(null), null);
   assert.equal(distanceText(Number.NaN), null);
-  assert.equal(instructorRole("Yoga instructor", "Physiotherapist"), "Yoga instructor · Physiotherapist");
-  assert.equal(instructorRole(null, "Personal Trainer"), "Personal Trainer");
-  assert.equal(instructorRole("personal trainer", "Personal Trainer"), "personal trainer");
-  assert.equal(instructorRole(" ", null), null);
 });
 
 test("a closed or paused business refuses class bookings and waitlists (ATXAB)", () => {

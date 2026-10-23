@@ -22,6 +22,7 @@ export function ReviewForm({
   submitLabel,
   onSubmit,
   onDelete,
+  textOptional = false,
 }: {
   initialRating?: number;
   initialText?: string;
@@ -31,6 +32,8 @@ export function ReviewForm({
   onSubmit: (rating: number, text: string) => Promise<string | null>;
   /** Own review only: "Delete review", tapped twice. */
   onDelete?: () => Promise<string | null>;
+  /** Optional: stars alone can be sent (write_class_review, write_gym_review and write_business_review since Database #38); the text is required by default. */
+  textOptional?: boolean;
 }) {
   const m = marketPalette(useIsDark());
   const press = usePress();
@@ -40,7 +43,7 @@ export function ReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const over = text.length > REVIEW_BODY_MAX;
-  const empty = !text.trim();
+  const empty = !textOptional && !text.trim();
 
   const submit = async () => {
     if (busy || over || empty) return;

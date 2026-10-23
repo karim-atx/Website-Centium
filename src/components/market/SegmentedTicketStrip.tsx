@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx, linePx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../pro/proInk";
-import { SEGMENT_STEPS, marketPalette } from "../../theme/marketTokens";
+import { SEGMENT_STEPS, highContrast, marketPalette } from "../../theme/marketTokens";
 import { darkenForWhite, hexAlpha } from "./marketColor";
 
 // Market + Share 3.0 · SegmentedTicketStrip (HANDOVER §5: items 2–4, active,
@@ -106,8 +106,9 @@ export function SegmentedTicketStrip<K extends string>({
         const idleBg = dark ? hexAlpha(ink, 0.16) : tint;
         const idleInk = dark ? m.ink : "#17142A";
         // Dark: the step ink darkened just enough for the white label to reach
-        // 4.5:1 (W2 lead decision); light keeps the drawn ink.
-        const activeBg = dark ? darkenForWhite(ink) : ink;
+        // 4.5:1 (W2 lead decision); light keeps the drawn ink, except under High
+        // contrast (R2 gate), where it takes the same darkening.
+        const activeBg = dark || highContrast() ? darkenForWhite(ink) : ink;
         const Icon = it.icon;
         return (
           <button

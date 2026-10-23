@@ -1,63 +1,96 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Button } from "../../components/ui/Button";
-import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
+import { Handshake, Link2, Lock } from "lucide-react";
+import { PinnedSlot } from "../../components/ui/PinnedCta";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useOpenThread } from "../../components/messages/useOpenThread";
-import { goldPill, initials, pinGround, typeColours } from "../../components/professionals/typeColour";
-import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useApp } from "../../context/AppContext";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette } from "../../theme/marketTokens";
+import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { fetchClientSince, isActiveClientOf, professionalRole } from "../../services/connected-professional";
 import { fetchPublicCv, type PublicCv } from "../../services/professional-cv";
-import { CvView } from "../../components/cv/CvView";
 import { VerifiedCheck } from "../../components/cv/CvBadges";
 import { HireSheet } from "../../components/hire/HireSheet";
 import { YourHireCard } from "../../components/hire/YourHireCard";
-import { fetchMyHires, hireDecline, liveHireWith, type MyHire } from "../../services/hires";
+import { fetchMyHires, fetchPlansFor, hireDecline, hireStatusLabel, liveHireWith, planPriceLabel, type MyHire, type Plan } from "../../services/hires";
+import { fetchDeclineReasonLabel, fetchMyHireRequest, sendHireRequest, type HireRequest, type HireRequestExtras, type HireRequestState } from "../../services/hire-request";
 import {
-  fetchDeclineReasonLabel,
-  fetchMyHireRequest,
-  sendHireRequest,
-  type HireRequest,
-  type HireRequestExtras,
-  type HireRequestState,
-} from "../../services/hire-request";
-import { declineIsFinal, declineText, previewInviteLink, professionalByHandle } from "../../services/public-pro";
+  NOT_TAKING_BOOKINGS,
+  bookingAllowed,
+  declineIsFinal,
+  declineText,
+  fetchBookableSessions,
+  fetchOpenSlots,
+  localDay,
+  mondayOf,
+  previewInviteLink,
+  professionalByHandle,
+  sessionsThatFit,
+  slotsByDay,
+  weekDays,
+  type BookableSession,
+} from "../../services/public-pro";
 import { getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
 import { AccessRequestNotice } from "../../components/professionals/AccessRequestNotice";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
-import { ProfileMoreSections } from "../../components/professionals/ProfileMoreSections";
-import { BottomSheet } from "../../components/ui/BottomSheet";
-import { BookingFlow } from "../public/BookingFlow";
-import type { ProfessionalType } from "../../types";
-import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/ReviewForms";
-import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
-import { ChevronLeft, Handshake, Link2, Lock, MessageCircle, Star, Wallet } from "lucide-react";
-import { textPx } from "../../theme/textSize";
-import { useBack } from "../../hooks/useBack";
+import { priceLabel, sessionLine } from "../../components/pro/profile/profileModel";
+import { fetchPublicProfile, type PublicProfile } from "../../services/pro-profile";
+import type { MarketResult } from "../../services/market/rpc";
+import { HiredBadge, MarketAvatar, Star } from "../../components/market/ProfessionalCard";
+import { SegmentedTicketStrip } from "../../components/market/SegmentedTicketStrip";
+import { FOCUS_CSS } from "../../components/market/usePress";
+import { useStrip } from "../business-market/listingParts";
+import { BookingDone } from "../marketplace/PurchaseSheet";
+import { BackRow, Caps, EmptyBlock, PressButton } from "./profile/parts";
+import { AboutTab, type Availability, type WhereRow } from "./profile/AboutTab";
+import { ServicesTab } from "./profile/ServicesTab";
+import { WorkTab, type WorkState } from "./profile/WorkTab";
+import { ReviewsTab } from "./profile/ReviewsTab";
+import { BookSheet, type BookedResult } from "./profile/BookSheet";
+import { fetchConnectedSocials } from "./profile/connectedSocials";
+import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sessionWhen, socialLinks, summaryFigure, summaryLine } from "./profile/profileModel";
 
-// MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
-// colours, the price and client-since pills, the gold reviews pill (which
-// opens the reviews page, MO1.2.1.1), section labels, and a 44 pinned row:
-// Message and Hire (A3: Hire opens the hire sheet, MO1.2.1.5). The reviews
-// sheet that lived here is now that page.
-
-// V8 (QA 8.0): "pressing on the grey review text would open to all the
-// reviews written by the clients."
-// THE GENERATED REVIEWS THAT USED TO LIVE HERE ARE GONE. The app could only
-// store the current user's own review per professional, so a hash of the
-// professional's id produced plausible reviewer names, ratings and comments to
-// fill out the rest of the list. That was defensible scaffolding for seeded
-// entries and indefensible the moment a real account had a listing: invented
-// testimony, rendered identically to the real thing, about a real person.
-// The list reads professional_reviews now and shows what is there.
+// Market + Share 3.0 · W5 · C-MO.4.9 Professional profile (Client
+// Professional Screens lines 52–158; HANDOVER §4 "C-MO.4.9"). Literal values:
+// - the back row with the eyebrow "PROFESSIONAL" (10.5 / 700, 0.1em, --faint);
+// - the identity (margin-top 8, gap 14, centred): the 72 avatar (initials
+//   22 / 800 on the person's fixed step colour), the name 22 / 28 800, the
+//   specialty 13 --ink2, the rating line 12 --faint with the 12 star
+//   (margin-top 2, gap 4);
+// - the hired chip (margin-top 12): HiredBadge "chip" (--tealbg / --tealink,
+//   or --soft / --faint "No Centium work yet");
+// - Hire / Message (margin-top 14, a 1fr 1fr grid, gap 8): 46 tall, radius
+//   14, 14 / 800; Hire --fill / --onfill, Message 1px --border / --pdark;
+// - the SegmentedTicketStrip About · Services · Work history · Reviews (steps
+//   1–4, margin-top 14).
+// D-27: no phone, email, social link or website for anyone who is not a
+// CONNECTED client; every reader here selects no contact column, and the
+// social handles are read only after the live connection check says yes.
+//
+// DATA. The live readers keep the page working while DB10 is pending:
+// identity, about and CV from public_professional_directory / the public CV
+// views (or the invite's own readers); Services from appointment_services
+// (Book) and professional_plans_for (Hire); Reviews from professional_reviews.
+// professional_public_profile (DB10) adds the hired count, point offers
+// (DB2), Teaches at, Work history and the class reviews with the gym's name.
+//
+// KEPT LIVE FEATURES (PLAN §3.2): ?invite= banner; ?hire= deep link; "Client
+// since"; CvView, Where and Availability this week under About; Book a
+// session (the live booking, Services › Book); My review + edit; YourHireCard
+// with Cancel hire; cancel / decline notes; AccessRequestNotice + "Choose
+// what to share"; "Ask {first} for a client code"; Message + Hire (Hire
+// disabled signed out; on your own profile only Message). The professional's
+// own MO3 preview (`preview`) is the same page with their pinned pair.
 
 /**
  * Optional props (Release 3 W6, MO3 public profile preview): the page as a
  * client sees it, for the professional themselves. Unset, the page is the
- * client directory profile exactly as before.
+ * client directory profile.
  */
 export interface ProfessionalDetailPreview {
   /** Whose profile, in place of the route id. */
@@ -70,9 +103,19 @@ export interface ProfessionalDetailPreview {
   above?: ReactNode;
   /** The pinned bar in place of Message and Hire (MO3 Hire and Book a session). */
   pinned?: ReactNode;
-  /** Where the reviews pill goes (the directory reviews page needs a listing). */
+  /** Where "See all reviews" goes (the directory reviews page needs a listing). */
   reviewsHref?: string;
 }
+
+type Tab = "about" | "services" | "work" | "reviews";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "about", label: "About" },
+  { key: "services", label: "Services" },
+  { key: "work", label: "Work history" },
+  { key: "reviews", label: "Reviews" },
+];
+
+type ServicesData = { allowed: boolean; sessions: BookableSession[]; plans: Plan[]; week: number[] | null };
 
 export default function ProfessionalDetail({ preview }: { preview?: ProfessionalDetailPreview } = {}) {
   const params = useParams();
@@ -80,20 +123,14 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   const isPreview = !!preview;
   const fallbackListing = preview?.fallbackListing ?? null;
   const navigate = useNavigate();
-  const back = useBack();
-  const { authUserId } = useApp();
+  const { authUserId, pointsSummary, refreshAchievements } = useApp();
+  const dark = useIsDark();
+  const m = marketPalette(dark);
+  const today = localDay(new Date());
 
-  // ONE SOURCE NOW: public_professional_directory, keyed by account uuid.
-  // The seeded mockProfessionals entries — keyed "pr1" — are gone, and with
-  // them the branch that resolved them. Nothing links to such an id any more;
-  // a stale bookmark carrying one falls through to "Professional not found",
-  // which is the truthful answer for a profile that never was an account.
+  // ---- the listing (live identity), with the invite link's own readers ----
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [listingLoading, setListingLoading] = useState(true);
-  // Release 3 · W7 (J13, CU27): opened from an invite link (/i/{code} ›
-  // "See their profile"), ?invite=<code>. The "{first} invited you." line,
-  // and the profile even before the professional is listed: built from the
-  // invite's own anon readers (preview_invite_link, professional_by_handle).
   const [searchParams, setSearchParams] = useSearchParams();
   const inviteCode = isPreview ? null : searchParams.get("invite");
 
@@ -140,191 +177,140 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     };
   }, [id, fallbackListing, inviteCode]);
 
-  // One shape for the page. `isReal` used to gate what only a real account
-  // could do, back when a seeded entry could reach this screen; every listing
-  // is a real account now, so it is simply whether one loaded.
-  const professional = listing
-    ? {
-        id: listing.profileId,
-        name: listing.name,
-        type: (listing.subtype ?? "trainer") as ProfessionalType,
-        specialty: listing.specialty ?? "",
-        location: listing.location ?? "",
-        // The real aggregate, from professional_rating_summary via the
-        // directory view — the same numbers anon sees, computed over
-        // unredacted rows only.
-        rating: listing.averageRating ?? 0,
-        reviews: listing.reviewCount,
-        bio: listing.bio ?? "",
-        monthlyRate: listing.monthlyRate ?? 0,
-        headline: listing.headline,
-        skills: listing.skills,
-        verified: listing.hasVerifiedLicence,
-        connected: undefined as boolean | undefined,
-      }
-    : undefined;
   const isReal = !!listing;
-  const realProfessionalId = professional?.id ?? null;
+  const proId = listing?.profileId ?? null;
 
-  /**
-   * Whether the caller is actually this professional's client.
-   *
-   * STAMPED WITH THE PROFESSIONAL IT DESCRIBES, and read back by comparison —
-   * the same shape useThreadRealtime uses for its status, for the same two
-   * reasons. Resetting to "unknown" inside the effect would be a synchronous
-   * setState in an effect, and in the window before that effect runs it would
-   * report the PREVIOUS professional's answer as though it were this one's.
-   *
-   * NULL MEANS NOT ANSWERED YET, and is distinct from false. Rendering the
-   * unconnected layout while the check is in flight would flash a "Hire"
-   * call-to-action at someone who is already a client, so the connected-only
-   * sections wait rather than guess.
-   */
-  const [checked, setChecked] = useState<{ id: string | null; active: boolean }>({
-    id: null,
-    active: false,
-  });
-  const activeClient: boolean | null =
-    realProfessionalId !== null && checked.id === realProfessionalId ? checked.active : null;
-
+  // ---- whether the caller is this professional's client (null = not answered) ----
+  const [checked, setChecked] = useState<{ id: string | null; active: boolean }>({ id: null, active: false });
+  const activeClient: boolean | null = proId !== null && checked.id === proId ? checked.active : null;
   useEffect(() => {
-    if (!realProfessionalId || isPreview) return;
+    if (!proId || isPreview) return;
     let cancelled = false;
-    void isActiveClientOf(realProfessionalId).then((yes) => {
-      if (!cancelled) setChecked({ id: realProfessionalId, active: yes });
+    void isActiveClientOf(proId).then((yes) => {
+      if (!cancelled) setChecked({ id: proId, active: yes });
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, isPreview]);
+  }, [proId, isPreview]);
+  const isConnected = activeClient === true;
 
-  // The CV, from the public views (listed professionals are readable by
-  // anyone; a connected client can always read their own professional's).
-  // Stamped with the professional it belongs to, like the checks above.
+  // ---- the CV (public views) ----
   const [cvState, setCvState] = useState<{ id: string | null; cv: PublicCv | null }>({ id: null, cv: null });
-  const publicCv = realProfessionalId !== null && cvState.id === realProfessionalId ? cvState.cv : null;
-
+  const publicCv = proId !== null && cvState.id === proId ? cvState.cv : null;
   useEffect(() => {
-    if (!realProfessionalId) return;
+    if (!proId) return;
     let cancelled = false;
-    void fetchPublicCv(realProfessionalId).then((r) => {
-      if (!cancelled && r.ok) setCvState({ id: realProfessionalId, cv: r.cv });
+    void fetchPublicCv(proId).then((r) => {
+      if (!cancelled && r.ok) setCvState({ id: proId, cv: r.cv });
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId]);
+  }, [proId]);
 
-  // THE REAL START OF THE RELATIONSHIP, replacing a hardcoded "Client since
-  // August 2026" that every client saw regardless of when they connected.
+  // ---- "Client since" (the relationship's own start) ----
   const [since, setSince] = useState<{ id: string | null; at: string | null }>({ id: null, at: null });
-  const clientSince = realProfessionalId !== null && since.id === realProfessionalId ? since.at : null;
-
+  const clientSince = proId !== null && since.id === proId ? since.at : null;
   useEffect(() => {
-    if (!realProfessionalId || activeClient !== true) return;
+    if (!proId || activeClient !== true) return;
     let cancelled = false;
-    void fetchClientSince(realProfessionalId).then((at) => {
-      if (!cancelled) setSince({ id: realProfessionalId, at });
+    void fetchClientSince(proId).then((at) => {
+      if (!cancelled) setSince({ id: proId, at });
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, activeClient]);
+  }, [proId, activeClient]);
 
-  /**
-   * A3: the caller's hires, from my_hires() (professional_hires itself is
-   * unreadable). Stamped with the professional like the checks above. Only
-   * a LIVE hire with this professional is shown (pending or active); a
-   * cancelled or expired one does not block hiring again.
-   */
+  // ---- D-27: social handles, for a connected client only ----
+  const [socialState, setSocialState] = useState<{ id: string; s: Awaited<ReturnType<typeof fetchConnectedSocials>> } | null>(null);
+  useEffect(() => {
+    if (!proId || activeClient !== true || isPreview) return;
+    let cancelled = false;
+    void fetchConnectedSocials(proId).then((s) => {
+      if (!cancelled) setSocialState({ id: proId, s });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [proId, activeClient, isPreview]);
+  const socials = isConnected && socialState && socialState.id === proId ? socialLinks(socialState.s) : [];
+
+  // ---- the caller's hires (my_hires) ----
   const [hiresState, setHiresState] = useState<{ id: string | null; hires: MyHire[] }>({ id: null, hires: [] });
-  const liveHire = realProfessionalId !== null && hiresState.id === realProfessionalId ? liveHireWith(hiresState.hires, realProfessionalId) : null;
-  // Stamped with the professional it was written for, like the state above, so
-  // a cancel note never follows the client onto another professional's page.
+  const liveHire = proId !== null && hiresState.id === proId ? liveHireWith(hiresState.hires, proId) : null;
   const [cancelNoteState, setCancelNote] = useState<{ id: string | null; note: string } | null>(null);
-  const cancelNote = cancelNoteState && cancelNoteState.id === realProfessionalId ? cancelNoteState.note : null;
+  const cancelNote = cancelNoteState && cancelNoteState.id === proId ? cancelNoteState.note : null;
+  const loadHires = useCallback(async (forId: string) => {
+    const r = await fetchMyHires();
+    if (r.ok) setHiresState({ id: forId, hires: r.hires });
+  }, []);
+  useEffect(() => {
+    if (!proId || !authUserId || isPreview) return;
+    let cancelled = false;
+    void fetchMyHires().then((r) => {
+      if (!cancelled && r.ok) setHiresState({ id: proId, hires: r.hires });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [proId, authUserId, isPreview]);
 
-  // THE FREE REQUEST (pending_client_requests), as before A3: kept for a
-  // professional with no plans, where the hire sheet would otherwise offer
-  // nothing but a message. Stamped with the professional like the state above.
+  // ---- the free request (pending_client_requests) and the decline note ----
   const [requestState, setRequestState] = useState<{ id: string | null; state: HireRequestState; request?: HireRequest | null }>({ id: null, state: "none" });
-  const hireRequestState: HireRequestState =
-    realProfessionalId !== null && requestState.id === realProfessionalId ? requestState.state : "none";
+  const hireRequestState: HireRequestState = proId !== null && requestState.id === proId ? requestState.state : "none";
   const [requestSending, setRequestSending] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
-  // Release 3 · W7 (CU12): the professional's decline of the client's request,
-  // with its reason, shown where the client's own cancel note goes, once the
-  // professional's 5-minute undo has passed. A hire declined with
-  // decline_hire() reads its reason from my_hires() (no undo window); the
-  // newer of the two decides.
   const [decline, setDecline] = useState<{ id: string; text: string; at: string | null } | null>(null);
   useEffect(() => {
-    if (!realProfessionalId || !authUserId || isPreview) return;
+    if (!proId || !authUserId || isPreview) return;
     let cancelled = false;
-    void fetchMyHireRequest(realProfessionalId).then(async (res) => {
+    void fetchMyHireRequest(proId).then(async (res) => {
       if (cancelled || res.status !== "ok") return;
-      setRequestState({ id: realProfessionalId, state: res.state, request: res.request });
+      setRequestState({ id: proId, state: res.state, request: res.request });
       const r = res.request;
       if (r && r.status === "rejected" && declineIsFinal(r.resolvedAt)) {
         const label = !r.declineMessage?.trim() && r.declineReason ? await fetchDeclineReasonLabel(r.declineReason) : null;
         const text = declineText(label, r.declineMessage ?? null);
-        if (!cancelled && text) setDecline({ id: realProfessionalId, text, at: r.resolvedAt });
+        if (!cancelled && text) setDecline({ id: proId, text, at: r.resolvedAt });
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, authUserId, isPreview]);
-  const requestDecline = decline && decline.id === realProfessionalId ? decline : null;
-  const hireDeclined = realProfessionalId !== null && hiresState.id === realProfessionalId ? hireDecline(hiresState.hires, realProfessionalId) : null;
+  }, [proId, authUserId, isPreview]);
+  const requestDecline = decline && decline.id === proId ? decline : null;
+  const hireDeclined = proId !== null && hiresState.id === proId ? hireDecline(hiresState.hires, proId) : null;
   const hireDeclineLine = hireDeclined ? declineText(hireDeclined.label, hireDeclined.message) : null;
   const hireIsNewer = !!hireDeclineLine && (!requestDecline || new Date(hireDeclined?.at ?? 0).getTime() >= new Date(requestDecline.at ?? 0).getTime());
   const declineLine = hireRequestState === "pending" ? null : hireIsNewer ? hireDeclineLine : requestDecline?.text ?? null;
   const sendRequest = async (extras?: HireRequestExtras) => {
-    if (!realProfessionalId || !authUserId || requestSending) return;
+    if (!proId || !authUserId || requestSending) return;
     setRequestSending(true);
     setRequestError(null);
-    const res = await sendHireRequest(realProfessionalId, authUserId, extras);
+    const res = await sendHireRequest(proId, authUserId, extras);
     setRequestSending(false);
     if (res.status === "ok" || res.status === "already_pending") {
-      setRequestState({ id: realProfessionalId, state: "pending" });
+      setRequestState({ id: proId, state: "pending" });
       return;
     }
     if (res.status === "cooling_down") {
-      setRequestState({ id: realProfessionalId, state: "cooling_down" });
+      setRequestState({ id: proId, state: "cooling_down" });
       return;
     }
     setRequestError(res.message);
   };
 
-  const loadHires = async (forId: string) => {
-    const r = await fetchMyHires();
-    if (r.ok) setHiresState({ id: forId, hires: r.hires });
-  };
-
-  useEffect(() => {
-    if (!realProfessionalId || !authUserId || isPreview) return;
-    let cancelled = false;
-    void fetchMyHires().then((r) => {
-      if (!cancelled && r.ok) setHiresState({ id: realProfessionalId, hires: r.hires });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [realProfessionalId, authUserId, isPreview]);
-
-  // The hire sheet (MO1.2.1.5), and the ?hire=<planId> deep link from a chat
-  // plans card's Hire: the sheet opens on that plan's checkout while it is
-  // still offered, or on the plan list with a note. A bare ?hire (the chat
-  // header's Hire) opens the plan list with no note. The parameter is dropped
-  // when the sheet closes, so Back and a reload don't reopen it.
-  // (searchParams is read above, with the invite link's ?invite.)
+  // ---- the hire sheet and the ?hire=<planId> deep link ----
   const hireParam = searchParams.has("hire");
   const deepLinkPlan = searchParams.get("hire") || null;
   const [hireOpen, setHireOpen] = useState(false);
+  const [hirePlan, setHirePlan] = useState<string | null>(null);
   const hireSheetOpen = hireOpen || (hireParam && isReal);
   const closeHire = () => {
     setHireOpen(false);
+    setHirePlan(null);
     if (hireParam) {
       const next = new URLSearchParams(searchParams);
       next.delete("hire");
@@ -332,503 +318,476 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     }
   };
 
-  /**
-   * TWO SOURCES, BECAUSE THIS PAGE SERVES TWO KINDS OF PROFESSIONAL.
-   *
-   * A real listing asks the database: `professional_clients` with
-   * `disconnected_at is null` is the only thing that decides whether someone
-   * is a client, and it is the thing the roster and the consent screen already
-   * read.
-   *
-   * A mock entry has only its seed flag to go on. Its ids are not accounts, so
-   * no query could answer for them.
-   *
-   * THE LOCAL LIST NOW SUBTRACTS RATHER THAN ADDS. It used to be an "added"
-   * list written by the mock hire flow, which is gone — so the only thing left
-   * for it to record is which seeded entries the user has dismissed. That
-   * inversion is what makes Remove work on `pr1`, the one entry shipped with
-   * `connected: true`: filtering an id out of an added list could never clear a
-   * flag that lives in the seed data, so the button used to navigate away and
-   * leave the entry connected.
-   *
-   * REAL LISTINGS DO NOT CONSULT IT AT ALL. `activeClient` comes from
-   * `professional_clients`, and this branch never runs for them.
-   */
-  // professional_clients with disconnected_at null is the only thing that
-  // decides whether somebody is a client, and it is what the roster and the
-  // consent screen already read. The local "dismissed" list that used to sit
-  // beside it existed solely to switch off a seed flag on an entry that was
-  // never an account; both are gone.
-  const isConnected: boolean = activeClient === true;
   const [reviewOpen, setReviewOpen] = useState(false);
-  const dark = useIsDark();
-  const { open: openThread, busy: threadBusy, error: threadError } = useOpenThread(realProfessionalId ?? "");
+  const { open: openThread, busy: threadBusy, error: threadError } = useOpenThread(proId ?? "");
+  const { mine: myReview, myStatus, others: otherReviews, error: reviewError, canReview, signedOut, loading: reviewsLoading, save: saveReview, withdraw: withdrawReview, reload: reloadReviews } = useProfessionalReviews(preview ? null : proId);
 
-  // REAL ROWS, read as this caller. Signed out nothing is read — review text
-  // has no anon grant — and the sheet asks them to sign in instead.
-  const {
-    mine: myReview,
-    myStatus,
-    others: otherReviews,
-    error: reviewError,
-    canReview,
-    save: saveReview,
-    withdraw: withdrawReview,
-  } = useProfessionalReviews(preview ? null : realProfessionalId);
-
-  // Release 3 · W7 (CU11 "{first} asks to see {n} things"): this
-  // professional's pending data requests (access_requests; their default data
-  // requests land here when they accept), in the client-code card's place for
-  // a client. "Choose what to share" opens the same switches as Profile ›
-  // Connected professionals. Stamped with the professional like the state above.
+  // ---- data requests ("{first} asks to see {n} things") ----
   const [asks, setAsks] = useState<{ id: string | null; list: AccessRequest[] }>({ id: null, list: [] });
   const [sharingOpen, setSharingOpen] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
   const loadAsks = async (forId: string) => {
     const r = await getMyAccessRequests();
     if (r.ok) setAsks({ id: forId, list: r.requests.filter((q) => q.professionalId === forId) });
   };
   useEffect(() => {
-    if (!realProfessionalId || isPreview || activeClient !== true) return;
+    if (!proId || isPreview || activeClient !== true) return;
     let cancelled = false;
     void getMyAccessRequests().then((r) => {
-      if (!cancelled && r.ok) setAsks({ id: realProfessionalId, list: r.requests.filter((q) => q.professionalId === realProfessionalId) });
+      if (!cancelled && r.ok) setAsks({ id: proId, list: r.requests.filter((q) => q.professionalId === proId) });
     });
     return () => {
       cancelled = true;
     };
-  }, [realProfessionalId, isPreview, activeClient]);
-  const pendingAsks = asks.id === realProfessionalId ? asks.list : [];
+  }, [proId, isPreview, activeClient]);
+  const pendingAsks = asks.id === proId ? asks.list : [];
 
-  /**
-   * Re-reads the listing so the headline average moves with the write.
-   * average_rating comes from a view over every counted row, so the honest
-   * way to show the new number is to ask for it again.
-   */
+  // ---- DB10: professional_public_profile (DB2 for the offers) ----
+  const [pub, setPub] = useState<{ id: string; r: MarketResult<PublicProfile | null> } | null>(null);
+  const [pubReload, setPubReload] = useState(0);
+  useEffect(() => {
+    if (!proId) return;
+    let cancelled = false;
+    // professional_public_profile + work_history (Database Release 2): the header's rating is
+    // professional_rating() (client and class reviews). Class-context reviews, Teaches at and point
+    // offers have no reader in the contract (Database gap): those parts keep their live sources.
+    void fetchPublicProfile(proId).then((r) => {
+      if (!cancelled) setPub({ id: proId, r });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [proId, pubReload]);
+  const pubResult = pub && pub.id === proId ? pub.r : null;
+  const profile = pubResult && pubResult.ok ? pubResult.value : null;
+
+  // ---- Services, Where and Availability (live readers) ----
+  const [svc, setSvc] = useState<{ id: string; data: ServicesData | null; error: boolean } | null>(null);
+  const [svcReload, setSvcReload] = useState(0);
+  useEffect(() => {
+    if (!proId) return;
+    let live = true;
+    void (async () => {
+      const [allowed, plans] = await Promise.all([bookingAllowed(proId), fetchPlansFor(proId)]);
+      const sessions = allowed.ok && allowed.data ? await fetchBookableSessions(proId) : null;
+      if (!live) return;
+      if (!allowed.ok || (sessions && !sessions.ok)) {
+        setSvc({ id: proId, data: null, error: true });
+        return;
+      }
+      const list = sessions && sessions.ok ? sessions.data : [];
+      let week: number[] | null = null;
+      if (allowed.data && list.length > 0) {
+        const days = weekDays(mondayOf(new Date()));
+        const slots = await fetchOpenSlots(proId, localDay(days[0]), localDay(days[6]), list[0].id);
+        if (slots.ok) {
+          const by = slotsByDay(slots.slots);
+          week = days.map((d) => sessionsThatFit(by.get(localDay(d)) ?? []));
+        }
+      }
+      if (live) setSvc({ id: proId, data: { allowed: allowed.data, sessions: list, plans: plans.ok ? plans.plans : [], week }, error: false });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [proId, svcReload]);
+  const services = svc && svc.id === proId ? svc : null;
+
+  // ---- tabs, sheets, the strip ----
+  const [tab, setTab] = useState<Tab>("about");
+  const [bookFor, setBookFor] = useState<string | null>(null);
+  const [booked, setBooked] = useState<BookedResult | null>(null);
+  const [strip, showStrip] = useStrip();
+
+  const offers = profile?.offers ?? [];
+  const offersKnown = offers.length > 0;
+  const balanceKnown = !!pointsSummary;
+  useEffect(() => {
+    if (offersKnown && !balanceKnown) refreshAchievements();
+  }, [offersKnown, balanceKnown, refreshAchievements]);
+
   const refreshAggregate = async () => {
-    if (!realProfessionalId) return;
-    const found = await fetchListing(realProfessionalId);
+    if (!proId) return;
+    const found = await fetchListing(proId);
     if (found) setListing(found);
   };
-
   const submitReview = async (rating: number, body: string, nameVisible: boolean) => {
     const message = await saveReview(rating, body, nameVisible);
     if (!message) await refreshAggregate();
     return message;
   };
-
   const withdrawMyReview = async () => {
     const message = await withdrawReview();
     if (!message) await refreshAggregate();
     return message;
   };
 
-  // V7 (QA 7.0): "Your rating should influence the professional's overall
-  // rating based on the total rating by all people."
-  // IT DOES NOW, WITHOUT ARITHMETIC HERE. The old code blended the local
-  // review into the mock aggregate by hand, because there was no shared total
-  // to belong to. professional_rating_summary already counts every unredacted
-  // row including this user's, so the number below IS the blend — and
-  // re-adding the own review on top would double-count it.
-  const aggregateCount = professional?.reviews ?? 0;
+  const lines = useMemo(() => reviewLines([...otherReviews, ...(myReview && myStatus !== "withdrawn" ? [myReview] : [])], profile?.reviews ?? [], myReview?.id ?? null), [otherReviews, myReview, myStatus, profile]);
 
-  const t = typeColours(listing?.subtype ?? null, dark);
-  const gold = goldPill(dark);
+  // ---------------------------------------------------------------- render
 
-  if (!professional) {
-    // MO1.2.1 States, Loading: skeleton blocks at the anatomy positions
-    // (surface.soft, each block's radius): the 96 avatar, name, headline,
-    // the pills, then the About and Experience cards.
+  if (!listing) {
     if (listingLoading) {
       return (
-        <div aria-busy="true">
+        <div aria-busy="true" style={{ lineHeight: "normal" }}>
           <span className="sr-only">Loading…</span>
-          <div aria-hidden className="flex flex-col items-center gap-1.5 pt-[46px] mb-5">
-            <span className="w-24 h-24 rounded-full bg-cream-soft mb-1.5" />
-            <span className="w-40 h-[22px] rounded-md bg-cream-soft" />
-            <span className="w-56 h-[15px] rounded-md bg-cream-soft" />
-            <span className="w-44 h-[14px] rounded-md bg-cream-soft" />
-            <span className="w-48 h-[26px] rounded-full bg-cream-soft mt-1.5" />
-            <span className="w-32 h-7 rounded-full bg-cream-soft mt-0.5" />
+          <BackRow eyebrow="PROFESSIONAL" />
+          <div aria-hidden style={{ marginTop: 8, display: "flex", gap: 14, alignItems: "center" }}>
+            <span className="animate-skeleton-pulse" style={{ width: 72, height: 72, borderRadius: 999, background: m.soft }} />
+            <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+              <span className="animate-skeleton-pulse" style={{ height: 22, width: "60%", borderRadius: 8, background: m.soft }} />
+              <span className="animate-skeleton-pulse" style={{ height: 14, width: "45%", borderRadius: 8, background: m.soft }} />
+            </span>
           </div>
-          <div aria-hidden className="h-[98px] rounded-[20px] bg-cream-soft mb-5" />
-          <div aria-hidden className="h-[141px] rounded-[20px] bg-cream-soft" />
+          <span aria-hidden className="animate-skeleton-pulse" style={{ display: "block", marginTop: 26, height: 46, borderRadius: 14, background: m.soft }} />
+          <span aria-hidden className="animate-skeleton-pulse" style={{ display: "block", marginTop: 14, height: 44, borderRadius: 16, background: m.soft }} />
         </div>
       );
     }
     return (
-      <div className="text-center py-20 text-charcoal-soft">
-        Professional not found.
-        <div className="mt-4">
-          <Button onClick={() => navigate("/app/professionals")}>Back</Button>
-        </div>
+      <div style={{ lineHeight: "normal" }}>
+        <BackRow eyebrow="PROFESSIONAL" />
+        <EmptyBlock title="Professional not found." body={null}>
+          <PressButton onClick={() => navigate("/app/professionals")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
+            Back
+          </PressButton>
+        </EmptyBlock>
       </div>
     );
   }
 
-  const first = professional.name.split(" ")[0];
-  const rating = ratingLabel(listing?.averageRating ?? null, aggregateCount);
-  /** MO1.2.1's section label: 10.5/700 uppercase in the type colour. */
-  const sectionLabel = (text: string) => (
-    <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2" style={{ color: t.main }}>
-      {text}
-    </p>
+  const name = listing.name || profile?.card.name || "Professional";
+  const first = name.split(" ")[0];
+  const specialty = profile?.card.specialty || professionalRole({ specialty: listing.specialty, subtype: listing.subtype }) || typeLabel(listing.subtype);
+  const area = listing.location ?? profile?.card.area ?? null;
+  // The rating: DB10's (client and class reviews) once it answers, else the
+  // live aggregate (professional_rating_summary through the directory view).
+  const avg = profile ? profile.card.rating : listing.averageRating;
+  const count = profile ? profile.card.reviewCount : listing.reviewCount;
+  const isOwnProfile = proId !== null && proId === authUserId;
+  const showActions = !isPreview && activeClient !== null;
+  const inert = isPreview || isOwnProfile;
+
+  const sv = services?.data ?? null;
+  const rows = sv
+    ? serviceRows(
+        sv.allowed ? sv.sessions.map((s) => ({ id: s.id, name: s.name, meta: sessionLine(s.durationMin, s.locationKind), price: priceLabel(s.price, s.currency) })) : [],
+        sv.plans.map((p) => ({ id: p.id, name: p.name, meta: p.features[0] ?? null, price: planPriceLabel(p.price, p.billing) })),
+      )
+    : null;
+  const kinds = new Set((sv?.sessions ?? []).map((s) => s.locationKind));
+  const where: WhereRow[] | null = sv
+    ? [
+        ...(listing.location?.trim() ? [{ icon: "place" as const, title: listing.location.trim(), line: "In person" }] : []),
+        ...(kinds.has("online") || kinds.has(null) ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
+        ...(kinds.has("home_visit") ? [{ icon: "home" as const, title: "Home visits", line: "At your place" }] : []),
+        ...(kinds.has("phone") ? [{ icon: "phone" as const, title: "Phone", line: "Phone sessions" }] : []),
+      ]
+    : null;
+  const availability: Availability | null = sv
+    ? !sv.allowed
+      ? { state: "blocked", blockedLine: NOT_TAKING_BOOKINGS }
+      : sv.sessions.length === 0
+        ? { state: "none" }
+        : sv.week
+          ? { state: "ready", week: sv.week }
+          : { state: "error" }
+    : null;
+
+  const specialtiesFromDb = (profile?.specialties ?? []).length > 0;
+  const pills = specialtiesFromDb ? profile!.specialties : listing.skills;
+  const bio = profile?.about ?? listing.bio;
+
+  const workState: WorkState = !pubResult
+    ? { kind: "loading" }
+    : pubResult.ok
+      ? { kind: "ready", entries: profile?.workHistory ?? [] }
+      : pubResult.pending
+        ? { kind: "pending" }
+        : { kind: "error" };
+
+  const classOnly = lines.length > 0 && lines.every((l) => l.context);
+  const tabCount = profile ? count : lines.length > 0 ? Math.max(count, lines.length) : count;
+  const tabAvg = profile ? avg : listing.averageRating ?? averageOf(lines.map((l) => l.rating));
+  const figure = summaryFigure(tabAvg, tabCount);
+
+  const bookSession = sv?.sessions.find((s) => s.id === bookFor) ?? null;
+  const ownerLine = [name, typeLabel(listing.subtype)].filter(Boolean).join(" · ");
+
+  const messageBtn = (full: boolean) => (
+    <PressButton
+      onClick={() => void openThread()}
+      inert={threadBusy}
+      aria-busy={threadBusy || undefined}
+      style={{ gridColumn: full ? "1 / -1" : undefined, height: 46, borderRadius: 14, background: "transparent", border: `1px solid ${m.border}`, color: m.pdark, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer", opacity: threadBusy ? 0.6 : 1 }}
+    >
+      Message
+    </PressButton>
   );
-  // MO1.2.1: pills 26 tall (measured), 10 either side; the icon in the type's
-  // main colour, the text in its deep colour (both sampled from the frame).
-  // v6 MO1.2.1.5.2 #9 / #11: 26 tall, 0 10, icon 12 5 to the label, 11/16.5 600.
-  const pill = "inline-flex items-center gap-[5px] h-[26px] px-2.5 rounded-full text-[11px] leading-[16.5px] font-semibold";
-  // The pinned row waits for the connection check, so Message never flashes
-  // the non-client outline at someone who is already a client.
-  const showPinned = isReal && activeClient !== null;
-  const isOwnProfile = realProfessionalId !== null && realProfessionalId === authUserId;
+
+  // The kept relationship blocks at the end of About.
+  const aboutFooter = (
+    <>
+      {isConnected && (
+        <p style={{ margin: "18px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: textPx(11.5), color: m.faint }}>
+          <Lock size={12} strokeWidth={1.75} aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }} /> Manage what your professionals can see under Profile › Connected professionals.
+        </p>
+      )}
+      {!isPreview && activeClient === false && (
+        <div style={{ marginTop: 18, borderRadius: 18, background: m.pale, padding: 16 }}>
+          <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 700, color: m.pdark }}>Ask {first} for a client code</p>
+          <p style={{ margin: "4px 0 0", fontSize: textPx(12), lineHeight: linePx(20), color: m.ink2 }}>{first} can generate a code for you. Redeem it from your profile to connect and start sharing data.</p>
+          <PressButton
+            onClick={() => void openThread()}
+            inert={threadBusy}
+            style={{ marginTop: 14, width: "100%", height: 40, borderRadius: 12, background: m.card, border: `1px solid ${m.border}`, color: m.pdark, font: "inherit", fontSize: textPx(13), fontWeight: 700, cursor: "pointer", opacity: threadBusy ? 0.6 : 1 }}
+          >
+            Message {first}
+          </PressButton>
+        </div>
+      )}
+    </>
+  );
+
+  const servicesTop =
+    liveHire || cancelNote || (declineLine && !isConnected) ? (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
+        {liveHire && (
+          <YourHireCard
+            hire={liveHire}
+            onChanged={(note) => {
+              if (note) setCancelNote({ id: proId, note });
+              if (proId) void loadHires(proId);
+            }}
+          />
+        )}
+        {cancelNote && !liveHire && (
+          <p role="status" style={{ margin: 0, fontSize: textPx(12), color: m.ink2 }}>
+            {cancelNote}
+          </p>
+        )}
+        {declineLine && !cancelNote && !liveHire && !isConnected && (
+          <p role="status" style={{ margin: 0, padding: "2px 4px", fontSize: textPx(12), lineHeight: 1.5, color: m.ink2 }}>
+            <b style={{ color: m.ink }}>{first} couldn't take you on:</b> {declineLine}
+          </p>
+        )}
+      </div>
+    ) : null;
+
+  const myReviewBlock =
+    !preview && (canReview === true || myReview) ? (
+      <section aria-label="My review">
+        <Caps>My review</Caps>
+        <div style={{ marginTop: 8 }}>
+          <MyReviewCard className="!rounded-[18px] !p-4" hideLabel firstName={first} review={myReview} status={myStatus} onOpen={() => setReviewOpen(true)} onWithdraw={withdrawMyReview} />
+        </div>
+      </section>
+    ) : null;
 
   return (
-    <div className={showPinned || preview?.pinned ? (preview?.pinned ? "pb-[228px]" : "pb-[172px]") : ""}>
+    <div className={preview?.pinned ? "pb-[228px]" : ""} style={{ lineHeight: "normal", color: m.ink }}>
+      <style>{FOCUS_CSS}</style>
+      {strip}
       {inviteCode && activeClient === false && (
-        // CU27 v2 (r27): above the profile, opened from an invite link. r16,
-        // primary.pale, padding 10 12, gap 10; Link 15 / 2 primary.deep;
-        // 12.5 / 1.45 text, the name in bold; 8 under.
-        <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-3 py-2.5 mb-2" role="note">
-          <Link2 size={15} strokeWidth={2} aria-hidden className="shrink-0 text-primary-deep-text" />
-          <p className="flex-1 text-charcoal leading-[1.45]" style={{ fontSize: textPx(12.5) }}>
+        <div role="note" style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 16, background: m.pale, padding: "10px 12px", marginBottom: 8 }}>
+          <Link2 size={15} strokeWidth={2} aria-hidden style={{ flexShrink: 0, color: m.accent, ...NO_ICON_SCALE }} />
+          <p style={{ margin: 0, flex: 1, fontSize: textPx(12.5), lineHeight: 1.45, color: m.ink }}>
             <b>{first} invited you.</b> Hire a plan below or send a message first.
           </p>
         </div>
       )}
-      <div className={preview?.headerRight ? "flex items-start justify-between gap-2" : undefined}>
-      <button
-        onClick={back}
-        aria-label="Back"
-        className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-2"
-      >
-        {/* MO1.2.1 / MO1.2.1.4: ChevronLeft 18, in a 36 button at x 17 (the
-            chevron's vertex measured at x 31.5, as on MO1.2) with its centre
-            at y 44; the avatar starts at y 70. */}
-        <ChevronLeft size={18} />
-      </button>
-      {preview?.headerRight}
-      </div>
+
+      <BackRow eyebrow="PROFESSIONAL" aside={preview?.headerRight} />
       {preview?.above}
 
-      {/* MO1.2.1: the centred hero, in the professional's type colours (B3).
-          Avatar 96 (measured on the frame). */}
-      <div className="flex flex-col items-center text-center mb-5 animate-fade-slide-up">
-        {/* v6 MO1.2.1.5.2 #3 / #4: 96 round on #E7E2F6 / #E1EEEB (dark the
-            family pill, the drawn #E7E2F6* is a light leak); photo, else
-            initials when a name exists, else the person glyph. */}
-        <span
-          className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold"
-          style={{ background: pinGround(listing?.subtype ?? null, dark), color: t.deep }}
-        >
-          {listing?.avatarUrl ? (
-            <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : professional.name.trim() ? (
-            initials(professional.name)
-          ) : (
-            <AvatarPlaceholder size={96} />
-          )}
-        </span>
-        {/* #5 / #6: 22/28 700 ls -0.4 in the deep ink, 12 under the avatar;
-            BadgeCheck 18, 6 to the name. */}
-        <h1 className="mt-3 flex items-center justify-center gap-1.5 text-[22px] font-bold leading-[28px] tracking-[-0.4px]" style={{ color: t.deep }}>
-          <span className="min-w-0 break-words">{professional.name}</span>
-          {professional.verified && <VerifiedCheck size={18} strokeWidth={1.75} />}
-        </h1>
-        {professional.headline && (
-          // #7: 15/21 700, 3 under the name.
-          <p className="mt-[3px] text-[15px] leading-[21px] font-bold break-words" style={{ color: t.main }}>
-            {professional.headline}
-          </p>
-        )}
-        {/* #8: 14/20 500, 2 under. */}
-        <p className="mt-[2px] text-[14px] leading-[20px] font-medium text-charcoal-soft">
-          {[professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }), professional.location]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        {/* #9 / #11: 12 under the role line, 6 apart. */}
-        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
-          {isConnected && clientSince && (
-            <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Handshake size={12} strokeWidth={1.75} aria-hidden style={{ color: t.main }} />
-              Client since {new Date(clientSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
-            </span>
-          )}
-          {/* New on the profile (MO1.2.1); none when no rate is set (B5). */}
-          {listing?.monthlyRate != null && (
-            <span className={pill} style={{ background: t.pill, color: t.deep }}>
-              <Wallet size={12} strokeWidth={1.75} aria-hidden style={{ color: t.main }} />${listing.monthlyRate}/mo
-            </span>
-          )}
+      {/* The identity. */}
+      <div style={{ marginTop: 8, display: "flex", gap: 14, alignItems: "center" }}>
+        <MarketAvatar id={listing.profileId} name={name} photoUrl={listing.avatarUrl} size={72} fontSize={22} />
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, display: "flex", alignItems: "center", gap: 6, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28), color: m.ink }}>
+            <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{name}</span>
+            {listing.hasVerifiedLicence && <VerifiedCheck size={18} strokeWidth={1.75} />}
+          </h1>
+          <div style={{ fontSize: textPx(13), color: m.ink2 }}>{specialty}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: textPx(12), color: m.faint, marginTop: 2 }}>
+            <Star size={12} />
+            <span>{profileRatingLine(avg, count, area)}</span>
+          </div>
         </div>
-        {/* The gold reviews pill opens the reviews page (B7, B9). "New" until
-            three reviews count toward an average. */}
-        <button
-          type="button"
-          onClick={() => navigate(preview?.reviewsHref ?? `/app/professionals/${professional.id}/reviews`)}
-          // #13 / #14: 28 tall, 8 under the pills, padding 0 12, 11.5/17.3 700,
-          // a 1.1px border (#D9A441, dark #E0B360), Star 13 6 to the label.
-          className="tap mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11.5px] leading-[17.3px] font-bold"
-          style={{ background: gold.bg, border: `1.1px solid ${gold.border}`, color: gold.ink }}
-        >
-          <Star size={13} aria-hidden style={{ fill: gold.star, color: gold.star }} />
-          {rating.kind === "average"
-            ? `${rating.value} · ${reviewCountLabel(rating.count)}`
-            : aggregateCount > 0
-              ? `New · ${reviewCountLabel(aggregateCount)}`
-              : "New · no reviews yet"}
-        </button>
       </div>
 
-      {/* About IS the existing bio; the CV follows it. */}
-      {professional.bio && (
-        <section className="mb-5 animate-fade-slide-up" aria-label="About">
-          {sectionLabel("About")}
-          {/* v6 MO1.2.1.5.2 #16 / #17: pad 16, r18, 0.5px #241F1B@8% / #F5F3FA@8%; 13/21.5. */}
-          <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4">
-            <p className="text-[13px] text-charcoal-soft leading-[21.5px] whitespace-pre-line">{professional.bio}</p>
-          </div>
-        </section>
-      )}
-
-      {publicCv && (
-        <div className="mb-5">
-          <CvView cv={publicCv} skills={professional.skills} accent={{ label: t.main, pillBg: t.pill, pillInk: t.deep }} />
+      {/* The hired chip (DB10 only: omitted while unknown) and the kept
+          "Client since" pill in the same chip style. */}
+      {(profile || (isConnected && clientSince)) && (
+        <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {profile && <HiredBadge roles={profile.card.hiredViaCentiumCount} variant="chip" />}
+          {isConnected && clientSince && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 10, background: m.pale, padding: "6px 10px", fontSize: textPx(12), fontWeight: 700, color: m.pdark }}>
+              <Handshake size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
+              Client since {new Date(clientSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Release 3 · W7: the MO3 sections (Services, Where, Availability,
-          Reviews) and Book a session (Hire stays on the pinned row), for clients only: the
-          professional's own MO3 preview passes `preview` and is unchanged. */}
-      {!preview && isReal && activeClient !== null && (
-        <ProfileMoreSections
-          professionalId={professional.id}
-          firstName={first}
-          location={listing?.location ?? null}
-          reviews={otherReviews}
-          reviewCount={aggregateCount}
-          onSeeReviews={() => navigate(`/app/professionals/${professional.id}/reviews`)}
-          onBook={() => setBookOpen(true)}
-          isOwn={isOwnProfile}
-        />
+      {/* Hire / Message (waits for the connection check, so nothing flashes). */}
+      {showActions && isReal && (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {isOwnProfile ? (
+            messageBtn(true)
+          ) : (
+            <>
+              <PressButton
+                inert={!authUserId}
+                onClick={() => {
+                  setHirePlan(null);
+                  setHireOpen(true);
+                }}
+                aria-label={authUserId ? `Hire ${first}` : `Hire ${first}. Sign in to hire`}
+                style={{ height: 46, borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: authUserId ? "pointer" : "default", opacity: authUserId ? 1 : 0.4 }}
+              >
+                Hire
+              </PressButton>
+              {messageBtn(false)}
+            </>
+          )}
+        </div>
       )}
-
-      {/* V5 (QA 5.0): rating/reviewing is restricted to professionals you've
-          actually hired — for anyone else, this section doesn't appear.
-          GATED ON THE DATABASE'S ANSWER, not on the connection check beside
-          it. can_review_professional admits anyone with a professional_clients
-          row and deliberately does NOT filter disconnected_at, so somebody who
-          has since left this professional can still review the work they did
-          together — which `isConnected` would have hidden. The card also shows
-          for an existing review regardless, so a past client can still edit or
-          remove what they wrote. */}
-      {!preview && (canReview === true || myReview) && (
-        <section className="mb-5 animate-fade-slide-up" aria-label="My review">
-          {sectionLabel("My review")}
-          <MyReviewCard
-            // MO1.2.1 #7: radius 20, padding 16 (the text sits at x 33).
-            className="!rounded-[20px] !p-4"
-            hideLabel
-            firstName={first}
-            review={myReview}
-            status={myStatus}
-            onOpen={() => setReviewOpen(true)}
-            onWithdraw={withdrawMyReview}
-          />
-        </section>
-      )}
-
-      {/* Handover-complete pass: the "You can only review a professional
-          you've worked with" line is gone. MO1.2.1.4 (not a client) draws no
-          My review section and no line in its place. */}
-
-      {reviewError && (
-        // States, Error: an inline line in danger (no tinted box).
-        <p role="alert" className="mb-5 px-1 text-[12.5px] font-medium text-status-high">
-          {reviewError}
-        </p>
-      )}
-
-      {liveHire && (
-        <YourHireCard
-          hire={liveHire}
-          t={t}
-          sectionLabel={sectionLabel}
-          onChanged={(note) => {
-            if (note) setCancelNote({ id: realProfessionalId, note });
-            if (realProfessionalId) void loadHires(realProfessionalId);
-          }}
-        />
-      )}
-      {cancelNote && !liveHire && (
-        <p role="status" className="mb-5 px-1 text-[12px] text-charcoal-soft">
-          {cancelNote}
-        </p>
-      )}
-      {/* CU12 v2 (r26): the professional's decline with its reason, where the
-          client's own cancel note goes: padding 2 4, 12 / 1.5 text.soft, the
-          lead-in bold in the ink; 20 under. */}
-      {declineLine && !cancelNote && !liveHire && !isConnected && (
-        <p role="status" className="mb-5 text-charcoal-soft" style={{ padding: "2px 4px", fontSize: textPx(12), lineHeight: 1.5 }}>
-          <b className="text-charcoal">{first} couldn't take you on:</b> {declineLine}
-        </p>
-      )}
-
-      {/* CU11 v2: "{first} asks to see {n} things" (the professional's
-          default data requests), above the lock line, 20 under. */}
-      {isConnected && pendingAsks.length > 0 && (
-        <AccessRequestNotice
-          variant="summary"
-          requests={pendingAsks}
-          firstName={first}
-          onChoose={() => setSharingOpen(true)}
-          className="mb-5"
-        />
-      )}
-
-      {isConnected && (
-        // The data-sharing toggles live under Profile › Connected
-        // professionals (DataSharingSection), where real consent hangs off
-        // real relationships. CU11 safety fix (FINAL_PLAN section 5): the
-        // path named here is the real one.
-        <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5">
-          <Lock size={12} strokeWidth={1.75} className="shrink-0" /> Manage what your professionals can see under Profile › Connected
-          professionals.
-        </p>
-      )}
-
-      {isReal && activeClient === false && (
-        <>
-          {/* MO1.2.1.4 #7: the client-code card (358, the type pill, r18,
-              p16; title 13.5/700 deep, body 12/400 #5B5349 on a 20 line) with
-              its own "Message {first}" outline button: white, 1 px type deep,
-              13/700 deep, MessageCircle 14 (40 tall, r12, measured). */}
-          <div className="rounded-[18px] p-4" style={{ background: t.pill }}>
-            <p className="text-[13.5px] font-bold" style={{ color: t.deep }}>
-              Ask {first} for a client code
-            </p>
-            <p className="text-[12px] leading-5 text-charcoal-soft mt-1">
-              {first} can generate a code for you. Redeem it from your profile to connect and start sharing data.
-            </p>
-            <button
-              type="button"
-              onClick={() => void openThread()}
-              disabled={threadBusy}
-              className="tap mt-4 w-full h-10 rounded-xl bg-cream-card flex items-center justify-center gap-1.5 text-[13px] font-bold disabled:opacity-60"
-              style={{ color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13) }}
-            >
-              <MessageCircle size={14} aria-hidden /> Message {first}
-            </button>
-          </div>
-        </>
-      )}
-
       {threadError && (
-        <p role="alert" className="mt-3 px-1 text-[12.5px] font-medium text-status-high">
+        <p role="alert" style={{ margin: "8px 0 0", fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
           {threadError}
         </p>
       )}
 
-      {/* MO1.2.1 #9 / MO1.2.1.4 #8 / MO1.2.1.5 #9: the pinned row, 358 × 44,
-          r12, gap 8, labels 13.5/700. Message (secondary): the type pill and
-          deep ink, with a 1 px deep outline when not yet a client
-          (MO1.2.1.4). Hire (primary): white on the type's CTA fill (#9A8CD6 /
-          #6F9993), Handshake 15, for a client and a non-client alike, as
-          MO1.2.1 draws it: it opens the hire sheet (MO1.2.1.5). A paid hire on
-          top of an existing relationship is ordinary (the contract). */}
-      {/* Your own profile (user decision, 7 October 2026): no Hire — you
-          cannot hire yourself — so Message stands alone. */}
-      {preview?.pinned && <PinnedSlot>{preview.pinned}</PinnedSlot>}
-      {!preview && showPinned && isOwnProfile && <PinnedCta size="base" primary={{
-            label: "Message",
-            icon: <MessageCircle size={15} />,
-            loading: threadBusy,
-            onClick: () => void openThread(),
-            style: isConnected
-              ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
-              : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
-          }} />}
-      {!preview && showPinned && !isOwnProfile && (
-        <PinnedCta
-          size="base"
-          secondary={{
-            label: "Message",
-            icon: <MessageCircle size={15} />,
-            loading: threadBusy,
-            onClick: () => void openThread(),
-            style: isConnected
-              ? { background: t.pill, color: t.deep, fontSize: textPx(13.5) }
-              : { background: t.pill, color: t.deep, border: `1px solid ${t.deep}`, fontSize: textPx(13.5) },
-          }}
-          primary={{
-            label: "Hire",
-            icon: <Handshake size={15} />,
-            disabled: !authUserId,
-            onClick: () => setHireOpen(true),
-            style: { background: t.cta, color: t.onMain, fontSize: textPx(13.5) },
-          }}
-        />
+      {isConnected && pendingAsks.length > 0 && (
+        <AccessRequestNotice variant="summary" requests={pendingAsks} firstName={first} onChoose={() => setSharingOpen(true)} className="mt-3.5" />
       )}
+
+      <SegmentedTicketStrip items={TABS} active={tab} onChange={setTab} label={`${first}'s profile`} idPrefix="pro" style={{ marginTop: 14 }} />
+
+      <div role="tabpanel" id={`pro-panel-${tab}`} aria-labelledby={`pro-tab-${tab}`}>
+        {tab === "about" && (
+          <AboutTab
+            bio={bio}
+            specialties={pills}
+            socials={socials}
+            cv={publicCv}
+            skills={specialtiesFromDb ? listing.skills : []}
+            firstName={first}
+            where={isPreview || sv ? where : null}
+            availability={availability}
+            offers={offers}
+            balance={pointsSummary?.balance ?? 0}
+            teaches={profile?.teachesAt ?? []}
+            today={today}
+            footer={aboutFooter}
+          />
+        )}
+        {tab === "services" && (
+          <ServicesTab
+            rows={rows}
+            error={!!services?.error}
+            onRetry={() => setSvcReload((n) => n + 1)}
+            onBook={(sid) => setBookFor(sid)}
+            onHire={(pid) => {
+              if (!authUserId) return;
+              setHirePlan(pid);
+              setHireOpen(true);
+            }}
+            inert={inert}
+            firstName={first}
+            top={servicesTop}
+          />
+        )}
+        {tab === "work" && <WorkTab state={workState} firstName={first} today={today} onRetry={() => setPubReload((n) => n + 1)} />}
+        {tab === "reviews" && (
+          <ReviewsTab
+            signedOut={!preview && signedOut}
+            loading={!preview && reviewsLoading && lines.length === 0}
+            error={reviewError}
+            onRetry={() => void reloadReviews()}
+            lines={lines}
+            figure={figure}
+            stars={figure === "New" ? 0 : Math.round(Number(figure))}
+            countLine={tabCount > 0 ? summaryLine(tabCount, classOnly) : "No reviews yet"}
+            firstName={first}
+            onSeeAll={otherReviews.length > 0 || myReview ? () => navigate(preview?.reviewsHref ?? `/app/professionals/${listing.profileId}/reviews`) : undefined}
+            mine={myReviewBlock}
+          />
+        )}
+      </div>
+
+      {preview?.pinned && <PinnedSlot>{preview.pinned}</PinnedSlot>}
 
       {isReal && !preview && (
         <HireSheet
           open={hireSheetOpen}
           onClose={closeHire}
-          pro={{
-            id: professional.id,
-            name: professional.name,
-            first,
-            role: professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }) ?? "",
-            avatarUrl: listing?.avatarUrl ?? null,
-          }}
-          t={t}
-          initialPlanId={deepLinkPlan}
-          onHired={(hires) => {
+          pro={{ id: listing.profileId, name, first, role: specialty, avatarUrl: listing.avatarUrl }}
+          initialPlanId={deepLinkPlan ?? hirePlan}
+          onHired={(hires, hire) => {
             setCancelNote(null);
-            if (hires) setHiresState({ id: professional.id, hires });
-            else void loadHires(professional.id);
+            if (hires) setHiresState({ id: listing.profileId, hires });
+            else void loadHires(listing.profileId);
+            closeHire();
+            showStrip(`Hired ${first} · ${hireStatusLabel(hire)}`, "success", { label: "View", onPress: () => setTab("services") });
           }}
           onMessage={() => void openThread()}
           messageBusy={threadBusy}
-          // Not for someone already their client: there is nothing to ask for.
-          request={
-            isConnected
-              ? undefined
-              : { state: hireRequestState, busy: requestSending, error: requestError, onSend: (extras) => void sendRequest(extras) }
-          }
+          request={isConnected ? undefined : { state: hireRequestState, busy: requestSending, error: requestError, onSend: (extras) => void sendRequest(extras) }}
         />
       )}
 
       {!preview && isReal && (
         <>
-          {/* CU11 "Choose what to share": the same switches as Profile ›
-              Connected professionals, for this professional. */}
           <BottomSheet
             open={sharingOpen}
             onClose={() => {
               setSharingOpen(false);
-              void loadAsks(professional.id);
+              void loadAsks(listing.profileId);
             }}
-            title={professional.name}
+            title={name}
           >
-            {sharingOpen && <DataSharingSection professionalId={professional.id} />}
+            {sharingOpen && <DataSharingSection professionalId={listing.profileId} />}
           </BottomSheet>
-          {/* MO3 Book a session: the public booking page's flow, in a sheet. */}
-          <BottomSheet open={bookOpen} onClose={() => setBookOpen(false)} title="Book a session" size="tall">
-            {bookOpen && <BookingFlow professionalId={professional.id} firstName={first} signedIn={!!authUserId} />}
-          </BottomSheet>
+          <BookSheet
+            open={!!bookSession}
+            onClose={() => setBookFor(null)}
+            session={bookSession}
+            firstName={first}
+            ownerLine={ownerLine}
+            professionalId={listing.profileId}
+            signedIn={!!authUserId}
+            onBooked={(r) => {
+              setBookFor(null);
+              setBooked(r);
+              setSvcReload((n) => n + 1);
+            }}
+          />
+          <BookingDone
+            open={!!booked}
+            title={booked?.status === "requested" ? "Request sent" : "You're booked"}
+            body={
+              booked?.status === "requested"
+                ? `${first} will confirm your session. You can follow it in My bookings.`
+                : `Your session with ${first} is in My bookings. You can message ${first} there if you need to change it.`
+            }
+            rows={
+              booked
+                ? [
+                    { k: "Session", v: booked.session.name },
+                    { k: "With", v: name },
+                    { k: "When", v: sessionWhen(booked.startsAt, ", ") },
+                    { k: "Payment", v: booked.session.price > 0 ? `${priceLabel(booked.session.price, booked.session.currency)} · Cash` : "Free" },
+                  ]
+                : []
+            }
+            bookingsTab="upcoming"
+            onDone={() => setBooked(null)}
+          />
         </>
       )}
 
-      <ReviewFormSheet
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        firstName={first}
-        existing={myReview}
-        onSave={submitReview}
-        onWithdraw={withdrawMyReview}
-      />
+      <ReviewFormSheet open={reviewOpen} onClose={() => setReviewOpen(false)} firstName={first} existing={myReview} onSave={submitReview} onWithdraw={withdrawMyReview} />
     </div>
   );
 }

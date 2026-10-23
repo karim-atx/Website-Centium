@@ -1,7 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../../lib/supabase/client";
-import { clearAllNotifications, dismissNotification, fetchNotifications, markRead, subscribeNotifications, type ProNotification } from "../../../services/pro/notifications";
+import { useInboxRealtime } from "../../../hooks/useInboxRealtime";
+import { applyReadChanges, hasNewRows, PRO_KINDS } from "../../../services/notifications";
+import { withMemberRows } from "./inboxModel";
+import {
+  clearAllNotifications,
+  clearMemberNotifications,
+  dismissMemberNotification,
+  dismissNotification,
+  fetchMemberInbox,
+  fetchNotifications,
+  fromMemberRow,
+  markMemberRead,
+  markRead,
+  subscribeNotifications,
+  type ProNotification,
+} from "../../../services/pro/notifications";
 import { fetchHireInbox, type HireRequestRow } from "../../../services/hire-inbox";
 import { fetchMyEmployments, type MyEmployment } from "../../../services/business-team/employment";
 import { invitationState } from "../businesses/invitationLogic";
@@ -23,6 +38,13 @@ export interface ProRequest extends HireRequestRow {
  * place so Home's badge and the hub agree.
  * - notifications: professional_notifications, re-read on every realtime
  *   change for this professional (DB-2); Clear all and dismiss delete rows;
+ *   merged (newest first) with the professional kinds of the member inbox
+ *   (Market + Share Release 2: my_notifications(p_kinds = PRO_KINDS), rows
+ *   with `memberKind`). Live (Database 73ea87b, useInboxRealtime with
+ *   PRO_KINDS): a new member row re-reads the member half only and puts it in
+ *   place (withMemberRows), a read_at changed elsewhere is applied without a
+ *   read, a reconnect re-reads the member half once. Mark read, dismiss and
+ *   Clear all act on each row's own table;
  * - requests: pending_client_requests waiting for an answer, with plan and
  *   message;
  * - declined: requests declined in the last 5 minutes ("Declined · Undo");
@@ -53,7 +75,12 @@ export interface ProInbox {
   undoDecline: (id: string) => Promise<{ ok: true } | { ok: false; message: string; final?: boolean }>;
 }
 
-export function useProInbox(): ProInbox {
+/**
+ * `screen`: the live member-inbox channel's screen name (useInboxRealtime);
+ * null for a screen that shows no notification rows (Clients), which then
+ * holds no channel for them.
+ */
+export function useProInbox(screen: string | null = "pro-hub"): ProInbox {
   const { authUserId, professionalClients } = useApp();
   const [state, setState] = useState<{
     loading: boolean;
@@ -75,9 +102,10 @@ export function useProInbox(): ProInbox {
     if (!authUserId) return;
     let live = true;
     void (async () => {
-      const [n, r, e, h, d] = await Promise.all([fetchNotifications(), fetchHireInbox(authUserId), fetchMyEmployments(), fetchPendingHires(), fetchRecentDeclines(authUserId)]);
+      const [n, r, e, h, d, mi] = await Promise.all([fetchNotifications(), fetchHireInbox(authUserId), fetchMyEmployments(), fetchPendingHires(), fetchRecentDeclines(authUserId), fetchMemberInbox()]);
       if (!live) return;
-      const notifications = n.ok ? n.data : [];
+      // The member-inbox rows join the console's; a failed member read leaves them out (the console's rows still show).
+      const notifications = n.ok ? withMemberRows(n.data, mi.ok ? mi.data.map(fromMemberRow) : []) : [];
       const details = r.status === "ok" ? await fetchRequestDetails(r.requests.map((x) => x.id)) : {};
       // Names the roster doesn't have (a prospect asking to work with you).
       const ids = [...new Set(notifications.map((x) => x.clientId).filter((x): x is string => !!x))];
@@ -112,6 +140,22 @@ export function useProInbox(): ProInbox {
     };
   }, [authUserId, nonce]);
 
+  // The member inbox's professional kinds, live: only the member half is re-read.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+  useInboxRealtime(screen ? authUserId : null, screen ?? "pro-hub", PRO_KINDS, (changes, resync) => {
+    const st = stateRef.current;
+    if (st.loading || st.error || st.offline) return;
+    if (changes.length) setState((s) => ({ ...s, notifications: applyReadChanges(s.notifications, changes) }));
+    if (!resync && !hasNewRows(st.notifications, changes)) return;
+    void fetchMemberInbox().then((mi) => {
+      if (!mi.ok) return;
+      setState((s) => ({ ...s, notifications: withMemberRows(s.notifications, mi.data.map(fromMemberRow)) }));
+    });
+  });
+
   useEffect(() => {
     if (!authUserId) return;
     return subscribeNotifications(authUserId, reload);
@@ -136,17 +180,22 @@ export function useProInbox(): ProInbox {
 
   const doMarkRead = useCallback(
     async (ids: string[]) => {
-      const unreadIds = ids.filter((id) => state.notifications.some((x) => x.id === id && !x.readAt));
-      if (!unreadIds.length) return;
+      const unread = state.notifications.filter((x) => ids.includes(x.id) && !x.readAt);
+      if (!unread.length) return;
+      const unreadIds = unread.map((x) => x.id);
       const now = new Date().toISOString();
       setState((s) => ({ ...s, notifications: s.notifications.map((x) => (unreadIds.includes(x.id) ? { ...x, readAt: now } : x)) }));
-      if (!(await markRead(unreadIds))) reload();
+      const member = unread.filter((x) => x.memberKind).map((x) => x.id);
+      const own = unread.filter((x) => !x.memberKind).map((x) => x.id);
+      const [a, b] = await Promise.all([markRead(own), markMemberRead(member)]);
+      if (!a || !b) reload();
     },
     [state.notifications, reload]
   );
 
   const clearAll = useCallback(async () => {
-    const ok = await clearAllNotifications();
+    const [own, member] = await Promise.all([clearAllNotifications(), clearMemberNotifications()]);
+    const ok = own && member;
     if (ok) setState((s) => ({ ...s, notifications: [] }));
     reload();
     return ok;
@@ -154,12 +203,13 @@ export function useProInbox(): ProInbox {
 
   const dismiss = useCallback(
     async (id: string) => {
-      const ok = await dismissNotification(id);
+      const row = state.notifications.find((x) => x.id === id);
+      const ok = row?.memberKind ? await dismissMemberNotification(id) : await dismissNotification(id);
       if (ok) setState((s) => ({ ...s, notifications: s.notifications.filter((x) => x.id !== id) }));
       else reload();
       return ok;
     },
-    [reload]
+    [state.notifications, reload]
   );
 
   const undoDecline = useCallback(

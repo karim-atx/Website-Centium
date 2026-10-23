@@ -13,6 +13,10 @@ import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { MembershipPass } from "../../components/marketplace/MembershipPass";
+import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
+import { InstructorReviewDialog } from "../../components/market/InstructorReviewDialog";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { fetchPastBookings, firstName, sentText, type PastBooking, type ReviewTarget } from "../../services/instructor-reviews";
 import { endMyGymMembership, fetchMembershipTerms, type GymMembership } from "../../services/venues";
 import { commitmentLines } from "../../services/venues/venueLogic";
 import { BackTitle } from "./BackTitle";
@@ -25,6 +29,7 @@ import {
   hireRow,
   longDate,
   membershipRow,
+  pastRows,
   sessionRow,
   splitSchedule,
   tabFromQuery,
@@ -47,10 +52,20 @@ import {
 //   tile radius 18 --pale with the calendar 24 (stroke 1.75) --accent, the
 //   title 16 / 800, the body 13 / 1.55 --faint, the CTA (margin-top 6, min
 //   height 40, radius 12, 1px --border, padding 0 14, 12.5 / 800 --pdark).
-// Composed client-side from the live readers (myBookingsData.ts): DB4
-// my_bookings is optional and hasn't landed. The instructor-review stub on
-// Past ("Review", the review popup `rev*`) waits for DB10 (`reviewable`) and
-// W5, so no row shows it yet.
+// Composed client-side from the live readers (myBookingsData.ts), except
+// Past's classes.
+// W5 (C-MO.4.5 `revPrompt` / `revFilled` / `revSent`; D-43): Past's classes
+// read my_class_bookings(p_tab 'past') (DB4, Database 20261211100000:
+// `can_review`, `my_rating`; the lead's decision: only Past switches, Upcoming
+// stays composed); the professional sessions stay composed. A past class
+// with an instructor that the server says is reviewable has the teal
+// "Review" stub (a button) → InstructorReviewDialog; once sent the
+// row reads "you rated N" with the muted "Reviewed" stub, and the strip
+// "Review sent · it shows on {first}'s profile with {gym}" (Client
+// Professional Screens line 192: margin-top 12 under the track, --goodbg,
+// the "View" stub → the instructor's profile; closes after 5 s as useStrip)
+// shows above the list. While my_class_bookings fails, Past stays the
+// composed rows with no Review stub.
 // D-46: an active membership's row has a ⋮ (32 × 44) with "Show pass" (the
 // live MembershipPass in a popup, as GymPage) and "End membership": the live
 // end_gym_membership flow (MembershipsCard: at the period end or today) as a
@@ -72,6 +87,13 @@ export default function MyBookingsPage() {
   const [members, setMembers] = useState<Loaded<MembershipsData> | null>(null);
   const [schedule, setSchedule] = useState<Loaded<ScheduleData> | null>(null);
   const [tick, setTick] = useState(0);
+  /** my_class_bookings past (DB4): undefined while reading, null when it failed (Past stays composed). */
+  const [pastDb, setPastDb] = useState<PastBooking[] | null | undefined>(undefined);
+  /** Reviews sent this session: booking id → the rating given. */
+  const [sent, setSent] = useState<Record<string, number>>({});
+  const [reviewing, setReviewing] = useState<ReviewTarget | null>(null);
+  const [strip, setStrip] = useState<{ n: number; text: string; professionalId: string } | null>(null);
+  const reduced = useReducedMotion();
   /** Ended at the period end this session (MembershipsCard's rule, until the reader says so). */
   const [endsOn, setEndsOn] = useState<Record<string, string>>({});
 
@@ -79,8 +101,10 @@ export default function MyBookingsPage() {
     let cancelled = false;
     setMembers(null);
     setSchedule(null);
+    setPastDb(undefined);
     void loadMemberships().then((r) => !cancelled && setMembers(r));
     void loadSchedule().then((r) => !cancelled && setSchedule(r));
+    void fetchPastBookings().then((r) => !cancelled && setPastDb(r.ok ? r.value : null));
     return () => {
       cancelled = true;
     };
@@ -98,6 +122,18 @@ export default function MyBookingsPage() {
     return splitSchedule([...schedule.value.classes.map((c) => classRow(c, now)), ...schedule.value.sessions.map((s) => sessionRow(s, now))]);
   }, [schedule]);
 
+  const pastFromDb = useMemo(() => (pastDb && split ? pastRows(pastDb, sent, split.past) : null), [pastDb, sent, split]);
+
+  // The sent strip closes with View or after 5 s (useStrip's timing). The row
+  // that had focus becomes a plain ticket, so focus moves to the strip's View.
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!strip) return;
+    stripRef.current?.querySelector("button")?.focus();
+    const id = window.setTimeout(() => setStrip(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [strip]);
+
   const gymById = useMemo(() => new Map((members?.ok ? members.value.gyms : []).map((g) => [g.id, g])), [members]);
 
   // The row menu, the pass and the end flow.
@@ -105,8 +141,8 @@ export default function MyBookingsPage() {
   const [passFor, setPassFor] = useState<GymMembership | null>(null);
   const [ending, setEnding] = useState<GymMembership | null>(null);
 
-  const state = tab === "memberships" ? members : schedule;
-  const rows: BookingRow[] | null = tab === "memberships" ? memberRows : split ? (tab === "upcoming" ? split.upcoming : split.past) : null;
+  const state = tab === "memberships" ? members : tab === "past" ? (pastDb === undefined ? null : pastDb && schedule?.ok ? ({ ok: true } as const) : schedule) : schedule;
+  const rows: BookingRow[] | null = tab === "memberships" ? memberRows : tab === "past" && pastFromDb ? pastFromDb : split ? (tab === "upcoming" ? split.upcoming : split.past) : null;
   const cachedAt = members?.ok ? members.value.cachedAt : null;
 
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
@@ -120,7 +156,7 @@ export default function MyBookingsPage() {
 
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
-      <style>{FOCUS_CSS}</style>
+      <style>{`${FOCUS_CSS}.bk-review button:focus-visible{outline:2px solid #AEA1DC;outline-offset:-2px}`}</style>
       <BackTitle title="My bookings" parent="/app/marketplace" />
       <div role="tablist" aria-label="My bookings" style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
         {BOOKINGS_TABS.map((t, i) => {
@@ -149,6 +185,21 @@ export default function MyBookingsPage() {
       </div>
 
       <div id="bk-panel" role="tabpanel" aria-labelledby={TAB_IDS[tab]}>
+        {tab === "past" && strip ? (
+          <div ref={stripRef} style={{ marginTop: 12 }}>
+            <ConfirmationStrip
+              key={strip.n}
+              text={strip.text}
+              action="View"
+              onAction={() => {
+                const id = strip.professionalId;
+                setStrip(null);
+                navigate(`/app/professionals/${encodeURIComponent(id)}`);
+              }}
+              still={reduced}
+            />
+          </div>
+        ) : null}
         {tab === "memberships" && cachedAt ? <MarketOffline loaded force style={{ marginTop: 14 }} /> : null}
         {state === null ? (
           <MarketSkeleton radius={18} rows={3} height={98} count={2} label="Loading your bookings" style={{ marginTop: 14 }} />
@@ -173,6 +224,7 @@ export default function MyBookingsPage() {
                   onOpen={r.href ? () => navigate(r.href as string) : undefined}
                   menu={g && (canEnd || canPass) ? (anchor) => setMenu({ g, anchor }) : undefined}
                   menuOpen={!!g && menu?.g.id === g.id}
+                  onReview={r.review ? () => setReviewing(r.review ?? null) : undefined}
                 />
               );
             })}
@@ -208,6 +260,16 @@ export default function MyBookingsPage() {
         </button>
       </CentredPopup>
 
+      <InstructorReviewDialog
+        target={reviewing}
+        onClose={() => setReviewing(null)}
+        onSent={(t, rating) => {
+          setReviewing(null);
+          setSent((s) => ({ ...s, [t.bookingId]: rating }));
+          setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(t.professionalName, t.gymName), professionalId: t.professionalId }));
+        }}
+      />
+
       <EndMembershipDialog
         membership={ending}
         onClose={() => setEnding(null)}
@@ -223,7 +285,7 @@ export default function MyBookingsPage() {
 
 // ---------------------------------------------------------------------------
 
-const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (anchor: HTMLElement) => void; menuOpen: boolean }> = ({ row, onOpen, menu, menuOpen }) => {
+const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (anchor: HTMLElement) => void; menuOpen: boolean; onReview?: () => void }> = ({ row, onOpen, menu, menuOpen, onReview }) => {
   const m = marketPalette(useIsDark());
   const press = usePress();
   const label = [row.title, row.sub, row.meta, row.note, row.stub].filter(Boolean).join(", ");
@@ -241,6 +303,27 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
     </>
   );
   const bodyBox: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", boxSizing: "border-box" };
+  if (onReview) {
+    // W5: the body opens the class, the teal "Review" stub opens the review popup.
+    return (
+      <TicketStub
+        stubWidth={46}
+        vertical
+        labelType={[9.5, "0.1em"]}
+        minHeight={98}
+        tone={row.tone}
+        stubLabel={row.stub}
+        onPress={onOpen ?? onReview}
+        onStubPress={onReview}
+        ariaLabel={label}
+        stubAriaLabel={row.review ? `Review ${firstName(row.review.professionalName)}'s class` : "Review"}
+        className="bk-review"
+        bodyStyle={bodyBox}
+      >
+        {content}
+      </TicketStub>
+    );
+  }
   if (!menu) {
     return (
       <TicketStub stubWidth={46} vertical labelType={[9.5, "0.1em"]} minHeight={98} tone={row.tone} stubLabel={row.stub} onPress={onOpen} ariaLabel={label} className="market-focus" bodyStyle={bodyBox}>
