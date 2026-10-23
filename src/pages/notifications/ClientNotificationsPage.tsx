@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBack } from "../../hooks/useBack";
@@ -10,16 +10,19 @@ import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import {
+  clientNotificationTarget,
   fetchMyNotifications,
   groupNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
+  markNotificationsRead,
+  markReadLocally,
   NOTIF_GLYPHS,
   NOTIF_TONES,
+  notificationCopy,
+  notificationCursor,
   notifLook,
   notifWhen,
   unreadCount,
-  type AppNotification,
+  type MemberNotification,
 } from "../../services/notifications";
 
 // Market + Share 3.0 · W2 · the client's notifications (C-MO.4.10
@@ -37,12 +40,21 @@ import {
 //   and the time 11 --faint (nowrap, gap 8), the body 12 / 17 #5B5349
 //   (margin-top 2), the 8 unread dot #8F68F6 (transparent once read;
 //   margin-top 6).
-// Tapping a row marks it read and opens its target. Dark (not drawn, D-05):
-// the page's dark palette, each tile its ink at 16% with the ink lifted.
-// awaiting DB stage DB6: until the member inbox lands, my_notifications is
-// `pending` and the page shows its empty state (ours, not drawn).
+// Dark (not drawn, D-05): the page's dark palette, each tile its ink at 16%
+// with the ink lifted.
+// DB6 (Database 2a5b122, 20261210600000): the rows are my_notifications, PAGE
+// at a time; "Load more" (not drawn; Points history's) passes the last row
+// shown as (p_before, p_before_id). The words are the client's copy for the
+// row's title_key (notificationCopy; an unknown key reads "New notification",
+// never the key). Read state as the board: opening the page reads nothing;
+// tapping a row marks that row read (mark_notifications_read([id])) and opens
+// its target (clientNotificationTarget); "Mark all read" is
+// mark_notifications_read(null). No rows: the empty state (ours, not drawn).
 
-type State = { s: "loading" } | { s: "ok"; list: AppNotification[] } | { s: "pending" } | { s: "error"; offline: boolean };
+const PAGE = 30;
+const OFFLINE_NOTE = "You're offline. Try again when you're connected.";
+
+type State = { s: "loading" } | { s: "ok"; list: MemberNotification[]; more: boolean } | { s: "error"; offline: boolean };
 
 export default function ClientNotificationsPage() {
   const dark = useIsDark();
@@ -53,14 +65,15 @@ export default function ClientNotificationsPage() {
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
   const [failNote, setFailNote] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setState({ s: "loading" });
-    void fetchMyNotifications().then((r) => {
+    void fetchMyNotifications(null, PAGE).then((r) => {
       if (cancelled) return;
-      if (r.ok) setState({ s: "ok", list: r.value });
-      else if (r.pending) setState({ s: "pending" });
+      if (r.ok) setState({ s: "ok", list: r.value.items, more: r.value.more });
       else setState({ s: "error", offline: !!r.offline });
     });
     return () => {
@@ -70,25 +83,46 @@ export default function ClientNotificationsPage() {
 
   const list = state.s === "ok" ? state.list : [];
   const unread = unreadCount(list);
-  const readNow = (ids: Set<string> | null) =>
-    setState((st) => (st.s === "ok" ? { s: "ok", list: st.list.map((n) => (!n.readAt && (!ids || ids.has(n.id)) ? { ...n, readAt: new Date().toISOString() } : n)) } : st));
+  /** `at` null puts the rows back to unread (a failed single mark). */
+  const setRead = (ids: Set<string> | null, at: string | null) =>
+    setState((st) =>
+      st.s !== "ok" ? st : { ...st, list: at ? markReadLocally(st.list, ids, at) : st.list.map((n) => (ids && ids.has(n.id) ? { ...n, readAt: null } : n)) }
+    );
+
+  const loadMore = useCallback(async () => {
+    if (state.s !== "ok" || state.list.length === 0 || loadingMore) return;
+    setLoadingMore(true);
+    setMoreFailed(false);
+    const r = await fetchMyNotifications(notificationCursor(state.list), PAGE);
+    setLoadingMore(false);
+    if (!r.ok) return setMoreFailed(true);
+    setState((st) => (st.s === "ok" ? { s: "ok", list: [...st.list, ...r.value.items], more: r.value.more } : st));
+  }, [state, loadingMore]);
 
   const markAll = async () => {
     if (busy || unread === 0) return;
     setBusy(true);
     setFailNote(null);
-    const r = await markAllNotificationsRead();
+    const r = await markNotificationsRead(null);
     setBusy(false);
-    if (r.ok) readNow(null);
-    else setFailNote(r.offline ? "You're offline. Try again when you're connected." : r.message);
+    if (r.ok) setRead(null, new Date().toISOString());
+    else setFailNote(r.offline ? OFFLINE_NOTE : r.message);
   };
 
-  const open = (n: AppNotification) => {
+  const open = (n: MemberNotification) => {
+    const target = clientNotificationTarget(n);
     if (!n.readAt) {
-      readNow(new Set([n.id]));
-      void markNotificationRead(n.id);
+      const ids = new Set([n.id]);
+      setRead(ids, new Date().toISOString());
+      setFailNote(null);
+      void markNotificationsRead([n.id]).then((r) => {
+        if (r.ok || target) return;
+        // Still on this page (the row opens nothing): the dot comes back.
+        setRead(ids, null);
+        setFailNote(r.offline ? OFFLINE_NOTE : r.message);
+      });
     }
-    if (n.targetPath) navigate(n.targetPath);
+    if (target) navigate(target);
   };
 
   return (
@@ -127,10 +161,11 @@ export default function ClientNotificationsPage() {
         <MarketSkeleton radius={20} rows={3} count={2} height={160} label="Loading your notifications" style={{ marginTop: 12 }} />
       ) : state.s === "error" ? (
         <MarketError thing="your notifications" onRetry={() => setTick((x) => x + 1)} style={{ marginTop: 12 }} />
-      ) : state.s === "pending" || list.length === 0 ? (
+      ) : list.length === 0 ? (
         <NotificationsEmpty />
       ) : (
-        groupNotifications(list).map((g) => (
+        <>
+          {groupNotifications(list).map((g) => (
           <section key={g.heading} aria-labelledby={`notif-${g.heading}`}>
             <h2 id={`notif-${g.heading}`} style={{ margin: 0, padding: "12px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
               {g.heading}
@@ -141,16 +176,31 @@ export default function ClientNotificationsPage() {
               ))}
             </div>
           </section>
-        ))
+          ))}
+          {state.s === "ok" && state.more ? (
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="market-focus"
+              style={{ width: "100%", marginTop: 16, minHeight: 44, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", opacity: loadingMore ? 0.6 : 1 }}
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </button>
+          ) : null}
+          {moreFailed ? <MarketError thing="more of your notifications" onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
+        </>
       )}
     </div>
   );
 }
 
-const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: () => void }> = ({ n, first, onOpen }) => {
+const NotificationRow: React.FC<{ n: MemberNotification; first: boolean; onOpen: () => void }> = ({ n, first, onOpen }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const look = notifLook(n.kind);
+  const copy = notificationCopy(n);
+  const opens = clientNotificationTarget(n) !== null;
   const [tileBg, tileInk] = NOTIF_TONES[look.tone];
   const unread = !n.readAt;
   const when = notifWhen(n.createdAt);
@@ -159,7 +209,7 @@ const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: ()
       type="button"
       onClick={onOpen}
       className="market-focus"
-      aria-label={`${unread ? "Unread. " : ""}${n.title}. ${n.body} ${when}`}
+      aria-label={`${unread ? "Unread. " : ""}${copy.title}. ${copy.body ? copy.body + " " : ""}${when}`}
       style={{
         width: "100%",
         display: "flex",
@@ -173,7 +223,7 @@ const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: ()
         font: "inherit",
         color: m.ink,
         textAlign: "left",
-        cursor: n.targetPath || unread ? "pointer" : "default",
+        cursor: opens || unread ? "pointer" : "default",
       }}
     >
       <span aria-hidden style={{ width: 38, height: 38, borderRadius: 12, background: dark ? hexAlpha(tileInk, 0.16) : tileBg, color: dark ? liftInk(tileInk) : tileInk, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
@@ -183,10 +233,10 @@ const NotificationRow: React.FC<{ n: AppNotification; first: boolean; onOpen: ()
       </span>
       <span style={{ flex: 1, minWidth: 0, display: "block" }}>
         <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18) }}>{n.title}</span>
+          <span style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18) }}>{copy.title}</span>
           <span style={{ fontSize: textPx(11), color: m.faint, whiteSpace: "nowrap" }}>{when}</span>
         </span>
-        {n.body ? <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(17), color: dark ? m.ink2 : "#5B5349", marginTop: 2 }}>{n.body}</span> : null}
+        {copy.body ? <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(17), color: dark ? m.ink2 : "#5B5349", marginTop: 2 }}>{copy.body}</span> : null}
       </span>
       <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: unread ? "#8F68F6" : "transparent", flex: "none", marginTop: 6 }} />
     </button>
