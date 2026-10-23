@@ -43,7 +43,8 @@ export async function qrRows(value: string): Promise<boolean[][] | null> {
   }
 }
 
-export const ShareQr: React.FC<{ value: string; size: number }> = ({ value, size }) => {
+/** `label` (More › Business card) defaults to the share card's wording. */
+export const ShareQr: React.FC<{ value: string; size: number; label?: string }> = ({ value, size, label = "QR code to the profile" }) => {
   const [state, setState] = useState<{ value: string; rows: boolean[][] | null } | null>(() => (cache.has(value) ? { value, rows: cache.get(value)! } : null));
   useEffect(() => {
     let live = true;
@@ -56,7 +57,7 @@ export const ShareQr: React.FC<{ value: string; size: number }> = ({ value, size
   if (!rows) return <span aria-hidden style={{ display: "block", width: size, height: size, background: "#FFFFFF" }} />;
   const n = rows.length;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label="QR code to the profile" style={{ display: "block" }}>
+    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label={label} style={{ display: "block" }}>
       <rect width={n} height={n} fill="#FFFFFF" />
       {rows.flatMap((row, y) => row.map((dark, x) => (dark ? <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill="#241F1B" /> : null)))}
     </svg>

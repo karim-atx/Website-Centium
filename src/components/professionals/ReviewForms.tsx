@@ -284,12 +284,17 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
 
 /**
  * The report form, as a sheet's body (the listing swaps it in for the list;
- * the Profile gives it a sheet of its own).
+ * the Profile gives it a sheet of its own). Also reports an offer (offer
+ * detail), with its own reason hints and report_offer's 300-character note.
  */
 export const ReviewReportForm: React.FC<{
   onSend: (reason: ReviewReportReason, detail: string) => Promise<string | null>;
-}> = ({ onSend }) => {
-  const [reason, setReason] = useState<ReviewReportReason>(REVIEW_REPORT_REASONS[0].value);
+  /** The report_reason rows (defaults to the review wording). */
+  reasons?: { value: ReviewReportReason; label: string; hint: string }[];
+  /** The note's limit (defaults to 2,000). */
+  detailMax?: number;
+}> = ({ onSend, reasons = REVIEW_REPORT_REASONS, detailMax = 2000 }) => {
+  const [reason, setReason] = useState<ReviewReportReason>(reasons[0].value);
   const [detail, setDetail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -320,11 +325,11 @@ export const ReviewReportForm: React.FC<{
       </p>
       <fieldset className="border-none m-0 p-0">
         <legend className="section-label text-charcoal-soft w-full mb-1">Reason</legend>
-        {REVIEW_REPORT_REASONS.map((r, i) => (
+        {reasons.map((r, i) => (
           <label
             key={r.value}
             className={`flex items-start gap-2.5 py-2.5 min-h-[48px] cursor-pointer ${
-              i < REVIEW_REPORT_REASONS.length - 1 ? "border-b border-charcoal/10" : ""
+              i < reasons.length - 1 ? "border-b border-charcoal/10" : ""
             }`}
           >
             <input
@@ -345,7 +350,7 @@ export const ReviewReportForm: React.FC<{
         <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Anything else? (optional)</span>
         <textarea
           value={detail}
-          onChange={(e) => setDetail(e.target.value.slice(0, 2000))}
+          onChange={(e) => setDetail(e.target.value.slice(0, detailMax))}
           rows={3}
           className={fieldClass}
         />

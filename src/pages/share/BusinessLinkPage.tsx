@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { BRAND_C, BRAND_LEAF, MARK_C_PATH, MARK_LEAF_PATH } from "../../components/icons/CentiumMark";
 import { CARD_LEAF_PATH, CARD_LEAF_VIEWBOX, WHITE_MARK_VIEWBOX } from "../../components/share/business/bizArt";
-import { BIZ_FILLS, dayLabel, longDay, pointsText } from "../../components/share/business/bizCardModel";
+import { dayLabel, fillOf, longDay, pointsText, whereLabel, type OfferData } from "../../components/share/business/bizCardModel";
+import { typeLabel } from "../../components/business-more/kind";
 import { useIsDark } from "../../hooks/useIsDark";
 import { siteHref } from "../../config/site";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
@@ -39,10 +40,12 @@ import { time12 } from "../../utils/time12";
 //   app is published); "Already have Centium? The link opens this offer in
 //   the app." 11.5 / 16 #8C8378, centred.
 //
-// The reader is resolve_share_link (anon). awaiting DB stage DB13: until it
-// lands the page shows its quiet state (the Centium mark, a short line, Open
-// in Centium and the store row) and never a made-up card. not_found and
-// not_public read "This link isn't available."
+// The reader is resolve_share_link (anon; services/share-links): found draws
+// the card from the business's public row and the item's (an offer signed
+// out, which offers' grants don't let anyone read, names the business and
+// says to open it in Centium); a bad slug, a closed or hidden business, or an
+// item that isn't public reads "This link isn't available."; a link Centium
+// took down (disabled_share_links) says so. Never a made-up card.
 //
 // Board-only (D-52), not shipped: the "9:41" status bar, the browser address
 // bar, the centium.app address, and the sample business and offer.
@@ -50,36 +53,34 @@ import { time12 } from "../../utils/time12";
 const NOUN: Record<string, string> = { o: "this offer", c: "this class", m: "this plan", i: "this item", j: "this opening", week: "this schedule", none: "this business" };
 const nounOf = (kind: ShareLinkKind | null) => NOUN[kind ?? "none"];
 
-const VENUE_CATEGORIES = /^(gym|classes|studio)$/i;
-
 function itemLines(card: ShareLinkCard): { eyebrow: string; title: string; value: { big: string; leaf: boolean; unit: string } | null; line: string | null; image: string | null } {
   const it: ShareLinkItem = card.item;
   switch (it.kind) {
-    case "o":
+    case "o": {
+      const o = it.offer;
+      if (!o) return { eyebrow: "Offer", title: card.business.name, value: null, line: `Open it in Centium to see ${nounOf("o")}.`, image: null };
       return {
         eyebrow: "Offer",
-        title: it.headline,
-        value: { big: pointsText(it.pointsCost), leaf: true, unit: "points" },
-        line: [it.validUntil ? `Valid until ${longDay(it.validUntil)}` : null, it.where].filter(Boolean).join(" · ") || null,
+        title: o.headline,
+        value: { big: pointsText(o.pointsCost), leaf: true, unit: "points" },
+        line: [o.validUntil ? `Valid until ${longDay(o.validUntil)}` : null, o.where ? (whereLabel(o.where as OfferData["where"]) ?? null) : null].filter(Boolean).join(" · ") || null,
         image: null,
       };
+    }
     case "c": {
       const when = [it.date ? dayLabel(it.date) : null, it.startTime ? time12(it.startTime) : null].filter(Boolean).join(" · ");
-      const spots = it.spotsLeft !== null ? `${it.spotsLeft} ${it.spotsLeft === 1 ? "spot" : "spots"} left` : null;
-      return { eyebrow: "Class", title: it.title, value: null, line: [when || null, it.instructor, spots].filter(Boolean).join(" · ") || null, image: null };
+      return { eyebrow: "Class", title: it.title, value: null, line: when || null, image: null };
     }
     case "m":
       return { eyebrow: "Membership", title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: null, image: null };
     case "i":
       return { eyebrow: "From our shop", title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: it.description, image: it.imageUrl };
     case "j":
-      return { eyebrow: "Now hiring", title: it.title, value: null, line: null, image: null };
+      return { eyebrow: "Now hiring", title: card.business.name, value: null, line: `Open it in Centium to see ${nounOf("j")}.`, image: null };
     case "week":
       return { eyebrow: "Weekly schedule", title: `This week at ${card.business.name}`, value: null, line: null, image: null };
-    default: {
-      const r = card.business.rating;
-      return { eyebrow: "Find us on Centium", title: card.business.name, value: null, line: r ? `${r.average.toFixed(1)} · ${r.count} reviews` : null, image: null };
-    }
+    default:
+      return { eyebrow: "Find us on Centium", title: card.business.name, value: null, line: null, image: null };
   }
 }
 
@@ -96,7 +97,7 @@ function initialsOf(name: string): string {
 
 export default function BusinessLinkPage() {
   const { slug = "", "*": splat = "" } = useParams();
-  const { authReady } = useApp();
+  const { authReady, authUserId } = useApp();
   const dark = useIsDark();
   const m = marketPalette(dark);
   const target = isBizSlug(slug) ? parseShareSplat(splat) : null;
@@ -111,12 +112,12 @@ export default function BusinessLinkPage() {
     }
     let live = true;
     setState({ status: "loading" });
-    void resolveShareLink(slug, target.kind, target.item).then((r) => live && setState(r));
+    void resolveShareLink(slug, target.kind, target.item, !!authUserId).then((r) => live && setState(r));
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, splat, reload, authReady]);
+  }, [slug, splat, reload, authReady, authUserId]);
 
   useEffect(() => {
     document.title = state.status === "found" ? `${state.card.business.name} · Centium` : "Centium";
@@ -188,19 +189,19 @@ export default function BusinessLinkPage() {
       </div>
     );
     showFooter = false;
-  } else if (state.status === "unavailable") {
-    // awaiting DB stage DB13: the quiet page, no card until the reader lands.
+  } else if (state.status === "disabled") {
     body = (
-      <div style={{ marginTop: 18 }}>
-        <p style={{ margin: 0, fontSize: textPx(18), fontWeight: 800, lineHeight: linePx(23.4), color: m.ink }}>Shared from Centium</p>
-        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: 1.55, color: m.ink2 }}>Open it in Centium to see {noun}.</p>
+      <div style={{ marginTop: 18, borderRadius: 20, background: m.soft, padding: "20px 18px", textAlign: "center" }}>
+        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>This link was taken down.</p>
+        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>Centium removed it, so it can't be opened any more.</p>
       </div>
     );
+    showFooter = false;
   } else {
     const card = state.card;
     const lines = itemLines(card);
-    const fill = VENUE_CATEGORIES.test(card.business.category ?? "") ? BIZ_FILLS.venue : BIZ_FILLS.shop;
-    const head = [card.business.category, card.business.area].filter(Boolean).join(" · ");
+    const fill = fillOf(card.business.type);
+    const head = [card.business.type ? typeLabel(card.business.type) : null, card.business.area].filter(Boolean).join(" · ");
     const offer = card.item.kind === "o";
     body = (
       <>
@@ -213,7 +214,18 @@ export default function BusinessLinkPage() {
               className="relative flex items-center justify-center shrink-0 overflow-hidden"
               style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.55)", boxSizing: "border-box", fontSize: 13, fontWeight: 800 }}
             >
-              {card.business.logoUrl ? <img src={card.business.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" /> : initialsOf(card.business.name)}
+              {initialsOf(card.business.name)}
+              {/* Over the initials; a logo that doesn't load leaves them showing. */}
+              {card.business.logoUrl && (
+                <img
+                  src={card.business.logoUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
             </span>
             <div className="min-w-0">
               <div style={{ fontSize: textPx(15), fontWeight: 800, lineHeight: "normal" }}>{card.business.name}</div>
