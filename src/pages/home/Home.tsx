@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ProReminders } from "../../components/client-forms/ProReminders";
 
 // The streaks card's height, so its placeholder does not shift the page.
@@ -215,11 +216,15 @@ export default function Home() {
  * only, so an owner's or a professional's rows never light it; Home remounts
  * on the way back from the page, so rows read there clear the dot); the
  * count goes in the label, "99+" at the reader's cap (unreadBadge). No dot
- * when the read fails.
+ * when the read fails. Live (Database 73ea87b, notifications in realtime):
+ * an INSERT or UPDATE of one of the member's own client-kind rows re-reads
+ * the count only (useInboxRealtime, coalesced), never the list.
  */
 function HomeBell() {
   const navigate = useNavigate();
+  const { authUserId } = useApp();
   const [unread, setUnread] = useState(0);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     let cancelled = false;
     void fetchUnreadNotificationCount(CLIENT_KINDS).then((r) => {
@@ -228,7 +233,8 @@ function HomeBell() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tick]);
+  useInboxRealtime(authUserId, "bell", CLIENT_KINDS, () => setTick((t) => t + 1));
   return (
     <button
       type="button"

@@ -116,3 +116,6 @@ export function classesLine(sessions: number | null, booked: number | null): str
   const parts = [sessions === null ? null : `${plural(sessions, "session", "sessions")} this week`, booked === null ? null : `${formatCount(booked)} booked`].filter(Boolean);
   return parts.join(" · ");
 }
+
+/** reorder_showcase_items refused with ATX96: an id in the list isn't the caller's to move, so nothing moved. */
+export const REORDER_NOT_YOURS = "You can't change the order of these items.";

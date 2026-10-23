@@ -7,12 +7,15 @@
 //   writable). No live reader has a daily series or a month-on-month change
 //   for it (listing_performance is weekly impressions, a different figure),
 //   so the hero shows the figure alone: no sparkline series, no delta.
-// - reorder_business_offerings(p_ids): DB3. `business_offerings.sort` doesn't
-//   exist yet, so the Showcase never selects it and shows the live order.
+// - reorder_showcase_items(p_ids) (Database 73ea87b, 20261211400000): `sort`
+//   becomes each id's position in the array; every id is checked before
+//   anything moves (ATX96 = one of them isn't the caller's to move: a
+//   professional's own, or a business's with the `store` capability). Shared
+//   by the business Showcase (B-MA.2) and the professional's shelf (P-MA.2).
 
 import { supabase } from "../../../lib/supabase/client";
-import { marketRpc, type MarketResult } from "../market/rpc";
-import { parseOverview, type MarketplaceOverview } from "./overviewModel";
+import { marketRpc, num, type MarketResult } from "../market/rpc";
+import { parseOverview, REORDER_NOT_YOURS, type MarketplaceOverview } from "./overviewModel";
 
 export async function fetchMarketplaceOverview(businessId: string): Promise<MarketResult<MarketplaceOverview | null>> {
   // awaiting DB stage DB5
@@ -31,8 +34,9 @@ export async function fetchMembersReached(businessId: string): Promise<number | 
   }
 }
 
-/** Saves the Showcase order (ids top to bottom). */
-export async function reorderShowcase(ids: string[]): Promise<MarketResult<null>> {
-  // awaiting DB stage DB3
-  return marketRpc("reorder_business_offerings", { p_ids: ids }, "Couldn't save the order. Try again.", () => null);
+/** Saves a shelf's order (ids top to bottom); the value is how many rows moved. */
+export async function reorderShowcase(ids: string[]): Promise<MarketResult<number>> {
+  const r = await marketRpc("reorder_showcase_items", { p_ids: ids }, "Couldn't save the order. Try again.", (data) => num(data) ?? 0);
+  if (!r.ok && r.code === "ATX96") return { ...r, message: REORDER_NOT_YOURS };
+  return r;
 }

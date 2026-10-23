@@ -1,4 +1,4 @@
-import React, { useId, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 import { ImageIcon, Minus, Plus } from "lucide-react";
 import { sheetChipStyle } from "../../../components/ui/sheetChip";
 import { EVENT_SWATCHES } from "../../../components/calendar/eventColour";
@@ -9,7 +9,22 @@ import { useOnline } from "../../../hooks/useOnline";
 import { BILLING_OPTIONS, PLAN_FEATURES_MAX, PLAN_NAME_MAX, type PlanBilling } from "../../../services/hires/proLogic";
 import { savePlan, setPlanFields } from "../../../services/pro/profile";
 import type { BookingAudience } from "../../../services/pro/calendar";
-import { FORMATS, formatOfLocation, locationOfFormat, saveSessionService, type Format, type PlanService, type ServiceRef } from "../../../services/pro-market";
+import {
+  FORMATS,
+  SHELF_DURATION_MAX,
+  SHELF_NAME_MAX,
+  formatOfLocation,
+  locationOfFormat,
+  reorderShelf,
+  saveSessionService,
+  saveShelfItem,
+  shelfMove,
+  uploadShelfPhoto,
+  type Format,
+  type PlanService,
+  type ServiceRef,
+  type ShelfItem,
+} from "../../../services/pro-market";
 import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, lh, px, useMarketColors } from "../../business-market/listingParts";
 
 // Market + Share 3.0 · W3 · P-MA.2 "Edit service" (Professional Marketplace
@@ -20,25 +35,33 @@ import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyl
 //   badge (lucide camera 14 --pdark) and "Tap the photo to change it" 11.5
 //   --faint (gap 6, padding-bottom 4); tap → "Service photo" (a second
 //   MasterSheet: Take photo · Choose from library · Remove photo, rows 52 tall
-//   radius 14 --sgrey 14 / 600, Remove in --high). The photo is DB3's
-//   photo_path (awaiting): an empty frame (never the board's "SERVICE PHOTO")
-//   and the rows say it is coming soon;
+//   radius 14 --sgrey 14 / 600, Remove in --high). A shelf item's photo is
+//   its live image_url (the product-images bucket under the caller's uid;
+//   Take photo / Choose from library upload, Remove photo clears it). A
+//   session type or plan has no photo column (DB3 73ea87b added none): an
+//   empty frame (never the board's "SERVICE PHOTO") and the rows say it is
+//   coming soon;
 // - Name, Description, Price (SheetBox: --sgrey radius 14 padding 12 14, the
 //   13 / 500 --slabel label, the --sfield field radius 10 padding 11 13);
 // - Format chips In person · Online · Both (radius 8, padding 8 12, 13; on
 //   the chip fill / white 700, off --chipoffbg / --chipoffbd 500): live for a
-//   session type (location_kind; null is Both, as CA16), DB3 `format` for a
-//   plan (awaiting);
+//   session type (location_kind; null is Both, as CA16) and a shelf item
+//   (`format`); a plan has none (shown off, disabled);
 // - "Show in Showcase" / "Off hides it from clients and gyms" with the 42 × 26
-//   switch: DB3 showcase_visible (awaiting; shown on, disabled);
+//   switch: a shelf item's live `visible`; a session type or plan has no
+//   showcase flag (shown on, disabled);
 // - footer (padding 8 20 34, the --srule above, gap 4): "Save" (50 tall
 //   radius 16 --fill 15 / 700) and "Delete service" (40 tall 14 / 700 --high).
 // KEPT live fields (PLAN §3.3, the Services page's ServiceSheet and the
 // calendar's SessionTypeSheet), in the same chrome: adding picks the Type
-// (Session · Package · Programme); a session type keeps Duration, Buffer
-// after, Colour and Who can book (changed in Availability); a plan keeps
-// Sessions (a package), Billed, What's included (up to 10), Offered and the
-// Move up / Move down order.
+// (Session · Package · Programme · Showcase item); a session type keeps
+// Duration, Buffer after, Colour and Who can book (changed in Availability);
+// a plan keeps Sessions (a package), Billed, What's included (up to 10),
+// Offered and the Move up / Move down order. A Showcase item (the
+// professional's own shelf row, Database 73ea87b) adds a free-text Duration
+// (its duration_label, "60 min" / "6 weeks": the card's meta line draws it,
+// the sheet doesn't; ours) and Move up / Move down through
+// reorder_showcase_items (the board draws no drag handle on P-MA.2).
 
 const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 120];
 const BUFFERS = [0, 5, 10, 15, 20, 30];
@@ -48,14 +71,19 @@ const AUDIENCE_LABEL: Record<BookingAudience, string> = {
   approved_only: "People you approve",
 };
 const SOON_SHOW = "Hiding a service from your Showcase is coming soon.";
+const SHOW_SUB = "Off hides it from clients and gyms";
+const TAKEN_DOWN_SUB = "Centium took this down. Contact support for details.";
 
-type AddKind = "session" | "package" | "programme";
+type AddKind = "session" | "package" | "programme" | "shelf";
+const KIND_LABEL: Record<AddKind, string> = { session: "Session", package: "Package", programme: "Programme", shelf: "Showcase item" };
 
 export interface ServiceEditSheetProps {
   open: boolean;
   /** The service being edited; null adds one. */
   target: ServiceRef | null;
   plans: PlanService[];
+  /** The professional's own shelf items (for Move up / Move down). */
+  shelf?: ShelfItem[];
   audience: BookingAudience;
   onClose: () => void;
   onSaved: (message: string) => void;
@@ -68,19 +96,31 @@ export function ServiceEditSheet(props: ServiceEditSheetProps) {
   return <ServiceForm key={props.target ? `${props.target.kind}:${props.target.item.id}` : "new"} {...props} />;
 }
 
-function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOpenAvailability }: ServiceEditSheetProps) {
+function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, onDelete, onOpenAvailability }: ServiceEditSheetProps) {
   const m = useMarketColors();
   const ids = useId();
   const { authUserId } = useApp();
   const online = useOnline();
   const session = target?.kind === "session" ? target.item : null;
   const plan = target?.kind === "plan" ? target.item : null;
-  const [kind, setKind] = useState<AddKind>(plan ? (plan.sessionCount !== null ? "package" : "programme") : "session");
+  const item = target?.kind === "shelf" ? target.item : null;
+  const [kind, setKind] = useState<AddKind>(item ? "shelf" : plan ? (plan.sessionCount !== null ? "package" : "programme") : "session");
   const isSession = kind === "session";
+  const isShelf = kind === "shelf";
   const [name, setName] = useState(target?.item.name ?? "");
-  const [description, setDescription] = useState(session?.description ?? "");
-  const [price, setPrice] = useState(target && target.item.price > 0 ? String(target.item.price) : "");
-  const [format, setFormat] = useState<Format | null>(session ? formatOfLocation(session.locationKind) : target ? null : "in_person");
+  const [description, setDescription] = useState(session?.description ?? item?.description ?? "");
+  const [price, setPrice] = useState(target && (target.item.price ?? 0) > 0 ? String(target.item.price) : "");
+  const [format, setFormat] = useState<Format | null>(session ? formatOfLocation(session.locationKind) : item ? item.format : target ? null : "in_person");
+  const [durationLabel, setDurationLabel] = useState(item?.durationLabel ?? "");
+  const [shown, setShown] = useState(item?.visible ?? true);
+  const [imageUrl, setImageUrl] = useState<string | null>(item?.imageUrl ?? null);
+  /** A photo URL that failed to load: the empty frame shows instead of a broken image. */
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const libRef = useRef<HTMLInputElement>(null);
+  const takenDown = !!item?.hiddenByCentium;
   const [duration, setDuration] = useState(session?.durationMin ?? 60);
   const [buffer, setBuffer] = useState(session?.bufferMin ?? 0);
   const [colour, setColour] = useState(session?.colour ?? DEFAULT_SESSION);
@@ -104,6 +144,21 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
     if (p === null) return setError("Enter the price as a number, for example 60, or leave it empty for Free.");
     if (!name.trim()) return setError("Give the service a name.");
     setBusy(true);
+    if (isShelf) {
+      // An empty price shows no price on the shelf (a session's empty price is Free).
+      const r = await saveShelfItem(authUserId, item?.id ?? null, {
+        name,
+        description,
+        price: price.trim() === "" ? null : p,
+        imageUrl,
+        format,
+        durationLabel,
+        visible: shown,
+      });
+      setBusy(false);
+      if (!r.ok) return setError(r.message);
+      return onSaved(editing ? "Service saved" : `${name.trim()} added`);
+    }
     if (isSession) {
       const r = await saveSessionService(authUserId, session?.id ?? null, {
         name,
@@ -130,8 +185,19 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
     onSaved(editing ? "Service saved" : `${r.plan.name} added`);
   };
 
-  // The plan editor's reorder (kept): swap positions with the neighbour.
+  // The plan editor's reorder (kept): swap positions with the neighbour. A
+  // shelf item moves through reorder_showcase_items (the whole shelf's order).
   const move = async (dir: -1 | 1) => {
+    if (item) {
+      const next = shelfMove(shelf, item.id, dir);
+      if (!next || busy) return;
+      setBusy(true);
+      setError(null);
+      const r = await reorderShelf(next);
+      setBusy(false);
+      if (!r.ok) return setError(r.message);
+      return onSaved(dir < 0 ? "Moved up" : "Moved down");
+    }
     if (!plan || busy) return;
     const sorted = [...plans].sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
     const i = sorted.findIndex((x) => x.id === plan.id);
@@ -144,6 +210,17 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
     setBusy(false);
     if (!b.ok) return setError(b.message);
     onSaved(dir < 0 ? "Moved up" : "Moved down");
+  };
+
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || !authUserId) return;
+    setPhotoOpen(false);
+    setPhotoBusy(true);
+    setPhotoError(null);
+    const r = await uploadShelfPhoto(authUserId, file);
+    setPhotoBusy(false);
+    if (!r.ok) return setPhotoError(r.message);
+    setImageUrl(r.url);
   };
 
   const chip = (on: boolean, disabled?: boolean): React.CSSProperties => ({
@@ -202,8 +279,9 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingBottom: 4 }}>
             <button
               type="button"
-              aria-label="Change photo"
+              aria-label={isShelf && !imageUrl ? "Add a photo" : "Change photo"}
               aria-haspopup="dialog"
+              disabled={isShelf && (photoBusy || !online)}
               onClick={() => {
                 setPhotoNote(false);
                 setPhotoOpen(true);
@@ -211,7 +289,12 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
               className="market-focus"
               style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
             >
-              <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
+              {isShelf && imageUrl && failedUrl !== imageUrl ? (
+                <img src={imageUrl} alt="" onError={() => setFailedUrl(imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
+              ) : (
+                <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
+              )}
+              {photoBusy ? <span className="animate-skeleton-pulse" aria-hidden style={{ position: "absolute", inset: 0, borderRadius: 18, background: m.soft, opacity: 0.7 }} /> : null}
               <span aria-hidden style={{ position: "absolute", right: 6, bottom: 6, width: 26, height: 26, borderRadius: 999, background: m.card, display: "flex", alignItems: "center", justifyContent: "center", color: m.pdark, boxShadow: "0 1px 3px rgba(36,31,27,0.16)" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "none" }}>
                   <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
@@ -219,7 +302,12 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
                 </svg>
               </span>
             </button>
-            <span style={{ fontSize: px(11.5), color: m.faint }}>Tap the photo to change it</span>
+            <span style={{ fontSize: px(11.5), color: m.faint }}>{photoBusy ? "Uploading…" : "Tap the photo to change it"}</span>
+            {photoError ? (
+              <span role="alert" style={{ fontSize: px(11.5), color: m.high, textAlign: "center" }}>
+                {photoError}
+              </span>
+            ) : null}
           </div>
 
           {!editing ? (
@@ -227,9 +315,9 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
               {groupLabel(`${ids}-type`, "Type")}
               {chipRow(
                 `${ids}-type`,
-                (["session", "package", "programme"] as AddKind[]).map((k) => (
+                (["session", "package", "programme", "shelf"] as AddKind[]).map((k) => (
                   <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className="market-focus" style={chip(kind === k)}>
-                    {k === "session" ? "Session" : k === "package" ? "Package" : "Programme"}
+                    {KIND_LABEL[k]}
                   </button>
                 ))
               )}
@@ -237,11 +325,11 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
           ) : null}
 
           <SheetBox label="Name" htmlFor={`${ids}-name`}>
-            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={isSession ? 60 : PLAN_NAME_MAX} style={fieldStyle(m)} />
+            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={isSession ? 60 : isShelf ? SHELF_NAME_MAX : PLAN_NAME_MAX} style={fieldStyle(m)} />
           </SheetBox>
 
           <SheetBox label="Description" htmlFor={`${ids}-desc`}>
-            {isSession ? (
+            {isSession || isShelf ? (
               <textarea
                 id={`${ids}-desc`}
                 value={description}
@@ -260,7 +348,7 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
           </SheetBox>
 
           <SheetBox label="Price" htmlFor={`${ids}-price`}>
-            <input id={`${ids}-price`} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Free" inputMode="decimal" style={fieldStyle(m)} />
+            <input id={`${ids}-price`} value={price} onChange={(e) => setPrice(e.target.value)} placeholder={isShelf ? "Optional" : "Free"} inputMode="decimal" style={fieldStyle(m)} />
           </SheetBox>
 
           <div style={grey}>
@@ -268,28 +356,61 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
             {chipRow(
               `${ids}-fmt`,
               FORMATS.map((f) => {
-                const on = isSession && format === f.key;
+                const live = isSession || isShelf;
+                const on = live && format === f.key;
                 return (
                   <button
                     key={f.key}
                     type="button"
                     role="radio"
                     aria-checked={on}
-                    aria-disabled={!isSession || undefined}
-                    aria-describedby={!isSession ? `${ids}-fmt-note` : undefined}
-                    onClick={() => isSession && setFormat(f.key)}
+                    aria-disabled={!live || undefined}
+                    aria-describedby={!live ? `${ids}-fmt-note` : undefined}
+                    onClick={() => live && setFormat(f.key)}
                     className="market-focus"
-                    style={chip(on, !isSession)}
+                    style={chip(on, !live)}
                   >
                     {f.label}
                   </button>
                 );
               })
             )}
-            {!isSession ? hint("Format for packages and programmes is coming soon.", `${ids}-fmt-note`) : null}
+            {!isSession && !isShelf ? hint("Format for packages and programmes is coming soon.", `${ids}-fmt-note`) : null}
           </div>
 
-          {isSession ? (
+          {isShelf ? (
+            <>
+              <SheetBox label="Duration" htmlFor={`${ids}-len`}>
+                <input
+                  id={`${ids}-len`}
+                  value={durationLabel}
+                  onChange={(e) => setDurationLabel(e.target.value)}
+                  maxLength={SHELF_DURATION_MAX}
+                  placeholder="Optional, for example 60 min or 6 weeks"
+                  style={fieldStyle(m)}
+                />
+              </SheetBox>
+              {item && shelf.length > 1 ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([-1, 1] as const).map((dir) => {
+                    const can = !!shelfMove(shelf, item.id, dir);
+                    return (
+                      <button
+                        key={dir}
+                        type="button"
+                        onClick={() => void move(dir)}
+                        disabled={busy || !online || !can}
+                        className="tap market-focus"
+                        style={{ minHeight: 40, padding: "0 12px", borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", color: m.pdark, fontSize: px(12.5), fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: busy || !online || !can ? 0.4 : 1 }}
+                      >
+                        {dir < 0 ? "Move up" : "Move down"}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </>
+          ) : isSession ? (
             <>
               <div style={grey}>
                 {groupLabel(`${ids}-dur`, "Duration")}
@@ -428,16 +549,47 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: px(14), fontWeight: 700 }}>Show in Showcase</div>
               <div id={`${ids}-vis`} style={{ fontSize: px(11.5), color: m.faint }}>
-                {SOON_SHOW}
+                {isShelf ? (takenDown ? TAKEN_DOWN_SUB : SHOW_SUB) : SOON_SHOW}
               </div>
             </div>
-            {/* awaiting DB stage DB3: showcase_visible; every live service shows. */}
-            <SheetSwitch on onChange={() => undefined} label="Show in Showcase" describedBy={`${ids}-vis`} disabled />
+            {isShelf ? (
+              <SheetSwitch on={shown && !takenDown} onChange={setShown} label="Show in Showcase" describedBy={`${ids}-vis`} disabled={takenDown} />
+            ) : (
+              // awaiting DB stage DB3: showcase_visible on appointment_services / professional_plans (73ea87b added none); every live service shows.
+              <SheetSwitch on onChange={() => undefined} label="Show in Showcase" describedBy={`${ids}-vis`} disabled />
+            )}
           </div>
         </div>
       </MasterSheet>
 
       <MasterSheet open={photoOpen} onClose={() => setPhotoOpen(false)} title="Service photo" footer={<span />}>
+        {isShelf ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
+            {(["Take photo", "Choose from library", "Remove photo"] as const).map((label) => {
+              const remove = label === "Remove photo";
+              const off = remove && !imageUrl;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    if (label === "Take photo") camRef.current?.click();
+                    else if (label === "Choose from library") libRef.current?.click();
+                    else {
+                      setImageUrl(null);
+                      setPhotoOpen(false);
+                    }
+                  }}
+                  disabled={off}
+                  className="market-focus"
+                  style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: remove ? m.high : m.ink, textAlign: "left", cursor: off ? "default" : "pointer", opacity: off ? 0.4 : 1 }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
           {(["Take photo", "Choose from library", "Remove photo"] as const).map((label) => {
             const remove = label === "Remove photo";
@@ -445,7 +597,7 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
               <button
                 key={label}
                 type="button"
-                // awaiting DB stage DB3: photo_path. No photo can be stored yet, so there is none to remove.
+                // awaiting DB stage DB3: photo_path on appointment_services / professional_plans (73ea87b added none). No photo can be stored yet, so there is none to remove.
                 onClick={() => setPhotoNote(true)}
                 disabled={remove}
                 aria-describedby={`${ids}-photo-note`}
@@ -460,7 +612,31 @@ function ServiceForm({ target, plans, audience, onClose, onSaved, onDelete, onOp
             Service photos are coming soon.
           </p>
         </div>
+        )}
       </MasterSheet>
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          void pickPhoto(f);
+        }}
+      />
+      <input
+        ref={libRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          void pickPhoto(f);
+        }}
+      />
     </>
   );
 }

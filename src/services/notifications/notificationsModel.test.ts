@@ -23,6 +23,7 @@ import {
   unreadCount,
   UNREAD_COUNT_CAP,
 } from "./notificationsModel.ts";
+import * as rt from "./notificationsModel.ts";
 
 const NOW = new Date(2026, 9, 16, 15, 0); // Fri
 const V = "6f1c2a4e-1b2c-4d3e-8f90-0123456789ab";
@@ -237,4 +238,75 @@ test("Today / Earlier keep the reader's order; unread count; local mark read", (
   const all = markReadLocally(list, null, "T");
   assert.equal(unreadCount(all), 0);
   assert.equal(all[2].readAt, "2026-10-15T10:00:00Z"); // an already-read row isn't re-stamped
+});
+
+// ---------------------------------------------------------------------------
+// Realtime (Database 73ea87b).
+
+test("toInboxChange: INSERT / UPDATE payloads, anything else null", () => {
+  assert.deepEqual(rt.toInboxChange({ eventType: "INSERT", new: { id: "n1", kind: "voucher_issued", read_at: null } }), { type: "INSERT", id: "n1", kind: "voucher_issued", readAt: null });
+  assert.deepEqual(rt.toInboxChange({ eventType: "UPDATE", new: { id: "n1", kind: "voucher_issued", read_at: "2026-10-23T09:00:00Z" } }), {
+    type: "UPDATE",
+    id: "n1",
+    kind: "voucher_issued",
+    readAt: "2026-10-23T09:00:00Z",
+  });
+  assert.equal(rt.toInboxChange({ eventType: "DELETE", old: { id: "n1" } }), null);
+  assert.equal(rt.toInboxChange(null), null);
+});
+
+test("inboxChangeShown: the screen's kinds only; no filter or no kind passes", () => {
+  const c = (kind: string | null) => ({ type: "INSERT" as const, id: "x", kind, readAt: null });
+  assert.equal(rt.inboxChangeShown(c("points_expiring"), CLIENT_KINDS), true);
+  assert.equal(rt.inboxChangeShown(c("voucher_redeemed"), CLIENT_KINDS), false);
+  assert.equal(rt.inboxChangeShown(c(null), CLIENT_KINDS), true);
+  assert.equal(rt.inboxChangeShown(c("voucher_redeemed"), null), true);
+});
+
+test("applyReadChanges / hasNewRows", () => {
+  const list = [
+    { id: "a", readAt: null as string | null },
+    { id: "b", readAt: "2026-10-23T08:00:00Z" as string | null },
+  ];
+  const out = rt.applyReadChanges(list, [
+    { type: "UPDATE", id: "a", kind: "voucher_issued", readAt: "2026-10-23T09:00:00Z" },
+    { type: "UPDATE", id: "zz", kind: "voucher_issued", readAt: "2026-10-23T09:00:00Z" },
+    { type: "INSERT", id: "b", kind: "voucher_issued", readAt: null },
+  ]);
+  assert.deepEqual(out, [
+    { id: "a", readAt: "2026-10-23T09:00:00Z" },
+    { id: "b", readAt: "2026-10-23T08:00:00Z" },
+  ]);
+  assert.equal(out[1], list[1]);
+  assert.equal(rt.hasNewRows(list, [{ type: "INSERT", id: "c", kind: null, readAt: null }]), true);
+  assert.equal(rt.hasNewRows(list, [{ type: "INSERT", id: "a", kind: null, readAt: null }]), false);
+  assert.equal(rt.hasNewRows(list, [{ type: "UPDATE", id: "c", kind: null, readAt: null }]), false);
+});
+
+test("mergeFirstPage: new rows on top, shown rows refreshed, loaded pages kept; no overlap replaces", () => {
+  const list = [
+    { id: "b", v: 1 },
+    { id: "c", v: 1 },
+    { id: "d", v: 1 },
+  ];
+  assert.deepEqual(
+    rt.mergeFirstPage(list, true, {
+      items: [
+        { id: "a", v: 2 },
+        { id: "b", v: 2 },
+      ],
+      more: true,
+    }),
+    {
+      list: [
+        { id: "a", v: 2 },
+        { id: "b", v: 2 },
+        { id: "c", v: 1 },
+        { id: "d", v: 1 },
+      ],
+      more: true,
+    }
+  );
+  assert.deepEqual(rt.mergeFirstPage(list, true, { items: [{ id: "x", v: 2 }], more: false }), { list: [{ id: "x", v: 2 }], more: false });
+  assert.deepEqual(rt.mergeFirstPage([], false, { items: [{ id: "x", v: 2 }], more: false }), { list: [{ id: "x", v: 2 }], more: false });
 });

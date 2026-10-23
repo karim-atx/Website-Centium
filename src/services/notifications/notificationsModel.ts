@@ -382,3 +382,59 @@ export const unreadCount = (list: readonly { readAt: string | null }[]): number 
 export function markReadLocally<T extends { id: string; readAt: string | null }>(list: readonly T[], ids: ReadonlySet<string> | null, at: string): T[] {
   return list.map((n) => (!n.readAt && (!ids || ids.has(n.id)) ? { ...n, readAt: at } : n));
 }
+
+// ---------------------------------------------------------------------------
+// Realtime (Database 73ea87b: public.notifications is in supabase_realtime).
+// A postgres_changes event is a TRIGGER (as the app's other realtime hooks):
+// an INSERT makes the open page re-read its first page and the bell re-count;
+// an UPDATE's read_at is applied to a row the open page already shows (a mark
+// on another device), without a read.
+
+/** One inbox change from a postgres_changes payload. */
+export interface InboxChange {
+  type: "INSERT" | "UPDATE";
+  id: string | null;
+  kind: string | null;
+  readAt: string | null;
+}
+
+/** A postgres_changes payload (eventType + new row) → the change, or null for anything else. */
+export function toInboxChange(payload: unknown): InboxChange | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as { eventType?: unknown; new?: unknown };
+  if (p.eventType !== "INSERT" && p.eventType !== "UPDATE") return null;
+  const row = p.new && typeof p.new === "object" ? (p.new as Record<string, unknown>) : {};
+  const s = (v: unknown) => (typeof v === "string" && v ? v : null);
+  return { type: p.eventType, id: s(row.id), kind: s(row.kind), readAt: s(row.read_at) };
+}
+
+/** A change this screen shows: its kind is one of `kinds` (null = every kind); an unknown kind counts (re-reading is safe). */
+export const inboxChangeShown = (c: InboxChange, kinds: readonly string[] | null): boolean => !kinds || !c.kind || kinds.includes(c.kind);
+
+/** The rows with each UPDATE's read_at applied (rows not in the list are left alone). */
+export function applyReadChanges<T extends { id: string; readAt: string | null }>(list: readonly T[], changes: readonly InboxChange[]): T[] {
+  const reads = new Map<string, string | null>();
+  for (const c of changes) if (c.type === "UPDATE" && c.id) reads.set(c.id, c.readAt);
+  if (!reads.size) return list.slice();
+  return list.map((n) => (reads.has(n.id) && reads.get(n.id) !== n.readAt ? { ...n, readAt: reads.get(n.id) ?? null } : n));
+}
+
+/** Whether the changes carry a row the list doesn't have yet. */
+export const hasNewRows = (list: readonly { id: string }[], changes: readonly InboxChange[]): boolean => {
+  const known = new Set(list.map((n) => n.id));
+  return changes.some((c) => c.type === "INSERT" && (!c.id || !known.has(c.id)));
+};
+
+/**
+ * The list after a fresh first page: rows it didn't have go on top (newest
+ * first, as the reader returns them), rows it had take the fresh copy, and the
+ * pages already loaded below stay. A first page with no row in common (more
+ * rows arrived than a page holds, or the list was empty) replaces the list.
+ */
+export function mergeFirstPage<T extends { id: string }>(list: readonly T[], more: boolean, page: { items: readonly T[]; more: boolean }): { list: T[]; more: boolean } {
+  const known = new Set(list.map((n) => n.id));
+  if (!page.items.some((n) => known.has(n.id))) return { list: page.items.slice(), more: page.more };
+  const fresh = new Map(page.items.map((n) => [n.id, n]));
+  const added = page.items.filter((n) => !known.has(n.id));
+  return { list: [...added, ...list.map((n) => fresh.get(n.id) ?? n)], more };
+}

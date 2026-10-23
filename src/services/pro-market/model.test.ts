@@ -20,6 +20,7 @@ import {
   type PlanService,
   type SessionService,
 } from "./model.ts";
+import * as shelfModel from "./model.ts";
 
 const ROW = {
   clients_reached: 1240,
@@ -181,4 +182,95 @@ test("withoutPending hides the cards waiting to be deleted", () => {
   const list = [{ key: "a" }, { key: "b" }];
   assert.deepEqual(withoutPending(list, new Set(["a"])), [{ key: "b" }]);
   assert.equal(withoutPending(list, new Set()), list);
+});
+
+// ---------------------------------------------------------------------------
+// DB3 wiring (Database 73ea87b): the professional's own shelf and D-19.
+
+const shelfRow = (id: string, over: Record<string, unknown> = {}) => ({
+  id,
+  title: `Item ${id}`,
+  description: null,
+  price: "80.00",
+  image_url: null,
+  format: "in_person",
+  duration_label: "6 weeks",
+  visible: true,
+  hidden_at: null,
+  sort: 0,
+  created_at: "2026-10-01T10:00:00.000Z",
+  ...over,
+});
+
+test("parseShelfRows: the columns, public_showcase's order (sort, then newest, then id)", () => {
+  const list = shelfModel.parseShelfRows([
+    shelfRow("c", { sort: 2 }),
+    shelfRow("b", { sort: 0, created_at: "2026-10-01T10:00:00.000Z" }),
+    shelfRow("a", { sort: 0, created_at: "2026-10-03T10:00:00.000Z", format: "nonsense", price: null, duration_label: "  " }),
+    shelfRow("d", { sort: 0, created_at: "2026-10-01T10:00:00.000Z", visible: false, hidden_at: "2026-10-05T00:00:00Z" }),
+    { title: "no id" },
+  ]);
+  assert.deepEqual(
+    list.map((x) => x.id),
+    ["a", "b", "d", "c"]
+  );
+  assert.equal(list[0].format, null);
+  assert.equal(list[0].price, null);
+  assert.equal(list[0].durationLabel, null);
+  assert.equal(list[1].price, 80);
+  assert.equal(list[2].visible, false);
+  assert.equal(list[2].hiddenByCentium, true);
+});
+
+test("serviceCards: shelf first with its meta, price and chips; then sessions and plans", () => {
+  const shelf = shelfModel.parseShelfRows([
+    shelfRow("s1", { sort: 1, format: "online", duration_label: "8 weeks", price: "90" }),
+    shelfRow("s2", { sort: 2, visible: false, price: null, format: null, duration_label: null }),
+    shelfRow("s3", { sort: 3, hidden_at: "2026-10-05T00:00:00Z" }),
+  ]);
+  const cards = serviceCards([], [], shelf);
+  assert.deepEqual(
+    cards.map((c) => c.key),
+    ["shelf:s1", "shelf:s2", "shelf:s3"]
+  );
+  assert.deepEqual([cards[0].meta, cards[0].price, cards[0].dim, cards[0].chip], ["8 weeks · Online", "$90", false, null]);
+  assert.deepEqual([cards[1].meta, cards[1].price, cards[1].dim, cards[1].chip], ["", "", true, "Hidden"]);
+  assert.deepEqual([cards[2].dim, cards[2].chip], [true, shelfModel.TAKEN_DOWN_CHIP]);
+  assert.equal(serviceCards([], []).length, 0);
+});
+
+test("shelfMeta / shelfPrice", () => {
+  assert.equal(shelfModel.shelfMeta("60 min", "in_person"), "60 min · In person");
+  assert.equal(shelfModel.shelfMeta(null, "both"), "In person or online");
+  assert.equal(shelfModel.shelfMeta(" 4 x 60 min ", null), "4 x 60 min");
+  assert.equal(shelfModel.shelfPrice(null), "");
+  assert.equal(shelfModel.shelfPrice(0), "Free");
+  assert.equal(shelfModel.shelfPrice(12.5), "$12.50");
+});
+
+test("shelfMove: swaps with the neighbour in the shelf's order; null at either end", () => {
+  const shelf = shelfModel.parseShelfRows([shelfRow("a", { sort: 1 }), shelfRow("b", { sort: 2 }), shelfRow("c", { sort: 3 })]);
+  assert.deepEqual(shelfModel.shelfMove(shelf, "b", -1), ["b", "a", "c"]);
+  assert.deepEqual(shelfModel.shelfMove(shelf, "b", 1), ["a", "c", "b"]);
+  assert.equal(shelfModel.shelfMove(shelf, "a", -1), null);
+  assert.equal(shelfModel.shelfMove(shelf, "c", 1), null);
+  assert.equal(shelfModel.shelfMove(shelf, "zz", 1), null);
+});
+
+test("visibleRefusal: each set_marketplace_visible code has its own line; others none", () => {
+  assert.match(shelfModel.visibleRefusal("ATXC6") ?? "", /licence or certificate is verified/);
+  assert.match(shelfModel.visibleRefusal("ATX47") ?? "", /under 18/);
+  assert.match(shelfModel.visibleRefusal("ATX48") ?? "", /date of birth/);
+  assert.ok(shelfModel.visibleRefusal("ATX09"));
+  assert.equal(shelfModel.visibleRefusal("42501"), null);
+  assert.equal(shelfModel.visibleRefusal(undefined), null);
+});
+
+test("needsHideWarning: only a visible, unverified (or not yet known) professional turning it off", () => {
+  assert.equal(shelfModel.needsHideWarning(true, false, false), true);
+  assert.equal(shelfModel.needsHideWarning(true, false, null), true);
+  assert.equal(shelfModel.needsHideWarning(true, false, true), false);
+  assert.equal(shelfModel.needsHideWarning(false, true, false), false);
+  assert.equal(shelfModel.needsHideWarning(false, false, false), false);
+  assert.equal(shelfModel.needsHideWarning(true, true, false), false);
 });

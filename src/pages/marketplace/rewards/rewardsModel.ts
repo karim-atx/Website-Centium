@@ -4,6 +4,8 @@
 
 import { distanceKm, type Coords } from "../../../services/geo/distance";
 import { distanceText } from "../../../services/marketplace/classBooking";
+import { toProduct, type Row } from "../../../services/store/mapping";
+import type { Product } from "../../../services/store/types";
 import {
   REDEEM_ERROR_TEXT,
   categoryOfType,
@@ -159,3 +161,9 @@ export function newRequestId(): string {
     return (ch === "x" ? r : (r & 3) | 8).toString(16);
   });
 }
+
+// ---------------------------------------------------------------------------
+// C-MO.4.4.1 Products: public_showcase rows (Database 73ea87b) as products.
+
+/** public_showcase's rows (id, title, description, category, price, image_url, format, duration_label, bookable, sort), in the reader's order. */
+export const parseShelf = (data: unknown): Product[] => (Array.isArray(data) ? (data as Row[]) : []).filter((r) => r && typeof r === "object" && r.id).map((r) => toProduct(r));
