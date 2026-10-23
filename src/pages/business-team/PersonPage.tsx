@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AtSign, Award, Briefcase, CalendarClock, CalendarDays, Dumbbell, FileBadge, Globe, MessageCircle, Quote, Repeat2, Send, TriangleAlert, UserMinus, UserX } from "lucide-react";
-import { InstagramGlyph } from "../../components/business-more/InstagramGlyph";
+import { Award, Briefcase, CalendarClock, CalendarDays, Dumbbell, FileBadge, MessageCircle, Quote, Repeat2, Send, TriangleAlert, UserMinus, UserX } from "lucide-react";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useSchedule } from "../business-ops/classes/useSchedule";
@@ -19,8 +18,8 @@ import { localDayOf } from "../../utils/date";
 import { AvailabilityCard } from "./AvailabilityCard";
 import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
-import { Avatar, BackRow, DCard, LinkRow, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
-import { inviteState, inviteWhen, isWithdrawn, jobRow, profileLink, shortDay, specialtySub } from "./teamLogic";
+import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
+import { inviteState, inviteWhen, isWithdrawn, jobRow, shortDay, specialtySub } from "./teamLogic";
 import { ROLE_LABEL, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
@@ -33,7 +32,7 @@ import type { TeamData } from "./useTeamData";
 // SubstituteSheet, B9 assign_class_instructor) for this person's next
 // session; with more than one to come, a session picker first.
 //
-// Specialty, jobs, bio and links (OP1-132 C1, C2, C5, C6) come from what the
+// Specialty, jobs and bio (OP1-132 C1, C2, C5) come from what the
 // professional lists publicly (public_professional_directory /
 // public_professional_experience). An unlisted professional (affiliating
 // turns listing off) shows none of those rows: only their licences.
@@ -346,24 +345,6 @@ export function PersonPage({ data }: { data: TeamData }) {
               ))
           ))}
         {accepted && details?.bio && <Row icon={<Quote size={16} />} title="Bio" sub={details.bio} />}
-        {accepted &&
-          details &&
-          (
-            [
-              ["website", "Website", <Globe key="g" size={16} />],
-              ["instagram", "Instagram", <InstagramGlyph key="i" size={16} />],
-              ["x", "X", <AtSign key="x" size={16} />],
-            ] as const
-          ).map(([k, title, icon]) => {
-            const raw = details[k];
-            if (!raw) return null;
-            const l = profileLink(k, raw);
-            return l.href ? (
-              <LinkRow key={k} icon={icon} title={title} sub={l.text} href={l.href} label={`${title}: ${l.text} (opens in a new tab)`} />
-            ) : (
-              <Row key={k} icon={icon} title={title} sub={l.text} />
-            );
-          })}
         <p className="tm-note">{`Added by ${name} in their professional profile. Only they can change it.`}</p>
       </DCard>
 

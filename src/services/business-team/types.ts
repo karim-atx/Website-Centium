@@ -57,7 +57,7 @@ export interface ClassSession {
 }
 
 /**
- * What a professional shows the public (OP1-132 C1, C2, C5, C6; OP1-124 9c),
+ * What a professional shows the public (OP1-132 C1, C2, C5; OP1-124 9c),
  * read by team.ts fetchPublicDetails. Here so pure modules can take the type.
  */
 export interface PublicDetails {
@@ -65,8 +65,5 @@ export interface PublicDetails {
   subtype: string | null;
   specialty: string | null;
   bio: string | null;
-  website: string | null;
-  instagram: string | null;
-  x: string | null;
   experience: { title: string; organisation: string | null; startMonth: string | null; endMonth: string | null }[];
 }

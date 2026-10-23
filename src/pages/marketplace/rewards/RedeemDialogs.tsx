@@ -30,8 +30,8 @@ import { newRequestId } from "./rewardsModel";
 //   12 / 17 600 --caution), CTA "Redeem 900 points", the secondary "Back".
 // Confirm calls redeem_offer (DB2, ⟳) with ONE request id per open sheet, kept
 // across retries so a retry can't redeem twice; a new opening makes a new
-// one. Refusals show REDEEM_ERROR_TEXT; before DB2 lands it says "Redeeming
-// points is coming soon." On success the voucher opens (?new=1 shows "Saved
+// one. Refusals (redeem_offer's ATX08 / 10 / 11 / 12 / 13 / 14, and the ATX02
+// rate limit) show REDEEM_ERROR_TEXT. On success the voucher opens (?new=1 shows "Saved
 // to My Rewards") and the points summary is re-read.
 
 export interface RedeemSheetProps {
@@ -72,7 +72,6 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
     if (!requestId.current) requestId.current = newRequestId();
     setBusy(true);
     setError(null);
-    // awaiting DB stage DB2: redeem_offer.
     const r = await redeemOffer(offerId, requestId.current);
     setBusy(false);
     if (!r.ok) {

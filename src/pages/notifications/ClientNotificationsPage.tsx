@@ -10,6 +10,7 @@ import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import {
+  CLIENT_KINDS,
   clientNotificationTarget,
   fetchMyNotifications,
   groupNotifications,
@@ -43,14 +44,18 @@ import {
 //   margin-top 6).
 // Dark (not drawn, D-05): the page's dark palette, each tile its ink at 16%
 // with the ink lifted.
-// DB6 (Database 2a5b122, 20261210600000): the rows are my_notifications, PAGE
-// at a time; "Load more" (not drawn; Points history's) passes the last row
-// shown as (p_before, p_before_id). The words are the client's copy for the
-// row's title_key (notificationCopy; an unknown key reads "New notification",
-// never the key). Read state as the board: opening the page reads nothing;
-// tapping a row marks that row read (mark_notifications_read([id])) and opens
-// its target (clientNotificationTarget); "Mark all read" is
-// mark_notifications_read(null). No rows: the empty state (ours, not drawn).
+// DB6 (Database 33c0bf5, 20261210600000): the rows are my_notifications with
+// p_kinds = CLIENT_KINDS (a member's kinds only), PAGE at a time; "Load more"
+// (not drawn; Points history's) passes the last row shown as (p_before,
+// p_before_id). The words are the client's copy for the row's title_key with
+// its payload values (notificationCopy + CLIENT_FILLS; a missing key keeps
+// the plain line; an unknown key reads "New notification", never the key).
+// Read state as the board: opening the page reads nothing; tapping a row
+// marks that row read (mark_notifications_read([id])) and opens its target
+// (clientNotificationTarget); "Mark all read" is
+// mark_notifications_read(null, CLIENT_KINDS), never a bare null (that would
+// clear a business's or a professional's rows too). No rows: the empty state
+// (ours, not drawn).
 
 const PAGE = 30;
 const OFFLINE_NOTE = "You're offline. Try again when you're connected.";
@@ -72,7 +77,7 @@ export default function ClientNotificationsPage() {
   useEffect(() => {
     let cancelled = false;
     setState({ s: "loading" });
-    void fetchMyNotifications(null, PAGE).then((r) => {
+    void fetchMyNotifications(null, PAGE, CLIENT_KINDS).then((r) => {
       if (cancelled) return;
       if (r.ok) setState({ s: "ok", list: r.value.items, more: r.value.more });
       else setState({ s: "error", offline: !!r.offline });
@@ -94,7 +99,7 @@ export default function ClientNotificationsPage() {
     if (state.s !== "ok" || state.list.length === 0 || loadingMore) return;
     setLoadingMore(true);
     setMoreFailed(false);
-    const r = await fetchMyNotifications(notificationCursor(state.list), PAGE);
+    const r = await fetchMyNotifications(notificationCursor(state.list), PAGE, CLIENT_KINDS);
     setLoadingMore(false);
     if (!r.ok) return setMoreFailed(true);
     setState((st) => (st.s === "ok" ? { s: "ok", list: [...st.list, ...r.value.items], more: r.value.more } : st));
@@ -104,7 +109,7 @@ export default function ClientNotificationsPage() {
     if (busy || unread === 0) return;
     setBusy(true);
     setFailNote(null);
-    const r = await markNotificationsRead(null);
+    const r = await markNotificationsRead(null, CLIENT_KINDS);
     setBusy(false);
     if (r.ok) setRead(null, new Date().toISOString());
     else setFailNote(r.offline ? OFFLINE_NOTE : r.message);

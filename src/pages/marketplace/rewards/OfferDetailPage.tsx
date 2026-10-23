@@ -45,8 +45,8 @@ import { RedeemSheet } from "./RedeemDialogs";
 // - pinned (gap 8): when the balance is short "You need 1,760 more points"
 //   12 / 600 --ink2 centred, and "Redeem for 900 points" 52 tall radius 16
 //   --fill 15 / 800 (opacity 0.4 and inert when locked).
-// offer_detail is DB2's: pending → a quiet "isn't available yet" card; null
-// (not_found / not_public) → the not-found card.
+// The offer is DB2's `offers` row (fetchOfferDetail); null (no such offer,
+// or not live: RLS hides it or offer_is_live wouldn't pass) → the not-found card.
 
 const ICONS: React.ReactNode[] = [
   <>
@@ -87,7 +87,6 @@ export default function OfferDetailPage() {
   const fetchIt = useCallback(() => {
     let live = true;
     setLoad({ state: "loading" });
-    // awaiting DB stage DB2: offer_detail.
     void fetchOfferDetail(offerId).then((result) => live && setLoad({ state: "done", result }));
     return () => {
       live = false;
@@ -111,7 +110,6 @@ export default function OfferDetailPage() {
   if (load.state === "loading") return shell(<MarketSkeleton radius={18} count={3} rows={3} label="Loading this offer" />);
   const r = load.result;
   if (!r.ok) {
-    if (r.pending) return shell(<MarketEmptyCard title="This offer isn't available yet" body="Rewards for your points are opening soon. Check back shortly." />);
     return shell(<MarketError thing="this offer" onRetry={fetchIt} />);
   }
   const o = r.value;

@@ -18,10 +18,13 @@ import {
 } from "./manageModel.ts";
 
 const TODAY = "2026-10-22";
+// An `offers` row as the owner's read returns it (DB2 20261210800000).
 const row = (over: Record<string, unknown> = {}) => ({
   id: "of1",
-  headline: "15% off full-price items",
-  type: "percent_off",
+  owner_kind: "business",
+  title: "15% off full-price items",
+  category: "clothing",
+  kind: "percent_off",
   value: 15,
   points_cost: 900,
   per_member_limit: 1,
@@ -29,36 +32,51 @@ const row = (over: Record<string, unknown> = {}) => ({
   ends_on: "2026-12-31",
   where_used: "both",
   redeemed_count: 30,
-  paused: false,
+  paused_at: null,
+  hidden_at: null,
+  funding_ack_at: "2026-09-30T10:00:00Z",
   ...over,
 });
 const one = (over: Record<string, unknown> = {}) => parseManagedOffers([row(over)])[0];
+const PAUSED = new Date(2026, 9, 10, 14).toISOString();
 
-test("parse: rows without an id or dates are dropped; defaults", () => {
+test("parse: the table's columns; rows without an id or a start are dropped; defaults", () => {
   assert.equal(parseManagedOffers([{ id: "x" }, row()]).length, 1);
   const o = one({ quantity_cap: null, per_member_limit: null, terms: null });
+  assert.equal(o.headline, "15% off full-price items");
+  assert.equal(o.type, "percent_off");
   assert.equal(o.perMemberLimit, 1);
   assert.equal(o.quantityCap, null);
   assert.equal(o.terms, "");
   assert.equal(o.where, "both");
+  assert.equal(o.appliesTo, null);
+  assert.equal(o.fundingAckAt, "2026-09-30T10:00:00Z");
   assert.equal(one({ starts_on: "2026-10-01T00:00:00Z" }).startsOn, "2026-10-01");
+  assert.equal(one({ ends_on: null }).endsOn, null);
+  // where_used in_person: "In store" for a business, "In person" for a professional.
+  assert.equal(one({ where_used: "in_person" }).where, "in_store");
+  assert.equal(one({ where_used: "in_person", owner_kind: "professional" }).where, "in_person");
+  assert.equal(one({ paused_at: PAUSED }).paused, true);
+  assert.equal(draftOf(one({ ends_on: null })).endsOn, "");
 });
 
-test("status: the server's wins; else derived from dates and paused", () => {
-  assert.equal(offerStatus(one({ status: "paused" }), TODAY), "paused");
+test("status: derived from dates, paused_at and hidden_at", () => {
   assert.equal(offerStatus(one(), TODAY), "active");
   assert.equal(offerStatus(one({ starts_on: "2026-11-01" }), TODAY), "scheduled");
-  assert.equal(offerStatus(one({ paused: true }), TODAY), "paused");
-  assert.equal(offerStatus(one({ ends_on: "2026-09-30", paused: true }), TODAY), "expired");
+  assert.equal(offerStatus(one({ paused_at: PAUSED }), TODAY), "paused");
+  assert.equal(offerStatus(one({ hidden_at: PAUSED }), TODAY), "paused");
+  assert.equal(offerStatus(one({ ends_on: "2026-09-30", paused_at: PAUSED }), TODAY), "expired");
   assert.equal(offerStatus(one({ ends_on: TODAY }), TODAY), "active");
+  assert.equal(offerStatus(one({ ends_on: null }), TODAY), "active");
   assert.equal(offerStatus(one({ starts_on: TODAY }), TODAY), "active");
 });
 
 test("meta lines, month first (B-MA.3 offerList)", () => {
   assert.equal(offerMeta(one(), TODAY), "Ends Dec 31, 2026 · 30 redeemed");
   assert.equal(offerMeta(one({ starts_on: "2026-11-01", redeemed_count: 0 }), TODAY), "Starts Nov 1, 2026");
-  assert.equal(offerMeta(one({ paused: true, paused_at: new Date(2026, 9, 10, 14).toISOString(), redeemed_count: 8 }), TODAY), "Paused Oct 10, 2026 · 8 redeemed");
-  assert.equal(offerMeta(one({ paused: true, redeemed_count: 8 }), TODAY), "Paused · 8 redeemed");
+  assert.equal(offerMeta(one({ paused_at: PAUSED, redeemed_count: 8 }), TODAY), "Paused Oct 10, 2026 · 8 redeemed");
+  assert.equal(offerMeta(one({ hidden_at: PAUSED, redeemed_count: 8 }), TODAY), "Taken down by Centium · 8 redeemed");
+  assert.equal(offerMeta(one({ ends_on: null }), TODAY), "No end date · 30 redeemed");
   assert.equal(offerMeta(one({ starts_on: "2026-06-01", ends_on: "2026-09-30", redeemed_count: 41 }), TODAY), "Ended Sep 30, 2026 · 41 redeemed");
   assert.equal(offerMeta(one({ redeemed_count: 1200 }), TODAY), "Ends Dec 31, 2026 · 1,200 redeemed");
   assert.equal(dayLabel("2027-01-31"), "Jan 31, 2027");
@@ -67,7 +85,7 @@ test("meta lines, month first (B-MA.3 offerList)", () => {
 test("sort: Active, Scheduled, Paused, Expired; stable inside a status", () => {
   const list = parseManagedOffers([
     row({ id: "e", ends_on: "2026-09-30" }),
-    row({ id: "p", paused: true }),
+    row({ id: "p", paused_at: PAUSED }),
     row({ id: "a1" }),
     row({ id: "s", starts_on: "2026-11-01" }),
     row({ id: "a2" }),
@@ -148,7 +166,7 @@ test("draftOf round-trips an offer; the funding box starts ticked once acknowled
   assert.equal(d.pointsCost, "900");
   assert.equal(d.quantityCap, "50");
   assert.equal(d.fundingAck, true);
-  assert.equal(draftOf(one()).fundingAck, false);
+  assert.equal(draftOf(one({ funding_ack_at: null })).fundingAck, false);
 });
 
 test("errors: documented names map, anything else is null", () => {

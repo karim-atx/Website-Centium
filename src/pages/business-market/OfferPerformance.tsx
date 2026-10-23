@@ -94,18 +94,19 @@ function usePerfParams(): { range: PerfRange; offerId: string | null; set: (patc
   return { range, offerId, set, query: q.toString() };
 }
 
-/** The owner's offers for the selector; [] while DB2 is pending or the read fails (the selector keeps "All offers"). */
-function useOfferChoices(): OfferChoice[] {
+/** The business's offers for the selector (DB2 `offers`); [] while loading or when the read fails (the selector keeps "All offers"). */
+function useOfferChoices(businessId: string | null): OfferChoice[] {
   const [list, setList] = useState<OfferChoice[]>([]);
   useEffect(() => {
+    if (!businessId) return;
     let alive = true;
-    void fetchOfferChoices().then((r) => {
+    void fetchOfferChoices(businessId).then((r) => {
       if (alive && r.ok) setList(r.value);
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [businessId]);
   return list;
 }
 
@@ -190,7 +191,7 @@ export function OfferPerformance() {
   const mk = useMarket();
   const navigate = useNavigate();
   const { range, offerId, set, query } = usePerfParams();
-  const choices = useOfferChoices();
+  const choices = useOfferChoices(mk.business?.id ?? null);
   const can = mk.can("marketing");
   const [load, retry] = useOfferSeries(range, offerId, can);
   const offer = choices.find((o) => o.id === offerId) ?? null;
@@ -270,7 +271,7 @@ export function OfferPerformanceExpanded({ segment }: { segment: string }) {
   const mk = useMarket();
   const navigate = useNavigate();
   const { range, offerId, set, query } = usePerfParams();
-  const choices = useOfferChoices();
+  const choices = useOfferChoices(mk.business?.id ?? null);
   const can = mk.can("marketing");
   const ex = EXPANDED[segment] ?? EXPANDED.views;
   const mt = ex.metric;

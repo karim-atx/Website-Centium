@@ -9,7 +9,7 @@
 // show as their quiet designed state, never as an error. When the Database
 // stage lands, the same call starts returning rows with no client change.
 
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
 
@@ -54,6 +54,19 @@ export async function marketRpcRaw(fn: string, args?: Record<string, unknown>): 
   } catch (e) {
     return { data: null, error: null, thrown: e };
   }
+}
+
+/**
+ * Untyped table reads for the Release 1 tables the generated types don't know
+ * yet (offers, vouchers, redemptions: DB2 grants SELECT under RLS and nothing
+ * else). Reads only: every write goes through a documented function.
+ */
+export const marketDb = supabase as unknown as SupabaseClient;
+
+/** The signed-in user's id (from the stored session; no network). */
+export async function currentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
 }
 
 export { rows, str, num, bool } from "./parse";

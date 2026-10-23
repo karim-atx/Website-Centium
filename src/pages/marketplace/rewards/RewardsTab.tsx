@@ -16,12 +16,14 @@ import {
   REWARD_SORTS,
   arrangeOffers,
   fetchRewardCatalog,
+  forAge,
   ownerInitials,
   type CatalogOffer,
   type RewardCategory,
   type RewardSort,
 } from "../../../services/offers";
 import type { MarketResult } from "../../../services/market/rpc";
+import { forumAccess } from "../../../services/forum/rules";
 import { fetchMarketplaceVenues, type MarketplaceVenue } from "../../../services/marketplace";
 import { useImpression } from "../../../services/marketplace/listingEvents";
 import { exploreSource, type ListingEvent } from "../../../services/marketplace/listingLogic";
@@ -45,8 +47,9 @@ import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
 //   0 1px 3px rgba(0,0,0,0.18));
 // - the offers (margin-top 12, gap 10): the W1 client OfferCard, opening the
 //   offer (/app/marketplace/rewards/{offerId}).
-// reward_catalog is DB2's: until it lands the list is `pending` and a quiet
-// designed card says rewards are on their way (D-04).
+// The offers are DB2's `offers` table (fetchRewardCatalog: the live rule,
+// cheapest first); supplement offers are left out for an under-18 or a
+// member without a date of birth (forAge, lead Q3).
 //
 // D-21 (not drawn): under the offers, a "Businesses" section keeps the old
 // Businesses tab's rows (marketplace_venues kind "business") filtered by the
@@ -62,7 +65,8 @@ import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
 type Load<T> = { state: "loading" } | { state: "done"; result: MarketResult<T> };
 
 export default function RewardsTab() {
-  const { pointsSummary, refreshAchievements } = useApp();
+  const { pointsSummary, refreshAchievements, user } = useApp();
+  const adult = forumAccess(user.dateOfBirth) === "adult";
   const dark = useIsDark();
   const m = marketPalette(dark);
   const navigate = useNavigate();
@@ -235,7 +239,7 @@ export default function RewardsTab() {
 
       {/* Offers */}
       <div style={{ marginTop: 12 }}>
-        <OffersList state={catalog} sort={sort} affordable={affordable} balance={balance} onRetry={() => loadCatalog(category)} onOpen={(o) => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.offerId)}`)} />
+        <OffersList state={catalog} adult={adult} sort={sort} affordable={affordable} balance={balance} onRetry={() => loadCatalog(category)} onOpen={(o) => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.offerId)}`)} />
       </div>
 
       {/* D-21: business sections */}
@@ -300,22 +304,22 @@ const rowStyle = (m: ReturnType<typeof marketPalette>, marginTop = 0): React.CSS
 /** The offers list and its states. */
 const OffersList: React.FC<{
   state: Load<CatalogOffer[]>;
+  adult: boolean;
   sort: RewardSort;
   affordable: boolean;
   balance: number;
   onRetry: () => void;
   onOpen: (o: CatalogOffer) => void;
-}> = ({ state, sort, affordable, balance, onRetry, onOpen }) => {
+}> = ({ state, adult, sort, affordable, balance, onRetry, onOpen }) => {
   if (state.state === "loading") return <MarketSkeleton radius={18} count={3} rows={2} label="Loading rewards" />;
   const r = state.result;
   if (!r.ok) {
-    // awaiting DB stage DB2: reward_catalog isn't on the server yet.
-    if (r.pending) return <MarketEmptyCard title="Rewards are on their way" body="Discounts from Centium businesses and professionals will show here. Keep earning points in the meantime." />;
     if (r.offline) return <MarketOffline loaded={false} onRetry={onRetry} force />;
     return <MarketError thing="rewards" onRetry={onRetry} />;
   }
-  if (r.value.length === 0) return <MarketEmptyCard title="No rewards here yet" body="New offers show here as businesses add them. Try another category." />;
-  const shown = arrangeOffers(r.value, sort, affordable, balance);
+  const list = forAge(r.value, adult);
+  if (list.length === 0) return <MarketEmptyCard title="No rewards here yet" body="New offers show here as businesses add them. Try another category." />;
+  const shown = arrangeOffers(list, sort, affordable, balance);
   if (shown.length === 0) return <MarketEmptyCard title="Nothing you can redeem yet" body="Turn off Affordable now to see every reward and how many points each needs." />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

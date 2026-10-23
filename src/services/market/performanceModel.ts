@@ -17,7 +17,7 @@
 //   (Professional `steps[].w`), at least 1%;
 // - dates are month first (D-02): "Oct 16".
 
-import { num, rows, str } from "./parse";
+import { num, rows } from "./parse";
 
 export type PerfRange = "7D" | "30D" | "90D" | "12M";
 export const PERF_RANGES: readonly PerfRange[] = ["7D", "30D", "90D", "12M"];
@@ -172,16 +172,10 @@ export function startsLater(startsOn: string | null | undefined, today: string):
   return !!startsOn && startsOn > today;
 }
 
-/** One of the owner's offers, as the header's selector lists it (my_offers, DB2). */
+/** One of the business's offers, as the header's selector lists it (DB2 `offers`). */
 export interface OfferChoice {
   id: string;
   headline: string;
-  status: string | null;
   startsOn: string | null;
 }
 
-export function parseOfferChoices(data: unknown): OfferChoice[] {
-  return rows(data)
-    .map((r) => ({ id: str(r.id) ?? "", headline: str(r.headline) ?? "", status: str(r.status), startsOn: str(r.starts_on)?.slice(0, 10) ?? null }))
-    .filter((o) => o.id && o.headline);
-}

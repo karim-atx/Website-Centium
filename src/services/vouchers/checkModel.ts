@@ -1,42 +1,57 @@
 // Market + Share 3.0 · W3 · checking a voucher at the counter, pure (B-MA.4,
 // P-MA.4; Business / Professional Marketplace Screens `R`, `scanCode`).
-// Shapes: PLAN §2.2 DB2 check_voucher → {state: valid | already_used |
-// expired | not_valid_here, offer_headline, member_first_name, used_at,
-// used_by_first_name, expired_at, code} (+ the voucher id and valid-until a
-// Mark as used needs), mark_voucher_used → the same with `used` on the first
-// call and `already_used` on a repeat. Re-check the names when DB2 lands.
+// DB2 (Database 33c0bf5, 20261210800000; HANDOVER_API "At the desk"):
+// - check_voucher(p_code) → one row {voucher_id, state, offer_title,
+//   points_paid, issued_at, expires_at, used_at, used_by_name}; state is
+//   valid | already_used | expired | void | not_valid_here | not_found (the
+//   last two as a row with everything else null, never an error);
+// - mark_voucher_used(p_voucher_id) → {voucher_id, state used | already_used,
+//   already_used, used_at, used_by_name}; refusals ATX08 not found, ATX15
+//   not_valid_here, ATX16 void, ATX17 expired (the function comment).
+// Neither returns the member's first name, so the board's Member / Client row
+// isn't shown (Database gap, reported).
 
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { rows, str } from "../market/parse";
 
 export type CheckVariant = "business" | "professional";
-export type CheckState = "valid" | "already_used" | "expired" | "not_valid_here" | "used";
+/** check_voucher's six states, and `used`: mark_voucher_used's success. */
+export type CheckState = "valid" | "already_used" | "expired" | "void" | "not_valid_here" | "not_found" | "used";
 
 export interface VoucherCheck {
   state: CheckState;
   voucherId: string | null;
+  /** The code as typed or scanned (the readers don't return it). */
   code: string | null;
   offerHeadline: string;
-  memberFirstName: string | null;
-  /** valid: when the voucher stops working. */
-  validUntil: string | null;
+  /** valid / expired: when the voucher stops (stopped) working. */
+  expiresAt: string | null;
   usedAt: string | null;
+  /** The first name of the staff member (or professional) who marked it used. */
   usedBy: string | null;
-  expiredAt: string | null;
 }
 
 // ---------------------------------------------------------------------------
-// Codes (D-24: XXXX-XXXX-XXXX, letters and digits)
+// Codes (D-24: Crockford base32, XXXX-XXXX-XXXX; no I, L, O or U)
 
 export const CODE_LENGTH = 12;
 
-/** Letters and digits only, upper case, at most 12. */
+/**
+ * Letters and digits only, upper case, at most 12, with Crockford's reading
+ * of the glyphs the alphabet leaves out (O → 0, I and L → 1): a code read
+ * aloud as "O" still matches. check_voucher only upper-cases and trims.
+ */
 export function codeChars(raw: string): string {
-  return raw.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, CODE_LENGTH);
+  return raw
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "")
+    .replace(/O/g, "0")
+    .replace(/[IL]/g, "1")
+    .slice(0, CODE_LENGTH);
 }
 
-/** As typed in the Enter code field: upper case with the dashes put in ("OUTL-7K4P-2QX9"). */
+/** As typed in the Enter code field: upper case with the dashes put in ("hwae pd5g 74km" → "HWAE-PD5G-74KM"). */
 export function formatCode(raw: string): string {
   const c = codeChars(raw);
   return [c.slice(0, 4), c.slice(4, 8), c.slice(8, 12)].filter(Boolean).join("-");
@@ -46,54 +61,56 @@ export function formatCode(raw: string): string {
 export const codeComplete = (raw: string): boolean => codeChars(raw).length === CODE_LENGTH;
 
 /**
- * What a camera read becomes: a printed code ("OUTL-7K4P-2QX9", any case,
- * with or without dashes) is checked as p_code; anything else (the signed QR
- * token) as p_qr_payload.
+ * A typed code or a camera read → check_voucher's p_code, or null when it
+ * isn't a voucher code at all (the app's voucher QR carries the code; a
+ * scanned URL or other QR can't be one).
  */
-export function scanInput(raw: string): { p_code: string } | { p_qr_payload: string } | null {
+export function scanInput(raw: string): { p_code: string } | null {
   const t = raw.trim();
-  if (!t) return null;
-  if (/^[0-9A-Za-z]{4}-?[0-9A-Za-z]{4}-?[0-9A-Za-z]{4}$/.test(t)) return { p_code: formatCode(t) };
-  return { p_qr_payload: t };
+  if (!/^[0-9A-Za-z]{4}-?[0-9A-Za-z]{4}-?[0-9A-Za-z]{4}$/.test(t)) return null;
+  return { p_code: formatCode(t) };
 }
+
+/** What a read that isn't a code shows: the not-found result, without a server call. */
+export const notACode = (): VoucherCheck => ({ state: "not_found", voucherId: null, code: null, offerHeadline: "", expiresAt: null, usedAt: null, usedBy: null });
 
 // ---------------------------------------------------------------------------
 // Results
 
-const STATES: readonly CheckState[] = ["valid", "already_used", "expired", "not_valid_here", "used"];
+const STATES: readonly CheckState[] = ["valid", "already_used", "expired", "void", "not_valid_here", "not_found", "used"];
 
-export function parseCheck(data: unknown): VoucherCheck | null {
+/** check_voucher's row (with the code that was checked). */
+export function parseCheck(data: unknown, code: string | null = null): VoucherCheck | null {
   const r = rows(data)[0];
   if (!r) return null;
   const s = str(r.state);
-  if (!STATES.includes(s as CheckState)) return null;
+  if (!STATES.includes(s as CheckState) || s === "used") return null;
   return {
     state: s as CheckState,
-    voucherId: str(r.voucher_id) ?? str(r.id),
-    code: str(r.code),
-    offerHeadline: str(r.offer_headline) ?? "",
-    memberFirstName: str(r.member_first_name),
-    validUntil: str(r.expires_at) ?? str(r.valid_until),
+    voucherId: str(r.voucher_id),
+    code,
+    offerHeadline: str(r.offer_title) ?? "",
+    expiresAt: str(r.expires_at),
     usedAt: str(r.used_at),
-    usedBy: str(r.used_by_first_name) ?? str(r.used_by),
-    expiredAt: str(r.expired_at) ?? str(r.expires_at),
+    usedBy: str(r.used_by_name),
   };
 }
 
-/** A Mark as used answer, filling what the server leaves out from the check it followed. */
-export function mergeMark(prev: VoucherCheck, data: unknown, now: Date = new Date()): VoucherCheck | null {
-  const r = parseCheck(data);
+/** mark_voucher_used's answer over the check it followed: `used` the first time, `already_used` on a repeat. */
+export function mergeMark(prev: VoucherCheck, data: unknown): VoucherCheck | null {
+  const r = rows(data)[0];
   if (!r) return null;
-  return {
-    ...prev,
-    state: r.state === "valid" ? "used" : r.state,
-    voucherId: r.voucherId ?? prev.voucherId,
-    offerHeadline: r.offerHeadline || prev.offerHeadline,
-    memberFirstName: r.memberFirstName ?? prev.memberFirstName,
-    usedAt: r.usedAt ?? (r.state === "used" ? now.toISOString() : prev.usedAt),
-    usedBy: r.usedBy ?? prev.usedBy,
-    expiredAt: r.expiredAt ?? prev.expiredAt,
-  };
+  const s = str(r.state);
+  if (s !== "used" && s !== "already_used") return null;
+  return { ...prev, state: s, voucherId: str(r.voucher_id) ?? prev.voucherId, usedAt: str(r.used_at) ?? prev.usedAt, usedBy: str(r.used_by_name) ?? prev.usedBy };
+}
+
+/** mark_voucher_used's refusals → the state the sheet shows instead. */
+const MARK_CODES: Record<string, CheckState> = { ATX08: "not_found", ATX15: "not_valid_here", ATX16: "void", ATX17: "expired" };
+
+export function markRefusal(prev: VoucherCheck, e: { code?: string | null }): VoucherCheck | null {
+  const s = e.code ? MARK_CODES[e.code] : undefined;
+  return s ? { ...prev, state: s } : null;
 }
 
 const dateOf = (iso: string) => formatShortDate(new Date(iso), { month: "short", day: "numeric", year: "numeric" });
@@ -123,12 +140,14 @@ export interface CheckView {
 /**
  * The Voucher check sheet's content (`R`): Valid → Mark as used; Already used
  * (date, 12-hour time and, for a business, the staff first name); Expired;
- * Not valid here. `used` is ours: the success state after Mark as used.
+ * Not valid here. Ours: `used` (after Mark as used), `not_found` and `void`
+ * (check_voucher's other two states, not drawn).
  */
 export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
   const pro = variant === "professional";
   const who = pro ? "client" : "member";
   const offer = c.offerHeadline ? [{ k: "Offer", v: c.offerHeadline }] : [];
+  const codeRow = c.code ? [{ k: "Code", v: c.code }] : [];
   switch (c.state) {
     case "valid":
       return {
@@ -136,7 +155,7 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         icon: "check",
         title: "Valid voucher",
         body: `Check the ${who}'s name, then mark the voucher as used.`,
-        rows: [...offer, ...(c.memberFirstName ? [{ k: pro ? "Client" : "Member", v: c.memberFirstName }] : []), ...(c.validUntil ? [{ k: "Valid until", v: dateOf(c.validUntil) }] : [])],
+        rows: [...offer, ...(c.expiresAt ? [{ k: "Valid until", v: dateOf(c.expiresAt) }] : [])],
         cta: "Mark as used",
       };
     case "used":
@@ -145,7 +164,7 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         icon: "check",
         title: "Voucher marked as used",
         body: c.usedAt ? `Marked as used on ${dateTimeLabel(c.usedAt)}.` : "Marked as used.",
-        rows: [...offer, ...(c.memberFirstName ? [{ k: pro ? "Client" : "Member", v: c.memberFirstName }] : [])],
+        rows: offer,
         cta: "Scan another",
       };
     case "already_used":
@@ -162,8 +181,26 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         tone: "high",
         icon: "x",
         title: "Expired",
-        body: c.expiredAt ? `This voucher expired on ${dateOf(c.expiredAt)} and can't be used.` : "This voucher has expired and can't be used.",
-        rows: [...offer, ...(c.expiredAt ? [{ k: "Expired", v: dateOf(c.expiredAt) }] : [])],
+        body: c.expiresAt ? `This voucher expired on ${dateOf(c.expiresAt)} and can't be used.` : "This voucher has expired and can't be used.",
+        rows: [...offer, ...(c.expiresAt ? [{ k: "Expired", v: dateOf(c.expiresAt) }] : [])],
+        cta: "Scan another",
+      };
+    case "void":
+      return {
+        tone: "high",
+        icon: "x",
+        title: "Voucher cancelled",
+        body: "Centium cancelled this voucher, so it can't be used.",
+        rows: [...offer, ...codeRow],
+        cta: "Scan another",
+      };
+    case "not_found":
+      return {
+        tone: "high",
+        icon: "x",
+        title: "Code not found",
+        body: "No voucher has this code. Check it and try again.",
+        rows: codeRow,
         cta: "Scan another",
       };
     default:
@@ -172,7 +209,7 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         icon: "x",
         title: pro ? "Not valid with you" : "Not valid at this business",
         body: pro ? "This voucher was issued for another professional's or business's offer." : "This voucher was issued for another business's offer.",
-        rows: c.code ? [{ k: "Code", v: c.code }] : [],
+        rows: codeRow,
         cta: "Scan another",
       };
   }

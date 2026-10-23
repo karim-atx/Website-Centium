@@ -6,10 +6,15 @@ import {
   BUSINESS_COPY,
   BUSINESS_KINDS,
   CLIENT_COPY,
+  CLIENT_FILLS,
+  CLIENT_KINDS,
   clientNotificationTarget,
+  formatCount,
+  formatNoticeDate,
   GENERIC_COPY,
   groupNotifications,
   isBusinessKind,
+  MEMBER_NOTIFICATION_KINDS,
   markReadLocally,
   notificationCopy,
   notificationCursor,
@@ -17,8 +22,11 @@ import {
   notifWhen,
   parseMarkedCount,
   parseMemberNotifications,
+  parseUnreadCount,
   RELEASE1_KINDS,
+  unreadBadge,
   unreadCount,
+  UNREAD_COUNT_CAP,
 } from "./notificationsModel.ts";
 
 const NOW = new Date(2026, 9, 16, 15, 0); // Fri
@@ -102,18 +110,107 @@ test("copy: every Release 1 kind has a line; title_key first, then kind, then th
   assert.equal(notificationCopy({ titleKey: "hired", kind: "hired" }, { hired: { title: "Hired", body: "" } }).title, "Hired");
 });
 
-test("targets: voucher, offer, booking, points; owner kinds open nothing in the client UI", () => {
+test("targets: the documented subject per client kind; other kinds open nothing in the client UI", () => {
   assert.equal(clientNotificationTarget({ kind: "voucher_issued", subjectType: "voucher", subjectId: V }), `/app/marketplace/vouchers/${V}`);
   assert.equal(clientNotificationTarget({ kind: "voucher_issued", subjectType: null, subjectId: null }), "/app/marketplace/rewards/mine");
-  assert.equal(clientNotificationTarget({ kind: "points_expiring", subjectType: null, subjectId: null }), "/app/marketplace/points/history");
-  assert.equal(clientNotificationTarget({ kind: "voucher_redeemed", subjectType: "voucher", subjectId: V }), null);
-  assert.equal(clientNotificationTarget({ kind: "offer_hidden", subjectType: "offer", subjectId: O }), null);
-  assert.equal(clientNotificationTarget({ kind: "class_cancelled", subjectType: "offer", subjectId: O }), `/app/marketplace/rewards/${O}`);
-  assert.equal(clientNotificationTarget({ kind: "class_cancelled", subjectType: "booking", subjectId: O }), "/app/marketplace/bookings");
-  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "points", subjectId: null }), "/app/marketplace/points/history");
-  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "voucher", subjectId: "../../admin" }), "/app/marketplace/rewards/mine");
-  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: null }), null);
-  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "class_series", subjectId: O }), null);
+  assert.equal(clientNotificationTarget({ kind: "voucher_issued", subjectType: "voucher", subjectId: "../../admin" }), "/app/marketplace/rewards/mine");
+  assert.equal(clientNotificationTarget({ kind: "points_expiring", subjectType: "points", subjectId: null }), "/app/marketplace/points/history");
+  assert.equal(clientNotificationTarget({ kind: "class_cancelled", subjectType: "class_session", subjectId: O }), "/app/marketplace/bookings?tab=upcoming");
+  assert.equal(clientNotificationTarget({ kind: "review_prompt", subjectType: "class_session", subjectId: O }), "/app/marketplace/bookings?tab=past");
+  for (const k of MEMBER_NOTIFICATION_KINDS.filter((k) => !CLIENT_KINDS.includes(k))) {
+    assert.equal(clientNotificationTarget({ kind: k, subjectType: "voucher", subjectId: V }), null, k);
+  }
+  // the guessed subject routes are gone: an unknown kind opens nothing whatever its subject
+  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "points", subjectId: null }), null);
+  assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
+});
+
+test("kinds: the enum in order; the client's are a member's four, never an owner's or a professional's", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 18);
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
+  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt"]);
+  for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
+  const notMine = [
+    "voucher_redeemed", "offer_hidden", "application_received", "hire_offer_accepted", "hire_offer_declined", "hiring_fee_added", "gym_review_received",
+    "hire_offer_received", "hired", "classes_added", "class_changed", "removed_from_team", "existing_team_invite", "instructor_review_received",
+  ] as const;
+  for (const k of notMine) assert.ok(!CLIENT_KINDS.includes(k), k);
+  assert.equal(CLIENT_KINDS.length + notMine.length, MEMBER_NOTIFICATION_KINDS.length);
+  // every client kind has a plain line and a fill
+  for (const k of CLIENT_KINDS) {
+    assert.ok(CLIENT_COPY[k]?.title, k);
+    assert.equal(typeof CLIENT_FILLS[k], "function", k);
+  }
+});
+
+test("unread count: the reader's integer, capped at 99; the badge reads 99+ at the cap", () => {
+  assert.equal(UNREAD_COUNT_CAP, 99);
+  assert.equal(parseUnreadCount(3), 3);
+  assert.equal(parseUnreadCount("12"), 12);
+  assert.equal(parseUnreadCount(99), 99);
+  assert.equal(parseUnreadCount(140), 99);
+  assert.equal(parseUnreadCount(0), 0);
+  assert.equal(parseUnreadCount(null), 0);
+  assert.equal(parseUnreadCount(-2), 0);
+  assert.equal(parseUnreadCount([{ n: 3 }]), 0);
+  assert.equal(unreadBadge(1), "1");
+  assert.equal(unreadBadge(98), "98");
+  assert.equal(unreadBadge(99), "99+");
+  assert.equal(unreadBadge(parseUnreadCount(99)), "99+");
+});
+
+test("copy with payload: the documented keys interpolate; numbers with separators, dates month first", () => {
+  const c = (kind: string, payload?: Record<string, unknown>) => notificationCopy({ titleKey: kind, kind, payload });
+  assert.equal(formatCount(1250), "1,250");
+  assert.equal(formatNoticeDate(new Date(2026, 10, 30)), "Nov 30, 2026");
+  // voucher_issued: code, offer_title, points, expires_at (redeem_offer's payload)
+  assert.deepEqual(c("voucher_issued", { code: "ABCD-EFGH-JKMN", offer_title: "15% off full-price items", points: 900, expires_at: "2027-01-21T10:00:00+00:00" }), {
+    title: "Voucher ready",
+    body: "Your voucher for 15% off full-price items is in My rewards.",
+  });
+  // points_expiring: points, expires_on (a date: that calendar day, not UTC midnight)
+  assert.deepEqual(c("points_expiring", { points: 1250, expires_on: "2026-11-30" }), {
+    title: "1,250 points expire soon",
+    body: "They expire on Nov 30, 2026. Redeem them for a reward before then.",
+  });
+  assert.deepEqual(c("points_expiring", { points: 1, expires_on: "2026-11-30" }), { title: "1 point expires soon", body: "It expires on Nov 30, 2026. Redeem it for a reward before then." });
+  assert.deepEqual(c("points_expiring", { points: "120" }), { title: "120 points expire soon", body: CLIENT_COPY.points_expiring.body });
+  assert.deepEqual(c("points_expiring", { expires_on: "2026-11-30" }), { title: "Points expire soon", body: "Some of your points expire on Nov 30, 2026. Redeem them for a reward before then." });
+  // class_cancelled: business_name, class_title, starts_at, reason
+  const starts = new Date(2026, 10, 6, 18, 0).toISOString();
+  assert.deepEqual(c("class_cancelled", { business_name: "Cedar Fitness", class_title: "Core 20", starts_at: starts, reason: "Instructor ill" }), {
+    title: "Core 20 is cancelled",
+    body: "Cedar Fitness cancelled Core 20 on Fri, Nov 6. Your booking is cancelled.",
+  });
+  assert.deepEqual(c("class_cancelled", { class_title: "Core 20" }), { title: "Core 20 is cancelled", body: CLIENT_COPY.class_cancelled.body });
+  assert.equal(c("class_cancelled", { business_name: "Cedar Fitness", class_title: "Core 20" }).body, "Cedar Fitness cancelled Core 20. Your booking is cancelled.");
+  // review_prompt: business_name, class_title, instructor_name
+  assert.deepEqual(c("review_prompt", { business_name: "Hamra Strength Club", class_title: "Spin 45", instructor_name: "Rana Khoury" }), {
+    title: "Rate your instructor",
+    body: "How was Spin 45 with Rana Khoury at Hamra Strength Club?",
+  });
+  assert.equal(c("review_prompt", { class_title: "Spin 45", business_name: "Hamra Strength Club" }).body, "How was Spin 45 at Hamra Strength Club?");
+  assert.equal(c("review_prompt", { class_title: "Spin 45", instructor_name: "Rana Khoury" }).body, "How was Spin 45 with Rana Khoury?");
+});
+
+test("copy without payload keys: the plain line, the same entry; bad values count as missing", () => {
+  for (const k of CLIENT_KINDS) {
+    assert.equal(notificationCopy({ titleKey: k, kind: k, payload: {} }), CLIENT_COPY[k], k);
+    assert.equal(notificationCopy({ titleKey: k, kind: k }), CLIENT_COPY[k], k);
+  }
+  const c = (kind: string, payload: Record<string, unknown>) => notificationCopy({ titleKey: kind, kind, payload });
+  assert.equal(c("points_expiring", { points: 0, expires_on: "not a date" }), CLIENT_COPY.points_expiring);
+  assert.equal(c("points_expiring", { points: 2.5, expires_on: "" }), CLIENT_COPY.points_expiring);
+  assert.equal(c("voucher_issued", { offer_title: "   " }), CLIENT_COPY.voucher_issued);
+  assert.equal(c("review_prompt", { instructor_name: "Rana Khoury" }), CLIENT_COPY.review_prompt);
+  // an unknown key on a client kind still fills by the kind
+  assert.equal(notificationCopy({ titleKey: "member.points.v2", kind: "points_expiring", payload: { points: 120 } }).title, "120 points expire soon");
+  // another table brings no client fills unless it passes them
+  const other = { voucher_issued: { title: "Issued", body: "" } };
+  assert.equal(notificationCopy({ titleKey: "voucher_issued", kind: "voucher_issued", payload: { offer_title: "X" } }, other), other.voucher_issued);
+  assert.equal(notificationCopy({ titleKey: "voucher_issued", kind: "voucher_issued", payload: { offer_title: "X" } }, other, { voucher_issued: (p) => ({ body: String(p.offer_title) }) }).body, "X");
+  // the generic line ignores payload
+  assert.equal(notificationCopy({ titleKey: "hired", kind: "hired", payload: { business_name: "B" } }), GENERIC_COPY);
 });
 
 test("kinds take the board's tiles", () => {
