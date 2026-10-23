@@ -17,7 +17,7 @@
 
 import { SHARE_TOKENS } from "../../../theme/marketTokens";
 import { time12 } from "../../../utils/time12";
-import { bizShareHref, bizShareText, type ShareLinkKind } from "../../../services/share-links/links";
+import { bizShareHref, bizShareText, isBizSlug, type ShareLinkKind } from "../../../services/share-links/links";
 import type { MembershipPlanRow } from "../../../services/membership-plans/types";
 import { billingLabel, daysLabel, priceLine } from "../../../pages/business-ops/plans/planModel";
 
@@ -157,7 +157,7 @@ export interface PlanData {
 
 /**
  * W4 B-SH "Now hiring" (SPEC.hiring): an opening, public fields only.
- * awaiting DB stage DB13 + M2 (the public resolver for j; the openings themselves are Database Release 2).
+ * The link resolves through resolve_share_link's kind "opening" (the public page draws it; the openings are Database Release 2).
  */
 export interface HiringData {
   /** The opening id (the link's item). */
@@ -207,7 +207,7 @@ export function linkOf(data: TemplateData): { kind: ShareLinkKind | null; item: 
     case "profile":
       return { kind: null, item: null };
     case "hiring":
-      // awaiting DB stage DB13 + M2: the public resolver for j (an opening).
+      // resolve_share_link kind "opening"; the public page shows it.
       return { kind: "j", item: data.d.id };
   }
 }
@@ -621,3 +621,20 @@ export const ITEM_NOUN: Record<BizTemplate, string> = {
   profile: "your profile",
   hiring: "this opening",
 };
+
+/**
+ * Whether the business's share link resolves, in the order the share button
+ * explains it. resolve_share_link answers found only for a publicly visible
+ * business (Database 727924b, business_is_publicly_visible): on Explore
+ * (`active`), not closed (`closedAt`) and not paused (`deactivatedAt`; a
+ * verification can set active without clearing it). Any other answer would
+ * offer a link that no longer opens.
+ */
+export type BizLinkState = "ready" | "noSlug" | "hidden" | "paused";
+
+export function bizLinkState(b: { slug: string | null; active: boolean; closedAt: string | null; deactivatedAt: string | null }): BizLinkState {
+  if (!isBizSlug(b.slug)) return "noSlug";
+  if (!b.active || b.closedAt) return "hidden";
+  if (b.deactivatedAt) return "paused";
+  return "ready";
+}

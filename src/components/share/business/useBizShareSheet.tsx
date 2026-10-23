@@ -22,11 +22,12 @@ import type { TemplateData } from "./bizCardModel";
 
 export const NOT_LISTED_HINT = "Show your business on Explore to share it.";
 export const NO_LINK_HINT = "Your business needs a Centium link before it can be shared.";
+export const PAUSED_HINT = "Your listing is paused. Resume it to share your business.";
 export const LOAD_FAILED_HINT = "Couldn't load your business. Try again.";
 
 /** Why this business can't share yet, or null (ready or still loading). */
 export function brandHint(brand: BrandState): string | null {
-  return brand.status === "noSlug" ? NO_LINK_HINT : brand.status === "hidden" ? NOT_LISTED_HINT : brand.status === "error" ? LOAD_FAILED_HINT : null;
+  return brand.status === "noSlug" ? NO_LINK_HINT : brand.status === "hidden" ? NOT_LISTED_HINT : brand.status === "paused" ? PAUSED_HINT : brand.status === "error" ? LOAD_FAILED_HINT : null;
 }
 
 export type BizShareGetData = (businessId: string) => TemplateData | Promise<TemplateData | null> | null;

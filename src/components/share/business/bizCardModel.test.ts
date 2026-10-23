@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  bizLinkState,
   BIZ_FILLS,
   CARD_W,
   DEF_HIDE,
@@ -161,16 +162,19 @@ test("weekly schedule: Monday-first, this week only, cancelled left out, 12-hour
   assert.ok(card.small);
 });
 
-test("plan and links: membership, its unit and the /m/ link", () => {
+test("plan and links: membership, its unit and the /membership/ link", () => {
   const d = planData({ id: "p1", name: "Monthly", price: "$45", billing: "monthly", kind: "membership", sessionsInPack: null, validForDays: null, includes: ["Gym floor", "lockers", " showers "] });
   assert.deepEqual(d, { id: "p1", name: "Monthly", price: "$45", unit: "a month", duration: "Monthly", includes: "Gym floor, lockers, showers" });
   const c = cardContent(BRAND, { t: "plan", d }, []);
   assert.equal(c.val, "$45");
   assert.deepEqual(c.rows.map((r) => r.k), ["Duration", "Includes"]);
-  assert.equal(cardLink("flexfitness", { t: "plan", d }).href, "https://centium.atraxia.org/b/flexfitness/m/p1");
+  // Items are uuids (resolve_share_link p_item_id uuid).
+  const U = "e1000000-0000-4000-8000-0000000000c1";
+  assert.equal(cardLink("flexfitness", { t: "plan", d: { ...d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/membership/${U}`);
   assert.equal(cardLink("flexfitness", { t: "profile", d: { rating: null } }).text, "centium.atraxia.org/b/flexfitness");
-  assert.equal(cardLink("flexfitness", CLASS).href, "https://centium.atraxia.org/b/flexfitness/c/c1");
-  assert.equal(cardLink("flexfitness", OFFER).href, "https://centium.atraxia.org/b/flexfitness/o/o1");
+  assert.equal(cardLink("flexfitness", { t: "class", d: { ...(CLASS as Extract<TemplateData, { t: "class" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/class/${U}`);
+  assert.equal(cardLink("flexfitness", { t: "offer", d: { ...(OFFER as Extract<TemplateData, { t: "offer" }>).d, id: U } }).href, `https://centium.atraxia.org/b/flexfitness/offer/${U}`);
+  assert.throws(() => cardLink("flexfitness", { t: "plan", d }));
 });
 
 test("B-SH.4 privacy: no card carries an Overview figure, member names or counts, client data or revenue", () => {
@@ -191,9 +195,9 @@ test("B-SH.4 privacy: no card carries an Overview figure, member names or counts
   assert.deepEqual(profile.rows.map((r) => r.k), ["Category", "Location", "Rating"]);
 });
 
-test("Now hiring (W4, SPEC.hiring): eyebrow, sub, rows; pay off by default; Story and Post only; /j/ link; 'Share opening'", async () => {
+test("Now hiring (W4, SPEC.hiring): eyebrow, sub, rows; pay off by default; Story and Post only; /opening/ link; 'Share opening'", async () => {
   const { ITEM_NOUN, SHEET_TITLE } = await import("./bizCardModel.ts");
-  const HIRING: TemplateData = { t: "hiring", d: { id: "op1", title: "Sunday Spin instructor", typeLabel: "Role · ongoing", schedule: "Sun 10:00 AM · 4 classes a month", pay: "$80 per class" } };
+  const HIRING: TemplateData = { t: "hiring", d: { id: "2a200000-0000-4000-8000-000000000011", title: "Sunday Spin instructor", typeLabel: "Role · ongoing", schedule: "Sun 10:00 AM · 4 classes a month", pay: "$80 per class" } };
   assert.deepEqual(templateFormats("hiring"), ["story", "post"]);
   assert.equal(SHEET_TITLE.hiring, "Share opening");
   assert.equal(ITEM_NOUN.hiring, "this opening");
@@ -223,9 +227,20 @@ test("Now hiring (W4, SPEC.hiring): eyebrow, sub, rows; pay off by default; Stor
   // No pay set: no Pay toggle, no Pay row.
   const unpaid: TemplateData = { t: "hiring", d: { ...(HIRING.d as { id: string; title: string; typeLabel: string; schedule: string }), pay: null } };
   assert.deepEqual(toggleRows(unpaid, BRAND).map((r) => r.key), ["role", "type"]);
-  assert.equal(cardLink("flexfitness", HIRING).href, "https://centium.atraxia.org/b/flexfitness/j/op1");
-  assert.equal(cardLink("flexfitness", HIRING).text, "centium.atraxia.org/b/flexfitness/j/op1");
+  assert.equal(cardLink("flexfitness", HIRING).href, "https://centium.atraxia.org/b/flexfitness/opening/2a200000-0000-4000-8000-000000000011");
+  assert.equal(cardLink("flexfitness", HIRING).text, "centium.atraxia.org/b/flexfitness/opening/2a200000-0000-4000-8000-000000000011");
   // B-SH.4: nothing private on it.
   const text = JSON.stringify(cardContent(BRAND, HIRING, [])) + JSON.stringify(rows);
   for (const f of PRIVATE_FIGURES) assert.ok(!text.includes(f), f);
+});
+
+test("bizLinkState: a link only for a slugged business on Explore, open and not paused", () => {
+  const b = { slug: "flexfitness", active: true, closedAt: null, deactivatedAt: null };
+  assert.equal(bizLinkState(b), "ready");
+  assert.equal(bizLinkState({ ...b, slug: null }), "noSlug");
+  assert.equal(bizLinkState({ ...b, slug: "Not A Slug" }), "noSlug");
+  assert.equal(bizLinkState({ ...b, active: false }), "hidden");
+  assert.equal(bizLinkState({ ...b, closedAt: "2026-10-01T00:00:00Z" }), "hidden");
+  // Verification sets active without clearing the pause: still no link.
+  assert.equal(bizLinkState({ ...b, deactivatedAt: "2026-10-01T00:00:00Z" }), "paused");
 });

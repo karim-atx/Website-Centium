@@ -30,7 +30,7 @@ const SHARE_GLYPH = (
   </>
 );
 
-export { LOAD_FAILED_HINT, NOT_LISTED_HINT, NO_LINK_HINT } from "./useBizShareSheet";
+export { LOAD_FAILED_HINT, NOT_LISTED_HINT, NO_LINK_HINT, PAUSED_HINT } from "./useBizShareSheet";
 
 export interface BizShareButtonProps {
   /** The card's data, built when pressed (it may read a field the host doesn't have, e.g. a class's created_at). */

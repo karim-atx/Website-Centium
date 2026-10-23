@@ -419,7 +419,7 @@ function AppRoutes() {
       <Route path="/p/:handle/book" element={<PublicBooking />} />
       {/* Release 3 W8: a shared card (the site address + /s/{id}); shared_item_public is anon. */}
       <Route path="/s/:id" element={<SharedCard />} />
-      {/* Market + Share 3.0 B-SH.6: a business share link (the site address + /b/{slug}[/{kind}/{item}]); resolve_share_link is anon (DB13). */}
+      {/* Market + Share 3.0 B-SH.6: a business share link (the site address + /b/{slug}[/{kind}/{item}]); resolve_share_link is anon. */}
       <Route path="/b/:slug/*" element={<BusinessLinkPage />} />
 
       {/* The one route a recovery session may reach. Deliberately outside
