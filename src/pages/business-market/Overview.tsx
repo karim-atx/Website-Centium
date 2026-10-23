@@ -22,7 +22,7 @@ import { CapsLabel, CategoriesCard, OutlineButton, PhotosCard, RatingCard, Stren
 import { hoursSummary, notEnded, strengthItems, strengthPct, type StrengthInput, type StrengthItem } from "./model";
 import { useListingSwitch } from "./useListingSwitch";
 import { AmenitiesSheet, FirstVisitSheet } from "./DetailsSheets";
-import { fetchMyOpenings, fetchMyTeam } from "../../services/hiring";
+import { fetchMayHire, fetchMyOpenings, fetchMyTeam } from "../../services/hiring";
 import { TagChip } from "./hiring/hiringParts";
 import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 
@@ -49,7 +49,8 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    new applicants · Team of {n}" from my_openings('open') and my_team (DB8),
 //    with the NEW chip while there are new applicants. Studios have no Gym
 //    card (W3); since W5 (lead decision) they get the same Hiring row alone
-//    in that card's chrome under a caps "Studio".
+//    in that card's chrome under a caps "Studio", only while
+//    business_may_hire says so (gyms only in Database Release 2).
 // Below the drawn blocks, under a caps "Listing" section, every live Listing
 // tab feature, restyled as handover cards (PLAN §3.4): Listing strength and
 // its sheets (hours, amenities, first visit, categories, policies), "Your
@@ -174,14 +175,11 @@ export function Overview() {
           </div>
         </>
       ) : kind === "classes" ? (
-        // Studios hire too (W4 lead decision): the same Hiring row in the Gym
-        // card's chrome, alone (no Memberships / Classes rows, R1 decision 7).
-        <>
-          <CapsLabel style={{ marginTop: 4 }}>Studio</CapsLabel>
-          <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-            <HiringRow businessId={business.id} tick={tick} />
-          </div>
-        </>
+        // Studios (W4 lead decision): the same Hiring row in the Gym card's
+        // chrome, alone, ONLY when the server lets this business hire
+        // (business_may_hire: gyms only in Database Release 2, the studio
+        // widening flagged to Karim).
+        <StudioHiring businessId={business.id} tick={tick} />
       ) : null}
       <ListingSection />
       {sw.popup}
@@ -190,12 +188,34 @@ export function Overview() {
   );
 }
 
+/** The studio's Hiring card, shown only when business_may_hire answers true. */
+function StudioHiring({ businessId, tick }: { businessId: string; tick: number }) {
+  const c = useMarketColors();
+  const [may, setMay] = useState<{ id: string; ok: boolean } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchMayHire(businessId).then((r) => alive && setMay({ id: businessId, ok: r.ok && r.value }));
+    return () => {
+      alive = false;
+    };
+  }, [businessId]);
+  if (!may || may.id !== businessId || !may.ok) return null;
+  return (
+    <>
+      <CapsLabel style={{ marginTop: 4 }}>Studio</CapsLabel>
+      <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
+        <HiringRow businessId={businessId} tick={tick} />
+      </div>
+    </>
+  );
+}
+
 /**
  * The Gym card's Hiring row (Business Marketplace Screens line 94; frame-check
  * B-MA.1 "Gym · Hiring row"): GymRow with the NEW chip (10 / 800, 0.08em,
  * #EEEAF8 / #7D67D9, padding 3 8) while there are new applicants. Counts from
- * my_openings('open') (openings, new applicants) and my_team (Team of n).
- * Pending (DB8 not landed): a calm line, never zeros; an error: its own line.
+ * my_openings('open') (openings, new applicants) and my_team (Team of n),
+ * Database Release 2. An error: its own line.
  */
 function HiringRow({ businessId, tick }: { businessId: string; tick: number }) {
   const navigate = useNavigate();
@@ -203,7 +223,6 @@ function HiringRow({ businessId, tick }: { businessId: string; tick: number }) {
   const key = `${businessId}:${tick}`;
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB8 (my_openings, my_team)
     void Promise.all([fetchMyOpenings(businessId, "open"), fetchMyTeam(businessId)]).then(([o, t]) => {
       if (!alive) return;
       if (o.ok && t.ok) {

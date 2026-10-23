@@ -79,7 +79,7 @@ export function listingCard(l: ListingLike, typeLabel: string, place?: string | 
   };
 }
 
-/** A ranked search_directory hit (DB10) as the card, with its "From $X". */
+/** A professionals_ranked hit (Database Release 2) as the card, with its "From $X". */
 export function hitCard(h: DirectoryHit, photoUrl?: string | null): ProfessionalCardData {
   return {
     ...h,

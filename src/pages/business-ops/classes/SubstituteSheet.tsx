@@ -33,7 +33,7 @@ import { useClassTeam } from "./useClassTeam";
 // (DB8) answers, the free list keeps Team members only (DB9 makes
 // instructors_free_for Team-only on the server too). Until then it is the
 // live instructors_free_for list, unchanged.
-// awaiting DB stage DB8 (my_team) / DB9 (instructors_free_for Team only)
+// my_team is Database Release 2; awaiting DB stage DB9 (instructors_free_for Team only on the server)
 
 export function SubstituteSheet({
   open,
@@ -83,7 +83,7 @@ export function SubstituteSheet({
     }
   }
 
-  // awaiting DB stage DB8 (my_team): pending keeps the live list.
+  // my_team (Database Release 2) narrows the free list to the Team.
   const [team] = useClassTeam(businessId, open);
   const teamIds = team.s === "team" ? new Set(team.team.map((t) => t.professional.id)) : null;
   const sessionId = session?.id ?? null;

@@ -4,7 +4,6 @@ import {
   dayText,
   parseDirectory,
   parsePublicProfile,
-  parseReviews,
   parseWork,
   reviewContext,
   sortWork,
@@ -37,56 +36,51 @@ test("role line and sort: current roles first, then newest", () => {
   assert.equal(workRoleLine({ roleTitle: "Spin instructor", type: "role" }), "Spin instructor · Role");
   assert.equal(workRoleLine({ roleTitle: "Saturday Spin cover", type: "class_slot" }), "Saturday Spin cover · Class slot");
   const list = parseWork([
-    { id: "a", business_name: "Cedar", role_title: "HIIT", type: "role", from: "2025-01-01", to: "2025-06-01" },
-    { id: "b", business_name: "Hamra", role_title: "Cover", type: "class_slot", from: "2026-09-12" },
-    { id: "c", business_name: "Hamra", role_title: "Spin", type: "role", from: "2026-03-01" },
+    { hire_id: "a", business_name: "Cedar", role_title: "HIIT", type: "role", from_on: "2025-01-01", to_on: "2025-06-01", status: "ended" },
+    { hire_id: "b", business_name: "Hamra", role_title: "Cover", type: "class_slot", from_on: "2026-09-12", status: "active" },
+    { hire_id: "c", business_name: "Hamra", role_title: "Spin", type: "role", from_on: "2026-03-01", status: "active" },
   ]);
   assert.deepEqual(sortWork(list, TODAY).map((w) => w.id), ["c", "b", "a"]);
 });
 
-test("reviews keep the class and gym context (D-43); client reviews have none", () => {
-  const r = parseReviews([
-    { id: "r1", reviewer_name: "Maya K.", rating: 5, text: "Great", class_name: "Spin 45", business_name: "Hamra" },
-    { id: "r2", reviewer_name: "Jad", rating: 4 },
-    { id: "r3", rating: 0 },
-  ]);
-  assert.equal(r.length, 2);
-  assert.equal(reviewContext(r[0]!), "Spin 45 · Hamra");
-  assert.equal(reviewContext(r[1]!), null);
+test("a review's class and gym context (D-43); a client review has none", () => {
+  const base = { id: "r1", reviewerName: "Maya K.", rating: 5, text: "Great", createdAt: null };
+  assert.equal(reviewContext({ ...base, className: "Spin 45", businessName: "Hamra" }), "Spin 45 · Hamra");
+  assert.equal(reviewContext({ ...base, className: null, businessName: null }), null);
 });
 
-test("public profile: never contact fields (D-27)", () => {
-  const p = parsePublicProfile([
-    {
-      professional_id: "p1",
-      name: "R K",
-      specialty: "Spin",
-      rating: 4.8,
-      review_count: 38,
-      hired_via_centium_count: 2,
-      phone: "+961",
-      email: "a@b.c",
-      instagram: "x",
-      website: "y",
-      services: [{ id: "s1", kind: "hire", name: "Pack", price: 120 }, { id: "s2", name: "1:1", price: "35" }],
-      offers: [{ offer_id: "o1", headline: "20% off", points_cost: 1200 }],
-      teaches_at: [{ title: "Spin 45", business_name: "Hamra", weekday: 5, start_time: "18:30" }],
-    },
-  ])!;
+test("public profile: professional_public_profile + work_history, never contact fields (D-27)", () => {
+  const p = parsePublicProfile(
+    [{ professional_id: "p1", first_name: "Rana", avatar_url: null, specialty: "Spin", headline: null, bio: "Coach", skills: ["HIIT"], area_label: "Hamra", average_rating: "4.8", review_count: 38, client_reviews: 30, class_reviews: 8, hired_via_centium: 2, gyms_worked_with: 1, handle: "rana", phone: "+961", email: "a@b.c", website: "y" }],
+    [{ hire_id: "h1", business_id: "b1", business_name: "Hamra Gym", role_title: "Spin", type: "role", from_on: "2026-03-01", to_on: null, status: "active" }],
+  )!;
   assert.equal(p.card.id, "p1");
+  assert.equal(p.card.name, "Rana");
+  assert.equal(p.card.rating, 4.8);
+  assert.equal(p.card.reviewCount, 38);
   assert.equal(p.card.hiredViaCentiumCount, 2);
+  assert.equal(p.card.area, "Hamra");
+  assert.deepEqual(p.specialties, ["HIIT"]);
+  assert.equal(p.workHistory.length, 1);
+  // No reader in the contract for these (Database gap): empty, never invented.
+  assert.deepEqual([p.services, p.offers, p.reviews, p.teachesAt], [[], [], [], []]);
   const flat = JSON.stringify(p);
-  for (const k of ["+961", "a@b.c", "instagram", "website"]) assert.equal(flat.includes(k), false, k);
-  assert.deepEqual(p.services.map((s) => s.kind), ["hire", "book"]);
-  assert.equal(p.offers[0]!.pointsCost, 1200);
-  assert.equal(parsePublicProfile([]), null);
+  for (const k of ["+961", "a@b.c", "website"]) assert.equal(flat.includes(k), false, k);
+  assert.equal(parsePublicProfile([], []), null);
 });
 
-test("directory hits: ranked cards without contact fields", () => {
-  const [h] = parseDirectory([{ professional_id: "p1", name: "A", rank: 1, from_price: 15, distance_km: 1.2, phone: "1" }]);
+test("professionals_ranked: the server's order, the cursor score, From $X, every row kept", () => {
+  const [h, g] = parseDirectory([
+    { professional_id: "p1", first_name: "A", consultation_rate: 35, monthly_rate: 15, average_rating: 4.6, review_count: 9, hired_via_centium: 3, area_label: "Hamra", distance_band: "under 2 km", band_rank: 1, rank_score: "0.8123", phone: "1" },
+    { professional_id: "p2", first_name: null, rank_score: 0.5 },
+  ]);
   assert.equal(h!.rank, 1);
+  assert.equal(h!.score, 0.8123);
   assert.equal(h!.fromPriceValue, 15);
+  assert.equal(h!.hiredViaCentiumCount, 3);
   assert.equal("phone" in h!, false);
+  assert.equal(g!.name, "Professional");
+  assert.equal(g!.rank, 2);
 });
 
 test("teaches at: later start and weekday label", () => {

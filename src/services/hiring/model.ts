@@ -1,22 +1,20 @@
-// Market + Share 3.0 · W4 · Hiring and Team: row shapes and pure readers.
+// Market + Share 3.0 · Hiring and Team: row shapes and pure readers.
 //
-// Database stage DB8 (Hiring, Team, fees, existing team) has NOT landed
-// (checked 2026-10-22: no Release 2 branch in ../Database, none of these
-// functions on the local stack). The shapes follow PLAN §2.2 DB8, api.md
-// "Hiring (gyms only)" and types.ts (Opening, Application, HireOffer, Hire,
-// TeamMember, ExistingTeamWindow, ExistingTeamInvite, HiringFee,
-// ProfessionalCard), in the database's snake_case. The parsers are tolerant
-// (a missing column reads as null / empty) so the lead can rewire to the
-// documented columns when HANDOVER_API.md gains a Hiring section, without the
-// screens changing. No Supabase import here: the module stays testable.
+// Database Release 2 (release/hiring-team-calendar-and-reviews abf4b2c +
+// ff093b7, migrations 20261213000000–20261213080000; no HANDOVER_API section
+// yet, so the migration comments and function definitions are the contract).
+// Each reader below names the function or table it reads and its exact
+// columns. No Supabase import here: the module stays testable under
+// node:test.
 
 import { bool, num, rows, str } from "../market/parse";
-import { quoteHiringFee, type HiringFeeQuote, type OpeningType, type PayUnit } from "./fee";
+import { parseFeeQuote, type HiringFeeQuote, type OpeningType, type PayUnit } from "./fee";
 
 export type { OpeningType, PayUnit } from "./fee";
 
+/** public.opening_status. */
 export type OpeningStatus = "open" | "filled" | "closed";
-/** The board's status labels, identical in both UIs (STATUS_STEPS colours). */
+/** The board's status labels (public.application_status, upper-cased), identical in both UIs (STATUS_STEPS colours). */
 export type ApplicationStatus = "APPLIED" | "SHORTLISTED" | "OFFERED" | "HIRED" | "DECLINED";
 
 /** ProfessionalCard (types.ts): one identity everywhere. Never contact fields. */
@@ -40,11 +38,13 @@ export interface Opening {
   description: string | null;
   classSeriesIds: string[];
   classSessionId: string | null;
-  /** The class line the gym linked ("Spin 45"), when the reader names it. */
+  /** openings.schedule_label, the gym's own words when it gave some. */
+  scheduleLabel: string | null;
+  /** The class line the gym linked ("Spin 45"), from its class series / session. */
   className: string | null;
-  /** First session of a linked series or the slot's session, ISO. */
+  /** First session of the linked series or the slot's session, ISO local. */
   startsAt: string | null;
-  /** ISO weekdays, 1 = Monday … 7 = Sunday (PLAN §2.2 "week days run Monday first"; to confirm with DB8). */
+  /** ISO weekdays of the linked series, 1 = Monday … 7 = Sunday (class_series.weekdays). */
   weekdays: number[];
   pay: number | null;
   payUnit: PayUnit;
@@ -53,9 +53,13 @@ export interface Opening {
   requirements: string[];
   positions: number;
   status: OpeningStatus;
+  /** An admin took it down (openings.hidden_at). */
+  hidden: boolean;
   postedAt: string | null;
+  /** A closed opening's last change (openings.updated_at: set_opening_status stamps it). */
   closedAt: string | null;
   applicantCount: number;
+  shortlistedCount: number;
   newApplicantCount: number;
   hiredName: string | null;
   hiredAt: string | null;
@@ -76,9 +80,13 @@ export interface Application {
   proposedPay: number | null;
   attachments: Attachment[];
   status: ApplicationStatus;
+  /** Nobody has decided on it yet (status applied): the server's "new" (my_openings.new_applicants). */
   isNew: boolean;
   createdAt: string | null;
+  /** The accepted offer's start, once HIRED. */
   hireStartsOn: string | null;
+  /** The fee behind a HIRED card: the charged amount when the caller may read fees, else the quote the gym was shown. */
+  fee: number | null;
 }
 
 export interface TeamClass {
@@ -115,6 +123,8 @@ export interface HiringFee {
   type: OpeningType;
   hiredAt: string | null;
   quote: HiringFeeQuote;
+  /** What the offer showed (quoted_amount); differs from quote.fee only if the rate moved between offer and accept. */
+  quotedAmount: number | null;
   status: "DUE" | "PAID";
 }
 
@@ -143,10 +153,9 @@ export interface ExistingTeamInvite {
 
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const strs = (v: unknown): string[] => arr(v).map(str).filter((x): x is string => !!x);
-const nums = (v: unknown): number[] => arr(v).map(num).filter((x): x is number => x != null);
 
-const openingType = (v: unknown): OpeningType => (v === "class_slot" ? "class_slot" : "role");
-const payUnit = (v: unknown, type: OpeningType): PayUnit =>
+export const openingType = (v: unknown): OpeningType => (v === "class_slot" ? "class_slot" : "role");
+export const payUnitOf = (v: unknown, type: OpeningType): PayUnit =>
   v === "per_class" || v === "per_month" || v === "per_slot" ? v : type === "class_slot" ? "per_slot" : "per_class";
 
 const STATUSES: ApplicationStatus[] = ["APPLIED", "SHORTLISTED", "OFFERED", "HIRED", "DECLINED"];
@@ -155,56 +164,102 @@ export function applicationStatus(v: unknown): ApplicationStatus {
   return (STATUSES as string[]).includes(s) ? (s as ApplicationStatus) : "APPLIED";
 }
 
-/** A ProfessionalCard from a row (flat, or nested under `professional`). */
-export function parseProCard(r: Record<string, unknown>): ProCard {
-  const p = r.professional && typeof r.professional === "object" ? (r.professional as Record<string, unknown>) : r;
+/**
+ * search_professionals rows (professional_id, first_name, avatar_url,
+ * specialty, headline, area_label, average_rating, review_count — both from
+ * professional_rating() — hired_via_centium, on_this_team,
+ * open_to_gym_work), in the server's order (Centium hires, then rating): the
+ * rank is the position. No distance is returned.
+ */
+export function parseSearchRows(data: unknown): ProCard[] {
+  return rows(data)
+    .filter((r) => str(r.professional_id))
+    .map((r, i) => ({
+      id: r.professional_id as string,
+      name: str(r.first_name)?.trim() ?? "",
+      photoUrl: str(r.avatar_url),
+      specialty: str(r.specialty) ?? str(r.headline),
+      rating: num(r.average_rating),
+      reviewCount: num(r.review_count) ?? 0,
+      hiredViaCentiumCount: num(r.hired_via_centium) ?? 0,
+      distanceKm: null,
+      onTeam: bool(r.on_this_team),
+      rank: i + 1,
+    }));
+}
+
+/**
+ * opening_applicants rows (application_id, professional_id, first_name,
+ * avatar_url, specialty, headline, message, proposed_pay,
+ * availability_confirmed, attachments, status, average_rating, review_count,
+ * hired_via_centium, created_at) → the card part.
+ */
+export function applicantCard(r: Record<string, unknown>, onTeam: boolean): ProCard {
   return {
-    id: str(p.professional_id) ?? str(p.id) ?? "",
-    name: str(p.name) ?? str(p.display_name) ?? str(p.full_name) ?? "",
-    photoUrl: str(p.photo_url) ?? str(p.avatar_url),
-    specialty: str(p.specialty) ?? str(p.headline),
-    rating: num(p.rating) ?? num(p.average_rating),
-    reviewCount: num(p.review_count) ?? 0,
-    hiredViaCentiumCount: num(p.hired_via_centium_count) ?? num(p.hire_count) ?? 0,
-    distanceKm: num(p.distance_km),
-    onTeam: bool(p.on_team) || bool(r.on_team),
-    rank: num(p.rank) ?? num(r.rank),
+    id: str(r.professional_id) ?? "",
+    name: str(r.first_name)?.trim() ?? "",
+    photoUrl: str(r.avatar_url),
+    specialty: str(r.specialty) ?? str(r.headline),
+    rating: num(r.average_rating),
+    reviewCount: num(r.review_count) ?? 0,
+    hiredViaCentiumCount: num(r.hired_via_centium) ?? 0,
+    distanceKm: null,
+    onTeam,
+    rank: null,
   };
 }
 
-export function parseOpening(r: Record<string, unknown>): Opening {
+/** The enrichment the business reads beside my_openings (its own class series and sessions, its accepted offers). */
+export interface OpeningExtras {
+  className?: string | null;
+  startsAt?: string | null;
+  weekdays?: number[];
+  hiredName?: string | null;
+  hiredAt?: string | null;
+  hiredPath?: "opening" | "direct" | null;
+  closedAt?: string | null;
+}
+
+/**
+ * One my_openings row (id, type, title, description, class_series_ids,
+ * class_session_id, schedule_label, pay, pay_unit, classes_per_month,
+ * allow_pay_proposals, requirements, positions, status, hidden_at,
+ * posted_at, applicants, shortlisted, new_applicants).
+ */
+export function parseOpening(r: Record<string, unknown>, x: OpeningExtras = {}): Opening {
   const type = openingType(r.type);
   const st = str(r.status);
   return {
-    id: str(r.id) ?? str(r.opening_id) ?? "",
+    id: str(r.id) ?? "",
     type,
     title: str(r.title) ?? "",
     description: str(r.description),
     classSeriesIds: strs(r.class_series_ids),
     classSessionId: str(r.class_session_id),
-    className: str(r.class_title) ?? str(r.class_name),
-    startsAt: str(r.starts_at) ?? str(r.session_starts_at),
-    weekdays: nums(r.weekdays),
-    pay: num(r.pay) ?? num(r.pay_amount),
-    payUnit: payUnit(r.pay_unit, type),
+    scheduleLabel: str(r.schedule_label),
+    className: x.className ?? null,
+    startsAt: x.startsAt ?? null,
+    weekdays: x.weekdays ?? [],
+    pay: num(r.pay),
+    payUnit: payUnitOf(r.pay_unit, type),
     classesPerMonth: num(r.classes_per_month),
     allowPayProposals: bool(r.allow_pay_proposals),
     requirements: strs(r.requirements),
     positions: num(r.positions) ?? 1,
     status: st === "filled" || st === "closed" ? st : "open",
-    postedAt: str(r.posted_at) ?? str(r.created_at),
-    closedAt: str(r.closed_at),
-    applicantCount: num(r.applicant_count) ?? 0,
-    newApplicantCount: num(r.new_applicant_count) ?? 0,
-    hiredName: str(r.hired_name) ?? str(r.hired_professional_name),
-    hiredAt: str(r.hired_at),
-    hiredPath: r.hired_path === "direct" ? "direct" : r.hired_path === "opening" ? "opening" : null,
+    hidden: !!str(r.hidden_at),
+    postedAt: str(r.posted_at),
+    closedAt: x.closedAt ?? null,
+    applicantCount: num(r.applicants) ?? 0,
+    shortlistedCount: num(r.shortlisted) ?? 0,
+    newApplicantCount: num(r.new_applicants) ?? 0,
+    hiredName: x.hiredName ?? null,
+    hiredAt: x.hiredAt ?? null,
+    hiredPath: x.hiredPath ?? null,
   };
 }
 
-export const parseOpenings = (data: unknown): Opening[] => rows(data).map(parseOpening).filter((o) => o.id);
-
-function parseAttachment(v: unknown): Attachment | null {
+export function parseAttachment(v: unknown): Attachment | null {
   if (!v || typeof v !== "object") return null;
   const a = v as Record<string, unknown>;
   const label = str(a.label);
@@ -213,84 +268,52 @@ function parseAttachment(v: unknown): Attachment | null {
   return { kind: k === "credential" || k === "service" || k === "work_history" ? k : "file", refId: str(a.ref_id), label };
 }
 
-export function parseApplication(r: Record<string, unknown>): Application {
+/** One opening_applicants row (applicantCard) with the opening it belongs to. */
+export function parseApplication(r: Record<string, unknown>, openingId: string, card: ProCard, x: { hireStartsOn?: string | null; fee?: number | null } = {}): Application {
+  const status = applicationStatus(r.status);
   return {
-    id: str(r.id) ?? str(r.application_id) ?? "",
-    openingId: str(r.opening_id) ?? "",
-    professional: parseProCard(r),
+    id: str(r.application_id) ?? "",
+    openingId,
+    professional: card,
     message: str(r.message),
     proposedPay: num(r.proposed_pay),
     attachments: arr(r.attachments).map(parseAttachment).filter((a): a is Attachment => !!a),
-    status: applicationStatus(r.status),
-    isNew: bool(r.is_new),
-    createdAt: str(r.created_at),
-    hireStartsOn: str(r.hire_starts_on) ?? str(r.starts_on),
-  };
-}
-
-export const parseApplications = (data: unknown): Application[] => rows(data).map(parseApplication).filter((a) => a.id);
-
-export const parseProCards = (data: unknown): ProCard[] => rows(data).map(parseProCard).filter((p) => p.id);
-
-function parseTeamClass(v: unknown): TeamClass | null {
-  if (!v || typeof v !== "object") return null;
-  const c = v as Record<string, unknown>;
-  const title = str(c.title) ?? str(c.class_title);
-  if (!title) return null;
-  return { seriesId: str(c.class_series_id) ?? str(c.series_id), title, weekday: num(c.weekday), startTime: str(c.start_time), label: str(c.label) };
-}
-
-function parseTeamHire(v: unknown): TeamHire | null {
-  if (!v || typeof v !== "object") return null;
-  const h = v as Record<string, unknown>;
-  const id = str(h.id) ?? str(h.hire_id);
-  if (!id) return null;
-  return { id, title: str(h.title) ?? str(h.role_title) ?? "", type: openingType(h.type), hiredAt: str(h.hired_at), startsOn: str(h.starts_on) };
-}
-
-export function parseTeamMember(r: Record<string, unknown>): TeamMember {
-  return {
-    professional: parseProCard(r),
-    source: r.source === "existing_team" ? "existing_team" : "hire",
-    firstAddedAt: str(r.first_added_at) ?? str(r.added_at),
-    hires: arr(r.hires).map(parseTeamHire).filter((h): h is TeamHire => !!h),
-    classes: arr(r.classes ?? r.assigned_classes).map(parseTeamClass).filter((c): c is TeamClass => !!c),
-  };
-}
-
-export const parseTeam = (data: unknown): TeamMember[] => rows(data).map(parseTeamMember).filter((m) => m.professional.id);
-
-export function parseHiringFee(r: Record<string, unknown>): HiringFee {
-  const type = openingType(r.type);
-  const base = num(r.base) ?? 0;
-  const mirror = quoteHiringFee(type, base);
-  const pct = num(r.percent_amount) ?? mirror.percentAmount;
-  const min = num(r.minimum) ?? mirror.minimum;
-  const fee = num(r.fee) ?? num(r.amount) ?? mirror.fee;
-  const status = typeof r.status === "string" && r.status.toUpperCase() === "PAID" ? "PAID" : "DUE";
-  return {
-    id: str(r.id) ?? str(r.hiring_fee_id) ?? "",
-    hireId: str(r.hire_id),
-    professionalName: str(r.professional_name) ?? str(r.name) ?? "",
-    roleTitle: str(r.role_title) ?? str(r.title) ?? "",
-    type,
-    hiredAt: str(r.hired_at) ?? str(r.charged_at),
-    quote: {
-      type,
-      base,
-      basis: type === "role" ? "first_month_pay" : "slot_total_pay",
-      percentAmount: pct,
-      minimum: min,
-      fee,
-      // The server's flag when it sends one; else strictly-higher, as the mirror.
-      minimumApplied: r.minimum_applied == null ? min > pct : bool(r.minimum_applied),
-    },
     status,
+    isNew: status === "APPLIED",
+    createdAt: str(r.created_at),
+    hireStartsOn: x.hireStartsOn ?? null,
+    fee: x.fee ?? null,
   };
 }
 
-export const parseHiringFees = (data: unknown): HiringFee[] => rows(data).map(parseHiringFee).filter((f) => f.id);
+/**
+ * One my_hiring_fees row (id, hire_id, professional_id, first_name,
+ * role_title, type, base, basis, percent_amount, minimum, amount,
+ * minimum_applied, quoted_amount, status due | paid, charge_id,
+ * charge_status, charged_at, paid_at); null when its arithmetic isn't all
+ * there.
+ */
+export function parseHiringFee(r: Record<string, unknown>): HiringFee | null {
+  const type = openingType(r.type);
+  const quote = parseFeeQuote(type, r);
+  const id = str(r.id);
+  if (!quote || !id) return null;
+  return {
+    id,
+    hireId: str(r.hire_id),
+    professionalName: str(r.first_name) ?? "",
+    roleTitle: str(r.role_title) ?? "",
+    type,
+    hiredAt: str(r.charged_at),
+    quote,
+    quotedAmount: num(r.quoted_amount),
+    status: r.status === "paid" ? "PAID" : "DUE",
+  };
+}
 
+export const parseHiringFees = (data: unknown): HiringFee[] => rows(data).map(parseHiringFee).filter((f): f is HiringFee => !!f);
+
+/** existing_team_window(p_business_id) → business_id, opens_at, closes_at, days_left, open (closed with no dates until Karim sets the start). */
 export function parseWindow(data: unknown): ExistingTeamWindow | null {
   const r = rows(data)[0];
   if (!r) return null;
@@ -316,6 +339,21 @@ export function parseInvite(r: Record<string, unknown>): ExistingTeamInvite {
 export const parseInvites = (data: unknown): ExistingTeamInvite[] => rows(data).map(parseInvite).filter((i) => i.id);
 
 // ---------------------------------------------------------------------------
+// class series → the lines Team and the opening cards show
+
+/** class_series.weekdays: ISO 1 = Monday … 7 = Sunday (my_calendar names them from date '2024-01-01' + (w - 1), a Monday). */
+export function isoWeekdays(v: unknown): number[] {
+  return [...new Set(arr(v).map(num).filter((n): n is number => n != null && Number.isInteger(n) && n >= 1 && n <= 7))].sort((a, b) => a - b);
+}
+
+/** "HH:MM" of a time column ("18:30:00" → "18:30"). */
+export const hhmmOf = (v: unknown): string | null => {
+  const s = str(v);
+  const m = s ? /^(\d{2}):(\d{2})/.exec(s) : null;
+  return m ? `${m[1]}:${m[2]}` : null;
+};
+
+// ---------------------------------------------------------------------------
 // window maths (D-31: verification date, or launch if later, + 30 days)
 
 export const EXISTING_TEAM_WINDOW_DAYS = 30;
@@ -327,59 +365,135 @@ export function windowUsed(daysLeft: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// errors (PLAN §2.2 DB8 / api.md names; mapped by name, as offers do)
+// errors
+//
+// The contract raises `ATXH<n>: <sentence>` (or ATXB8) in the MESSAGE with a
+// SQLSTATE in the code. Each one maps to a name and the screen's words. The
+// names after "not in the contract" are the W4 guesses for functions that
+// haven't landed (existing team, the Team-only check, the after-window
+// invite refusal); they stay matched by name until those stages document
+// theirs.
 
 export type HiringError =
-  | "not_a_gym"
-  | "pay_locked"
-  | "already_applied"
-  | "conflicts"
-  | "conflict_warning"
-  | "offer_withdrawn"
-  | "window_closed"
-  | "not_a_professional"
-  | "invite_expired"
-  | "professional_code"
-  | "professional_account"
-  | "instructor_not_on_team"
-  | "invalid_pay";
+  | "not_a_gym" // ATXH0 · ATX09
+  | "pay_locked" // ATXH1 · 22023
+  | "already_applied" // ATXH2 · ATX10
+  | "not_your_class" // ATXH3 · 22023
+  | "not_a_professional" // ATXH4 · ATX09
+  | "availability_required" // ATXH5 · 22023
+  | "opening_closed" // ATXH6 · ATX08
+  | "own_opening" // ATXH7 · 22023
+  | "opening_hidden" // ATXH8 · 42501
+  | "business_paused" // ATXH9 · ATX09
+  | "has_offer" // ATXH10 · ATX10
+  | "not_open_to_gym_work" // ATXH11 · ATX09
+  | "invalid_pay" // ATXH12 · 22023
+  | "offer_pending" // ATXH13 · ATX10
+  | "offer_closed" // ATXH14 · ATX10, and "no such offer" · ATX08
+  | "conflicts" // ATXH15 · ATX10
+  | "not_on_team" // ATXH16 · ATX08
+  | "professional_code" // ATXH17 · 22023 (invite_employee: a professional's own code)
+  | "professional_account" // ATXH17 · 22023, hint "…window … has closed" (invite_employee)
+  | "nobody_named" // ATXH18 · 22023
+  | "window_closed" // ATXH19 · ATX10
+  | "already_invited" // ATXH20 · ATX10
+  | "invite_expired" // ATXH21 · ATX10
+  | "invite_gone" // "no such invitation" · ATX08
+  | "not_attended" // ATXH22 · ATX94 (review_instructor; services/instructor-reviews words it)
+  | "no_instructor" // ATXH23 · ATX08 (review_instructor)
+  | "not_your_hire" // ATXH24 · 42501 (raise_hiring_dispute: no caller, the board draws no dispute flow)
+  | "dispute_open" // ATXH25 · ATX10 (raise_hiring_dispute: no caller)
+  | "no_seats" // ATXC0 · 23514 (the seat cap: an existing-team addition occupies a paid seat)
+  | "not_your_business" // ATXB8 · 42501
+  | "rate_limited" // ATX02 (check_rate_limit)
+  | "invalid_opening" // 23514 (a title / description / requirements CHECK)
+  // not in the contract (awaiting DB stage DB9):
+  | "instructor_not_on_team";
 
-const ERRORS: HiringError[] = [
-  "not_a_gym",
-  "pay_locked",
-  "already_applied",
-  "conflict_warning",
-  "conflicts",
-  "offer_withdrawn",
-  "window_closed",
-  "not_a_professional",
-  "invite_expired",
-  "professional_code",
-  "professional_account",
-  "instructor_not_on_team",
-  "invalid_pay",
-];
+const ATXH: Record<number, HiringError> = {
+  0: "not_a_gym",
+  1: "pay_locked",
+  2: "already_applied",
+  3: "not_your_class",
+  4: "not_a_professional",
+  5: "availability_required",
+  6: "opening_closed",
+  7: "own_opening",
+  8: "opening_hidden",
+  9: "business_paused",
+  10: "has_offer",
+  11: "not_open_to_gym_work",
+  12: "invalid_pay",
+  13: "offer_pending",
+  14: "offer_closed",
+  15: "conflicts",
+  16: "not_on_team",
+  18: "nobody_named",
+  19: "window_closed",
+  20: "already_invited",
+  21: "invite_expired",
+  22: "not_attended",
+  23: "no_instructor",
+  24: "not_your_hire",
+  25: "dispute_open",
+};
+
+const PENDING_NAMES: HiringError[] = ["instructor_not_on_team"];
 
 export function hiringErrorOf(e: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null | undefined): HiringError | null {
   if (!e) return null;
-  const hay = [e.code, e.message, e.details, e.hint].filter(Boolean).join(" ").toLowerCase();
-  for (const k of ERRORS) if (hay.includes(k)) return k;
+  const msg = e.message ?? "";
+  const h = /\bATXH(\d+)\b/.exec(msg);
+  // ATXH17 is one sentence with two causes, told apart by the hint.
+  if (h && Number(h[1]) === 17) return /window/i.test(e.hint ?? "") ? "professional_account" : "professional_code";
+  if (h && ATXH[Number(h[1])]) return ATXH[Number(h[1])];
+  if (/\bATXC0\b/.test(msg)) return "no_seats";
+  if (/\bATXB8\b/.test(msg) || e.code === "42501") return "not_your_business";
+  if (e.code === "ATX02") return "rate_limited";
+  if (e.code === "ATX08" && /no such offer/i.test(msg)) return "offer_closed";
+  if (e.code === "ATX08" && /no such invitation/i.test(msg)) return "invite_gone";
+  if (e.code === "23514") return "invalid_opening";
+  const hay = [e.code, msg, e.details, e.hint].filter(Boolean).join(" ").toLowerCase();
+  for (const k of PENDING_NAMES) if (hay.includes(k)) return k;
   return null;
 }
 
 /** The board's words where it has them; ours otherwise (listed in W4.md). */
 export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
-  not_a_gym: "Hiring is for gyms and studios.",
+  not_a_gym: "Hiring is for gyms.",
   pay_locked: "This opening doesn't take proposals.",
   already_applied: "You've already applied to this opening.",
-  conflict_warning: "This overlaps a time already busy on their calendar.",
-  conflicts: "This overlaps a time already busy on your calendar.",
-  offer_withdrawn: "The gym withdrew this offer.",
-  window_closed: "New professionals join through Hiring",
+  not_your_class: "One of those classes isn't yours. Choose again.",
   not_a_professional: "This account isn't a professional account.",
-  invite_expired: "This invite has expired",
+  availability_required: "Confirm you're available for this schedule.",
+  opening_closed: "This opening is no longer open.",
+  own_opening: "You can't apply to your own opening.",
+  opening_hidden: "Centium took this opening down. Contact support for details.",
+  business_paused: "This business is paused or closed, so it isn't hiring right now.",
+  has_offer: "This applicant already has an offer.",
+  not_open_to_gym_work: "They aren't open to gym work right now.",
+  invalid_pay: "Check the pay, the classes a month and the start date.",
+  offer_pending: "They already have an offer from you for this job.",
+  offer_closed: "This offer is no longer open.",
+  conflicts: "This overlaps a time already busy on your calendar.",
+  not_on_team: "They aren't on your team anymore.",
+  not_your_business: "You don't have permission to hire for this business.",
+  rate_limited: "Too many tries in a short time. Try again later.",
+  invalid_opening: "Check the title and the details, then try again.",
   professional_code: "Add professionals to your team through Hiring.",
   professional_account: "New professionals join through Hiring.",
+  nobody_named: "Add at least one person, with an email or a phone number.",
+  window_closed: "New professionals join through Hiring",
+  already_invited: "This person has already been invited.",
+  invite_expired: "This invite has expired",
+  invite_gone: "This invite is no longer available.",
+  not_attended: "You can review a class once you've been to it.",
+  no_instructor: "This class had no named instructor on the gym's team.",
+  not_your_hire: "This hire isn't yours to dispute.",
+  dispute_open: "You already have an open dispute about this hire.",
+  no_seats: "All seats are in use. Buy a seat block or remove somebody first.",
   instructor_not_on_team: "Only your Team can be named. Add people through Hiring.",
-  invalid_pay: "Enter the pay for this opening.",
 };
+
+/** The caution card under an applicant or a result after an offer (B-MA.8.6): their busy times. */
+export const BUSY_WARNING_TEXT = "This overlaps a time already busy on their calendar.";

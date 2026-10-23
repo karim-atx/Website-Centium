@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -8,10 +8,10 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { BackHeader, MasterSheet, PrimaryButton, SoonNote } from "../listingParts";
-import { FEE_NOTICE, searchProfessionals, sendHireOffer, type BusyTime, type ProCard } from "../../../services/hiring";
+import { searchProfessionals, sendHireOffer, type BusyTime, type ProCard } from "../../../services/hiring";
 import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
-import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip } from "./hiringParts";
+import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlusGlyph, feeNoticeText, fixedPair, useFeeRules, useHiringRead, useHiringStrip } from "./hiringParts";
 import { OpeningFormFields, useLiveClasses } from "./PostOpeningSheet";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
 import { busyText, emptyForm, hiredLine, parseForm, sentStrip, type OpeningFormState, type ParsedForm } from "./hubModel";
@@ -30,16 +30,16 @@ import { busyText, emptyForm, hiredLine, parseForm, sentStrip, type OpeningFormS
 //     line and "Send offer" (36 tall, padding 0 14, radius 11, --fill /
 //     --onfill 12.5 / 800), "Offered" (#EBF2F4 / #5A859E) after sending;
 //   the offer sheet "Offer to {name}" (the person row, Type, Role title,
-//     Classes, Pay, Classes a month, Starts; FEE_NOTICE over "Review offer")
+//     Classes, Pay, Classes a month, Starts; the fee notice over "Review offer")
 //     → HireConfirmDialog "Send this offer?" → strip "Offer sent to {name}.
 //     {First} accepts in Opportunities." (View).
-// search_professionals is ranked by the server (D-44: work history 40%,
-// reviews 40%, distance 20%), open-to-gym-work only, no contact fields.
-// Busy times returned with the offer (start / end only) show as a caution
-// card under that result: a warning, never blocking. Every call here is
-// awaiting DB stage DB8 (search also DB11 open_to_gym_work).
-
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+// search_professionals (Database Release 2) lists only professionals open to
+// gym work, ranked by the server: Centium hires, then rating
+// (professional_rating()). It returns no distance and does not apply D-44's
+// 40/40/20 weights (platform_settings rank_weight_* exist but nothing reads
+// them; Database gap), so the line under the field says what the server does.
+// Busy times (check_conflicts as the gym: start / end only) show as a caution
+// card under that result after sending: a warning, never blocking.
 
 const personLine = (p: ProCard): { line: string; muted: boolean } => {
   const h = hiredLine(p.hiredViaCentiumCount);
@@ -55,6 +55,7 @@ export default function DirectOfferPage() {
   const id = biz.canHire ? biz.businessId : null;
   const [strip, showStrip] = useHiringStrip();
   const live = useLiveClasses();
+  const rules = useFeeRules();
 
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
@@ -62,7 +63,6 @@ export default function DirectOfferPage() {
     const t = window.setTimeout(() => setDq(q.trim()), 300);
     return () => window.clearTimeout(t);
   }, [q]);
-  // awaiting DB stage DB8 (search_professionals) and DB11 (open_to_gym_work)
   const results = useHiringRead(() => (id ? searchProfessionals(id, dq) : null), [id, dq]);
 
   const [offered, setOffered] = useState<Record<string, BusyTime[]>>({});
@@ -72,7 +72,6 @@ export default function DirectOfferPage() {
   const [confirm, setConfirm] = useState<{ o: HireOffer; f: ParsedForm } | null>(null);
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState<DialogNote | null>(null);
-  const requestId = useRef(newRequestId());
 
   const slot = live.sessions.find((s) => s.id === form.sessionId) ?? null;
   const parsed = parseForm(form, "offer", slot?.slotTitle ?? null);
@@ -80,7 +79,6 @@ export default function DirectOfferPage() {
   const start = (p: ProCard) => {
     setWho(p);
     setForm(emptyForm());
-    requestId.current = newRequestId();
     setSheetOpen(true);
   };
 
@@ -96,25 +94,19 @@ export default function DirectOfferPage() {
   const send = async () => {
     if (!confirm || !who || !id || sending) return;
     setSending(true);
-    // awaiting DB stage DB8 (send_hire_offer): pending today → the calm note, the dialog stays.
-    const r = await sendHireOffer(
-      id,
-      {
-        professionalId: who.id,
-        applicationId: null,
-        openingId: null,
-        type: confirm.o.type,
-        title: confirm.o.title,
-        classSeriesIds: confirm.f.seriesIds,
-        classSessionId: confirm.f.sessionId,
-        pay: confirm.o.pay,
-        payUnit: confirm.o.payUnit,
-        classesPerMonth: confirm.o.classesPerMonth,
-        startsOn: confirm.o.startsOn,
-        message: null,
-      },
-      requestId.current
-    );
+    const r = await sendHireOffer(id, {
+      professionalId: who.id,
+      applicationId: null,
+      type: confirm.o.type,
+      title: confirm.o.title,
+      classSeriesIds: confirm.f.seriesIds,
+      classSessionId: confirm.f.sessionId,
+      pay: confirm.o.pay,
+      payUnit: confirm.o.payUnit,
+      classesPerMonth: confirm.o.classesPerMonth,
+      startsOn: confirm.o.startsOn,
+      message: null,
+    });
     setSending(false);
     if (!r.ok) {
       setNote({ text: r.message, tone: r.pending ? "soon" : "error" });
@@ -140,7 +132,7 @@ export default function DirectOfferPage() {
       {strip}
 
       {!biz.loading && !biz.canHire ? (
-        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms and studios." />
+        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms." />
       ) : (
         <>
           <div data-search style={{ height: 48, boxSizing: "border-box", borderRadius: 14, border: `1.5px solid ${m.fill}`, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", background: m.card }}>
@@ -160,13 +152,13 @@ export default function DirectOfferPage() {
               </button>
             ) : null}
           </div>
-          <div style={{ marginTop: 10, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Ranked by Centium work history, reviews and distance. Only professionals open to gym work show here.</div>
+          <div style={{ marginTop: 10, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Ranked by Centium work history and reviews. Only professionals open to gym work show here.</div>
 
           {results.state === "loading" && !results.value ? <MarketSkeleton radius={20} rows={3} count={3} label="Searching professionals" style={{ marginTop: 12 }} /> : null}
           {results.state === "error" ? <MarketError thing="professionals" onRetry={results.retry} style={{ marginTop: 12 }} /> : null}
           {results.state === "offline" ? <MarketOffline loaded={list.length > 0} onRetry={results.retry} force style={{ marginTop: 12 }} /> : null}
           {results.state === "pending" ? <SoonNote style={{ marginTop: 16 }}>Hiring is coming soon.</SoonNote> : null}
-          {results.state === "ok" && list.length === 0 ? <SoonNote style={{ marginTop: 16 }}>{dq ? "No professionals match this search." : "No professionals are open to gym work near you yet."}</SoonNote> : null}
+          {results.state === "ok" && list.length === 0 ? <SoonNote style={{ marginTop: 16 }}>{dq ? "No professionals match this search." : "No professionals are open to gym work yet."}</SoonNote> : null}
 
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             {list.map((p, i) => {
@@ -201,7 +193,7 @@ export default function DirectOfferPage() {
         title={who ? `Offer to ${who.name}` : "Offer"}
         footer={
           <>
-            <FeeNoticeRow text={FEE_NOTICE} />
+            <FeeNoticeRow text={feeNoticeText(rules)} />
             <PrimaryButton onClick={review} disabled={!parsed || (parsed.type === "class_slot" && !slot)}>
               Review offer
             </PrimaryButton>

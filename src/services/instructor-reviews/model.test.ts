@@ -112,9 +112,15 @@ test("Send needs a star; the radiogroup keys move and clamp", () => {
   assert.equal(starKey(3, "Enter"), null);
 });
 
-test("documented refusals map by name", () => {
-  assert.equal(reviewErrorOf({ code: "P0001", message: "already_reviewed" }), "already_reviewed");
-  assert.equal(reviewErrorOf({ code: "P0001", message: "x", details: "not_attended" }), "not_attended");
+test("review_instructor's refusals map by code (HANDOVER_API Release 2)", () => {
+  assert.equal(reviewErrorOf({ code: "ATX94", message: "ATXH22: you did not attend that class" }), "not_attended");
+  assert.equal(reviewErrorOf({ code: "ATX08", message: "ATXH23: that class had no named instructor" }), "no_instructor");
+  assert.equal(reviewErrorOf({ code: "ATX08", message: "ATXH23: that instructor is not on this gym's team" }), "no_instructor");
+  assert.equal(reviewErrorOf({ code: "ATX10", message: "you can rate a class once it has happened" }), "not_yet");
+  assert.equal(reviewErrorOf({ code: "ATX91", message: "a rating must be between 1 and 5" }), "bad_rating");
+  assert.equal(reviewErrorOf({ code: "22023", message: "keep it under 2000 characters" }), "too_long");
+  assert.equal(reviewErrorOf({ code: "ATX02", message: "rate limited" }), "rate_limited");
+  assert.equal(reviewErrorOf({ code: "23502", message: "null value in column \"body\" of relation \"gym_reviews\" violates not-null constraint" }), "needs_text");
   assert.equal(reviewErrorOf({ code: "P0001", message: "other" }), null);
   assert.equal(reviewErrorOf(null), null);
 });

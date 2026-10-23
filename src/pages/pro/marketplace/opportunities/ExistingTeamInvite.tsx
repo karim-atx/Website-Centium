@@ -61,7 +61,7 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
     setSoon(false);
     const r = await acceptExistingTeamInvite(invite.id);
     setBusy(false);
-    // awaiting DB stage DB8 (accept_existing_team_invite): pending → the quiet note, nothing changes.
+    // accept_existing_team_invite (Database Release 2): ATXH21 → the expired dialog; ATXC0 (the gym has no free seat) and ATX08 show their words.
     if (r.ok) return onDone(invite);
     if (r.pending) return setSoon(true);
     if (r.error === "invite_expired") return setExpired(true);

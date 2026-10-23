@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Paperclip } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
@@ -12,14 +12,11 @@ import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { BackHeader } from "../listingParts";
 import {
-  declineApplication,
-  feeBase,
+  decideApplication,
   fetchApplications,
   fetchMyOpenings,
   payMoney,
-  quoteHiringFee,
   sendHireOffer,
-  shortlistApplication,
   type Application,
   type ApplicationStatus,
   type BusyTime,
@@ -57,9 +54,11 @@ import { applicantTag, busyText, firstName, hiredState, hiredStrip, offerStartDa
 // Ours: an OFFERED card reads "Offer sent · waiting for {first}" and a
 // DECLINED one "Declined" in place of the actions; busy times returned with
 // an offer show as a caution card under that applicant (a warning, never
-// blocking). Every call here is awaiting DB stage DB8.
-
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+// blocking). Database Release 2: opening_applicants (the cards, with
+// professional_rating()), decide_application, send_hire_offer (+ busy times
+// from check_conflicts), and the hired card's fee from my_hiring_fees (the
+// charged amount; the quote the gym was shown when the caller can't read
+// fees).
 
 const stubOf = (o: Opening): { n: string; unit: string } | null => {
   if (o.pay == null || o.pay <= 0) return null;
@@ -93,18 +92,16 @@ export default function ApplicantsPage() {
   const id = biz.canHire ? biz.businessId : null;
   const [strip, showStrip] = useHiringStrip();
 
-  // The opening: handed over by the hub, else found in my_openings (awaiting DB stage DB8).
+  // The opening: handed over by the hub, else found in my_openings.
   const lookup = useHiringRead(() => (passed && passed.id === openingId ? null : id ? fetchMyOpenings(id, null) : null), [id, openingId, passed]);
   const opening: Opening | null = passed && passed.id === openingId ? passed : (lookup.value?.find((o) => o.id === openingId) ?? null);
 
-  // awaiting DB stage DB8 (opening_applications)
-  const apps = useHiringRead(() => (openingId ? fetchApplications(openingId) : null), [openingId]);
+  const apps = useHiringRead(() => (openingId && id ? fetchApplications(id, openingId) : null), [id, openingId]);
   const [changed, setChanged] = useState<Record<string, { status?: ApplicationStatus; busy?: BusyTime[] }>>({});
   const [working, setWorking] = useState<string | null>(null);
   const [offer, setOffer] = useState<{ app: Application; o: HireOffer } | null>(null);
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState<DialogNote | null>(null);
-  const requestId = useRef(newRequestId());
 
   const list = useMemo(() => {
     const rows = (apps.value ?? []).map((a) => ({ ...a, status: changed[a.id]?.status ?? a.status }));
@@ -117,17 +114,14 @@ export default function ApplicantsPage() {
     const hired = (apps.value ?? []).find((a) => a.status === "HIRED" && !seen(a.id));
     if (!hired) return;
     markSeen(hired.id);
-    const base = opening.pay != null ? feeBase(opening.type, hired.proposedPay ?? opening.pay, opening.payUnit, opening.classesPerMonth) : null;
-    if (base == null) return;
-    const fee = quoteHiringFee(opening.type, base).fee;
-    showStrip(hiredStrip(fee), biz.isOwner ? { action: "Fees", onAction: () => navigate(HIRING_ROUTES.fees) } : {});
+    if (hired.fee == null) return;
+    showStrip(hiredStrip(hired.fee), biz.isOwner ? { action: "Fees", onAction: () => navigate(HIRING_ROUTES.fees) } : {});
   }, [apps.value, opening, biz.isOwner, navigate, showStrip]);
 
   const act = async (a: Application, kind: "shortlist" | "decline") => {
     if (working) return;
     setWorking(a.id);
-    // awaiting DB stage DB8 (shortlist_application / decline_application)
-    const r = kind === "shortlist" ? await shortlistApplication(a.id) : await declineApplication(a.id);
+    const r = await decideApplication(a.id, kind === "shortlist" ? "shortlisted" : "declined");
     setWorking(null);
     if (r.ok) setChanged((c) => ({ ...c, [a.id]: { ...c[a.id], status: kind === "shortlist" ? "SHORTLISTED" : "DECLINED" } }));
     else showStrip(r.message, { tone: r.pending ? "neutral" : "error" });
@@ -135,7 +129,6 @@ export default function ApplicantsPage() {
 
   const openOffer = (a: Application) => {
     if (!opening || opening.pay == null) return;
-    requestId.current = newRequestId();
     setNote(null);
     setOffer({
       app: a,
@@ -155,25 +148,19 @@ export default function ApplicantsPage() {
   const send = async () => {
     if (!offer || !opening || !id || sending) return;
     setSending(true);
-    // awaiting DB stage DB8 (send_hire_offer): pending today → the calm note, the dialog stays.
-    const r = await sendHireOffer(
-      id,
-      {
-        professionalId: offer.app.professional.id,
-        applicationId: offer.app.id,
-        openingId: opening.id,
-        type: offer.o.type,
-        title: offer.o.title,
-        classSeriesIds: opening.classSeriesIds,
-        classSessionId: opening.classSessionId,
-        pay: offer.o.pay,
-        payUnit: offer.o.payUnit,
-        classesPerMonth: offer.o.classesPerMonth,
-        startsOn: offer.o.startsOn,
-        message: null,
-      },
-      requestId.current
-    );
+    const r = await sendHireOffer(id, {
+      professionalId: offer.app.professional.id,
+      applicationId: offer.app.id,
+      type: offer.o.type,
+      title: offer.o.title,
+      classSeriesIds: opening.classSeriesIds,
+      classSessionId: opening.classSessionId,
+      pay: offer.o.pay,
+      payUnit: offer.o.payUnit,
+      classesPerMonth: offer.o.classesPerMonth,
+      startsOn: offer.o.startsOn,
+      message: null,
+    });
     setSending(false);
     if (!r.ok) {
       setNote({ text: r.message, tone: r.pending ? "soon" : "error" });

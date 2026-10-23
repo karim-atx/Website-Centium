@@ -73,7 +73,7 @@ function useOpportunityCard(): Record<"offers" | "openings" | "work", Sub> {
   const [subs, setSubs] = useState<Record<"offers" | "openings" | "work", Sub>>({ offers: null, openings: null, work: null });
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB8 (my_applications, opportunities, my_work)
+    // Database Release 2: my_hire_offers + own applications, opportunities, my_work.
     void fetchMyApplications().then((r) => alive && r.ok && setSubs((s) => ({ ...s, offers: { text: offersSub(r.value), badge: offeredCount(r.value) > 0 } })));
     void fetchOpportunities("gyms", { type: null, specialty: null, distanceKm: null }).then((r) => alive && r.ok && setSubs((s) => ({ ...s, openings: { text: openingsSub(r.value.length) } })));
     void fetchMyWork().then((r) => alive && r.ok && setSubs((s) => ({ ...s, work: { text: workSub(r.value) } })));

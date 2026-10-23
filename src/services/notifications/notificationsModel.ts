@@ -413,10 +413,15 @@ export function markReadLocally<T extends { id: string; readAt: string | null }>
 // BUSINESS_KINDS), and the bell row's count is
 // my_unread_notification_count(BUSINESS_KINDS). The reader, cursor, parser,
 // grouping and local mark are the ones above.
-// Writers today (local stack): redeem_offer (voucher_redeemed) and
-// admin_set_offer_hidden (offer_hidden). awaiting DB stage DB12: nothing
-// writes the hiring kinds or gym_review_received yet; their lines and targets
-// follow the documented payload table, so a row reads right when it arrives.
+// Writers: redeem_offer (voucher_redeemed), admin_set_offer_hidden
+// (offer_hidden), and Database Release 2's apply_to_opening
+// (application_received: subject opening, payload opening_id, opening_title,
+// application_id), decline_hire_offer (hire_offer_declined: title),
+// accept_hire_offer (hire_offer_accepted: subject hire, title, starts_on,
+// sessions_not_assigned; hiring_fee_added: subject hiring_fee, amount,
+// minimum_applied). None names the professional (Database gap: the Release 1
+// table promised professional_name). awaiting DB stage DB12: nothing writes
+// gym_review_received yet.
 
 /**
  * The kinds that reach a business owner (the migration's payload table):
@@ -462,6 +467,13 @@ export function noticeMoney(amount: unknown, currency: unknown): string | null {
   }
 }
 
+/**
+ * The role a hiring row names: Release 1's payload table said role_title;
+ * Release 2's writers (send_hire_offer, decline_hire_offer,
+ * accept_hire_offer) send `title` (Database gap: the two disagree).
+ */
+const roleOf = (p: Readonly<Record<string, unknown>>): string | null => pText(p, "role_title") ?? pText(p, "title");
+
 /** "5 stars" / "1 star"; null outside 1–5. */
 const starsText = (p: Readonly<Record<string, unknown>>): string | null => {
   const r = pCount(p, "rating");
@@ -497,7 +509,7 @@ export const BUSINESS_FILLS: NotificationFillTable = {
   },
   hire_offer_accepted: (p) => {
     const who = pText(p, "professional_name");
-    const role = pText(p, "role_title");
+    const role = roleOf(p);
     const out: Partial<NotificationCopy> = {};
     if (who) out.title = `${who} accepted your offer`;
     if (role) out.body = `They're on your team now as ${role}.`;
@@ -505,17 +517,18 @@ export const BUSINESS_FILLS: NotificationFillTable = {
   },
   hire_offer_declined: (p) => {
     const who = pText(p, "professional_name");
-    const role = pText(p, "role_title");
+    const role = roleOf(p);
     const out: Partial<NotificationCopy> = {};
     if (who) out.title = `${who} declined your offer`;
     if (who && role) out.body = `${who} declined ${role}.`;
+    else if (role) out.body = `Your offer for ${role} was declined.`;
     return out;
   },
   hiring_fee_added: (p) => {
     const money = noticeMoney(p.amount, p.currency);
     if (!money) return {};
     const who = pText(p, "professional_name");
-    const role = pText(p, "role_title");
+    const role = roleOf(p);
     const forWhom = who ? ` for ${who}${role ? ` · ${role}` : ""}` : "";
     return { body: `${money}${forWhom}. Due on your next bill.` };
   },
@@ -600,9 +613,13 @@ export function bizNotifTarget(n: Pick<MemberNotification, "kind" | "subjectType
 // `notifications` (the member inbox, keyed on the professional's profile):
 // P-MA.7 NotificationsHub merges them in with my_notifications(p_kinds =
 // PRO_KINDS); the calendar strips read the sync kinds; Opportunities reads
-// existing_team_invite. awaiting DB stage DB12: nothing writes these kinds
-// yet (the local stack's only notify_member callers are redeem_offer and
-// admin_set_offer_hidden).
+// existing_team_invite. Database Release 2 writes hire_offer_received
+// (send_hire_offer), hired (accept_hire_offer; add_existing_team with
+// payload source 'existing_team'), removed_from_team (remove_from_team),
+// existing_team_invite (invite_existing_team, to an account whose email
+// matches: subject business, payload invite_id, business_name, expires_at)
+// and instructor_review_received (review_instructor). awaiting DB stage DB12:
+// nothing writes classes_added or class_changed yet.
 
 /** The kinds addressed to a professional (the migration's payload table; instructor_review_received "to the INSTRUCTOR"). */
 export const PRO_KINDS: readonly MemberNotificationKind[] = [
@@ -673,7 +690,7 @@ const PAY_UNIT: Readonly<Record<string, string>> = { per_class: "per class", per
 export const PRO_FILLS: NotificationFillTable = {
   hire_offer_received: (p) => {
     const biz = pText(p, "business_name");
-    const role = pText(p, "role_title");
+    const role = roleOf(p);
     const pay = num(p.pay);
     const unit = pText(p, "pay_unit");
     const from = pDate(p, "starts_on");
@@ -686,9 +703,15 @@ export const PRO_FILLS: NotificationFillTable = {
   },
   hired: (p) => {
     const biz = pText(p, "business_name");
-    const role = pText(p, "role_title");
+    const role = roleOf(p);
     const from = pDate(p, "starts_on");
     const out: Partial<NotificationCopy> = {};
+    // add_existing_team writes `hired` too, with source 'existing_team': no hire, no role.
+    if (p.source === "existing_team") {
+      if (biz) out.title = `${biz} added you to their team`;
+      out.body = "You're on their team as existing team. No hiring fee.";
+      return out;
+    }
     if (biz) out.title = `${biz} hired you`;
     if (role) out.body = from ? `${role} · starts ${formatNoticeDay(from)}.` : `${role}.`;
     return out;
@@ -724,7 +747,8 @@ export const PRO_FILLS: NotificationFillTable = {
   },
   existing_team_invite: (p) => {
     const biz = pText(p, "business_name");
-    const by = pDate(p, "accept_by");
+    // invite_existing_team sends expires_at (the window's close); Release 1's table said accept_by.
+    const by = pDate(p, "expires_at") ?? pDate(p, "accept_by");
     const fee = pText(p, "fee_text");
     const out: Partial<NotificationCopy> = {};
     if (biz) out.title = `${biz} added you to their team`;

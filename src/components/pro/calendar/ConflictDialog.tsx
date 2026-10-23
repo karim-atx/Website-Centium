@@ -114,7 +114,11 @@ export const ConflictDialog: React.FC<{
             ))}
           </ul>
         ) : null}
-        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textAlign: "left" }}>If you continue, both stay on your calendar. You can move your own sessions afterwards.</p>
+        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textAlign: "left" }}>
+          {/* Not the board's "both stay on your calendar": accept_hire_offer(p_ack_conflicts) keeps the agreement and leaves the
+              clashing sessions WITHOUT an instructor (an instructor can't be in two places; Database Release 2). Ours, flagged. */}
+          If you continue, you're hired and the clashing sessions are left for the gym to cover. Your own sessions stay as they are.
+        </p>
         {children}
         {error ? (
           <p role="alert" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.high }}>

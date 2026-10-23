@@ -11,8 +11,8 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useInboxRealtime } from "../../../hooks/useInboxRealtime";
 import { useApp } from "../../../context/AppContext";
-import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
-import { fetchMyApplications, fetchOpportunities, inviteFromNotification, type Opportunity } from "../../../services/team-hiring";
+import { markMemberRead } from "../../../services/pro/notifications";
+import { fetchMyApplications, fetchMyTeamInvites, fetchOpportunities, type Opportunity } from "../../../services/team-hiring";
 import type { ExistingTeamInvite } from "../../../services/hiring/model";
 import { TextLink, lh, px, useMarketColors } from "../../business-market/listingParts";
 import { ApplySheet } from "./opportunities/ApplySheet";
@@ -66,12 +66,16 @@ import {
 //    the 72 pay stub (--pale, the pay 18 / 800 + "pay" 10 / 700 --pdark);
 //    tapping one opens the Apply sheet (the ticket is the board's only
 //    control there). Empty: "No openings match" + Clear filters.
-// opportunities() is DB8 (+ DB11 open_to_gym_work): pending, the W3 quiet
-// "coming soon" card keeps "Gyms and colleagues" (ProfessionalExplore, D-39)
-// reachable; once openings load, a quiet "Gyms and colleagues" link stays
-// under the list. An existing-team invite reaching the professional here
-// (router state from the P-MA.7 row, or an unread existing_team_invite
-// notification) opens P-MA.5.4.
+// opportunities(p_tab, p_type, p_radius_km, p_limit) (Database Release 2):
+// nearest first, from the professional's own stored area (no coordinates
+// sent); Distance is p_radius_km, Type p_type, and Specialty (no server
+// parameter) matches the opening's own words. A gym's rating isn't returned.
+// Should the function be missing the W3 quiet card keeps "Gyms and
+// colleagues" (ProfessionalExplore, D-39) reachable; once openings load, a
+// quiet "Gyms and colleagues" link stays under the list. Existing-team
+// invites are my_team_invites (live, to the caller's own email or phone),
+// re-read when an existing_team_invite notification arrives; the P-MA.7 row
+// routes its invite here too. Either opens P-MA.5.4.
 
 const HOME = "/app/pro/marketplace";
 const INVITE_KINDS: readonly string[] = ["existing_team_invite"];
@@ -104,7 +108,7 @@ export function OpportunitiesTab() {
     let alive = true;
     const setState = (st: ListState) => setLoaded({ key: loadKey, s: st });
     const queries = filterQueries(selectedKey ? selectedKey.split("|") : []);
-    // awaiting DB stage DB8 (opportunities; DB11 open_to_gym_work)
+    // opportunities (Database Release 2): Distance is p_radius_km; Specialty matches the opening's own words.
     void Promise.all(queries.map((q) => fetchOpportunities(tab, q))).then((rs) => {
       if (!alive) return;
       if (rs.some((r) => !r.ok && r.pending)) return setState({ status: "pending" });
@@ -122,7 +126,7 @@ export function OpportunitiesTab() {
 
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB8 (my_applications): pending → no badge.
+    // The badge: offers waiting (my_hire_offers pending, through fetchMyApplications).
     void fetchMyApplications().then((r) => alive && setOffers(r.ok ? offeredCount(r.value) : 0));
     return () => {
       alive = false;
@@ -132,7 +136,7 @@ export function OpportunitiesTab() {
   // ---- existing-team invites reaching the professional here (P-MA.5.4)
   const routed = (location.state as { existingTeamInvite?: ExistingTeamInvite } | null)?.existingTeamInvite ?? null;
   const [invite, setInvite] = useState<{ invite: ExistingTeamInvite; notificationId: string | null } | null>(null);
-  const [waiting, setWaiting] = useState<{ invite: ExistingTeamInvite; notificationId: string }[]>([]);
+  const [waiting, setWaiting] = useState<{ invite: ExistingTeamInvite; notificationId: string | null }[]>([]);
   const [lastRouted, setLastRouted] = useState<ExistingTeamInvite | null>(null);
   if (routed && routed !== lastRouted) {
     setLastRouted(routed);
@@ -146,32 +150,20 @@ export function OpportunitiesTab() {
   const [inviteTick, setInviteTick] = useState(0);
   useEffect(() => {
     let alive = true;
-    // The member inbox's existing_team_invite rows (Database 20261210600000).
-    // awaiting DB stage DB12: nothing writes existing_team_invite yet.
-    void fetchMemberInbox(INVITE_KINDS).then((r) => {
+    // my_team_invites (Database Release 2): live invitations to the caller's own email or phone.
+    void fetchMyTeamInvites().then((r) => {
       if (!alive || !r.ok) return;
       const now = new Date();
-      const seen = new Set<string>();
-      const list: { invite: ExistingTeamInvite; notificationId: string }[] = [];
-      for (const n of r.data) {
-        if (n.readAt) continue;
-        const inv = inviteFromNotification(n);
-        if (!inv || inv.acceptedAt || seen.has(inv.id) || inviteExpired(inv, now)) continue;
-        seen.add(inv.id);
-        list.push({ invite: inv, notificationId: n.id });
-      }
-      setWaiting(list);
+      setWaiting(r.value.filter((inv) => !inviteExpired(inv, now)).map((invite) => ({ invite, notificationId: null })));
     });
     return () => {
       alive = false;
     };
   }, [inviteTick]);
-  // Live (Database 73ea87b): a new existing_team_invite row (or a reconnect)
-  // re-reads the invites only; one read elsewhere drops its note without a read.
+  // Live (Database 73ea87b): a new existing_team_invite notification (or a reconnect)
+  // re-reads my_team_invites.
   const { authUserId } = useApp();
   useInboxRealtime(authUserId, "pro-opportunities", INVITE_KINDS, (changes, resync) => {
-    const read = new Set(changes.filter((c) => c.type === "UPDATE" && c.id && c.readAt).map((c) => c.id));
-    if (read.size) setWaiting((w) => w.filter((x) => !read.has(x.notificationId)));
     if (resync || changes.some((c) => c.type === "INSERT")) setInviteTick((t) => t + 1);
   });
 

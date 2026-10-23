@@ -29,9 +29,13 @@ import { PRO_TYPE_CHIPS, addCta, addTitle, addedDuringWindow, addedStrip, countd
 // Market + Share 3.0 · W4-B · B-MA.8.8 Add your existing team (Business
 // Hiring Screens lines 227–265 + the `ETP` / `et` / etInvite / etConfirm /
 // etDone script; frame-check B-MA.8.8, 6 states).
-// D-31: the free window opens at the business's verification date (or launch,
-// if later) and closes 30 days on; the SERVER computes it
-// (existing_team_window) and this page only shows it.
+// D-31 as the server computes it (existing_team_window, Database Release 2):
+// greatest(the business's created_at, platform_settings
+// existing_team_window_opens_at) + existing_team_window_days. CLOSED, with no
+// dates, until Karim sets the start: this page then says the window hasn't
+// started (ours; the board draws only open and closed). "Free" means no
+// hiring fee: an existing-team addition still occupies a paid seat, so a gym
+// without one is refused with ATXC0 (shown in the confirm dialog).
 // Open: the countdown card on #E6F1EF ("Free for your first 30 days", "Closes
 // {date}", the days figure 34 / 800, the bar = windowUsed), the explainer;
 // search (name or specialty: search_professionals with p_existing_team);
@@ -45,11 +49,9 @@ import { PRO_TYPE_CHIPS, addCta, addTitle, addedDuringWindow, addedStrip, countd
 // Closed (day 31): the grey card, Post an opening (→ the hub, ?post=1 asks it
 // to open the post sheet) / Find a professional (→ find), and the people
 // added during the window (my_team, source existing_team).
-// Pending (DB8 not landed): a quiet "coming soon" card.
+// A failed window read: the error card with Retry.
 
 type Load<T> = { status: "loading" } | { status: "ok"; value: T } | { status: "pending" } | { status: "error" };
-
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export default function ExistingTeamPage() {
   const biz = useHiringBusiness();
@@ -69,7 +71,6 @@ export default function ExistingTeamPage() {
     if (!businessId) return;
     let alive = true;
     setWin({ status: "loading" });
-    // awaiting DB stage DB8 (existing_team_window, my_team)
     void fetchExistingTeamWindow(businessId).then((r) => alive && setWin(r.ok ? { status: "ok", value: r.value } : r.pending ? { status: "pending" } : { status: "error" }));
     void fetchMyTeam(businessId).then((r) => alive && setTeam(r.ok ? { status: "ok", value: r.value } : r.pending ? { status: "pending" } : { status: "error" }));
     return () => {
@@ -88,7 +89,6 @@ export default function ExistingTeamPage() {
     let alive = true;
     setResults({ status: "loading" });
     const id = window.setTimeout(() => {
-      // awaiting DB stage DB8 (search_professionals, p_existing_team; DB11 open_to_gym_work)
       void searchProfessionals(businessId, q, true).then((r) => alive && setResults(r.ok ? { status: "ok", value: r.value } : r.pending ? { status: "pending" } : { status: "error" }));
     }, 300);
     return () => {
@@ -119,8 +119,7 @@ export default function ExistingTeamPage() {
     const people = [...picked.values()];
     setBusy(true);
     setDlgError(null);
-    // awaiting DB stage DB8 (add_existing_team)
-    const r = await addExistingTeam(businessId, people.map((p) => p.id), newRequestId());
+    const r = await addExistingTeam(businessId, people.map((p) => p.id));
     setBusy(false);
     if (!r.ok) {
       setDlgError(r.message);
@@ -154,6 +153,22 @@ export default function ExistingTeamPage() {
     body = <MarketError thing="your free window" onRetry={retry} />;
   } else if (win.status === "pending" || !w) {
     body = <MarketEmptyCard title="Hiring is coming soon." body="Professionals who already work with you join free during your first 30 days. You add them here." />;
+  } else if (!isOpen && !w.opensAt) {
+    body = (
+      <div data-closed style={{ borderRadius: 20, background: m.soft, padding: 16 }}>
+        <CapsLabel as="p">Not open yet</CapsLabel>
+        <h2 style={{ margin: "4px 0 0", fontSize: px(18), fontWeight: 800, color: m.ink }}>New professionals join through Hiring</h2>
+        <p style={{ margin: "4px 0 0", fontSize: px(12.5), lineHeight: lh(18), color: m.ink2 }}>The free window to add your existing team hasn't started yet. Until it does, post an opening or send a direct offer. A one-time hiring fee applies to each hire.</p>
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <button type="button" onClick={() => navigate(`${HIRING_ROUTES.hub}?post=1`)} className="market-focus" style={{ height: 44, borderRadius: 12, background: m.fill, color: m.onfill, border: 0, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
+            Post an opening
+          </button>
+          <button type="button" onClick={() => navigate(HIRING_ROUTES.find)} className="market-focus" style={{ height: 44, boxSizing: "content-box", padding: 0, borderRadius: 12, background: "transparent", border: `1px solid ${m.border}`, color: m.pdark, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
+            Find a professional
+          </button>
+        </div>
+      </div>
+    );
   } else if (!isOpen) {
     const during = team.status === "ok" ? addedDuringWindow(team.value) : [];
     body = (
@@ -400,8 +415,7 @@ function InviteSheet({ open, onClose, businessId, closesAt, onSent, onClosed }: 
     setBusy(true);
     setError(null);
     setSoon(false);
-    // awaiting DB stage DB8 (invite_existing_team)
-    const r = await inviteExistingTeam(businessId, { emailOrPhone: contact.trim(), name: name.trim(), professionalType: type }, newRequestId());
+    const r = await inviteExistingTeam(businessId, { emailOrPhone: contact.trim(), name: name.trim(), professionalType: type });
     setBusy(false);
     if (r.ok) return onSent(name.trim());
     if (r.pending) return setSoon(true);

@@ -205,7 +205,7 @@ export const NotificationsHub: React.FC<{
     // W4 P-MA.5.4: an existing-team invite (the member inbox's
     // existing_team_invite row, Database 20261210600000) opens its dialog on
     // Opportunities (router state, read by OpportunitiesTab).
-    // awaiting DB stage DB12: nothing writes existing_team_invite yet.
+    // invite_existing_team writes it (Database Release 2) when the invited email has an account.
     const invite = inviteFromNotification(n);
     if (invite) {
       p.onClose();

@@ -7,7 +7,7 @@ import FeesPage from "./Fees";
 import DirectOfferPage from "./DirectOffer";
 import ExistingTeamPage from "./ExistingTeam";
 
-// Market + Share 3.0 · W4 · Business Hiring (B-MA.8, gyms and studios only;
+// Market + Share 3.0 · W4 · Business Hiring (B-MA.8, gyms only: business_may_hire;
 // HANDOVER §4 "Business Hiring B-MA.8", §13 routes), /app/business/hiring/*
 // (App.tsx: ConsoleGate "members"; api.md "business (owner, members)"):
 //   index                 B-MA.8 Hiring hub (Open · Filled · Closed; ?tab=filled|closed)

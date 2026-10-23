@@ -32,11 +32,10 @@ import { INSTRUCTOR_NOTE, NO_INSTRUCTOR, type PickerPerson } from "./instructorT
 //   Hiring" with no Team.
 // The choice is applied with Done; the close X keeps the field as it was.
 //
-// SOURCE (lead decision, D-35): the Team (my_team, DB8) when it answers.
-// awaiting DB stage DB8 (my_team) / DB9 (instructor_not_on_team): until then
-// the rows are the live instructors (fetchInstructors, the accepted
-// business_employees the sheet used), which DB8 backfills as existing_team
-// members; their line is the live "{n} classes this week" (muted: no hire is
+// SOURCE (lead decision, D-35): the Team (my_team, Database Release 2: the
+// business's accepted professionals, hired or existing team). Should it fail
+// to answer as a function the rows are the live instructors (fetchInstructors, the accepted
+// business_employees the sheet used); their line is the live "{n} classes this week" (muted: no hire is
 // known, so no "Hired via Centium").
 
 const TICKET = "M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z";

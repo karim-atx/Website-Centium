@@ -19,15 +19,16 @@ test("a live assigned class: the class look in a palette colour, and no hire cla
 });
 
 test("my_calendar events replace the live row of the same session: no duplicates", () => {
-  const hired = parseMyCalendar([{ class_session_id: "s1", hire_id: "h1", business_name: "Gym A", title: "HIIT 30", date: "2026-11-02", start_time: "07:00", end_time: "07:30", pay_per_session: 70, colour: "#667BB1" }]);
+  const hired = parseMyCalendar([{ class_id: "s1", class_series_id: "cs1", hire_id: "h1", business_name: "Gym A", title: "HIIT 30", event_date: "2026-11-02", start_time: "07:00", end_time: "07:30", pay_per_session: 70 }]);
   const out = mergeClasses([live(), live({ id: "s9" })], hired);
   assert.deepEqual(out.map((c) => [c.sessionId, c.hired]).sort(), [["s1", true], ["s9", false]]);
   assert.equal(out.find((c) => c.sessionId === "s1")?.pay, 70);
-  assert.equal(out.find((c) => c.sessionId === "s1")?.colour, "#667BB1");
+  // my_calendar carries no colour (D-40 not in the contract): the series' palette colour.
+  assert.ok((CLASS_PALETTE as readonly string[]).includes(out.find((c) => c.sessionId === "s1")?.colour ?? ""));
 });
 
 test("an event without a hire never says Hired", () => {
-  const out = mergeClasses([], parseMyCalendar([{ class_session_id: "s1", business_name: "Gym A", title: "HIIT 30", date: "2026-11-02", start_time: "07:00" }]));
+  const out = mergeClasses([], parseMyCalendar([{ class_id: "s1", business_name: "Gym A", title: "HIIT 30", event_date: "2026-11-02", start_time: "07:00" }]));
   assert.equal(out[0].hired, false);
 });
 

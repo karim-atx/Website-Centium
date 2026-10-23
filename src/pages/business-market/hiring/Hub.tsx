@@ -19,7 +19,7 @@ import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, t
 
 // Market + Share 3.0 · W4 · B-MA.8 Hiring hub (Business Hiring Screens
 // `hOpen` `hPosted` `hFilled` `hClosed` `hEmpty`, markup lines 56–102),
-// gyms and studios only. Content padding 0 16 32 (the app shell's own):
+// gyms only (business_may_hire). Content padding 0 16 32 (the app shell's own):
 //   back header "Gym / Hiring";
 //   the existing-team ticket banner (margin-bottom 12, radius 18, #E6F1EF;
 //     body padding 12 14: "Add your existing team" 14 / 800, the line 12 / 17
@@ -43,10 +43,12 @@ import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, t
 // Ours: a non-owner (staff with the members permission) sees the Team button
 // alone across the track (Hiring fees is the owner's, ConsoleGate "owner");
 // the ⋮ on Open cards only (B-SH.1 opening menu: Edit / Share / Pause /
-// Delete; Share is live through useBizShareSheet, the other three have no
-// documented DB8 function and answer a calm strip). Every read below is
-// awaiting DB stage DB8: pending today, so the hub shows its drawn empty
-// state, "Team" without a count and no banner.
+// Delete; Share is live through useBizShareSheet; Database Release 2 has
+// no writer that edits, pauses or deletes an opening (set_opening_status
+// only moves it between open / filled / closed), so the other three answer
+// a calm strip). Reads (Database Release 2): my_openings, my_team (the Team
+// count), existing_team_window (the banner, only while it is open; closed
+// with no dates until Karim sets the start).
 
 export default function HubPage() {
   const dark = useIsDark();
@@ -71,11 +73,10 @@ export default function HubPage() {
   const [justPosted, setJustPosted] = useState<string | null>(null);
   const id = biz.canHire ? biz.businessId : null;
 
-  // awaiting DB stage DB8 (my_openings)
   const openings = useHiringRead(() => (id ? fetchMyOpenings(id, tab) : null), [id, tab]);
-  // awaiting DB stage DB8 (my_team): "Team" alone while pending / unknown.
+  // "Team" alone until my_team answers.
   const team = useHiringRead(() => (id ? fetchMyTeam(id) : null), [id]);
-  // awaiting DB stage DB8 (existing_team_window, D-31): no banner while pending.
+  // D-31: the banner only while the window is open.
   const win = useHiringRead(() => (id ? fetchExistingTeamWindow(id) : null), [id]);
 
   const list = useMemo(() => {
@@ -97,7 +98,7 @@ export default function HubPage() {
       void share.open(() => ({ t: "hiring", d: { id: o.id, title: o.title, typeLabel: typeLabel(o.type), schedule: scheduleLine(o), pay: o.pay != null && o.pay > 0 ? payText(o.pay, o.payUnit) : null } }));
       return;
     }
-    // No documented DB8 function for these yet (backend gap): a calm strip, nothing changes.
+    // No writer in the contract (Database gap): a calm strip, nothing changes.
     const text = a === "edit" ? "Editing an opening is coming soon." : a === "pause" ? "Pausing an opening is coming soon." : "Deleting an opening is coming soon.";
     showStrip(text, { tone: "neutral" });
   };
@@ -116,7 +117,7 @@ export default function HubPage() {
     return (
       <div style={{ color: m.ink }}>
         {header}
-        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms and studios." />
+        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms." />
       </div>
     );
   }

@@ -18,7 +18,8 @@ import { LicencePendingTag } from "../../components/professionals/LicencePending
 import { CvView } from "../../components/cv/CvView";
 import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import { fetchConnectedProfessional, professionalRole, type ConnectedProfessional } from "../../services/connected-professional";
-import { searchDirectory, type DirectoryHit } from "../../services/pro-profile";
+import { fetchRankedDirectory, type DirectoryHit } from "../../services/pro-profile";
+import { locationPermission, requestPosition, savedArea, type Coords } from "../../services/geo";
 import { ProfessionalCard, MarketAvatar } from "../../components/market/ProfessionalCard";
 import { MarketError, MarketOffline, MarketSkeleton } from "../../components/market/MarketStates";
 import { FOCUS_CSS } from "../../components/market/usePress";
@@ -37,10 +38,15 @@ import { hitCard, matchesQuery } from "./profile/profileModel";
 // 11.5 / 16 --faint (margin-top 10); the cards (margin-top 12, gap 10): the
 // shared ProfessionalCard (one identity everywhere).
 //
-// RANKING (D-44, DB10): only search_directory ranks (work history 40%,
-// reviews 40%, distance 20%, server side). Until it answers the list is the
-// live public_professional_directory (alphabetical), with NO ranking line and
-// no hired line on the cards; the search field filters it on the device.
+// RANKING (D-44): professionals_ranked (Database Release 2 5a907d6) ranks on
+// platform_settings' weights (work history 0.4, reviews 0.4, distance 0.2,
+// distance by band) and needs a point: the area this device chose for the
+// map (savedArea), else the position when location is ALREADY allowed (never
+// prompted from the list). Without one the list is the live
+// public_professional_directory (alphabetical), with NO ranking line. The
+// rail's subtype is the server's p_subtype; the search field filters the
+// ranked page on the device (the function takes no text). The Map keeps
+// professionals_in_area (a spatial search, not a ranking).
 //
 // KEPT LIVE FEATURES (PLAN §3.2), restyled in the handover chrome:
 // - List / Map under the search field (NearbyView / NearbyMap: area picker,
@@ -56,7 +62,7 @@ import { hitCard, matchesQuery } from "./profile/profileModel";
 type Subtype = Enums<"professional_subtype">;
 const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
 
-type Ranked = { query: string; hits: DirectoryHit[] } | null;
+type Ranked = { hits: DirectoryHit[] } | null;
 
 export default function Professionals() {
   const { user, authUserId, theme, accessibility } = useApp();
@@ -142,31 +148,32 @@ export default function Professionals() {
     };
   }, [reload]);
 
-  // The ranked search (DB10). Debounced; a pending, failed or offline answer
-  // keeps the live list (the quiet state), never an error over it.
+  // The ranked directory. A failed, offline or pointless (no area, location
+  // not allowed) answer keeps the live list (the quiet state), never an error over it.
   const [ranked, setRanked] = useState<Ranked>(null);
   useEffect(() => {
     let live = true;
-    const q = query.trim();
-    const t = window.setTimeout(() => {
-      // awaiting DB stage DB10
-      void searchDirectory({ query: q || null, specialty: null, lat: null, lng: null }).then((r) => {
-        if (!live) return;
-        setRanked(r.ok ? { query: q, hits: r.value } : null);
-      });
-    }, q ? 300 : 0);
+    void (async () => {
+      const area = savedArea();
+      let point: Coords | null = area ? { lat: area.lat, lng: area.lng } : null;
+      if (!point && (await locationPermission()) === "granted") {
+        const p = await requestPosition();
+        if (p.ok) point = p.coords;
+      }
+      if (!point || !live) return;
+      const r = await fetchRankedDirectory({ point, subtype: type });
+      if (live) setRanked(r.ok ? { hits: r.value } : null);
+    })();
     return () => {
       live = false;
-      window.clearTimeout(t);
     };
-  }, [query]);
+  }, [type]);
 
   const byId = useMemo(() => new Map((listings ?? []).map((l) => [l.profileId, l])), [listings]);
   const isRanked = !!ranked;
   const shownListings = (listings ?? []).filter((l) => (type ? l.subtype === type : true) && matchesQuery(l, query));
-  // A ranked hit filtered by the rail through the live listing's subtype (the
-  // hit carries none); one that isn't in the live directory shows under All only.
-  const shownHits = (ranked?.hits ?? []).filter((h) => (type ? byId.get(h.id)?.subtype === type : true));
+  // The ranked page filtered on the device by the search field (the rail is the server's p_subtype).
+  const shownHits = (ranked?.hits ?? []).filter((h) => matchesQuery({ name: h.name, specialty: h.specialty, headline: null, location: h.area ?? null, skills: [] }, query));
   const count = isRanked ? shownHits.length : shownListings.length;
 
   const linkedListed = !!linkedProfessionalId && (listings ?? []).some((l) => l.profileId === linkedProfessionalId);

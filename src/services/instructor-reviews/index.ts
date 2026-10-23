@@ -2,10 +2,9 @@
 //
 // DB4 has landed (Database 20261211100000, HANDOVER_API Release 1 "Bookings
 // (DB4)"): my_class_bookings(p_tab, p_limit) is the past list's reader, with
-// `can_review` and the caller's own `my_rating`. DB10's review_instructor has
-// NOT landed (no function on the local stack): PostgREST answers PGRST202,
-// which is `pending`, and a send that comes back pending changes nothing (a
-// calm note in the dialog).
+// `can_review` and the caller's own `my_rating`. The write is Database
+// Release 2's review_instructor(p_class_id, p_rating, p_body): one review per
+// member per class series (D-43); a second one EDITS the first.
 
 import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, marketRpcRaw, isPendingError, type MarketResult } from "../market/rpc";
@@ -44,15 +43,10 @@ export async function fetchPastBookings(now: Date = new Date()): Promise<MarketR
 /**
  * The calendar's Rate (D-43): the instructor review target for this booking
  * when the class had an instructor and my_class_bookings says it's
- * reviewable. awaiting DB stage DB10: until review_instructor exists the
- * answer is null, so Rate keeps the live write_class_review sheet (a target
- * here would open a dialog that can't send). Flip INSTRUCTOR_REVIEW_WRITER
- * when DB10 lands.
+ * reviewable; null otherwise, and Rate keeps the live write_class_review
+ * sheet (the venue review, for a class with nobody named).
  */
-const INSTRUCTOR_REVIEW_WRITER: boolean = false;
-
 export async function findReviewTarget(bookingId: string, sessionId?: string | null): Promise<ReviewTarget | null> {
-  if (!INSTRUCTOR_REVIEW_WRITER) return null;
   const r = await fetchPastBookings();
   if (!r.ok) return null;
   const b = findPast(r.value, bookingId, sessionId);
@@ -63,10 +57,9 @@ export type ReviewWrite = { ok: true } | { ok: false; pending?: boolean; offline
 
 const FALLBACK = "Couldn't send your review. Try again.";
 
-/** review_instructor ⟳ (idempotent by p_request_id). Errors: not_attended, already_reviewed. */
-export async function reviewInstructor(sessionId: string, rating: number, text: string | null, requestId: string): Promise<ReviewWrite> {
-  // awaiting DB stage DB10
-  const res = await marketRpcRaw("review_instructor", { p_session_id: sessionId, p_rating: rating, p_text: text, p_request_id: requestId });
+/** review_instructor(p_class_id, p_rating, p_body) → the review id. One per member per series; a second one edits it. */
+export async function reviewInstructor(classId: string, rating: number, text: string | null): Promise<ReviewWrite> {
+  const res = await marketRpcRaw("review_instructor", { p_class_id: classId, p_rating: rating, p_body: text });
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: FALLBACK };
   if (res.error) {
     if (isPendingError(res.error)) return { ok: false, pending: true, message: "Instructor reviews are coming soon. Nothing was sent." };

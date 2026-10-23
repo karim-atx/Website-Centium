@@ -235,7 +235,7 @@ export async function fetchSeatBlockPrice(): Promise<Result<{ monthly: number; s
 
 export type InviteOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "no_seats" | "rate_limited" | "not_allowed" | "professional_account" | "failed"; message: string };
+  | { ok: false; reason: "not_found" | "no_seats" | "rate_limited" | "not_allowed" | "professional_account" | "professional_code" | "failed"; message: string };
 
 /**
  * invite_employee(identifier, role, business, message). The identifier is an
@@ -259,9 +259,14 @@ export async function inviteEmployee(businessId: string, identifier: string, rol
   if (text.includes("ATXC0") || error.code === "23514") return { ok: false, reason: "no_seats", message: "All seats are in use." };
   if (text.includes("ATXB9") && error.code === "22023") return { ok: false, reason: "not_found", message: "No professional found with that ID or email." };
   if (isBusinessClosedError(error)) return { ok: false, reason: "not_allowed", message: closureMessage(CLOSED_INVITE_STAFF, error.message) };
-  // Market + Share 3.0 (D-33, DB8 EXT invite_employee): after the existing-team window a professional
-  // account is refused by name; the InviteSheet shows the B-MA.8.7 card. awaiting DB stage DB8
-  if (`${text} ${error.details ?? ""} ${error.hint ?? ""}`.includes("professional_account")) return { ok: false, reason: "professional_account", message: "New professionals join through Hiring." };
+  // Database Release 2: ATXH17 (22023) "add professionals to your team through Hiring" for a
+  // professional's own code, or a professional ACCOUNT once the free window has closed (the hint says
+  // which). Both show the B-MA.8.7 card.
+  if (text.includes("ATXH17")) {
+    return /window/i.test(error.hint ?? "")
+      ? { ok: false, reason: "professional_account", message: "New professionals join through Hiring." }
+      : { ok: false, reason: "professional_code", message: "Add professionals to your team through Hiring." };
+  }
   if (error.code === "42501") return { ok: false, reason: "not_allowed", message: "You can't invite people to this business." };
   if (error.code === "ATX02") return { ok: false, reason: "rate_limited", message: "Too many invites in a short time. Try again in an hour." };
   console.error("[business-team] invite_employee failed:", error.code, error.message);

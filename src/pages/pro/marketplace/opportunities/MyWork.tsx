@@ -58,7 +58,7 @@ export default function MyWorkPage() {
 
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB8 (my_work; its classes and sessions a week: DB9)
+    // my_work + my_calendar (Database Release 2).
     void fetchMyWork().then((r) => {
       if (!alive) return;
       setState(r.ok ? { status: "ok", list: r.value } : r.pending ? { status: "pending" } : { status: "error" });

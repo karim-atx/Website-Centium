@@ -38,8 +38,8 @@ const unreadNotices = (list: readonly NotificationLike[]): NotificationLike[] =>
  * - DB-4: availability (pro-wide and per-business), time off, session types,
  *   booking requests, each session's outcome / type / price / paid state;
  * - Clinical overview: follow-ups due (care plans).
- * - Market + Share 3.0 W5 (P-CA): the hired class events (my_calendar, DB9;
- *   pending until it lands, then they replace the live class rows by session)
+ * - Market + Share 3.0 W5 (P-CA): the class sessions from my_calendar (Database
+ *   Release 2; they replace the live class rows by session)
  *   and the unread calendar sync notices (the member inbox's calendar kinds,
  *   my_notifications(p_kinds = CALENDAR_SYNC_KINDS)).
  * A failed read keeps whatever was on screen (the rule every calendar here
@@ -64,9 +64,9 @@ export interface ProCalendarData {
   requests: BookingRow[];
   extras: Record<string, SessionExtras>;
   followUps: DueFollowUp[];
-  /** my_calendar's hired class events (empty while DB9 is pending). */
+  /** my_calendar's class sessions (empty until it answers). */
   hired: HiredClassEvent[];
-  /** my_calendar answered (DB9 landed): the "Hired" words may show. */
+  /** my_calendar answered: the "Hired" words may show. */
   hiredLive: boolean;
   /** Unread calendar sync notifications (on hire, edited, cancelled, removed). */
   notices: NotificationLike[];
@@ -110,7 +110,7 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       fetchBookingRequests(authUserId),
       fetchSessionExtras(authUserId, from, to),
       clinical ? fetchFollowUps(authUserId, from, to) : Promise.resolve({ ok: true as const, data: [] as DueFollowUp[] }),
-      // awaiting DB stage DB9 (my_calendar)
+      // my_calendar (Database Release 2): the class sessions this professional is named on, a year per call.
       fetchMyCalendar(from, to),
       fetchMemberInbox(CALENDAR_SYNC_KINDS),
     ]);
@@ -136,7 +136,7 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       setHiredLive(false);
     }
     // The member inbox's calendar kinds (Database 20261210600000).
-    // awaiting DB stage DB12: nothing writes classes_added / class_changed / removed_from_team
+    // remove_from_team writes removed_from_team (Release 2). awaiting DB stage DB12: nothing writes classes_added / class_changed
     // (or class_cancelled to an instructor) yet.
     if (nt.ok) setNotices(unreadNotices(nt.data));
   }, [authUserId, clinical]);

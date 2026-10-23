@@ -289,7 +289,12 @@ test("business copy: the documented payload keys fill the board's lines; a missi
   assert.deepEqual(c("application_received", { opening_title: "Sunday Spin instructor" }), { title: "New application · Sunday Spin instructor", body: BUSINESS_COPY.application_received.body });
   assert.deepEqual(c("hire_offer_accepted", { professional_name: "Rana", role_title: "Sunday Spin instructor" }), { title: "Rana accepted your offer", body: "They're on your team now as Sunday Spin instructor." });
   assert.deepEqual(c("hire_offer_declined", { professional_name: "Joe Abi Nader", role_title: "Saturday Spin cover" }), { title: "Joe Abi Nader declined your offer", body: "Joe Abi Nader declined Saturday Spin cover." });
-  assert.deepEqual(c("hire_offer_declined", { role_title: "Saturday Spin cover" }), BUSINESS_COPY.hire_offer_declined);
+  assert.deepEqual(c("hire_offer_declined", { role_title: "Saturday Spin cover" }), { title: BUSINESS_COPY.hire_offer_declined.title, body: "Your offer for Saturday Spin cover was declined." });
+  // Database Release 2's writers send `title`, not role_title, and no professional name.
+  assert.deepEqual(c("hire_offer_declined", { hire_offer_id: O, business_id: O, title: "Saturday Spin cover" }), { title: BUSINESS_COPY.hire_offer_declined.title, body: "Your offer for Saturday Spin cover was declined." });
+  assert.deepEqual(c("hire_offer_accepted", { hire_id: O, title: "Sunday Spin instructor", starts_on: "2026-11-01", sessions_not_assigned: 0 }), { title: BUSINESS_COPY.hire_offer_accepted.title, body: "They're on your team now as Sunday Spin instructor." });
+  assert.equal(c("hiring_fee_added", { hiring_fee_id: O, amount: 25.6, minimum_applied: false }).body, "$25.60. Due on your next bill.");
+  assert.deepEqual(c("application_received", { opening_id: O, opening_title: "Sunday Spin instructor", application_id: O, business_id: O }), { title: "New application · Sunday Spin instructor", body: BUSINESS_COPY.application_received.body });
   assert.deepEqual(c("hiring_fee_added", { amount: 25.6, currency: "USD", professional_name: "Rana Khoury", role_title: "Sunday Spin instructor" }), { title: "Hiring fee added to your Centium bill", body: "$25.60 for Rana Khoury · Sunday Spin instructor. Due on your next bill." });
   assert.equal(c("hiring_fee_added", { amount: "1250", currency: null }).body, "$1,250.00. Due on your next bill.");
   assert.equal(c("hiring_fee_added", { amount: 30, currency: "EUR", professional_name: "Rana" }).body, "€30.00 for Rana. Due on your next bill.");
@@ -346,6 +351,11 @@ test("professional copy: P-MA.7's lines from the documented payload keys", () =>
   assert.deepEqual(c("class_cancelled", { business_name: "Cedar Fitness", class_title: "Core 20", starts_at: "2026-11-06T18:00:00" }), { title: "Core 20 on Fri, Nov 6 is cancelled", body: "Cedar Fitness cancelled this session. It's struck through in your calendar." });
   assert.equal(c("removed_from_team", { business_name: "Peak Performance Gym" }).title, "Your role at Peak Performance Gym ended");
   assert.deepEqual(c("existing_team_invite", { business_name: "Hamra Strength Club", accept_by: "2026-11-14", fee_text: "free" }), { title: "Hamra Strength Club added you to their team", body: "Accept by Nov 14, 2026 to join as existing team, free." });
+  // Database Release 2: invite_existing_team sends expires_at; send_hire_offer / accept_hire_offer send title; add_existing_team sends hired with source existing_team.
+  assert.equal(c("existing_team_invite", { invite_id: "i1", business_name: "Hamra Strength Club", expires_at: "2026-11-14T12:00:00Z" }).body, "Accept by Nov 14, 2026 to join as existing team.");
+  assert.equal(c("hire_offer_received", { business_name: "Cedar Fitness", title: "HIIT instructor", type: "role", pay: 70, pay_unit: "per_class", starts_on: "2026-11-02" }).body, "HIIT instructor · $70 per class · from Mon, Nov 2. Accept or decline in Opportunities.");
+  assert.deepEqual(c("hired", { business_name: "Cedar Fitness", title: "HIIT instructor", starts_on: "2026-11-02", sessions_not_assigned: 0 }), { title: "Cedar Fitness hired you", body: "HIIT instructor · starts Mon, Nov 2." });
+  assert.deepEqual(c("hired", { business_name: "Cedar Fitness", source: "existing_team" }), { title: "Cedar Fitness added you to their team", body: "You're on their team as existing team. No hiring fee." });
   assert.deepEqual(c("instructor_review_received", { gym_name: "Hamra Strength Club", class_title: "Spin 45", rating: 5, has_body: true }), { title: "New review · 5 stars", body: "A member reviewed Spin 45 at Hamra Strength Club." });
 });
 

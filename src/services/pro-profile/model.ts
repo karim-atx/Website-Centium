@@ -80,115 +80,79 @@ export interface PublicProfile {
   teachesAt: TeachesAtRow[];
 }
 
-/** search_directory: the card plus its rank and "From $X" (number, formatted by the caller). */
+/** professionals_ranked: the card plus its place in the server's order, "From $X" and the keyset cursor (rank_score, id). */
 export interface DirectoryHit extends ProfessionalCardData {
   rank: number | null;
   fromPriceValue: number | null;
+  /** rank_score, the cursor's first half (p_before_score). */
+  score: number | null;
 }
-
-const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
-const list = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? (v.filter((x) => obj(x)) as Record<string, unknown>[]) : []);
 
 const workType = (v: unknown): WorkType => (v === "class_slot" ? "class_slot" : "role");
 
-/** The ProfessionalCard identity (flat, or nested under `card` / `professional`). Never contact fields. */
-export function parseCard(raw: Record<string, unknown>): ProfessionalCardData {
-  const r = obj(raw.card) ?? obj(raw.professional) ?? raw;
+/**
+ * The card from professional_public_profile or professionals_ranked
+ * (professional_id, first_name, avatar_url, specialty, headline,
+ * average_rating and review_count from professional_rating(),
+ * hired_via_centium, area_label, location). Never contact fields: neither
+ * function returns any.
+ */
+export function parseCard(r: Record<string, unknown>): ProfessionalCardData {
   return {
-    id: str(r.professional_id) ?? str(r.id) ?? "",
-    name: str(r.name) ?? str(r.display_name) ?? "",
-    photoUrl: str(r.photo_url) ?? str(r.avatar_url),
-    specialty: str(r.specialty) ?? "",
-    rating: num(r.rating) ?? num(r.average_rating),
+    id: str(r.professional_id) ?? "",
+    name: str(r.first_name)?.trim() ?? "",
+    photoUrl: str(r.avatar_url),
+    specialty: str(r.specialty) ?? str(r.headline) ?? "",
+    rating: num(r.average_rating),
     reviewCount: num(r.review_count) ?? 0,
-    hiredViaCentiumCount: num(r.hired_via_centium_count) ?? 0,
-    distanceKm: num(r.distance_km),
-    area: str(r.area) ?? str(r.location),
+    hiredViaCentiumCount: num(r.hired_via_centium) ?? 0,
+    distanceKm: null,
+    area: str(r.area_label) ?? str(r.location),
   };
 }
 
+/** work_history(p_professional_id): hire_id, business_id, business_name, logo_url, role_title, type, from_on, to_on, status, classes_per_week, hired_via_centium. */
 export function parseWork(data: unknown): WorkEntry[] {
   return rows(data)
     .map((r) => ({
-      id: str(r.id) ?? str(r.hire_id) ?? "",
+      id: str(r.hire_id) ?? "",
       hireId: str(r.hire_id),
       businessId: str(r.business_id),
       businessName: str(r.business_name) ?? "",
-      roleTitle: str(r.role_title) ?? str(r.title) ?? "",
+      roleTitle: str(r.role_title) ?? "",
       type: workType(r.type),
-      from: str(r.from) ?? str(r.from_date) ?? str(r.starts_on),
-      to: str(r.to) ?? str(r.to_date) ?? str(r.ends_on),
+      from: str(r.from_on),
+      to: str(r.to_on),
     }))
     .filter((w) => w.id && w.businessName);
 }
 
-export function parseReviews(data: unknown): ProfileReview[] {
-  return rows(data)
-    .map((r) => ({
-      id: str(r.id) ?? "",
-      reviewerName: str(r.reviewer_name) ?? str(r.first_name) ?? "",
-      rating: Math.max(0, Math.min(5, Math.round(num(r.rating) ?? 0))),
-      text: str(r.text) ?? str(r.body),
-      createdAt: str(r.created_at),
-      className: str(r.class_name) ?? str(r.class_title),
-      businessName: str(r.business_name),
-    }))
-    .filter((r) => r.id && r.rating > 0);
-}
-
-export function parseTeaches(data: unknown): TeachesAtRow[] {
-  return rows(data).map((r) => ({
-    seriesId: str(r.class_series_id) ?? str(r.series_id),
-    title: str(r.title) ?? str(r.class_title) ?? "",
-    businessId: str(r.business_id),
-    businessName: str(r.business_name) ?? "",
-    weekday: num(r.weekday),
-    startTime: str(r.start_time),
-    startsOn: str(r.starts_on),
-  })).filter((t) => t.title);
-}
-
-export function parseServices(data: unknown): ProfileService[] {
-  return rows(data)
-    .map((r) => ({
-      id: str(r.id) ?? "",
-      kind: (r.kind === "hire" || r.bookable === false ? "hire" : "book") as "book" | "hire",
-      name: str(r.name) ?? str(r.title) ?? "",
-      meta: str(r.meta) ?? str(r.description),
-      price: num(r.price),
-    }))
-    .filter((s) => s.id && s.name);
-}
-
-export function parseOffers(data: unknown): ProfileOffer[] {
-  return rows(data)
-    .map((r) => ({ id: str(r.offer_id) ?? str(r.id) ?? "", headline: str(r.headline) ?? "", endsOn: str(r.ends_on), pointsCost: num(r.points_cost) ?? 0 }))
-    .filter((o) => o.id && o.headline && o.pointsCost > 0);
-}
-
-/** professional_public_profile → PublicProfile (one row, or null when the reader returned nothing). */
-export function parsePublicProfile(data: unknown): PublicProfile | null {
-  const r = rows(data)[0];
+/**
+ * professional_public_profile (one row; none for an unlisted professional)
+ * with work_history. The rest of the board's profile has no reader in the
+ * contract (Database gap): reviews with their class and gym, the services
+ * split Book / Hire, point offers, Teaches at — those stay empty and the
+ * screens keep their live sources.
+ */
+export function parsePublicProfile(profile: unknown, work: unknown): PublicProfile | null {
+  const r = rows(profile)[0];
   if (!r) return null;
   const card = parseCard(r);
   if (!card.id) return null;
-  const specs = Array.isArray(r.specialties) ? (r.specialties as unknown[]).map(str).filter((s): s is string => !!s) : [];
-  return {
-    card,
-    about: str(r.about) ?? str(r.bio),
-    specialties: specs,
-    services: parseServices(list(r.services)),
-    offers: parseOffers(list(r.offers)),
-    workHistory: parseWork(list(r.work_history)),
-    reviews: parseReviews(list(r.reviews)),
-    teachesAt: parseTeaches(list(r.teaches_at)),
-  };
+  const skills = Array.isArray(r.skills) ? (r.skills as unknown[]).map(str).filter((s): s is string => !!s) : [];
+  return { card, about: str(r.bio), specialties: skills, services: [], offers: [], workHistory: parseWork(work), reviews: [], teachesAt: [] };
 }
 
+/** professionals_ranked rows, in the server's order (rank_score desc, id). "From $X" is the lower of the two rates. */
 export function parseDirectory(data: unknown): DirectoryHit[] {
   return rows(data)
-    .map((r) => ({ ...parseCard(r), rank: num(r.rank), fromPriceValue: num(r.from_price) }))
-    .filter((c) => c.id && c.name);
+    .map((r, i) => {
+      const prices = [num(r.consultation_rate), num(r.monthly_rate)].filter((p): p is number => p != null && p > 0);
+      const card = parseCard(r);
+      // Every row is kept (only an id is required): the cursor is the LAST ROW the server sent.
+      return { ...card, name: card.name || "Professional", rank: i + 1, fromPriceValue: prices.length ? Math.min(...prices) : null, score: num(r.rank_score) };
+    })
+    .filter((c) => c.id);
 }
 
 // ---------------------------------------------------------------- display rules

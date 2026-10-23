@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { fetchMyTeam, type TeamMember } from "../../../services/hiring";
 
 // Market + Share 3.0 · W4 · B-MA.6: the Team the class sheets name from
-// (ClassSheet's InstructorPicker, SubstituteSheet's list). my_team (DB8) when
-// it answers; `pending` until then, and the callers keep the live source
-// (lead decision D-35: DB8 backfills those people as existing_team).
+// (ClassSheet's InstructorPicker, SubstituteSheet's list): my_team (Database
+// Release 2). `pending` only on a stack without it; the callers then keep the
+// live source (lead decision D-35).
 
 /** The Team source: my_team once DB8 answers; `pending` until then (the live source stands in). */
 export type ClassTeam = { s: "loading" } | { s: "pending" } | { s: "team"; team: TeamMember[] } | { s: "error"; offline: boolean };
@@ -16,7 +16,6 @@ export function useClassTeam(businessId: string | null | undefined, active: bool
   useEffect(() => {
     if (!active || !businessId) return;
     let alive = true;
-    // awaiting DB stage DB8 (my_team)
     void fetchMyTeam(businessId).then((r) => {
       if (!alive) return;
       setResult({ businessId, v: r.ok ? { s: "team", team: r.value } : r.pending ? { s: "pending" } : { s: "error", offline: !!r.offline } });

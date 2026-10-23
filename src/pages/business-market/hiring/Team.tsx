@@ -27,11 +27,10 @@ import { classLine, classTile, firstName, hireLine, removeConfirmBody, removeSen
 // as Classes' "Message instructor" does) in Messages; Remove from team → two
 // CentredDialogs → remove_from_team ⟳ → strip "{name} removed from your
 // team" · Done. Empty: "No one on your team yet" + Post an opening.
-// Pending (DB8 not landed): the same empty state without its button (quiet).
+// Database Release 2: my_team (the current team; removed people are left out) and
+// remove_from_team (ends their hires, clears them from future sessions, no refund).
 
 type Load = { status: "loading" } | { status: "ok"; team: TeamMember[] } | { status: "pending" } | { status: "error" };
-
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export default function TeamPage() {
   const biz = useHiringBusiness();
@@ -51,7 +50,6 @@ export default function TeamPage() {
     if (!businessId) return;
     let alive = true;
     setLoad({ status: "loading" });
-    // awaiting DB stage DB8 (my_team)
     void fetchMyTeam(businessId).then((r) => {
       if (!alive) return;
       setLoad(r.ok ? { status: "ok", team: r.value } : r.pending ? { status: "pending" } : { status: "error" });
@@ -90,8 +88,7 @@ export default function TeamPage() {
     }
     setBusy(true);
     setDlgError(null);
-    // awaiting DB stage DB8 (remove_from_team)
-    const r = await removeFromTeam(businessId, removing.member.professional.id, newRequestId());
+    const r = await removeFromTeam(businessId, removing.member.professional.id);
     setBusy(false);
     if (!r.ok) {
       setDlgError(r.message);

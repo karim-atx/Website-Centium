@@ -107,8 +107,8 @@ export function InviteSheet({
     if (!open || idKind === "other") return;
     let alive = true;
     const t = window.setTimeout(() => {
-      // awaiting DB stage DB8 (classify_code): pending answers nothing and the field works as before.
-      void classifyCode(businessId, trimmed).then((r) => {
+      // classify_code (Database Release 2): a professional's own code shows the B-MA.8.7 card; a failed read changes nothing.
+      void classifyCode(trimmed).then((r) => {
         if (alive && r.ok) setGuard({ for: trimmed, kind: r.value });
       });
     }, 400);
@@ -174,7 +174,7 @@ export function InviteSheet({
     const r = await inviteEmployee(businessId, identifier, role, message);
     setBusy(false);
     if (r.ok) return onSent();
-    if (r.reason === "professional_account") return setGuard({ for: identifier.trim(), kind: "professional_account" });
+    if (r.reason === "professional_account" || r.reason === "professional_code") return setGuard({ for: identifier.trim(), kind: r.reason });
     if (r.reason === "no_seats") return onNoSeats();
     if (r.reason === "not_found") return setFieldError(r.message);
     setSendError(r.message);

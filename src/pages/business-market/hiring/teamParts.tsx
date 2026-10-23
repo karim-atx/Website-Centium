@@ -81,7 +81,7 @@ export function ExistingTeamChip() {
   );
 }
 
-/** A store (or no business): Hiring is for gyms and studios (`not_a_gym`). */
+/** A store (or no business): Hiring is for gyms (business_may_hire; ATXH0). */
 export function NotForThisBusiness({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   if (error) return <MarketError thing="your business" onRetry={onRetry} />;
   return <MarketEmptyCard title={HIRING_ERROR_TEXT.not_a_gym} />;

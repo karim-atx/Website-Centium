@@ -1,6 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseTeam } from "../../../services/hiring/model.ts";
+import type { TeamMember } from "../../../services/hiring/model.ts";
+
+// TeamMember rows as services/hiring fetchMyTeam builds them from my_team (the test's own builder).
+type Row = { professional_id: string; name?: string; specialty?: string | null; source: "hire" | "existing_team"; hires?: { id: string; title?: string; type?: "role" | "class_slot"; starts_on?: string }[] };
+const parseTeam = (rows: Row[]): TeamMember[] =>
+  rows.map((r) => ({
+    professional: { id: r.professional_id, name: r.name ?? "", photoUrl: null, specialty: r.specialty ?? null, rating: null, reviewCount: 0, hiredViaCentiumCount: 0, distanceKm: null, onTeam: true, rank: null },
+    source: r.source,
+    firstAddedAt: null,
+    hires: (r.hires ?? []).map((h) => ({ id: h.id, title: h.title ?? "", type: h.type ?? "role", hiredAt: null, startsOn: h.starts_on ?? null })),
+    classes: [],
+  }));
 import { busyDayOf, clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, teamSubLine, weekLoad } from "./instructorTeam.ts";
 
 const team = parseTeam([

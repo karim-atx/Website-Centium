@@ -64,7 +64,8 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 // fetchInstructors; D-35 backfills them as existing_team members). "Go to
 // Hiring" / "Post an opening" park the draft and open Hiring. The server's
 // Team check (DB9 `instructor_not_on_team`) shows under the field.
-// awaiting DB stage DB8 (my_team) / DB9 (instructor_not_on_team)
+// my_team is Database Release 2; awaiting DB stage DB9 (instructor_not_on_team: the server doesn't
+// refuse a non-Team instructor yet)
 //
 // KEPT live (PLAN §3.4), in the sheet's chrome, as span-2 boxes under the
 // drawn grid: the Repeat editor (Daily / Weekly / Every 2 weeks / Custom every
@@ -182,7 +183,7 @@ function SheetBody({
   const [durOpen, setDurOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string } | null>(null);
-  // awaiting DB stage DB8 (my_team): `pending` keeps the live instructors.
+  // my_team (Database Release 2); `pending` (a stack without it) keeps the live instructors.
   const [team, retryTeam] = useClassTeam(businessId, open);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [untilOpen, setUntilOpen] = useState(false);

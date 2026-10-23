@@ -38,13 +38,13 @@ import { acceptBody, acceptRows, applicationMeta, clashBody, clashTime, hiredStr
 // (components/pro/calendar, W5). Hired → the card turns HIRED and the
 // strip "You're hired · {gym}, {role}" with "My work". Decline →
 // decline_hire_offer (one tap: the board draws no confirm).
-// my_applications / accept / decline are DB8: pending, the drawn empty state;
-// a write that comes back pending shows "Hiring is coming soon." and changes
-// nothing.
+// Database Release 2: there is no my_applications reader, so the list is
+// my_hire_offers + the caller's own opening_applications (services/team-hiring);
+// accept_hire_offer (ATXH15 → the clash dialog, its rows from check_conflicts)
+// and decline_hire_offer (ATXH14 / ATX08 → "This offer is no longer open.").
 
 const HOME = "/app/pro/marketplace";
 type State = { status: "loading" } | { status: "pending" } | { status: "error" } | { status: "ok"; list: MyApplication[] };
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `offer-${Date.now()}`);
 
 export default function MyApplicationsPage() {
   const m = useMarketColors();
@@ -65,7 +65,7 @@ export default function MyApplicationsPage() {
 
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB8 (my_applications)
+    // My applications: my_hire_offers + the caller's own opening_applications (services/team-hiring).
     void fetchMyApplications().then((r) => {
       if (!alive) return;
       setState(r.ok ? { status: "ok", list: r.value } : r.pending ? { status: "pending" } : { status: "error" });
@@ -91,8 +91,7 @@ export default function MyApplicationsPage() {
     setBusy(true);
     setDlgError(null);
     setDlgSoon(false);
-    // awaiting DB stage DB8 (accept_hire_offer; the calendar series: DB9)
-    const r = await acceptHireOffer(a.offerId ?? a.id, ack, newRequestId());
+    const r = await acceptHireOffer(a.offerId ?? a.id, ack);
     setBusy(false);
     if (r.ok) {
       closeDialogs();
@@ -107,7 +106,7 @@ export default function MyApplicationsPage() {
       setClash({ app: a, clashes: clashesOf(r.details) });
       return;
     }
-    if (r.error === "offer_withdrawn") retry();
+    if (r.error === "offer_closed") retry();
     setDlgError(r.message);
   };
 
@@ -115,7 +114,6 @@ export default function MyApplicationsPage() {
     if (declining) return;
     if (!online) return showStrip("You're offline. Try again when you're connected.", { tone: "neutral" });
     setDeclining(a.id);
-    // awaiting DB stage DB8 (decline_hire_offer)
     const r = await declineHireOffer(a.offerId ?? a.id);
     setDeclining(null);
     if (r.ok) {
@@ -123,7 +121,7 @@ export default function MyApplicationsPage() {
       return showStrip(a.businessName ? `Offer declined · ${a.businessName}` : "Offer declined");
     }
     if (r.pending) return showStrip("Hiring is coming soon.", { tone: "neutral" });
-    if (r.error === "offer_withdrawn") retry();
+    if (r.error === "offer_closed") retry();
     showStrip(r.message, { tone: "error" });
   };
 

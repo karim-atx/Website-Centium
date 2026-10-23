@@ -268,7 +268,6 @@ export default function MyBookingsPage() {
           setSent((s) => ({ ...s, [t.bookingId]: rating }));
           setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(t.professionalName, t.gymName), professionalId: t.professionalId }));
         }}
-        onAlreadyReviewed={(t) => setPastDb((list) => (list ? list.map((b) => (b.refId === t.bookingId ? { ...b, reviewed: true } : b)) : list))}
       />
 
       <EndMembershipDialog

@@ -347,7 +347,9 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   useEffect(() => {
     if (!proId) return;
     let cancelled = false;
-    // awaiting DB stage DB10 (and DB2 for the point offers it carries)
+    // professional_public_profile + work_history (Database Release 2): the header's rating is
+    // professional_rating() (client and class reviews). Class-context reviews, Teaches at and point
+    // offers have no reader in the contract (Database gap): those parts keep their live sources.
     void fetchPublicProfile(proId).then((r) => {
       if (!cancelled) setPub({ id: proId, r });
     });

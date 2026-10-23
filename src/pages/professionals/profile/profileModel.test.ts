@@ -62,7 +62,7 @@ test("a live listing becomes the shared card (no hired count, specialty fallback
 });
 
 test("a ranked hit keeps its rank and gets From $X", () => {
-  const c = hitCard({ id: "x", name: "Joe", photoUrl: null, specialty: "HIIT", rating: null, reviewCount: 0, hiredViaCentiumCount: 0, distanceKm: 4, rank: 3, fromPriceValue: 30 });
+  const c = hitCard({ id: "x", name: "Joe", photoUrl: null, specialty: "HIIT", rating: null, reviewCount: 0, hiredViaCentiumCount: 0, distanceKm: 4, rank: 3, fromPriceValue: 30, score: 0.61 });
   assert.equal(c.fromPrice, "From $30");
   assert.equal(c.rating, null);
 });

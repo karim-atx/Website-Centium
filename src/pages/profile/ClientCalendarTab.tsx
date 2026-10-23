@@ -195,9 +195,9 @@ export default function ClientCalendarTab() {
   const [rate, setRate] = useState<{ bookingId: string; title: string; businessName: string } | null>(null);
   // Market + Share 3.0 W5 (D-43): Rate opens the InstructorReviewDialog when
   // the class had an instructor and my_class_bookings (DB4) says it's
-  // reviewable, once DB10's review_instructor exists (findReviewTarget answers
-  // null until then); otherwise the live Rate sheet above
-  // (write_class_review), unchanged.
+  // reviewable (review_instructor, Database Release 2: one per member per
+  // series); otherwise the live Rate sheet above (write_class_review, which
+  // now writes the venue review only when nobody is named).
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
   const [reviewStrip, showReviewStrip] = useStrip();
   const rateSeq = useRef(0);

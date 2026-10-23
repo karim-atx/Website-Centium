@@ -45,7 +45,8 @@ import { TicketStub, type StubTone } from "../../../components/market/TicketStub
 import { TicketCheck } from "../../../components/market/ProfessionalCard";
 import { initialsOf } from "../../../components/market/peopleModel";
 import { stubColors } from "../../../components/market/marketColor";
-import { dayText, fetchPublicProfile, reviewContext, sortWork, workRoleLine, workStub, type PublicProfile, type WorkEntry } from "../../../services/pro-profile";
+import { fetchOpenToGymWork, setOpenToGymWork } from "../../../services/team-hiring";
+import { fetchWorkHistory, sortWork, workRoleLine, workStub, type WorkEntry } from "../../../services/pro-profile";
 import { ServiceEditSheet } from "./ServiceEditSheet";
 
 // Market + Share 3.0 · W3 · P-MA.2 Showcase (HANDOVER §4 "P-MA.2 Showcase";
@@ -482,19 +483,7 @@ function AvailabilityPanel() {
     <>
       <CapsLabel style={{ marginTop: 14 }}>Weekly hours</CapsLabel>
       {hours}
-      <div style={{ marginTop: 12, borderRadius: 16, border: `1px solid ${c.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: px(14), fontWeight: 700 }}>Open to gym work</div>
-          <div id="pm-gymwork-sub" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint }}>
-            Gyms can find you in search and send you direct offers.
-          </div>
-          <div id="pm-gymwork-soon" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint, fontWeight: 700, marginTop: 2 }}>
-            Coming soon with Opportunities.
-          </div>
-        </div>
-        {/* awaiting DB stage DB11 (Release 2): professional_profiles.open_to_gym_work. */}
-        <SheetSwitch on={false} onChange={() => undefined} label="Open to gym work" describedBy="pm-gymwork-sub pm-gymwork-soon" disabled />
-      </div>
+      <GymWorkRow />
       <WideButton onClick={() => navigate("/app/pro/calendar/availability")}>Edit hours</WideButton>
     </>
   );
@@ -503,7 +492,7 @@ function AvailabilityPanel() {
 // ---------------------------------------------------------------------------
 // Work history (lines 182–225, `workList`, `reviews`; W5)
 //
-// professional_public_profile(my id) (DB10, awaiting): with entries, the head
+// work_history(my id) (Database Release 2): with entries, the head
 // row (margin-top 14, space-between: caps "Hired via Centium" 10.5 / 700
 // 0.1em --faint; "2 roles · 1 class slot" 11.5 / 700 --tealink), the
 // ticket-stub entries (margin-top 8, gap 10; TicketStub 46, min 96; the body
@@ -518,10 +507,58 @@ function AvailabilityPanel() {
 // your classes" 11.5 --faint; rows padding 12 16 with a 0.5 --div rule: name
 // 12.5 / 800, date --faint, "{class} · {gym}" 11.5 / 600 --accent
 // (margin-top 1), the text 12.5 / 18 --ink2 (margin-top 4)). No entries: the
-// drawn empty state (scWorkEmpty). Pending: today's empty state and the live
-// reviews (useReviewsAboutMe), unchanged.
+// drawn empty state (scWorkEmpty). The reviews block is the live reviews about
+// me (useReviewsAboutMe): the contract has no reader of class reviews with
+// their class and gym (Database gap).
 
-type WorkLoad = { ok: true; value: PublicProfile | null } | { ok: false; pending?: boolean; offline?: boolean } | null;
+type WorkLoad = { ok: true; value: WorkEntry[] } | { ok: false; pending?: boolean; offline?: boolean } | null;
+
+/**
+ * P-MA.2 "Open to gym work": professional_profiles.open_to_gym_work (own row)
+ * and set_gym_work_available(p_open) (Database Release 2). On: gyms find
+ * them in search_professionals and may send direct offers; off stops both
+ * (pending offers stay). The switch moves at once and comes back with a strip
+ * when the save fails.
+ */
+function GymWorkRow() {
+  const c = useMarketColors();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [strip, showStrip] = useStrip();
+  useEffect(() => {
+    let alive = true;
+    void fetchOpenToGymWork().then((r) => alive && setOn(r.ok ? r.value : null));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const change = async (v: boolean) => {
+    if (busy || on === null) return;
+    setBusy(true);
+    setOn(v);
+    const r = await setOpenToGymWork(v);
+    setBusy(false);
+    if (r.ok) setOn(r.value);
+    else {
+      setOn(!v);
+      showStrip(r.message, "error");
+    }
+  };
+  return (
+    <>
+      {strip}
+      <div style={{ marginTop: 12, borderRadius: 16, border: `1px solid ${c.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: px(14), fontWeight: 700 }}>Open to gym work</div>
+          <div id="pm-gymwork-sub" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint }}>
+            Gyms can find you in search and send you direct offers.
+          </div>
+        </div>
+        <SheetSwitch on={!!on} onChange={(v) => void change(v)} label="Open to gym work" describedBy="pm-gymwork-sub" disabled={on === null || busy} />
+      </div>
+    </>
+  );
+}
 
 function WorkPanel() {
   const navigate = useNavigate();
@@ -532,8 +569,7 @@ function WorkPanel() {
     if (!authUserId) return;
     let alive = true;
     setLoad(null);
-    // awaiting DB stage DB10
-    void fetchPublicProfile(authUserId).then((r) => alive && setLoad(r.ok ? { ok: true, value: r.value } : { ok: false, pending: r.pending, offline: r.offline }));
+    void fetchWorkHistory(authUserId).then((r) => alive && setLoad(r.ok ? { ok: true, value: r.value } : { ok: false, pending: r.pending, offline: r.offline }));
     return () => {
       alive = false;
     };
@@ -547,21 +583,11 @@ function WorkPanel() {
     />
   );
   if (load === null) return <MarketSkeleton radius={18} rows={4} height={100} count={2} label="Loading your work history" style={{ marginTop: 14 }} />;
-  if (!load.ok && load.pending) {
-    return (
-      <>
-        {empty}
-        <LiveReviews />
-      </>
-    );
-  }
   if (!load.ok) return load.offline ? <MarketOffline loaded={false} force onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} /> : <MarketError thing="your work history" onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} />;
-  const p = load.value;
-  const work = p ? p.workHistory : [];
   return (
     <>
-      {work.length ? <WorkList list={work} /> : empty}
-      {p && p.reviews.length ? <ClassReviews profile={p} onAll={() => navigate("/app/more/reviews")} /> : null}
+      {load.value.length ? <WorkList list={load.value} /> : empty}
+      <LiveReviews />
     </>
   );
 }
@@ -626,45 +652,7 @@ function WorkList({ list }: { list: WorkEntry[] }) {
   );
 }
 
-function ClassReviews({ profile, onAll }: { profile: PublicProfile; onAll: () => void }) {
-  const c = useMarketColors();
-  const shown = [...profile.reviews].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-  const count = Math.max(profile.card.reviewCount, shown.length);
-  const avg = profile.card.rating ?? Math.round((shown.reduce((n, r) => n + r.rating, 0) / shown.length) * 10) / 10;
-  const LIMIT = 3;
-  return (
-    <>
-      <CapsLabel style={{ marginTop: 18 }}>{`Reviews · ${count}`}</CapsLabel>
-      <div style={{ marginTop: 8, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
-          <span style={{ fontSize: px(30), lineHeight: lh(34), fontWeight: 800 }}>{avg.toFixed(1)}</span>
-          <div>
-            <span role="img" aria-label={`${avg.toFixed(1)} out of 5`}>
-              <Stars filled={Math.round(avg)} />
-            </span>
-            <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>From clients who attended your classes</div>
-          </div>
-        </div>
-        {shown.slice(0, LIMIT).map((r) => {
-          const ctx = reviewContext(r);
-          return (
-            <div key={r.id} style={{ padding: "12px 16px", borderTop: `0.5px solid ${c.div}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: px(12.5) }}>
-                <span style={{ fontWeight: 800 }}>{reviewerLabel(r.reviewerName)}</span>
-                <span style={{ color: c.faint, flexShrink: 0 }}>{dayText(r.createdAt)}</span>
-              </div>
-              {ctx ? <div style={{ fontSize: px(11.5), fontWeight: 600, color: c.accent, marginTop: 1 }}>{ctx}</div> : null}
-              {r.text ? <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>{r.text}</div> : null}
-            </div>
-          );
-        })}
-      </div>
-      {shown.length > LIMIT ? <WideButton onClick={onAll}>See all reviews</WideButton> : null}
-    </>
-  );
-}
-
-/** Pending DB10: the live reviews about me (professional_reviews), as W3 drew them. */
+/** The live reviews about me (professional_reviews), as W3 drew them. */
 function LiveReviews() {
   const c = useMarketColors();
   const navigate = useNavigate();

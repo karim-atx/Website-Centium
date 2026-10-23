@@ -157,7 +157,7 @@ export interface PlanData {
 
 /**
  * W4 B-SH "Now hiring" (SPEC.hiring): an opening, public fields only.
- * awaiting DB stage DB8 (openings) / DB13 + M2 (the public resolver for j).
+ * awaiting DB stage DB13 + M2 (the public resolver for j; the openings themselves are Database Release 2).
  */
 export interface HiringData {
   /** The opening id (the link's item). */

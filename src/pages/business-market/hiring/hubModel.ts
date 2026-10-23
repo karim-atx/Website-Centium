@@ -231,9 +231,9 @@ export const offerBody = (name: string): string => `${firstName(name)} accepts i
  * applied; the charge sentence; then the rehire sentence for someone already
  * on the Team, or (a direct offer) "Nothing recurring."
  */
-export function feeNote(o: { type: OpeningType; minimumApplied: boolean; onTeam: boolean; name: string; direct: boolean }): string {
+export function feeNote(o: { type: OpeningType; minimum: number; minimumApplied: boolean; onTeam: boolean; name: string; direct: boolean }): string {
   const parts: string[] = [];
-  if (o.minimumApplied) parts.push(minimumSentence(o.type));
+  if (o.minimumApplied) parts.push(minimumSentence(o));
   parts.push("Charged once when the hire is confirmed and added to your Centium bill.");
   if (o.onTeam) parts.push(`${firstName(o.name)} is already on your Team: a new opening is a new hire.`);
   else if (o.direct) parts.push("Nothing recurring.");
@@ -392,6 +392,31 @@ export function sessionOptions(classes: BusinessClassRow[], today: string, nowTi
       if (!d) return [];
       return [{ id: c.id, date: c.date, label: `${c.title} · ${weekdayMonthDay(d)}, ${time12(c.startTime)}`, slotTitle: `${DAY_LONG[isoDay(d) - 1]} ${c.title} cover` }];
     });
+}
+
+/**
+ * openings.schedule_label: the chosen classes in words, as the form lists
+ * them ("Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 AM"; a slot: its
+ * session). A professional can't read the gym's class series, so this is
+ * what the opportunities board shows of the schedule. null with none chosen.
+ */
+export function scheduleLabelOf(p: Pick<ParsedForm, "type" | "seriesIds" | "sessionId">, series: readonly Pick<SeriesOption, "id" | "label">[], sessions: readonly Pick<SessionOption, "id" | "label">[]): string | null {
+  const labels = p.type === "class_slot" ? sessions.filter((x) => x.id === p.sessionId).map((x) => x.label) : series.filter((x) => p.seriesIds.includes(x.id)).map((x) => x.label);
+  return labels.length ? labels.join(" and ").slice(0, 200) : null;
+}
+
+/**
+ * openings.description (required by the table, 10 to 4,000 characters): the
+ * board's form has no description field, so it is the form's own facts in
+ * one line ("Role · ongoing · Spin 45 · Sun 10:00 AM · $80 per class · 4
+ * classes a month · First aid"). Always over 10 characters (the type label
+ * alone is 14).
+ */
+export function openingDescription(p: Pick<ParsedForm, "type" | "pay" | "payUnit" | "classesPerMonth" | "requirements">, scheduleLabel: string | null): string {
+  const parts = [typeLabel(p.type), scheduleLabel, payText(p.pay, p.payUnit)];
+  if (p.payUnit === "per_class" && p.classesPerMonth) parts.push(`${plural(p.classesPerMonth, "class", "classes")} a month`);
+  parts.push(...p.requirements);
+  return parts.filter(Boolean).join(" · ").slice(0, 4000);
 }
 
 /** Classes a month suggested from the chosen series (sessions a week × 4), as the board's 1 weekly class → 4. */

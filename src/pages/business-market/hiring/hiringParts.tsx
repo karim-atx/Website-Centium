@@ -13,8 +13,9 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { sheetChipStyle } from "../../../components/ui/sheetChip";
 import { SheetSwitch } from "../listingParts";
-import { HIRING_ERROR_TEXT, type Opening, type ProCard } from "../../../services/hiring/model";
+import { BUSY_WARNING_TEXT, type Opening, type ProCard } from "../../../services/hiring/model";
 import type { MarketResult } from "../../../services/market/rpc";
+import { FEE_NOTICE_PLAIN, feeNotice, fetchHiringFeeRules, type HiringFeeRules } from "../../../services/hiring";
 import { footLine, hiredLine, openingTag, payLine, personRating, scheduleLine, type HiringTag } from "./hubModel";
 
 // Market + Share 3.0 · W4 · pieces shared by the B-MA.8 pages (W4-A owns this
@@ -555,6 +556,24 @@ export function PersonRow({ p, line, muted }: { p: ProCard; line: string; muted?
 }
 
 /** The sheet footer's fee notice (markup line 301): centred, gap 6, padding 4 0 10, 12 / 700 --pdark, the ticket glyph 14. */
+/** platform_settings' hiring numbers (cached for the session); null until they load or when the read fails. */
+export function useFeeRules(): HiringFeeRules | null {
+  const [rules, setRules] = useState<HiringFeeRules | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchHiringFeeRules().then((r) => live && r.ok && setRules(r.value));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return rules;
+}
+
+/** The footer notice with the server's rate and floors ("One-time 8% hiring fee (min. $25 per role, $3 per class slot) when you hire"). */
+export function feeNoticeText(rules: HiringFeeRules | null): string {
+  return rules ? feeNotice(rules) : FEE_NOTICE_PLAIN;
+}
+
 export function FeeNoticeRow({ text }: { text: string }) {
   const m = marketPalette(useIsDark());
   return (
@@ -576,7 +595,7 @@ export function BusyWarning({ lines, style }: { lines: string[]; style?: React.C
   if (!lines.length) return null;
   return (
     <div role="status" style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", lineHeight: "normal", textAlign: "left", ...style }}>
-      <div style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{HIRING_ERROR_TEXT.conflict_warning}</div>
+      <div style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{BUSY_WARNING_TEXT}</div>
       {lines.map((l) => (
         <div key={l} style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 4 }}>
           {`Busy ${l}`}

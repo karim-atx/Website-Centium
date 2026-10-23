@@ -24,42 +24,43 @@ import {
   type NotificationLike,
 } from "./model";
 
+// my_calendar's exact columns (Database Release 2, 20261213040000).
 const row = (o: Record<string, unknown> = {}) => ({
-  class_session_id: "s1",
-  hire_id: "h1",
+  class_id: "s1",
   class_series_id: "cs1",
+  hire_id: "h1",
   business_id: "b1",
   business_name: "Gym A",
-  title: "HIIT 30",
+  gym_id: "g1",
   location: "Badaro",
-  date: "2026-11-02",
+  title: "HIIT 30",
+  event_date: "2026-11-02",
   start_time: "07:00:00",
   end_time: "07:30:00",
-  weekdays: [1, 3],
+  duration_min: 30,
+  recurrence_label: "Every Mon and Wed",
   booked_count: 12,
   capacity: 16,
-  pay_per_session: 70,
-  colour: "#4f8f8a",
+  pay_per_session: "70.00",
   status: "scheduled",
-  updated_fields: [],
   ...o,
 });
 
-test("my_calendar keeps hired events only, tolerant of the date shapes", () => {
-  const out = parseMyCalendar([row(), { id: "own-event", title: "Not a class" }, row({ class_session_id: "s2", date: null, start_time: null, starts_at: "2026-11-04T07:00:00", ends_at: "2026-11-04T07:30:00" })]);
-  assert.equal(out.length, 2);
-  assert.deepEqual([out[0].date, out[0].start, out[0].end], ["2026-11-02", "07:00", "07:30"]);
-  assert.deepEqual([out[1].date, out[1].start, out[1].end], ["2026-11-04", "07:00", "07:30"]);
-  assert.deepEqual(out[0].weekdays, [1, 3]);
+test("my_calendar rows: the exact columns; an unreadable row is dropped", () => {
+  const out = parseMyCalendar([row(), { id: "own-event", title: "Not a class" }, row({ class_id: "s2", event_date: null })]);
+  assert.equal(out.length, 1);
+  assert.deepEqual([out[0].classSessionId, out[0].date, out[0].start, out[0].end], ["s1", "2026-11-02", "07:00", "07:30"]);
+  assert.equal(out[0].recurrenceLabel, "Every Mon and Wed");
+  assert.equal(out[0].payPerSession, 70);
   assert.equal(out[0].status, "scheduled");
 });
 
-test("duration_min fills the end; a bad status reads scheduled; updated_fields are filtered", () => {
-  const [e] = parseMyCalendar([row({ end_time: null, duration_min: 45, status: "weird", updated_fields: ["time", "price"] })]);
+test("duration_min fills the end; a bad status reads scheduled; no hire, no pay", () => {
+  const [e] = parseMyCalendar([row({ end_time: null, duration_min: 45, status: "weird", hire_id: null, pay_per_session: null })]);
   assert.equal(e.end, "07:45");
   assert.equal(e.status, "scheduled");
-  assert.deepEqual(e.updatedFields, ["time"]);
-  assert.deepEqual(parseMyCalendar([row({ updated_fields: "{time,location}" })])[0].updatedFields, ["time", "location"]);
+  assert.equal(e.hireId, null);
+  assert.equal(e.payPerSession, null);
 });
 
 test("weekdays are ISO; 0 reads as Sunday", () => {
@@ -134,7 +135,7 @@ test("notices: the documented subject and payload keys (20261210600000)", () => 
 });
 
 test("strips: payload first, then what the events say; never invented", () => {
-  const events = parseMyCalendar([row(), row({ class_session_id: "s2", class_series_id: "cs2", date: "2026-11-06" })]);
+  const events = parseMyCalendar([row(), row({ class_id: "s2", class_series_id: "cs2", event_date: "2026-11-06" })]);
   const added = pickNotices([n({ kind: "classes_added", subjectType: "hire", subjectId: "h1" })]).strip!;
   assert.deepEqual(stripOf(added, events, "2026-11-01"), { text: "2 classes added to your calendar · Gym A, from Mon, Nov 2", tone: "success", action: "View", jumpTo: "2026-11-02" });
   const fromPayload = pickNotices([n({ kind: "classes_added", subjectType: "hire", subjectId: "zz", payload: { business_name: "Gym C", session_count: 4, first_starts_at: "2026-11-09T07:00:00" } })]).strip!;

@@ -7,8 +7,10 @@
 // written in one dialog, stored as a gym review on the server and shown on the
 // instructor's profile with the gym's name. Reviewability per past class comes
 // from my_class_bookings(p_tab 'past') (DB4: `can_review`, `my_rating`); the
-// write is review_instructor(p_session_id, p_rating, p_text, p_request_id)
-// (DB10, not landed).
+// write is review_instructor(p_class_id, p_rating, p_body) (Database Release
+// 2: one per member per class series, a second review of the series EDITS
+// the first; write_class_review now delegates to it when the class names an
+// instructor).
 
 import { bool, num, rows, str } from "../market/parse";
 
@@ -191,19 +193,37 @@ export const REVIEW_TEXT_MAX = 2000;
 
 // ---------------------------------------------------------------- errors
 
-export type ReviewError = "not_attended" | "already_reviewed";
-const ERRORS: readonly ReviewError[] = ["not_attended", "already_reviewed"];
+/**
+ * review_instructor's refusals (HANDOVER_API Release 2 "Instructor reviews"):
+ * ATXH22 (ATX94) no booking of that class; ATX10 before it has happened;
+ * ATXH23 (ATX08) nobody named, or never on that gym's team; ATX91 a rating
+ * outside 1–5; 22023 over 2,000 characters; ATX02 rate limited; and 23502
+ * when the text is left empty: review_instructor takes p_body as optional but
+ * gym_reviews.body is NOT NULL, so a stars-only review is refused (Database
+ * gap, proved in r2h_proof_d) and the dialog asks for a few words.
+ */
+export type ReviewError = "not_attended" | "not_yet" | "no_instructor" | "bad_rating" | "too_long" | "rate_limited" | "needs_text";
 
-/** The documented error name in a PostgREST error (code, message, details or hint), or null. */
-export function reviewErrorOf(e: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null | undefined): ReviewError | null {
+export function reviewErrorOf(e: { code?: string | null; message?: string | null } | null | undefined): ReviewError | null {
   if (!e) return null;
-  const hay = [e.code, e.message, e.details, e.hint].filter(Boolean).join(" ").toLowerCase();
-  for (const k of ERRORS) if (hay.includes(k)) return k;
+  const msg = e.message ?? "";
+  if (/\bATXH22\b/.test(msg) || e.code === "ATX94") return "not_attended";
+  if (/\bATXH23\b/.test(msg)) return "no_instructor";
+  if (e.code === "ATX10") return "not_yet";
+  if (e.code === "ATX91") return "bad_rating";
+  if (e.code === "22023") return "too_long";
+  if (e.code === "ATX02") return "rate_limited";
+  if (e.code === "23502") return "needs_text";
   return null;
 }
 
-/** Not drawn on the board: written in its voice (listed in the W5 report). */
+/** Not drawn on the board: written in its voice. */
 export const REVIEW_ERROR_TEXT: Record<ReviewError, string> = {
   not_attended: "You can review a class once you've been to it.",
-  already_reviewed: "You've already reviewed this class.",
+  not_yet: "You can rate a class once it has happened.",
+  no_instructor: "This class had no instructor from the gym's team to review.",
+  bad_rating: "Choose from 1 to 5 stars.",
+  too_long: "Keep it under 2,000 characters.",
+  rate_limited: "Too many reviews in a short time. Try again later.",
+  needs_text: "Add a few words about the class, then send.",
 };

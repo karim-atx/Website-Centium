@@ -16,7 +16,6 @@ import {
   reviewNote,
   reviewTitle,
   starKey,
-  type ReviewError,
   type ReviewTarget,
 } from "../../services/instructor-reviews";
 
@@ -49,7 +48,6 @@ import {
 
 const STAR = "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2";
 
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 const isHighContrast = () => typeof document !== "undefined" && document.documentElement.classList.contains("high-contrast");
 
@@ -59,15 +57,13 @@ export interface InstructorReviewDialogProps {
   onClose: () => void;
   /** Sent: the rating given (the row turns "Reviewed · you rated N"; the page shows the strip). */
   onSent: (target: ReviewTarget, rating: number) => void;
-  /** The server refused because it is already reviewed: the row turns "Reviewed". */
-  onAlreadyReviewed?: (target: ReviewTarget) => void;
 }
 
-/** A fresh dialog per class (keyed): no rating, empty text, a new request id. */
+/** A fresh dialog per class (keyed): no rating, empty text. */
 export const InstructorReviewDialog: React.FC<InstructorReviewDialogProps> = ({ target, ...rest }) =>
   target ? <ReviewCard key={`${target.bookingId}:${target.sessionId}`} target={target} {...rest} /> : null;
 
-const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { target: ReviewTarget }> = ({ target, onClose, onSent, onAlreadyReviewed }) => {
+const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { target: ReviewTarget }> = ({ target, onClose, onSent }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const online = useOnline();
@@ -81,7 +77,6 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: "calm" | "error"; text: string } | null>(null);
-  const [requestId] = useState(newRequestId);
 
   const busyRef = useRef(busy);
   const closeRef = useRef(onClose);
@@ -113,7 +108,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
     setBusy(true);
     setNote(null);
     const trimmed = text.trim();
-    const r = await reviewInstructor(target.sessionId, rating, trimmed ? trimmed : null, requestId);
+    const r = await reviewInstructor(target.sessionId, rating, trimmed ? trimmed : null);
     setBusy(false);
     if (r.ok) {
       onSent(target, rating);
@@ -123,7 +118,6 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
       setNote({ tone: "calm", text: r.message });
       return;
     }
-    if ((r.error as ReviewError | undefined) === "already_reviewed") onAlreadyReviewed?.(target);
     setNote({ tone: "error", text: r.message });
   };
 

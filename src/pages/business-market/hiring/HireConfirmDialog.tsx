@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { linePx, textPx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { CentredDialog } from "../listingParts";
-import { feeBase, feeCalcLine, feeMoney, quoteFee, quoteHiringFee, type HiringFeeQuote, type OpeningType, type PayUnit } from "../../../services/hiring";
+import { feeCalcLine, feeMoney, quoteFee, type HiringFeeQuote, type OpeningType, type PayUnit } from "../../../services/hiring";
+import { useFeeRules } from "./hiringParts";
 import { feeNote, offerBody, offerPayText, offerTitle, startsText } from "./hubModel";
 
 // Market + Share 3.0 · W4 · B-MA.8.3 Offer and hire (`hireConfirm`,
@@ -20,13 +21,15 @@ import { feeNote, offerBody, offerPayText, offerTitle, startsText } from "./hubM
 // --faint (margin-top 8); buttons margin-top 18: Cancel #F0EDF9 / #5F5093,
 // Send offer #AEA1DC / #FFFFFF (--fill / --onfill).
 //
-// The fee shows the fee.ts mirror at once and the server's quote_hiring_fee
-// when it answers (awaiting DB stage DB8: pending today, so the mirror
-// stays). Nothing is charged here: the fee is recorded only when the
-// professional accepts (HANDOVER §9 "Hiring fee").
+// The fee is the SERVER's (quote_hiring_fee, Database Release 2: the rate and
+// floors are platform_settings rows): the ticket reads "Working out the fee"
+// until it answers and Send waits for it; a failed quote says so and Send
+// asks again. Nothing is charged here: accept_hire_offer recomputes the fee
+// and records it when the professional accepts (the gym's quote is kept
+// beside it).
 
 export interface HireOffer {
-  /** The professional's full name. */
+  /** The professional's name (first name, as the readers give it). */
   name: string;
   onTeam: boolean;
   type: OpeningType;
@@ -42,6 +45,8 @@ export interface DialogNote {
   text: string;
   tone: "soon" | "error";
 }
+
+type Quote = { key: string; q: HiringFeeQuote | null; failed: boolean };
 
 export default function HireConfirmDialog({
   offer,
@@ -61,44 +66,47 @@ export default function HireConfirmDialog({
 }) {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const base = offer ? feeBase(offer.type, offer.pay, offer.payUnit, offer.classesPerMonth) : null;
-  const mirror = useMemo(() => (offer && base != null ? quoteHiringFee(offer.type, base) : null), [offer, base]);
-  const [server, setServer] = useState<{ key: string; q: HiringFeeQuote } | null>(null);
-  const key = offer ? `${offer.type}|${offer.pay}|${offer.payUnit}|${offer.classesPerMonth ?? ""}` : "";
+  const rules = useFeeRules();
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [tick, setTick] = useState(0);
+  const key = offer ? `${offer.type}|${offer.pay}|${offer.payUnit}|${offer.classesPerMonth ?? ""}|${tick}` : "";
 
   useEffect(() => {
     if (!offer) return;
     let live = true;
-    // awaiting DB stage DB8 (quote_hiring_fee): pending today, so the fee.ts mirror stays on screen.
     void quoteFee(offer.type, offer.pay, offer.payUnit, offer.classesPerMonth).then((r) => {
-      if (live && r.ok && r.value) setServer({ key, q: r.value });
+      if (live) setQuote({ key, q: r.ok ? r.value : null, failed: !r.ok || !r.value });
     });
     return () => {
       live = false;
     };
   }, [offer, key]);
+  const retry = useCallback(() => setTick((t) => t + 1), []);
 
-  const q = server && server.key === key ? server.q : mirror;
-  if (!offer || !q) return null;
+  if (!offer) return null;
+  const answered = quote && quote.key === key ? quote : null;
+  const q = answered?.q ?? null;
+  const failed = !!answered?.failed;
 
   const rows: [string, string][] = [
     ["Role", offer.title],
     ["Pay", offerPayText(offer.type, offer.pay, offer.payUnit, offer.classesPerMonth)],
     ["Starts", startsText(offer.startsOn)],
   ];
+  const shownNote: DialogNote | null = note ?? (failed ? { text: "Couldn't work out the fee. Try again.", tone: "error" } : null);
   return (
     <CentredDialog
       open
       title={offerTitle(offer.name, direct)}
       body={offerBody(offer.name)}
       cancel="Cancel"
-      action="Send offer"
+      action={failed ? "Try again" : "Send offer"}
       tone="primary"
       width={338}
       pad="24px 22px 22px"
       actionsTop={18}
-      busy={busy}
-      onAction={onSend}
+      busy={busy || (!q && !failed)}
+      onAction={failed ? retry : onSend}
       onCancel={onCancel}
     >
       <div data-hire-rows style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
@@ -109,24 +117,26 @@ export default function HireConfirmDialog({
           </div>
         ))}
       </div>
-      <div data-fee-ticket style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "left" }}>
+      <div data-fee-ticket aria-busy={!q || undefined} style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "left" }}>
         <div style={{ flex: 1, minWidth: 0, padding: "11px 14px" }}>
           <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>One-time Centium hiring fee</div>
-          <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{feeCalcLine(q)}</div>
-          {q.minimumApplied ? <div style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 800, color: m.caution }}>Minimum fee applied</div> : null}
+          <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{q ? feeCalcLine(q, rules?.rate ?? null) : failed ? "Not worked out yet" : "Working out the fee"}</div>
+          {q?.minimumApplied ? <div style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 800, color: m.caution }}>Minimum fee applied</div> : null}
         </div>
         <div style={{ width: 84, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>{feeMoney(q.fee)}</span>
+          <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>{q ? feeMoney(q.fee) : "–"}</span>
         </div>
         <span aria-hidden style={{ position: "absolute", right: 77, top: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
         <span aria-hidden style={{ position: "absolute", right: 77, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
       </div>
-      <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-        {feeNote({ type: offer.type, minimumApplied: q.minimumApplied, onTeam: offer.onTeam, name: offer.name, direct })}
-      </div>
-      {note ? (
-        <p role={note.tone === "error" ? "alert" : "status"} style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: note.tone === "error" ? 600 : 500, color: note.tone === "error" ? m.high : m.faint }}>
-          {note.text}
+      {q ? (
+        <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
+          {feeNote({ type: offer.type, minimum: q.minimum, minimumApplied: q.minimumApplied, onTeam: offer.onTeam, name: offer.name, direct })}
+        </div>
+      ) : null}
+      {shownNote ? (
+        <p role={shownNote.tone === "error" ? "alert" : "status"} style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: shownNote.tone === "error" ? 600 : 500, color: shownNote.tone === "error" ? m.high : m.faint }}>
+          {shownNote.text}
         </p>
       ) : null}
     </CentredDialog>

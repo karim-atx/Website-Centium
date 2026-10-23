@@ -27,6 +27,8 @@ import {
   startsText,
   tabOf,
   teamButtonText,
+  openingDescription,
+  scheduleLabelOf,
 } from "./hubModel.ts";
 import type { BusinessClassRow } from "../../../services/business-classes/types.ts";
 
@@ -115,15 +117,15 @@ test("offer dialog strings", () => {
   assert.equal(offerPayText("class_slot", 60, "per_slot", null), "$60 for the slot");
   assert.equal(startsText("2026-11-01"), "Sun, Nov 1, 2026");
   assert.equal(
-    feeNote({ type: "role", minimumApplied: false, onTeam: true, name: "Rana Khoury", direct: false }),
+    feeNote({ type: "role", minimum: 25, minimumApplied: false, onTeam: true, name: "Rana Khoury", direct: false }),
     "Charged once when the hire is confirmed and added to your Centium bill. Rana is already on your Team: a new opening is a new hire.",
   );
   assert.equal(
-    feeNote({ type: "role", minimumApplied: true, onTeam: false, name: "Sami Tannous", direct: false }),
+    feeNote({ type: "role", minimum: 25, minimumApplied: true, onTeam: false, name: "Sami Tannous", direct: false }),
     "The minimum for a role is $25. Charged once when the hire is confirmed and added to your Centium bill.",
   );
   assert.equal(
-    feeNote({ type: "role", minimumApplied: false, onTeam: false, name: "Rana Khoury", direct: true }),
+    feeNote({ type: "role", minimum: 25, minimumApplied: false, onTeam: false, name: "Rana Khoury", direct: true }),
     "Charged once when the hire is confirmed and added to your Centium bill. Nothing recurring.",
   );
   assert.equal(sentStrip("Rana Khoury"), "Offer sent to Rana Khoury. Rana accepts in Opportunities.");
@@ -188,4 +190,19 @@ test("live classes → series and sessions", () => {
   );
   assert.equal(s[0].slotTitle, "Saturday Spin 45 cover");
   assert.equal(sessionOptions([row("t", "2026-10-22", "07:00", null), row("u", "2026-10-22", "18:00", null)], "2026-10-22", "09:30").length, 1, "earlier today is gone");
+});
+
+test("create_opening's schedule_label and description come from the form's own facts", () => {
+  const series = [{ id: "s1", label: "Spin 45 · Sun 10:00 AM" }, { id: "s2", label: "HIIT 30 · Mon 7:00 AM" }];
+  const sessions = [{ id: "c1", label: "Spin 45 · Sat, Oct 24, 9:00 AM" }];
+  assert.equal(scheduleLabelOf({ type: "role", seriesIds: ["s1", "s2"], sessionId: null }, series, sessions), "Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 AM");
+  assert.equal(scheduleLabelOf({ type: "class_slot", seriesIds: [], sessionId: "c1" }, series, sessions), "Spin 45 · Sat, Oct 24, 9:00 AM");
+  assert.equal(scheduleLabelOf({ type: "role", seriesIds: [], sessionId: null }, series, sessions), null);
+  assert.equal(
+    openingDescription({ type: "role", pay: 80, payUnit: "per_class", classesPerMonth: 4, requirements: ["First aid"] }, "Spin 45 · Sun 10:00 AM"),
+    "Role · ongoing · Spin 45 · Sun 10:00 AM · $80 per class · 4 classes a month · First aid",
+  );
+  const bare = openingDescription({ type: "role", pay: 900, payUnit: "per_month", classesPerMonth: null, requirements: [] }, null);
+  assert.equal(bare, "Role · ongoing · $900 a month");
+  assert.ok(bare.length >= 10);
 });

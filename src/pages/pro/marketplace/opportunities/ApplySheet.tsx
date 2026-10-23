@@ -8,7 +8,7 @@ import { useApp } from "../../../../context/AppContext";
 import { useOnline } from "../../../../hooks/useOnline";
 import { fetchShowcaseServices } from "../../../../services/pro-market";
 import { applyToOpening, type ApplyInput, type Opportunity } from "../../../../services/team-hiring";
-import { fetchPublicProfile } from "../../../../services/pro-profile";
+import { fetchWorkHistory } from "../../../../services/pro-profile";
 import { payMoney, payText } from "../../../../services/hiring/fee";
 import { MasterSheet, PrimaryButton, SaveError, SoonNote, fieldStyle, lh, px, useMarketColors } from "../../../business-market/listingParts";
 import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parseRate, proposalHint, scheduleLine, unitWord } from "./opportunitiesModel";
@@ -31,12 +31,12 @@ import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parse
 // - Attach (fChips): the professional's own LIVE credentials (named, not
 //   expired unless shown when expired) and services (session types and
 //   offered plans), read only, as toggle chips; "Work history" (W5) is a chip
-//   too once professional_public_profile (DB10, awaiting) lists Centium work
-//   history; pending it is drawn disabled with "Work history is coming
-//   soon.", and with no entries yet disabled with "No Centium work yet.";
-// - the footer CTA "Send application" → apply_to_opening ⟳ (one request id
-//   per sheet); pay_locked / already_applied show the board's words under it;
-//   pending shows "Hiring is coming soon." and changes nothing.
+//   too when work_history (Database Release 2) lists Centium hires; with none
+//   it is drawn disabled with "No Centium work yet." (a failed read: "Couldn't
+//   load your work history.");
+// - the footer CTA "Send application" → apply_to_opening (Release 2: the
+//   message is required, 1 to 2,000 characters, so Send waits for one too);
+//   ATXH1 / ATXH2 / ATXH5 / ATXH6 / ATXH7 show their words under it.
 
 export interface ApplySheetProps {
   opening: Opportunity | null;
@@ -60,7 +60,6 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
   const { authUserId } = useApp();
   const { cv } = useMyCv();
   const ids = { msg: useId(), rate: useId(), rateHint: useId(), attach: useId(), wh: useId() };
-  const [requestId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `apply-${Date.now()}`));
   const [message, setMessage] = useState("");
   const [rate, setRate] = useState(o.allowPayProposals && o.pay != null ? String(o.pay) : "");
   const [available, setAvailable] = useState(false);
@@ -79,8 +78,8 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
       if (!alive) return;
       setServices(r.ok ? [...r.data.sessions.map((s) => ({ id: s.id, label: s.name })), ...r.data.plans.filter((p) => p.active).map((p) => ({ id: p.id, label: p.name }))] : []);
     });
-    // awaiting DB stage DB10 (professional_public_profile): the Work history chip.
-    void fetchPublicProfile(authUserId).then((r) => alive && setHasWork(r.ok && r.value ? r.value.workHistory.length > 0 : null));
+    // work_history (Database Release 2): the Work history chip.
+    void fetchWorkHistory(authUserId).then((r) => alive && setHasWork(r.ok ? r.value.length > 0 : null));
     return () => {
       alive = false;
     };
@@ -100,7 +99,8 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
   const proposals = o.allowPayProposals;
   const rateValue = proposals ? parseRate(rate) : null;
   const rateInvalid = proposals && rate.trim() !== "" && rateValue == null;
-  const canSend = available && !rateInvalid && online;
+  // apply_to_opening needs a message (1 to 2,000 characters) and the availability confirmation (ATXH5).
+  const canSend = available && !rateInvalid && online && message.trim().length > 0;
   const schedule = scheduleLine(o);
 
   const toggle = (k: string) =>
@@ -119,15 +119,13 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
     const r = await applyToOpening(
       o.id,
       {
-        message: message.trim() || null,
+        message: message.trim(),
         proposedPay: rateValue,
         availabilityConfirmed: true,
         attachments: chips.filter((c) => picked.has(c.key)).map((c) => ({ kind: c.kind, refId: c.refId, label: c.label })),
-      },
-      requestId
+      }
     );
     setBusy(false);
-    // awaiting DB stage DB8 (apply_to_opening): pending → the quiet note, nothing changes.
     if (r.ok) return onSent(o);
     if (r.pending) return setSoon(true);
     if (r.error === "already_applied") onAlreadyApplied?.(o);
@@ -242,7 +240,6 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
                 </button>
               );
             })}
-            {/* awaiting DB stage DB10 (Centium work history): until it lists entries the chip can't attach anything. */}
             {hasWork ? null : (
               <button type="button" aria-pressed={false} aria-disabled aria-describedby={ids.wh} className="hit market-focus" style={{ ...sheetChipStyle(false), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "default", opacity: 0.4 }}>
                 Work history
@@ -256,8 +253,8 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
                   ? "No Centium work yet."
                   : "Add credentials and services to your profile to attach them. No Centium work yet."
                 : chips.length || services === null
-                  ? "Work history is coming soon."
-                  : "Add credentials and services to your profile to attach them. Work history is coming soon."}
+                  ? "Couldn't load your work history."
+                  : "Add credentials and services to your profile to attach them. Couldn't load your work history."}
             </div>
           )}
         </div>

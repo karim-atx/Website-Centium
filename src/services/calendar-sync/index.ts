@@ -1,22 +1,35 @@
-// Market + Share 3.0 · W5 · calendar sync: the professional calendar's hired
-// class events (P-CA; PLAN §2.2 DB9, api.md "Calendar"). The P-CA.5.5
-// conflict list comes from accept_hire_offer's `conflicts` refusal (DB8,
-// services/team-hiring); check_conflicts has no caller and no binding.
-//
-// Database stage DB9 has NOT landed (checked 2026-10-22: no Release 2 branch
-// in ../Database; neither function on the local stack). The calls follow PLAN
-// §2.2 DB9 / api.md; `pending` is the calendar's quiet state: the live
-// assigned business classes (services/business-classes
-// fetchClassesAssignedToMe) keep showing meanwhile, and when my_calendar
-// answers its events replace those rows by class session (no duplicates).
+// Market + Share 3.0 · calendar sync: the class sessions on the professional's
+// calendar (P-CA). Database Release 2 (20261213040000): a hired class IS a
+// class_series with professional_id, so no second calendar copy exists;
+// my_calendar(p_from, p_to) returns every class session the caller is the
+// named instructor of (hired or not, told apart by hire_id), and the client
+// merges them with the repo's own calendar_events (classModel.mergeClasses,
+// one row per session). A range is at most a year ("ask for a year at a
+// time", 22023) and 1000 rows, so a longer range is read in windows.
+// The P-CA.5.5 clash list comes from check_conflicts (services/team-hiring).
 
 import { marketRpc, type MarketResult } from "../market/rpc";
 import { parseMyCalendar, type HiredClassEvent } from "./model";
 
 export * from "./model";
 
-/** my_calendar(p_from, p_to): the hired class events in the range (YYYY-MM-DD, inclusive). */
-export function fetchMyCalendar(from: string, to: string): Promise<MarketResult<HiredClassEvent[]>> {
-  // awaiting DB stage DB9
-  return marketRpc("my_calendar", { p_from: from, p_to: to }, "Couldn't load your calendar.", parseMyCalendar);
+/** The longest range my_calendar answers (its limit is 370 days). */
+const WINDOW_DAYS = 365;
+
+const addDays = (ymd: string, n: number): string => {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return t.toISOString().slice(0, 10);
+};
+
+/** my_calendar(p_from, p_to) over YYYY-MM-DD..YYYY-MM-DD (inclusive), a year at a time. */
+export async function fetchMyCalendar(from: string, to: string): Promise<MarketResult<HiredClassEvent[]>> {
+  const out: HiredClassEvent[] = [];
+  for (let a = from; a <= to; a = addDays(a, WINDOW_DAYS + 1)) {
+    const b = addDays(a, WINDOW_DAYS) < to ? addDays(a, WINDOW_DAYS) : to;
+    const r = await marketRpc("my_calendar", { p_from: a, p_to: b }, "Couldn't load your calendar.", parseMyCalendar);
+    if (!r.ok) return r;
+    out.push(...r.value);
+  }
+  return { ok: true, value: out };
 }

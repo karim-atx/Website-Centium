@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MarketError, MarketSkeleton } from "../../../components/market/MarketStates";
 import { FOCUS_CSS } from "../../../components/market/usePress";
-import { feeMoney, feeRows, fetchHiringFees, type HiringFee } from "../../../services/hiring";
+import { feeExplanation, feeMoney, feeRows, fetchHiringFees, type HiringFee } from "../../../services/hiring";
 import { BackHeader, px, useMarketColors } from "../listingParts";
 import { HIRING_ROUTES } from "./HiringRoutes";
-import { TagChip } from "./hiringParts";
+import { TagChip, useFeeRules } from "./hiringParts";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { HiringEmpty, NotForThisBusiness, PaleNote, RECEIPT_ICON } from "./teamParts";
 import { feeRoleLine } from "./teamModel";
@@ -18,13 +18,15 @@ import { feeRoleLine } from "./teamModel";
 // 11.5 --faint, the fee 16 / 800 tabular (feeMoney), the DUE / PAID chip
 // (TagChip: --cautionbg / --caution, --goodbg / --good; the board's padding
 // 2 8 here), and the rows box (--soft radius 12 padding 2 12; rows 7 0, 12;
-// key --faint, value 700) from feeRows(quote): Base used, 8% of base, Minimum
-// applied. Empty: "No hiring fees" with the board's explanation.
+// key --faint, value 700) from feeRows(quote, rate): Base used, 8% of base,
+// Minimum applied, all my_hiring_fees' own figures (amount is what was
+// charged; the rate in the label is the row's own percent_amount / base). Empty: "No hiring
+// fees" with the board's explanation, its numbers from platform_settings.
 //
 // Centium bill (D-32): a fee is a line on the existing `centium_charges`
-// (product `hiring_fee`, DB8); DUE = the charge unpaid, PAID = paid. The page
-// reads my_hiring_fees only, never centium_charges, until DB8 documents it.
-// Pending (DB8 not landed): the drawn empty state, which explains the fee.
+// (product `hiring_fee`, hire_id; Database Release 2); DUE / PAID is
+// hiring_fees.status. The page reads my_hiring_fees only (the `revenue`
+// permission).
 
 type Load = { status: "loading" } | { status: "ok"; fees: HiringFee[] } | { status: "pending" } | { status: "error" };
 
@@ -35,12 +37,12 @@ export default function FeesPage() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [tick, setTick] = useState(0);
   const businessId = biz.canHire ? biz.businessId : null;
+  const rules = useFeeRules();
 
   useEffect(() => {
     if (!businessId) return;
     let alive = true;
     setLoad({ status: "loading" });
-    // awaiting DB stage DB8 (my_hiring_fees)
     void fetchHiringFees(businessId).then((r) => {
       if (!alive) return;
       setLoad(r.ok ? { status: "ok", fees: r.value } : r.pending ? { status: "pending" } : { status: "error" });
@@ -77,7 +79,7 @@ export default function FeesPage() {
         <HiringEmpty
           icon={RECEIPT_ICON}
           title="No hiring fees"
-          body="Each hire through Centium has one fee: 8% of the base, or the minimum ($25 per role, $3 per class slot), whichever is higher. It shows here with how it was worked out."
+          body={feeExplanation(rules)}
           top={36}
         />
       </>
@@ -100,7 +102,7 @@ export default function FeesPage() {
                 </div>
               </div>
               <div style={{ marginTop: 10, borderRadius: 12, background: m.soft, padding: "2px 12px" }}>
-                {feeRows(f.quote).map(([k, v], i) => (
+                {feeRows(f.quote, null).map(([k, v], i) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: px(12) }}>
                     <span style={{ color: m.faint }}>{k}</span>
                     <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{v}</span>

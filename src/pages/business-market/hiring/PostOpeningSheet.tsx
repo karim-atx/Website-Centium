@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBusinessClasses } from "../../../hooks/useBusinessCatalog";
@@ -8,13 +8,15 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { todayLocal } from "../../../utils/date";
 import { MasterSheet, PrimaryButton } from "../listingParts";
-import { FEE_NOTICE, createOpening, type Opening, type ProCard } from "../../../services/hiring";
-import { ChipSet, FeeNoticeRow, FieldBox, FieldGrid, FieldInput, PersonRow, PickerField, ToggleBox } from "./hiringParts";
+import { createOpening, type Opening, type ProCard } from "../../../services/hiring";
+import { ChipSet, FeeNoticeRow, FieldBox, FieldGrid, FieldInput, PersonRow, PickerField, ToggleBox, feeNoticeText, useFeeRules } from "./hiringParts";
 import {
   PROPOSALS_HINT,
   REQUIREMENTS,
   emptyForm,
+  openingDescription,
   parseForm,
+  scheduleLabelOf,
   seriesOptions,
   sessionOptions,
   startsText,
@@ -35,7 +37,7 @@ import {
 //     Pay + Classes a month; Requirements chips; Allow pay proposals.
 //   Class slot · one-off: Type; Linked class (chevron); Pay for the slot +
 //     Positions; Requirements; Allow pay proposals.
-// Footer: the fee notice (FEE_NOTICE, the ticket glyph, 12 / 700 --pdark)
+// Footer: the fee notice (platform_settings' rate and floors, the ticket glyph, 12 / 700 --pdark)
 // over "Post opening" (50, radius 16, --fill), at 0.4 until the form is valid.
 //
 // Ours (not drawn): Pay's unit is chosen next to its label ("per class" / "a
@@ -280,8 +282,6 @@ export function OpeningFormFields({
   );
 }
 
-const newRequestId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-
 export default function PostOpeningSheet({
   open,
   businessId,
@@ -299,9 +299,9 @@ export default function PostOpeningSheet({
   const [form, setForm] = useState<OpeningFormState>(emptyForm);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; tone: "soon" | "error" } | null>(null);
-  const requestId = useRef(newRequestId());
+  const rules = useFeeRules();
 
-  // A fresh form (and request id) each time the sheet opens.
+  // A fresh form each time the sheet opens.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -311,9 +311,6 @@ export default function PostOpeningSheet({
       setBusy(false);
     }
   }
-  useEffect(() => {
-    if (open) requestId.current = newRequestId();
-  }, [open]);
 
   const set = (patch: Partial<OpeningFormState>) => {
     setNote(null);
@@ -325,24 +322,23 @@ export default function PostOpeningSheet({
   const post = async () => {
     if (!parsed || !businessId || busy) return;
     setBusy(true);
-    // awaiting DB stage DB8 (create_opening): pending today → the calm note, the sheet stays.
-    const r = await createOpening(
-      businessId,
-      {
-        type: parsed.type,
-        title: parsed.title,
-        description: null,
-        classSeriesIds: parsed.seriesIds,
-        classSessionId: parsed.sessionId,
-        pay: parsed.pay,
-        payUnit: parsed.payUnit,
-        classesPerMonth: parsed.classesPerMonth,
-        allowPayProposals: parsed.allowProposals,
-        requirements: parsed.requirements,
-        positions: parsed.positions,
-      },
-      requestId.current
-    );
+    // create_opening (Database Release 2). The form draws no description, and the table requires one:
+    // the form's own facts in one line (openingDescription).
+    const scheduleLabel = scheduleLabelOf(parsed, live.series, live.sessions);
+    const r = await createOpening(businessId, {
+      type: parsed.type,
+      title: parsed.title,
+      description: openingDescription(parsed, scheduleLabel),
+      classSeriesIds: parsed.seriesIds,
+      classSessionId: parsed.sessionId,
+      scheduleLabel,
+      pay: parsed.pay,
+      payUnit: parsed.payUnit,
+      classesPerMonth: parsed.classesPerMonth,
+      allowPayProposals: parsed.allowProposals,
+      requirements: parsed.requirements,
+      positions: parsed.positions,
+    });
     setBusy(false);
     if (r.ok) onPosted(r.value, parsed.title);
     else setNote({ text: r.message, tone: r.pending ? "soon" : "error" });
@@ -355,7 +351,7 @@ export default function PostOpeningSheet({
       title="Post opening"
       footer={
         <>
-          <FeeNoticeRow text={FEE_NOTICE} />
+          <FeeNoticeRow text={feeNoticeText(rules)} />
           {note ? (
             <p role={note.tone === "error" ? "alert" : "status"} style={{ margin: "0 0 10px", textAlign: "center", fontSize: textPx(12), fontWeight: note.tone === "error" ? 700 : 500, color: note.tone === "error" ? m.high : m.faint, lineHeight: "normal" }}>
               {note.text}

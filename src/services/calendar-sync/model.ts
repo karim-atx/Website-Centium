@@ -9,9 +9,16 @@ import { num, rows, str } from "../market/parse";
 import { formatMinutes12, minutesOfDay, rangeMinutes12 } from "../../utils/time12";
 
 export type HiredStatus = "scheduled" | "cancelled" | "completed";
-export type UpdatedField = "time" | "day" | "location";
 
-/** One hired class session on the professional's calendar (my_calendar, DB9). */
+/**
+ * One class session the professional is the named instructor of
+ * (my_calendar, Database Release 2 20261213040000): class_id (the
+ * business_classes row), class_series_id, hire_id (null when the class isn't
+ * from a hire), business_id, business_name, gym_id, location, title,
+ * event_date, start_time, end_time, duration_min, recurrence_label ("Every
+ * Mon and Wed", null for a one-off), booked_count, capacity,
+ * pay_per_session (null without a hire), status.
+ */
 export interface HiredClassEvent {
   classSessionId: string;
   hireId: string | null;
@@ -19,21 +26,12 @@ export interface HiredClassEvent {
   businessId: string | null;
   businessName: string;
   title: string;
-  /** The hire's role ("HIIT instructor"), when the reader sends it. */
-  roleTitle: string | null;
   location: string | null;
-  /** The server's own words ("Every Mon and Wed"), when it sends them. */
   recurrenceLabel: string | null;
-  /** ISO weekdays of the series. */
-  weekdays: number[];
   bookedCount: number | null;
   capacity: number | null;
   payPerSession: number | null;
-  /** class_series.colour (D-40); null = the reader sent none. */
-  colour: string | null;
   status: HiredStatus;
-  updatedFields: UpdatedField[];
-  updatedAt: string | null;
   /** Local YYYY-MM-DD, "HH:MM", "HH:MM". */
   date: string;
   start: string;
@@ -43,76 +41,51 @@ export interface HiredClassEvent {
 const pad = (n: number) => String(n).padStart(2, "0");
 const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const localTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const hhmm = (v: unknown): string | null => {
+const hhmm =(v: unknown): string | null => {
   const m = minutesOfDay(str(v));
   return m === null ? null : `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 };
 const STATUSES: HiredStatus[] = ["scheduled", "cancelled", "completed"];
-const FIELDS: UpdatedField[] = ["time", "day", "location"];
 
-/** ISO weekday from 1–7 (or 0 read as Sunday, types.ts's 0–6 reading); null when unreadable. */
-export function isoWeekday(v: unknown): number | null {
-  const n = num(v);
-  if (n === null || !Number.isInteger(n) || n < 0 || n > 7) return null;
-  return n === 0 ? 7 : n;
-}
-
-const list = (v: unknown): unknown[] => {
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string" && v.startsWith("{")) return v.slice(1, -1).split(",").filter(Boolean);
-  return [];
-};
-
-/** One my_calendar row as a hired class event, or null (a repo calendar item, or unreadable). */
+/** One my_calendar row as a class event, or null when it's unreadable. */
 export function parseHiredEvent(r: Record<string, unknown>): HiredClassEvent | null {
-  const session = str(r.class_session_id);
-  if (!session) return null;
-  let date: string | null = null;
-  let start: string | null = null;
-  let end: string | null = null;
-  const s = str(r.starts_at) ? new Date(r.starts_at as string) : null;
-  const e = str(r.ends_at) ? new Date(r.ends_at as string) : null;
-  if (s && !Number.isNaN(s.getTime())) {
-    date = localDate(s);
-    start = localTime(s);
-    if (e && !Number.isNaN(e.getTime())) end = localTime(e);
-  } else {
-    date = str(r.date) && /^\d{4}-\d{2}-\d{2}/.test(r.date as string) ? (r.date as string).slice(0, 10) : null;
-    start = hhmm(r.start_time);
-    end = hhmm(r.end_time);
-    const dur = num(r.duration_min);
-    if (!end && start && dur !== null) {
-      const m = (minutesOfDay(start) ?? 0) + dur;
-      end = `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
-    }
+  const session = str(r.class_id);
+  const date = str(r.event_date) && /^\d{4}-\d{2}-\d{2}/.test(r.event_date as string) ? (r.event_date as string).slice(0, 10) : null;
+  const start = hhmm(r.start_time);
+  if (!session || !date || !start) return null;
+  let end = hhmm(r.end_time);
+  const dur = num(r.duration_min);
+  if (!end && dur !== null) {
+    const m = (minutesOfDay(start) ?? 0) + dur;
+    end = `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
   }
-  if (!date || !start) return null;
-  const status = STATUSES.includes(r.status as HiredStatus) ? (r.status as HiredStatus) : "scheduled";
   return {
     classSessionId: session,
     hireId: str(r.hire_id),
     classSeriesId: str(r.class_series_id),
     businessId: str(r.business_id),
     businessName: str(r.business_name) ?? "",
-    title: str(r.title) ?? str(r.class_title) ?? "",
-    roleTitle: str(r.role_title),
+    title: str(r.title) ?? "",
     location: str(r.location),
     recurrenceLabel: str(r.recurrence_label),
-    weekdays: [...new Set(list(r.weekdays).map(isoWeekday).filter((d): d is number => d !== null))].sort((a, b) => a - b),
     bookedCount: num(r.booked_count),
     capacity: num(r.capacity),
     payPerSession: num(r.pay_per_session),
-    colour: str(r.colour),
-    status,
-    updatedFields: list(r.updated_fields).filter((f): f is UpdatedField => FIELDS.includes(f as UpdatedField)),
-    updatedAt: str(r.updated_at),
+    status: STATUSES.includes(r.status as HiredStatus) ? (r.status as HiredStatus) : "scheduled",
     date,
     start,
     end: end ?? start,
   };
 }
 
-/** my_calendar answers repo calendar items + hired class events: the hired ones only (the repo items keep their live readers). */
+/** ISO weekday from 1–7 (0 read as Sunday); null when unreadable. */
+export function isoWeekday(v: unknown): number | null {
+  const n = num(v);
+  if (n === null || !Number.isInteger(n) || n < 0 || n > 7) return null;
+  return n === 0 ? 7 : n;
+}
+
+/** my_calendar's rows (the repo's own calendar_events keep their live readers; the client merges the two lists). */
 export function parseMyCalendar(data: unknown): HiredClassEvent[] {
   return rows(data)
     .map(parseHiredEvent)
