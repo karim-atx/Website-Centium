@@ -1,6 +1,6 @@
 // Market + Share 3.0 · W5 · the professional calendar's hired class events
 // (P-CA; PLAN §2.2 DB9, api.md "Calendar", types.ts HiredClassEvent) and the calendar sync notices (on hire, gym edits, gym
-// cancels, role removed; DB12 kinds on professional_notifications).
+// cancels, role removed: the member inbox kinds of Database 20261210600000).
 // Pure parsers and display rules (no Supabase import, so node:test runs them).
 // Dates are month first (D-02: "Mon, Nov 2"), times 12-hour (D-03:
 // "7:00 to 7:30 AM"), weekdays ISO (1 = Monday … 7 = Sunday).
@@ -225,18 +225,26 @@ export function payText(pay: number | null): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Sync notices (DB12 kinds on professional_notifications, read through
-// services/pro/notifications). The title keys and payload fields below are
-// the ones this screen reads; DB12 documents the real names (asked of the
-// lead): on hire `classes_added` {hire_id, business_name, class_count,
-// starts_on}; gym edit `class_changed` {hire_id, class_session_id,
-// business_name, class_title, weekday, from_time, to_time}; gym cancel
-// `class_cancelled` {class_session_id, business_name, class_title,
-// session_date}; role ended `removed_from_team` {hire_id, business_name}.
+// Sync notices: the member inbox's calendar kinds (Database 20261210600000,
+// the payload table; read with my_notifications(p_kinds = SYNC_KINDS) by
+// services/pro/notifications fetchMemberInbox). professional_notifications is
+// NOT where these live: its kind enum is request / to_review / update, and
+// notify_member() writes member_notification_kind rows to `notifications`.
+// The documented subject and payload per kind:
+// - classes_added (hire; business_name, role_title, session_count,
+//   first_starts_at): the strip on hire;
+// - class_changed (class_series; business_name, class_title, starts_at,
+//   ends_at, previous_starts_at): the edit card;
+// - class_cancelled (class_session; business_name, class_title, starts_at,
+//   reason): the cancel strip (the lead keeps class_cancelled a CLIENT kind
+//   for the member bell; a professional's own inbox reads it here only);
+// - removed_from_team (business; business_name, role_title, ended_on).
+// Timestamps are read on the device's clock (local date and time).
 
 export type SyncKind = "added" | "changed" | "cancelled" | "removed";
 
-export const SYNC_TITLE_KEYS: Record<string, SyncKind> = {
+/** member_notification_kind → the calendar's notice. */
+export const SYNC_KINDS: Readonly<Record<string, SyncKind>> = {
   classes_added: "added",
   class_changed: "changed",
   class_cancelled: "cancelled",
@@ -249,47 +257,64 @@ export interface SyncNotice {
   createdAt: string;
   hireId: string | null;
   sessionId: string | null;
+  seriesId: string | null;
   businessName: string | null;
   classTitle: string | null;
+  /** Local YYYY-MM-DD of the session (cancelled). */
   date: string | null;
+  /** ISO weekday of the new start (changed). */
   weekday: number | null;
+  /** Local "HH:MM": the previous start and the new start (changed). */
   fromTime: string | null;
   toTime: string | null;
   count: number | null;
+  /** Local YYYY-MM-DD of the first class (added). */
   startsOn: string | null;
 }
 
-/** The notification fields read here (services/pro/notifications ProNotification, structurally). */
+/** The inbox fields read here (services/notifications MemberNotification, structurally). */
 export interface NotificationLike {
   id: string;
-  titleKey: string;
-  subjectType?: string;
+  kind: string;
+  subjectType?: string | null;
   subjectId?: string | null;
   payload: Record<string, unknown>;
   readAt: string | null;
   createdAt: string;
 }
 
-/** An unread sync notification as a notice; null for any other row (or one already read). */
+const instant = (v: unknown): Date | null => {
+  const s = str(v);
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/** An unread calendar notice; null for any other kind (or a row already read). */
 export function parseNotice(n: NotificationLike): SyncNotice | null {
-  const kind = SYNC_TITLE_KEYS[n.titleKey] ?? (n.subjectType ? SYNC_TITLE_KEYS[n.subjectType] : undefined);
+  const kind = SYNC_KINDS[n.kind];
   if (!kind || n.readAt) return null;
   const p = n.payload ?? {};
-  const isoDay = (v: unknown) => (str(v) && /^\d{4}-\d{2}-\d{2}/.test(v as string) ? (v as string).slice(0, 10) : null);
+  const subject = (type: string) => (n.subjectType === type ? str(n.subjectId) : null);
+  const starts = instant(p.starts_at);
+  const before = instant(p.previous_starts_at);
+  const first = instant(p.first_starts_at);
+  const count = num(p.session_count);
   return {
     id: n.id,
     kind,
     createdAt: n.createdAt,
-    hireId: str(p.hire_id),
-    sessionId: str(p.class_session_id),
+    hireId: subject("hire"),
+    sessionId: subject("class_session"),
+    seriesId: subject("class_series"),
     businessName: str(p.business_name),
-    classTitle: str(p.class_title) ?? str(p.title),
-    date: isoDay(p.session_date) ?? isoDay(p.date),
-    weekday: isoWeekday(p.weekday),
-    fromTime: hhmm(p.from_time),
-    toTime: hhmm(p.to_time),
-    count: num(p.class_count),
-    startsOn: isoDay(p.starts_on),
+    classTitle: str(p.class_title),
+    date: kind === "cancelled" && starts ? localDate(starts) : null,
+    weekday: kind === "changed" && starts ? ((starts.getDay() + 6) % 7) + 1 : null,
+    fromTime: kind === "changed" && before ? localTime(before) : null,
+    toTime: kind === "changed" && starts ? localTime(starts) : null,
+    count: count !== null && Number.isInteger(count) && count > 0 ? count : null,
+    startsOn: first ? localDate(first) : null,
   };
 }
 
@@ -349,7 +374,7 @@ export const removedStrip = (gym: string): string => `Your role at ${gym} ended.
 
 /** P-CA.5.2: the notification card's title and body; null when there is too little to say. */
 export function editedNote(n: SyncNotice, events: readonly HiredClassEvent[]): { title: string; body: string } | null {
-  const ofSession = n.sessionId ? events.find((e) => e.classSessionId === n.sessionId) ?? null : null;
+  const ofSession = n.seriesId ? (events.find((e) => e.classSeriesId === n.seriesId) ?? null) : n.sessionId ? (events.find((e) => e.classSessionId === n.sessionId) ?? null) : null;
   const gym = n.businessName ?? ofSession?.businessName ?? null;
   const title = n.classTitle ?? ofSession?.title ?? null;
   if (!gym || !title) return null;

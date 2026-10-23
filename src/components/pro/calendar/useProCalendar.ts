@@ -19,8 +19,9 @@ import {
   type TimeOffRow,
 } from "../../../services/pro/calendar";
 import type { ExceptionMap } from "../../calendar/occurrences";
-import { fetchMyCalendar, type HiredClassEvent, type NotificationLike, SYNC_TITLE_KEYS } from "../../../services/calendar-sync";
-import { fetchNotifications, markRead } from "../../../services/pro/notifications";
+import { fetchMyCalendar, type HiredClassEvent, type NotificationLike, SYNC_KINDS } from "../../../services/calendar-sync";
+import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
+import { CALENDAR_SYNC_KINDS } from "../../../services/notifications/notificationsModel";
 import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel";
 
 /**
@@ -35,7 +36,8 @@ import { addDays, groupTimeOff, isoOf, type TimeOffEntry } from "./calendarModel
  * - Clinical overview: follow-ups due (care plans).
  * - Market + Share 3.0 W5 (P-CA): the hired class events (my_calendar, DB9;
  *   pending until it lands, then they replace the live class rows by session)
- *   and the unread calendar sync notifications (DB12 kinds).
+ *   and the unread calendar sync notices (the member inbox's calendar kinds,
+ *   my_notifications(p_kinds = CALENDAR_SYNC_KINDS)).
  * A failed read keeps whatever was on screen (the rule every calendar here
  * follows): an empty calendar is a claim about somebody's day.
  */
@@ -106,7 +108,7 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       clinical ? fetchFollowUps(authUserId, from, to) : Promise.resolve({ ok: true as const, data: [] as DueFollowUp[] }),
       // awaiting DB stage DB9 (my_calendar)
       fetchMyCalendar(from, to),
-      fetchNotifications(),
+      fetchMemberInbox(CALENDAR_SYNC_KINDS),
     ]);
     setLoaded(true);
     setError(!cal.ok || !av.ok || !off.ok || !ty.ok || !rq.ok);
@@ -129,14 +131,16 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       setHired([]);
       setHiredLive(false);
     }
-    // awaiting DB stage DB12 (the calendar sync kinds: classes_added, class_changed, class_cancelled, removed_from_team)
-    if (nt.ok) setNotices(nt.data.filter((n) => !n.readAt && (SYNC_TITLE_KEYS[n.titleKey] || SYNC_TITLE_KEYS[n.subjectType])));
+    // The member inbox's calendar kinds (Database 20261210600000).
+    // awaiting DB stage DB12: nothing writes classes_added / class_changed / removed_from_team
+    // (or class_cancelled to an instructor) yet.
+    if (nt.ok) setNotices(nt.data.filter((n) => !n.readAt && !!SYNC_KINDS[n.kind]));
   }, [authUserId, clinical]);
 
   /** Seen: hidden here at once, read_at set on the server (the owner's own update). */
   const dismissNotice = useCallback((id: string) => {
     setNotices((list) => list.filter((n) => n.id !== id));
-    void markRead([id]);
+    void markMemberRead([id]);
   }, []);
 
   useEffect(() => {

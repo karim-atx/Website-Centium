@@ -37,10 +37,13 @@ import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, pri
 //   "Hidden" chip (10.5 / 800, --soft / --faint, padding 2 8).
 // Reorder: drag the handle (pointer, the rows move as it passes their
 // middles) or, from the keyboard, Space / Enter to pick up, arrows to move,
-// Space / Enter to drop, Escape to cancel. The order is saved through DB3's
-// reorder_business_offerings (awaiting): while it is pending the order goes
-// back and a neutral strip says "Saving the order is coming soon." The list
-// shows the live order (created_at) until `sort` exists; it is never selected.
+// Space / Enter to drop, Escape to cancel. The order is saved through
+// reorder_business_offerings (awaiting DB3: DB3 added business_offerings.sort
+// in 20261210900000 and public_showcase orders by it, but there is no reorder
+// function and authenticated holds no UPDATE grant on `sort`): while it is
+// pending the order goes back and a neutral strip says "Saving the order is
+// coming soon." The list shows the live order (created_at, newest first);
+// `sort` is never selected here.
 
 const CAP = 3;
 

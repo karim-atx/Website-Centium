@@ -9,7 +9,7 @@ import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { initialsOf } from "../../../components/market/peopleModel";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { fetchNotifications, markRead } from "../../../services/pro/notifications";
+import { fetchMemberInbox, markMemberRead } from "../../../services/pro/notifications";
 import { fetchMyApplications, fetchOpportunities, inviteFromNotification, type Opportunity } from "../../../services/team-hiring";
 import type { ExistingTeamInvite } from "../../../services/hiring/model";
 import { TextLink, lh, px, useMarketColors } from "../../business-market/listingParts";
@@ -142,8 +142,9 @@ export function OpportunitiesTab() {
   }, [routed, navigate, location.pathname]);
   useEffect(() => {
     let alive = true;
-    // awaiting DB stage DB12 (the existing_team_invite notification and its payload)
-    void fetchNotifications().then((r) => {
+    // The member inbox's existing_team_invite rows (Database 20261210600000).
+    // awaiting DB stage DB12: nothing writes existing_team_invite yet.
+    void fetchMemberInbox(["existing_team_invite"]).then((r) => {
       if (!alive || !r.ok) return;
       const now = new Date();
       const seen = new Set<string>();
@@ -290,7 +291,7 @@ export function OpportunitiesTab() {
             const nid = invite.notificationId;
             setInvite(null);
             setWaiting((w) => w.filter((x) => x.invite.id !== inv.id));
-            if (nid) void markRead([nid]);
+            if (nid) void markMemberRead([nid]);
             showStrip(inv.businessName ? `You joined ${inv.businessName}'s team` : "You joined the team");
           }}
         />

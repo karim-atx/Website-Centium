@@ -7,6 +7,7 @@
 // back to its kind, so a new key never renders blank.
 
 import type { ProNotification } from "../../../services/pro/notifications";
+import { notificationCopy, PRO_COPY } from "../../../services/notifications/notificationsModel";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
 
@@ -25,7 +26,27 @@ const winWord = (k: unknown) => (typeof k === "string" && WIN_WORD[k]) || "win";
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+/**
+ * Market + Share 3.0 Release 2: a member-inbox row (`memberKind`, the
+ * professional kinds of Database 20261210600000) reads PRO_COPY with its
+ * payload (services/notifications PRO_FILLS) and P-MA.7's tile per kind.
+ */
+const MEMBER_LOOK: Record<string, Pick<NotificationText, "icon" | "tone">> = {
+  hire_offer_received: { icon: "banknote", tone: "req" },
+  existing_team_invite: { icon: "user-plus", tone: "req" },
+  hired: { icon: "user-plus", tone: "done" },
+  classes_added: { icon: "calendar-check", tone: "pr" },
+  class_changed: { icon: "calendar-check", tone: "act" },
+  class_cancelled: { icon: "calendar-x", tone: "att" },
+  removed_from_team: { icon: "bell", tone: "pr" },
+  instructor_review_received: { icon: "star", tone: "req" },
+};
+
 export function notificationText(n: ProNotification, names: Record<string, string>): NotificationText {
+  if (n.memberKind) {
+    const c = notificationCopy({ titleKey: n.titleKey, kind: n.memberKind, payload: n.payload }, PRO_COPY);
+    return { title: c.title, line: c.body, ...(MEMBER_LOOK[n.memberKind] ?? { icon: "bell", tone: "pr" }) };
+  }
   const p = n.payload;
   const who = (n.clientId && names[n.clientId]) || str(p.first_name) || "A client";
   const key = n.titleKey;

@@ -14,6 +14,7 @@ import {
   isoWeekday,
   parseMyCalendar,
   payText,
+  parseNotice,
   pickNotices,
   recurrenceText,
   removedStrip,
@@ -101,40 +102,63 @@ test("words: month-first dates, 12-hour times, the sheet rows", () => {
   assert.equal(payText(null), null);
 });
 
-const n = (o: Partial<NotificationLike>): NotificationLike => ({ id: "n", titleKey: "x", payload: {}, readAt: null, createdAt: "2026-11-01T10:00:00Z", ...o });
+// Local wall-clock instants (no zone suffix): the notices read times on the device's clock.
+const n = (o: Partial<NotificationLike>): NotificationLike => ({ id: "n", kind: "x", subjectType: null, subjectId: null, payload: {}, readAt: null, createdAt: "2026-11-01T10:00:00Z", ...o });
 
-test("notices: unread sync kinds only; the latest strip and the latest edit", () => {
+test("notices: unread member-inbox sync kinds only; the latest strip and the latest edit", () => {
   const p = pickNotices([
-    n({ id: "a", titleKey: "classes_added", createdAt: "2026-11-01T09:00:00Z" }),
-    n({ id: "b", titleKey: "class_cancelled", createdAt: "2026-11-01T11:00:00Z" }),
-    n({ id: "c", titleKey: "class_changed" }),
-    n({ id: "d", titleKey: "removed_from_team", readAt: "2026-11-01T12:00:00Z", createdAt: "2026-11-01T12:00:00Z" }),
-    n({ id: "e", titleKey: "application_received" }),
+    n({ id: "a", kind: "classes_added", createdAt: "2026-11-01T09:00:00Z" }),
+    n({ id: "b", kind: "class_cancelled", createdAt: "2026-11-01T11:00:00Z" }),
+    n({ id: "c", kind: "class_changed" }),
+    n({ id: "d", kind: "removed_from_team", readAt: "2026-11-01T12:00:00Z", createdAt: "2026-11-01T12:00:00Z" }),
+    n({ id: "e", kind: "application_received" }),
+    // the old guessed title keys on another kind no longer count
+    n({ id: "f", kind: "hired", subjectType: "classes_added", createdAt: "2026-11-01T13:00:00Z" }),
   ]);
   assert.equal(p.strip?.id, "b");
   assert.equal(p.note?.id, "c");
 });
 
+test("notices: the documented subject and payload keys (20261210600000)", () => {
+  const added = parseNotice(n({ kind: "classes_added", subjectType: "hire", subjectId: "h1", payload: { business_name: "Gym A", role_title: "HIIT instructor", session_count: 3, first_starts_at: "2026-11-02T07:00:00" } }))!;
+  assert.deepEqual([added.kind, added.hireId, added.businessName, added.count, added.startsOn], ["added", "h1", "Gym A", 3, "2026-11-02"]);
+  const changed = parseNotice(n({ kind: "class_changed", subjectType: "class_series", subjectId: "cs1", payload: { business_name: "Gym A", class_title: "HIIT 30", starts_at: "2026-11-04T07:30:00", ends_at: "2026-11-04T08:00:00", previous_starts_at: "2026-11-04T07:00:00" } }))!;
+  assert.deepEqual([changed.seriesId, changed.weekday, changed.fromTime, changed.toTime, changed.sessionId], ["cs1", 3, "07:00", "07:30", null]);
+  const cancelled = parseNotice(n({ kind: "class_cancelled", subjectType: "class_session", subjectId: "s2", payload: { business_name: "Gym A", class_title: "Core 20", starts_at: "2026-11-06T18:00:00", reason: "Coach ill" } }))!;
+  assert.deepEqual([cancelled.sessionId, cancelled.date, cancelled.classTitle], ["s2", "2026-11-06", "Core 20"]);
+  const removed = parseNotice(n({ kind: "removed_from_team", subjectType: "business", subjectId: "b1", payload: { business_name: "Gym B", role_title: "Coach", ended_on: "2026-11-01" } }))!;
+  assert.deepEqual([removed.businessName, removed.hireId, removed.sessionId], ["Gym B", null, null]);
+  // a subject id of another type is never read as a hire / session / series
+  assert.equal(parseNotice(n({ kind: "classes_added", subjectType: "business", subjectId: "b1" }))!.hireId, null);
+  assert.equal(parseNotice(n({ kind: "classes_added", payload: { session_count: 0 } }))!.count, null);
+});
+
 test("strips: payload first, then what the events say; never invented", () => {
   const events = parseMyCalendar([row(), row({ class_session_id: "s2", class_series_id: "cs2", date: "2026-11-06" })]);
-  const added = pickNotices([n({ titleKey: "classes_added", payload: { hire_id: "h1" } })]).strip!;
+  const added = pickNotices([n({ kind: "classes_added", subjectType: "hire", subjectId: "h1" })]).strip!;
   assert.deepEqual(stripOf(added, events, "2026-11-01"), { text: "2 classes added to your calendar · Gym A, from Mon, Nov 2", tone: "success", action: "View", jumpTo: "2026-11-02" });
-  const unknown = pickNotices([n({ titleKey: "classes_added", payload: { hire_id: "zz" } })]).strip!;
+  const fromPayload = pickNotices([n({ kind: "classes_added", subjectType: "hire", subjectId: "zz", payload: { business_name: "Gym C", session_count: 4, first_starts_at: "2026-11-09T07:00:00" } })]).strip!;
+  assert.equal(stripOf(fromPayload, [], "2026-11-01")?.text, "4 classes added to your calendar · Gym C, from Mon, Nov 9");
+  const unknown = pickNotices([n({ kind: "classes_added", subjectType: "hire", subjectId: "zz" })]).strip!;
   assert.equal(stripOf(unknown, events, "2026-11-01"), null);
-  const cancelled = pickNotices([n({ titleKey: "class_cancelled", payload: { class_session_id: "s2" } })]).strip!;
+  const cancelled = pickNotices([n({ kind: "class_cancelled", subjectType: "class_session", subjectId: "s2" })]).strip!;
   assert.equal(stripOf(cancelled, events, "2026-11-01")?.text, "Gym A cancelled HIIT 30 on Fri, Nov 6");
-  const removed = pickNotices([n({ titleKey: "removed_from_team", payload: { business_name: "Gym B" } })]).strip!;
+  const removed = pickNotices([n({ kind: "removed_from_team", subjectType: "business", payload: { business_name: "Gym B" } })]).strip!;
   assert.deepEqual(stripOf(removed, [], "2026-11-01"), { text: removedStrip("Gym B"), tone: "neutral", action: "OK", jumpTo: null });
   assert.equal(addedStrip(1, "Gym A", null), "1 class added to your calendar · Gym A");
   assert.equal(cancelledStrip("Gym A", "Core 20", null), "Gym A cancelled Core 20");
 });
 
-test("the edit card: times when sent, else a plain line", () => {
-  const timed = pickNotices([n({ titleKey: "class_changed", payload: { business_name: "Gym A", class_title: "HIIT 30", weekday: 3, from_time: "07:00", to_time: "07:30" } })]).note!;
+test("the edit card: times from previous_starts_at → starts_at, else a plain line", () => {
+  const timed = pickNotices([n({ kind: "class_changed", subjectType: "class_series", subjectId: "cs9", payload: { business_name: "Gym A", class_title: "HIIT 30", starts_at: "2026-11-04T07:30:00", previous_starts_at: "2026-11-04T07:00:00" } })]).note!;
   assert.deepEqual(editedNote(timed, []), { title: "Class time changed", body: "Gym A moved HIIT 30 on Wednesdays from 7:00 to 7:30 AM. Your calendar is updated." });
-  const plain = pickNotices([n({ titleKey: "class_changed", payload: { business_name: "Gym A", class_title: "HIIT 30" } })]).note!;
+  const plain = pickNotices([n({ kind: "class_changed", payload: { business_name: "Gym A", class_title: "HIIT 30" } })]).note!;
   assert.equal(editedNote(plain, [])?.title, "Class changed");
-  const bare = pickNotices([n({ titleKey: "class_changed" })]).note!;
+  // the series' own events fill the names when the payload lacks them
+  const events = parseMyCalendar([row()]);
+  const bySeries = pickNotices([n({ kind: "class_changed", subjectType: "class_series", subjectId: "cs1" })]).note!;
+  assert.deepEqual(editedNote(bySeries, events), { title: "Class changed", body: "Gym A changed HIIT 30. Your calendar is updated." });
+  const bare = pickNotices([n({ kind: "class_changed" })]).note!;
   assert.equal(editedNote(bare, []), null);
 });
 

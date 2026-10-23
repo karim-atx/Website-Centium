@@ -1,6 +1,6 @@
 // Market + Share 3.0 · W2 · My bookings, pure (C-MO.4.5 `bookMembers`,
-// `bookUpcoming`, `bookPast`, `bookEmpty`). DB4 my_bookings (optional, PLAN
-// §2.2) hasn't landed, so the rows are composed here from the live readers:
+// `bookUpcoming`, `bookPast`, `bookEmpty`). The rows are composed here from
+// the live readers (Past's classes come from DB4 my_class_bookings, below):
 // my_gym_memberships() and my_hires() (Memberships), my_class_schedule (+ the
 // class's venue and cancellation) and the member's own professional
 // appointments (Upcoming / Past). The row shape is the board's `list.items`
@@ -293,46 +293,42 @@ export function splitSchedule(rows: readonly { row: BookingRow; past: boolean }[
 }
 
 // ---------------------------------------------------------------------------
-// Past from my_bookings (W5; DB4 `reviewable` / `reviewed`, D-43)
+// Past classes from my_class_bookings (DB4 `can_review` / `my_rating`, D-43)
 //
-// When my_bookings(p_tab 'past') answers, Past is its rows (descending, as
-// DB4 sorts them), so a past class taught by a Team instructor carries the
-// server's reviewability (C-MO.4.5 `bookPast`, Client Professional Screens
-// `pastItems`):
-// - reviewable, not reviewed: meta "Fri, Oct 9 · 6:30 PM · Rate your
+// When my_class_bookings(p_tab 'past') answers, Past's CLASS rows are its
+// rows (the composed class rows leave Past; the professional sessions stay
+// composed, DB4 carries classes only), so a past class taught by an
+// instructor carries the server's reviewability (C-MO.4.5 `bookPast`, Client
+// Professional Screens `pastItems`):
+// - can_review, no my_rating: meta "Fri, Oct 9 · 6:30 PM · Rate your
 //   instructor", the stub "Review" teal (a button → the review popup);
-// - reviewed (or sent this session): meta "… · you rated 5", the stub
+// - my_rating (or sent this session): meta "… · you rated 5", the stub
 //   "Reviewed" muted;
-// - anything else: as the composed rows ("Mon Oct 12" muted, "Cancelled").
-// While my_bookings is pending, Past stays the composed rows (no Review stub).
+// - anything else: as the composed class rows ("Mon Oct 12" muted; the
+//   venue's cancellation "Cancelled").
+// While it is pending or failed, Past stays the composed rows (no Review stub).
 
-const OFF_STATUS = new Set(["cancelled", "late_cancel", "declined", "no_show", "rejected", "cancelled_by_venue"]);
-
-/** A my_bookings past row; `sentRating` is a review sent this session. */
+/** A my_class_bookings past row; `sentRating` is a review sent this session. */
 export function pastRow(b: PastBooking, sentRating?: number | null): BookingRow {
   const start = b.startsAt ? new Date(b.startsAt) : null;
   const end = b.endsAt ? new Date(b.endsAt) : null;
   const okStart = start && !Number.isNaN(start.getTime()) ? start : null;
-  const off = !!b.status && OFF_STATUS.has(b.status);
+  const off = b.cancelled;
   const sent = sentRating !== undefined && sentRating !== null;
   const target = sent ? null : targetOf(b);
-  const reviewed = sent || (b.kind === "class" && b.reviewed);
-  const isClass = b.kind === "class";
-  const isSession = b.kind === "professional_session";
-  const who = b.professionalName ? (isSession && b.professionalType ? `${b.professionalName} · ${b.professionalType}` : b.professionalName) : null;
-  const sub = isClass ? [b.providerName, who].filter(Boolean).join(" · ") : isSession ? (who ?? b.providerName) : b.providerName;
-  const tile = tileInitials(isSession ? (b.professionalName ?? b.providerName) : b.providerName || b.title);
+  const reviewed = sent || b.reviewed;
+  const sub = [b.providerName, b.professionalName].filter(Boolean).join(" · ");
+  const tile = tileInitials(b.providerName || b.title);
   const tail = target || reviewed ? reviewMetaTail({ reviewed, rating: sent ? (sentRating as number) : b.myRating }) : null;
   const meta = okStart
     ? (target || reviewed) && !off
       ? [dayLine(okStart), clock(okStart), tail].filter(Boolean).join(" · ")
-      : sessionMeta(okStart, end && !Number.isNaN(end.getTime()) ? end : null) + (off ? " · Cancelled" : "")
+      : sessionMeta(okStart, end && !Number.isNaN(end.getTime()) ? end : null) + (off ? " · Cancelled by the venue" : "")
     : (tail ?? "");
   const stub = off ? "Cancelled" : target ? "Review" : reviewed ? "Reviewed" : okStart ? pastStub(okStart) : "Past";
-  const href = isClass && b.sessionId ? `/app/marketplace/class?id=${encodeURIComponent(b.sessionId)}` : isSession && b.professionalId ? `/app/professionals/${encodeURIComponent(b.professionalId)}` : null;
   return {
-    key: `p-${b.kind}-${b.refId}`,
-    kind: isClass ? "class" : isSession ? "session" : b.kind === "professional_package" ? "package" : "membership",
+    key: `p-class-${b.refId}`,
+    kind: "class",
     tile,
     title: b.title,
     sub,
@@ -341,15 +337,15 @@ export function pastRow(b: PastBooking, sentRating?: number | null): BookingRow 
     stub,
     tone: target && !off ? "teal" : "muted",
     at: okStart ? okStart.getTime() : 0,
-    href,
+    href: b.sessionId ? `/app/marketplace/class?id=${encodeURIComponent(b.sessionId)}` : null,
     refId: b.refId,
     review: off ? null : target,
   };
 }
 
-/** Past from my_bookings: the rows, newest first. */
-export function pastRows(list: readonly PastBooking[], sent: Readonly<Record<string, number>>): BookingRow[] {
-  return list.map((b) => pastRow(b, sent[b.refId])).sort((a, b) => b.at - a.at);
+/** Past: the DB4 class rows plus the composed rows that aren't classes (the professional sessions), newest first. */
+export function pastRows(list: readonly PastBooking[], sent: Readonly<Record<string, number>>, others: readonly BookingRow[] = []): BookingRow[] {
+  return [...list.map((b) => pastRow(b, sent[b.refId])), ...others.filter((r) => r.kind !== "class")].sort((a, b) => b.at - a.at);
 }
 
 // ---------------------------------------------------------------------------

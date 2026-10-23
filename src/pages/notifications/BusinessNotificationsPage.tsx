@@ -14,9 +14,9 @@ import {
   bizNotifLook,
   bizNotifTarget,
   BUSINESS_COPY,
+  BUSINESS_KINDS,
   fetchMyNotifications,
   groupNotifications,
-  isBusinessKind,
   markNotificationsRead,
   markReadLocally,
   notificationCursor,
@@ -43,51 +43,34 @@ import { NotificationRow, NotificationsEmpty } from "./ClientNotificationsPage";
 // - the kinds the board draws: application_received (lav, send),
 //   hire_offer_accepted (teal, ticket check), hiring_fee_added (gold, bill),
 //   hire_offer_declined (grey, x), voucher_redeemed (blue, QR),
-//   review_received (gold, star); bizNotifTarget is where each opens.
-// DB6 (Database 20261210600000) has ONE inbox per profile and no business
-// scope, so this page reads the owner's own my_notifications and keeps the
-// business kinds (isBusinessKind) client-side. A server-side kind filter
-// (my_notifications(p_kinds)) would be better: an owner with many member rows
-// pages through them here. Each read (first load, "Load more") fetches server
-// pages of FETCH rows until it has gathered PAGE business rows or the inbox
-// ends, at most MAX_PAGES pages, then offers "Load more" if the inbox goes on;
-// the cursor is the last row READ (any kind), not the last row shown.
+//   gym_review_received (gold, star); BUSINESS_FILLS interpolates the
+//   documented payload keys, bizNotifTarget is where each opens.
+// The member inbox (Database 20261210600000, HANDOVER_API Release 1
+// "Notifications") filtered on the server: my_notifications(p_before,
+// p_limit, p_before_id, p_kinds = BUSINESS_KINDS), PAGE rows at a time,
+// "Load more" with the last row shown as (p_before, p_before_id).
 // Read state as the client page: opening reads nothing; a tap marks that row
-// (mark_notifications_read([id])) and opens its target; "Mark all read" sends
-// the ids of the unread business rows loaded here, NEVER null (null would also
-// clear the member inbox of the same profile). Unread business rows further
-// down, not loaded yet, stay unread.
-// awaiting DB stage DB12: nothing writes the hiring kinds yet (who sends
-// application_received / hire_offer_* / hiring_fee_added / review_received,
-// with which subject_type and payload keys); until then those rows never
-// arrive and the page shows its quiet empty state (ours: the board draws
-// none), never sample rows.
+// (mark_notifications_read([id])) and opens its target; "Mark all read" is
+// mark_notifications_read(null, BUSINESS_KINDS): every unread business row,
+// loaded or not, and never the owner's other kinds.
+// awaiting DB stage DB12: nothing writes the hiring kinds or
+// gym_review_received yet (redeem_offer and admin_set_offer_hidden write the
+// two Release 1 owner kinds); until then those rows never arrive and the page
+// shows its quiet empty state (ours: the board draws none), never sample rows.
 
 const PAGE = 30;
-const FETCH = 100;
-const MAX_PAGES = 5;
 const OFFLINE_NOTE = "You're offline. Try again when you're connected.";
 const BUSINESS_NOTIF_EMPTY = "Applications, offer replies, hiring fees, vouchers and reviews will show here.";
 
-type Batch = { items: MemberNotification[]; cursor: NotificationCursor | null; more: boolean };
-type Read = { ok: true; batch: Batch } | { ok: false; offline: boolean };
+type Read = { ok: true; items: MemberNotification[]; more: boolean } | { ok: false; offline: boolean };
 
-/** Server pages from `cursor` until PAGE business rows, the end, or MAX_PAGES. */
-async function readBusinessRows(from: NotificationCursor | null): Promise<Read> {
-  const items: MemberNotification[] = [];
-  let cursor = from;
-  for (let i = 0; i < MAX_PAGES; i++) {
-    const r = await fetchMyNotifications(cursor, FETCH);
-    if (!r.ok) return { ok: false, offline: !!r.offline };
-    items.push(...r.value.items.filter((n) => isBusinessKind(n.kind)));
-    cursor = notificationCursor(r.value.items) ?? cursor;
-    if (!r.value.more) return { ok: true, batch: { items, cursor, more: false } };
-    if (items.length >= PAGE) break;
-  }
-  return { ok: true, batch: { items, cursor, more: true } };
+/** One page of business rows after `cursor` (the last row shown); the server filters the kinds. */
+async function readBusinessRows(cursor: NotificationCursor | null): Promise<Read> {
+  const r = await fetchMyNotifications(cursor, PAGE, BUSINESS_KINDS);
+  return r.ok ? { ok: true, items: r.value.items, more: r.value.more } : { ok: false, offline: !!r.offline };
 }
 
-type State = { s: "loading" } | { s: "ok"; list: MemberNotification[]; cursor: NotificationCursor | null; more: boolean } | { s: "error"; offline: boolean };
+type State = { s: "loading" } | { s: "ok"; list: MemberNotification[]; more: boolean } | { s: "error"; offline: boolean };
 
 export default function BusinessNotificationsPage() {
   const dark = useIsDark();
@@ -106,7 +89,7 @@ export default function BusinessNotificationsPage() {
     let cancelled = false;
     void readBusinessRows(null).then((r) => {
       if (cancelled) return;
-      setState(r.ok ? { s: "ok", list: r.batch.items, cursor: r.batch.cursor, more: r.batch.more } : { s: "error", offline: r.offline });
+      setState(r.ok ? { s: "ok", list: r.items, more: r.more } : { s: "error", offline: r.offline });
     });
     return () => {
       cancelled = true;
@@ -115,29 +98,28 @@ export default function BusinessNotificationsPage() {
 
   const list = state.s === "ok" ? state.list : [];
   const unread = unreadCount(list);
-  /** `at` null puts the rows back to unread (a failed mark). */
-  const setRead = (ids: Set<string>, at: string | null) =>
-    setState((st) => (st.s !== "ok" ? st : { ...st, list: at ? markReadLocally(st.list, ids, at) : st.list.map((n) => (ids.has(n.id) ? { ...n, readAt: null } : n)) }));
+  /** `ids` null = every row shown; `at` null puts the rows back to unread (a failed mark). */
+  const setRead = (ids: Set<string> | null, at: string | null) =>
+    setState((st) => (st.s !== "ok" ? st : { ...st, list: at ? markReadLocally(st.list, ids, at) : st.list.map((n) => (!ids || ids.has(n.id) ? { ...n, readAt: null } : n)) }));
 
   const loadMore = useCallback(async () => {
     if (state.s !== "ok" || !state.more || loadingMore) return;
     setLoadingMore(true);
     setMoreFailed(false);
-    const r = await readBusinessRows(state.cursor);
+    const r = await readBusinessRows(notificationCursor(state.list));
     setLoadingMore(false);
     if (!r.ok) return setMoreFailed(true);
-    setState((st) => (st.s === "ok" ? { s: "ok", list: [...st.list, ...r.batch.items], cursor: r.batch.cursor, more: r.batch.more } : st));
+    setState((st) => (st.s === "ok" ? { s: "ok", list: [...st.list, ...r.items], more: r.more } : st));
   }, [state, loadingMore]);
 
   const markAll = async () => {
-    // Only the business rows loaded here, by id: never mark_notifications_read(null).
-    const ids = list.filter((n) => !n.readAt).map((n) => n.id);
-    if (busy || ids.length === 0) return;
+    // Every unread business row, loaded or not (null ids scoped to BUSINESS_KINDS); never the owner's other kinds.
+    if (busy || unread === 0) return;
     setBusy(true);
     setFailNote(null);
-    const r = await markNotificationsRead(ids);
+    const r = await markNotificationsRead(null, BUSINESS_KINDS);
     setBusy(false);
-    if (r.ok) setRead(new Set(ids), new Date().toISOString());
+    if (r.ok) setRead(null, new Date().toISOString());
     else setFailNote(r.offline ? OFFLINE_NOTE : r.message);
   };
 
@@ -202,7 +184,6 @@ export default function BusinessNotificationsPage() {
           }} style={{ marginTop: 12 }} />
       ) : (
         <>
-          {/* No business rows read yet (the inbox may go on past MAX_PAGES: "Load more" stays). */}
           {list.length === 0 ? <NotificationsEmpty body={BUSINESS_NOTIF_EMPTY} /> : null}
           {groupNotifications(list).map((g) => (
             <section key={g.heading} aria-labelledby={`biz-notif-${g.heading}`}>

@@ -10,6 +10,7 @@ import { Toggle } from "../ui/Toggle";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
 import type { MyVenue } from "../../services/venues/consoleLogic";
+import { unreadBadge } from "../../services/notifications/notificationsModel";
 
 // DA1-015 #2-#7 (header, bell, name row, Listed chip), S1 (Needs your
 // attention), DA2-003 (Finish setting up), OURS-DA-kept-features #1, #2, #4
@@ -221,8 +222,29 @@ const ATT_ICON: Record<AttentionIcon, typeof EyeOff> = {
  * shown as a retry row rather than "You're all caught up".
  * Market + Share 3.0 W4 (D-38): a "Notifications" row at the top opens the
  * business inbox (B-MA.9, /app/business/notifications); the rest is kept.
+ * `notificationsUnread` (optional): the unread business notices
+ * (my_unread_notification_count(BUSINESS_KINDS)), a count pill on that row
+ * when above 0 ("99+" at the cap); null or 0 shows none.
  */
-export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRetry }: { c: DashPalette; open: boolean; items: AttentionItem[] | null; anchor: HTMLElement | null; onClose: () => void; onAction: (item: AttentionItem) => void; onRetry: () => void }) {
+export function AttentionPanel({
+  c,
+  open,
+  items,
+  anchor,
+  onClose,
+  onAction,
+  onRetry,
+  notificationsUnread,
+}: {
+  c: DashPalette;
+  open: boolean;
+  items: AttentionItem[] | null;
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  onAction: (item: AttentionItem) => void;
+  onRetry: () => void;
+  notificationsUnread?: number | null;
+}) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   useEffect(() => {
     if (!open || !anchor) return;
@@ -268,6 +290,7 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
         <button
           type="button"
           data-notifications-row
+          aria-label={notificationsUnread ? `Notifications, ${unreadBadge(notificationsUnread)} unread` : undefined}
           onClick={() => {
             onClose();
             navigate("/app/business/notifications");
@@ -281,6 +304,15 @@ export function AttentionPanel({ c, open, items, anchor, onClose, onAction, onRe
             Notifications
             <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>Applications, offer replies, hiring fees and reviews</span>
           </span>
+          {notificationsUnread ? (
+            <span
+              data-notifications-count
+              aria-hidden
+              style={{ minWidth: 18, height: 18, padding: "0 5px", borderRadius: 999, background: c.fill, color: c.onFill, fontSize: textPx(10), fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box", flexShrink: 0 }}
+            >
+              {unreadBadge(notificationsUnread)}
+            </span>
+          ) : null}
           <span style={{ display: "flex", color: c.faint }}>
             <ChevronRight size={15} aria-hidden />
           </span>

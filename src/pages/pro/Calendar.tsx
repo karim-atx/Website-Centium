@@ -98,7 +98,7 @@ import { startThread } from "../../services/messaging";
  *   their class colour (D-40; classModel), open the Class sheet
  *   (HiredClassSheet); the Month grid has two dot rows; the sync strip (on
  *   hire / cancelled / removed) sits under the tabs and the "Class time
- *   changed" card over the header (DB12 notifications); the Week view shows
+ *   changed" card over the header (the member inbox's calendar kinds); the Week view shows
  *   "No hired classes yet" when no class is on the calendar.
  * Deep links: ?day=YYYY-MM-DD opens that day (the hub's booking request),
  * ?new=1&client=<id> opens Add session for that client (the client page).
@@ -442,7 +442,7 @@ export default function Calendar() {
     await message(owner);
   };
 
-  // ---- calendar sync (P-CA.5.1 to 5.4; DB12 notifications) ----
+  // ---- calendar sync (P-CA.5.1 to 5.4; the member inbox's calendar kinds) ----
   const sync = useMemo(() => pickNotices(data.notices), [data.notices]);
   const strip = sync.strip ? stripOf(sync.strip, data.hired, todayIso) : null;
   const note = sync.note ? editedNote(sync.note, data.hired) : null;

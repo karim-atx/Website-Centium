@@ -21,7 +21,7 @@ import { fetchMarketplaceVenues, type MarketplaceVenue } from "../../../services
 import { recordListingEvent } from "../../../services/marketplace/listingEvents";
 import { parseListingSource } from "../../../services/marketplace/listingLogic";
 import { businessHasVenue } from "../../../services/venues";
-import { fetchStoreProducts, type Product } from "../../../services/store/products";
+import type { Product } from "../../../services/store/products";
 import { fetchShowcaseOffers, forAge, type CatalogOffer } from "../../../services/offers";
 import { forumAccess } from "../../../services/forum/rules";
 import type { MarketResult } from "../../../services/market/rpc";
@@ -31,7 +31,7 @@ import { marketplaceCategoryIcon } from "../../../utils/icons";
 import type { MarketplaceCategoryId } from "../../../types";
 import { TYPE_CATEGORY } from "../venueTypes";
 import { distanceLine, productsNote, showcaseSegments, showcaseTypeLabel, type ShowcaseSegKey } from "./rewardsModel";
-import { fetchShowcaseExtras, type ShowcaseExtras } from "./showcaseData";
+import { fetchShowcaseExtras, fetchShowcaseItems, type ShowcaseExtras } from "./showcaseData";
 import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsParts";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.1 Business showcase (`showcase`,
@@ -56,8 +56,10 @@ import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsP
 // - "Products" + "Display prices. Buy in store or online." (11 --faint,
 //   baseline row, margin-top 18), then (margin-top 8) a 2-column grid, gap 10:
 //   a square photo radius 16 --soft, the name 13 / 700 (margin-top 6), the
-//   price 12 --ink2. The business's real business_offerings rows; no photo
-//   is a designed empty tile (a bag glyph in --tert), never "PRODUCT PHOTO".
+//   price 12 --ink2. The business's shelf from DB3's public_showcase (the
+//   visible, unhidden business_offerings rows in the owner's order; empty for
+//   a paused or closed business); no photo is a designed empty tile (a bag
+//   glyph in --tert), never "PRODUCT PHOTO".
 // Segments with no data are left out (no website → no Online; no location →
 // no Location), see rewardsModel.showcaseSegments.
 //
@@ -121,10 +123,10 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   const loadProducts = useCallback(() => {
     let live = true;
     setProducts({ state: "loading" });
-    void fetchStoreProducts(businessId).then((r) => {
+    // DB3 public_showcase: the visible, unhidden items in the owner's order.
+    void fetchShowcaseItems("business", businessId).then((list) => {
       if (!live) return;
-      // RLS gives the public only visible products of a listed business.
-      setProducts(r.status === "ok" ? { state: "done", ok: true, list: r.value.products.filter((p) => p.visible) } : { state: "done", ok: r.status === "pending", list: [] });
+      setProducts(list ? { state: "done", ok: true, list } : { state: "done", ok: false, list: [] });
     });
     return () => {
       live = false;

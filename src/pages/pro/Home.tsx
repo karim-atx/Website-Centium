@@ -42,6 +42,7 @@ import { cancelHire, type PendingHire } from "../../services/hires/pro";
 import { acceptEmployment, removeMyEmployment, type MyEmployment } from "../../services/business-team/employment";
 import { startThread } from "../../services/messaging";
 import type { ProNotification } from "../../services/pro/notifications";
+import { proMemberTarget } from "../../services/notifications/notificationsModel";
 
 /**
  * Release 3 · Home (/app/pro, CL1 v6; HANDOVER f "CL · Home"; FINAL_PLAN W2).
@@ -342,6 +343,13 @@ export default function Home() {
 
   const openNotification = (n: ProNotification) => {
     void inbox.markRead([n.id]);
+    // Market + Share 3.0 Release 2: a member-inbox row (hire offers, hires,
+    // calendar changes, instructor reviews) opens its page (proMemberTarget).
+    if (n.memberKind) {
+      setHubOpen(false);
+      navigate(proMemberTarget({ kind: n.memberKind, payload: n.payload }));
+      return;
+    }
     switch (n.subjectType) {
       case "hire":
       case "client_request":

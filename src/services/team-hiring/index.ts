@@ -219,17 +219,21 @@ export function fetchMyWork(): Promise<MarketResult<WorkItem[]>> {
 
 /**
  * An existing-team invite from its notification (P-MA.7 row → P-MA.5.4).
- * PLAN §2.2 documents no invite reader (only accept / decline): the invite
- * reaches the professional as a `professional_notifications` row (DB8 / DB12
- * kind `existing_team_invite`), subject_id = the invite, payload = business
- * name, sent and accept-by dates. Backend gap reported: confirm the payload
- * keys, or add a reader. null when the row isn't an invite.
+ * There is no invite reader: the invite reaches the professional as a MEMBER
+ * inbox row (Database 20261210600000's payload table): kind
+ * `existing_team_invite`, subject_type `business_employee` (subject_id = the
+ * business_employees row, the invite), payload business_name, business_id,
+ * accept_by, fee_text. A bare `accept_by` date is open to the end of that
+ * day. `memberKind` is the hub's row (services/pro/notifications), `kind` a
+ * my_notifications row. null when the row isn't an invite.
+ * awaiting DB stage DB12: nothing writes existing_team_invite yet.
  */
-export function inviteFromNotification(n: { subjectType: string; subjectId: string | null; titleKey: string; payload: Record<string, unknown>; createdAt: string }): ExistingTeamInvite | null {
-  // awaiting DB stage DB12 (the existing_team_invite notification and its payload)
-  if (n.subjectType !== "existing_team_invite" && n.titleKey !== "existing_team_invite") return null;
+export function inviteFromNotification(n: { kind: string; memberKind?: string; subjectType: string | null; subjectId: string | null; payload: Record<string, unknown>; createdAt: string }): ExistingTeamInvite | null {
+  if ((n.memberKind ?? n.kind) !== "existing_team_invite" || n.subjectType !== "business_employee") return null;
   const p = n.payload;
-  const inv = parseInvites([{ ...p, id: n.subjectId ?? p.invite_id, sent_at: p.sent_at ?? n.createdAt }])[0];
+  const by = str(p.accept_by);
+  const expiresAt = by && /^\d{4}-\d{2}-\d{2}$/.test(by) ? `${by}T23:59:59` : by;
+  const inv = parseInvites([{ id: n.subjectId, business_id: p.business_id, business_name: p.business_name, sent_at: n.createdAt, expires_at: expiresAt }])[0];
   return inv ?? null;
 }
 

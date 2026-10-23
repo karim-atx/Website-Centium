@@ -6,76 +6,88 @@
 // D-43 (Karim): an instructor review is one per member per CLASS SERIES,
 // written in one dialog, stored as a gym review on the server and shown on the
 // instructor's profile with the gym's name. Reviewability per past class comes
-// from my_bookings(p_tab 'past') (DB4: `reviewable`, `reviewed`); the write is
-// review_instructor(p_session_id, p_rating, p_text, p_request_id) (DB10).
+// from my_class_bookings(p_tab 'past') (DB4: `can_review`, `my_rating`); the
+// write is review_instructor(p_session_id, p_rating, p_text, p_request_id)
+// (DB10, not landed).
 
 import { bool, num, rows, str } from "../market/parse";
 
-// ---------------------------------------------------------------- my_bookings (past)
+// ---------------------------------------------------------------- my_class_bookings (DB4)
 
-export type PastKind = "membership" | "day_pass" | "class" | "professional_session" | "professional_package";
-
-/** One my_bookings(p_tab 'past') row (PLAN §2.2 DB4), read tolerantly. */
+/**
+ * One my_class_bookings(p_tab 'past') row (Database 20261211100000,
+ * HANDOVER_API Release 1 "Bookings (DB4)"): booking_id, session_id (=
+ * business_class_id, the occurrence), series_id, class_title, starts_at,
+ * ends_at, business_id, business_name, gym_id, instructor_id,
+ * instructor_name, instructor_avatar, payment_method, payment_status,
+ * price_agreed, cancelled_at, my_rating (the caller's own), can_review
+ * (happened, not cancelled, not already rated), booked_at.
+ */
 export interface PastBooking {
-  kind: PastKind;
-  /** ref_id: the booking (or appointment / membership) the row is about. */
+  /** booking_id. */
   refId: string;
-  /** The class session (business_classes row) a class review is written for. */
+  /** session_id: the class occurrence (business_classes row) a review is written for. */
   sessionId: string | null;
+  seriesId: string | null;
   title: string;
-  /** The venue (gym) or the professional's practice. */
+  /** The venue's name (the caller fills it from gym_id), else business_name. */
   providerName: string;
-  /** The class's Team instructor, or the hired professional. */
+  gymId: string | null;
+  /** The class's instructor (instructor_id / _name / _avatar). */
   professionalId: string | null;
   professionalName: string | null;
   professionalPhotoUrl: string | null;
-  /** The professional's type line on a hired session ("Trainer"). */
-  professionalType: string | null;
   startsAt: string | null;
   endsAt: string | null;
-  status: string | null;
+  /** cancelled_at is set: the venue cancelled the class. */
+  cancelled: boolean;
+  /** can_review. */
   reviewable: boolean;
+  /** my_rating is set. */
   reviewed: boolean;
-  /** The rating this member gave, when the reader sends it ("you rated 5"). */
+  /** my_rating ("you rated 5"). */
   myRating: number | null;
 }
 
-const KINDS: readonly PastKind[] = ["membership", "day_pass", "class", "professional_session", "professional_package"];
-const kindOf = (v: unknown): PastKind | null => (typeof v === "string" && (KINDS as readonly string[]).includes(v) ? (v as PastKind) : null);
-
-export function parsePastBookings(data: unknown): PastBooking[] {
+export function parseClassBookings(data: unknown): PastBooking[] {
   const out: PastBooking[] = [];
   for (const r of rows(data)) {
-    const kind = kindOf(r.kind);
-    const refId = str(r.ref_id) ?? str(r.booking_id) ?? str(r.id);
-    if (!kind || !refId) continue;
-    const rating = num(r.my_rating) ?? num(r.rating);
+    const refId = str(r.booking_id);
+    if (!refId) continue;
+    const rating = num(r.my_rating);
+    const myRating = rating !== null && rating >= 1 && rating <= 5 ? Math.round(rating) : null;
     out.push({
-      kind,
       refId,
-      sessionId: str(r.class_session_id) ?? str(r.session_id) ?? str(r.class_id),
-      title: str(r.title) ?? "",
-      providerName: str(r.provider_name) ?? str(r.business_name) ?? "",
-      professionalId: str(r.professional_id) ?? str(r.instructor_id),
-      professionalName: str(r.professional_name) ?? str(r.instructor_name),
-      professionalPhotoUrl: str(r.professional_photo_url) ?? str(r.instructor_photo_url) ?? str(r.photo_url),
-      professionalType: str(r.professional_type) ?? str(r.specialty),
+      sessionId: str(r.session_id),
+      seriesId: str(r.series_id),
+      title: str(r.class_title) ?? "",
+      providerName: str(r.business_name) ?? "",
+      gymId: str(r.gym_id),
+      professionalId: str(r.instructor_id),
+      professionalName: str(r.instructor_name),
+      professionalPhotoUrl: str(r.instructor_avatar),
       startsAt: str(r.starts_at),
       endsAt: str(r.ends_at),
-      status: str(r.status),
-      reviewable: bool(r.reviewable),
-      reviewed: bool(r.reviewed),
-      myRating: rating !== null && rating >= 1 && rating <= 5 ? Math.round(rating) : null,
+      cancelled: !!str(r.cancelled_at),
+      reviewable: bool(r.can_review),
+      reviewed: myRating !== null,
+      myRating,
     });
   }
   return out;
+}
+
+/** Past means over: a class still running reads as Upcoming (the composed rows keep it until it ends). */
+export function isOver(b: Pick<PastBooking, "startsAt" | "endsAt">, now: Date): boolean {
+  const t = new Date(b.endsAt ?? b.startsAt ?? "");
+  return !Number.isNaN(t.getTime()) && t.getTime() <= now.getTime();
 }
 
 // ---------------------------------------------------------------- the review target
 
 /** What the dialog needs: the class, the gym, the date, the Team instructor. */
 export interface ReviewTarget {
-  /** The booking (my_bookings ref_id), to mark the row reviewed. */
+  /** The booking (my_class_bookings booking_id), to mark the row reviewed. */
   bookingId: string;
   sessionId: string;
   title: string;
@@ -87,12 +99,12 @@ export interface ReviewTarget {
 }
 
 /**
- * A past class the server says this member may review (DB4 `reviewable`,
- * not yet `reviewed`) and that names its Team instructor; anything else is
- * not an instructor review (null).
+ * A past class the server says this member may review (DB4 `can_review`,
+ * no `my_rating` yet) and that names its instructor; anything else is not an
+ * instructor review (null).
  */
 export function targetOf(b: PastBooking): ReviewTarget | null {
-  if (b.kind !== "class" || !b.reviewable || b.reviewed) return null;
+  if (b.cancelled || !b.reviewable || b.reviewed) return null;
   if (!b.sessionId || !b.professionalId || !b.professionalName) return null;
   return {
     bookingId: b.refId,
@@ -108,7 +120,7 @@ export function targetOf(b: PastBooking): ReviewTarget | null {
 
 /** The past row for a booking (by its booking id, or its class session), as the calendar's Rate asks. */
 export function findPast(list: readonly PastBooking[], bookingId: string, sessionId?: string | null): PastBooking | null {
-  return list.find((b) => b.refId === bookingId) ?? (sessionId ? (list.find((b) => b.kind === "class" && b.sessionId === sessionId) ?? null) : null);
+  return list.find((b) => b.refId === bookingId) ?? (sessionId ? (list.find((b) => b.sessionId === sessionId) ?? null) : null);
 }
 
 // ---------------------------------------------------------------- copy (the board's, D-02)

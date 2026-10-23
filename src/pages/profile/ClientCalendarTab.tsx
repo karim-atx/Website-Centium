@@ -194,9 +194,10 @@ export default function ClientCalendarTab() {
   // B14 RP-04: Rate this class from a booked class that has ended.
   const [rate, setRate] = useState<{ bookingId: string; title: string; businessName: string } | null>(null);
   // Market + Share 3.0 W5 (D-43): Rate opens the InstructorReviewDialog when
-  // the class had a Team instructor and my_bookings (DB4, awaiting) says it's
-  // reviewable; otherwise (and while DB4 is pending) the live Rate sheet
-  // above (write_class_review), unchanged.
+  // the class had an instructor and my_class_bookings (DB4) says it's
+  // reviewable, once DB10's review_instructor exists (findReviewTarget answers
+  // null until then); otherwise the live Rate sheet above
+  // (write_class_review), unchanged.
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
   const [reviewStrip, showReviewStrip] = useStrip();
   const rateSeq = useRef(0);

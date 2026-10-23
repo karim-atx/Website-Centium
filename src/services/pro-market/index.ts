@@ -8,7 +8,13 @@
 //   marketplace visibility"; D-19);
 // - the DB3 service fields (photo_path, showcase_visible, format, sort on
 //   appointment_services and professional_plans) are never selected and never
-//   written until DB3 lands: their writers here answer `pending`.
+//   written: their writers here answer `pending`.
+// DB3 as landed (Database 20261210900000) gave business_offerings a
+// professional owner and public_showcase('professional', id), but none of the
+// above: no set_marketplace_visible, no fields on appointment_services /
+// professional_plans, and business_offerings' RLS (insert / update / delete
+// / select) checks business_id only, so a professional can neither write nor
+// read their own shelf rows. The markers below stay.
 //
 // LIVE (D-18): the services are appointment_services (Book; a professional's
 // own rows, business_id null, active) and professional_plans (Hire). Writes

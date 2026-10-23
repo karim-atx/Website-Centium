@@ -52,17 +52,19 @@ import {
 //   tile radius 18 --pale with the calendar 24 (stroke 1.75) --accent, the
 //   title 16 / 800, the body 13 / 1.55 --faint, the CTA (margin-top 6, min
 //   height 40, radius 12, 1px --border, padding 0 14, 12.5 / 800 --pdark).
-// Composed client-side from the live readers (myBookingsData.ts): DB4
-// my_bookings is optional and hasn't landed.
-// W5 (C-MO.4.5 `revPrompt` / `revFilled` / `revSent`; D-43): Past reads
-// my_bookings(p_tab 'past') (DB4 `reviewable` / `reviewed`, awaiting); when it
-// answers, Past is its rows and a past class taught by a Team instructor has
-// the teal "Review" stub (a button) → InstructorReviewDialog; once sent the
+// Composed client-side from the live readers (myBookingsData.ts), except
+// Past's classes.
+// W5 (C-MO.4.5 `revPrompt` / `revFilled` / `revSent`; D-43): Past's classes
+// read my_class_bookings(p_tab 'past') (DB4, Database 20261211100000:
+// `can_review`, `my_rating`; the lead's decision: only Past switches, Upcoming
+// stays composed); the professional sessions stay composed. A past class
+// with an instructor that the server says is reviewable has the teal
+// "Review" stub (a button) → InstructorReviewDialog; once sent the
 // row reads "you rated N" with the muted "Reviewed" stub, and the strip
 // "Review sent · it shows on {first}'s profile with {gym}" (Client
 // Professional Screens line 192: margin-top 12 under the track, --goodbg,
 // the "View" stub → the instructor's profile; closes after 5 s as useStrip)
-// shows above the list. While my_bookings is pending, Past stays the
+// shows above the list. While my_class_bookings fails, Past stays the
 // composed rows with no Review stub.
 // D-46: an active membership's row has a ⋮ (32 × 44) with "Show pass" (the
 // live MembershipPass in a popup, as GymPage) and "End membership": the live
@@ -85,7 +87,7 @@ export default function MyBookingsPage() {
   const [members, setMembers] = useState<Loaded<MembershipsData> | null>(null);
   const [schedule, setSchedule] = useState<Loaded<ScheduleData> | null>(null);
   const [tick, setTick] = useState(0);
-  /** my_bookings past (DB4): undefined while reading, null when pending or failed (Past stays composed). */
+  /** my_class_bookings past (DB4): undefined while reading, null when it failed (Past stays composed). */
   const [pastDb, setPastDb] = useState<PastBooking[] | null | undefined>(undefined);
   /** Reviews sent this session: booking id → the rating given. */
   const [sent, setSent] = useState<Record<string, number>>({});
@@ -120,7 +122,7 @@ export default function MyBookingsPage() {
     return splitSchedule([...schedule.value.classes.map((c) => classRow(c, now)), ...schedule.value.sessions.map((s) => sessionRow(s, now))]);
   }, [schedule]);
 
-  const pastFromDb = useMemo(() => (pastDb ? pastRows(pastDb, sent) : null), [pastDb, sent]);
+  const pastFromDb = useMemo(() => (pastDb && split ? pastRows(pastDb, sent, split.past) : null), [pastDb, sent, split]);
 
   // The sent strip closes with View or after 5 s (useStrip's timing). The row
   // that had focus becomes a plain ticket, so focus moves to the strip's View.
@@ -139,7 +141,7 @@ export default function MyBookingsPage() {
   const [passFor, setPassFor] = useState<GymMembership | null>(null);
   const [ending, setEnding] = useState<GymMembership | null>(null);
 
-  const state = tab === "memberships" ? members : tab === "past" ? (pastDb === undefined ? null : pastFromDb ? ({ ok: true } as const) : schedule) : schedule;
+  const state = tab === "memberships" ? members : tab === "past" ? (pastDb === undefined ? null : pastDb && schedule?.ok ? ({ ok: true } as const) : schedule) : schedule;
   const rows: BookingRow[] | null = tab === "memberships" ? memberRows : tab === "past" && pastFromDb ? pastFromDb : split ? (tab === "upcoming" ? split.upcoming : split.past) : null;
   const cachedAt = members?.ok ? members.value.cachedAt : null;
 

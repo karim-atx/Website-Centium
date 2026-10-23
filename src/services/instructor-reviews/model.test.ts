@@ -5,7 +5,8 @@ import {
   contextLine,
   findPast,
   firstName,
-  parsePastBookings,
+  isOver,
+  parseClassBookings,
   reviewErrorOf,
   reviewMetaTail,
   reviewNote,
@@ -16,52 +17,66 @@ import {
   targetOf,
 } from "./model.ts";
 
+/** A my_class_bookings row (Database 20261211100000), as PostgREST returns it. */
 const row = (over: Record<string, unknown> = {}) => ({
-  kind: "class",
-  ref_id: "bk1",
-  class_session_id: "s1",
-  title: "Spin 45",
-  provider_name: "Hamra Strength Club",
-  professional_id: "p1",
-  professional_name: "Rana Khoury",
+  booking_id: "bk1",
+  session_id: "s1",
+  series_id: "cs1",
+  class_title: "Spin 45",
   starts_at: new Date(2026, 9, 9, 18, 30).toISOString(),
-  status: "attended",
-  reviewable: true,
-  reviewed: false,
+  ends_at: new Date(2026, 9, 9, 19, 15).toISOString(),
+  business_id: "b1",
+  business_name: "Friend Fitness",
+  gym_id: "g1",
+  instructor_id: "p1",
+  instructor_name: "Rana Khoury",
+  instructor_avatar: null,
+  payment_method: "cash",
+  payment_status: "pending",
+  price_agreed: 10,
+  cancelled_at: null,
+  my_rating: null,
+  can_review: true,
+  booked_at: new Date(2026, 9, 1).toISOString(),
   ...over,
 });
 
-test("my_bookings past rows parse tolerantly; unknown kinds and rows without an id drop", () => {
-  const list = parsePastBookings([row(), { kind: "nope", ref_id: "x" }, { kind: "class" }, row({ ref_id: "bk2", reviewable: "true", reviewed: 1, my_rating: 5 })]);
-  assert.equal(list.length, 2);
-  assert.equal(list[0].sessionId, "s1");
+test("my_class_bookings rows parse; rows without a booking id drop; my_rating is the caller's own", () => {
+  const list = parseClassBookings([row(), { session_id: "x" }, row({ booking_id: "bk2", can_review: false, my_rating: 5 }), row({ booking_id: "bk3", cancelled_at: "2026-10-08T10:00:00Z", can_review: false })]);
+  assert.equal(list.length, 3);
+  assert.deepEqual([list[0].refId, list[0].sessionId, list[0].seriesId, list[0].gymId, list[0].providerName], ["bk1", "s1", "cs1", "g1", "Friend Fitness"]);
   assert.equal(list[0].professionalName, "Rana Khoury");
-  assert.equal(list[1].reviewable, true);
-  assert.equal(list[1].reviewed, true);
-  assert.equal(list[1].myRating, 5);
-  assert.equal(parsePastBookings(null).length, 0);
-  // instructor_* aliases and a session under class_id
-  const alt = parsePastBookings([{ kind: "class", booking_id: "b9", class_id: "s9", instructor_id: "p9", instructor_name: "Nour Fares", reviewable: true }])[0];
-  assert.equal(alt.refId, "b9");
-  assert.equal(alt.sessionId, "s9");
-  assert.equal(alt.professionalName, "Nour Fares");
+  assert.deepEqual([list[0].reviewable, list[0].reviewed, list[0].myRating, list[0].cancelled], [true, false, null, false]);
+  assert.deepEqual([list[1].reviewable, list[1].reviewed, list[1].myRating], [false, true, 5]);
+  assert.equal(list[2].cancelled, true);
+  assert.equal(parseClassBookings(null).length, 0);
+  assert.equal(parseClassBookings([row({ my_rating: 9 })])[0].myRating, null);
 });
 
-test("only a reviewable, unreviewed class with a Team instructor is a review target", () => {
-  const [b] = parsePastBookings([row()]);
+test("past means over: a class still running is not past yet", () => {
+  const now = new Date(2026, 9, 9, 19, 0);
+  assert.equal(isOver({ startsAt: new Date(2026, 9, 9, 18, 30).toISOString(), endsAt: new Date(2026, 9, 9, 19, 15).toISOString() }, now), false);
+  assert.equal(isOver({ startsAt: new Date(2026, 9, 9, 18, 0).toISOString(), endsAt: new Date(2026, 9, 9, 18, 45).toISOString() }, now), true);
+  assert.equal(isOver({ startsAt: new Date(2026, 9, 9, 18, 0).toISOString(), endsAt: null }, now), true);
+  assert.equal(isOver({ startsAt: null, endsAt: null }, now), false);
+});
+
+test("only a reviewable, unrated, uncancelled class with an instructor is a review target", () => {
+  const [b] = parseClassBookings([row()]);
   const t = targetOf(b);
   assert.ok(t);
   assert.equal(t.sessionId, "s1");
-  assert.equal(t.gymName, "Hamra Strength Club");
+  assert.equal(t.bookingId, "bk1");
+  assert.equal(t.gymName, "Friend Fitness");
   assert.equal(targetOf({ ...b, reviewable: false }), null);
   assert.equal(targetOf({ ...b, reviewed: true }), null);
+  assert.equal(targetOf({ ...b, cancelled: true }), null);
   assert.equal(targetOf({ ...b, professionalName: null }), null);
-  assert.equal(targetOf({ ...b, kind: "professional_session" }), null);
   assert.equal(targetOf({ ...b, sessionId: null }), null);
 });
 
 test("the calendar finds the row by booking, else by session", () => {
-  const list = parsePastBookings([row(), row({ ref_id: "bk2", class_session_id: "s2" })]);
+  const list = parseClassBookings([row(), row({ booking_id: "bk2", session_id: "s2" })]);
   assert.equal(findPast(list, "bk2")?.sessionId, "s2");
   assert.equal(findPast(list, "zz", "s1")?.refId, "bk1");
   assert.equal(findPast(list, "zz", "s9"), null);

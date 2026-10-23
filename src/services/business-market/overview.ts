@@ -7,8 +7,10 @@
 //   writable). No live reader has a daily series or a month-on-month change
 //   for it (listing_performance is weekly impressions, a different figure),
 //   so the hero shows the figure alone: no sparkline series, no delta.
-// - reorder_business_offerings(p_ids): DB3. `business_offerings.sort` doesn't
-//   exist yet, so the Showcase never selects it and shows the live order.
+// - reorder_business_offerings(p_ids): DB3. `business_offerings.sort` exists
+//   (20261210900000) but no reorder function does, and authenticated has no
+//   UPDATE grant on `sort` (an owner can't write it), so the Showcase never
+//   selects it and shows the live order.
 
 import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, type MarketResult } from "../market/rpc";

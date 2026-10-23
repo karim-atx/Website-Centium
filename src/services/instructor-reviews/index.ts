@@ -1,32 +1,58 @@
 // Market + Share 3.0 · W5 · instructor reviews (C-MO.4.5 review popup; D-43).
 //
-// Database stages DB4 (my_bookings) and DB10 (review_instructor) have NOT
-// landed (checked 2026-10-22: no Release 2 branch in ../Database; neither
-// function on the local stack). The calls follow PLAN §2.2 DB4 / DB10 and
-// api.md "Reviews and work history"; PostgREST answers PGRST202 meanwhile,
-// which is `pending`: My bookings shows no Review stub, the calendar's Rate
-// keeps the live write_class_review sheet, and a send that comes back
-// pending changes nothing (a calm note in the dialog).
+// DB4 has landed (Database 20261211100000, HANDOVER_API Release 1 "Bookings
+// (DB4)"): my_class_bookings(p_tab, p_limit) is the past list's reader, with
+// `can_review` and the caller's own `my_rating`. DB10's review_instructor has
+// NOT landed (no function on the local stack): PostgREST answers PGRST202,
+// which is `pending`, and a send that comes back pending changes nothing (a
+// calm note in the dialog).
 
+import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, marketRpcRaw, isPendingError, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
-import { findPast, parsePastBookings, REVIEW_ERROR_TEXT, reviewErrorOf, targetOf, type PastBooking, type ReviewError, type ReviewTarget } from "./model";
+import { findPast, isOver, parseClassBookings, REVIEW_ERROR_TEXT, reviewErrorOf, targetOf, type PastBooking, type ReviewError, type ReviewTarget } from "./model";
 
 export * from "./model";
 
-/** my_bookings(p_tab 'past'): the member's past bookings with `reviewable` / `reviewed` (DB4). */
-export function fetchPastBookings(): Promise<MarketResult<PastBooking[]>> {
-  // awaiting DB stage DB4
-  return marketRpc("my_bookings", { p_tab: "past" }, "Couldn't load your bookings.", parsePastBookings);
+/** my_class_bookings clamps p_limit to 1..200. */
+const PAST_LIMIT = 200;
+
+/**
+ * my_class_bookings(p_tab 'past', 200): the member's class bookings that have
+ * started, newest first, with the venue's name filled from `gyms` (public for
+ * a listed business, as the composed rows read it; the business name when the
+ * class has no venue or the read fails). Only classes that have ENDED are
+ * kept: one still running stays under Upcoming, where the composed rows keep
+ * it until it ends.
+ */
+export async function fetchPastBookings(now: Date = new Date()): Promise<MarketResult<PastBooking[]>> {
+  const r = await marketRpc("my_class_bookings", { p_tab: "past", p_limit: PAST_LIMIT }, "Couldn't load your bookings.", parseClassBookings);
+  if (!r.ok) return r;
+  const list = r.value.filter((b) => isOver(b, now));
+  const gymIds = [...new Set(list.map((b) => b.gymId).filter((x): x is string => !!x))];
+  if (gymIds.length === 0) return { ok: true, value: list };
+  try {
+    const { data, error } = await supabase.from("gyms").select("id, name").in("id", gymIds);
+    if (error) return { ok: true, value: list };
+    const names = new Map(((data ?? []) as { id: string; name: string | null }[]).map((g) => [g.id, g.name?.trim() || ""]));
+    return { ok: true, value: list.map((b) => (b.gymId && names.get(b.gymId) ? { ...b, providerName: names.get(b.gymId) as string } : b)) };
+  } catch {
+    return { ok: true, value: list };
+  }
 }
 
 /**
  * The calendar's Rate (D-43): the instructor review target for this booking
- * when the class had a Team instructor and the server says it is reviewable;
- * null otherwise (including while DB4 is pending), and the live Rate flow
- * opens instead.
+ * when the class had an instructor and my_class_bookings says it's
+ * reviewable. awaiting DB stage DB10: until review_instructor exists the
+ * answer is null, so Rate keeps the live write_class_review sheet (a target
+ * here would open a dialog that can't send). Flip INSTRUCTOR_REVIEW_WRITER
+ * when DB10 lands.
  */
+const INSTRUCTOR_REVIEW_WRITER: boolean = false;
+
 export async function findReviewTarget(bookingId: string, sessionId?: string | null): Promise<ReviewTarget | null> {
+  if (!INSTRUCTOR_REVIEW_WRITER) return null;
   const r = await fetchPastBookings();
   if (!r.ok) return null;
   const b = findPast(r.value, bookingId, sessionId);

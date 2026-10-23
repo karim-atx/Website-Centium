@@ -202,9 +202,10 @@ export const NotificationsHub: React.FC<{
   // opens its review (HO20 for a check-in, CL10 for an intake) at
   // /app/more/forms/responses/{id}; every other row goes to the page's onOpen.
   const openRow = (n: ProNotification) => {
-    // W4 P-MA.5.4: an existing-team invite opens its dialog on Opportunities
-    // (router state, read by OpportunitiesTab). awaiting DB stage DB12 (the
-    // existing_team_invite notification and its payload).
+    // W4 P-MA.5.4: an existing-team invite (the member inbox's
+    // existing_team_invite row, Database 20261210600000) opens its dialog on
+    // Opportunities (router state, read by OpportunitiesTab).
+    // awaiting DB stage DB12: nothing writes existing_team_invite yet.
     const invite = inviteFromNotification(n);
     if (invite) {
       p.onClose();
